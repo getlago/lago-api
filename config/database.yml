@@ -11,8 +11,8 @@ development:
 
 test:
   <<: *default
-  database: lago
+  url: <%= ENV['DATABASE_URL'] %>
 
 production:
   <<: *default
-  database: lago
+  url: <%= ENV['DATABASE_URL'] %>
