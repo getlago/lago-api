@@ -7,6 +7,7 @@ ruby '3.0.1'
 
 gem 'bcrypt'
 gem 'bootsnap', require: false
+gem 'graphql'
 gem 'pg'
 gem 'puma', '~> 5.0'
 gem 'rails', '~> 7.0.2'
@@ -20,4 +21,8 @@ group :development, :test do
 end
 
 group :development do
+  gem 'coffee-rails'
+  gem 'graphiql-rails'
+  gem 'sass-rails'
+  gem 'uglifier'
 end
