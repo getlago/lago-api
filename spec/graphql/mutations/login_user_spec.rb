@@ -21,7 +21,7 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
     user = create(:user)
 
     result = execute_graphql(
-      mutation,
+      query: mutation,
       variables: {
         input: {
           email: user.email,
@@ -43,7 +43,7 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
       user = create(:user)
 
       result = execute_graphql(
-        mutation,
+        query: mutation,
         variables: {
           input: {
             email: user.email,
