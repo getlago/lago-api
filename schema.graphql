@@ -30,6 +30,7 @@ type Mutation {
 }
 
 type Query {
+  currentUser: User!
 }
 
 type User {
