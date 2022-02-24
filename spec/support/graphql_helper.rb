@@ -8,8 +8,6 @@ module GraphQLHelper
   end
 
   def execute_graphql(current_user: nil, query: nil, **kwargs)
-    return unless query 
-
     args = kwargs.merge(
       context: { controller: controller, current_user: current_user }
     )
