@@ -9,6 +9,30 @@ class UsersService < BaseService
     result
   end
 
+  def register(email, password, organization_name)
+    result.user = User.find_or_initialize_by(email: email)
+
+    if result.user.id
+      result.fail!('user_already_exists')
+
+      return result
+    end
+
+    ActiveRecord::Base.transaction do
+      result.organization = Organization.create!(name: organization_name)
+      result.user.password = password
+      result.user.save!
+
+      result.membership = Membership.create!(
+        user: result.user,
+        organization: result.organization,
+        role: :admin
+      )
+    end
+
+    result
+  end
+
   private
 
   def generate_token
