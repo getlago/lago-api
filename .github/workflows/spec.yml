@@ -1,0 +1,29 @@
+name: "Spec"
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: lago
+          POSTGRES_USER: lago
+          POSTGRES_PASSWORD: lago
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Ruby and gems
+        uses: ruby/setup-ruby@8f312efe1262fb463d906e9bf040319394c18d3e # v1.92
+        with:
+          ruby-version: 3.0.1
+          bundler-cache: true
+      - name: Set up database schema
+        run: bin/rails db:schema:load
+      - name: Run tests
+        run: bundle exec rspec
