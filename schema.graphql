@@ -45,6 +45,7 @@ type Mutation {
 }
 
 type Organization {
+  apiKey: String!
   createdAt: ISO8601DateTime!
   id: ID!
   name: String!

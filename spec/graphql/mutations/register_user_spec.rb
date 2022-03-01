@@ -14,6 +14,7 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
           organization {
             id
             name
+            apiKey
           }
           membership {
             id

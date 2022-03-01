@@ -15,4 +15,12 @@ RSpec.describe Organization, type: :model do
       expect(subject).to_not be_valid
     end
   end
+
+  describe 'Callbacks' do
+    it 'generates the api key' do
+      subject.save!
+      
+      expect(subject.api_key).to be_present
+    end
+  end
 end
