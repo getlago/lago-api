@@ -23,6 +23,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
       - name: Build, tag and push image to Amazon ECR
         env:
+          RAILS_ENV: staging
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: lago-api-staging
           IMAGE_TAG: ${{ steps.extract_branch.outputs.branch }}
