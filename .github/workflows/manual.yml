@@ -1,0 +1,33 @@
+name: "Build Staging Image"
+
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      branch_to_build:
+        description: 'Branch to Build'
+        default: 'main'
+        required: true
+
+jobs:
+  build:
+    name: "Build Staging Image"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        name: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secrets-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build, tag and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: lago-api-staging
+          IMAGE_TAG: ${{ github.event.inputs.branch_to_build }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
