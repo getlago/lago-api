@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
+COPY ./start.sh /app/start.sh
 
 RUN apk add --no-cache \
   git \
