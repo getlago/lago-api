@@ -1,0 +1,76 @@
+auto_deploy: true
+autoscaling:
+  enabled: false
+  maxReplicas: 10
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 50
+  targetMemoryUtilizationPercentage: 50
+cloudsql:
+  connectionName: ''
+  dbPort: 5432
+  enabled: false
+  serviceAccountJSON: ''
+clusterId: 1689
+container:
+  command: null
+  env: {}
+  lifecycle:
+    postStart: null
+    preStop: null
+  port: 3000
+currentCluster:
+  service:
+    is_aws: true
+    is_do: false
+    is_gcp: false
+health:
+  enabled: false
+  failureThreshold: 3
+  path: /healthz
+  periodSeconds: 5
+  readinessProbe:
+    enabled: false
+    path: /ready
+    periodSeconds: 5
+  startupProbe:
+    enabled: false
+    failureThreshold: 3
+    path: /startupz
+    periodSeconds: 5
+image:
+  pullPolicy: Always
+  repository: 201661579678.dkr.ecr.us-east-1.amazonaws.com/lago-api-staging
+  tag: main
+ingress:
+  annotations: {}
+  custom_domain: true
+  custom_paths: []
+  enabled: true
+  hosts:
+    - main-api.staging.getlago.com
+  porter_hosts: []
+  provider: aws
+  tls: true
+  wildcard: true
+namespace: default
+nodeSelector: {}
+pvc:
+  enabled: false
+  existingVolume: ''
+  mountPath: /mypath
+  storage: 20Gi
+replicaCount: 1
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+service:
+  port: 80
+serviceAccount:
+  annotations: {}
+  create: true
+  name: ''
+showStartCommand: true
+statefulset:
+  enabled: false
+terminationGracePeriodSeconds: 30
