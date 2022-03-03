@@ -2,6 +2,7 @@ FROM ruby:3.0.1-alpine
 
 WORKDIR /app
 
+COPY . /app
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 COPY ./start.sh /app/start.sh
