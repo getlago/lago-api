@@ -13,7 +13,9 @@ cloudsql:
 clusterId: 1689
 container:
   command: null
-  env: {}
+  env:
+    normal:
+      RAILS_ENV: staging
   lifecycle:
     postStart: null
     preStop: null

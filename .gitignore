@@ -28,3 +28,7 @@
 
 .env
 .byebug_history
+
+/config/credentials/staging.key
+
+/config/credentials/development.key
