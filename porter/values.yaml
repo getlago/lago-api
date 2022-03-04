@@ -16,6 +16,8 @@ container:
   env:
     normal:
       RAILS_ENV: staging
+      RAILS_MASTER_KEY: PORTERSECRET_api-staging.v2
+      DATABASE_URL: postgres://lago:DB_PASSWORD@DB_HOST:5432/main_branch
   lifecycle:
     postStart: null
     preStop: null
