@@ -36,7 +36,7 @@ jobs:
     - name: Deploy to Porter
       uses: porter-dev/porter-cli-action@v0.1.0
       with:
-        command: create --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
       env:
         PORTER_HOST: https://dashboard.getporter.dev
         PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
