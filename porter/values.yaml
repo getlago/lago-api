@@ -17,7 +17,7 @@ container:
     normal:
       RAILS_ENV: staging
       RAILS_MASTER_KEY: PORTERSECRET_api-staging.v2
-      DATABASE_URL:
+      DATABASE_URL: ${DATABASE_URL}
   lifecycle:
     postStart: null
     preStop: null
@@ -43,15 +43,15 @@ health:
     periodSeconds: 5
 image:
   pullPolicy: Always
-  repository: 
-  tag:
+  repository: ${ECR_REPOSITORY} 
+  tag: ${BRANCH}
 ingress:
   annotations: {}
   custom_domain: true
   custom_paths: []
   enabled: true
   hosts:
-    -
+    - ${BRANCH}-api.staging.getlago.com
   porter_hosts: []
   provider: aws
   tls: true

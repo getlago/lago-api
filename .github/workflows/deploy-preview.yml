@@ -22,21 +22,18 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
-    - name: Porter File configuration
-      uses: microsoft/variable-substitution@v1
-      with:
-        files: './porter/values.yaml'
+    - name: Replace Variables in values.yaml
       env:
-        image.repository: ${{ steps.login-ecr.outputs.registry }}/lago-api-staging
-        image.tag: ${{ steps.extract_branch.outputs.branch }}
-        container.env.normal.DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
-        ingress.hosts: ${{ steps.extract_branch.outputs.branch}}-api.staging.getlago.com
-    - name: test
-      run: echo "$(cat ./porter/values.yaml)"
+        ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/lago-api-staging
+        BRANCH: ${{ steps.extract_branch.outputs.branch }}
+        DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
+      run: |
+        sudo apt update && sudo apt install -y gettext
+        envsubst < ./porter/values.yaml > ./porter/env_values.yaml
     - name: Deploy to Porter
       uses: porter-dev/porter-cli-action@v0.1.0
       with:
-        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
       env:
         PORTER_HOST: https://dashboard.getporter.dev
         PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
