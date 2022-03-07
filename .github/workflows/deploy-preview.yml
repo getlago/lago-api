@@ -13,13 +13,32 @@ jobs:
       shell: bash
       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
       id: extract_branch
-    - name: Update Porter App
-      timeout-minutes: 20
-      uses: porter-dev/porter-update-action@v0.1.0
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        app: api
-        cluster: "1689"
-        namespace: ${{ steps.extract_branch.outputs.branch}}
-        project: "2643"
-        tag: ${{ steps.vars.outputs.sha_short }}
-        token: ${{ secrets.PORTER_TOKEN_2643 }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Porter File configuration
+      uses: microsoft/variable-substitution@v1
+      with:
+        files: './porter/values.yaml'
+      env:
+        image.repository: ${{ steps.login-ecr.outputs.registry }}/lago-api-staging
+        image.tag: ${{ steps.extract_branch.outputs.branch }}
+        container.env.normal.DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
+        ingress.hosts: ${{ steps.extract_branch.outputs.branch}}-api.staging.getlago.com
+    - name: test
+      run: echo "$(cat ./porter/values.yaml)"
+    - name: Deploy to Porter
+      uses: porter-dev/porter-cli-action@v0.1.0
+      with:
+        command: create --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+      env:
+        PORTER_HOST: https://dashboard.getporter.dev
+        PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
+        PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
+        PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}

@@ -17,7 +17,7 @@ container:
     normal:
       RAILS_ENV: staging
       RAILS_MASTER_KEY: PORTERSECRET_api-staging.v2
-      DATABASE_URL: postgres://lago:DB_PASSWORD@DB_HOST:5432/main_branch
+      DATABASE_URL:
   lifecycle:
     postStart: null
     preStop: null
@@ -43,15 +43,15 @@ health:
     periodSeconds: 5
 image:
   pullPolicy: Always
-  repository: 201661579678.dkr.ecr.us-east-1.amazonaws.com/lago-api-staging
-  tag: main
+  repository: 
+  tag:
 ingress:
   annotations: {}
   custom_domain: true
   custom_paths: []
   enabled: true
   hosts:
-    - main-api.staging.getlago.com
+    -
   porter_hosts: []
   provider: aws
   tls: true
