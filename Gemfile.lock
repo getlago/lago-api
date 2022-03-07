@@ -147,6 +147,8 @@ GEM
       nio4r (~> 2.0)
     racc (1.6.0)
     rack (2.2.3)
+    rack-cors (1.1.1)
+      rack (>= 2.0.0)
     rack-test (1.1.0)
       rack (>= 1.0, < 3)
     rails (7.0.2)
@@ -242,6 +244,7 @@ DEPENDENCIES
   jwt
   pg
   puma (~> 5.6)
+  rack-cors
   rails (~> 7.0.2)
   rspec-rails
   sass-rails
