@@ -7,6 +7,7 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
     <<~GQL
       mutation($input: RegisterUserInput!) {
         registerUser(input: $input) {
+          token
           user {
             id
             email
