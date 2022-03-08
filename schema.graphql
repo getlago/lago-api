@@ -59,6 +59,7 @@ type Query {
 type RegisterUser {
   membership: Membership!
   organization: Organization!
+  token: String!
   user: User!
 }
 
