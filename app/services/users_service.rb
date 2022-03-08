@@ -22,6 +22,7 @@ class UsersService < BaseService
       result.organization = Organization.create!(name: organization_name)
       result.user.password = password
       result.user.save!
+      result.token = generate_token
 
       result.membership = Membership.create!(
         user: result.user,

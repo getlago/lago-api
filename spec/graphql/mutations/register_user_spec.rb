@@ -7,6 +7,7 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
     <<~GQL
       mutation($input: RegisterUserInput!) {
         registerUser(input: $input) {
+          token
           user {
             id
             email
@@ -40,6 +41,7 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
       expect(result['data']['registerUser']['membership']['id']).to be_present
       expect(result['data']['registerUser']['user']['email']).to eq('foo@bar.com')
       expect(result['data']['registerUser']['organization']['name']).to eq('FooBar')
+      expect(result['data']['registerUser']['token']).to be_present
     end
   end
 
