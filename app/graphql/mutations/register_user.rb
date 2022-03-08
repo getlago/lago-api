@@ -15,7 +15,7 @@ module Mutations
         organization_name
       )
 
-      result.success? ? result : execution_error(message: result.error)
+      result.success? ? result : execution_error(code: result.error_code, message: result.error)
     end
   end
 end

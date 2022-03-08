@@ -38,7 +38,7 @@ class UsersService < BaseService
   def generate_token
     JWT.encode(payload, Rails.application.secrets.secret_key_base, 'HS256')
   rescue StandardError => e
-    result.fail!(e.message)
+    result.fail!('token_encoding_error', e.message)
   end
 
   def payload
