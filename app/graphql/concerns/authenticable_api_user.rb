@@ -12,6 +12,6 @@ module AuthenticableApiUser
   end
 
   def unauthorized_error
-    GraphQL::ExecutionError.new('unauthorized', options: { status: :unauthorized, code: 401 })
+    GraphQL::ExecutionError.new('unauthorized', extensions: { status: :unauthorized, code: 'unauthorized' })
   end
 end
