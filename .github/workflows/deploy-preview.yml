@@ -53,4 +53,4 @@ jobs:
       if: ${{ steps.preview_exists.outputs.exists == 'false' }}
       uses: porter-dev/porter-cli-action@v0.1.0
       with:
-        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml --repository-url ${{ secrets.STAGING_REPOSITORY_URL }}
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml
