@@ -3,6 +3,11 @@ on: workflow_dispatch
 jobs:
   porter-deploy:
     runs-on: ubuntu-latest
+    env:
+      PORTER_HOST: https://dashboard.getporter.dev
+      PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
+      PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
+      PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v2.3.4
@@ -30,12 +35,19 @@ jobs:
       run: |
         sudo apt update && sudo apt install -y gettext
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
-    - name: Deploy to Porter
-      uses: porter-dev/porter-cli-action@v0.1.0
-      with:
-        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
-      env:
-        PORTER_HOST: https://dashboard.getporter.dev
-        PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
-        PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
-        PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}
+    - name: Install Porter
+      run: /bin/bash -c "$(curl -fsSL https://install.porter.run)"
+    - name: test
+      run: echo "$(porter get main-api)"
+    # - name: Check if preview exists
+    #   id: preview_exists
+    #   run: echo "##[set-output name=exists;]"$()
+    # - name: Deploy to Porter
+    #   uses: porter-dev/porter-cli-action@v0.1.0
+    #   with:
+    #     command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+    #   env:
+    #     PORTER_HOST: https://dashboard.getporter.dev
+    #     PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
+    #     PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
+    #     PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}
