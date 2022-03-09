@@ -42,6 +42,8 @@ jobs:
     - name: Check if preview exists
       id: preview_exists
       run: echo "::set-output name=exists ::$(porter get ${{ steps.extract_branch.outputs.branch }}-api && echo 'true' || echo 'false')"
+    - name: test
+      run: echo ${{ steps.preview_exists.outputs.exists }}
     - name: Update Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'true' }}
       run: echo 'update'
