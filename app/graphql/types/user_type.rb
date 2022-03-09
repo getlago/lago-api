@@ -7,6 +7,6 @@ module Types
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-    field :organization, Types::OrganizationType
+    field :organizations, [Types::OrganizationType]
   end
 end
