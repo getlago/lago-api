@@ -37,8 +37,8 @@ jobs:
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
     - name: Install Porter
       run: |
-      cd /tmp
-      /bin/bash -c "$(curl -fsSL https://install.porter.run/)"
+        cd /tmp
+        /bin/bash -c "$(curl -fsSL https://install.porter.run/)"
     - name: test
       run: echo "$(porter get main-api)"
     # - name: Check if preview exists
