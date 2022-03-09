@@ -39,11 +39,15 @@ jobs:
       run: |
         cd /tmp
         /bin/bash -c "$(curl -fsSL https://install.porter.run/)"
-    - name: test
-      run: echo "$(porter get main-api)"
-    # - name: Check if preview exists
-    #   id: preview_exists
-    #   run: echo "##[set-output name=exists;]"$()
+    - name: Check if preview exists
+      id: preview_exists
+      run: echo "::set-output name=exists ::$(porter get ${{ steps.extract_branch.outputs.branch }}-api && echo 'true' || echo 'false')"
+    - name: Update Porter app
+      if: ${{ steps.preview_exists.outputs.exists == "true"}}
+      run: echo 'update'
+    - name: Create Porter app
+      if: ${{ steps.preview_exists.outputs.exists == "false" }}
+      run: echo 'create'
     # - name: Deploy to Porter
     #   uses: porter-dev/porter-cli-action@v0.1.0
     #   with:
