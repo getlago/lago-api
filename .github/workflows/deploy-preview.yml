@@ -11,9 +11,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2.3.4
-    - name: Set Github tag
-      id: vars
-      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+    - name: Set current folder
+      id: current_folder
+      run: echo "::set-output name=folder::$(pwd)"
     - name: Extract branch name
       shell: bash
       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
@@ -39,17 +39,16 @@ jobs:
       run: |
         cd /tmp
         /bin/bash -c "$(curl -fsSL https://install.porter.run/)"
+    - name: Get back to working directory
+      run: cd ${{ steps.current_folder.outputs.folder }}
     - name: Check if preview exists
       id: preview_exists
       run: echo "::set-output name=exists::$(porter get ${{ steps.extract_branch.outputs.branch }}-api &> /dev/null && echo 'true' || echo 'false')"
     - name: Update Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'true' }}
-      uses: porter-dev/porter-update-action@v0.1.0
+      uses: porter-dev/porter-cli-action@v0.1.0
       with:
-        app: ${{ steps.extract_branch.outputs.branch }}-api
-        cluster: ${{ secrets.PORTER_CLUSTER }}
-        project: ${{ secrets.PORTER_PROJECT }}
-        token: ${{ secrets.PORTER_TOKEN_2643 }}
+        command: create update --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml
     - name: Create Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'false' }}
       uses: porter-dev/porter-cli-action@v0.1.0
