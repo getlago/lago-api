@@ -43,10 +43,10 @@ jobs:
       id: preview_exists
       run: echo "::set-output name=exists ::$(porter get ${{ steps.extract_branch.outputs.branch }}-api && echo 'true' || echo 'false')"
     - name: Update Porter app
-      if: ${{ steps.preview_exists.outputs.exists == "true"}}
+      if: ${{ steps.preview_exists.outputs.exists == 'true' }}
       run: echo 'update'
     - name: Create Porter app
-      if: ${{ steps.preview_exists.outputs.exists == "false" }}
+      if: ${{ steps.preview_exists.outputs.exists == 'false' }}
       run: echo 'create'
     # - name: Deploy to Porter
     #   uses: porter-dev/porter-cli-action@v0.1.0
