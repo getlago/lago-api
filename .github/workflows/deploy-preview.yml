@@ -44,9 +44,12 @@ jobs:
       run: echo "::set-output name=exists::$(porter get ${{ steps.extract_branch.outputs.branch }}-api &> /dev/null && echo 'true' || echo 'false')"
     - name: Update Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'true' }}
-      uses: porter-dev/porter-cli-action@v0.1.0
+      uses: porter-dev/porter-update-action@v0.1.0
       with:
-        command: update --app ${{ steps.extract_branch.outputs.branch }}-api --values ./porter/env_values.yaml
+        app: ${{ steps.extract_branch.outputs.branch }}-api
+        cluster: ${{ secrets.PORTER_CLUSTER }}
+        project: ${{ secrets.PORTER_PROJECT }}
+        token: ${{ secrets.PORTER_TOKEN_2643 }}
     - name: Create Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'false' }}
       uses: porter-dev/porter-cli-action@v0.1.0
