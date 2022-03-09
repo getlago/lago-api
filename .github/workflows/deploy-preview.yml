@@ -41,7 +41,7 @@ jobs:
         /bin/bash -c "$(curl -fsSL https://install.porter.run/)"
     - name: Check if preview exists
       id: preview_exists
-      run: echo "::set-output name=exists ::$(porter get ${{ steps.extract_branch.outputs.branch }}-api && echo 'true' || echo 'false')"
+      run: echo "::set-output name=exists::$(porter get ${{ steps.extract_branch.outputs.branch }}-api &> /dev/null && echo 'true' || echo 'false')"
     - name: test
       run: echo ${{ steps.preview_exists.outputs.exists }}
     - name: Update Porter app
