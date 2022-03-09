@@ -24,7 +24,7 @@ group :development, :test do
   gem 'rspec-rails'
 end
 
-group :development do
+group :development, :staging do
   gem 'coffee-rails'
   gem 'graphiql-rails', git: 'https://github.com/rmosolgo/graphiql-rails.git'
   gem 'sass-rails'
