@@ -8,7 +8,6 @@ jobs:
       PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
       PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
       PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}
-      KUBE_CONFIG_DATA: ${{ secrets.KUBE_STAGING_DATA }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v2.3.4
@@ -43,7 +42,7 @@ jobs:
             --progress-bar \
             --location \
             --remote-name
-        chmod +x kubectl
+        sudo chmod +x kubectl
         sudo mv kubectl /usr/local/bin/
         echo ${{ secrets.KUBE_STAGING_CONFIG }} | base64 --decode > kubeconfig.yaml
     - name: Get pod name
