@@ -42,20 +42,13 @@ jobs:
     - name: Check if preview exists
       id: preview_exists
       run: echo "::set-output name=exists::$(porter get ${{ steps.extract_branch.outputs.branch }}-api &> /dev/null && echo 'true' || echo 'false')"
-    - name: test
-      run: echo ${{ steps.preview_exists.outputs.exists }}
     - name: Update Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'true' }}
-      run: echo 'update'
+      uses: porter-dev/porter-cli-action@v0.1.0
+      with:
+        command: update --app ${{ steps.extract_branch.outputs.branch }}-api -source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
     - name: Create Porter app
       if: ${{ steps.preview_exists.outputs.exists == 'false' }}
-      run: echo 'create'
-    # - name: Deploy to Porter
-    #   uses: porter-dev/porter-cli-action@v0.1.0
-    #   with:
-    #     command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
-    #   env:
-    #     PORTER_HOST: https://dashboard.getporter.dev
-    #     PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
-    #     PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
-    #     PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}
+      uses: porter-dev/porter-cli-action@v0.1.0
+      with:
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
