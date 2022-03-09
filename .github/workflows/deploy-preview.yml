@@ -8,6 +8,7 @@ jobs:
       PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
       PORTER_PROJECT: ${{ secrets.PORTER_PROJECT }}
       PORTER_TOKEN: ${{ secrets.PORTER_TOKEN_2643 }}
+      KUBE_CONFIG_DATA: ${{ secrets.KUBE_STAGING_DATA }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v2.3.4
@@ -35,22 +36,24 @@ jobs:
       run: |
         sudo apt update && sudo apt install -y gettext
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
-    - name: Install Porter
+    - name: Install and configure kubectl
       run: |
-        cd /tmp
-        /bin/bash -c "$(curl -fsSL https://install.porter.run/)"
-    - name: Get back to working directory
-      run: cd ${{ steps.current_folder.outputs.folder }}
-    - name: Check if preview exists
-      id: preview_exists
-      run: echo "::set-output name=exists::$(porter get ${{ steps.extract_branch.outputs.branch }}-api &> /dev/null && echo 'true' || echo 'false')"
-    - name: Update Porter app
-      if: ${{ steps.preview_exists.outputs.exists == 'true' }}
-      uses: porter-dev/porter-cli-action@v0.1.0
-      with:
-        command: update --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml
+        VERSION=$(curl --silent https://storage.googleapis.com/kubernetes-release/release/stable.txt)
+        curl https://storage.googleapis.com/kubernetes-release/release/$VERSION/bin/linux/amd64/kubectl \
+            --progress-bar \
+            --location \
+            --remote-name
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+        echo ${{ secrets.KUBECONFIG }} | base64 --decode > kubeconfig.yaml
+    - name: Get pod name
+      id: pod_name
+      run: echo "::set-output name=pod_name::$(kubectl get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
+    - name: Delete Porter app
+      if: ${{ steps.pod_name.outputs.pod_name != '' }}
+      run: |
+        kubectl delete pod ${{ steps.pod_name.outputs.pod_name }}
     - name: Create Porter app
-      if: ${{ steps.preview_exists.outputs.exists == 'false' }}
       uses: porter-dev/porter-cli-action@v0.1.0
       with:
-        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
