@@ -15,6 +15,8 @@ module AuthenticableUser
 
   def decoded_token
     @decoded_token ||= JWT.decode(token, Rails.application.secrets.secret_key_base, true, decode_options)
+  rescue JWT::DecodeError => e
+    raise e if e.is_a?(JWT::ExpiredSignature) || Rails.env.development?
   end
 
   def valid_token?
@@ -29,5 +31,9 @@ module AuthenticableUser
     {
       algorithm: 'HS256'
     }
+  end
+
+  def render_expired_token_error
+    render_graphql_error(code: 'expired_jwt_token', status: 401)
   end
 end

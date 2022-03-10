@@ -14,8 +14,11 @@ class GraphqlController < ApplicationController
     }
     result = LagoApiSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
     render json: result
+  rescue JWT::ExpiredSignature
+    render_expired_token_error
   rescue StandardError => e
     raise e unless Rails.env.development?
+
     handle_error_in_development(e)
   end
 
@@ -46,5 +49,17 @@ class GraphqlController < ApplicationController
     logger.error e.backtrace.join("\n")
 
     render json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: 500
+  end
+
+  def render_graphql_error(code:, status:, message: nil)
+    render json: {
+      data: {},
+      errors: [
+        {
+          message: message || code,
+          extensions: { status: status, code: code }
+        }
+      ]
+    }
   end
 end
