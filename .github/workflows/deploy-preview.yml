@@ -33,8 +33,10 @@ jobs:
         BRANCH: ${{ steps.extract_branch.outputs.branch }}
         DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
       run: |
-        sudo apt update && sudo apt install -y gettext base64
+        sudo apt update && sudo apt install -y gettext
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
+    - name: test
+      run: base64
     - name: Install and configure kubectl
       run: |
         VERSION=$(curl --silent https://storage.googleapis.com/kubernetes-release/release/stable.txt)
@@ -48,11 +50,11 @@ jobs:
     - name: Get pod name
       id: pod_name
       run: echo "::set-output name=pod_name::$(kubectl get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
-    - name: Delete Porter app
-      if: ${{ steps.pod_name.outputs.pod_name != '' }}
-      run: |
-        kubectl delete pod ${{ steps.pod_name.outputs.pod_name }}
-    - name: Create Porter app
-      uses: porter-dev/porter-cli-action@v0.1.0
-      with:
-        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+    # - name: Delete Porter app
+    #   if: ${{ steps.pod_name.outputs.pod_name != '' }}
+    #   run: |
+    #     kubectl delete pod ${{ steps.pod_name.outputs.pod_name }}
+    # - name: Create Porter app
+    #   uses: porter-dev/porter-cli-action@v0.1.0
+    #   with:
+    #     command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
