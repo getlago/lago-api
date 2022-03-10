@@ -45,7 +45,7 @@ jobs:
         chmod +x kubectl
         mv kubectl /usr/local/bin/
     - name: Configure kubectl
-      run: echo ${{ secrets.KUBE_STAGING_CONFIG }} | base64 -d > kubeconfig.yaml
+      run: echo "${{ secrets.KUBE_STAGING_CONFIG }}" | base64 -d > kubeconfig.yaml
     - name: Get pod name
       id: pod_name
       run: echo "::set-output name=pod_name::$(kubectl get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
