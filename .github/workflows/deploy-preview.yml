@@ -33,9 +33,9 @@ jobs:
         BRANCH: ${{ steps.extract_branch.outputs.branch }}
         DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
       run: |
-        sudo apt update && sudo apt install -y gettext
+        sudo apt update && sudo apt install ù-y gettext
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
-    - name: Install and configure kubectl
+    - name: Install kubectl
       run: |
         VERSION=$(curl --silent https://storage.googleapis.com/kubernetes-release/release/stable.txt)
         curl https://storage.googleapis.com/kubernetes-release/release/$VERSION/bin/linux/amd64/kubectl \
@@ -44,7 +44,8 @@ jobs:
             --remote-name
         chmod +x kubectl
         mv kubectl /usr/local/bin/
-        echo ${{ secrets.KUBE_STAGING_CONFIG }}
+    - name: Configure kubectl
+      run: echo ${{ secrets.KUBE_STAGING_CONFIG }} | base64 -d > kubeconfig.yaml
     - name: Get pod name
       id: pod_name
       run: echo "::set-output name=pod_name::$(kubectl get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
