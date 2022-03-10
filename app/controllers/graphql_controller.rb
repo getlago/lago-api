@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class GraphqlController < ApplicationController
   include AuthenticableUser
   # If accessing from outside this domain, nullify the session
