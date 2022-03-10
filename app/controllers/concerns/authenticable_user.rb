@@ -32,8 +32,4 @@ module AuthenticableUser
       algorithm: 'HS256'
     }
   end
-
-  def render_expired_token_error
-    render_graphql_error(code: 'expired_jwt_token', status: 401)
-  end
 end

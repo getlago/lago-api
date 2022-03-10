@@ -15,7 +15,7 @@ class GraphqlController < ApplicationController
     result = LagoApiSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
     render json: result
   rescue JWT::ExpiredSignature
-    render_expired_token_error
+    render_graphql_error(code: 'expired_jwt_token', status: 401)
   rescue StandardError => e
     raise e unless Rails.env.development?
 
