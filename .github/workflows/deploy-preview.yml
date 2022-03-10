@@ -33,7 +33,7 @@ jobs:
         BRANCH: ${{ steps.extract_branch.outputs.branch }}
         DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
       run: |
-        sudo apt update && sudo apt install ù-y gettext
+        sudo apt update && sudo apt install -y gettext
         envsubst < ./porter/values.yaml > ./porter/env_values.yaml
     - name: Install kubectl
       run: |
