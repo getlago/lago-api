@@ -15,6 +15,8 @@ module AuthenticableUser
 
   def decoded_token
     @decoded_token ||= JWT.decode(token, Rails.application.secrets.secret_key_base, true, decode_options)
+  rescue JWT::DecodeError => e
+    raise e if e.is_a?(JWT::ExpiredSignature) || Rails.env.development?
   end
 
   def valid_token?
