@@ -3,6 +3,10 @@
 module AuthenticableUser
   extend ActiveSupport::Concern
 
+  included do
+    before_action :renew_token
+  end
+
   private
 
   def current_user
@@ -31,5 +35,12 @@ module AuthenticableUser
     {
       algorithm: 'HS256'
     }
+  end
+
+  def renew_token
+    return unless current_user
+
+    result = UsersService.new.new_token(current_user)
+    response.set_header('x-lago-token', result.token) if result.success?
   end
 end
