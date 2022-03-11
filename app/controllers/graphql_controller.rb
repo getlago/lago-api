@@ -2,6 +2,11 @@
 
 class GraphqlController < ApplicationController
   include AuthenticableUser
+
+  rescue_from JWT::ExpiredSignature do
+    render_graphql_error(code: 'expired_jwt_token', status: 401)
+  end
+
   # If accessing from outside this domain, nullify the session
   # This allows for outside API access while preventing CSRF attacks,
   # but you'll have to authenticate your user separately
