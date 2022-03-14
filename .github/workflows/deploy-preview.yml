@@ -50,11 +50,11 @@ jobs:
       run: echo "::set-output name=pod_name::$(kubectl --kubeconfig ./kubeconfig.yaml get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
     - name: test
       run: echo ${{ steps.pod_name.outputs.pod_name }}
-    # - name: Delete Porter app
-    #   if: ${{ steps.pod_name.outputs.pod_name != '' }}
-    #   run: |
-    #     kubectl delete pod ${{ steps.pod_name.outputs.pod_name }}
-    # - name: Create Porter app
-    #   uses: porter-dev/porter-cli-action@v0.1.0
-    #   with:
-    #     command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+    - name: Delete Porter app
+      if: ${{ steps.pod_name.outputs.pod_name != '' }}
+      run: |
+        kubectl delete pod ${{ steps.pod_name.outputs.pod_name }}
+    - name: Create Porter app
+      uses: porter-dev/porter-cli-action@v0.1.0
+      with:
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
