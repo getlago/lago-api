@@ -6,6 +6,10 @@ Rails.application.routes.draw do
   end
 
   post '/graphql', to: 'graphql#execute'
+
+  # Health Check status
+  get '/health', to: 'application#health'
+
   # Defines the root path route ("/")
   # root "articles#index"
 end
