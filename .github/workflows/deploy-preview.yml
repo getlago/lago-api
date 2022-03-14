@@ -54,7 +54,7 @@ jobs:
         sudo apt-get install helm
     - name: Get Helm deployment
       id: helm_deployment
-      run: echo "::set-output name=deployment::$(helm --kubeconfig ./kubeconfig.yaml list -f ${{ steps.extract_branch.outputs.branch }}-api -o=json | jq '.[0].name'"
+      run: echo "::set-output name=deployment::$(helm --kubeconfig ./kubeconfig.yaml list -f ${{ steps.extract_branch.outputs.branch }}-api -o=json | jq '.[0].name')"
     - name: test
       run: echo ${{ steps.helm_deployment.outputs.deployment }}
     - name: Delete Porter app
