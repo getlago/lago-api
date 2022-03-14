@@ -1,6 +1,33 @@
 name: Deploy Preview to Staging
 on: workflow_dispatch
 jobs:
+  build-image:
+    name: "Build Staging Image"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build, tag and push image to Amazon ECR
+        env:
+          RAILS_ENV: staging
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: lago-api-staging
+          IMAGE_TAG: ${{ steps.extract_branch.outputs.branch }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
   porter-deploy:
     runs-on: ubuntu-latest
     env:
@@ -27,6 +54,15 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
+    - name: Build, tag and push image to Amazon ECR
+      env:
+        RAILS_ENV: staging
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: lago-api-staging
+        IMAGE_TAG: ${{ steps.extract_branch.outputs.branch }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     - name: Replace Variables in values.yaml
       env:
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/lago-api-staging
@@ -55,8 +91,6 @@ jobs:
     - name: Get Helm deployment
       id: helm_deployment
       run: echo "::set-output name=deployment::$(helm --kubeconfig ./kubeconfig.yaml list -f ${{ steps.extract_branch.outputs.branch }}-api -o=json | jq '.[0].name')"
-    - name: test
-      run: echo ${{ steps.helm_deployment.outputs.deployment }}
     - name: Delete Porter app
       if: ${{ steps.helm_deployment.outputs.deployment != 'null' }}
       run: |
