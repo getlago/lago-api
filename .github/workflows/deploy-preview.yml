@@ -45,11 +45,9 @@ jobs:
         chmod +x kubectl
         mv kubectl /usr/local/bin/
         echo "${{ secrets.KUBE_STAGING_CONFIG }}" | base64 -d > kubeconfig.yaml
-    - name: test
-      run: cat ~/.aws/credentials
-    # - name: Get pod name
-    #   id: pod_name
-    #   run: echo "::set-output name=pod_name::$(kubectl --kubeconfig ./kubeconfig.yaml get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
+    - name: Get pod name
+      id: pod_name
+      run: echo "::set-output name=pod_name::$(kubectl --kubeconfig ./kubeconfig.yaml get pod -l app.kubernetes.io/instance=${{ steps.extract_branch.outputs.branch }}-api -o=jsonpath='{range .items[*]}{.metadata.name}')"
     # - name: Delete Porter app
     #   if: ${{ steps.pod_name.outputs.pod_name != '' }}
     #   run: |
