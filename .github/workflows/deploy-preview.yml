@@ -53,7 +53,7 @@ jobs:
     - name: Delete Porter app
       if: ${{ steps.pod_name.outputs.pod_name != '' }}
       run: |
-        kubectl delete pod ${{ steps.pod_name.outputs.pod_name }}
+        kubectl --kubeconfig ./kubeconfig.yaml delete pod ${{ steps.pod_name.outputs.pod_name }}
     - name: Create Porter app
       uses: porter-dev/porter-cli-action@v0.1.0
       with:
