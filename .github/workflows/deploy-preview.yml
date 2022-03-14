@@ -58,7 +58,7 @@ jobs:
     - name: test
       run: echo ${{ steps.helm_deployment.outputs.deployment }}
     - name: Delete Porter app
-      if: ${{ steps.helm_deployment.outputs.deployment != "null" }}
+      if: ${{ steps.helm_deployment.outputs.deployment != 'null' }}
       run: |
         helm --kubeconfig ./kubeconfig.yaml uninstall ${{ steps.extract_branch.outputs.branch }}-api
     - name: Create Porter app
