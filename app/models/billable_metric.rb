@@ -16,7 +16,7 @@ class BillableMetric < ApplicationRecord
   ].freeze
 
   enum billable_period: BILLABLE_PERIODS
-  enum aggregation_type: AGGREGATION_TYPES
+  enum aggregation_type: AGGREGATION_TYPES, _suffix: :agg
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
