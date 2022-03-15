@@ -3,6 +3,7 @@
 module Types
   module BillableMetrics
     class BillableMetricObject < Types::BaseObject
+      field :id, ID, null: false
       field :organization, Types::OrganizationType
 
       field :name, String, null: false
@@ -12,6 +13,9 @@ module Types
       field :pro_rata, GraphQL::Types::Boolean, null: false
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
       field :properties, GraphQL::Types::JSON
+
+      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     end
   end
 end

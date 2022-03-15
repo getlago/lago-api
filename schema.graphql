@@ -1,19 +1,22 @@
 enum AggregationTypeEnum {
-  count
-  max_count
-  sum
-  unique_count
+  count_agg
+  max_count_agg
+  sum_agg
+  unique_count_agg
 }
 
 type BillableMetricObject {
   aggregationType: AggregationTypeEnum!
   billablePeriod: BillablePeriodEnum!
   code: String!
+  createdAt: ISO8601DateTime!
   description: String
+  id: ID!
   name: String!
   organization: Organization
   proRata: Boolean!
   properties: JSON
+  updatedAt: ISO8601DateTime!
 }
 
 enum BillablePeriodEnum {

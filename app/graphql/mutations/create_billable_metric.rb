@@ -2,6 +2,8 @@
 
 module Mutations
   class CreateBillableMetric < BaseMutation
+    include AuthenticableApiUser
+
     argument :organization_id, String, required: true
     argument :name, String, required: true
     argument :code, String, required: true
@@ -14,9 +16,9 @@ module Mutations
     type Types::BillableMetrics::BillableMetricObject
 
     def resolve(**args)
-      result = BillableMetricsService.new.create(**args)
+      result = BillableMetricsService.new(context[:current_user]).create(**args)
 
-      result.success? ? result : execution_error(code: result.error_code, message: result.error)
+      result.success? ? result.billable_metric : execution_error(code: result.error_code, message: result.error)
     end
   end
 end

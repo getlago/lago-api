@@ -20,10 +20,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_15_092929) do
     t.string "name", null: false
     t.string "code", null: false
     t.string "description"
-    t.string "billable_period", null: false
+    t.integer "billable_period", null: false
     t.boolean "pro_rata", default: false, null: false
     t.jsonb "properties", default: {}
-    t.string "aggregation_type", null: false
+    t.integer "aggregation_type", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true

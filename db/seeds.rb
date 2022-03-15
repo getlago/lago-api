@@ -9,4 +9,4 @@
 user = User.find_or_initialize_by(email: 'gavin@hooli.com')
 user.update(password: 'ILoveLago') unless user.password_digest.present?
 orga = Organization.find_or_create_by(name: 'Hooli')
-Membership.find_or_create_by(user: user, organization: orga, role: 'admin')
+Membership.find_or_create_by(user: user, organization: orga, role: :admin)

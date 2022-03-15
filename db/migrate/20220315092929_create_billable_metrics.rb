@@ -6,10 +6,10 @@ class CreateBillableMetrics < ActiveRecord::Migration[7.0]
       t.string :name, null: false
       t.string :code, null: false
       t.string :description
-      t.string :billable_period, null: false
+      t.integer :billable_period, null: false
       t.boolean :pro_rata, default: false, null: false
       t.jsonb :properties, default: {}
-      t.string :aggregation_type, null: false
+      t.integer :aggregation_type, null: false
 
       t.timestamps
 

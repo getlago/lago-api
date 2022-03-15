@@ -9,16 +9,16 @@ class BillableMetric < ApplicationRecord
   ].freeze
 
   AGGREGATION_TYPES = %i[
-    count
-    sum
-    max_count
-    unique_count
+    count_agg
+    sum_agg
+    max_count_agg
+    unique_count_agg
   ].freeze
 
   enum billable_period: BILLABLE_PERIODS
-  enum aggregation_type: AGGREGATION_TYPES, _suffix: :agg
+  enum aggregation_type: AGGREGATION_TYPES
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
-  validates :pro_rata, presence: true, inclusion: { in: [true, false] }
+  validates :pro_rata, inclusion: [true, false]
 end

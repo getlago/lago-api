@@ -19,25 +19,25 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "count",
+              "name": "count_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "sum",
+              "name": "sum_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "max_count",
+              "name": "max_count_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "unique_count",
+              "name": "unique_count_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -108,12 +108,48 @@
               ]
             },
             {
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "description",
               "description": null,
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -178,6 +214,24 @@
                 "kind": "SCALAR",
                 "name": "JSON",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "updatedAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
