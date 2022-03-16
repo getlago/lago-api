@@ -17,6 +17,7 @@ container:
     normal:
       RAILS_ENV: staging
       RAILS_MASTER_KEY: PORTERSECRET_api-staging.v2
+      RAILS_LOG_TO_STDOUT: true
       DATABASE_URL: ${DATABASE_URL}
   lifecycle:
     postStart: null

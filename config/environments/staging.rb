@@ -1,6 +1,11 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Used for GraphiQL
+  config.middleware.use ActionDispatch::Cookies
+  config.middleware.use ActionDispatch::Session::CookieStore, key: '_lago_staging'
+  config.middleware.use Rack::MethodOverride
+
   config.cache_classes = true
   config.eager_load = true
   config.consider_all_requests_local = false
