@@ -8,7 +8,8 @@
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
     # NOTE: use env related constant instead
-    origins 'app.lago.dev'
+    origins 'app.lago.dev' if Rails.env.development?
+    origins /[a-z0-9-]+\.staging\.getlago\.com/ if Rails.env.staging?
 
     resource '*',
       headers: :any,
