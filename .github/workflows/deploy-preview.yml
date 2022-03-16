@@ -30,6 +30,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
   porter-deploy:
     runs-on: ubuntu-latest
+    needs: [build-image]
     env:
       PORTER_HOST: https://dashboard.getporter.dev
       PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
