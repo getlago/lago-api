@@ -26,8 +26,9 @@ class BaseService
     attr_accessor :failure
   end
 
-  def initialize
+  def initialize(current_user = nil)
     @result = Result.new
+    result.user = current_user
   end
 
   private
