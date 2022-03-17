@@ -2,6 +2,7 @@ module Types
   class ErrorEnum < BaseEnum
     value 'internal_error'
     value 'unauthorized'
+    value 'forbidden'
     value 'token_encoding_error'
     value 'expired_jwt_token'
     value 'not_organization_member'
