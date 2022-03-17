@@ -124,7 +124,7 @@ type Query {
   """
   Query billable metrics of an organization
   """
-  billableMetrics(limit: Int, page: Int): BillableMetricObjectCollection
+  billableMetrics(limit: Int, page: Int): BillableMetricObjectCollection!
   currentUser: User!
 }
 

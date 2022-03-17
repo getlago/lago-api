@@ -9,15 +9,6 @@ module Types
 
     field :current_user, resolver: Resolvers::CurrentUserResolver
 
-    field(
-      :billable_metrics,
-      resolver: Resolvers::BillableMetricsResolver,
-      null: true
-    ) do
-      description 'Query billable metrics of an organization'
-
-      argument :page, Integer, required: false
-      argument :limit, Integer, required: false
-    end
+    field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
   end
 end

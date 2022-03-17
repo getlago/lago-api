@@ -1046,9 +1046,13 @@
               "name": "billableMetrics",
               "description": "Query billable metrics of an organization",
               "type": {
-                "kind": "OBJECT",
-                "name": "BillableMetricObjectCollection",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "BillableMetricObjectCollection",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,

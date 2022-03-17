@@ -5,6 +5,11 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    description 'Query billable metrics of an organization'
+
+    argument :page, Integer, required: false
+    argument :limit, Integer, required: false
+
     type Types::BillableMetrics::BillableMetricObject.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
