@@ -15,6 +15,7 @@ jobs:
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
