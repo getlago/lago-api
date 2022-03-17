@@ -11,10 +11,13 @@ module Types
 
     field(
       :billable_metrics,
-      Types::BillableMetrics::BillableMetricObject.connection_type,
-      resolver: Resolvers::BillableMetricsResolver
+      resolver: Resolvers::BillableMetricsResolver,
+      null: true
     ) do
       description 'Query billable metrics of an organization'
+
+      argument :page, Integer, required: false
+      argument :limit, Integer, required: false
     end
   end
 end

@@ -9,7 +9,7 @@ module RequiredOrganization
 
   private
 
-  def ready?
+  def ready?(*)
     raise missing_organization_error unless current_organization
 
     true

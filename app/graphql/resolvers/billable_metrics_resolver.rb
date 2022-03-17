@@ -5,10 +5,13 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    type [Types::BillableMetrics::BillableMetricObject], null: false
+    type Types::BillableMetrics::BillableMetricObject.collection_type, null: false
 
-    def resolve
-      current_organization.billable_metrics
+    def resolve(page: nil, limit: nil)
+      current_organization
+        .billable_metrics
+        .page(page)
+        .per(limit)
     end
   end
 end
