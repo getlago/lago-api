@@ -31,6 +31,8 @@ jobs:
   porter-deploy:
     runs-on: ubuntu-latest
     needs: [build-image]
+    container:
+      image: getlago/deploy-staging
     env:
       PORTER_HOST: https://dashboard.getporter.dev
       PORTER_CLUSTER: ${{ secrets.PORTER_CLUSTER }}
