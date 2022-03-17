@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ScopedToOrganization
+module OrganizationHeader
   def current_organization
     return unless organization_header
 

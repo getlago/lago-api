@@ -10,12 +10,20 @@ module RequiredOrganization
   private
 
   def ready?(*)
-    raise missing_organization_error unless current_organization
+    raise organization_error('Missing organization id') unless current_organization
+    raise organization_error('Not in organization') unless organization_member?
 
     true
   end
 
-  def missing_organization_error
-    GraphQL::ExecutionError.new('Missing organization', extensions: { status: :forbidden, code: 'forbidden' })
+  def organization_error(message)
+    GraphQL::ExecutionError.new(message, extensions: { status: :forbidden, code: 'forbidden' })
+  end
+
+  def organization_member?
+    return false unless context[:current_user]
+    return false unless current_organization
+
+    context[:current_user].organizations.exists?(id: current_organization.id)
   end
 end

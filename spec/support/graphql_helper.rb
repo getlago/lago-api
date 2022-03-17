@@ -7,9 +7,13 @@ module GraphQLHelper
     end
   end
 
-  def execute_graphql(current_user: nil, query: nil, **kwargs)
+  def execute_graphql(current_user: nil, query: nil, current_organization: nil, **kwargs)
     args = kwargs.merge(
-      context: { controller: controller, current_user: current_user }
+      context: {
+        controller: controller,
+        current_user: current_user,
+        current_organization: current_organization
+      }
     )
 
     LagoApiSchema.execute(
