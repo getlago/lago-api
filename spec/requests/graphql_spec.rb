@@ -48,7 +48,7 @@ RSpec.describe GraphqlController, type: :request do
             sub: user.id,
             exp: Time.now.to_i
           },
-          Rails.application.secrets.secret_key_base, 'HS256'
+          Rails.application.credentials.config[:secret_key_base], 'HS256'
         )
       end
 
