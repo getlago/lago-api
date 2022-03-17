@@ -8,5 +8,13 @@ module Types
     include GraphQL::Types::Relay::HasNodesField
 
     field :current_user, resolver: Resolvers::CurrentUserResolver
+
+    field(
+      :billable_metrics,
+      Types::BillableMetrics::BillableMetricObject.connection_type,
+      resolver: Resolvers::BillableMetricsResolver
+    ) do
+      description 'Query billable metrics of an organization'
+    end
   end
 end
