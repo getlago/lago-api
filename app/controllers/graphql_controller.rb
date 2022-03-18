@@ -2,6 +2,7 @@
 
 class GraphqlController < ApplicationController
   include AuthenticableUser
+  include OrganizationHeader
 
   rescue_from JWT::ExpiredSignature do
     render_graphql_error(code: 'expired_jwt_token', status: 401)
@@ -17,7 +18,8 @@ class GraphqlController < ApplicationController
     query = params[:query]
     operation_name = params[:operationName]
     context = {
-      current_user: current_user
+      current_user: current_user,
+      current_organization: current_organization
     }
     result = LagoApiSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
     render json: result

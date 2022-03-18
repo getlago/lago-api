@@ -48,4 +48,6 @@ class LagoApiSchema < GraphQL::Schema
     full_global_id = "gid://#{GlobalID.app}/#{id}"
     GlobalID::Locator.locate(full_global_id)
   end
+
+  default_max_page_size 25
 end

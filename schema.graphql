@@ -19,9 +19,21 @@ type BillableMetricObject {
   updatedAt: ISO8601DateTime!
 }
 
+type BillableMetricObjectCollection {
+  collection: [BillableMetricObject!]!
+  metadata: CollectionMetadata!
+}
+
 enum BillablePeriodEnum {
   one_shot
   recurring
+}
+
+type CollectionMetadata {
+  currentPage: Int!
+  limitValue: Int!
+  totalCount: Int!
+  totalPages: Int!
 }
 
 """
@@ -109,6 +121,10 @@ type Organization {
 }
 
 type Query {
+  """
+  Query billable metrics of an organization
+  """
+  billableMetrics(limit: Int, page: Int): BillableMetricObjectCollection!
   currentUser: User!
 }
 

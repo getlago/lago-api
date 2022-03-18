@@ -4,7 +4,8 @@ require 'rails_helper'
 
 RSpec.describe GraphqlController, type: :request do
   describe 'POST /graphql' do
-    let(:user) { create(:user) }
+    let(:membership) { create(:membership) }
+    let(:user) { membership.user }
     let(:mutation) do
       <<~GQL
         mutation($input: LoginUserInput!) {
@@ -35,7 +36,7 @@ RSpec.describe GraphqlController, type: :request do
       json = JSON.parse(response.body)
       expect(json['data']['loginUser']['token']).to be_present
       expect(json['data']['loginUser']['user']['id']).to eq(user.id)
-      expect(json['data']['loginUser']['user']['organizations']).to eq([])
+      expect(json['data']['loginUser']['user']['organizations'].first['id']).to eq(membership.organization_id)
     end
 
     context 'with JWT token' do
@@ -52,9 +53,27 @@ RSpec.describe GraphqlController, type: :request do
         )
       end
 
-      it 'retrieves the current user and rerfeshes the token' do
+      it 'retrieves the current user and refreshes the token' do
         post '/graphql', headers: {
           'Authorization' => "Bearer #{token}"
+        }, params: {
+          query: mutation,
+          variables: {
+            input: {
+              email: user.email,
+              password: 'ILoveLago'
+            }
+          }
+        }
+
+        expect(response.status).to be(200)
+        expect(response.headers['x-lago-token']).to be_present
+      end
+
+      it 'retrieves the current organization' do
+        post '/graphql', headers: {
+          'Authorization' => "Bearer #{token}",
+          'x-lago-organization' => membership.organization
         }, params: {
           query: mutation,
           variables: {

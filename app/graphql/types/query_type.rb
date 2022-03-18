@@ -8,5 +8,7 @@ module Types
     include GraphQL::Types::Relay::HasNodesField
 
     field :current_user, resolver: Resolvers::CurrentUserResolver
+
+    field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
   end
 end
