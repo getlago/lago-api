@@ -28,18 +28,21 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+      - name: Docker tag
+        id: docker_tag
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: lago-api-staging
+          IMAGE_TAG: ${{ steps.extract_branch.outputs.branch }}
+        run: echo "##[set-output name=tag;]$(echo $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG)"
       - name: Build and push
         uses: docker/build-push-action@v2
         env:
           RAILS_ENV: staging
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: lago-api-staging
-          IMAGE_TAG: ${{ steps.extract_branch.outputs.branch }}
         with:
           context: .
           push: true
-          tags: |
-            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          tags: ${{ steps.docker_tag.outputs.tag }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
       - name: Move cache
