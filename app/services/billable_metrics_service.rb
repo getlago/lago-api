@@ -42,6 +42,17 @@ class BillableMetricsService < BaseService
     result
   end
 
+  def destroy(id)
+    metric = BillableMetric.find_by(id: id)
+    return result.fail!('not_found') unless metric
+    return result.fail!('not_organization_member') unless organization_member?(metric.organization_id)
+
+    metric.destroy!
+
+    result.billable_metric = metric
+    result
+  end
+
   private
 
   def organization_member?(organization_id)
