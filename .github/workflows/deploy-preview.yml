@@ -41,7 +41,7 @@ jobs:
           tags: |
             $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type-local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
