@@ -6,10 +6,11 @@ module Mutations
       include AuthenticableApiUser
 
       description 'Creates a new product'
+      graphql_name 'CreateProduct'
 
       argument :organization_id, String, required: true
       argument :name, String, required: true
-      argument :billable_metrics_ids, [String]
+      argument :billable_metric_ids, [String]
 
       type Types::Products::Object
 
