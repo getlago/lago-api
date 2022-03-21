@@ -2,34 +2,35 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::CreateBillableMetric, type: :graphql do
+RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
   let(:membership) { create(:membership) }
+  let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:mutation) do
-    <<~GQL
-      mutation($input: CreateBillableMetricInput!) {
-        createBillableMetric(input: $input) {
+    <<-GQL
+      mutation($input: UpdateBillableMetricInput!) {
+        updateBillableMetric(input: $input) {
           id,
           name,
           code,
           aggregationType,
           billablePeriod,
-          proRata
+          proRata,
           organization { id }
         }
       }
     GQL
   end
 
-  it 'creates a billable metric' do
+  it 'updates a billable metric' do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
       variables: {
         input: {
+          id: billable_metric.id,
           name: 'New Metric',
           code: 'new_metric',
           description: 'New metric description',
-          organizationId: membership.organization_id,
           aggregationType: 'count_agg',
           billablePeriod: 'recurring',
           proRata: false,
@@ -38,7 +39,7 @@ RSpec.describe Mutations::CreateBillableMetric, type: :graphql do
       }
     )
 
-    result_data = result['data']['createBillableMetric']
+    result_data = result['data']['updateBillableMetric']
 
     aggregate_failures do
       expect(result_data['id']).to be_present
@@ -51,16 +52,16 @@ RSpec.describe Mutations::CreateBillableMetric, type: :graphql do
     end
   end
 
-  context 'without current user' do
+  context 'without current_user' do
     it 'returns an error' do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
+            id: billable_metric.id,
             name: 'New Metric',
             code: 'new_metric',
             description: 'New metric description',
-            organizationId: membership.organization_id,
             aggregationType: 'count_agg',
             billablePeriod: 'recurring',
             proRata: false,
@@ -68,8 +69,6 @@ RSpec.describe Mutations::CreateBillableMetric, type: :graphql do
           }
         }
       )
-
-      result_error = result['errors'].first
 
       expect_unauthorized_error(result)
     end

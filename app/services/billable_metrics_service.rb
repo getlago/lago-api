@@ -2,10 +2,7 @@
 
 class BillableMetricsService < BaseService
   def create(**args)
-    if !organization_member?(args[:organization_id])
-      result.fail!('not_organization_member')
-      return result
-    end
+    return result.fail!('not_organization_member') unless organization_member?(args[:organization_id])
 
     metric = BillableMetric.new(
       organization_id: args[:organization_id],
@@ -18,6 +15,27 @@ class BillableMetricsService < BaseService
       properties: args[:properties]
     )
 
+    # TODO: better handling of validation errors
+    metric.save!
+
+    result.billable_metric = metric
+    result
+  end
+
+  def update(**args)
+    metric = BillableMetric.find_by(id: args[:id])
+    return result.fail!('not_found') unless metric
+    return result.fail!('not_organization_member') unless organization_member?(metric.organization_id)
+
+    metric.name = args[:name]
+    metric.code = args[:code]
+    metric.description = args[:description] if args[:description]
+    metric.billable_period = args[:billable_period]&.to_sym
+    metric.aggregation_type = args[:aggregation_type]&.to_sym
+    metric.pro_rata = args[:pro_rata]
+    metric.properties = args[:properties] if args[:properties]
+
+    # TODO: better handling of validation errors
     metric.save!
 
     result.billable_metric = metric

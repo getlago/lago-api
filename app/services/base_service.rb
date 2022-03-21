@@ -19,6 +19,12 @@ class BaseService
       @failure = true
       @error_code = code
       @error = message || code
+
+      # Return self to return result immediately in case of failure:
+      # ```
+      # return result.fail!('not_found')
+      # ```
+      self
     end
 
     private

@@ -10,7 +10,7 @@ module Resolvers
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
 
-    type Types::BillableMetrics::BillableMetricObject.collection_type, null: false
+    type Types::BillableMetrics::Object.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
       current_organization

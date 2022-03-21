@@ -2,7 +2,9 @@
 
 module Types
   module BillableMetrics
-    class BillableMetricObject < Types::BaseObject
+    class Object < Types::BaseObject
+      graphql_name 'BillableMetric'
+
       field :id, ID, null: false
       field :organization, Types::OrganizationType
 
