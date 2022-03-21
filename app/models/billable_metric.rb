@@ -23,5 +23,4 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
-  validates :pro_rata, inclusion: [true, false]
 end

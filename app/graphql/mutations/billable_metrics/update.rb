@@ -13,7 +13,6 @@ module Mutations
       argument :description, String
       argument :billable_period, Types::BillableMetrics::BillablePeriodEnum, required: true
       argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
-      argument :pro_rata, GraphQL::Types::Boolean, required: true
       argument :properties, GraphQL::Types::JSON
 
       type Types::BillableMetrics::Object

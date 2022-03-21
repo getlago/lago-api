@@ -14,7 +14,6 @@ type BillableMetric {
   id: ID!
   name: String!
   organization: Organization
-  proRata: Boolean!
   properties: JSON
   updatedAt: ISO8601DateTime!
 }
@@ -51,7 +50,6 @@ input CreateBillableMetricInput {
   description: String!
   name: String!
   organizationId: String!
-  proRata: Boolean!
   properties: JSON!
 }
 
@@ -197,7 +195,6 @@ input UpdateBillableMetricInput {
   description: String!
   id: String!
   name: String!
-  proRata: Boolean!
   properties: JSON!
 }
 

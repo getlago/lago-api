@@ -17,7 +17,6 @@ RSpec.describe BillableMetricsService, type: :service do
         organization_id: organization.id,
         aggregation_type: 'count_agg',
         billable_period: 'recurring',
-        pro_rata: false,
         properties: {}
       }
     end
@@ -64,7 +63,6 @@ RSpec.describe BillableMetricsService, type: :service do
         description: 'New metric description',
         aggregation_type: 'count_agg',
         billable_period: 'recurring',
-        pro_rata: false,
         properties: {}
       }
     end
@@ -81,7 +79,6 @@ RSpec.describe BillableMetricsService, type: :service do
         expect(metric.code).to eq('new_metric')
         expect(metric.aggregation_type).to eq('count_agg')
         expect(metric.billable_period).to eq('recurring')
-        expect(metric.pro_rata).to be_falsey
       end
     end
 
@@ -94,7 +91,6 @@ RSpec.describe BillableMetricsService, type: :service do
           description: 'New metric description',
           aggregation_type: 'count_agg',
           billable_period: 'recurring',
-          pro_rata: false,
           properties: {}
         }
       end

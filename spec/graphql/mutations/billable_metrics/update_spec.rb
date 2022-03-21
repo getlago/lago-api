@@ -14,7 +14,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           code,
           aggregationType,
           billablePeriod,
-          proRata,
           organization { id }
         }
       }
@@ -33,7 +32,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           description: 'New metric description',
           aggregationType: 'count_agg',
           billablePeriod: 'recurring',
-          proRata: false,
           properties: {}
         }
       }
@@ -48,7 +46,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
       expect(result_data['organization']['id']).to eq(membership.organization_id)
       expect(result_data['aggregationType']).to eq('count_agg')
       expect(result_data['billablePeriod']).to eq('recurring')
-      expect(result_data['proRata']).to be_falsey
     end
   end
 
@@ -64,7 +61,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
             description: 'New metric description',
             aggregationType: 'count_agg',
             billablePeriod: 'recurring',
-            proRata: false,
             properties: {}
           }
         }
