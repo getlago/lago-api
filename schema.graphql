@@ -177,17 +177,12 @@ type Organization {
 }
 
 type Product {
+  billableMetrics: [BillableMetric!]
   createdAt: ISO8601DateTime!
   id: ID!
   name: String!
   organization: Organization
-  productItems: [ProductItem!]
   updatedAt: ISO8601DateTime!
-}
-
-type ProductItem {
-  billableMetric: BillableMetric!
-  id: ID!
 }
 
 type Query {

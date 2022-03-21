@@ -10,7 +10,7 @@ module Types
 
       field :name, String, null: false
 
-      field :product_items, [Types::ProductItems::Object]
+      field :billable_metrics, [Types::BillableMetrics::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
