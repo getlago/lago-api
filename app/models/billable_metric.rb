@@ -3,6 +3,9 @@
 class BillableMetric < ApplicationRecord
   belongs_to :organization
 
+  has_many :product_items, dependent: :destroy
+  has_many :products, through: :product_items
+
   BILLABLE_PERIODS = %i[
     recurring
     one_shot

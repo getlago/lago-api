@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_03_16_115408) do
+ActiveRecord::Schema[7.0].define(version: 2022_03_21_131918) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -48,6 +48,23 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_16_115408) do
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 
+  create_table "product_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "product_id"
+    t.uuid "billable_metric_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billable_metric_id"], name: "index_product_items_on_billable_metric_id"
+    t.index ["product_id"], name: "index_product_items_on_product_id"
+  end
+
+  create_table "products", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organizations_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organizations_id"], name: "index_products_on_organizations_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -58,4 +75,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_16_115408) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "product_items", "billable_metrics"
+  add_foreign_key "product_items", "products"
+  add_foreign_key "products", "organizations", column: "organizations_id"
 end
