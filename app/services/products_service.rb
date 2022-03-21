@@ -26,4 +26,15 @@ class ProductsService < BaseService
     result.product = product
     result
   end
+
+  def destroy(id)
+    product = Product.find_by(id: id)
+    return result.fail!('not_found') unless product
+    return result.fail!('not_organization_member') unless organization_member?(product.organization_id)
+
+    product.destroy!
+
+    result.product = product
+    result
+  end
 end
