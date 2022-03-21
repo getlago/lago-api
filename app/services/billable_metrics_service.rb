@@ -11,7 +11,6 @@ class BillableMetricsService < BaseService
       description: args[:description],
       billable_period: args[:billable_period]&.to_sym,
       aggregation_type: args[:aggregation_type]&.to_sym,
-      pro_rata: args[:pro_rata],
       properties: args[:properties]
     )
 
@@ -32,7 +31,6 @@ class BillableMetricsService < BaseService
     metric.description = args[:description] if args[:description]
     metric.billable_period = args[:billable_period]&.to_sym
     metric.aggregation_type = args[:aggregation_type]&.to_sym
-    metric.pro_rata = args[:pro_rata]
     metric.properties = args[:properties] if args[:properties]
 
     # TODO: better handling of validation errors
