@@ -1,6 +1,6 @@
 name: Repository Dispatch
 on:
-  repository-dispatch:
+  repository_dispatch:
     types: [deploy-preview]
 jobs:
   deploy-preview:
