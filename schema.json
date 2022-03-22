@@ -292,13 +292,37 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "recurring",
+              "name": "one_shot",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "one_shot",
+              "name": "hourly",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "daily",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "weekly",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "monthly",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "yearly",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

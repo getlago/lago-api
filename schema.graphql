@@ -24,8 +24,12 @@ type BillableMetricCollection {
 }
 
 enum BillablePeriodEnum {
+  daily
+  hourly
+  monthly
   one_shot
-  recurring
+  weekly
+  yearly
 }
 
 type CollectionMetadata {
