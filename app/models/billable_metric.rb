@@ -7,8 +7,12 @@ class BillableMetric < ApplicationRecord
   has_many :products, through: :product_items
 
   BILLABLE_PERIODS = %i[
-    recurring
     one_shot
+    hourly
+    daily
+    weekly
+    monthly
+    yearly
   ].freeze
 
   AGGREGATION_TYPES = %i[
