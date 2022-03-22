@@ -62,4 +62,35 @@ RSpec.describe ProductsService, type: :service do
       end
     end
   end
+
+  describe 'destroy' do
+    let(:product) { create(:product, organization: organization) }
+
+    it 'destroys the product' do
+      id = product.id
+
+      expect { subject.destroy(id) }
+        .to change(Product, :count).by(-1)
+    end
+
+    context 'when user is not member of the organization' do
+      let(:organization) { create(:organization) }
+
+      it 'returns an error' do
+        result = subject.destroy(product.id)
+
+        expect(result.success?).to be_falsey
+        expect(result.error).to eq('not_organization_member')
+      end
+    end
+
+    context 'when product is not found' do
+      it 'returns an error' do
+        result = subject.destroy(nil)
+
+        expect(result).to_not be_success
+        expect(result.error).to eq('not_found')
+      end
+    end
+  end
 end
