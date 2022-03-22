@@ -79,6 +79,7 @@ jobs:
       env:
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/lago-api-staging
         BRANCH: ${{ steps.extract_branch.outputs.branch }}
+        DOMAIN: ${{ steps.extract_branch.outputs.branch }}
         DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
       run: envsubst < ./porter/values.yaml > ./porter/env_values.yaml
     - name: Configure kubectl

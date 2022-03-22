@@ -52,7 +52,7 @@ ingress:
   custom_paths: []
   enabled: true
   hosts:
-    - ${BRANCH}-api.staging.getlago.com
+    - ${DOMAIN}-api.staging.getlago.com
   porter_hosts: []
   provider: aws
   tls: true
