@@ -7,6 +7,7 @@ module Types
     value 'unauthorized'
     value 'forbidden'
     value 'not_found'
+    value 'unprocessable_entity'
 
     # Authentication & authentication errors
     value 'token_encoding_error'

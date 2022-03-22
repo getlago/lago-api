@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BillableMetricsService < BaseService
+  include ScopedToOrganization
+
   def create(**args)
     return result.fail!('not_organization_member') unless organization_member?(args[:organization_id])
 
@@ -49,14 +51,5 @@ class BillableMetricsService < BaseService
 
     result.billable_metric = metric
     result
-  end
-
-  private
-
-  def organization_member?(organization_id)
-    return false unless result.user
-    return false unless organization_id
-
-    result.user.organizations.exists?(id: organization_id)
   end
 end
