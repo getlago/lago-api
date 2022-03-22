@@ -217,12 +217,22 @@ type Product {
   updatedAt: ISO8601DateTime!
 }
 
+type ProductCollection {
+  collection: [Product!]!
+  metadata: CollectionMetadata!
+}
+
 type Query {
   """
   Query billable metrics of an organization
   """
   billableMetrics(limit: Int, page: Int): BillableMetricCollection!
   currentUser: User!
+
+  """
+  Query products of an organization
+  """
+  products(limit: Int, page: Int): ProductCollection!
 }
 
 type RegisterUser {
