@@ -1,0 +1,11 @@
+name: Repository Dispatch
+on:
+  repository-dispatch:
+    types: [deploy-preview]
+jobs:
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: test
+        run: echo "${{ github.event.client_payload.branch }}"
