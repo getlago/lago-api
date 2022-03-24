@@ -10,9 +10,7 @@ RSpec.describe PlansService, type: :service do
 
   describe 'create' do
     let(:plan_name) { 'Some plan name' }
-    let(:billable_metrics) do
-      create_list(:billable_metric, 3, organization: organization)
-    end
+    let(:billable_metrics) { create_list(:billable_metric, 2, organization: organization) }
 
     let(:create_args) do
       {
@@ -24,7 +22,23 @@ RSpec.describe PlansService, type: :service do
         pro_rata: false,
         amount_cents: 200,
         amount_currency: 'EUR',
-        billable_metric_ids: billable_metrics.map(&:id)
+        charges: [
+          {
+            billable_metric_id: billable_metrics.first.id,
+            amount_cents: 100,
+            amount_currency: 'USD',
+            frequency: 'recurring',
+            pro_rata: false,
+          },
+          {
+            billable_metric_id: billable_metrics.last.id,
+            amount_cents: 300,
+            amount_currency: 'EUR',
+            frequency: 'one_time',
+            pro_rata: true,
+            vat_rate: 10.5
+          }
+        ]
       }
     end
 
@@ -32,9 +46,9 @@ RSpec.describe PlansService, type: :service do
       expect { subject.create(**create_args) }
         .to change { Plan.count }.by(1)
 
-        plan = Plan.order(:created_at).last
+      plan = Plan.order(:created_at).last
 
-      expect(plan.billable_metrics.count).to eq(3)
+      expect(plan.charges.count).to eq(2)
     end
 
     context 'with validation error' do
@@ -47,7 +61,7 @@ RSpec.describe PlansService, type: :service do
     end
 
     context 'with metrics from other organization' do
-      let(:billable_metrics) { [create(:billable_metric)] }
+      let(:billable_metrics) { create_list(:billable_metric, 2) }
 
       it 'returns an error' do
         result = subject.create(**create_args)
@@ -73,7 +87,7 @@ RSpec.describe PlansService, type: :service do
     let(:plan) { create(:plan, organization: organization) }
     let(:plan_name) { 'Updated plan name' }
     let(:billable_metrics) do
-      create_list(:billable_metric, 4, organization: organization)
+      create_list(:billable_metric, 2, organization: organization)
     end
 
     let(:update_args) do
@@ -86,7 +100,23 @@ RSpec.describe PlansService, type: :service do
         pro_rata: false,
         amount_cents: 200,
         amount_currency: 'EUR',
-        billable_metric_ids: billable_metrics.map(&:id)
+        charges: [
+          {
+            billable_metric_id: billable_metrics.first.id,
+            amount_cents: 100,
+            amount_currency: 'USD',
+            frequency: 'recurring',
+            pro_rata: false,
+          },
+          {
+            billable_metric_id: billable_metrics.last.id,
+            amount_cents: 300,
+            amount_currency: 'EUR',
+            frequency: 'one_time',
+            pro_rata: true,
+            vat_rate: 10.5
+          }
+        ]
       }
     end
 
@@ -96,7 +126,7 @@ RSpec.describe PlansService, type: :service do
       updated_plan = result.plan
       aggregate_failures do
         expect(updated_plan.name).to eq('Updated plan name')
-        expect(plan.billable_metrics.count).to eq(4)
+        expect(plan.charges.count).to eq(2)
       end
     end
 
@@ -110,7 +140,7 @@ RSpec.describe PlansService, type: :service do
     end
 
     context 'with metrics from other organization' do
-      let(:billable_metrics) { [create(:billable_metric)] }
+      let(:billable_metrics) { create_list(:billable_metric, 2) }
 
       it 'returns an error' do
         result = subject.update(**update_args)

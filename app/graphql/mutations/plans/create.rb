@@ -10,7 +10,6 @@ module Mutations
 
       argument :organization_id, String, required: true
       argument :name, String, required: true
-      argument :billable_metric_ids, [String]
       argument :code, String, required: true
       argument :frequency, Types::Plans::FrequencyEnum, required: true
       argument :billing_period, Types::Plans::BillingPeriodEnum, required: true

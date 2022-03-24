@@ -5,6 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name 'Charge'
 
+      field :id, ID, null: false
       field :billable_metric, Types::BillableMetrics::Object, null: false
       field :amount_cents, Integer, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
