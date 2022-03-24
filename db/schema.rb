@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_03_21_143758) do
+ActiveRecord::Schema[7.0].define(version: 2022_03_24_104446) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -20,13 +20,21 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_21_143758) do
     t.string "name", null: false
     t.string "code", null: false
     t.string "description"
-    t.integer "billable_period", null: false
     t.jsonb "properties", default: {}
     t.integer "aggregation_type", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
+  end
+
+  create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "billable_metric_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "plan_id"
+    t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
+    t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -47,21 +55,12 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_21_143758) do
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 
-  create_table "product_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "product_id"
-    t.uuid "billable_metric_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["billable_metric_id"], name: "index_product_items_on_billable_metric_id"
-    t.index ["product_id"], name: "index_product_items_on_product_id"
-  end
-
-  create_table "products", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["organization_id"], name: "index_products_on_organization_id"
+    t.index ["organization_id"], name: "index_plans_on_organization_id"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -72,9 +71,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_21_143758) do
   end
 
   add_foreign_key "billable_metrics", "organizations"
+  add_foreign_key "charges", "billable_metrics"
+  add_foreign_key "charges", "plans"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
-  add_foreign_key "product_items", "billable_metrics"
-  add_foreign_key "product_items", "products"
-  add_foreign_key "products", "organizations"
+  add_foreign_key "plans", "organizations"
 end

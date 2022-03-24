@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
 module Mutations
-  module Products
+  module Plans
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'DestroyProduct'
+      graphql_name 'DestroyPlan'
 
       argument :id, ID, required: true
 
       field :id, ID, null: true
 
       def resolve(id:)
-        result = ProductsService.new(context[:current_user]).destroy(id)
+        result = PlansService.new(context[:current_user]).destroy(id)
 
-        result.success? ? result.product : execution_error(code: result.error, message: result.error)
+        result.success? ? result.plan : execution_error(code: result.error, message: result.error)
       end
     end
   end

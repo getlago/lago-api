@@ -13,7 +13,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           name,
           code,
           aggregationType,
-          billablePeriod,
           organization { id }
         }
       }
@@ -31,7 +30,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           code: 'new_metric',
           description: 'New metric description',
           aggregationType: 'count_agg',
-          billablePeriod: 'hourly',
           properties: {}
         }
       }
@@ -45,7 +43,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
       expect(result_data['code']).to eq('new_metric')
       expect(result_data['organization']['id']).to eq(membership.organization_id)
       expect(result_data['aggregationType']).to eq('count_agg')
-      expect(result_data['billablePeriod']).to eq('hourly')
     end
   end
 
@@ -60,7 +57,6 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
             code: 'new_metric',
             description: 'New metric description',
             aggregationType: 'count_agg',
-            billablePeriod: 'hourly',
             properties: {}
           }
         }

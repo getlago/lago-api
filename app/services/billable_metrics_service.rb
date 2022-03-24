@@ -11,7 +11,6 @@ class BillableMetricsService < BaseService
       name: args[:name],
       code: args[:code],
       description: args[:description],
-      billable_period: args[:billable_period]&.to_sym,
       aggregation_type: args[:aggregation_type]&.to_sym,
       properties: args[:properties]
     )
@@ -31,7 +30,6 @@ class BillableMetricsService < BaseService
     metric.name = args[:name]
     metric.code = args[:code]
     metric.description = args[:description] if args[:description]
-    metric.billable_period = args[:billable_period]&.to_sym
     metric.aggregation_type = args[:aggregation_type]&.to_sym
     metric.properties = args[:properties] if args[:properties]
 

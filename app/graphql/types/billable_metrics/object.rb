@@ -11,7 +11,6 @@ module Types
       field :name, String, null: false
       field :code, String, null: false
       field :description, String
-      field :billable_period, Types::BillableMetrics::BillablePeriodEnum, null: false
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
       field :properties, GraphQL::Types::JSON
 

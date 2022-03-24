@@ -3,16 +3,12 @@
 class BillableMetric < ApplicationRecord
   belongs_to :organization
 
-  has_many :product_items, dependent: :destroy
-  has_many :products, through: :product_items
+  has_many :charges, dependent: :destroy
+  has_many :plans, through: :charges
 
   BILLABLE_PERIODS = %i[
     one_shot
-    hourly
-    daily
-    weekly
-    monthly
-    yearly
+    recurring
   ].freeze
 
   AGGREGATION_TYPES = %i[

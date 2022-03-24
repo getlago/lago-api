@@ -2,11 +2,11 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::ProductsResolver, type: :graphql do
+RSpec.describe Resolvers::PlansResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        products(limit: 5) {
+        plans(limit: 5) {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -17,8 +17,8 @@ RSpec.describe Resolvers::ProductsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  it 'returs a list of products' do
-    product = create(:product, organization: organization)
+  it 'returs a list of plans' do
+    plan = create(:plan, organization: organization)
 
     result = execute_graphql(
       current_user: membership.user,
@@ -26,14 +26,14 @@ RSpec.describe Resolvers::ProductsResolver, type: :graphql do
       query: query
     )
 
-    products_response = result['data']['products']
+    plans_response = result['data']['plans']
 
     aggregate_failures do
-      expect(products_response['collection'].count).to eq(organization.products.count)
-      expect(products_response['collection']).to eq([{ 'id' => product.id }])
+      expect(plans_response['collection'].count).to eq(organization.plans.count)
+      expect(plans_response['collection']).to eq([{ 'id' => plan.id }])
 
-      expect(products_response['metadata']['currentPage']).to eq(1)
-      expect(products_response['metadata']['totalCount']).to eq(1)
+      expect(plans_response['metadata']['currentPage']).to eq(1)
+      expect(plans_response['metadata']['totalCount']).to eq(1)
     end
   end
 

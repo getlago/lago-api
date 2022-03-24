@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class ProductsResolver < GraphQL::Schema::Resolver
+  class PlansResolver < GraphQL::Schema::Resolver
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query products of an organization'
+    description 'Query plans of an organization'
 
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
 
-    type Types::Products::Object.collection_type, null: false
+    type Types::Plans::Object.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
       current_organization
-        .products
+        .plans
         .page(page)
         .per(limit)
     end

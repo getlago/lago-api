@@ -9,8 +9,8 @@ module Types
     field :update_billable_metric, mutation: Mutations::BillableMetrics::Update
     field :destroy_billable_metric, mutation: Mutations::BillableMetrics::Destroy
 
-    field :create_product, mutation: Mutations::Products::Create
-    field :update_product, mutation: Mutations::Products::Update
-    field :destroy_product, mutation: Mutations::Products::Destroy
+    field :create_plan, mutation: Mutations::Plans::Create
+    field :update_plan, mutation: Mutations::Plans::Update
+    field :destroy_plan, mutation: Mutations::Plans::Destroy
   end
 end

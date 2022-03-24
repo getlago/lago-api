@@ -2,14 +2,14 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Products::Update, type: :graphql do
+RSpec.describe Mutations::Plans::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:product) { create(:product, organization: organization) }
+  let(:plan) { create(:plan, organization: organization) }
   let(:mutation) do
     <<~GQL
-      mutation($input: UpdateProductInput!) {
-        updateProduct(input: $input) {
+      mutation($input: UpdatePlanInput!) {
+        updatePlan(input: $input) {
           id,
           name,
           billableMetrics { id, name }
@@ -22,24 +22,24 @@ RSpec.describe Mutations::Products::Update, type: :graphql do
     create_list(:billable_metric, 4, organization: organization)
   end
 
-  it 'updates a product' do
+  it 'updates a plan' do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
       variables: {
         input: {
-          id: product.id,
-          name: 'Updated product',
+          id: plan.id,
+          name: 'Updated plan',
           billableMetricIds: billable_metrics.map(&:id)
         }
       }
     )
 
-    result_data = result['data']['updateProduct']
+    result_data = result['data']['updatePlan']
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['name']).to eq('Updated product')
+      expect(result_data['name']).to eq('Updated plan')
       expect(result_data['billableMetrics'].count).to eq(4)
     end
   end
@@ -50,8 +50,8 @@ RSpec.describe Mutations::Products::Update, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            id: product.id,
-            name: 'Updated product',
+            id: plan.id,
+            name: 'Updated plan',
             billableMetricIds: billable_metrics.map(&:id)
           }
         }
