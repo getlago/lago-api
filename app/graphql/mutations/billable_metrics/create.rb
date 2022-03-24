@@ -6,6 +6,7 @@ module Mutations
       include AuthenticableApiUser
 
       graphql_name 'CreateBillableMetric'
+      description 'Creates a new Billable metric'
 
       argument :organization_id, String, required: true
       argument :name, String, required: true

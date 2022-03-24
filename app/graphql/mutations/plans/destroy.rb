@@ -6,6 +6,7 @@ module Mutations
       include AuthenticableApiUser
 
       graphql_name 'DestroyPlan'
+      description 'Deletes a Plan'
 
       argument :id, ID, required: true
 

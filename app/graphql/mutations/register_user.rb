@@ -2,6 +2,8 @@
 
 module Mutations
   class RegisterUser < BaseMutation
+    description 'Registers a new user and creates related organization'
+
     argument :email, String, required: true
     argument :password, String, required: true
     argument :organization_name, String, required: true
