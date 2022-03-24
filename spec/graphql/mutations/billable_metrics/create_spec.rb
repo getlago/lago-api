@@ -28,8 +28,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           code: 'new_metric',
           description: 'New metric description',
           organizationId: membership.organization_id,
-          aggregationType: 'count_agg',
-          properties: {}
+          aggregationType: 'count_agg'
         }
       }
     )
@@ -55,8 +54,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
             code: 'new_metric',
             description: 'New metric description',
             organizationId: membership.organization_id,
-            aggregationType: 'count_agg',
-            properties: {}
+            aggregationType: 'count_agg'
           }
         }
       )

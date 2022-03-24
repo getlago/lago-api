@@ -172,20 +172,6 @@
               ]
             },
             {
-              "name": "properties",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "JSON",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "updatedAt",
               "description": null,
               "type": {
@@ -481,22 +467,6 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "AggregationTypeEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "properties",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
                   "ofType": null
                 }
               },
@@ -964,16 +934,6 @@
           "kind": "SCALAR",
           "name": "Int",
           "description": "Represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "SCALAR",
-          "name": "JSON",
-          "description": "Represents untyped JSON",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -2249,22 +2209,6 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "AggregationTypeEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "properties",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
                   "ofType": null
                 }
               },

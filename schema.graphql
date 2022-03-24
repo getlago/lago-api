@@ -13,7 +13,6 @@ type BillableMetric {
   id: ID!
   name: String!
   organization: Organization
-  properties: JSON
   updatedAt: ISO8601DateTime!
 }
 
@@ -49,7 +48,6 @@ input CreateBillableMetricInput {
   description: String!
   name: String!
   organizationId: String!
-  properties: JSON!
 }
 
 """
@@ -141,11 +139,6 @@ enum FrequencyEnum {
 An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
-
-"""
-Represents untyped JSON
-"""
-scalar JSON
 
 type LoginUser {
   token: String!
@@ -306,7 +299,6 @@ input UpdateBillableMetricInput {
   description: String!
   id: String!
   name: String!
-  properties: JSON!
 }
 
 """

@@ -12,7 +12,6 @@ module Types
       field :code, String, null: false
       field :description, String
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
-      field :properties, GraphQL::Types::JSON
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

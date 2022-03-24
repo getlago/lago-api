@@ -11,8 +11,7 @@ class BillableMetricsService < BaseService
       name: args[:name],
       code: args[:code],
       description: args[:description],
-      aggregation_type: args[:aggregation_type]&.to_sym,
-      properties: args[:properties]
+      aggregation_type: args[:aggregation_type]&.to_sym
     )
 
     # TODO: better handling of validation errors
@@ -31,7 +30,6 @@ class BillableMetricsService < BaseService
     metric.code = args[:code]
     metric.description = args[:description] if args[:description]
     metric.aggregation_type = args[:aggregation_type]&.to_sym
-    metric.properties = args[:properties] if args[:properties]
 
     # TODO: better handling of validation errors
     metric.save!

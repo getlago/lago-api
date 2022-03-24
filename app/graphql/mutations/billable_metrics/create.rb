@@ -12,7 +12,6 @@ module Mutations
       argument :code, String, required: true
       argument :description, String
       argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
-      argument :properties, GraphQL::Types::JSON
 
       type Types::BillableMetrics::Object
 

@@ -15,8 +15,7 @@ RSpec.describe BillableMetricsService, type: :service do
         code: 'new_metric',
         description: 'New metric description',
         organization_id: organization.id,
-        aggregation_type: 'count_agg',
-        properties: {}
+        aggregation_type: 'count_agg'
       }
     end
 
@@ -60,8 +59,7 @@ RSpec.describe BillableMetricsService, type: :service do
         name: 'New Metric',
         code: 'new_metric',
         description: 'New metric description',
-        aggregation_type: 'count_agg',
-        properties: {}
+        aggregation_type: 'count_agg'
       }
     end
 
@@ -86,8 +84,7 @@ RSpec.describe BillableMetricsService, type: :service do
           name: nil,
           code: 'new_metric',
           description: 'New metric description',
-          aggregation_type: 'count_agg',
-          properties: {}
+          aggregation_type: 'count_agg'
         }
       end
 
