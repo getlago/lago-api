@@ -18,6 +18,12 @@ RSpec.describe PlansService, type: :service do
       {
         name: plan_name,
         organization_id: organization.id,
+        code: 'new_plan',
+        frequency: 'monthly',
+        billing_period: 'end_of_month',
+        pro_rata: false,
+        amount_cents: 200,
+        currency: 'EUR',
         billable_metric_ids: billable_metrics.map(&:id)
       }
     end
@@ -74,7 +80,12 @@ RSpec.describe PlansService, type: :service do
       {
         id: plan.id,
         name: plan_name,
-        organization_id: organization.id,
+        code: 'new_plan',
+        frequency: 'monthly',
+        billing_period: 'end_of_month',
+        pro_rata: false,
+        amount_cents: 200,
+        currency: 'EUR',
         billable_metric_ids: billable_metrics.map(&:id)
       }
     end

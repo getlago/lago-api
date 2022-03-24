@@ -12,6 +12,12 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
         updatePlan(input: $input) {
           id,
           name,
+          code,
+          frequency,
+          billingPeriod,
+          proRata,
+          amountCents,
+          currency,
           billableMetrics { id, name }
         }
       }
@@ -30,6 +36,12 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
         input: {
           id: plan.id,
           name: 'Updated plan',
+          code: 'new_plan',
+          frequency: 'monthly',
+          billingPeriod: 'end_of_month',
+          proRata: false,
+          amountCents: 200,
+          currency: 'EUR',
           billableMetricIds: billable_metrics.map(&:id)
         }
       }
@@ -40,6 +52,12 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated plan')
+      expect(result_data['code']).to eq('new_plan')
+      expect(result_data['frequency']).to eq('monthly')
+      expect(result_data['billingPeriod']).to eq('end_of_month')
+      expect(result_data['proRata']).to eq(false)
+      expect(result_data['amountCents']).to eq(200)
+      expect(result_data['currency']).to eq('EUR')
       expect(result_data['billableMetrics'].count).to eq(4)
     end
   end
@@ -52,6 +70,12 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           input: {
             id: plan.id,
             name: 'Updated plan',
+            code: 'new_plan',
+            frequency: 'monthly',
+            billingPeriod: 'end_of_month',
+            proRata: false,
+            amountCents: 200,
+            currency: 'EUR',
             billableMetricIds: billable_metrics.map(&:id)
           }
         }
