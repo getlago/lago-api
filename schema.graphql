@@ -28,6 +28,31 @@ enum BillingPeriodEnum {
   subscruption_date
 }
 
+type Charge {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  billableMetric: BillableMetric!
+  createdAt: ISO8601DateTime!
+  frequency: ChargeFrequency!
+  proRata: Boolean!
+  updatedAt: ISO8601DateTime!
+  vatRate: Float
+}
+
+enum ChargeFrequency {
+  one_time
+  recurring
+}
+
+input ChargeInput {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  billableMetricId: ID!
+  frequency: ChargeFrequency!
+  proRata: Boolean!
+  vatRate: Float
+}
+
 type CollectionMetadata {
   currentPage: Int!
   limitValue: Int!
@@ -60,6 +85,7 @@ input CreatePlanInput {
   amountCurrency: CurrencyEnum!
   billableMetricIds: [String!]!
   billingPeriod: BillingPeriodEnum!
+  charges: [ChargeInput!]!
 
   """
   A unique identifier for the client performing the mutation.
@@ -67,7 +93,7 @@ input CreatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  frequency: FrequencyEnum!
+  frequency: PlanFrequency!
   name: String!
   organizationId: String!
   proRata: Boolean!
@@ -129,12 +155,6 @@ type DestroyPlanPayload {
   """
   clientMutationId: String
   id: ID
-}
-
-enum FrequencyEnum {
-  monthly
-  weekly
-  yearly
 }
 
 """
@@ -239,12 +259,12 @@ type Organization {
 type Plan {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
-  billableMetrics: [BillableMetric!]
   billingPeriod: BillingPeriodEnum!
+  charges: [Charge!]
   code: String!
   createdAt: ISO8601DateTime!
   description: String
-  frequency: FrequencyEnum!
+  frequency: PlanFrequency!
   id: ID!
   name: String!
   organization: Organization
@@ -257,6 +277,12 @@ type Plan {
 type PlanCollection {
   collection: [Plan!]!
   metadata: CollectionMetadata!
+}
+
+enum PlanFrequency {
+  monthly
+  weekly
+  yearly
 }
 
 type Query {
@@ -324,7 +350,7 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  frequency: FrequencyEnum!
+  frequency: PlanFrequency!
   id: String!
   name: String!
   proRata: Boolean!

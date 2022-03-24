@@ -21,6 +21,8 @@ module Mutations
       argument :trial_period, Float, required: false
       argument :description, String, required: false
 
+      argument :charges, [Types::Charges::Input]
+
       type Types::Plans::Object
 
       def resolve(**args)
