@@ -664,7 +664,7 @@
               "deprecationReason": null
             },
             {
-              "name": "currency",
+              "name": "amountCurrency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -1577,6 +1577,24 @@
               ]
             },
             {
+              "name": "amountCurrency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "billableMetrics",
               "description": null,
               "type": {
@@ -1643,24 +1661,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "currency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
                   "ofType": null
                 }
               },
@@ -2432,7 +2432,7 @@
               "deprecationReason": null
             },
             {
-              "name": "currency",
+              "name": "amountCurrency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

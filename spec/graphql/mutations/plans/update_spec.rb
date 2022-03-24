@@ -17,7 +17,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           billingPeriod,
           proRata,
           amountCents,
-          currency,
+          amountCurrency,
           billableMetrics { id, name }
         }
       }
@@ -41,7 +41,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           billingPeriod: 'end_of_month',
           proRata: false,
           amountCents: 200,
-          currency: 'EUR',
+          amountCurrency: 'EUR',
           billableMetricIds: billable_metrics.map(&:id)
         }
       }
@@ -57,7 +57,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['billingPeriod']).to eq('end_of_month')
       expect(result_data['proRata']).to eq(false)
       expect(result_data['amountCents']).to eq(200)
-      expect(result_data['currency']).to eq('EUR')
+      expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['billableMetrics'].count).to eq(4)
     end
   end
@@ -75,7 +75,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             billingPeriod: 'end_of_month',
             proRata: false,
             amountCents: 200,
-            currency: 'EUR',
+            amountCurrency: 'EUR',
             billableMetricIds: billable_metrics.map(&:id)
           }
         }

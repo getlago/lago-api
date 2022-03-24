@@ -23,7 +23,7 @@ RSpec.describe PlansService, type: :service do
         billing_period: 'end_of_month',
         pro_rata: false,
         amount_cents: 200,
-        currency: 'EUR',
+        amount_currency: 'EUR',
         billable_metric_ids: billable_metrics.map(&:id)
       }
     end
@@ -85,7 +85,7 @@ RSpec.describe PlansService, type: :service do
         billing_period: 'end_of_month',
         pro_rata: false,
         amount_cents: 200,
-        currency: 'EUR',
+        amount_currency: 'EUR',
         billable_metric_ids: billable_metrics.map(&:id)
       }
     end

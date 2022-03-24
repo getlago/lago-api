@@ -15,7 +15,7 @@ module Mutations
       argument :billing_period, Types::Plans::BillingPeriodEnum, required: true
       argument :pro_rata, Boolean, required: true
       argument :amount_cents, Integer, required: true
-      argument :currency, Types::CurrencyEnum, required: true
+      argument :amount_currency, Types::CurrencyEnum, required: true
       argument :vat_rate, Float, required: false
       argument :trial_period, Float, required: false
       argument :description, String, required: false

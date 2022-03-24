@@ -8,6 +8,6 @@ FactoryBot.define do
     billing_period { 'end_of_month' }
     pro_rata { false }
     amount_cents { 100 }
-    currency { 'EUR' }
+    amount_currency { 'EUR' }
   end
 end

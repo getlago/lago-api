@@ -9,7 +9,7 @@ class AddPropertiesToPlans < ActiveRecord::Migration[7.0]
       t.integer :billing_period, null: false
       t.boolean :pro_rata, null: false
       t.integer :amount_cents, null: false
-      t.string :currency, null: false
+      t.string :amount_currency, null: false
       t.float :vat_rate
       t.float :trial_period
 

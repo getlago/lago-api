@@ -15,7 +15,7 @@ class PlansService < BaseService
       billing_period: args[:billing_period].to_sym,
       pro_rata: args[:pro_rata],
       amount_cents: args[:amount_cents],
-      currency: args[:currency],
+      amount_currency: args[:amount_currency],
       vat_rate: args[:vat_rate],
       trial_period: args[:trial_period]
     )
@@ -50,7 +50,7 @@ class PlansService < BaseService
     plan.billing_period = args[:billing_period].to_sym
     plan.pro_rata = args[:pro_rata]
     plan.amount_cents = args[:amount_cents]
-    plan.currency = args[:currency]
+    plan.amount_currency = args[:amount_currency]
     plan.vat_rate = args[:vat_rate]
     plan.trial_period = args[:trial_period]
 

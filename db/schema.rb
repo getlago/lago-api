@@ -66,7 +66,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_24_131020) do
     t.integer "billing_period", null: false
     t.boolean "pro_rata", null: false
     t.integer "amount_cents", null: false
-    t.string "currency", null: false
+    t.string "amount_currency", null: false
     t.float "vat_rate"
     t.float "trial_period"
     t.index ["code", "organization_id"], name: "index_plans_on_code_and_organization_id", unique: true
