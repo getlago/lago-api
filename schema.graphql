@@ -33,6 +33,7 @@ type Charge {
   billableMetric: BillableMetric!
   createdAt: ISO8601DateTime!
   frequency: ChargeFrequency!
+  id: ID!
   proRata: Boolean!
   updatedAt: ISO8601DateTime!
   vatRate: Float
