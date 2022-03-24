@@ -6,7 +6,6 @@ FactoryBot.define do
     name { 'Some metric' }
     description { 'some description' }
     code { Faker::Name.name }
-    billable_period { 'hourly' }
     aggregation_type { 'count_agg' }
     properties { {} }
   end

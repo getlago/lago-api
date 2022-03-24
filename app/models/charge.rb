@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class ProductItem < ApplicationRecord
-  belongs_to :product
+class Charge < ApplicationRecord
+  belongs_to :plan
   belongs_to :billable_metric
 end

@@ -10,6 +10,6 @@ module Types
     field :current_user, resolver: Resolvers::CurrentUserResolver
 
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
-    field :products, resolver: Resolvers::ProductsResolver
+    field :plans, resolver: Resolvers::PlansResolver
   end
 end

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Types
-  module Products
+  module Plans
     class Object < Types::BaseObject
-      graphql_name 'Product'
+      graphql_name 'Plan'
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType

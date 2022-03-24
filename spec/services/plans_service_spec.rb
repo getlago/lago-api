@@ -2,37 +2,37 @@
 
 require 'rails_helper'
 
-RSpec.describe ProductsService, type: :service do
+RSpec.describe PlansService, type: :service do
   subject { described_class.new(membership.user) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
   describe 'create' do
-    let(:product_name) { 'Some product name' }
+    let(:plan_name) { 'Some plan name' }
     let(:billable_metrics) do
       create_list(:billable_metric, 3, organization: organization)
     end
 
     let(:create_args) do
       {
-        name: product_name,
+        name: plan_name,
         organization_id: organization.id,
         billable_metric_ids: billable_metrics.map(&:id)
       }
     end
 
-    it 'creates a product' do
+    it 'creates a plan' do
       expect { subject.create(**create_args) }
-        .to change { Product.count }.by(1)
+        .to change { Plan.count }.by(1)
 
-      product = Product.order(:created_at).last
+        plan = Plan.order(:created_at).last
 
-      expect(product.billable_metrics.count).to eq(3)
+      expect(plan.billable_metrics.count).to eq(3)
     end
 
     context 'with validation error' do
-      let(:product_name) { nil }
+      let(:plan_name) { nil }
 
       it 'returns an error' do
         expect { subject.create(**create_args) }
@@ -64,33 +64,33 @@ RSpec.describe ProductsService, type: :service do
   end
 
   describe 'update' do
-    let(:product) { create(:product, organization: organization) }
-    let(:product_name) { 'Updated product name' }
+    let(:plan) { create(:plan, organization: organization) }
+    let(:plan_name) { 'Updated plan name' }
     let(:billable_metrics) do
       create_list(:billable_metric, 4, organization: organization)
     end
 
     let(:update_args) do
       {
-        id: product.id,
-        name: product_name,
+        id: plan.id,
+        name: plan_name,
         organization_id: organization.id,
         billable_metric_ids: billable_metrics.map(&:id)
       }
     end
 
-    it 'updates a product' do
+    it 'updates a plan' do
       result = subject.update(**update_args)
 
-      updated_product = result.product
+      updated_plan = result.plan
       aggregate_failures do
-        expect(updated_product.name).to eq('Updated product name')
-        expect(product.billable_metrics.count).to eq(4)
+        expect(updated_plan.name).to eq('Updated plan name')
+        expect(plan.billable_metrics.count).to eq(4)
       end
     end
 
     context 'with validation error' do
-      let(:product_name) { nil }
+      let(:plan_name) { nil }
 
       it 'returns an error' do
         expect { subject.update(**update_args) }
@@ -122,27 +122,27 @@ RSpec.describe ProductsService, type: :service do
   end
 
   describe 'destroy' do
-    let(:product) { create(:product, organization: organization) }
+    let(:plan) { create(:plan, organization: organization) }
 
-    it 'destroys the product' do
-      id = product.id
+    it 'destroys the plan' do
+      id = plan.id
 
       expect { subject.destroy(id) }
-        .to change(Product, :count).by(-1)
+        .to change(Plan, :count).by(-1)
     end
 
     context 'when user is not member of the organization' do
       let(:organization) { create(:organization) }
 
       it 'returns an error' do
-        result = subject.destroy(product.id)
+        result = subject.destroy(plan.id)
 
         expect(result.success?).to be_falsey
         expect(result.error).to eq('not_organization_member')
       end
     end
 
-    context 'when product is not found' do
+    context 'when plan is not found' do
       it 'returns an error' do
         result = subject.destroy(nil)
 
