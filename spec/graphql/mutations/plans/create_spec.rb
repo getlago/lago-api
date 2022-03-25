@@ -30,11 +30,11 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   it 'creates a plan' do
     result = execute_graphql(
       current_user: membership.user,
+      current_organization: membership.organization,
       query: mutation,
       variables: {
         input: {
           name: 'New Plan',
-          organizationId: organization.id,
           code: 'new_plan',
           frequency: 'monthly',
           billingPeriod: 'end_of_month',
@@ -80,11 +80,11 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(
+        current_organization: membership.organization,
         query: mutation,
         variables: {
           input: {
             name: 'New Plan',
-            organizationId: organization.id,
             code: 'new_plan',
             frequency: 'monthly',
             billingPeriod: 'end_of_month',
@@ -97,6 +97,29 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       )
 
       expect_unauthorized_error(result)
+    end
+  end
+
+  context 'without current organization' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: {
+            name: 'New Plan',
+            code: 'new_plan',
+            frequency: 'monthly',
+            billingPeriod: 'end_of_month',
+            proRata: false,
+            amountCents: 200,
+            amountCurrency: 'EUR',
+            charges: []
+          }
+        }
+      )
+
+      expect_forbidden_error(result)
     end
   end
 end

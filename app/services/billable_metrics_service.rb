@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
 class BillableMetricsService < BaseService
-  include ScopedToOrganization
-
   def create(**args)
-    return result.fail!('not_organization_member') unless organization_member?(args[:organization_id])
-
     metric = BillableMetric.new(
       organization_id: args[:organization_id],
       name: args[:name],
@@ -22,9 +18,8 @@ class BillableMetricsService < BaseService
   end
 
   def update(**args)
-    metric = BillableMetric.find_by(id: args[:id])
+    metric = result.user.billable_metrics.find_by(id: args[:id])
     return result.fail!('not_found') unless metric
-    return result.fail!('not_organization_member') unless organization_member?(metric.organization_id)
 
     metric.name = args[:name]
     metric.code = args[:code]
@@ -39,9 +34,8 @@ class BillableMetricsService < BaseService
   end
 
   def destroy(id)
-    metric = BillableMetric.find_by(id: id)
+    metric = result.user.billable_metrics.find_by(id: id)
     return result.fail!('not_found') unless metric
-    return result.fail!('not_organization_member') unless organization_member?(metric.organization_id)
 
     metric.destroy!
 

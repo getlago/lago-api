@@ -7,9 +7,7 @@ module RequiredOrganization
     context[:current_organization]
   end
 
-  private
-
-  def ready?(*)
+  def validate_organization!
     raise organization_error('Missing organization id') unless current_organization
     raise organization_error('Not in organization') unless organization_member?
 

@@ -13,6 +13,8 @@ module Resolvers
     type Types::Plans::Object.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
+      validate_organization!
+
       current_organization
         .plans
         .page(page)

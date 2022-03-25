@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
 class PlansService < BaseService
-  include ScopedToOrganization
-
   def create(**args)
-    return result.fail!('not_organization_member') unless organization_member?(args[:organization_id])
 
     plan = Plan.new(
       organization_id: args[:organization_id],
@@ -39,9 +36,8 @@ class PlansService < BaseService
   end
 
   def update(**args)
-    plan = Plan.find_by(id: args[:id])
+    plan = result.user.plans.find_by(id: args[:id])
     return result.fail!('not_found') unless plan
-    return result.fail!('not_organization_member') unless organization_member?(plan.organization_id)
 
     plan.name = args[:name]
     plan.code = args[:code]
@@ -77,9 +73,8 @@ class PlansService < BaseService
   end
 
   def destroy(id)
-    plan = Plan.find_by(id: id)
+    plan = result.user.plans.find_by(id: id)
     return result.fail!('not_found') unless plan
-    return result.fail!('not_organization_member') unless organization_member?(plan.organization_id)
 
     plan.destroy!
 

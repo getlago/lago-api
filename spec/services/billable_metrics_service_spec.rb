@@ -38,17 +38,6 @@ RSpec.describe BillableMetricsService, type: :service do
           .to raise_error(ActiveRecord::RecordInvalid)
       end
     end
-
-    context 'when user is not member of the organization' do
-      let(:organization) { create(:organization) }
-
-      it 'returns an error' do
-        result = subject.create(**create_args)
-
-        expect(result.success?).to be_falsey
-        expect(result.error).to eq('not_organization_member')
-      end
-    end
   end
 
   describe 'update' do
@@ -94,17 +83,6 @@ RSpec.describe BillableMetricsService, type: :service do
       end
     end
 
-    context 'when user is not member of the organization' do
-      let(:organization) { create(:organization) }
-
-      it 'returns an error' do
-        result = subject.update(**update_args)
-
-        expect(result.success?).to be_falsey
-        expect(result.error).to eq('not_organization_member')
-      end
-    end
-
     context 'when billable metric is not found' do
       let(:billable_metric) { nil }
 
@@ -125,17 +103,6 @@ RSpec.describe BillableMetricsService, type: :service do
 
       expect { subject.destroy(id) }
         .to change(BillableMetric, :count).by(-1)
-    end
-
-    context 'when user is not member of the organization' do
-      let(:organization) { create(:organization) }
-
-      it 'returns an error' do
-        result = subject.destroy(billable_metric.id)
-
-        expect(result.success?).to be_falsey
-        expect(result.error).to eq('not_organization_member')
-      end
     end
 
     context 'when billable metric is not found' do

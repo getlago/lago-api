@@ -27,7 +27,9 @@ module GraphQLHelper
 
     expect(symbolized_result[:errors]).not_to be_empty
 
-    error = symbolized_result[:errors].find { |e| e[:message].to_s == message.to_s }
+    error = symbolized_result[:errors].find do |e|
+      e[:message].to_s == message.to_s || e[:extensions][:code].to_s == message.to_s
+    end
 
     expect(error).to be_present, "error message for #{message} is not present"
   end
@@ -36,6 +38,13 @@ module GraphQLHelper
     expect_graphql_error(
       result: result,
       message: :unauthorized
+    )
+  end
+
+  def expect_forbidden_error(result)
+    expect_graphql_error(
+      result: result,
+      message: :forbidden
     )
   end
 end
