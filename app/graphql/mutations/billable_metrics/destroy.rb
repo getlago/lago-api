@@ -16,6 +16,8 @@ module Mutations
         result = BillableMetricsService.new(context[:current_user]).destroy(id)
 
         result.success? ? result.billable_metric : execution_error(code: result.error_code, message: result.error)
+      rescue ActiveRecord::RecordInvalid => e
+        validation_error(e.record)
       end
     end
   end

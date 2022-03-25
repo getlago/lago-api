@@ -2,7 +2,7 @@
 
 class BillableMetricsService < BaseService
   def create(**args)
-    metric = BillableMetric.new(
+    metric = BillableMetric.create!(
       organization_id: args[:organization_id],
       name: args[:name],
       code: args[:code],
@@ -10,11 +10,10 @@ class BillableMetricsService < BaseService
       aggregation_type: args[:aggregation_type]&.to_sym
     )
 
-    # TODO: better handling of validation errors
-    metric.save!
-
     result.billable_metric = metric
     result
+  rescue ActiveRecord::RecordInvalid => e
+    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
   end
 
   def update(**args)
@@ -25,12 +24,12 @@ class BillableMetricsService < BaseService
     metric.code = args[:code]
     metric.description = args[:description] if args[:description]
     metric.aggregation_type = args[:aggregation_type]&.to_sym
-
-    # TODO: better handling of validation errors
     metric.save!
 
     result.billable_metric = metric
     result
+  rescue ActiveRecord::RecordInvalid => e
+    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
   end
 
   def destroy(id)
