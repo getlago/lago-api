@@ -29,8 +29,10 @@
 .env
 .byebug_history
 
+# Ignore credential keys
 /config/credentials/staging.key
-
 /config/credentials/development.key
-
 /config/credentials/test.key
+
+# Ignore Simplecov coverage status
+/coverage/*
