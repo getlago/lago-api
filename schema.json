@@ -1440,7 +1440,7 @@
           "fields": [
             {
               "name": "createBillableMetric",
-              "description": null,
+              "description": "Creates a new Billable metric",
               "type": {
                 "kind": "OBJECT",
                 "name": "BillableMetric",
@@ -1469,7 +1469,7 @@
             },
             {
               "name": "createPlan",
-              "description": "Creates a new plan",
+              "description": "Creates a new Plan",
               "type": {
                 "kind": "OBJECT",
                 "name": "Plan",
@@ -1498,7 +1498,7 @@
             },
             {
               "name": "destroyBillableMetric",
-              "description": null,
+              "description": "Deletes a Billable metric",
               "type": {
                 "kind": "OBJECT",
                 "name": "DestroyBillableMetricPayload",
@@ -1527,7 +1527,7 @@
             },
             {
               "name": "destroyPlan",
-              "description": null,
+              "description": "Deletes a Plan",
               "type": {
                 "kind": "OBJECT",
                 "name": "DestroyPlanPayload",
@@ -1556,7 +1556,7 @@
             },
             {
               "name": "loginUser",
-              "description": null,
+              "description": "Opens a session for an existing user",
               "type": {
                 "kind": "OBJECT",
                 "name": "LoginUser",
@@ -1585,7 +1585,7 @@
             },
             {
               "name": "registerUser",
-              "description": null,
+              "description": "Registers a new user and creates related organization",
               "type": {
                 "kind": "OBJECT",
                 "name": "RegisterUser",
@@ -1614,7 +1614,7 @@
             },
             {
               "name": "updateBillableMetric",
-              "description": null,
+              "description": "Updates an existing Billable metric",
               "type": {
                 "kind": "OBJECT",
                 "name": "BillableMetric",
@@ -1643,7 +1643,7 @@
             },
             {
               "name": "updatePlan",
-              "description": null,
+              "description": "Updates an existing Plan",
               "type": {
                 "kind": "OBJECT",
                 "name": "Plan",
@@ -2186,7 +2186,7 @@
             },
             {
               "name": "currentUser",
-              "description": null,
+              "description": "Retrives currently connected user",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,

@@ -187,6 +187,9 @@ type Membership {
 }
 
 type Mutation {
+  """
+  Creates a new Billable metric
+  """
   createBillableMetric(
     """
     Parameters for CreateBillableMetric
@@ -195,7 +198,7 @@ type Mutation {
   ): BillableMetric
 
   """
-  Creates a new plan
+  Creates a new Plan
   """
   createPlan(
     """
@@ -203,36 +206,60 @@ type Mutation {
     """
     input: CreatePlanInput!
   ): Plan
+
+  """
+  Deletes a Billable metric
+  """
   destroyBillableMetric(
     """
     Parameters for DestroyBillableMetric
     """
     input: DestroyBillableMetricInput!
   ): DestroyBillableMetricPayload
+
+  """
+  Deletes a Plan
+  """
   destroyPlan(
     """
     Parameters for DestroyPlan
     """
     input: DestroyPlanInput!
   ): DestroyPlanPayload
+
+  """
+  Opens a session for an existing user
+  """
   loginUser(
     """
     Parameters for LoginUser
     """
     input: LoginUserInput!
   ): LoginUser
+
+  """
+  Registers a new user and creates related organization
+  """
   registerUser(
     """
     Parameters for RegisterUser
     """
     input: RegisterUserInput!
   ): RegisterUser
+
+  """
+  Updates an existing Billable metric
+  """
   updateBillableMetric(
     """
     Parameters for UpdateBillableMetric
     """
     input: UpdateBillableMetricInput!
   ): BillableMetric
+
+  """
+  Updates an existing Plan
+  """
   updatePlan(
     """
     Parameters for UpdatePlan
@@ -283,6 +310,10 @@ type Query {
   Query billable metrics of an organization
   """
   billableMetrics(limit: Int, page: Int): BillableMetricCollection!
+
+  """
+  Retrives currently connected user
+  """
   currentUser: User!
 
   """

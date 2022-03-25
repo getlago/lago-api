@@ -5,8 +5,8 @@ module Mutations
     class Create < BaseMutation
       include AuthenticableApiUser
 
-      description 'Creates a new plan'
       graphql_name 'CreatePlan'
+      description 'Creates a new Plan'
 
       argument :organization_id, String, required: true
       argument :name, String, required: true

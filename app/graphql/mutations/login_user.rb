@@ -3,6 +3,8 @@
 # Mutations::LoginUser Mutation
 module Mutations
   class LoginUser < BaseMutation
+    description 'Opens a session for an existing user'
+
     argument :email, String, required: true
     argument :password, String, required: true
 

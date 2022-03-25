@@ -6,6 +6,7 @@ module Mutations
       include AuthenticableApiUser
 
       graphql_name 'UpdatePlan'
+      description 'Updates an existing Plan'
 
       argument :id, String, required: true
       argument :name, String, required: true
