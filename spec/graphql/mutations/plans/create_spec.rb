@@ -17,14 +17,14 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           proRata,
           amountCents,
           amountCurrency,
-          billableMetrics { id, name }
+          charges { id, billableMetric { id name code } }
         }
       }
     GQL
   end
 
   let(:billable_metrics) do
-    create_list(:billable_metric, 3, organization: organization)
+    create_list(:billable_metric, 2, organization: organization)
   end
 
   it 'creates a plan' do
@@ -41,7 +41,23 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           proRata: false,
           amountCents: 200,
           amountCurrency: 'EUR',
-          billableMetricIds: billable_metrics.map(&:id)
+          charges: [
+            {
+              billableMetricId: billable_metrics.first.id,
+              amountCents: 100,
+              amountCurrency: 'USD',
+              frequency: 'recurring',
+              proRata: false
+            },
+            {
+              billableMetricId: billable_metrics.last.id,
+              amountCents: 300,
+              amountCurrency: 'EUR',
+              frequency: 'one_time',
+              proRata: true,
+              vatRate: 10.5
+            }
+          ]
         }
       }
     )
@@ -57,7 +73,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(result_data['proRata']).to eq(false)
       expect(result_data['amountCents']).to eq(200)
       expect(result_data['amountCurrency']).to eq('EUR')
-      expect(result_data['billableMetrics'].count).to eq(3)
+      expect(result_data['charges'].count).to eq(2)
     end
   end
 
@@ -75,7 +91,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             proRata: false,
             amountCents: 200,
             amountCurrency: 'EUR',
-            billableMetricIds: billable_metrics.map(&:id)
+            charges: []
           }
         }
       )

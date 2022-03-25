@@ -19,7 +19,7 @@ module Types
       field :trial_period, Float
       field :description, String
 
-      field :billable_metrics, [Types::BillableMetrics::Object]
+      field :charges, [Types::Charges::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

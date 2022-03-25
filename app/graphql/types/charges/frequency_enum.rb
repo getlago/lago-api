@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Types
-  module Plans
+  module Charges
     class FrequencyEnum < Types::BaseEnum
-      graphql_name 'PlanFrequency'
+      graphql_name 'ChargeFrequency'
 
-      Plan::FREQUENCIES.each do |type|
+      Charge::FREQUENCIES.each do |type|
         value type
       end
     end

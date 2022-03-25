@@ -20,9 +20,8 @@ class PlansService < BaseService
       trial_period: args[:trial_period]
     )
 
-    # TODO: create charges
     # Validates billable metrics
-    metric_ids = args[:billable_metric_ids]
+    metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
     if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
       return result.fail!('unprocessable_entity', 'Billable metrics does not exists')
     end
@@ -31,7 +30,8 @@ class PlansService < BaseService
       # TODO: better handling of validation errors
       plan.save!
 
-      plan.billable_metric_ids = metric_ids if metric_ids.present?
+      # TODO: group validation errors
+      args[:charges].each { |c| create_charge(plan, c) }
     end
 
     result.plan = plan
@@ -54,8 +54,7 @@ class PlansService < BaseService
     plan.vat_rate = args[:vat_rate]
     plan.trial_period = args[:trial_period]
 
-    # TODO: create charges
-    metric_ids = args[:billable_metric_ids]
+    metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
     if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
       return result.fail!('unprocessable_entity', 'Billable metrics does not exists')
     end
@@ -64,7 +63,11 @@ class PlansService < BaseService
       # TODO: better handling of validation errors
       plan.save!
 
-      plan.billable_metric_ids = metric_ids if metric_ids.present?
+      # TODO: update existing instead of removing all
+      plan.charges.delete_all
+
+      # TODO: group validation errors
+      args[:charges].each { |c| create_charge(plan, c) }
     end
 
     result.plan = plan
@@ -80,5 +83,18 @@ class PlansService < BaseService
 
     result.plan = plan
     result
+  end
+
+  private
+
+  def create_charge(plan, args)
+    plan.charges.create!(
+      billable_metric_id: args[:billable_metric_id],
+      amount_cents: args[:amount_cents],
+      amount_currency: args[:amount_currency],
+      frequency: args[:frequency].to_sym,
+      pro_rata: args[:pro_rata],
+      vat_rate: args[:vat_rate]
+    )
   end
 end
