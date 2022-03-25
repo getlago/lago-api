@@ -63,11 +63,13 @@ class PlansService < BaseService
       # TODO: better handling of validation errors
       plan.save!
 
-      # TODO: update existing instead of removing all
-      plan.charges.delete_all
+      args[:charges].each do |payload_charge|
+        charge = Charge.find_by(id: payload_charge[:id])
 
-      # TODO: group validation errors
-      args[:charges].each { |c| create_charge(plan, c) }
+        next create_charge(plan, payload_charge) unless charge
+
+        charge.update(payload_charge)
+      end
     end
 
     result.plan = plan

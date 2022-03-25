@@ -106,7 +106,7 @@ RSpec.describe PlansService, type: :service do
             amount_cents: 100,
             amount_currency: 'USD',
             frequency: 'recurring',
-            pro_rata: false,
+            pro_rata: false
           },
           {
             billable_metric_id: billable_metrics.last.id,
@@ -158,6 +158,56 @@ RSpec.describe PlansService, type: :service do
 
         expect(result.success?).to be_falsey
         expect(result.error).to eq('not_organization_member')
+      end
+    end
+
+    context 'with existing charges' do
+      let!(:existing_charge) do
+        create(
+          :charge,
+          plan_id: plan.id,
+          billable_metric_id: billable_metrics.first.id,
+          amount_cents: 300,
+          amount_currency: 'USD',
+          frequency: 'recurring',
+          pro_rata: false
+        )
+      end
+
+      let(:update_args) do
+        {
+          id: plan.id,
+          name: plan_name,
+          code: 'new_plan',
+          frequency: 'monthly',
+          billing_period: 'end_of_month',
+          pro_rata: false,
+          amount_cents: 200,
+          amount_currency: 'EUR',
+          charges: [
+            {
+              id: existing_charge.id,
+              billable_metric_id: billable_metrics.first.id,
+              amount_cents: 100,
+              amount_currency: 'USD',
+              frequency: 'recurring',
+              pro_rata: false
+            },
+            {
+              billable_metric_id: billable_metrics.last.id,
+              amount_cents: 300,
+              amount_currency: 'EUR',
+              frequency: 'one_time',
+              pro_rata: true,
+              vat_rate: 10.5
+            }
+          ]
+        }
+      end
+
+      it 'updates existing charge and creates an other one' do
+        expect { subject.update(**update_args) }
+          .to change { Charge.count }.by(1)
       end
     end
   end
