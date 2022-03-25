@@ -54,7 +54,6 @@ class PlansService < BaseService
     plan.vat_rate = args[:vat_rate]
     plan.trial_period = args[:trial_period]
 
-    # TODO: create charges
     metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
     if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
       return result.fail!('unprocessable_entity', 'Billable metrics does not exists')
