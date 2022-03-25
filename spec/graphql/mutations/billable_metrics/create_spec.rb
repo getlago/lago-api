@@ -21,13 +21,13 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
   it 'creates a billable metric' do
     result = execute_graphql(
       current_user: membership.user,
+      current_organization: membership.organization,
       query: mutation,
       variables: {
         input: {
           name: 'New Metric',
           code: 'new_metric',
           description: 'New metric description',
-          organizationId: membership.organization_id,
           aggregationType: 'count_agg'
         }
       }
@@ -47,19 +47,38 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(
+        current_organization: membership.organization,
         query: mutation,
         variables: {
           input: {
             name: 'New Metric',
             code: 'new_metric',
             description: 'New metric description',
-            organizationId: membership.organization_id,
             aggregationType: 'count_agg'
           }
         }
       )
 
       expect_unauthorized_error(result)
+    end
+  end
+
+  context 'without current organization' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: {
+            name: 'New Metric',
+            code: 'new_metric',
+            description: 'New metric description',
+            aggregationType: 'count_agg'
+          }
+        }
+      )
+
+      expect_forbidden_error(result)
     end
   end
 end

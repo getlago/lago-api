@@ -73,7 +73,6 @@ input CreateBillableMetricInput {
   code: String!
   description: String!
   name: String!
-  organizationId: String!
 }
 
 """
@@ -93,7 +92,6 @@ input CreatePlanInput {
   description: String
   frequency: PlanFrequency!
   name: String!
-  organizationId: String!
   proRata: Boolean!
   trialPeriod: Float
   vatRate: Float

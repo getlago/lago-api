@@ -13,6 +13,8 @@ module Resolvers
     type Types::BillableMetrics::Object.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
+      validate_organization!
+
       current_organization
         .billable_metrics
         .page(page)

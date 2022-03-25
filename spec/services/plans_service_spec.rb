@@ -70,17 +70,6 @@ RSpec.describe PlansService, type: :service do
         expect(result.error).to eq('Billable metrics does not exists')
       end
     end
-
-    context 'when user is not member of the organization' do
-      let(:organization) { create(:organization) }
-
-      it 'returns an error' do
-        result = subject.create(**create_args)
-
-        expect(result.success?).to be_falsey
-        expect(result.error).to eq('not_organization_member')
-      end
-    end
   end
 
   describe 'update' do
@@ -150,17 +139,6 @@ RSpec.describe PlansService, type: :service do
       end
     end
 
-    context 'when user is not member of the organization' do
-      let(:organization) { create(:organization) }
-
-      it 'returns an error' do
-        result = subject.update(**update_args)
-
-        expect(result.success?).to be_falsey
-        expect(result.error).to eq('not_organization_member')
-      end
-    end
-
     context 'with existing charges' do
       let!(:existing_charge) do
         create(
@@ -220,17 +198,6 @@ RSpec.describe PlansService, type: :service do
 
       expect { subject.destroy(id) }
         .to change(Plan, :count).by(-1)
-    end
-
-    context 'when user is not member of the organization' do
-      let(:organization) { create(:organization) }
-
-      it 'returns an error' do
-        result = subject.destroy(plan.id)
-
-        expect(result.success?).to be_falsey
-        expect(result.error).to eq('not_organization_member')
-      end
     end
 
     context 'when plan is not found' do

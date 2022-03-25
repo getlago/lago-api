@@ -4,11 +4,11 @@ module Mutations
   module Plans
     class Create < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       graphql_name 'CreatePlan'
       description 'Creates a new Plan'
 
-      argument :organization_id, String, required: true
       argument :name, String, required: true
       argument :code, String, required: true
       argument :frequency, Types::Plans::FrequencyEnum, required: true
@@ -25,7 +25,11 @@ module Mutations
       type Types::Plans::Object
 
       def resolve(**args)
-        result = PlansService.new(context[:current_user]).create(**args)
+        validate_organization!
+
+        result = PlansService
+          .new(context[:current_user])
+          .create(**args.merge(organization_id: current_organization.id))
 
         result.success? ? result.plan : execution_error(code: result.error_code, message: result.error)
       end
