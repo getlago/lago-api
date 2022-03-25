@@ -2,7 +2,6 @@
 
 class PlansService < BaseService
   def create(**args)
-
     plan = Plan.new(
       organization_id: args[:organization_id],
       name: args[:name],
@@ -24,15 +23,15 @@ class PlansService < BaseService
     end
 
     ActiveRecord::Base.transaction do
-      # TODO: better handling of validation errors
       plan.save!
 
-      # TODO: group validation errors
       args[:charges].each { |c| create_charge(plan, c) }
     end
 
     result.plan = plan
     result
+  rescue ActiveRecord::RecordInvalid => e
+    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
   end
 
   def update(**args)
@@ -56,7 +55,6 @@ class PlansService < BaseService
     end
 
     ActiveRecord::Base.transaction do
-      # TODO: better handling of validation errors
       plan.save!
 
       args[:charges].each do |payload_charge|
@@ -70,6 +68,8 @@ class PlansService < BaseService
 
     result.plan = plan
     result
+  rescue ActiveRecord::RecordInvalid => e
+    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
   end
 
   def destroy(id)
