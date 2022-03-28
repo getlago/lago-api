@@ -14,8 +14,8 @@ class Plan < ApplicationRecord
   ].freeze
 
   BILLING_PERIODS = %i[
-    beginning_of_month
-    end_of_month
+    beginning_of_period
+    end_of_period
     subscruption_date
   ].freeze
 

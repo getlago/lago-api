@@ -38,7 +38,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           name: 'Updated plan',
           code: 'new_plan',
           frequency: 'monthly',
-          billingPeriod: 'end_of_month',
+          billingPeriod: 'end_of_period',
           proRata: false,
           amountCents: 200,
           amountCurrency: 'EUR',
@@ -70,7 +70,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['name']).to eq('Updated plan')
       expect(result_data['code']).to eq('new_plan')
       expect(result_data['frequency']).to eq('monthly')
-      expect(result_data['billingPeriod']).to eq('end_of_month')
+      expect(result_data['billingPeriod']).to eq('end_of_period')
       expect(result_data['proRata']).to eq(false)
       expect(result_data['amountCents']).to eq(200)
       expect(result_data['amountCurrency']).to eq('EUR')
@@ -88,7 +88,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             name: 'Updated plan',
             code: 'new_plan',
             frequency: 'monthly',
-            billingPeriod: 'end_of_month',
+            billingPeriod: 'end_of_period',
             proRata: false,
             amountCents: 200,
             amountCurrency: 'EUR',
