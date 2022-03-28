@@ -55,8 +55,10 @@ RSpec.describe PlansService, type: :service do
       let(:plan_name) { nil }
 
       it 'returns an error' do
-        expect { subject.create(**create_args) }
-          .to raise_error(ActiveRecord::RecordInvalid)
+        result = subject.create(**create_args)
+
+        expect(result).to_not be_success
+        expect(result.error_code).to eq('unprocessable_entity')
       end
     end
 
@@ -123,8 +125,10 @@ RSpec.describe PlansService, type: :service do
       let(:plan_name) { nil }
 
       it 'returns an error' do
-        expect { subject.update(**update_args) }
-          .to raise_error(ActiveRecord::RecordInvalid)
+        result = subject.update(**update_args)
+
+        expect(result).to_not be_success
+        expect(result.error_code).to eq('unprocessable_entity')
       end
     end
 
