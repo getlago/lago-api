@@ -10,6 +10,12 @@ Rails.application.routes.draw do
   # Health Check status
   get '/health', to: 'application#health'
 
+  namespace :api do
+    namespace :v1 do
+      resources :customers, only: %i[create]
+    end
+  end
+
   # Defines the root path route ("/")
   # root "articles#index"
 end
