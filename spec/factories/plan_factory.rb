@@ -5,7 +5,7 @@ FactoryBot.define do
     name { Faker::TvShows::SiliconValley.app }
     code { Faker::Name.name.underscore }
     frequency { 'monthly' }
-    billing_period { 'end_of_month' }
+    billing_period { 'end_of_period' }
     pro_rata { false }
     amount_cents { 100 }
     amount_currency { 'EUR' }

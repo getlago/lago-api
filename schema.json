@@ -260,13 +260,13 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "beginning_of_month",
+              "name": "beginning_of_period",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "end_of_month",
+              "name": "end_of_period",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
