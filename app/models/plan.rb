@@ -5,6 +5,7 @@ class Plan < ApplicationRecord
 
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
+  has_many :subscriptions
 
   FREQUENCIES = %i[
     weekly

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_03_24_141856) do
+ActiveRecord::Schema[7.0].define(version: 2022_03_28_090501) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -40,6 +40,16 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_24_141856) do
     t.float "vat_rate"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
+  end
+
+  create_table "customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "external_id", null: false
+    t.string "name"
+    t.uuid "organization_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_id"], name: "index_customers_on_external_id"
+    t.index ["organization_id"], name: "index_customers_on_organization_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -78,6 +88,19 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_24_141856) do
     t.index ["organization_id"], name: "index_plans_on_organization_id"
   end
 
+  create_table "subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.uuid "plan_id", null: false
+    t.integer "status", null: false
+    t.datetime "canceled_at", precision: nil
+    t.datetime "terminated_at", precision: nil
+    t.datetime "started_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
+    t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -88,7 +111,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_24_141856) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
+  add_foreign_key "customers", "organizations"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "plans", "organizations"
+  add_foreign_key "subscriptions", "customers"
+  add_foreign_key "subscriptions", "plans"
 end
