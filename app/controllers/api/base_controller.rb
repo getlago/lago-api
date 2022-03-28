@@ -7,10 +7,13 @@ module Api
     private
 
     def authenticate
-      auth_header = headers[:authorization]
+      auth_header = request.headers['Authorization']
+
+      return unauthorized_error unless auth_header
+
       api_key = auth_header.split(' ').second
 
-      return unauthorized_error
+      return unauthorized unless api_key
 
       organization = Organization.find_by(api_key: api_key)
 
