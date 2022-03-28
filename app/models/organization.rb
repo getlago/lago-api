@@ -5,6 +5,8 @@ class Organization < ApplicationRecord
   has_many :users, through: :memberships
   has_many :billable_metrics
   has_many :plans
+  has_many :customers
+  has_many :subscriptions, through: :customers
 
   before_create :generate_api_key
 

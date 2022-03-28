@@ -2,6 +2,6 @@
 
 require 'rails_helper'
 
-RSpec.describe Charge, type: :model do
+RSpec.describe Customer, type: :model do
   # Empty
 end
