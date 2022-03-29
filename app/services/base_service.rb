@@ -27,6 +27,10 @@ class BaseService
       self
     end
 
+    def fail_with_validations!(record)
+      fail!('unprocessable_entity', record.errors.full_messages)
+    end
+
     private
 
     attr_accessor :failure
