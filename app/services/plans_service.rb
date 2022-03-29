@@ -56,14 +56,19 @@ class PlansService < BaseService
 
     ActiveRecord::Base.transaction do
       plan.save!
+      created_charges_ids = []
 
       args[:charges].each do |payload_charge|
         charge = Charge.find_by(id: payload_charge[:id])
 
-        next create_charge(plan, payload_charge) unless charge
+        next charge.update(payload_charge) if charge
 
-        charge.update(payload_charge)
+        created_charge = create_charge(plan, payload_charge)
+        created_charges_ids.push(created_charge.id)
       end
+
+      # Note: Delete charges that are no more linked to the plan
+      sanitize_charges(plan, args[:charges], created_charges_ids)
     end
 
     result.plan = plan
@@ -93,5 +98,13 @@ class PlansService < BaseService
       pro_rata: args[:pro_rata],
       vat_rate: args[:vat_rate]
     )
+  end
+
+  def sanitize_charges(plan, args_charges, created_charges_ids)
+    args_charges_ids = args_charges.select { |c| c[:id] != nil }.map { |c| c[:id] }
+    charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
+    charges_ids.each do |charge_id|
+      Charge.find_by(id: charge_id).destroy!
+    end
   end
 end
