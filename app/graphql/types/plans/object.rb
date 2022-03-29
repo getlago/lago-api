@@ -23,6 +23,17 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      field :charge_count, Integer, null: false, description: 'Number of charges attached to a plan'
+      field :customer_count, Integer, null: false, description: 'Number of customers attached to a plan'
+
+      def charge_count
+        object.charges.count
+      end
+
+      def customer_count
+        object.customers.count
+      end
     end
   end
 end

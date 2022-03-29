@@ -278,9 +278,19 @@ type Plan {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   billingPeriod: BillingPeriodEnum!
+
+  """
+  Number of charges attached to a plan
+  """
+  chargeCount: Int!
   charges: [Charge!]
   code: String!
   createdAt: ISO8601DateTime!
+
+  """
+  Number of customers attached to a plan
+  """
+  customerCount: Int!
   description: String
   frequency: PlanFrequency!
   id: ID!
