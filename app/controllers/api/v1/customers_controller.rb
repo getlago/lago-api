@@ -18,7 +18,7 @@ module Api
             )
           )
         else
-          render json: { message: result.error }, status: :unprocessable_entity
+          validation_errors(result.error)
         end
       end
 

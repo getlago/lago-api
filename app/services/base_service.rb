@@ -28,7 +28,7 @@ class BaseService
     end
 
     def fail_with_validations!(record)
-      fail!('unprocessable_entity', record.errors.full_messages.join('\n'))
+      fail!('unprocessable_entity', record.errors.full_messages)
     end
 
     private
