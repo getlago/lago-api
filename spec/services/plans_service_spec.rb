@@ -192,6 +192,39 @@ RSpec.describe PlansService, type: :service do
           .to change { Charge.count }.by(1)
       end
     end
+
+    context 'with charge to delete' do
+      let!(:charge) do
+        create(
+          :charge,
+          plan_id: plan.id,
+          billable_metric_id: billable_metrics.first.id,
+          amount_cents: 300,
+          amount_currency: 'USD',
+          frequency: 'recurring',
+          pro_rata: false
+        )
+      end
+
+      let(:update_args) do
+        {
+          id: plan.id,
+          name: plan_name,
+          code: 'new_plan',
+          frequency: 'monthly',
+          billing_period: 'end_of_period',
+          pro_rata: false,
+          amount_cents: 200,
+          amount_currency: 'EUR',
+          charges: []
+        }
+      end
+
+      it 'destroys the unattached charge' do
+        expect { subject.update(**update_args) }
+          .to change { plan.charges.count }.by(-1)
+      end
+    end
   end
 
   describe 'destroy' do
