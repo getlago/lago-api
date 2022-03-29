@@ -4,6 +4,6 @@ FactoryBot.define do
   factory :customer do
     organization
     name { Faker::TvShows::SiliconValley.character }
-    external_id { SecureRandom.uuid }
+    customer_id { SecureRandom.uuid }
   end
 end

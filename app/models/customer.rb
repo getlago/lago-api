@@ -5,5 +5,5 @@ class Customer < ApplicationRecord
 
   has_many :subscriptions
 
-  validates :external_id, presence: true
+  validates :customer_id, presence: true
 end

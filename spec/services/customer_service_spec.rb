@@ -10,7 +10,7 @@ RSpec.describe CustomersService, type: :service do
   describe 'create' do
     let(:create_args) do
       {
-        external_id: SecureRandom.uuid,
+        customer_id: SecureRandom.uuid,
         name: 'Foo Bar'
       }
     end
@@ -26,13 +26,13 @@ RSpec.describe CustomersService, type: :service do
       customer = result.customer
       expect(customer.id).to be_present
       expect(customer.organization_id).to eq(organization.id)
-      expect(customer.external_id).to eq(create_args[:external_id])
+      expect(customer.customer_id).to eq(create_args[:customer_id])
       expect(customer.name).to eq(create_args[:name])
     end
 
     context 'whin customer already exists' do
       let!(:customer) do
-        create(:customer, organization: organization, external_id: create_args[:external_id])
+        create(:customer, organization: organization, customer_id: create_args[:customer_id])
       end
 
       it 'updates the customer' do

@@ -2,7 +2,7 @@
 
 class CustomersService < BaseService
   def create(organization:, params:)
-    customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
+    customer = organization.customers.find_or_initialize_by(customer_id: params[:customer_id])
     customer.name = params[:name]
     customer.save!
 

@@ -25,7 +25,7 @@ module Api
       private
 
       def create_params
-        params.require(:customer).permit(:external_id, :name)
+        params.require(:customer).permit(:customer_id, :name)
       end
     end
   end

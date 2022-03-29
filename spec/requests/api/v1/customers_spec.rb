@@ -7,7 +7,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:organization) { create(:organization) }
     let(:create_params) do
       {
-        external_id: SecureRandom.uuid,
+        customer_id: SecureRandom.uuid,
         name: 'Foo Bar'
       }
     end
@@ -19,7 +19,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       result = JSON.parse(response.body, symbolize_names: true)[:customer]
       expect(result[:id]).to be_present
-      expect(result[:external_id]).to eq(create_params[:external_id])
+      expect(result[:customer_id]).to eq(create_params[:customer_id])
       expect(result[:name]).to eq(create_params[:name])
       expect(result[:created_at]).to be_present
     end
