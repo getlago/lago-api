@@ -327,7 +327,14 @@ type Query {
   """
   Query plans of an organization
   """
-  plans(limit: Int, page: Int): PlanCollection!
+  plans(
+    """
+    List of plan ID to fetch
+    """
+    ids: [String!]
+    limit: Int
+    page: Int
+  ): PlanCollection!
 }
 
 type RegisterUser {
