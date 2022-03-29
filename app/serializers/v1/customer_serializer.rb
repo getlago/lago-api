@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         id: model.id,
-        external_id: model.external_id,
+        customer_id: model.customer_id,
         name: model.name,
         created_at: model.created_at
       }
