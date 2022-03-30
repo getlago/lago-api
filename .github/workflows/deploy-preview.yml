@@ -75,23 +75,37 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
-    - name: Replace Variables in values.yaml
+    - name: Replace Variables
       env:
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/lago-api-staging
         BRANCH: ${{ steps.extract_branch.outputs.branch }}
         DOMAIN: ${{ steps.extract_branch.outputs.branch }}
         DATABASE_URL: postgres://lago:${{ secrets.DB_STAGING_PASSWORD }}@${{ secrets.DB_STAGING_HOST}}:5432/${{ steps.extract_branch.outputs.branch }}
-      run: envsubst < ./porter/values.yaml > ./porter/env_values.yaml
+        REDIS_URL: redis://${{ secrets.REDIS_STAGING_URL }}
+      run: |
+        envsubst < ./porter/api.yaml > ./porter/env_api.yaml
+        envsubst < ./porter/worker.yaml > ./porter/env_worker.yaml
     - name: Configure kubectl
       run: echo "${{ secrets.KUBE_STAGING_CONFIG }}" | base64 -d > kubeconfig.yaml
-    - name: Get Helm deployment
+    - name: Get Helm API deployment
       id: helm_deployment
       run: echo "::set-output name=deployment::$(helm --kubeconfig ./kubeconfig.yaml list -f ${{ steps.extract_branch.outputs.branch }}-api -o=json | jq '.[0].name')"
-    - name: Delete Porter app
+    - name: Delete API app
       if: ${{ steps.helm_deployment.outputs.deployment != 'null' }}
       run: |
         helm --kubeconfig ./kubeconfig.yaml uninstall ${{ steps.extract_branch.outputs.branch }}-api
-    - name: Create Porter app
+    - name: Create API app
       uses: porter-dev/porter-cli-action@v0.1.0
       with:
-        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_values.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+        command: create web --app ${{ steps.extract_branch.outputs.branch}}-api --source registry --values ./porter/env_api.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}
+    - name : Get Helm Worker Deployment
+      id: helm_worker_deployment
+      run: echo "::set-output name=deployment::$(helm --kubeconfig ./kubeconfig.yaml list -f ${{ steps.extract_branch.outputs.branch }}-worker -o=json | jq '.[0].name')"
+    - name: Delete Worker App
+      if: ${{ steps.helm_worker_deployment.outputs.deployment != 'null' }}
+      run: |
+        helm --kubeconfig ./kubeconfig.yaml uninstall ${{ steps.extract_branch.outputs.branch }}-worker
+    - name: Create Worker App
+      uses: porter-dev/porter-cli-action@v0.1.0
+      with:
+        command: create worker --app ${{ steps.extract_branch.outputs.branch }}-worker --source registry --values ./porter/env_worker.yaml --image ${{ steps.login-ecr.outputs.registry }}/lago-api-staging:${{ steps.extract_branch.outputs.branch }}

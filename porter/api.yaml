@@ -1,0 +1,82 @@
+auto_deploy: true
+autoscaling:
+  enabled: false
+  maxReplicas: 10
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 50
+  targetMemoryUtilizationPercentage: 50
+cloudsql:
+  connectionName: ''
+  dbPort: 5432
+  enabled: false
+  serviceAccountJSON: ''
+clusterId: 1689
+container:
+  command: ./start.sh
+  env:
+    normal:
+      RAILS_ENV: staging
+      RAILS_MASTER_KEY: PORTERSECRET_api-staging.v2
+      RAILS_LOG_TO_STDOUT: "true"
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+  lifecycle:
+    postStart: null
+    preStop: null
+  port: 3000
+currentCluster:
+  service:
+    is_aws: true
+    is_do: false
+    is_gcp: false
+health:
+  enabled: false
+  failureThreshold: 3
+  path: /healthz
+  periodSeconds: 5
+  readinessProbe:
+    enabled: false
+    path: /ready
+    periodSeconds: 5
+  startupProbe:
+    enabled: false
+    failureThreshold: 3
+    path: /startupz
+    periodSeconds: 5
+image:
+  pullPolicy: Always
+  repository: ${ECR_REPOSITORY} 
+  tag: ${BRANCH}
+ingress:
+  annotations: {}
+  custom_domain: true
+  custom_paths: []
+  enabled: true
+  hosts:
+    - ${DOMAIN}-api.staging.getlago.com
+  porter_hosts: []
+  provider: aws
+  tls: true
+  wildcard: true
+namespace: default
+nodeSelector: {}
+pvc:
+  enabled: false
+  existingVolume: ''
+  mountPath: /mypath
+  storage: 20Gi
+replicaCount: 1
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+service:
+  port: 80
+serviceAccount:
+  annotations: {}
+  create: true
+  name: ''
+showStartCommand: true
+statefulset:
+  enabled: false
+terminationGracePeriodSeconds: 30
