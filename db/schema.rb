@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_03_29_075751) do
+ActiveRecord::Schema[7.0].define(version: 2022_03_31_081121) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -50,6 +50,21 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_29_075751) do
     t.datetime "updated_at", null: false
     t.index ["customer_id"], name: "index_customers_on_customer_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
+  end
+
+  create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "customer_id", null: false
+    t.string "transaction_id", null: false
+    t.string "code", null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "timestamp", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_events_on_customer_id"
+    t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
+    t.index ["organization_id", "transaction_id"], name: "index_events_on_organization_id_and_transaction_id", unique: true
+    t.index ["organization_id"], name: "index_events_on_organization_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -112,6 +127,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_03_29_075751) do
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
   add_foreign_key "customers", "organizations"
+  add_foreign_key "events", "customers"
+  add_foreign_key "events", "organizations"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "plans", "organizations"
