@@ -28,6 +28,7 @@
 
 .env
 .byebug_history
+.irb_history
 
 # Ignore credential keys
 /config/credentials/staging.key

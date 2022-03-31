@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :customers, only: %i[create]
       resources :subscriptions, only: %i[create]
+      resources :events, only: %i[create]
     end
   end
 end
