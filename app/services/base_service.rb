@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BaseService
+  class FailedResult < StandardError; end
+
   class Result < OpenStruct
     attr_reader :error, :error_code
 
@@ -29,6 +31,12 @@ class BaseService
 
     def fail_with_validations!(record)
       fail!('unprocessable_entity', record.errors.full_messages)
+    end
+
+    def throw_error
+      return if success?
+
+      FailedResult.new(error)
     end
 
     private
