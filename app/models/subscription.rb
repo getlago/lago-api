@@ -11,21 +11,21 @@ class Subscription < ApplicationRecord
     :terminated,
     :canceled
   ].freeze
-  
+
   enum status: STATUSES
 
   def mark_as_active!
     self.started_at ||= Time.zone.now
-    self.active!
+    active!
   end
 
   def mark_as_terminated!
     self.terminated_at ||= Time.zone.now
-    self.terminated!
+    terminated!
   end
 
   def mark_as_canceled!
     self.canceled_at ||= Time.zone.now
-    self.canceled!
+    canceled!
   end
 end
