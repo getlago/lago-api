@@ -32,7 +32,8 @@ class BillingService
     # =================================
     # Billed monthly
     days = [Time.zone.day]
-    # If today is the last day of the month
+    # If today is the last day of the month and month count less than 31 days,
+    # Take all days to 31 into account
     ((Time.zone.day + 1)..31).each { |day| days << day } if Time.zone.day == Time.zone.end_of_month.day
 
     sql << Subscription.joins(:plan)
