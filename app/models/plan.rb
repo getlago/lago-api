@@ -16,8 +16,7 @@ class Plan < ApplicationRecord
 
   BILLING_PERIODS = %i[
     beginning_of_period
-    end_of_period
-    subscruption_date
+    subscription_date
   ].freeze
 
   enum frequency: FREQUENCIES

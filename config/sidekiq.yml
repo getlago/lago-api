@@ -3,6 +3,7 @@ timeout: 25
 retry: 1
 queues:
   - default
+  - clock
 
 production:
   concurrency: 10
