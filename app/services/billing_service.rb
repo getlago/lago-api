@@ -5,7 +5,7 @@ class BillingService
     # Keep track of billing time for retry and tracking purpose
     billing_timestamp = Time.zone.now.to_i
 
-    subscriptions.find_each do |subscription|
+    billable_subscriptions.find_each do |subscription|
       BillSubscriptionJob
         .set(wait: rand(240).minutes)
         .perform_later(subscription, billing_timestamp)
@@ -15,7 +15,7 @@ class BillingService
   private
 
   # Retrieve list of subscription that should be billed today
-  def subscriptions
+  def billable_subscriptions
     sql = []
     today = Time.zone.now
 
@@ -27,14 +27,14 @@ class BillingService
       # Billed monthly
       sql << Subscription.active.joins(:plan)
         .merge(Plan.monthly.beginning_of_period)
-        .select(:id).to_sql.to_sql
+        .select(:id).to_sql
 
       # We are on the first day of the year
       if today.month == 1
         # Billed yearly
         sql << Subscription.active.joins(:plan)
           .merge(Plan.yearly.beginning_of_period)
-          .select(:id).to_sql.to_sql
+          .select(:id).to_sql
       end
     end
 
@@ -66,6 +66,7 @@ class BillingService
       .where('DATE_PART(\'day\', subscriptions.started_at) IN (?)', days)
       .select(:id).to_sql
 
+    # Query subscriptions by ids
     Subscription.where("id in (#{sql.join(' UNION ')})")
   end
 end
