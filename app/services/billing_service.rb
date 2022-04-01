@@ -2,26 +2,37 @@
 
 class BillingService
   def call
+    # Keep track of billing time for retry and tracking purpose
+    billing_timestamp = Time.zone.now.to_i
+
     subscriptions.find_each do |subscription|
-      BillSubscriptionJob.perform_later(subscription)
+      BillSubscriptionJob
+        .set(wait: rand(240).minutes)
+        .perform_later(subscription, billing_timestamp)
     end
   end
 
+  private
+
+  # Retrieve list of subscription that should be billed today
   def subscriptions
     sql = []
+    today = Time.zone.now
 
     # =================================
     # Billed on the beginning of period
     # =================================
-    if Time.zone.day == 1
+    # We are on the first day of the month
+    if today.day == 1
       # Billed monthly
-      sql << Subscription.joins(:plan)
+      sql << Subscription.active.joins(:plan)
         .merge(Plan.monthly.beginning_of_period)
         .select(:id).to_sql.to_sql
 
-      # Billed yearly
-      if Time.zone.month == 1
-        sql << Subscription.joins(:plan)
+      # We are on the first day of the year
+      if today.month == 1
+        # Billed yearly
+        sql << Subscription.active.joins(:plan)
           .merge(Plan.yearly.beginning_of_period)
           .select(:id).to_sql.to_sql
       end
@@ -30,26 +41,28 @@ class BillingService
     # =================================
     # Billed on the subscription anniversary
     # =================================
-    # Billed monthly
-    days = [Time.zone.day]
-    # If today is the last day of the month and month count less than 31 days,
-    # Take all days to 31 into account
-    ((Time.zone.day + 1)..31).each { |day| days << day } if Time.zone.day == Time.zone.end_of_month.day
 
-    sql << Subscription.joins(:plan)
+    # Billed monthly
+    days = [today.day]
+
+    # If today is the last day of the month and month count less than 31 days,
+    # we need to take all days up to 31 into account
+    ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
+
+    sql << Subscription.active.joins(:plan)
       .merge(Plan.monthly.subscription_date)
       .where('DATE_PART(\'day\', subscriptions.started_at) IN (?)', days)
       .select(:id).to_sql
 
     # Billed yearly
-    days = [Time.zone.day]
+    days = [today.day]
 
     # If we are not in leap year and we are on 28/02 take 29/02 into account
-    days << 29 if !Date.leap?(Time.zone.year) && Time.zone.day == 28 && Time.zone.month == 2
+    days << 29 if !Date.leap?(today.year) && today.day == 28 && today.month == 2
 
-    sql << Subscription.joins(:plan)
+    sql << Subscription.active.joins(:plan)
       .merge(Plan.yearly.subscription_date)
-      .where('DATE_PART(\'month\', subscriptions.started_at) = ?', Time.zone.month)
+      .where('DATE_PART(\'month\', subscriptions.started_at) = ?', today.month)
       .where('DATE_PART(\'day\', subscriptions.started_at) IN (?)', days)
       .select(:id).to_sql
 
