@@ -113,6 +113,7 @@ type Customer {
   customerId: String!
   id: ID!
   name: String
+  subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
 }
 
@@ -379,6 +380,24 @@ input RegisterUserInput {
   email: String!
   organizationName: String!
   password: String!
+}
+
+enum StatusTypeEnum {
+  active
+  canceled
+  pending
+  terminated
+}
+
+type Subscription {
+  canceledAt: ISO8601DateTime
+  createdAt: ISO8601DateTime!
+  id: ID!
+  plan: [Plan!]!
+  startedAt: ISO8601DateTime
+  status: StatusTypeEnum
+  terminatedAt: ISO8601DateTime
+  updatedAt: ISO8601DateTime!
 }
 
 """

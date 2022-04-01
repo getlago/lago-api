@@ -6,6 +6,8 @@ module Types
       graphql_name 'Customer'
 
       field :id, ID, null: false
+      field :subscriptions, [Types::Subscriptions::Object]
+
       field :customer_id, String, null: false
       field :name, String
 
@@ -14,3 +16,4 @@ module Types
     end
   end
 end
+p
