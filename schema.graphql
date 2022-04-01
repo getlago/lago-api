@@ -23,8 +23,7 @@ type BillableMetricCollection {
 
 enum BillingPeriodEnum {
   beginning_of_period
-  end_of_period
-  subscruption_date
+  subscription_date
 }
 
 type Charge {
