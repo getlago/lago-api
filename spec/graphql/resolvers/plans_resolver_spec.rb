@@ -17,7 +17,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  it 'returs a list of plans' do
+  it 'returns a list of plans' do
     plan = create(:plan, organization: organization)
 
     result = execute_graphql(
