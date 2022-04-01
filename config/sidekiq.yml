@@ -3,6 +3,8 @@ timeout: 25
 retry: 1
 queues:
   - default
+  - clock
+  - billing
 
 production:
   concurrency: 10

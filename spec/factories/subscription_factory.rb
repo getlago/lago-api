@@ -4,5 +4,6 @@ FactoryBot.define do
   factory :subscription do
     customer
     plan
+    status { :active }
   end
 end

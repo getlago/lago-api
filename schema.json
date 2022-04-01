@@ -266,13 +266,7 @@
               "deprecationReason": null
             },
             {
-              "name": "end_of_period",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "subscruption_date",
+              "name": "subscription_date",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

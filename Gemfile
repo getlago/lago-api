@@ -7,6 +7,7 @@ ruby '3.0.1'
 
 gem 'bcrypt'
 gem 'bootsnap', require: false
+gem 'clockwork', require: false
 gem 'graphql'
 gem 'graphql-pagination'
 gem 'jwt'
