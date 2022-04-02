@@ -1,11 +1,9 @@
-FROM ruby:3.0.1-alpine
+FROM ruby:3.0.1-alpine as build
 
 WORKDIR /app
 
-COPY . /app
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
-COPY ./start.sh /app/start.sh
 
 RUN apk add --no-cache \
   git \
@@ -18,7 +16,20 @@ RUN apk add --no-cache \
   tzdata \
   postgresql-dev
 
-RUN bundle config build.nokogiri --use-system-libraries
-RUN bundle install
+RUN bundle config build.nokogiri --use-system-libraries &&\
+  bundle install --jobs=3 --retry=3 --without development test
 
-CMD ["./start.sh"]
+FROM ruby:3.0.1-alpine
+
+WORKDIR /app
+
+COPY . /app
+
+RUN apk add --no-cache \
+  bash \
+  postgresql-dev \
+  tzdata
+
+COPY --from=build /usr/local/bundle/ /usr/local/bundle
+
+CMD ["./scripts/start.sh"]

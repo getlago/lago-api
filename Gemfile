@@ -30,7 +30,7 @@ group :development, :test do
   gem 'simplecov', require: false
 end
 
-group :development, :staging do
+group :development do
   gem 'coffee-rails'
   gem 'graphiql-rails', git: 'https://github.com/rmosolgo/graphiql-rails.git'
   gem 'sass-rails'
