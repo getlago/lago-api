@@ -17,7 +17,7 @@ RUN apk add --no-cache \
   postgresql-dev \
   gcompat
 
-RUN bundle config build.nokogiri --use-system-libraries
-RUN bundle install
+RUN bundle config build.nokogiri --use-system-libraries &&\
+ bundle install
 
 CMD ["./start.dev.sh"]

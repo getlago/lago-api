@@ -12,7 +12,7 @@ cloudsql:
   serviceAccountJSON: ''
 clusterId: 1689
 container:
-  command: ./start.worker.sh
+  command: ./scripts/start.worker.sh
   env:
     normal:
       RAILS_ENV: staging
