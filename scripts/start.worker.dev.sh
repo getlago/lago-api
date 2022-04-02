@@ -1,4 +1,4 @@
 #!/bin/bash
 
 bundle install
-sidekiq -C config/sidekiq.yml
+bundle exec sidekiq -C config/sidekiq.yml
