@@ -1,0 +1,65 @@
+auto_deploy: true
+autoscaling:
+  enabled: false
+  maxReplicas: 10
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 50
+  targetMemoryUtilizationPercentage: 50
+cloudsql:
+  connectionName: ''
+  dbPort: 5432
+  enabled: false
+  serviceAccountJSON: ''
+clusterId: 1689
+container:
+  command: ./scripts/start.clock.sh
+  env:
+    normal:
+      RAILS_ENV: staging
+      RAILS_MASTER_KEY: PORTERSECRET_api-staging.v2
+      RAILS_LOG_TO_STDOUT: "true"
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+  port: 80
+currentCluster:
+  service:
+    is_aws: true
+    is_do: false
+    is_gcp: false
+health:
+  command: ls -l
+  enabled: false
+  failureThreshold: 3
+  periodSeconds: 5
+  readinessProbe:
+    command: ls -l
+    enabled: false
+    periodSeconds: 5
+  startupProbe:
+    command: ls -l
+    enabled: false
+    failureThreshold: 3
+    periodSeconds: 5
+image:
+  pullPolicy: Always
+  repository: ${ECR_REPOSITORY} 
+  tag: ${BRANCH}
+ingress:
+  provider: aws
+namespace: default
+nodeSelector: {}
+pvc:
+  enabled: false
+  mountPath: /mypath
+  storage: 5Gi
+replicaCount: 1
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+serviceAccount:
+  annotations: {}
+  create: true
+  name: ''
+showStartCommand: true
+terminationGracePeriodSeconds: 30
