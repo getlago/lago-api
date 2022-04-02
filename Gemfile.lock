@@ -82,6 +82,9 @@ GEM
     clockwork (3.0.0)
       activesupport
       tzinfo
+    clockwork-test (0.4.0)
+      clockwork
+      timecop
     coffee-rails (5.0.0)
       coffee-script (>= 2.2.0)
       railties (>= 5.2.0)
@@ -241,6 +244,7 @@ GEM
     strscan (3.0.1)
     thor (1.2.1)
     tilt (2.0.10)
+    timecop (0.9.5)
     timeout (0.2.0)
     tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
@@ -260,6 +264,7 @@ DEPENDENCIES
   bootsnap
   byebug
   clockwork
+  clockwork-test
   coffee-rails
   debug
   dotenv
