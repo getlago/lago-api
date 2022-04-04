@@ -70,8 +70,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_04_090706) do
 
   create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "subscription_id", null: false
-    t.datetime "from_date", precision: nil
-    t.datetime "to_date", precision: nil
+    t.date "from_date", null: false
+    t.date "to_date", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
