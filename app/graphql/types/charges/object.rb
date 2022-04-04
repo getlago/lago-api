@@ -10,6 +10,7 @@ module Types
       field :amount_cents, Integer, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
       field :frequency, Types::Charges::FrequencyEnum, null: false
+      field :charge_model, Types::Charges::ChargeModelEnum, null: false
       field :pro_rata, Boolean, null: false
       field :vat_rate, Float
 

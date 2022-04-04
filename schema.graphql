@@ -30,6 +30,7 @@ type Charge {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   billableMetric: BillableMetric!
+  chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
   frequency: ChargeFrequency!
   id: ID!
@@ -47,9 +48,14 @@ input ChargeInput {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
+  chargeModel: ChargeModelEnum!
   frequency: ChargeFrequency!
   proRata: Boolean!
   vatRate: Float
+}
+
+enum ChargeModelEnum {
+  standard
 }
 
 type CollectionMetadata {

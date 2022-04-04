@@ -9,6 +9,7 @@ module Types
       argument :amount_cents, Integer, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
       argument :frequency, Types::Charges::FrequencyEnum, required: true
+      argument :charge_model, Types::Charges::ChargeModelEnum, required: true
       argument :pro_rata, Boolean, required: true
       argument :vat_rate, Float, required: false
     end
