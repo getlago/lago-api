@@ -4,6 +4,9 @@ class BillSubscriptionJob < ApplicationJob
   queue_as 'billing'
 
   def perform(subscription, timestamp)
-    # TODO
+    InvoicesService.new.create(
+      subscription: subscription,
+      timestamp: timestamp,
+    )
   end
 end
