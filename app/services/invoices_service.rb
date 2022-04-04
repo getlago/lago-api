@@ -13,12 +13,12 @@ class InvoicesService < BaseService
                   raise NotImplementedError
     end
 
-    # On first billing period, subscription might after the computed start of period
+    # On first billing period, subscription might start after the computed start of period
     # ei: if we bill on beginning of period, and user registered on the 15th, the invoice should
-    #     start on the 15th and not on the 1st
+    #     start on the 15th (subscription date) and not on the 1st
     from_date = subscription.started_at.to_date if from_date < subscription.started_at
 
-    invoice = Invoice.create!(
+    invoice = Invoice.find_or_create_by!(
       subscription: subscription,
       from_date: from_date,
       to_date: to_date,
