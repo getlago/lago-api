@@ -5,6 +5,8 @@ class Subscription < ApplicationRecord
   belongs_to :plan
   has_one :organization, through: :customer
 
+  has_many :invoices
+
   STATUSES = [
     :pending,
     :active,
