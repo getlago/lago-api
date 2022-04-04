@@ -56,7 +56,7 @@ RSpec.describe InvoicesService, type: :service do
     context 'when billed monthly on first month' do
       let(:timestamp) { Time.zone.now.beginning_of_month }
 
-      let(:started_at) { Time.zone.today - 3.days }
+      let(:started_at) { timestamp - 3.days }
       let(:subscription) { create(:subscription, plan: plan, started_at: started_at) }
 
       let(:plan) do
@@ -132,7 +132,7 @@ RSpec.describe InvoicesService, type: :service do
 
       let(:timestamp) { Time.zone.now.beginning_of_month }
 
-      let(:started_at) { Time.zone.today - 3.days }
+      let(:started_at) { Time.zone.today - 3.months }
       let(:subscription) { create(:subscription, plan: plan, started_at: started_at) }
 
       it 'creates an invoice' do

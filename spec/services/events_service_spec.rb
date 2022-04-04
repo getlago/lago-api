@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-subscription
+require 'rails_helper'
 
 RSpec.describe EventsService, type: :service do
   subject(:event_service) { described_class.new }
