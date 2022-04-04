@@ -5,7 +5,7 @@ module Currencies
 
   ACCEPTED_CURRENCIES = {
     EUR: 'Euro',
-    USD: 'American Dolar',
+    USD: 'American Dollar',
   }.freeze
 
   included do
