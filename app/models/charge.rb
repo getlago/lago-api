@@ -9,5 +9,10 @@ class Charge < ApplicationRecord
     recurring
   ].freeze
 
+  CHARGE_MODELS = %i[
+    standard
+  ].freeze
+
   enum frequency: FREQUENCIES
+  enum charge_model: CHARGE_MODELS
 end

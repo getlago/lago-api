@@ -48,7 +48,8 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               amountCents: 100,
               amountCurrency: 'USD',
               frequency: 'recurring',
-              proRata: false
+              proRata: false,
+              chargeModel: 'standard',
             },
             {
               billableMetricId: billable_metrics.last.id,
@@ -56,11 +57,12 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               amountCurrency: 'EUR',
               frequency: 'one_time',
               proRata: true,
-              vatRate: 10.5
-            }
-          ]
-        }
-      }
+              vatRate: 10.5,
+              chargeModel: 'standard',
+            },
+          ],
+        },
+      },
     )
 
     result_data = result['data']['updatePlan']
@@ -92,9 +94,9 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             proRata: false,
             amountCents: 200,
             amountCurrency: 'EUR',
-            charges: []
-          }
-        }
+            charges: [],
+          },
+        },
       )
 
       expect_unauthorized_error(result)

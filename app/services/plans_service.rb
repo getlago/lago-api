@@ -96,7 +96,8 @@ class PlansService < BaseService
       amount_currency: args[:amount_currency],
       frequency: args[:frequency].to_sym,
       pro_rata: args[:pro_rata],
-      vat_rate: args[:vat_rate]
+      vat_rate: args[:vat_rate],
+      charge_model: args[:charge_model].to_sym,
     )
   end
 

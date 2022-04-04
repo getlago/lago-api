@@ -29,6 +29,7 @@ RSpec.describe PlansService, type: :service do
             amount_currency: 'USD',
             frequency: 'recurring',
             pro_rata: false,
+            charge_model: 'standard',
           },
           {
             billable_metric_id: billable_metrics.last.id,
@@ -36,7 +37,8 @@ RSpec.describe PlansService, type: :service do
             amount_currency: 'EUR',
             frequency: 'one_time',
             pro_rata: true,
-            vat_rate: 10.5
+            vat_rate: 10.5,
+            charge_model: 'standard',
           }
         ]
       }
@@ -97,7 +99,8 @@ RSpec.describe PlansService, type: :service do
             amount_cents: 100,
             amount_currency: 'USD',
             frequency: 'recurring',
-            pro_rata: false
+            pro_rata: false,
+            charge_model: 'standard',
           },
           {
             billable_metric_id: billable_metrics.last.id,
@@ -105,7 +108,8 @@ RSpec.describe PlansService, type: :service do
             amount_currency: 'EUR',
             frequency: 'one_time',
             pro_rata: true,
-            vat_rate: 10.5
+            vat_rate: 10.5,
+            charge_model: 'standard',
           }
         ]
       }
@@ -152,7 +156,8 @@ RSpec.describe PlansService, type: :service do
           amount_cents: 300,
           amount_currency: 'USD',
           frequency: 'recurring',
-          pro_rata: false
+          pro_rata: false,
+          charge_model: 'standard',
         )
       end
 
@@ -173,7 +178,8 @@ RSpec.describe PlansService, type: :service do
               amount_cents: 100,
               amount_currency: 'USD',
               frequency: 'recurring',
-              pro_rata: false
+              pro_rata: false,
+              charge_model: 'standard',
             },
             {
               billable_metric_id: billable_metrics.last.id,
@@ -181,7 +187,8 @@ RSpec.describe PlansService, type: :service do
               amount_currency: 'EUR',
               frequency: 'one_time',
               pro_rata: true,
-              vat_rate: 10.5
+              vat_rate: 10.5,
+              charge_model: 'standard',
             }
           ]
         }
@@ -202,7 +209,8 @@ RSpec.describe PlansService, type: :service do
           amount_cents: 300,
           amount_currency: 'USD',
           frequency: 'recurring',
-          pro_rata: false
+          pro_rata: false,
+          charge_model: 'standard',
         )
       end
 
@@ -216,7 +224,7 @@ RSpec.describe PlansService, type: :service do
           pro_rata: false,
           amount_cents: 200,
           amount_currency: 'EUR',
-          charges: []
+          charges: [],
         }
       end
 
