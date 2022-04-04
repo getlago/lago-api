@@ -6,12 +6,13 @@ class Subscription < ApplicationRecord
   has_one :organization, through: :customer
 
   has_many :invoices
+  has_many :fees
 
   STATUSES = [
     :pending,
     :active,
     :terminated,
-    :canceled
+    :canceled,
   ].freeze
 
   enum status: STATUSES

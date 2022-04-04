@@ -1015,7 +1015,7 @@
             },
             {
               "name": "USD",
-              "description": "American dolar",
+              "description": "American Dolar",
               "isDeprecated": false,
               "deprecationReason": null
             }
