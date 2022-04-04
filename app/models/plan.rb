@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Plan < ApplicationRecord
+  include Currencies
+
   belongs_to :organization
 
   has_many :charges, dependent: :destroy
@@ -22,6 +24,9 @@ class Plan < ApplicationRecord
   enum frequency: FREQUENCIES
   enum billing_period: BILLING_PERIODS
 
+  monetize :amount_cents
+
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
+  validates :amount_currency, inclusion: { in: currency_list }
 end

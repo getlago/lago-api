@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_04_04_090706) do
+ActiveRecord::Schema[7.0].define(version: 2022_04_04_130110) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -33,7 +33,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_04_090706) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "plan_id"
-    t.integer "amount_cents", null: false
+    t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
     t.integer "frequency", null: false
     t.boolean "pro_rata", null: false
@@ -66,6 +66,22 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_04_090706) do
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
     t.index ["organization_id", "transaction_id"], name: "index_events_on_organization_id_and_transaction_id", unique: true
     t.index ["organization_id"], name: "index_events_on_organization_id"
+  end
+
+  create_table "fees", force: :cascade do |t|
+    t.uuid "invoice_id"
+    t.uuid "charge_id"
+    t.uuid "subscription_id"
+    t.bigint "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.bigint "vat_cents", null: false
+    t.string "vat_currency", null: false
+    t.float "vat_rate"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["charge_id"], name: "index_fees_on_charge_id"
+    t.index ["invoice_id"], name: "index_fees_on_invoice_id"
+    t.index ["subscription_id"], name: "index_fees_on_subscription_id"
   end
 
   create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -105,7 +121,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_04_090706) do
     t.string "description"
     t.integer "billing_period", null: false
     t.boolean "pro_rata", null: false
-    t.integer "amount_cents", null: false
+    t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
     t.float "vat_rate"
     t.float "trial_period"
@@ -139,6 +155,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_04_090706) do
   add_foreign_key "customers", "organizations"
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
+  add_foreign_key "fees", "charges"
+  add_foreign_key "fees", "invoices"
+  add_foreign_key "fees", "subscriptions"
   add_foreign_key "invoices", "subscriptions"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"

@@ -3,6 +3,8 @@
 class Invoice < ApplicationRecord
   belongs_to :subscription
 
+  has_many :fees
+
   has_one :customer, through: :subscription
   has_one :organization, through: :subscription
   has_one :plan, through: :subscription

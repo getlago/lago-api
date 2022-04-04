@@ -109,7 +109,7 @@ enum CurrencyEnum {
   EUR
 
   """
-  American dolar
+  American Dollar
   """
   USD
 }
