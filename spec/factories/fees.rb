@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :fee do
     invoice
-    charge
+    charge { nil }
     subscription
 
     amount_cents { 200 }
