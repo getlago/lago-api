@@ -67,7 +67,7 @@ RSpec.describe Fees::SubscriptionService do
         context 'when plan is monthly' do
           before { plan.monthly! }
 
-          context 'when subscription start is on the 1th of the month' do
+          context 'when subscription start is on the 1st of the month' do
             let(:subscription) do
               create(
                 :subscription,
@@ -119,12 +119,12 @@ RSpec.describe Fees::SubscriptionService do
         context 'when plan is yearly' do
           before { plan.yearly! }
 
-          context 'when subscription start is on the 1th day of the year' do
+          context 'when subscription start is on the 1st day of the year' do
             let(:subscription) do
               create(
                 :subscription,
                 plan: plan,
-                started_at: (Time.zone.now - 3.month).beginning_of_year,
+                started_at: Time.zone.now.beginning_of_year,
               )
             end
 
