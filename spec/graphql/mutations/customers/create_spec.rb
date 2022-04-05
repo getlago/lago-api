@@ -10,7 +10,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         createCustomer(input: $input) {
           id,
           name,
-          customer_id
+          customerId
         }
       }
     GQL
@@ -24,7 +24,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       variables: {
         input: {
           name: 'John Doe',
-          customer_id: 'john_doe_2',
+          customerId: 'john_doe_2',
         },
       },
     )
@@ -34,7 +34,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('John Doe')
-      expect(result_data['customer_id']).to eq('john_doe_2')
+      expect(result_data['customerId']).to eq('john_doe_2')
     end
   end
 
@@ -46,7 +46,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         variables: {
           input: {
             name: 'John Doe',
-            customer_id: 'john_doe_2',
+            customerId: 'john_doe_2',
           },
         },
       )
@@ -63,7 +63,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         variables: {
           input: {
             name: 'John Doe',
-            customer_id: 'john_doe_2',
+            customerId: 'john_doe_2',
           },
         },
       )
