@@ -16,13 +16,13 @@ class Plan < ApplicationRecord
     yearly
   ].freeze
 
-  BILLING_PERIODS = %i[
+  FREQUENCIES = %i[
     beginning_of_period
     subscription_date
   ].freeze
 
   enum interval: INTERVALS
-  enum billing_period: BILLING_PERIODS
+  enum frequency: FREQUENCIES
 
   monetize :amount_cents
 

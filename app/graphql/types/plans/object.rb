@@ -11,7 +11,7 @@ module Types
       field :name, String, null: false
       field :code, String, null: false
       field :interval, Types::Plans::IntervalEnum, null: false
-      field :billing_period, Types::Plans::BillingPeriodEnum, null: false
+      field :frequency, Types::Plans::FrequencyEnum, null: false
       field :pro_rata, Boolean, null: false
       field :pay_in_advance, Boolean, null: false
       field :amount_cents, Integer, null: false

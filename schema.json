@@ -251,29 +251,6 @@
           "enumValues": null
         },
         {
-          "kind": "ENUM",
-          "name": "BillingPeriodEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "beginning_of_period",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "subscription_date",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
-        },
-        {
           "kind": "SCALAR",
           "name": "Boolean",
           "description": "Represents `true` or `false` values.",
@@ -927,14 +904,14 @@
               "deprecationReason": null
             },
             {
-              "name": "billingPeriod",
+              "name": "frequency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "BillingPeriodEnum",
+                  "name": "FrequencyEnum",
                   "ofType": null
                 }
               },
@@ -1439,6 +1416,29 @@
           "fields": null,
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "FrequencyEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "beginning_of_period",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_date",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "SCALAR",
@@ -2114,24 +2114,6 @@
               ]
             },
             {
-              "name": "billingPeriod",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "BillingPeriodEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "chargeCount",
               "description": "Number of charges attached to a plan",
               "type": {
@@ -2232,6 +2214,24 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "frequency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "FrequencyEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -3223,14 +3223,14 @@
               "deprecationReason": null
             },
             {
-              "name": "billingPeriod",
+              "name": "frequency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "BillingPeriodEnum",
+                  "name": "FrequencyEnum",
                   "ofType": null
                 }
               },
