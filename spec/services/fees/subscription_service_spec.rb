@@ -203,7 +203,7 @@ RSpec.describe Fees::SubscriptionService do
       end
     end
 
-    context 'when plan frequency is not implemented' do
+    context 'when plan interval is not implemented' do
       let(:subscription) do
         create(
           :subscription,

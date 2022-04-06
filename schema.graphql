@@ -107,7 +107,7 @@ input CreatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  frequency: PlanFrequency!
+  interval: PlanInterval!
   name: String!
   payInAdvance: Boolean!
   proRata: Boolean!
@@ -334,8 +334,8 @@ type Plan {
   """
   customerCount: Int!
   description: String
-  frequency: PlanFrequency!
   id: ID!
+  interval: PlanInterval!
   name: String!
   organization: Organization
   payInAdvance: Boolean!
@@ -350,7 +350,7 @@ type PlanCollection {
   metadata: CollectionMetadata!
 }
 
-enum PlanFrequency {
+enum PlanInterval {
   monthly
   weekly
   yearly
@@ -461,8 +461,8 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  frequency: PlanFrequency!
   id: String!
+  interval: PlanInterval!
   name: String!
   payInAdvance: Boolean!
   proRata: Boolean!

@@ -4,7 +4,7 @@ class InvoicesService < BaseService
   def create(subscription:, timestamp:)
     to_date = (Time.zone.at(timestamp) - 1.day).to_date
 
-    from_date = case subscription.plan.frequency.to_sym
+    from_date = case subscription.plan.interval.to_sym
                 when :monthly
                   (Time.zone.at(timestamp) - 1.month).to_date
                 when :yearly

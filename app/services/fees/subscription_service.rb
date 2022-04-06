@@ -54,7 +54,7 @@ module Fees
 
     # NOTE: Returns number of days of the invoice period
     def period_duration
-      case plan.frequency.to_sym
+      case plan.interval.to_sym
       when :monthly
         (invoice.to_date.beginning_of_month) - invoice.to_date
       when :yearly

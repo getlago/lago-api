@@ -13,7 +13,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           id,
           name,
           code,
-          frequency,
+          interval,
           billingPeriod,
           proRata,
           payInAdvance,
@@ -38,7 +38,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           id: plan.id,
           name: 'Updated plan',
           code: 'new_plan',
-          frequency: 'monthly',
+          interval: 'monthly',
           billingPeriod: 'beginning_of_period',
           proRata: false,
           payInAdvance: false,
@@ -73,7 +73,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated plan')
       expect(result_data['code']).to eq('new_plan')
-      expect(result_data['frequency']).to eq('monthly')
+      expect(result_data['interval']).to eq('monthly')
       expect(result_data['billingPeriod']).to eq('beginning_of_period')
       expect(result_data['proRata']).to eq(false)
       expect(result_data['payInAdvance']).to eq(false)
@@ -92,7 +92,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             id: plan.id,
             name: 'Updated plan',
             code: 'new_plan',
-            frequency: 'monthly',
+            interval: 'monthly',
             billingPeriod: 'beginning_of_period',
             proRata: false,
             payInAdvance: false,

@@ -12,7 +12,7 @@ RSpec.describe InvoicesService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_month }
 
       let(:plan) do
-        create(:plan, frequency: 'monthly', billing_period: 'beginning_of_period')
+        create(:plan, interval: 'monthly', billing_period: 'beginning_of_period')
       end
 
       it 'creates an invoice' do
@@ -34,7 +34,7 @@ RSpec.describe InvoicesService, type: :service do
     context 'when billed monthly on subscription anniversary' do
       let(:timestamp) { subscription.started_at + 2.years }
       let(:plan) do
-        create(:plan, frequency: 'monthly', billing_period: 'subscription_date')
+        create(:plan, interval: 'monthly', billing_period: 'subscription_date')
       end
 
       it 'creates an invoice' do
@@ -60,7 +60,7 @@ RSpec.describe InvoicesService, type: :service do
       let(:subscription) { create(:subscription, plan: plan, started_at: started_at) }
 
       let(:plan) do
-        create(:plan, frequency: 'monthly', billing_period: 'beginning_of_period')
+        create(:plan, interval: 'monthly', billing_period: 'beginning_of_period')
       end
 
       it 'creates an invoice' do
@@ -83,7 +83,7 @@ RSpec.describe InvoicesService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_month }
 
       let(:plan) do
-        create(:plan, frequency: 'yearly', billing_period: 'beginning_of_period')
+        create(:plan, interval: 'yearly', billing_period: 'beginning_of_period')
       end
 
       it 'creates an invoice' do
@@ -106,7 +106,7 @@ RSpec.describe InvoicesService, type: :service do
       let(:timestamp) { subscription.started_at + 2.years }
 
       let(:plan) do
-        create(:plan, frequency: 'yearly', billing_period: 'subscription_date')
+        create(:plan, interval: 'yearly', billing_period: 'subscription_date')
       end
 
       it 'creates an invoice' do
@@ -127,7 +127,7 @@ RSpec.describe InvoicesService, type: :service do
 
     context 'when billed yearly on first year' do
       let(:plan) do
-        create(:plan, frequency: 'yearly', billing_period: 'beginning_of_period')
+        create(:plan, interval: 'yearly', billing_period: 'beginning_of_period')
       end
 
       let(:timestamp) { Time.zone.now.beginning_of_month }
