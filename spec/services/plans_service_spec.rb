@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe PlansService, type: :service do
-  subject { described_class.new(membership.user) }
+  subject(:plans_service) { described_class.new(membership.user) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -20,6 +20,7 @@ RSpec.describe PlansService, type: :service do
         frequency: 'monthly',
         billing_period: 'beginning_of_period',
         pro_rata: false,
+        pay_in_advance: false,
         amount_cents: 200,
         amount_currency: 'EUR',
         charges: [
@@ -39,14 +40,14 @@ RSpec.describe PlansService, type: :service do
             pro_rata: true,
             vat_rate: 10.5,
             charge_model: 'standard',
-          }
-        ]
+          },
+        ],
       }
     end
 
     it 'creates a plan' do
-      expect { subject.create(**create_args) }
-        .to change { Plan.count }.by(1)
+      expect { plans_service.create(**create_args) }
+        .to change(Plan, :count).by(1)
 
       plan = Plan.order(:created_at).last
 
@@ -57,9 +58,9 @@ RSpec.describe PlansService, type: :service do
       let(:plan_name) { nil }
 
       it 'returns an error' do
-        result = subject.create(**create_args)
+        result = plans_service.create(**create_args)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -68,9 +69,9 @@ RSpec.describe PlansService, type: :service do
       let(:billable_metrics) { create_list(:billable_metric, 2) }
 
       it 'returns an error' do
-        result = subject.create(**create_args)
+        result = plans_service.create(**create_args)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error).to eq('Billable metrics does not exists')
       end
     end
@@ -91,6 +92,7 @@ RSpec.describe PlansService, type: :service do
         frequency: 'monthly',
         billing_period: 'beginning_of_period',
         pro_rata: false,
+        pay_in_advance: false,
         amount_cents: 200,
         amount_currency: 'EUR',
         charges: [
@@ -110,13 +112,13 @@ RSpec.describe PlansService, type: :service do
             pro_rata: true,
             vat_rate: 10.5,
             charge_model: 'standard',
-          }
-        ]
+          },
+        ],
       }
     end
 
     it 'updates a plan' do
-      result = subject.update(**update_args)
+      result = plans_service.update(**update_args)
 
       updated_plan = result.plan
       aggregate_failures do
@@ -129,9 +131,9 @@ RSpec.describe PlansService, type: :service do
       let(:plan_name) { nil }
 
       it 'returns an error' do
-        result = subject.update(**update_args)
+        result = plans_service.update(**update_args)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -140,9 +142,9 @@ RSpec.describe PlansService, type: :service do
       let(:billable_metrics) { create_list(:billable_metric, 2) }
 
       it 'returns an error' do
-        result = subject.update(**update_args)
+        result = plans_service.update(**update_args)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error).to eq('Billable metrics does not exists')
       end
     end
@@ -169,6 +171,7 @@ RSpec.describe PlansService, type: :service do
           frequency: 'monthly',
           billing_period: 'beginning_of_period',
           pro_rata: false,
+          pay_in_advance: false,
           amount_cents: 200,
           amount_currency: 'EUR',
           charges: [
@@ -189,14 +192,14 @@ RSpec.describe PlansService, type: :service do
               pro_rata: true,
               vat_rate: 10.5,
               charge_model: 'standard',
-            }
-          ]
+            },
+          ],
         }
       end
 
       it 'updates existing charge and creates an other one' do
-        expect { subject.update(**update_args) }
-          .to change { Charge.count }.by(1)
+        expect { plans_service.update(**update_args) }
+          .to change(Charge, :count).by(1)
       end
     end
 
@@ -222,6 +225,7 @@ RSpec.describe PlansService, type: :service do
           frequency: 'monthly',
           billing_period: 'beginning_of_period',
           pro_rata: false,
+          pay_in_advance: false,
           amount_cents: 200,
           amount_currency: 'EUR',
           charges: [],
@@ -229,7 +233,7 @@ RSpec.describe PlansService, type: :service do
       end
 
       it 'destroys the unattached charge' do
-        expect { subject.update(**update_args) }
+        expect { plans_service.update(**update_args) }
           .to change { plan.charges.count }.by(-1)
       end
     end
@@ -241,15 +245,15 @@ RSpec.describe PlansService, type: :service do
     it 'destroys the plan' do
       id = plan.id
 
-      expect { subject.destroy(id) }
+      expect { plans_service.destroy(id) }
         .to change(Plan, :count).by(-1)
     end
 
     context 'when plan is not found' do
       it 'returns an error' do
-        result = subject.destroy(nil)
+        result = plans_service.destroy(nil)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error).to eq('not_found')
       end
     end
