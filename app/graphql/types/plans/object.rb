@@ -13,6 +13,7 @@ module Types
       field :frequency, Types::Plans::FrequencyEnum, null: false
       field :billing_period, Types::Plans::BillingPeriodEnum, null: false
       field :pro_rata, Boolean, null: false
+      field :pay_in_advance, Boolean, null: false
       field :amount_cents, Integer, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
       field :vat_rate, Float

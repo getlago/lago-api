@@ -16,6 +16,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           frequency,
           billingPeriod,
           proRata,
+          payInAdvance,
           amountCents,
           amountCurrency,
           charges { id, billableMetric { id name code } }
@@ -40,6 +41,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           frequency: 'monthly',
           billingPeriod: 'beginning_of_period',
           proRata: false,
+          payInAdvance: false,
           amountCents: 200,
           amountCurrency: 'EUR',
           charges: [
@@ -74,6 +76,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['frequency']).to eq('monthly')
       expect(result_data['billingPeriod']).to eq('beginning_of_period')
       expect(result_data['proRata']).to eq(false)
+      expect(result_data['payInAdvance']).to eq(false)
       expect(result_data['amountCents']).to eq(200)
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['charges'].count).to eq(2)
@@ -92,6 +95,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             frequency: 'monthly',
             billingPeriod: 'beginning_of_period',
             proRata: false,
+            payInAdvance: false,
             amountCents: 200,
             amountCurrency: 'EUR',
             charges: [],

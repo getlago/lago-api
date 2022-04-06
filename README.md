@@ -32,6 +32,11 @@ touch ./config/master.key
 cp .env.dist .env
 ```
 
+- Install Rubocop locally (required for all developers)
+```shell
+gem install rubocop rubocop-rspec rubocop-performance rubocop-rails rubocop-thread_safety
+```
+
 - Start the database by running `docker-compose up db`
 - Prepare the database and run migrations
 ```shell

@@ -10,10 +10,11 @@ class PlansService < BaseService
       frequency: args[:frequency].to_sym,
       billing_period: args[:billing_period].to_sym,
       pro_rata: args[:pro_rata],
+      pay_in_advance: args[:pay_in_advance],
       amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
       vat_rate: args[:vat_rate],
-      trial_period: args[:trial_period]
+      trial_period: args[:trial_period],
     )
 
     # Validates billable metrics
@@ -44,6 +45,7 @@ class PlansService < BaseService
     plan.frequency = args[:frequency].to_sym
     plan.billing_period = args[:billing_period].to_sym
     plan.pro_rata = args[:pro_rata]
+    plan.pay_in_advance = args[:pay_in_advance]
     plan.amount_cents = args[:amount_cents]
     plan.amount_currency = args[:amount_currency]
     plan.vat_rate = args[:vat_rate]
@@ -67,7 +69,7 @@ class PlansService < BaseService
         created_charges_ids.push(created_charge.id)
       end
 
-      # Note: Delete charges that are no more linked to the plan
+      # NOTE: Delete charges that are no more linked to the plan
       sanitize_charges(plan, args[:charges], created_charges_ids)
     end
 

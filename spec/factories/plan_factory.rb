@@ -8,6 +8,7 @@ FactoryBot.define do
     frequency { 'monthly' }
     billing_period { 'beginning_of_period' }
     pro_rata { false }
+    pay_in_advance { false }
     amount_cents { 100 }
     amount_currency { 'EUR' }
   end

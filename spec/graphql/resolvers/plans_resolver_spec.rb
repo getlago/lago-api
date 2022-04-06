@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+# frozen_string_literal: true
 
 require 'rails_helper'
 
@@ -23,7 +23,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query
+      query: query,
     )
 
     plans_response = result['data']['plans']
@@ -43,7 +43,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
 
       expect_graphql_error(
         result: result,
-        message: 'Missing organization id'
+        message: 'Missing organization id',
       )
     end
   end
@@ -53,12 +53,12 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query
+        query: query,
       )
 
       expect_graphql_error(
         result: result,
-        message: 'Not in organization'
+        message: 'Not in organization',
       )
     end
   end
