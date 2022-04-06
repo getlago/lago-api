@@ -10,7 +10,7 @@ class Plan < ApplicationRecord
   has_many :subscriptions
   has_many :customers, through: :subscriptions
 
-  FREQUENCIES = %i[
+  INTERVALS = %i[
     weekly
     monthly
     yearly
@@ -21,7 +21,7 @@ class Plan < ApplicationRecord
     subscription_date
   ].freeze
 
-  enum frequency: FREQUENCIES
+  enum interval: INTERVALS
   enum billing_period: BILLING_PERIODS
 
   monetize :amount_cents

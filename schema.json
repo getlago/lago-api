@@ -911,14 +911,14 @@
               "deprecationReason": null
             },
             {
-              "name": "frequency",
+              "name": "interval",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "PlanFrequency",
+                  "name": "PlanInterval",
                   "ofType": null
                 }
               },
@@ -2240,14 +2240,14 @@
               ]
             },
             {
-              "name": "frequency",
+              "name": "id",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanFrequency",
+                  "kind": "SCALAR",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -2258,14 +2258,14 @@
               ]
             },
             {
-              "name": "id",
+              "name": "interval",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
+                  "kind": "ENUM",
+                  "name": "PlanInterval",
                   "ofType": null
                 }
               },
@@ -2452,7 +2452,7 @@
         },
         {
           "kind": "ENUM",
-          "name": "PlanFrequency",
+          "name": "PlanInterval",
           "description": null,
           "interfaces": null,
           "possibleTypes": null,
@@ -3207,14 +3207,14 @@
               "deprecationReason": null
             },
             {
-              "name": "frequency",
+              "name": "interval",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "PlanFrequency",
+                  "name": "PlanInterval",
                   "ofType": null
                 }
               },

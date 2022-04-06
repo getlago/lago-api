@@ -11,7 +11,7 @@ module Mutations
 
       argument :name, String, required: true
       argument :code, String, required: true
-      argument :frequency, Types::Plans::FrequencyEnum, required: true
+      argument :interval, Types::Plans::IntervalEnum, required: true
       argument :billing_period, Types::Plans::BillingPeriodEnum, required: true
       argument :pro_rata, Boolean, required: true
       argument :pay_in_advance, Boolean, required: true
