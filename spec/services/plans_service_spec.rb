@@ -199,7 +199,7 @@ RSpec.describe PlansService, type: :service do
 
       it 'updates existing charge and creates an other one' do
         expect { plans_service.update(**update_args) }
-          .to change(Plan, :count).by(1)
+          .to change(Charge, :count).by(1)
       end
     end
 
