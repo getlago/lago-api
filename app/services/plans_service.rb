@@ -8,7 +8,7 @@ class PlansService < BaseService
       code: args[:code],
       description: args[:description],
       interval: args[:interval].to_sym,
-      billing_period: args[:billing_period].to_sym,
+      frequency: args[:frequency].to_sym,
       pro_rata: args[:pro_rata],
       pay_in_advance: args[:pay_in_advance],
       amount_cents: args[:amount_cents],
@@ -43,7 +43,7 @@ class PlansService < BaseService
     plan.code = args[:code]
     plan.description = args[:description]
     plan.interval = args[:interval].to_sym
-    plan.billing_period = args[:billing_period].to_sym
+    plan.frequency = args[:frequency].to_sym
     plan.pro_rata = args[:pro_rata]
     plan.pay_in_advance = args[:pay_in_advance]
     plan.amount_cents = args[:amount_cents]

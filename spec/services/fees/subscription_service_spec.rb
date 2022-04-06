@@ -9,7 +9,7 @@ RSpec.describe Fees::SubscriptionService do
     let(:plan) do
       create(
         :plan,
-        billing_period: :beginning_of_period,
+        frequency: :beginning_of_period,
         amount_cents: 100,
         amount_currency: 'EUR',
         vat_rate: 20,
@@ -236,7 +236,7 @@ RSpec.describe Fees::SubscriptionService do
     let(:plan) do
       create(
         :plan,
-        billing_period: :subscription_date,
+        frequency: :subscription_date,
         amount_cents: 100,
         amount_currency: 'EUR',
         vat_rate: 20,
@@ -279,7 +279,7 @@ RSpec.describe Fees::SubscriptionService do
     let(:plan) do
       create(
         :plan,
-        billing_period: :subscription_date,
+        frequency: :subscription_date,
         amount_cents: 100,
         amount_currency: 'EUR',
         vat_rate: 20,

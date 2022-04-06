@@ -7,7 +7,7 @@ RSpec.describe BillingService, type: :service do
 
   describe '.call' do
     context 'when billed monthly on subscription date' do
-      let(:plan) { create(:plan, interval: :monthly, billing_period: :subscription_date) }
+      let(:plan) { create(:plan, interval: :monthly, frequency: :subscription_date) }
 
       context 'when subscription date is any day below 28' do
         let(:start_date) { DateTime.parse('04 Jan 2022') }
@@ -63,7 +63,7 @@ RSpec.describe BillingService, type: :service do
     end
 
     context 'when billed yearly on subscription date' do
-      let(:plan) { create(:plan, interval: :yearly, billing_period: :subscription_date) }
+      let(:plan) { create(:plan, interval: :yearly, frequency: :subscription_date) }
 
       context 'when subscription date is any day' do
         let(:start_date) { DateTime.parse('04 Jan 2021') }
@@ -153,7 +153,7 @@ RSpec.describe BillingService, type: :service do
     end
 
     context 'when billed monthly on beginning of period' do
-      let(:plan) { create(:plan, interval: :monthly, billing_period: :beginning_of_period) }
+      let(:plan) { create(:plan, interval: :monthly, frequency: :beginning_of_period) }
 
       let(:start_date) { DateTime.parse('20 Feb 2021') }
       let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
@@ -181,7 +181,7 @@ RSpec.describe BillingService, type: :service do
     end
 
     context 'when billed yearly on beginning of period' do
-      let(:plan) { create(:plan, interval: :yearly, billing_period: :beginning_of_period) }
+      let(:plan) { create(:plan, interval: :yearly, frequency: :beginning_of_period) }
 
       let(:start_date) { DateTime.parse('20 Feb 2021') }
       let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
