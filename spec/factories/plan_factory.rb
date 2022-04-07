@@ -11,5 +11,6 @@ FactoryBot.define do
     pay_in_advance { false }
     amount_cents { 100 }
     amount_currency { 'EUR' }
+    vat_rate { 20 }
   end
 end

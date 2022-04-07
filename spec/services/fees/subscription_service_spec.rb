@@ -63,7 +63,7 @@ RSpec.describe Fees::SubscriptionService do
         before do
           plan.update(pro_rata: true)
         end
-        
+
         context 'when plan is monthly' do
           before { plan.monthly! }
 
@@ -72,7 +72,7 @@ RSpec.describe Fees::SubscriptionService do
               create(
                 :subscription,
                 plan: plan,
-                started_at: (Time.zone.now - 3.month).beginning_of_month,
+                started_at: (Time.zone.now - 3.months).beginning_of_month,
               )
             end
 
@@ -87,6 +87,19 @@ RSpec.describe Fees::SubscriptionService do
                 expect(created_fee.amount_currency).to eq(plan.amount_currency)
                 expect(created_fee.vat_amount_cents).to eq(20)
                 expect(created_fee.vat_rate).to eq(20.0)
+              end
+            end
+
+            context 'when plan is pay in advance' do
+              before { plan.update(pay_in_advance: true) }
+
+              it 'creates a fee' do
+                result = fees_subscription_service.create
+                created_fee = result.fee
+
+                aggregate_failures do
+                  expect(created_fee.amount_cents).to eq(100)
+                end
               end
             end
           end
@@ -111,6 +124,19 @@ RSpec.describe Fees::SubscriptionService do
                 expect(created_fee.amount_currency).to eq(plan.amount_currency)
                 expect(created_fee.vat_amount_cents).to eq(10)
                 expect(created_fee.vat_rate).to eq(20.0)
+              end
+            end
+
+            context 'when plan is pay in advance' do
+              before { plan.update(pay_in_advance: true) }
+
+              it 'creates a fee' do
+                result = fees_subscription_service.create
+                created_fee = result.fee
+
+                aggregate_failures do
+                  expect(created_fee.amount_cents).to eq(53)
+                end
               end
             end
           end
@@ -141,6 +167,19 @@ RSpec.describe Fees::SubscriptionService do
                 expect(created_fee.vat_rate).to eq(20.0)
               end
             end
+
+            context 'when plan is pay in advance' do
+              before { plan.update(pay_in_advance: true) }
+
+              it 'creates a fee' do
+                result = fees_subscription_service.create
+                created_fee = result.fee
+
+                aggregate_failures do
+                  expect(created_fee.amount_cents).to eq(plan.amount_cents)
+                end
+              end
+            end
           end
 
           context 'when subscription start is on any other day' do
@@ -163,6 +202,19 @@ RSpec.describe Fees::SubscriptionService do
                 expect(created_fee.amount_currency).to eq(plan.amount_currency)
                 expect(created_fee.vat_amount_cents).to eq(3)
                 expect(created_fee.vat_rate).to eq(20.0)
+              end
+            end
+
+            context 'when plan is pay in advance' do
+              before { plan.update(pay_in_advance: true) }
+
+              it 'creates a fee' do
+                result = fees_subscription_service.create
+                created_fee = result.fee
+
+                aggregate_failures do
+                  expect(created_fee.amount_cents).to eq(79)
+                end
               end
             end
           end
