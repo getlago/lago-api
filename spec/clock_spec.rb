@@ -9,8 +9,8 @@ describe Clockwork do
 
   describe 'schedule:bill_customers' do
     let(:job) { 'schedule:bill_customers' }
-    let(:start_time) { DateTime.parse('1 Apr 2022 00:01:00') }
-    let(:end_time) { DateTime.parse('1 Apr 2022 01:01:00') }
+    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
+    let(:end_time) { Time.zone.parse('1 Apr 2022 01:01:00') }
 
     it 'enqueue a subscription biller job' do
       Clockwork::Test.run(
