@@ -19,6 +19,8 @@ module Invoices
 
       Fees::SubscriptionService.new(invoice).create
 
+      compute_amounts(invoice)
+
       result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -28,6 +30,8 @@ module Invoices
     private
 
     attr_accessor :subscription, :timestamp
+
+    delegate :plan, to: :subscription
 
     def from_date
       return @from_date if @from_date.present?
@@ -72,6 +76,20 @@ module Invoices
       @issuing_date = Time.zone.at(timestamp).to_date if subscription.plan.pay_in_advance?
 
       @issuing_date
+    end
+
+    def compute_amounts(invoice)
+      fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
+
+      invoice.amount_cents = fee_amounts.sum(&:amount_cents)
+      invoice.amount_currency = plan.amount_currency
+      invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
+      invoice.vat_amount_currency = plan.amount_currency
+
+      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
+      invoice.total_amount_currency = plan.amount_currency
+
+      invoice.save!
     end
   end
 end

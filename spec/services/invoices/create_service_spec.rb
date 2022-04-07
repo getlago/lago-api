@@ -28,6 +28,13 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.subscription).to eq(subscription)
           expect(result.invoice.issuing_date.to_date).to eq(timestamp - 1.day)
           expect(result.invoice.fees.count).to eq(1)
+
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.amount_currency).to eq('EUR')
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.vat_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(120)
+          expect(result.invoice.total_amount_currency).to eq('EUR')
         end
       end
     end
