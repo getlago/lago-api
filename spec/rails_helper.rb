@@ -40,11 +40,6 @@ RSpec.configure do |config|
   config.include ApiHelper, type: :request
   config.include ActiveSupport::Testing::TimeHelpers
 
-  config.before do
-    Sidekiq::Testing.disable!
-    Sidekiq::ScheduledSet.new.clear
-  end
-
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_path = "#{::Rails.root}/spec/fixtures"
 
