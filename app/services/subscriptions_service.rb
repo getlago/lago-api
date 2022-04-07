@@ -16,6 +16,8 @@ class SubscriptionsService < BaseService
     )
     subscription.mark_as_active!
 
+    # TODO: create invoice and fee if pay in advance
+
     result.subscription = subscription
     result
   rescue ActiveRecord::RecordInvalid => e

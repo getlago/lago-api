@@ -2,7 +2,6 @@
 
 module Fees
   class SubscriptionService < BaseService
-
     def initialize(invoice)
       @invoice = invoice
       super(nil)
@@ -12,7 +11,7 @@ module Fees
       return result if already_billed?
 
       new_amount_cents = compute_amount
-      
+
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
@@ -33,6 +32,7 @@ module Fees
     private
 
     attr_accessor :invoice
+
     delegate :plan, :subscription, to: :invoice
 
     def compute_amount
@@ -44,7 +44,7 @@ module Fees
       to_date = invoice.to_date
 
       # NOTE: Number of days of the first period since subscription creation
-      days_to_bill = (from_date - invoice.to_date).to_i
+      days_to_bill = (from_date - to_date).to_i
 
       # NOTE: cost of a single day in the period
       day_price = plan.amount_cents.to_f / period_duration
@@ -56,9 +56,9 @@ module Fees
     def period_duration
       case plan.interval.to_sym
       when :monthly
-        (invoice.to_date.beginning_of_month) - invoice.to_date
+        invoice.to_date.beginning_of_month - invoice.to_date
       when :yearly
-        (invoice.to_date.beginning_of_year) - invoice.to_date
+        invoice.to_date.beginning_of_year - invoice.to_date
       else
         raise NotImplementedError
       end
@@ -67,7 +67,7 @@ module Fees
     def already_billed?
       existing_fee = invoice.fees.subscription_kind.first
       return false unless existing_fee
-        
+
       result.fee = existing_fee
       true
     end

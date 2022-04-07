@@ -18,6 +18,11 @@ class InvoicesService < BaseService
     #     start on the 15th (subscription date) and not on the 1st
     from_date = subscription.started_at.to_date if from_date < subscription.started_at
 
+    # When price plan is configured as `pay_in_adavance`, subscription creation will be
+    # billed immediatly. An invoice must be generated for it with only the subscription fee.
+    # The invoicing period will be only one day: the subscription day
+    to_date = subscription.started_at.to_date if to_date < subscription.started_at
+
     invoice = Invoice.find_or_create_by!(
       subscription: subscription,
       from_date: from_date,
