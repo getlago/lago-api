@@ -11,6 +11,7 @@ class Invoice < ApplicationRecord
 
   validates :from_date, presence: true
   validates :to_date, presence: true
+  validates :issuing_date, presence: true
   validate :validate_date_bounds
 
   private

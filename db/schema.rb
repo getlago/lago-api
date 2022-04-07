@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_04_06_133642) do
+ActiveRecord::Schema[7.0].define(version: 2022_04_07_134206) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -90,6 +90,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_06_133642) do
     t.date "to_date", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "issuing_date"
     t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
   end
 
