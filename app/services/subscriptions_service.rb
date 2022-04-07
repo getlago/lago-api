@@ -16,7 +16,12 @@ class SubscriptionsService < BaseService
     )
     subscription.mark_as_active!
 
-    # TODO: create invoice and fee if pay in advance
+    if current_plan.pay_in_advance?
+      BillSubscriptionJob.perform_later(
+        subscription: subscription,
+        timestamp: Time.zone.now.to_i,
+      )
+    end
 
     result.subscription = subscription
     result

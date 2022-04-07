@@ -61,6 +61,19 @@ RSpec.describe SubscriptionsService, type: :service do
           expect(subscription).to be_active
         end
       end
+
+      context 'when plan is pay_in_advance' do
+        before { plan.update(pay_in_advance: true) }
+
+        it 'enqueued a job to bill the subscription' do
+          expect do
+            subscription_service.create(
+              organization: organization,
+              params: params,
+            )
+          end.to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
     end
 
     context 'when customer id is missing' do
