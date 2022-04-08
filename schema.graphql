@@ -126,15 +126,19 @@ type Customer {
   createdAt: ISO8601DateTime!
   customerId: String!
   id: ID!
-  invoices: [Invoice!]
   name: String
-  subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
 }
 
 type CustomerCollection {
   collection: [Customer!]!
   metadata: CollectionMetadata!
+}
+
+type CustomerDetails {
+  customer: Customer
+  invoices: [Invoice!]
+  subscriptions: [Subscription!]
 }
 
 """
@@ -387,6 +391,16 @@ type Query {
   Retrives currently connected user
   """
   currentUser: User!
+
+  """
+  Query a single customer of an organization
+  """
+  customer(
+    """
+    Uniq ID of the customer
+    """
+    id: ID!
+  ): CustomerDetails
 
   """
   Query customers of an organization
