@@ -5,7 +5,7 @@ FactoryBot.define do
 
     amount_cents { Faker::Number.between(from: 100, to: 500) }
     amount_currency { 'EUR' }
-    
+
     pro_rata { false }
 
     factory :one_time_charge do
@@ -15,5 +15,7 @@ FactoryBot.define do
     factory :recurring_charge do
       frequency { :recurring }
     end
+
+    charge_model { 'standard' }
   end
 end
