@@ -11,6 +11,7 @@ module Types
 
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :customers, resolver: Resolvers::CustomersResolver
+    field :customer, resolver: Resolvers::CustomerResolver
     field :plans, resolver: Resolvers::PlansResolver
   end
 end

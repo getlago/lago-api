@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::PlansResolver, type: :graphql do
+RSpec.describe Resolvers::CustomersResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
