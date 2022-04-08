@@ -127,6 +127,7 @@ type Customer {
   customerId: String!
   id: ID!
   name: String
+  subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
 }
 
@@ -136,9 +137,13 @@ type CustomerCollection {
 }
 
 type CustomerDetails {
-  customer: Customer
+  createdAt: ISO8601DateTime!
+  customerId: String!
+  id: ID!
   invoices: [Invoice!]
+  name: String
   subscriptions: [Subscription!]
+  updatedAt: ISO8601DateTime!
 }
 
 """

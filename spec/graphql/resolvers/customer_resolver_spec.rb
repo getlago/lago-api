@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     <<~GQL
       query($customerId: ID!) {
         customer(id: $customerId) {
-          customer { id customerId name }
+          id customerId name
           invoices { id }
           subscriptions { id }
         }
@@ -34,7 +34,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     customer_response = result['data']['customer']
 
     aggregate_failures do
-      expect(customer_response['customer']['id']).to eq(customer.id)
+      expect(customer_response['id']).to eq(customer.id)
       expect(customer_response['subscriptions'].count).to eq(0)
       expect(customer_response['invoices'].count).to eq(0)
     end

@@ -9,6 +9,7 @@ module Types
 
       field :customer_id, String, null: false
       field :name, String
+      field :subscriptions, [Types::Subscriptions::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
