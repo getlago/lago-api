@@ -9,6 +9,9 @@ class Invoice < ApplicationRecord
   has_one :organization, through: :subscription
   has_one :plan, through: :subscription
 
+  monetize :amount_cents
+  monetize :vat_amount_cents
+
   validates :from_date, presence: true
   validates :to_date, presence: true
   validates :issuing_date, presence: true
