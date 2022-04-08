@@ -126,6 +126,7 @@ type Customer {
   createdAt: ISO8601DateTime!
   customerId: String!
   id: ID!
+  invoices: [Invoice!]
   name: String
   subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
@@ -186,9 +187,29 @@ enum FrequencyEnum {
 }
 
 """
+An ISO 8601-encoded date
+"""
+scalar ISO8601Date
+
+"""
 An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
+
+type Invoice {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  fromDate: ISO8601Date!
+  id: ID!
+  issuingDate: ISO8601Date!
+  toDate: ISO8601Date!
+  totalAmountCents: Int!
+  totalAmountCurrency: CurrencyEnum!
+  updatedAt: ISO8601DateTime!
+  vatAmountCents: Int!
+  vatAmountCurrency: CurrencyEnum!
+}
 
 type LoginUser {
   token: String!
