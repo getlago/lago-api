@@ -6,7 +6,8 @@ module Types
       graphql_name 'Subscription'
 
       field :id, ID, null: false
-      field :plan, [Types::Plans::Object], null: false
+      field :customer, Types::Customers::Object, null: false
+      field :plan, Types::Plans::Object, null: false
 
       field :status, Types::Subscriptions::StatusTypeEnum
 
