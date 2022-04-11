@@ -1,12 +1,28 @@
-# This file should contain all the record creation needed to seed the database with its default values.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Examples:
-#
-#   movies = Movie.create([{ name: "Star Wars" }, { name: "Lord of the Rings" }])
-#   Character.create(name: "Luke", movie: movies.first)
+# frozen_string_literal: true
+
+require 'factory_bot_rails'
 
 user = User.find_or_initialize_by(email: 'gavin@hooli.com')
 user.update(password: 'ILoveLago') unless user.password_digest.present?
-orga = Organization.find_or_create_by(name: 'Hooli')
-Membership.find_or_create_by(user: user, organization: orga, role: :admin)
+organization = Organization.find_or_create_by(name: 'Hooli')
+Membership.find_or_create_by(user: user, organization: organization, role: :admin)
+
+
+billable_metric = FactoryBot.create(:billable_metric, organization: organization)
+plan = FactoryBot.create(:plan, organization: organization)
+
+FactoryBot.create(:recurring_charge, plan: plan, billable_metric: billable_metric)
+
+customers = FactoryBot.create_list(:customer, 5, organization: organization)
+subscriptions = []
+customers.each do |customer|
+  subscriptions << FactoryBot.create(:subscription, customer: customer, started_at: Time.zone.now - 3.months, status: :active)
+end
+
+Subscription.all.find_each do |subscription|
+  Invoices::CreateService.new(
+    subscription: subscription,
+    timestamp: Time.zone.now - 2.months,
+  ).create
+end
+
