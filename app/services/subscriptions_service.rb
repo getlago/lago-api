@@ -10,20 +10,19 @@ class SubscriptionsService < BaseService
       return result.fail!('missing_argument', 'plan does not exists')
     end
 
-    new_subscription = current_customer.subscriptions.active.find_or_initialize_by(
+    handle_current_subscription if current_subscription.present?
+
+    new_subscription = Subscription.find_or_initialize_by(
+      customer: current_customer,
+      status: :active,
       plan_id: current_plan.id,
     )
 
-    handle_current_subscription if current_subscription.present?
-
     # NOTE: If the subscription already exists (so its the same as the current_subscription)
     #       We do not create a new one and simply return it into the result.
-    result.subscription = if new_subscription.new_record?
-                            process_new_subscription(new_subscription)
-                          else
-                            new_subscription
-    end
+    process_new_subscription(new_subscription) if new_subscription.new_record?
 
+    result.subscription = new_subscription
     result
   rescue ActiveRecord::RecordInvalid => e
     result.fail_with_validations!(e.record)
@@ -65,6 +64,8 @@ class SubscriptionsService < BaseService
   end
 
   def handle_current_subscription
+    return if current_plan.id == current_subscription.plan.id
+
     # NOTE: We Upgrade the subscription
     if current_plan.amount_cents >= current_subscription.plan.amount_cents
       current_subscription.mark_as_terminated!
