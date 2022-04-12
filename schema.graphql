@@ -9,7 +9,7 @@ type BillableMetric {
   aggregationType: AggregationTypeEnum!
 
   """
-  Check if billable metric is currently deletable
+  Check if billable metric is deletable
   """
   canBeDeleted: Boolean!
   code: String!

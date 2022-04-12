@@ -73,7 +73,7 @@
             },
             {
               "name": "canBeDeleted",
-              "description": "Check if billable metric is currently deletable",
+              "description": "Check if billable metric is deletable",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
