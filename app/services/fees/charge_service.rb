@@ -43,7 +43,7 @@ module Fees
     end
 
     def already_billed?
-      existing_fee = invoice.fees.where(charge_id: charge.id).first
+      existing_fee = invoice.fees.find_by(charge_id: charge.id)
       return false unless existing_fee
 
       result.fee = existing_fee
@@ -51,6 +51,8 @@ module Fees
     end
 
     def aggregator
+      return @aggregator if @aggregator
+
       aggregator_service = case billable_metric.charge_model.to_sym
                            when :count_agg
                              BillableMetrics::Aggregations::CountService
@@ -58,10 +60,12 @@ module Fees
                              raise NotImplementedError
       end
 
-      aggregator_service.new(billable_metric: billable_metric, subscription: subscription)
+      @aggregator = aggregator_service.new(billable_metric: billable_metric, subscription: subscription)
     end
 
     def charge_model
+      return @charge_model if @charge_model
+
       model_service = case charge.charge_model.to_sym
                       when :standard
                         Charges::ChargeModels::Standard
@@ -69,7 +73,7 @@ module Fees
                         raise NotImplementedError
       end
 
-      model_service.new(charge: charge)
+      @charge_model = model_service.new(charge: charge)
     end
   end
 end
