@@ -5,7 +5,7 @@ class Subscription < ApplicationRecord
   belongs_to :plan
 
   has_one :organization, through: :customer
-  has_one :previous_subscription, class: 'Subscription'
+  has_one :previous_subscription, class_name: 'Subscription'
 
   has_many :invoices
   has_many :fees
