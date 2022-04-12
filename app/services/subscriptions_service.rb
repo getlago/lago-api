@@ -55,12 +55,12 @@ class SubscriptionsService < BaseService
     new_subscription.previous_subscription_id = current_subscription.id if current_subscription.present?
     new_subscription.mark_as_active!
 
-    if current_plan.pay_in_advance?
-      BillSubscriptionJob.perform_later(
-        subscription: new_subscription,
-        timestamp: Time.zone.now.to_i,
-      )
-    end
+    return unless current_plan.pay_in_advance?
+
+    BillSubscriptionJob.perform_later(
+      subscription: new_subscription,
+      timestamp: Time.zone.now.to_i,
+    )
   end
 
   def handle_current_subscription
@@ -74,8 +74,6 @@ class SubscriptionsService < BaseService
         subscription: current_subscription,
         timestamp: Time.zone.now.to_i,
       )
-
-      return
     end
 
     # TODO: Downgrade
