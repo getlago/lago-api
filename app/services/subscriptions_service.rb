@@ -10,20 +10,19 @@ class SubscriptionsService < BaseService
       return result.fail!('missing_argument', 'plan does not exists')
     end
 
-    # TODO: Handle customers with existing plans
-    subscription = current_customer.subscriptions.find_or_initialize_by(
+    handle_current_subscription if current_subscription.present?
+
+    new_subscription = Subscription.find_or_initialize_by(
+      customer: current_customer,
+      status: :active,
       plan_id: current_plan.id,
     )
-    subscription.mark_as_active!
 
-    if current_plan.pay_in_advance?
-      BillSubscriptionJob.perform_later(
-        subscription: subscription,
-        timestamp: Time.zone.now.to_i,
-      )
-    end
+    # NOTE: If the subscription already exists (so its the same as the current_subscription)
+    #       We do not create a new one and simply return it into the result.
+    process_new_subscription(new_subscription) if new_subscription.new_record?
 
-    result.subscription = subscription
+    result.subscription = new_subscription
     result
   rescue ActiveRecord::RecordInvalid => e
     result.fail_with_validations!(e.record)
@@ -46,5 +45,37 @@ class SubscriptionsService < BaseService
       code: code,
       organization_id: organization_id,
     )
+  end
+
+  def current_subscription
+    @current_subscription ||= current_customer.subscriptions.active.first
+  end
+
+  def process_new_subscription(new_subscription)
+    new_subscription.previous_subscription_id = current_subscription.id if current_subscription.present?
+    new_subscription.mark_as_active!
+
+    return unless current_plan.pay_in_advance?
+
+    BillSubscriptionJob.perform_later(
+      subscription: new_subscription,
+      timestamp: Time.zone.now.to_i,
+    )
+  end
+
+  def handle_current_subscription
+    return if current_plan.id == current_subscription.plan.id
+
+    # NOTE: We Upgrade the subscription
+    if current_plan.amount_cents >= current_subscription.plan.amount_cents
+      current_subscription.mark_as_terminated!
+
+      BillSubscriptionJob.perform_later(
+        subscription: current_subscription,
+        timestamp: Time.zone.now.to_i,
+      )
+    end
+
+    # TODO: Downgrade
   end
 end

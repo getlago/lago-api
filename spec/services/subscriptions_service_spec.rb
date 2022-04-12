@@ -8,7 +8,7 @@ RSpec.describe SubscriptionsService, type: :service do
   let(:organization) { create(:organization) }
 
   describe '.create' do
-    let(:plan) { create(:plan, organization: organization) }
+    let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
     let(:customer) { create(:customer, organization: organization) }
 
     let(:params) do
@@ -114,7 +114,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
     end
 
-    context 'when subscription already exists' do
+    context 'when an active subscription already exists' do
       let!(:subscription) do
         create(
           :subscription,
@@ -125,15 +125,63 @@ RSpec.describe SubscriptionsService, type: :service do
         )
       end
 
-      it 'returns existing subscription' do
-        result = subscription_service.create(
-          organization: organization,
-          params: params,
-        )
+      context 'when plan is the same' do
+        it 'returns existing subscription' do
+          result = subscription_service.create(
+            organization: organization,
+            params: params,
+          )
 
-        expect(result).to be_success
-        expect(result.subscription).to eq(subscription)
-        expect(result.subscription.started_at.to_s).to eq(subscription.started_at.to_s)
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+        end
+      end
+
+      context 'when plan is not the same' do
+        context 'when we upgrade the plan' do
+          let(:higher_plan) { create(:plan, amount_cents: 200, organization: organization) }
+          let(:params) do
+            {
+              customer_id: customer.customer_id,
+              plan_code: higher_plan.code,
+            }
+          end
+
+          it 'terminates the existing subscription' do
+            subscription_service.create(
+              organization: organization,
+              params: params,
+            )
+
+            old_subscription = Subscription.find(subscription.id)
+
+            expect(old_subscription).to be_terminated
+          end
+
+          it 'enqueues a job to bill the existing subscription' do
+            expect do
+              subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+            end.to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          it 'creates a new subscription' do
+            result = subscription_service.create(
+              organization: organization,
+              params: params,
+            )
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.subscription.id).not_to eq(subscription.id)
+              expect(result.subscription).to be_active
+              expect(result.subscription.plan.id).to eq(higher_plan.id)
+              expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+            end
+          end
+        end
       end
     end
   end
