@@ -20,6 +20,11 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:customer) do
     create(:customer, organization: organization)
   end
+  let(:subscription) { create(:subscription, customer: customer) }
+
+  before do
+    create_list(:invoice, 2, subscription: subscription)
+  end
 
   it 'returns a single of customer' do
     result = execute_graphql(
@@ -35,8 +40,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
 
     aggregate_failures do
       expect(customer_response['id']).to eq(customer.id)
-      expect(customer_response['subscriptions'].count).to eq(0)
-      expect(customer_response['invoices'].count).to eq(0)
+      expect(customer_response['subscriptions'].count).to eq(1)
+      expect(customer_response['invoices'].count).to eq(2)
     end
   end
 

@@ -224,6 +224,8 @@ type Invoice {
   fromDate: ISO8601Date!
   id: ID!
   issuingDate: ISO8601Date!
+  plan: Plan
+  subscription: Subscription
   toDate: ISO8601Date!
   totalAmountCents: Int!
   totalAmountCurrency: CurrencyEnum!

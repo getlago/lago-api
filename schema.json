@@ -1796,6 +1796,34 @@
               ]
             },
             {
+              "name": "plan",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Plan",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "subscription",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Subscription",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "toDate",
               "description": null,
               "type": {
