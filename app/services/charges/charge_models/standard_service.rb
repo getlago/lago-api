@@ -4,8 +4,8 @@ module Charges
   module ChargeModels
     class StandardService < Charges::ChargeModels::BaseService
       def apply(value:)
-        # TODO: return result object
-        value * charge.amount_cents
+        result.amount_cents = value * charge.amount_cents
+        result
       end
     end
   end

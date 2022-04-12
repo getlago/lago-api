@@ -39,7 +39,12 @@ module Fees
 
     def compute_amount
       aggregated_events = aggregator.aggregate(from_date: invoice.from_date, to_date: invoice.to_date)
-      charge_model.apply(value: aggregated_events)
+      return result.fail!('aggregation_failure') unless aggregated_events.success?
+
+      amount_result = charge_model.apply(value: aggregated_events.aggregation)
+      return result.fail!('charge_model_failure') unless amount_result.success?
+
+      amount_result.amount_cents
     end
 
     def already_billed?

@@ -14,6 +14,6 @@ RSpec.describe Charges::ChargeModels::StandardService, type: :service do
   end
 
   it 'apply the charge model to the value' do
-    expect(standard_service.apply(value: 10)).to eq(5000)
+    expect(standard_service.apply(value: 10).amount_cents).to eq(5000)
   end
 end

@@ -36,7 +36,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   it 'aggregates the events' do
     result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
-    expect(result).to eq(4)
+    expect(result.aggregation).to eq(4)
   end
 
   context 'when events are out of bounds' do
@@ -45,7 +45,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     it 'does not take events into account' do
       result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
-      expect(result).to eq(0)
+      expect(result.aggregation).to eq(0)
     end
   end
 end
