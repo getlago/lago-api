@@ -16,6 +16,7 @@ module Fees
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
+        charge: charge,
         amount_cents: new_amount_cents,
         amount_currency: charge.amount_currency,
         vat_rate: charge.vat_rate,
@@ -58,7 +59,7 @@ module Fees
     def aggregator
       return @aggregator if @aggregator
 
-      aggregator_service = case billable_metric.charge_model.to_sym
+      aggregator_service = case billable_metric.aggregation_type.to_sym
                            when :count_agg
                              BillableMetrics::Aggregations::CountService
                            else
@@ -73,7 +74,7 @@ module Fees
 
       model_service = case charge.charge_model.to_sym
                       when :standard
-                        Charges::ChargeModels::Standard
+                        Charges::ChargeModels::StandardService
                       else
                         raise NotImplementedError
       end
