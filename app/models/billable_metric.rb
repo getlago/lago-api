@@ -23,4 +23,12 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
+
+  def attached_to_subscriptions?
+    plans.joins(:subscriptions).exists?
+  end
+
+  def deletable?
+    !attached_to_subscriptions?
+  end
 end

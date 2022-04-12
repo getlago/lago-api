@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe BillableMetricsService, type: :service do
-  subject { described_class.new(membership.user) }
+  subject(:billable_metric_service) { described_class.new(membership.user) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -20,7 +20,7 @@ RSpec.describe BillableMetricsService, type: :service do
     end
 
     it 'creates a billable metric' do
-      expect { subject.create(**create_args) }
+      expect { billable_metric_service.create(**create_args) }
         .to change { BillableMetric.count }.by(1)
     end
 
@@ -34,7 +34,7 @@ RSpec.describe BillableMetricsService, type: :service do
       end
 
       it 'returns an error' do
-        result = subject.create(**create_args)
+        result = billable_metric_service.create(**create_args)
 
         expect(result).to_not be_success
         expect(result.error_code).to eq('unprocessable_entity')
@@ -105,16 +105,31 @@ RSpec.describe BillableMetricsService, type: :service do
     it 'destroys the billable metric' do
       id = billable_metric.id
 
-      expect { subject.destroy(id) }
+      expect { billable_metric_service.destroy(id) }
         .to change(BillableMetric, :count).by(-1)
     end
 
     context 'when billable metric is not found' do
       it 'returns an error' do
-        result = subject.destroy(nil)
+        result = billable_metric_service.destroy(nil)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error).to eq('not_found')
+      end
+    end
+
+    context 'when billable metric is attached to subscription' do
+      let(:subscription) { create(:subscription) }
+
+      before do
+        create(:one_time_charge, plan: subscription.plan, billable_metric: billable_metric)
+      end
+
+      it 'returns an error' do
+        result = billable_metric_service.destroy(billable_metric.id)
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('forbidden')
       end
     end
   end

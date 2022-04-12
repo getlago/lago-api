@@ -7,7 +7,7 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
     <<~GQL
       query {
         billableMetrics(limit: 5) {
-          collection { id }
+          collection { id, name, canBeDeleted }
           metadata { currentPage totalCount }
         }
       }
@@ -23,12 +23,13 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query
+      query: query,
     )
 
     aggregate_failures do
       expect(result['data']['billableMetrics']['collection'].count).to eq(organization.billable_metrics.count)
-      expect(result['data']['billableMetrics']['collection']).to eq([{ 'id' => metric.id }])
+      expect(result['data']['billableMetrics']['collection'].first['id']).to eq(metric.id)
+      expect(result['data']['billableMetrics']['collection'].first['canBeDeleted']).to eq(true)
 
       expect(result['data']['billableMetrics']['metadata']['currentPage']).to eq(1)
       expect(result['data']['billableMetrics']['metadata']['totalCount']).to eq(1)
@@ -41,7 +42,7 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
 
       expect_graphql_error(
         result: result,
-        message: 'Missing organization id'
+        message: 'Missing organization id',
       )
     end
   end
@@ -51,12 +52,12 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query
+        query: query,
       )
 
       expect_graphql_error(
         result: result,
-        message: 'Not in organization'
+        message: 'Not in organization',
       )
     end
   end
