@@ -380,6 +380,11 @@ type Plan {
   amountCurrency: CurrencyEnum!
 
   """
+  Check if plan is deletable
+  """
+  canBeDeleted: Boolean!
+
+  """
   Number of charges attached to a plan
   """
   chargeCount: Int!

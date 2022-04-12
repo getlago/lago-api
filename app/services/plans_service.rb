@@ -83,6 +83,13 @@ class PlansService < BaseService
     plan = result.user.plans.find_by(id: id)
     return result.fail!('not_found') unless plan
 
+    unless plan.deletable?
+      return result.fail!(
+        'forbidden',
+        'Plan is attached to active subscriptions',
+      )
+    end
+
     plan.destroy!
 
     result.plan = plan

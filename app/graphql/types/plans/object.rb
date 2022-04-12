@@ -28,12 +28,20 @@ module Types
       field :charge_count, Integer, null: false, description: 'Number of charges attached to a plan'
       field :customer_count, Integer, null: false, description: 'Number of customers attached to a plan'
 
+      field :can_be_deleted, Boolean, null: false do
+        description 'Check if plan is deletable'
+      end
+
       def charge_count
         object.charges.count
       end
 
       def customer_count
         object.customers.count
+      end
+
+      def can_be_deleted
+        object.deletable?
       end
     end
   end

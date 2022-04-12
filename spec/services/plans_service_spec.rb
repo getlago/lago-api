@@ -257,5 +257,18 @@ RSpec.describe PlansService, type: :service do
         expect(result.error).to eq('not_found')
       end
     end
+
+    context 'when plan is attached to subscription' do
+      before do
+        create(:subscription, plan: plan)
+      end
+
+      it 'returns an error' do
+        result = plans_service.destroy(plan.id)
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('forbidden')
+      end
+    end
   end
 end

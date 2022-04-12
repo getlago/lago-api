@@ -33,4 +33,12 @@ class Plan < ApplicationRecord
   def pay_in_arrear?
     !pay_in_advance
   end
+
+  def attached_to_subscriptions?
+    subscriptions.exists?
+  end
+
+  def deletable?
+    !attached_to_subscriptions?
+  end
 end
