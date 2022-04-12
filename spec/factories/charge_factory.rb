@@ -7,6 +7,7 @@ FactoryBot.define do
     amount_currency { 'EUR' }
 
     pro_rata { false }
+    charge_model { 'standard' }
 
     factory :one_time_charge do
       frequency { :one_time }
@@ -15,7 +16,5 @@ FactoryBot.define do
     factory :recurring_charge do
       frequency { :recurring }
     end
-
-    charge_model { 'standard' }
   end
 end
