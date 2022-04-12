@@ -10,11 +10,11 @@ class SubscriptionsService < BaseService
       return result.fail!('missing_argument', 'plan does not exists')
     end
 
-    handle_current_subscription if current_subscription.present?
-
-    new_subscription = current_customer.subscriptions.find_or_initialize_by(
+    new_subscription = current_customer.subscriptions.active.find_or_initialize_by(
       plan_id: current_plan.id,
     )
+
+    handle_current_subscription if current_subscription.present?
 
     # NOTE: If the subscription already exists (so its the same as the current_subscription)
     #       We do not create a new one and simply return it into the result.
