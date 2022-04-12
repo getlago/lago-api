@@ -16,7 +16,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       create(:one_time_charge, plan: subscription.plan, charge_model: 'standard')
     end
 
-    context 'when billed monthly on begging of period' do
+    context 'when billed monthly on beginning of period' do
       let(:timestamp) { Time.zone.now.beginning_of_month }
 
       let(:plan) do
@@ -92,7 +92,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       end
     end
 
-    context 'when billed yearly on begging of period' do
+    context 'when billed yearly on beginning of period' do
       let(:timestamp) { Time.zone.now.beginning_of_month }
 
       let(:plan) do
@@ -175,6 +175,22 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result.invoice.issuing_date).to eq(timestamp.to_date)
         end
+      end
+    end
+
+    context 'when subscription is terminated and plan is pay in arrear' do
+      let(:plan) do
+        create(:plan, interval: 'monthly', frequency: 'beginning_of_period', pay_in_advance: false)
+      end
+
+      let(:timestamp) { Time.zone.now.beginning_of_month }
+      let(:started_at) { Time.zone.today - 3.months }
+      let(:subscription) { create(:subscription, plan: plan, started_at: started_at, status: :terminated) }
+
+      it 'creates an invoice with subscription fee' do
+        result = invoice_service.create
+
+        expect(result.invoice.fees.subscription_kind.count).to eq(1)
       end
     end
   end
