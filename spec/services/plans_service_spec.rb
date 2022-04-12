@@ -237,6 +237,22 @@ RSpec.describe PlansService, type: :service do
           .to change { plan.charges.count }.by(-1)
       end
     end
+
+    context 'when attached to a subscription' do
+      before do
+        create(:subscription, plan: plan)
+      end
+
+      it 'updates only name and description' do
+        result = plans_service.update(**update_args)
+
+        updated_plan = result.plan
+        aggregate_failures do
+          expect(updated_plan.name).to eq('Updated plan name')
+          expect(plan.charges.count).to eq(0)
+        end
+      end
+    end
   end
 
   describe 'destroy' do
