@@ -7,7 +7,7 @@ class BillableMetricsService < BaseService
       name: args[:name],
       code: args[:code],
       description: args[:description],
-      aggregation_type: args[:aggregation_type]&.to_sym
+      aggregation_type: args[:aggregation_type]&.to_sym,
     )
 
     result.billable_metric = metric
@@ -35,6 +35,13 @@ class BillableMetricsService < BaseService
   def destroy(id)
     metric = result.user.billable_metrics.find_by(id: id)
     return result.fail!('not_found') unless metric
+
+    unless metric.deletable?
+      return result.fail!(
+        'forbidden',
+        'Billable metric is attached to an active subscriptions',
+      )
+    end
 
     metric.destroy!
 
