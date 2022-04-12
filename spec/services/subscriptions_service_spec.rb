@@ -154,6 +154,7 @@ RSpec.describe SubscriptionsService, type: :service do
             )
 
             old_subscription = Subscription.find(subscription.id)
+
             expect(old_subscription).to be_terminated
           end
 
@@ -172,10 +173,13 @@ RSpec.describe SubscriptionsService, type: :service do
               params: params,
             )
 
-            expect(result).to be_success
-            expect(result.subscription.id).not_to eq(subscription.id)
-            expect(result.subscription).to be_active
-            expect(result.subscription.plan.id).to eq(higher_plan.id)
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.subscription.id).not_to eq(subscription.id)
+              expect(result.subscription).to be_active
+              expect(result.subscription.plan.id).to eq(higher_plan.id)
+              expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+            end
           end
         end
       end
