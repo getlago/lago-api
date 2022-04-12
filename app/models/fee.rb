@@ -18,6 +18,7 @@ class Fee < ApplicationRecord
   validates :vat_amount_currency, inclusion: { in: currency_list }
 
   scope :subscription_kind, -> { where(charge_id: nil) }
+  scope :charge_kind, -> { where.not(charge_id: nil) }
 
   def subscription_fee?
     charge_id.blank?
