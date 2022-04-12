@@ -10,18 +10,22 @@ module Invoices
     end
 
     def create
-      invoice = Invoice.find_or_create_by!(
-        subscription: subscription,
-        from_date: from_date,
-        to_date: to_date,
-        issuing_date: issuing_date,
-      )
+      ActiveRecord::Base.transaction do
+        invoice = Invoice.find_or_create_by!(
+          subscription: subscription,
+          from_date: from_date,
+          to_date: to_date,
+          issuing_date: issuing_date,
+        )
 
-      Fees::SubscriptionService.new(invoice).create
+        create_subscription_fee(invoice)
+        create_charges_fees(invoice)
 
-      compute_amounts(invoice)
+        compute_amounts(invoice)
 
-      result.invoice = invoice
+        result.invoice = invoice
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -90,6 +94,18 @@ module Invoices
       invoice.total_amount_currency = plan.amount_currency
 
       invoice.save!
+    end
+
+    def create_subscription_fee(invoice)
+      fee_result = Fees::SubscriptionService.new(invoice).create
+      result.throw_error unless fee_result.success?
+    end
+
+    def create_charges_fees(invoice)
+      subscription.plan.charges.each do |charge|
+        fee_result = Fees::ChargeService.new(invoice: invoice, charge: charge).create
+        result.throw_error unless fee_result.success?
+      end
     end
   end
 end
