@@ -10,20 +10,20 @@ class SubscriptionsService < BaseService
       return result.fail!('missing_argument', 'plan does not exists')
     end
 
-    # TODO: Handle customers with existing plans
-    subscription = current_customer.subscriptions.find_or_initialize_by(
+    handle_current_subscription if current_subscription.present?
+
+    new_subscription = current_customer.subscriptions.find_or_initialize_by(
       plan_id: current_plan.id,
     )
-    subscription.mark_as_active!
 
-    if current_plan.pay_in_advance?
-      BillSubscriptionJob.perform_later(
-        subscription: subscription,
-        timestamp: Time.zone.now.to_i,
-      )
+    # NOTE: If the subscription already exists (so its the same as the current_subscription)
+    #       We do not create a new one and simply return it into the result.
+    result.subscription = if new_subscription.new_record?
+                            process_new_subscription(new_subscription)
+                          else
+                            new_subscription
     end
 
-    result.subscription = subscription
     result
   rescue ActiveRecord::RecordInvalid => e
     result.fail_with_validations!(e.record)
@@ -46,5 +46,37 @@ class SubscriptionsService < BaseService
       code: code,
       organization_id: organization_id,
     )
+  end
+
+  def current_subscription
+    @current_subscription ||= current_customer.subscriptions.active.first
+  end
+
+  def process_new_subscription(new_subscription)
+    new_subscription.previous_subscription_id = current_subscription.id if current_subscription.present?
+    new_subscription.mark_as_active!
+
+    if current_plan.pay_in_advance?
+      BillSubscriptionJob.perform_later(
+        subscription: new_subscription,
+        timestamp: Time.zone.now.to_i,
+      )
+    end
+  end
+
+  def handle_current_subscription
+    # NOTE: We Upgrade the subscription
+    if current_plan.amount_cents >= current_subscription.plan.amount_cents
+      current_subscription.mark_as_terminated!
+
+      BillSubscriptionJob.perform_later(
+        subscription: current_subscription,
+        timestamp: Time.zone.now.to_i,
+      )
+
+      return
+    end
+
+    # TODO: Downgrade
   end
 end

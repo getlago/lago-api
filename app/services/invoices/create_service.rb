@@ -18,7 +18,7 @@ module Invoices
           issuing_date: issuing_date,
         )
 
-        create_subscription_fee(invoice)
+        create_subscription_fee(invoice) if should_create_subscription_fee?
         create_charges_fees(invoice)
 
         compute_amounts(invoice)
@@ -59,7 +59,7 @@ module Invoices
 
     def to_date
       return @to_date if @to_date.present?
-
+ 
       @to_date = (Time.zone.at(timestamp) - 1.day).to_date
 
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
@@ -106,6 +106,13 @@ module Invoices
         fee_result = Fees::ChargeService.new(invoice: invoice, charge: charge).create
         result.throw_error unless fee_result.success?
       end
+    end
+
+    def should_create_subscription_fee?
+      # NOTE: When a subscription is terminated we still need to charge the subscription
+      #       fee if the plan is in pay in arrear, otherwise this fee will never
+      #       be created.
+      subscription.active? || (subscription.terminated? && subscription.plan.pay_in_arrear?)
     end
   end
 end

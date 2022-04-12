@@ -29,4 +29,8 @@ class Plan < ApplicationRecord
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :amount_currency, inclusion: { in: currency_list }
+
+  def pay_in_arrear?
+    !pay_in_advance
+  end
 end
