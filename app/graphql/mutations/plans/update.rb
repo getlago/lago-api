@@ -13,7 +13,6 @@ module Mutations
       argument :code, String, required: true
       argument :interval, Types::Plans::IntervalEnum, required: true
       argument :frequency, Types::Plans::FrequencyEnum, required: true
-      argument :pro_rata, Boolean, required: true
       argument :pay_in_advance, Boolean, required: true
       argument :amount_cents, Integer, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true

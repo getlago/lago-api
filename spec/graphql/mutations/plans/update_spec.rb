@@ -15,7 +15,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           code,
           interval,
           frequency,
-          proRata,
           payInAdvance,
           amountCents,
           amountCurrency,
@@ -40,7 +39,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           code: 'new_plan',
           interval: 'monthly',
           frequency: 'beginning_of_period',
-          proRata: false,
           payInAdvance: false,
           amountCents: 200,
           amountCurrency: 'EUR',
@@ -75,7 +73,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['code']).to eq('new_plan')
       expect(result_data['interval']).to eq('monthly')
       expect(result_data['frequency']).to eq('beginning_of_period')
-      expect(result_data['proRata']).to eq(false)
       expect(result_data['payInAdvance']).to eq(false)
       expect(result_data['amountCents']).to eq(200)
       expect(result_data['amountCurrency']).to eq('EUR')
@@ -94,7 +91,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             code: 'new_plan',
             interval: 'monthly',
             frequency: 'beginning_of_period',
-            proRata: false,
             payInAdvance: false,
             amountCents: 200,
             amountCurrency: 'EUR',
