@@ -110,7 +110,6 @@ input CreatePlanInput {
   interval: PlanInterval!
   name: String!
   payInAdvance: Boolean!
-  proRata: Boolean!
   trialPeriod: Float
   vatRate: Float
 }
@@ -403,7 +402,6 @@ type Plan {
   name: String!
   organization: Organization
   payInAdvance: Boolean!
-  proRata: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
   vatRate: Float
@@ -542,7 +540,6 @@ input UpdatePlanInput {
   interval: PlanInterval!
   name: String!
   payInAdvance: Boolean!
-  proRata: Boolean!
   trialPeriod: Float
   vatRate: Float
 }

@@ -12,7 +12,6 @@ module Types
       field :code, String, null: false
       field :interval, Types::Plans::IntervalEnum, null: false
       field :frequency, Types::Plans::FrequencyEnum, null: false
-      field :pro_rata, Boolean, null: false
       field :pay_in_advance, Boolean, null: false
       field :amount_cents, Integer, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
