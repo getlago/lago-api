@@ -51,7 +51,7 @@ class BillingService
 
     sql << Subscription.active.joins(:plan)
       .merge(Plan.monthly.subscription_date)
-      .where('DATE_PART(\'day\', subscriptions.started_at) IN (?)', days)
+      .where('DATE_PART(\'day\', subscriptions.anniversary_date) IN (?)', days)
       .select(:id).to_sql
 
     # Billed yearly
@@ -62,8 +62,8 @@ class BillingService
 
     sql << Subscription.active.joins(:plan)
       .merge(Plan.yearly.subscription_date)
-      .where('DATE_PART(\'month\', subscriptions.started_at) = ?', today.month)
-      .where('DATE_PART(\'day\', subscriptions.started_at) IN (?)', days)
+      .where('DATE_PART(\'month\', subscriptions.anniversary_date) = ?', today.month)
+      .where('DATE_PART(\'day\', subscriptions.anniversary_date) IN (?)', days)
       .select(:id).to_sql
 
     # Query subscriptions by ids

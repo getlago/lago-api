@@ -11,6 +11,7 @@ module Types
 
       field :status, Types::Subscriptions::StatusTypeEnum
 
+      field :anniversary_date, GraphQL::Types::ISO8601Date
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
