@@ -3523,6 +3523,20 @@
               ]
             },
             {
+              "name": "nextPlan",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Plan",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "plan",
               "description": null,
               "type": {

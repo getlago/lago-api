@@ -17,6 +17,12 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      field :next_plan, Types::Plans::Object
+
+      def next_plan
+        object.next_subscription&.plan
+      end
     end
   end
 end
