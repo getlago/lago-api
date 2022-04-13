@@ -20,6 +20,7 @@ container:
       RAILS_LOG_TO_STDOUT: "true"
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
   port: 80
 currentCluster:
   service:
