@@ -8,7 +8,14 @@ RSpec.describe Invoices::CreateService, type: :service do
   end
 
   describe 'create' do
-    let(:subscription) { create(:subscription, plan: plan, started_at: Time.zone.now - 2.years) }
+    let(:subscription) do
+      create(
+        :subscription,
+        plan: plan,
+        anniversary_date: (Time.zone.now - 2.years).to_date,
+        started_at: Time.zone.now - 2.years,
+      )
+    end
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
 
@@ -47,7 +54,7 @@ RSpec.describe Invoices::CreateService, type: :service do
     end
 
     context 'when billed monthly on subscription anniversary' do
-      let(:timestamp) { subscription.started_at + 2.years }
+      let(:timestamp) { subscription.anniversary_date.beginning_of_day + 2.years }
       let(:plan) do
         create(:plan, interval: 'monthly', frequency: 'subscription_date')
       end
@@ -58,8 +65,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq((timestamp - 1.day).to_date)
-          expect(result.invoice.from_date).to eq((timestamp - 1.month).to_date)
+          expect(result.invoice.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.from_date).to eq(timestamp - 1.month)
           expect(result.invoice.subscription).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -69,9 +76,16 @@ RSpec.describe Invoices::CreateService, type: :service do
 
     context 'when billed monthly on first month' do
       let(:timestamp) { Time.zone.now.beginning_of_month }
-
       let(:started_at) { timestamp - 3.days }
-      let(:subscription) { create(:subscription, plan: plan, started_at: started_at) }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: started_at.to_date,
+          started_at: started_at,
+        )
+      end
 
       let(:plan) do
         create(:plan, interval: 'monthly', frequency: 'beginning_of_period')
@@ -84,7 +98,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result).to be_success
 
           expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(started_at)
+          expect(result.invoice.from_date).to eq(subscription.anniversary_date)
           expect(result.invoice.subscription).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -115,7 +129,7 @@ RSpec.describe Invoices::CreateService, type: :service do
     end
 
     context 'when billed yearly on subscription anniversary' do
-      let(:timestamp) { subscription.started_at + 2.years }
+      let(:timestamp) { subscription.anniversary_date.beginning_of_day + 2.years }
 
       let(:plan) do
         create(:plan, interval: 'yearly', frequency: 'subscription_date')
@@ -127,8 +141,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq((timestamp - 1.day).to_date)
-          expect(result.invoice.from_date).to eq((timestamp - 1.year).to_date)
+          expect(result.invoice.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.from_date).to eq(timestamp - 1.year)
           expect(result.invoice.subscription).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -143,7 +157,14 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { Time.zone.today - 3.months }
-      let(:subscription) { create(:subscription, plan: plan, started_at: started_at) }
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: started_at.to_date,
+          started_at: started_at,
+        )
+      end
 
       it 'creates an invoice' do
         result = invoice_service.create
@@ -152,7 +173,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result).to be_success
 
           expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(started_at)
+          expect(result.invoice.from_date).to eq(subscription.anniversary_date)
           expect(result.invoice.subscription).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -167,7 +188,14 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { Time.zone.today - 3.months }
-      let(:subscription) { create(:subscription, plan: plan, started_at: started_at) }
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: started_at.to_date,
+          started_at: started_at,
+        )
+      end
 
       it 'creates an invoice' do
         result = invoice_service.create
@@ -185,7 +213,15 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { Time.zone.today - 3.months }
-      let(:subscription) { create(:subscription, plan: plan, started_at: started_at, status: :terminated) }
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: started_at.to_date,
+          started_at: started_at,
+          status: :terminated,
+        )
+      end
 
       it 'creates an invoice with subscription fee' do
         result = invoice_service.create

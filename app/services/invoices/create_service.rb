@@ -52,7 +52,7 @@ module Invoices
       # NOTE: On first billing period, subscription might start after the computed start of period
       #       ei: if we bill on beginning of period, and user registered on the 15th, the invoice should
       #       start on the 15th (subscription date) and not on the 1st
-      @from_date = subscription.started_at.to_date if from_date < subscription.started_at
+      @from_date = subscription.anniversary_date if from_date < subscription.anniversary_date
 
       @from_date
     end
@@ -65,7 +65,7 @@ module Invoices
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
       #       billed immediatly. An invoice must be generated for it with only the subscription fee.
       #       The invoicing period will be only one day: the subscription day
-      @to_date = subscription.started_at.to_date if to_date < subscription.started_at
+      @to_date = subscription.anniversary_date if to_date < subscription.anniversary_date
 
       @to_date
     end

@@ -32,6 +32,7 @@ RSpec.describe SubscriptionsService, type: :service do
         expect(subscription.customer_id).to eq(customer.id)
         expect(subscription.plan_id).to eq(plan.id)
         expect(subscription.started_at).to be_present
+        expect(subscription.anniversary_date).to be_present
         expect(subscription).to be_active
       end
     end
@@ -58,6 +59,7 @@ RSpec.describe SubscriptionsService, type: :service do
           expect(subscription.customer.customer_id).to eq(params[:customer_id])
           expect(subscription.plan_id).to eq(plan.id)
           expect(subscription.started_at).to be_present
+          expect(subscription.anniversary_date).to be_present
           expect(subscription).to be_active
         end
       end
@@ -121,6 +123,7 @@ RSpec.describe SubscriptionsService, type: :service do
           customer: customer,
           plan: plan,
           status: :active,
+          anniversary_date: Time.zone.now.to_date,
           started_at: Time.zone.now,
         )
       end
@@ -179,6 +182,7 @@ RSpec.describe SubscriptionsService, type: :service do
               expect(result.subscription).to be_active
               expect(result.subscription.plan.id).to eq(higher_plan.id)
               expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+              expect(result.subscription.anniversary_date).to eq(subscription.anniversary_date)
             end
           end
         end
@@ -207,6 +211,7 @@ RSpec.describe SubscriptionsService, type: :service do
                 expect(result.subscription.id).not_to eq(subscription.id)
                 expect(result.subscription).to be_active
                 expect(result.subscription.plan.id).to eq(lower_plan.id)
+                expect(result.subscription.anniversary_date).to eq(subscription.anniversary_date)
               end
             end
 
@@ -260,6 +265,7 @@ RSpec.describe SubscriptionsService, type: :service do
                 expect(next_subscription).to be_present
                 expect(next_subscription).to be_pending
                 expect(next_subscription.plan.id).to eq(lower_plan.id)
+                expect(next_subscription.anniversary_date).to eq(subscription.anniversary_date)
               end
             end
 

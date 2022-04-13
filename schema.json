@@ -3455,6 +3455,20 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "anniversaryDate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "canceledAt",
               "description": null,
               "type": {

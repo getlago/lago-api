@@ -11,7 +11,14 @@ RSpec.describe BillingService, type: :service do
 
       context 'when subscription date is any day below 28' do
         let(:start_date) { DateTime.parse('04 Jan 2022') }
-        let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            anniversary_date: start_date,
+            started_at: Time.zone.now,
+          )
+        end
 
         before { subscription }
 
@@ -37,7 +44,14 @@ RSpec.describe BillingService, type: :service do
 
       context 'when last day of month and subscription date is after 28 while current month has only 28 days' do
         let(:start_date) { DateTime.parse('30 Jan 2022') }
-        let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            anniversary_date: start_date,
+            started_at: Time.zone.now,
+          )
+        end
 
         before { subscription }
 
@@ -67,7 +81,14 @@ RSpec.describe BillingService, type: :service do
 
       context 'when subscription date is any day' do
         let(:start_date) { DateTime.parse('04 Jan 2021') }
-        let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            anniversary_date: start_date,
+            started_at: Time.zone.now,
+          )
+        end
 
         before { subscription }
 
@@ -93,7 +114,14 @@ RSpec.describe BillingService, type: :service do
 
       context 'when subscription date is on 29 feb and actual year is leap' do
         let(:start_date) { DateTime.parse('29 Feb 2016') }
-        let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            anniversary_date: start_date,
+            started_at: Time.zone.now,
+          )
+        end
 
         before { subscription }
 
@@ -127,7 +155,14 @@ RSpec.describe BillingService, type: :service do
 
       context 'when subscription date is on 29 feb, actual year is not leap' do
         let(:start_date) { DateTime.parse('29 Feb 2016') }
-        let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            anniversary_date: start_date,
+            started_at: Time.zone.now,
+          )
+        end
 
         before { subscription }
 
@@ -156,7 +191,14 @@ RSpec.describe BillingService, type: :service do
       let(:plan) { create(:plan, interval: :monthly, frequency: :beginning_of_period) }
 
       let(:start_date) { DateTime.parse('20 Feb 2021') }
-      let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: start_date,
+          started_at: Time.zone.now,
+        )
+      end
 
       before { subscription }
 
@@ -184,7 +226,14 @@ RSpec.describe BillingService, type: :service do
       let(:plan) { create(:plan, interval: :yearly, frequency: :beginning_of_period) }
 
       let(:start_date) { DateTime.parse('20 Feb 2021') }
-      let(:subscription) { create(:subscription, plan: plan, started_at: start_date) }
+      let(:subscription) do 
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: start_date,
+          started_at: Time.zone.now,
+        )
+      end
 
       before { subscription }
 

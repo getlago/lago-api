@@ -494,6 +494,7 @@ enum StatusTypeEnum {
 }
 
 type Subscription {
+  anniversaryDate: ISO8601Date
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
   customer: Customer!

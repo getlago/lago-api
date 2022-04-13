@@ -77,6 +77,7 @@ class SubscriptionsService < BaseService
     new_subscription = Subscription.new(
       customer: current_customer,
       plan_id: current_plan.id,
+      anniversary_date: Time.zone.now.to_date,
     )
     new_subscription.mark_as_active!
 
@@ -95,6 +96,7 @@ class SubscriptionsService < BaseService
       customer: current_customer,
       plan: current_plan,
       previous_subscription_id: current_subscription.id,
+      anniversary_date: current_subscription.anniversary_date,
     )
 
     ActiveRecord::Base.transaction do
@@ -124,6 +126,7 @@ class SubscriptionsService < BaseService
       customer: current_customer,
       plan: current_plan,
       previous_subscription_id: current_subscription.id,
+      anniversary_date: current_subscription.anniversary_date,
     )
 
     if current_subscription.plan.pay_in_advance?
