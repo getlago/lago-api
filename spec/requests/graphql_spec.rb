@@ -49,7 +49,7 @@ RSpec.describe GraphqlController, type: :request do
             sub: user.id,
             exp: Time.now.to_i
           },
-          Rails.application.secret_key_base, 'HS256'
+          ENV['SECRET_KEY_BASE'], 'HS256'
         )
       end
 
