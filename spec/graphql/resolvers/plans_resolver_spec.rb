@@ -7,7 +7,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     <<~GQL
       query {
         plans(limit: 5) {
-          collection { id chargeCount customerCount }
+          collection { id chargeCount customerCount canBeDeleted }
           metadata { currentPage, totalCount }
         }
       }
@@ -31,6 +31,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     aggregate_failures do
       expect(plans_response['collection'].count).to eq(organization.plans.count)
       expect(plans_response['collection'].first['id']).to eq(plan.id)
+      expect(plans_response['collection'].first['canBeDeleted']).to be_truthy
 
       expect(plans_response['metadata']['currentPage']).to eq(1)
       expect(plans_response['metadata']['totalCount']).to eq(1)

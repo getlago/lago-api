@@ -40,16 +40,21 @@ class PlansService < BaseService
     return result.fail!('not_found') unless plan
 
     plan.name = args[:name]
-    plan.code = args[:code]
     plan.description = args[:description]
-    plan.interval = args[:interval].to_sym
-    plan.frequency = args[:frequency].to_sym
-    plan.pro_rata = args[:pro_rata]
-    plan.pay_in_advance = args[:pay_in_advance]
-    plan.amount_cents = args[:amount_cents]
-    plan.amount_currency = args[:amount_currency]
-    plan.vat_rate = args[:vat_rate]
-    plan.trial_period = args[:trial_period]
+
+    # NOTE: Only name and description are editable if plan
+    #       is attached to subscriptions
+    unless plan.attached_to_subscriptions?
+      plan.code = args[:code]
+      plan.interval = args[:interval].to_sym
+      plan.frequency = args[:frequency].to_sym
+      plan.pro_rata = args[:pro_rata]
+      plan.pay_in_advance = args[:pay_in_advance]
+      plan.amount_cents = args[:amount_cents]
+      plan.amount_currency = args[:amount_currency]
+      plan.vat_rate = args[:vat_rate]
+      plan.trial_period = args[:trial_period]
+    end
 
     metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
     if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
@@ -58,19 +63,22 @@ class PlansService < BaseService
 
     ActiveRecord::Base.transaction do
       plan.save!
-      created_charges_ids = []
 
-      args[:charges].each do |payload_charge|
-        charge = Charge.find_by(id: payload_charge[:id])
+      unless plan.attached_to_subscriptions?
+        created_charges_ids = []
 
-        next charge.update(payload_charge) if charge
+        args[:charges].each do |payload_charge|
+          charge = Charge.find_by(id: payload_charge[:id])
 
-        created_charge = create_charge(plan, payload_charge)
-        created_charges_ids.push(created_charge.id)
+          next charge.update(payload_charge) if charge
+
+          created_charge = create_charge(plan, payload_charge)
+          created_charges_ids.push(created_charge.id)
+        end
+
+        # NOTE: Delete charges that are no more linked to the plan
+        sanitize_charges(plan, args[:charges], created_charges_ids)
       end
-
-      # NOTE: Delete charges that are no more linked to the plan
-      sanitize_charges(plan, args[:charges], created_charges_ids)
     end
 
     result.plan = plan
@@ -82,6 +90,13 @@ class PlansService < BaseService
   def destroy(id)
     plan = result.user.plans.find_by(id: id)
     return result.fail!('not_found') unless plan
+
+    unless plan.deletable?
+      return result.fail!(
+        'forbidden',
+        'Plan is attached to active subscriptions',
+      )
+    end
 
     plan.destroy!
 

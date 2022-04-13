@@ -2626,6 +2626,24 @@
               ]
             },
             {
+              "name": "canBeDeleted",
+              "description": "Check if plan is deletable",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "chargeCount",
               "description": "Number of charges attached to a plan",
               "type": {
