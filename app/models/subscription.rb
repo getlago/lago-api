@@ -3,9 +3,10 @@
 class Subscription < ApplicationRecord
   belongs_to :customer
   belongs_to :plan
+  belongs_to :previous_subscription, class_name: 'Subscription', optional: true
 
   has_one :organization, through: :customer
-  has_one :previous_subscription, class_name: 'Subscription'
+  has_one :next_subscription, class_name: 'Subscription', foreign_key: :previous_subscription_id
 
   has_many :invoices
   has_many :fees

@@ -498,6 +498,7 @@ type Subscription {
   createdAt: ISO8601DateTime!
   customer: Customer!
   id: ID!
+  nextPlan: Plan
   plan: Plan!
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
