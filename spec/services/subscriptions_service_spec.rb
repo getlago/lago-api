@@ -182,6 +182,102 @@ RSpec.describe SubscriptionsService, type: :service do
             end
           end
         end
+
+        context 'when we downgrade the plan' do
+          context 'when plan was pay_in_arrear' do
+            let(:lower_plan) do
+              create(:plan, amount_cents: 50, organization: organization, pay_in_advance: false)
+            end
+
+            let(:params) do
+              {
+                customer_id: customer.customer_id,
+                plan_code: lower_plan.code,
+              }
+            end
+
+            it 'creates a new subscription' do
+              result = subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).not_to eq(subscription.id)
+                expect(result.subscription).to be_active
+                expect(result.subscription.plan.id).to eq(lower_plan.id)
+              end
+            end
+
+            it 'terminates the existing subscription' do
+              result = subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                previous_subscription = result.subscription.previous_subscription
+                expect(previous_subscription.id).to eq(subscription.id)
+                expect(previous_subscription).to be_terminated
+              end
+            end
+
+            it 'enqueues a job to bill the existing subscription' do
+              expect do
+                subscription_service.create(
+                  organization: organization,
+                  params: params,
+                )
+              end.to have_enqueued_job(BillSubscriptionJob)
+            end
+          end
+
+          context 'when plan was pay_in_advance' do
+            before do
+              plan.update!(pay_in_advance: true)
+            end
+
+            let(:lower_plan) do
+              create(:plan, amount_cents: 50, organization: organization, pay_in_advance: true)
+            end
+
+            let(:params) do
+              {
+                customer_id: customer.customer_id,
+                plan_code: lower_plan.code,
+              }
+            end
+
+            it 'creates a new subscription' do
+              result = subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                next_subscription = result.subscription.next_subscription
+                expect(next_subscription).to be_present
+                expect(next_subscription).to be_pending
+                expect(next_subscription.plan.id).to eq(lower_plan.id)
+              end
+            end
+
+            it 'keeps the existing subscription alive' do
+              result = subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).to eq(subscription.id)
+                expect(result.subscription).to be_active
+                expect(result.subscription.plan.id).to eq(plan.id)
+              end
+            end
+          end
+        end
       end
     end
   end
