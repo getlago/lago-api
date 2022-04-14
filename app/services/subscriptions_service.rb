@@ -21,9 +21,11 @@ class SubscriptionsService < BaseService
     return result unless next_subscription
     return result unless next_subscription.pending?
 
+    rotation_date = Time.zone.at(timestamp)
+
     ActiveRecord::Base.transaction do
-      subscription.mark_as_terminated!
-      next_subscription.mark_as_active!
+      subscription.mark_as_terminated!(rotation_date)
+      next_subscription.mark_as_active!(rotation_date)
     end
 
     result.subscription = next_subscription

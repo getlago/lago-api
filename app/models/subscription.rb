@@ -20,13 +20,13 @@ class Subscription < ApplicationRecord
 
   enum status: STATUSES
 
-  def mark_as_active!
-    self.started_at ||= Time.zone.now
+  def mark_as_active!(timestamp = Time.zone.now)
+    self.started_at ||= timestamp
     active!
   end
 
-  def mark_as_terminated!
-    self.terminated_at ||= Time.zone.now
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
     terminated!
   end
 
