@@ -52,20 +52,20 @@ module Invoices
       # NOTE: On first billing period, subscription might start after the computed start of period
       #       ei: if we bill on beginning of period, and user registered on the 15th, the invoice should
       #       start on the 15th (subscription date) and not on the 1st
-      @from_date = subscription.anniversary_date if from_date < subscription.anniversary_date
+      @from_date = subscription.started_at.to_date if from_date < subscription.started_at
 
       @from_date
     end
 
     def to_date
       return @to_date if @to_date.present?
- 
+
       @to_date = (Time.zone.at(timestamp) - 1.day).to_date
 
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
       #       billed immediatly. An invoice must be generated for it with only the subscription fee.
       #       The invoicing period will be only one day: the subscription day
-      @to_date = subscription.anniversary_date if to_date < subscription.anniversary_date
+      @to_date = subscription.started_at.to_date if to_date < subscription.started_at
 
       @to_date
     end
@@ -98,13 +98,20 @@ module Invoices
 
     def create_subscription_fee(invoice)
       fee_result = Fees::SubscriptionService.new(invoice).create
-      result.throw_error unless fee_result.success?
+      fee_result.throw_error unless fee_result.success?
+
+      # NOTE: When a subscription payed in advance is downgraded
+      #       it remains active until the billing date.
+      #       Then we have to terminate it and activate the next one
+      return unless subscription.next_subscription
+
+      Subscriptions::TerminateJob.perform_later(subscription, Time.zone.now.to_i)
     end
 
     def create_charges_fees(invoice)
       subscription.plan.charges.each do |charge|
         fee_result = Fees::ChargeService.new(invoice: invoice, charge: charge).create
-        result.throw_error unless fee_result.success?
+        fee_result.throw_error unless fee_result.success?
       end
     end
 

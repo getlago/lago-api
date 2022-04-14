@@ -4,10 +4,10 @@ class BillSubscriptionJob < ApplicationJob
   queue_as 'billing'
 
   def perform(subscription, timestamp)
-    result = InvoicesService.new.create(
+    result = Invoices::CreateService.new(
       subscription: subscription,
       timestamp: timestamp,
-    )
+    ).create
 
     raise result.throw_error unless result.success?
   end

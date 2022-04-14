@@ -190,7 +190,7 @@ RSpec.describe SubscriptionsService, type: :service do
         context 'when we downgrade the plan' do
           context 'when plan was pay_in_arrear' do
             let(:lower_plan) do
-              create(:plan, amount_cents: 50, organization: organization, pay_in_advance: false)
+              create(:plan, amount_cents: 50, organization: organization)
             end
 
             let(:params) do
@@ -199,6 +199,8 @@ RSpec.describe SubscriptionsService, type: :service do
                 plan_code: lower_plan.code,
               }
             end
+
+            before { plan.update!(pay_in_advance: false) }
 
             it 'creates a new subscription' do
               result = subscription_service.create(
@@ -236,15 +238,28 @@ RSpec.describe SubscriptionsService, type: :service do
                 )
               end.to have_enqueued_job(BillSubscriptionJob)
             end
+
+            context 'when new plan is pay_in_advacne' do
+              let(:lower_plan) do
+                create(:plan, amount_cents: 50, organization: organization, pay_in_advance: true)
+              end
+
+              it 'enqueues a job to bill the new subscription' do
+                expect do
+                  subscription_service.create(
+                    organization: organization,
+                    params: params,
+                  )
+                end.to have_enqueued_job(BillSubscriptionJob).twice
+              end
+            end
           end
 
           context 'when plan was pay_in_advance' do
-            before do
-              plan.update!(pay_in_advance: true)
-            end
+            before { plan.update!(pay_in_advance: true) }
 
             let(:lower_plan) do
-              create(:plan, amount_cents: 50, organization: organization, pay_in_advance: true)
+              create(:plan, amount_cents: 50, organization: organization)
             end
 
             let(:params) do
@@ -284,6 +299,60 @@ RSpec.describe SubscriptionsService, type: :service do
             end
           end
         end
+      end
+    end
+  end
+
+  describe '.terminate_and_start_next' do
+    let(:subscription) { create(:subscription) }
+    let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }
+    let(:timestamp) { Time.zone.now.to_i }
+
+    before { next_subscription }
+
+    it 'terminates the subscription' do
+      result = subscription_service.terminate_and_start_next(
+        subscription: subscription,
+        timestamp: timestamp,
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(subscription.reload).to be_terminated
+      end
+    end
+
+    it 'starts the next subscription' do
+      result = subscription_service.terminate_and_start_next(
+        subscription: subscription,
+        timestamp: timestamp,
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.subscription.id).to eq(next_subscription.id)
+        expect(result.subscription).to be_active
+      end
+    end
+
+    context 'when next subscription is payed in advance' do
+      let(:plan) { create(:plan, pay_in_advance: true) }
+      let(:next_subscription) do
+        create(
+          :subscription,
+          previous_subscription_id: subscription.id,
+          plan: plan,
+          status: :pending,
+        )
+      end
+
+      it 'enqueues a job to bill the existing subscription' do
+        expect do
+          subscription_service.terminate_and_start_next(
+            subscription: subscription,
+            timestamp: timestamp,
+          )
+        end.to have_enqueued_job(BillSubscriptionJob)
       end
     end
   end
