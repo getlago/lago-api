@@ -7,7 +7,7 @@ module Resolvers
 
     description 'Query billable metrics of an organization'
 
-    argument :ids, Integer, required: false
+    argument :ids, [String], required: false, description: 'List of plan ID to fetch'
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
 

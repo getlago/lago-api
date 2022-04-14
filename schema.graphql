@@ -422,7 +422,14 @@ type Query {
   """
   Query billable metrics of an organization
   """
-  billableMetrics(ids: Int, limit: Int, page: Int): BillableMetricCollection!
+  billableMetrics(
+    """
+    List of plan ID to fetch
+    """
+    ids: [String!]
+    limit: Int
+    page: Int
+  ): BillableMetricCollection!
 
   """
   Retrives currently connected user
