@@ -287,4 +287,53 @@ RSpec.describe SubscriptionsService, type: :service do
       end
     end
   end
+
+  describe '.terminate_and_start_next' do
+    let(:subscription) { create(:subscription) }
+    let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id) }
+
+    before { next_subscription }
+
+    it 'terminates the subscription' do
+      result = subscription_service.terminate_and_start_next(
+        subscription: subscription,
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(subscription.reload).to be_terminated
+      end
+    end
+
+    it 'starts the next subscription' do
+      result = subscription_service.terminate_and_start_next(
+        subscription: subscription,
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.subscription.id).to eq(next_subscription.id)
+        expect(result.subscription).to be_active
+      end
+    end
+
+    context 'when next subscription is payed in advance' do
+      let(:plan) { create(:plan, pay_in_advance: true) }
+      let(:next_subscription) do
+        create(
+          :subscription,
+          previous_subscription_id: subscription.id,
+          plan: plan,
+        )
+      end
+
+      it 'enqueues a job to bill the existing subscription' do
+        expect do
+          subscription_service.terminate_and_start_next(
+            subscription: subscription,
+          )
+        end.to have_enqueued_job(BillSubscriptionJob)
+      end
+    end
+  end
 end

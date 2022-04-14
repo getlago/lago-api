@@ -26,10 +26,10 @@ class SubscriptionsService < BaseService
     end
 
     result.subscription = next_subscription
-    return result unless next_subscription.pay_in_advance?
+    return result unless next_subscription.plan.pay_in_advance?
 
     BillSubscriptionJob.perform_later(
-      subscription: current_subscription,
+      subscription: next_subscription,
       timestamp: Time.zone.now.to_i,
     )
 
