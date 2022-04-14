@@ -8,7 +8,6 @@ class PlansService < BaseService
       code: args[:code],
       description: args[:description],
       interval: args[:interval].to_sym,
-      frequency: args[:frequency].to_sym,
       pay_in_advance: args[:pay_in_advance],
       amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
@@ -46,7 +45,6 @@ class PlansService < BaseService
     unless plan.attached_to_subscriptions?
       plan.code = args[:code]
       plan.interval = args[:interval].to_sym
-      plan.frequency = args[:frequency].to_sym
       plan.pay_in_advance = args[:pay_in_advance]
       plan.amount_cents = args[:amount_cents]
       plan.amount_currency = args[:amount_currency]

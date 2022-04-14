@@ -922,22 +922,6 @@
               "deprecationReason": null
             },
             {
-              "name": "frequency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "FrequencyEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "payInAdvance",
               "description": null,
               "type": {
@@ -1616,29 +1600,6 @@
           "fields": null,
           "inputFields": null,
           "enumValues": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "FrequencyEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "beginning_of_period",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "subscription_date",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
         },
         {
           "kind": "SCALAR",
@@ -2736,24 +2697,6 @@
               ]
             },
             {
-              "name": "frequency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "FrequencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "id",
               "description": null,
               "type": {
@@ -3786,22 +3729,6 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "PlanInterval",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "frequency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "FrequencyEnum",
                   "ofType": null
                 }
               },
