@@ -190,7 +190,7 @@ RSpec.describe SubscriptionsService, type: :service do
         context 'when we downgrade the plan' do
           context 'when plan was pay_in_arrear' do
             let(:lower_plan) do
-              create(:plan, amount_cents: 50, organization: organization, pay_in_advance: false)
+              create(:plan, amount_cents: 50, organization: organization)
             end
 
             let(:params) do
@@ -199,6 +199,8 @@ RSpec.describe SubscriptionsService, type: :service do
                 plan_code: lower_plan.code,
               }
             end
+
+            before { plan.update!(pay_in_advance: false) }
 
             it 'creates a new subscription' do
               result = subscription_service.create(
@@ -236,15 +238,28 @@ RSpec.describe SubscriptionsService, type: :service do
                 )
               end.to have_enqueued_job(BillSubscriptionJob)
             end
+
+            context 'when new plan is pay_in_advacne' do
+              let(:lower_plan) do
+                create(:plan, amount_cents: 50, organization: organization, pay_in_advance: true)
+              end
+
+              it 'enqueues a job to bill the new subscription' do
+                expect do
+                  subscription_service.create(
+                    organization: organization,
+                    params: params,
+                  )
+                end.to have_enqueued_job(BillSubscriptionJob).twice
+              end
+            end
           end
 
           context 'when plan was pay_in_advance' do
-            before do
-              plan.update!(pay_in_advance: true)
-            end
+            before { plan.update!(pay_in_advance: true) }
 
             let(:lower_plan) do
-              create(:plan, amount_cents: 50, organization: organization, pay_in_advance: true)
+              create(:plan, amount_cents: 50, organization: organization)
             end
 
             let(:params) do
