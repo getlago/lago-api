@@ -305,7 +305,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
   describe '.terminate_and_start_next' do
     let(:subscription) { create(:subscription) }
-    let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id) }
+    let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }
 
     before { next_subscription }
 
@@ -339,6 +339,7 @@ RSpec.describe SubscriptionsService, type: :service do
           :subscription,
           previous_subscription_id: subscription.id,
           plan: plan,
+          status: :pending,
         )
       end
 

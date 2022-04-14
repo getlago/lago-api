@@ -19,6 +19,7 @@ class SubscriptionsService < BaseService
   def terminate_and_start_next(subscription:)
     next_subscription = subscription.next_subscription
     return result unless next_subscription
+    return result unless next_subscription.pending?
 
     ActiveRecord::Base.transaction do
       subscription.mark_as_terminated!

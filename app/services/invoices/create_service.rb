@@ -105,8 +105,7 @@ module Invoices
       #       Then we have to terminate it and activate the next one
       return unless subscription.next_subscription
 
-      subscription_result = SubscriptionsService.new.terminate_and_start_next(subscription: subscription)
-      subscription_result.throw_error unless subscription_result.success?
+      Subscriptions::TerminateJob.perform_later(subscription, Time.zone.now.to_i)
     end
 
     def create_charges_fees(invoice)

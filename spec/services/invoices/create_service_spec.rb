@@ -229,5 +229,26 @@ RSpec.describe Invoices::CreateService, type: :service do
         expect(result.invoice.fees.subscription_kind.count).to eq(1)
       end
     end
+
+    context 'when subscription has a pending next subscription' do
+      let(:plan) { create(:plan) }
+      let(:timestamp) { Time.zone.now.beginning_of_month }
+
+      let(:next_subscription) do
+        create(
+          :subscription,
+          previous_subscription_id: subscription.id,
+          status: :pending,
+        )
+      end
+
+      before { next_subscription }
+
+      it 'enqueues a job to terminate the subscription' do
+        expect do
+          invoice_service.create
+        end.to have_enqueued_job(Subscriptions::TerminateJob)
+      end
+    end
   end
 end
