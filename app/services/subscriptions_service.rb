@@ -16,7 +16,7 @@ class SubscriptionsService < BaseService
     result.fail_with_validations!(e.record)
   end
 
-  def terminate_and_start_next(subscription:)
+  def terminate_and_start_next(subscription:, timestamp:)
     next_subscription = subscription.next_subscription
     return result unless next_subscription
     return result unless next_subscription.pending?
@@ -31,7 +31,7 @@ class SubscriptionsService < BaseService
 
     BillSubscriptionJob.perform_later(
       subscription: next_subscription,
-      timestamp: Time.zone.now.to_i,
+      timestamp: timestamp,
     )
 
     result

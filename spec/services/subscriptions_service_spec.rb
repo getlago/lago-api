@@ -306,12 +306,14 @@ RSpec.describe SubscriptionsService, type: :service do
   describe '.terminate_and_start_next' do
     let(:subscription) { create(:subscription) }
     let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }
+    let(:timestamp) { Time.zone.now.to_i }
 
     before { next_subscription }
 
     it 'terminates the subscription' do
       result = subscription_service.terminate_and_start_next(
         subscription: subscription,
+        timestamp: timestamp,
       )
 
       aggregate_failures do
@@ -323,6 +325,7 @@ RSpec.describe SubscriptionsService, type: :service do
     it 'starts the next subscription' do
       result = subscription_service.terminate_and_start_next(
         subscription: subscription,
+        timestamp: timestamp,
       )
 
       aggregate_failures do
@@ -347,6 +350,7 @@ RSpec.describe SubscriptionsService, type: :service do
         expect do
           subscription_service.terminate_and_start_next(
             subscription: subscription,
+            timestamp: timestamp,
           )
         end.to have_enqueued_job(BillSubscriptionJob)
       end
