@@ -16,6 +16,28 @@ class SubscriptionsService < BaseService
     result.fail_with_validations!(e.record)
   end
 
+  def terminate_and_start_next(subscription:)
+    next_subscription = subscription.next_subscription
+    return result unless next_subscription
+
+    ActiveRecord::Base.transaction do
+      subscription.mark_as_terminated!
+      next_subscription.mark_as_active!
+    end
+
+    result.subscription = next_subscription
+    return result unless next_subscription.pay_in_advance?
+
+    BillSubscriptionJob.perform_later(
+      subscription: current_subscription,
+      timestamp: Time.zone.now.to_i,
+    )
+
+    result
+  rescue ActiveRecord::RecordInvalid => e
+    result.fail_with_validations!(e.record)
+  end
+
   private
 
   def current_customer(organization_id = nil, customer_id = nil)
@@ -37,19 +59,6 @@ class SubscriptionsService < BaseService
 
   def current_subscription
     @current_subscription ||= current_customer.subscriptions.active.first
-  end
-
-  def process_new_subscription(new_subscription)
-    new_subscription.previous_subscription_id = current_subscription.id if current_subscription.present?
-
-    new_subscription.mark_as_active!
-
-    return unless current_plan.pay_in_advance?
-
-    BillSubscriptionJob.perform_later(
-      subscription: new_subscription,
-      timestamp: Time.zone.now.to_i,
-    )
   end
 
   def handle_subscription
@@ -147,6 +156,13 @@ class SubscriptionsService < BaseService
         subscription: current_subscription,
         timestamp: Time.zone.now.to_i,
       )
+
+      if current_plan.pay_in_advance?
+        BillSubscriptionJob.perform_later(
+          subscription: new_subscription,
+          timestamp: Time.zone.now.to_i,
+        )
+      end
     end
 
     new_subscription

@@ -98,13 +98,21 @@ module Invoices
 
     def create_subscription_fee(invoice)
       fee_result = Fees::SubscriptionService.new(invoice).create
-      result.throw_error unless fee_result.success?
+      fee_result.throw_error unless fee_result.success?
+
+      # NOTE: When a subscription payed in advance is downgraded
+      #       it remains active until the billing date.
+      #       Then we have to terminate it and activate the next one
+      return unless subscription.next_subscription
+
+      subscription_result = SubscriptionsService.new.terminate_and_start_next(subscription: subscription)
+      subscription_result.throw_error unless subscription_result.success?
     end
 
     def create_charges_fees(invoice)
       subscription.plan.charges.each do |charge|
         fee_result = Fees::ChargeService.new(invoice: invoice, charge: charge).create
-        result.throw_error unless fee_result.success?
+        fee_result.throw_error unless fee_result.success?
       end
     end
 
