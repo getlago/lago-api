@@ -412,6 +412,39 @@ type PlanCollection {
   metadata: CollectionMetadata!
 }
 
+type PlanDetails {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+
+  """
+  Check if plan is deletable
+  """
+  canBeDeleted: Boolean!
+
+  """
+  Number of charges attached to a plan
+  """
+  chargeCount: Int!
+  charges: [Charge!]
+  code: String!
+  createdAt: ISO8601DateTime!
+
+  """
+  Number of customers attached to a plan
+  """
+  customerCount: Int!
+  description: String
+  frequency: FrequencyEnum!
+  id: ID!
+  interval: PlanInterval!
+  name: String!
+  organization: Organization
+  payInAdvance: Boolean!
+  trialPeriod: Float
+  updatedAt: ISO8601DateTime!
+  vatRate: Float
+}
+
 enum PlanInterval {
   monthly
   weekly
@@ -457,6 +490,16 @@ type Query {
     limit: Int
     page: Int
   ): CustomerCollection!
+
+  """
+  Query a single plan of an organization
+  """
+  plan(
+    """
+    Uniq ID of the plan
+    """
+    id: ID!
+  ): PlanDetails
 
   """
   Query plans of an organization

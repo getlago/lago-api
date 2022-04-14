@@ -13,5 +13,6 @@ module Types
     field :customers, resolver: Resolvers::CustomersResolver
     field :customer, resolver: Resolvers::CustomerResolver
     field :plans, resolver: Resolvers::PlansResolver
+    field :plan, resolver: Resolvers::PlanResolver
   end
 end
