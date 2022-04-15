@@ -62,6 +62,12 @@ module Invoices
 
       @to_date = (Time.zone.at(timestamp) - 1.day).to_date
 
+      if subscription.terminated? && @to_date > subscription.terminated_at
+        # NOTE: When subscription is terminated, we cannot generate an invoice for a period after the termination
+        # TODO: from_date / to_date of invoices should be timestamps so that to_date = subscription.terminated_at
+        @to_date = (subscription.terminated_at.to_date - 1.day)
+      end
+
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
       #       billed immediatly. An invoice must be generated for it with only the subscription fee.
       #       The invoicing period will be only one day: the subscription day
