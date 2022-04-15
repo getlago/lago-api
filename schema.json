@@ -3228,24 +3228,6 @@
               ]
             },
             {
-              "name": "frequency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "FrequencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "id",
               "description": null,
               "type": {

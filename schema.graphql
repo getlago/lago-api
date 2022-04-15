@@ -443,7 +443,6 @@ type PlanDetails {
   """
   customerCount: Int!
   description: String
-  frequency: FrequencyEnum!
   id: ID!
   interval: PlanInterval!
   name: String!
