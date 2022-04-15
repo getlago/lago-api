@@ -108,10 +108,16 @@ module Fees
     end
 
     def upgraded_amount
-      # TODO: nb_day = number of days between current date and end of period
+      # TODO: Previous subscription payed in advance
+      #       nb_day = number of days between current date and end of period
       #       old_plan_day_cost = (full period duration / old plan amount_cents)
       #       new_plan_day_cost = (full period duration / new plan amount_cents)
       #       amount_to_bill = nb_day * (new_plan_day_cost - old_plan_day_cost)
+      #
+      #       Previous subscription payed in arrear
+      #       nb_day = number of days between current_date and end of period
+      #       day_cost = (full period duration / new plan amount_cents)
+      #       amount_to_bill = (nb_day * day_cost)
       0.0
     end
   end
