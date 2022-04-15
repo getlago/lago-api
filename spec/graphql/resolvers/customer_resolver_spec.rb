@@ -61,4 +61,22 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       )
     end
   end
+
+  context 'when customer is not found' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+        variables: {
+          customerId: 'foo',
+        },
+      )
+
+      expect_graphql_error(
+        result: result,
+        message: 'Resource not found',
+      )
+    end
+  end
 end

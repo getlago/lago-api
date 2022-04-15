@@ -8,4 +8,12 @@ class Customer < ApplicationRecord
   has_many :invoices, through: :subscriptions
 
   validates :customer_id, presence: true
+
+  def attached_to_subscriptions?
+    subscriptions.exists?
+  end
+
+  def deletable?
+    !attached_to_subscriptions?
+  end
 end

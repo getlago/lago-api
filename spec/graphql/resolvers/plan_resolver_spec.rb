@@ -52,4 +52,22 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       )
     end
   end
+
+  context 'when plan is not found' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+        variables: {
+          planId: 'foo',
+        },
+      )
+
+      expect_graphql_error(
+        result: result,
+        message: 'Resource not found',
+      )
+    end
+  end
 end
