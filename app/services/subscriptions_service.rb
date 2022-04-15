@@ -29,7 +29,7 @@ class SubscriptionsService < BaseService
     end
 
     # NOTE: Create an invoice for the terminated subscription
-    #       if it as not been billed yet
+    #       if it has not been billed yet
     if subscription.plan.pay_in_arrear?
       BillSubscriptionJob.perform_later(
         subscription,
