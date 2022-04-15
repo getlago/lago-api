@@ -28,12 +28,21 @@ class SubscriptionsService < BaseService
       next_subscription.mark_as_active!(rotation_date)
     end
 
+    # NOTE: Create an invoice for the terminated subscription
+    #       if it as not been billed yet
+    if subscription.plan.pay_in_arrear?
+      BillSubscriptionJob.perform_later(
+        subscription,
+        timestamp,
+      )
+    end
+
     result.subscription = next_subscription
     return result unless next_subscription.plan.pay_in_advance?
 
     BillSubscriptionJob.perform_later(
-      subscription: next_subscription,
-      timestamp: timestamp,
+      next_subscription,
+      timestamp,
     )
 
     result
@@ -95,8 +104,8 @@ class SubscriptionsService < BaseService
 
     if current_plan.pay_in_advance?
       BillSubscriptionJob.perform_later(
-        subscription: new_subscription,
-        timestamp: Time.zone.now.to_i,
+        new_subscription,
+        Time.zone.now.to_i,
       )
     end
 
@@ -120,15 +129,15 @@ class SubscriptionsService < BaseService
 
     if current_subscription.plan.pay_in_arrear?
       BillSubscriptionJob.perform_later(
-        subscription: current_subscription,
-        timestamp: Time.zone.now.to_i,
+        current_subscription,
+        Time.zone.now.to_i,
       )
     end
 
     if current_plan.pay_in_advance?
       BillSubscriptionJob.perform_later(
-        subscription: new_subscription,
-        timestamp: Time.zone.now.to_i,
+        new_subscription,
+        Time.zone.now.to_i,
       )
     end
 

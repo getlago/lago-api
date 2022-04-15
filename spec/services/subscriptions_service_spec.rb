@@ -283,6 +283,19 @@ RSpec.describe SubscriptionsService, type: :service do
       end
     end
 
+    context 'when terminated subscription is payed in arrear' do
+      before { subscription.plan.update!(pay_in_advance: false) }
+
+      it 'enqueues a job to bill the existing subscription' do
+        expect do
+          subscription_service.terminate_and_start_next(
+            subscription: subscription,
+            timestamp: timestamp,
+          )
+        end.to have_enqueued_job(BillSubscriptionJob)
+      end
+    end
+
     context 'when next subscription is payed in advance' do
       let(:plan) { create(:plan, pay_in_advance: true) }
       let(:next_subscription) do
@@ -293,6 +306,8 @@ RSpec.describe SubscriptionsService, type: :service do
           status: :pending,
         )
       end
+
+      before { subscription.plan.update!(pay_in_advance: true) }
 
       it 'enqueues a job to bill the existing subscription' do
         expect do

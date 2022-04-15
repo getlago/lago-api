@@ -6,9 +6,15 @@ class BillingService
     billing_timestamp = Time.zone.now.to_i
 
     billable_subscriptions.find_each do |subscription|
-      BillSubscriptionJob
-        .set(wait: rand(240).minutes)
-        .perform_later(subscription, billing_timestamp)
+      if subscription.next_subscription
+        Subscriptions::TerminateJob
+          .set(wait: rand(240).minutes)
+          .perform_later(subscription, billing_timestamp)
+      else
+        BillSubscriptionJob
+          .set(wait: rand(240).minutes)
+          .perform_later(subscription, billing_timestamp)
+      end
     end
   end
 
