@@ -26,6 +26,22 @@ type BillableMetricCollection {
   metadata: CollectionMetadata!
 }
 
+type BillableMetricDetail {
+  aggregationType: AggregationTypeEnum!
+
+  """
+  Check if billable metric is deletable
+  """
+  canBeDeleted: Boolean!
+  code: String!
+  createdAt: ISO8601DateTime!
+  description: String
+  id: ID!
+  name: String!
+  organization: Organization
+  updatedAt: ISO8601DateTime!
+}
+
 type Charge {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
@@ -412,6 +428,39 @@ type PlanCollection {
   metadata: CollectionMetadata!
 }
 
+type PlanDetails {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+
+  """
+  Check if plan is deletable
+  """
+  canBeDeleted: Boolean!
+
+  """
+  Number of charges attached to a plan
+  """
+  chargeCount: Int!
+  charges: [Charge!]
+  code: String!
+  createdAt: ISO8601DateTime!
+
+  """
+  Number of customers attached to a plan
+  """
+  customerCount: Int!
+  description: String
+  frequency: FrequencyEnum!
+  id: ID!
+  interval: PlanInterval!
+  name: String!
+  organization: Organization
+  payInAdvance: Boolean!
+  trialPeriod: Float
+  updatedAt: ISO8601DateTime!
+  vatRate: Float
+}
+
 enum PlanInterval {
   monthly
   weekly
@@ -419,6 +468,16 @@ enum PlanInterval {
 }
 
 type Query {
+  """
+  Query a single billable metric of an organization
+  """
+  billableMetric(
+    """
+    Uniq ID of the billable metric
+    """
+    id: ID!
+  ): BillableMetricDetail
+
   """
   Query billable metrics of an organization
   """
@@ -457,6 +516,16 @@ type Query {
     limit: Int
     page: Int
   ): CustomerCollection!
+
+  """
+  Query a single plan of an organization
+  """
+  plan(
+    """
+    Uniq ID of the plan
+    """
+    id: ID!
+  ): PlanDetails
 
   """
   Query plans of an organization

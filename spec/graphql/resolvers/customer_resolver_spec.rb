@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+# frozen_string_literal: true
 
 require 'rails_helper'
 
@@ -26,7 +26,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     create_list(:invoice, 2, subscription: subscription)
   end
 
-  it 'returns a single of customer' do
+  it 'returns a single customer' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
