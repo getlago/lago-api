@@ -122,7 +122,6 @@ input CreatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  frequency: FrequencyEnum!
   interval: PlanInterval!
   name: String!
   payInAdvance: Boolean!
@@ -220,11 +219,6 @@ type DestroyPlanPayload {
   """
   clientMutationId: String
   id: ID
-}
-
-enum FrequencyEnum {
-  beginning_of_period
-  subscription_date
 }
 
 """
@@ -412,7 +406,6 @@ type Plan {
   """
   customerCount: Int!
   description: String
-  frequency: FrequencyEnum!
   id: ID!
   interval: PlanInterval!
   name: String!
@@ -611,7 +604,6 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  frequency: FrequencyEnum!
   id: String!
   interval: PlanInterval!
   name: String!

@@ -16,13 +16,7 @@ class Plan < ApplicationRecord
     yearly
   ].freeze
 
-  FREQUENCIES = %i[
-    beginning_of_period
-    subscription_date
-  ].freeze
-
   enum interval: INTERVALS
-  enum frequency: FREQUENCIES
 
   monetize :amount_cents
 

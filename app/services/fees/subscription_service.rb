@@ -36,7 +36,6 @@ module Fees
     delegate :plan, :subscription, to: :invoice
 
     def compute_amount
-      return plan.amount_cents unless plan.beginning_of_period?
       return plan.amount_cents if invoice.subscription.fees.subscription_kind.exists?
 
       from_date = invoice.from_date
