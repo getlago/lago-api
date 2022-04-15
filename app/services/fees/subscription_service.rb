@@ -36,6 +36,8 @@ module Fees
     delegate :plan, :subscription, to: :invoice
 
     def compute_amount
+      return terminated_amount if payed_in_arrear_terminated_upgraded_subscription?
+      return upgraded_amount if new_upgraded_subscription?
       return plan.amount_cents if invoice.subscription.fees.subscription_kind.exists?
 
       from_date = invoice.from_date
@@ -82,6 +84,35 @@ module Fees
 
       result.fee = existing_fee
       true
+    end
+
+    def payed_in_arrear_terminated_upgraded_subscription?
+      return false unless subscription.terminated?
+      return false if subscription.plan.pay_in_advance?
+
+      subscription.upgraded?
+    end
+
+    def terminated_amount
+      # TODO: nb_day = number of days between beggining of period and current_date
+      #       day_cost = (full period duration / old plan amount_cents)
+      #       amount_to_bill = (nb_day * day_cost)
+      0.0
+    end
+
+    def new_upgraded_subscription?
+      return false unless subscription.previous_subscription_id?
+      return false if subscription.invoices.count > 1
+
+      subscription.previous_subscription.upgraded?
+    end
+
+    def upgraded_amount
+      # TODO: nb_day = number of days between current date and end of period
+      #       old_plan_day_cost = (full period duration / old plan amount_cents)
+      #       new_plan_day_cost = (full period duration / new plan amount_cents)
+      #       amount_to_bill = nb_day * (new_plan_day_cost - old_plan_day_cost)
+      0.0
     end
   end
 end

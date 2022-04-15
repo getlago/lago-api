@@ -34,4 +34,10 @@ class Subscription < ApplicationRecord
     self.canceled_at ||= Time.zone.now
     canceled!
   end
+
+  def upgraded?
+    return false unless next_subscription
+
+    plan.amount_cents <= next_subscription.plan.amount_cents
+  end
 end
