@@ -46,30 +46,34 @@ module Fees
 
     def compute_amount
       # NOTE: bill for the last time a subscription that was upgraded
-      return terminated_amount if payed_in_arrear_terminated_upgraded_subscription?
+      return terminated_amount if should_compute_terminated_amount?
 
       # NOTE: bill for the first time a subscription created after an upgrade
-      return upgraded_amount if new_upgraded_subscription?
+      return upgraded_amount if should_compute_upgraded_amount?
 
       # NOTE: bill a subscription on a full period
-      return plan.amount_cents if invoice.subscription.fees.subscription_kind.exists?
+      return plan.amount_cents if should_use_full_amount?
 
       # NOTE: bill a subscription for the first time (or after downgrade)
       first_subscription_amount
     end
 
-    def payed_in_arrear_terminated_upgraded_subscription?
+    def should_compute_terminated_amount?
       return false unless subscription.terminated?
       return false if subscription.plan.pay_in_advance?
 
       subscription.upgraded?
     end
 
-    def new_upgraded_subscription?
+    def should_compute_upgraded_amount?
       return false unless subscription.previous_subscription_id?
       return false if subscription.invoices.count > 1
 
       subscription.previous_subscription.upgraded?
+    end
+
+    def should_use_full_amount?
+      invoice.subscription.fees.subscription_kind.exists?
     end
 
     def first_subscription_amount
@@ -150,7 +154,7 @@ module Fees
       from_date = invoice.from_date
 
       # NOTE: Duration in days of full billed period (without termination)
-      #       WARNING: the methode only handles beggining of period logic
+      #       WARNING: the method only handles beggining of period logic
       duration = case plan.interval.to_sym
                  when :monthly
                    (from_date.end_of_month + 1.day) - from_date.beginning_of_month

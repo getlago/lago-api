@@ -6,8 +6,9 @@ class BillingService
     billing_timestamp = Time.zone.now.to_i
 
     billable_subscriptions.find_each do |subscription|
-      if subscription.next_subscription
-        # NOTE: A next subscription is pending, the current one must be terminated
+      if subscription.next_subscription&.pending?
+        # NOTE: In case of downgrade, subscription remain active until the end of the perdiod,
+        #       a next subscription is pending, the current one must be terminated
         Subscriptions::TerminateJob
           .set(wait: rand(240).minutes)
           .perform_later(subscription, billing_timestamp)
