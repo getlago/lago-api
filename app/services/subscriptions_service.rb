@@ -16,7 +16,7 @@ class SubscriptionsService < BaseService
     result.fail_with_validations!(e.record)
   end
 
-  # NOTE: Called to terminate a dowgraded subscription
+  # NOTE: Called to terminate a downgraded subscription
   def terminate_and_start_next(subscription:, timestamp:)
     next_subscription = subscription.next_subscription
     return result unless next_subscription
