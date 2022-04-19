@@ -315,7 +315,7 @@ RSpec.describe SubscriptionsService, type: :service do
             subscription: subscription,
             timestamp: timestamp,
           )
-        end.to have_enqueued_job(BillSubscriptionJob)
+        end.to have_enqueued_job(BillSubscriptionJob).twice
       end
     end
   end

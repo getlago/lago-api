@@ -11,13 +11,11 @@ module Fees
     def create
       return result if already_billed?
 
-      new_amount_cents = compute_amount
-
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
         charge: charge,
-        amount_cents: new_amount_cents,
+        amount_cents: compute_amount,
         amount_currency: charge.amount_currency,
         vat_rate: charge.vat_rate,
       )
@@ -39,7 +37,7 @@ module Fees
     delegate :billable_metric, to: :charge
 
     def compute_amount
-      aggregated_events = aggregator.aggregate(from_date: invoice.from_date, to_date: invoice.to_date)
+      aggregated_events = aggregator.aggregate(from_date: from_date, to_date: invoice.to_date)
       return result.fail!('aggregation_failure') unless aggregated_events.success?
 
       amount_result = charge_model.apply(value: aggregated_events.aggregation)
@@ -80,6 +78,25 @@ module Fees
       end
 
       @charge_model = model_service.new(charge: charge)
+    end
+
+    def from_date
+      return invoice.from_date unless subscription.previous_subscription
+
+      if subscription.previous_subscription.upgraded?
+        date = case plan.interval.to_sym
+               when :monthly
+                 invoice.from_date.beginning_of_month
+               when :yearly
+                 invoice.from_date.beginning_of_year
+               else
+                 raise NotImplementedError
+        end
+
+        return date
+      end
+
+      invoice.from_date
     end
   end
 end
