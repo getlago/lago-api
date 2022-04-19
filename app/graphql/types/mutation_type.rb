@@ -14,6 +14,8 @@ module Types
     field :destroy_plan, mutation: Mutations::Plans::Destroy
 
     field :create_customer, mutation: Mutations::Customers::Create
+    field :update_customer, mutation: Mutations::Customers::Update
+    field :destroy_customer, mutation: Mutations::Customers::Destroy
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
   end

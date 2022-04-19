@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class PlanResolver < GraphQL::Schema::Resolver
+  class PlanResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 
@@ -14,7 +14,9 @@ module Resolvers
     def resolve(id: nil)
       validate_organization!
 
-      current_organization.plans.find_by(id: id)
+      current_organization.plans.find(id)
+    rescue ActiveRecord::RecordNotFound
+      not_found_error
     end
   end
 end
