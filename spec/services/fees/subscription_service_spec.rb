@@ -113,7 +113,7 @@ RSpec.describe Fees::SubscriptionService do
           aggregate_failures do
             expect(created_fee.id).not_to be_nil
             expect(created_fee.invoice_id).to eq(invoice.id)
-            expect(created_fee.amount_cents).to eq(53)
+            expect(created_fee.amount_cents).to eq(54)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
             expect(created_fee.vat_amount_cents).to eq(10)
             expect(created_fee.vat_rate).to eq(20.0)
@@ -128,7 +128,7 @@ RSpec.describe Fees::SubscriptionService do
             created_fee = result.fee
 
             aggregate_failures do
-              expect(created_fee.amount_cents).to eq(53)
+              expect(created_fee.amount_cents).to eq(54)
             end
           end
         end
@@ -144,6 +144,13 @@ RSpec.describe Fees::SubscriptionService do
             :subscription,
             plan: plan,
             started_at: Time.zone.now.beginning_of_year,
+          )
+        end
+
+        before do
+          invoice.update!(
+            from_date: subscription.started_at.beginning_of_year,
+            to_date: subscription.started_at.end_of_year,
           )
         end
 
@@ -184,6 +191,8 @@ RSpec.describe Fees::SubscriptionService do
           )
         end
 
+        before { invoice.update!(to_date: subscription.started_at.end_of_year) }
+
         it 'creates a fee' do
           result = fees_subscription_service.create
           created_fee = result.fee
@@ -191,9 +200,9 @@ RSpec.describe Fees::SubscriptionService do
           aggregate_failures do
             expect(created_fee.id).not_to be_nil
             expect(created_fee.invoice_id).to eq(invoice.id)
-            expect(created_fee.amount_cents).to eq(17)
+            expect(created_fee.amount_cents).to eq(80)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
-            expect(created_fee.vat_amount_cents).to eq(3)
+            expect(created_fee.vat_amount_cents).to eq(16)
             expect(created_fee.vat_rate).to eq(20.0)
           end
         end
@@ -206,7 +215,7 @@ RSpec.describe Fees::SubscriptionService do
             created_fee = result.fee
 
             aggregate_failures do
-              expect(created_fee.amount_cents).to eq(79)
+              expect(created_fee.amount_cents).to eq(80)
             end
           end
         end
@@ -307,6 +316,103 @@ RSpec.describe Fees::SubscriptionService do
 
     it 'creates a fee' do
       expect { fees_subscription_service.create }.to_not change { Fee.count }
+    end
+  end
+
+  context 'when billing a newly terminated subscription' do
+    let(:subscription) do
+      create(
+        :subscription,
+        plan: plan,
+        status: :terminated,
+        started_at: Time.zone.parse('2022-03-15 00:00:00'),
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        subscription: subscription,
+        from_date: subscription.started_at.beginning_of_month.to_date,
+        to_date: subscription.started_at.to_date,
+      )
+    end
+
+    before do
+      plan.update!(pay_in_advance: false)
+
+      create(:subscription, previous_subscription: subscription)
+    end
+
+    it 'creates a fee' do
+      result = fees_subscription_service.create
+      created_fee = result.fee
+
+      aggregate_failures do
+        expect(created_fee.id).not_to be_nil
+        expect(created_fee.invoice_id).to eq(invoice.id)
+        expect(created_fee.amount_cents).to eq(48)
+        expect(created_fee.amount_currency).to eq(plan.amount_currency)
+        expect(created_fee.vat_amount_cents).to eq(9)
+        expect(created_fee.vat_rate).to eq(20.0)
+      end
+    end
+  end
+
+  context 'when billing an new upgraded subscription' do
+    let(:previous_plan) { create(:plan, pay_in_advance: true, amount_cents: 80) }
+    let(:previous_subscription) { create(:subscription, status: :terminated, plan: previous_plan) }
+
+    let(:subscription) do
+      create(
+        :subscription,
+        plan: plan,
+        started_at: Time.zone.parse('2022-03-15 00:00:00'),
+        previous_subscription: previous_subscription,
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        subscription: subscription,
+        from_date: subscription.started_at.beginning_of_month.to_date,
+        to_date: subscription.started_at.to_date,
+      )
+    end
+
+    context 'when previous subscription was payed in advance' do
+      it 'creates a subscription' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(9)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+          expect(created_fee.vat_amount_cents).to eq(1)
+          expect(created_fee.vat_rate).to eq(20.0)
+        end
+      end
+    end
+
+    context 'when previous subscription was payed in arrear' do
+      before { previous_plan.update!(pay_in_advance: false) }
+
+      it 'creates a subscription' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(48)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+          expect(created_fee.vat_amount_cents).to eq(9)
+          expect(created_fee.vat_rate).to eq(20.0)
+        end
+      end
     end
   end
 end

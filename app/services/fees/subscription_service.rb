@@ -34,10 +34,49 @@ module Fees
     attr_accessor :invoice
 
     delegate :plan, :subscription, to: :invoice
+    delegate :previous_subscription, to: :subscription
+
+    def already_billed?
+      existing_fee = invoice.fees.subscription_kind.first
+      return false unless existing_fee
+
+      result.fee = existing_fee
+      true
+    end
 
     def compute_amount
-      return plan.amount_cents if invoice.subscription.fees.subscription_kind.exists?
+      # NOTE: bill for the last time a subscription that was upgraded
+      return terminated_amount if should_compute_terminated_amount?
 
+      # NOTE: bill for the first time a subscription created after an upgrade
+      return upgraded_amount if should_compute_upgraded_amount?
+
+      # NOTE: bill a subscription on a full period
+      return plan.amount_cents if should_use_full_amount?
+
+      # NOTE: bill a subscription for the first time (or after downgrade)
+      first_subscription_amount
+    end
+
+    def should_compute_terminated_amount?
+      return false unless subscription.terminated?
+      return false if subscription.plan.pay_in_advance?
+
+      subscription.upgraded?
+    end
+
+    def should_compute_upgraded_amount?
+      return false unless subscription.previous_subscription_id?
+      return false if subscription.invoices.count > 1
+
+      subscription.previous_subscription.upgraded?
+    end
+
+    def should_use_full_amount?
+      invoice.subscription.fees.subscription_kind.exists?
+    end
+
+    def first_subscription_amount
       from_date = invoice.from_date
       to_date = invoice.to_date
 
@@ -56,32 +95,76 @@ module Fees
       end
 
       # NOTE: Number of days of the first period since subscription creation
-      days_to_bill = (to_date - from_date).to_i
+      days_to_bill = (to_date + 1.day - from_date).to_i
 
-      # NOTE: cost of a single day in the period
-      day_price = plan.amount_cents.to_f / period_duration(to_date)
-
-      (days_to_bill * day_price).to_i
+      (days_to_bill * single_day_price).to_i
     end
 
-    # NOTE: Returns number of days of the invoice period
-    def period_duration(to_date)
-      case plan.interval.to_sym
-      when :monthly
-        to_date - invoice.to_date.beginning_of_month
-      when :yearly
-        to_date - invoice.to_date.beginning_of_year
+    # NOTE: When terminating a pay in arrerar subscription, we need to
+    #       bill the number of used day of the terminated subscription.
+    #
+    #       The amount to bill is computed with:
+    #       **nb_day** = number of days between beggining of the period and the termination date
+    #       **day_cost** = (plan amount_cents / full period duration)
+    #       amount_to_bill = (nb_day * day_cost)
+    def terminated_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
+      # NOTE: number of days between beggining of the period and the termination date
+      number_of_day_to_bill = (to_date + 1.day - from_date).to_i
+
+      (number_of_day_to_bill * single_day_price).to_i
+    end
+
+    def upgraded_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
+      # NOTE: number of days between the upgrade and the end of the periiod
+      number_of_day_to_bill = (to_date + 1.day - from_date).to_i
+
+      if previous_subscription.plan.pay_in_advance?
+        # NOTE: Previous subscription was payed in advance
+        #       We have to bill the difference between old plan and new plan cost on the
+        #       period between upgrade date and the end of the period
+        #
+        #       The amount to bill is computed with:
+        #       **nb_day** = number of days between current date and end of period
+        #       **old_day_price** = (old plan amount_cents / full period duration)
+        #       **new_day_price** = (new plan amount_cents / full period duration)
+        #       amount_to_bill = nb_day * (new_day_price - old_day_price)
+        old_day_price = single_day_price(previous_subscription.plan.amount_cents)
+
+        (number_of_day_to_bill * (single_day_price - old_day_price)).to_i
       else
-        raise NotImplementedError
+        # NOTE: Previous subscription was payed in arrear
+        #       We only bill the days between the upgrade date and the end of the period
+        #
+        #       The amount to bill is computed with:
+        #       **nb_day** = number of days between upgrade and the end of the period
+        #       **day_cost** = (plan amount_cents / full period duration)
+        #       amount_to_bill = (nb_day * day_cost)
+        (number_of_day_to_bill * single_day_price).to_i
       end
     end
 
-    def already_billed?
-      existing_fee = invoice.fees.subscription_kind.first
-      return false unless existing_fee
+    # NOTE: cost of a single day in a period
+    def single_day_price(amount_cents = plan.amount_cents)
+      from_date = invoice.from_date
 
-      result.fee = existing_fee
-      true
+      # NOTE: Duration in days of full billed period (without termination)
+      #       WARNING: the method only handles beggining of period logic
+      duration = case plan.interval.to_sym
+                 when :monthly
+                   (from_date.end_of_month + 1.day) - from_date.beginning_of_month
+                 when :yearly
+                   (from_date.end_of_year + 1.day) - from_date.beginning_of_year
+                 else
+                   raise NotImplementedError
+      end
+
+      amount_cents.to_f / duration.to_i
     end
   end
 end

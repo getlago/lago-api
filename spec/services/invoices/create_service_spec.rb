@@ -170,6 +170,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { Time.zone.today - 3.months }
+      let(:terminated_at) { timestamp - 2.days }
       let(:subscription) do
         create(
           :subscription,
@@ -177,34 +178,17 @@ RSpec.describe Invoices::CreateService, type: :service do
           anniversary_date: started_at.to_date,
           started_at: started_at,
           status: :terminated,
+          terminated_at: terminated_at,
         )
       end
 
       it 'creates an invoice with subscription fee' do
         result = invoice_service.create
 
-        expect(result.invoice.fees.subscription_kind.count).to eq(1)
-      end
-    end
-
-    context 'when subscription has a pending next subscription' do
-      let(:plan) { create(:plan) }
-      let(:timestamp) { Time.zone.now.beginning_of_month }
-
-      let(:next_subscription) do
-        create(
-          :subscription,
-          previous_subscription_id: subscription.id,
-          status: :pending,
-        )
-      end
-
-      before { next_subscription }
-
-      it 'enqueues a job to terminate the subscription' do
-        expect do
-          invoice_service.create
-        end.to have_enqueued_job(Subscriptions::TerminateJob)
+        aggregate_failures do
+          expect(result.invoice.to_date.to_s).to eq((terminated_at.to_date - 1.day).to_s)
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+        end
       end
     end
   end

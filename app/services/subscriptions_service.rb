@@ -28,12 +28,21 @@ class SubscriptionsService < BaseService
       next_subscription.mark_as_active!(rotation_date)
     end
 
+    # NOTE: Create an invoice for the terminated subscription
+    #       if it has not been billed yet
+    if subscription.plan.pay_in_arrear?
+      BillSubscriptionJob.perform_later(
+        subscription,
+        timestamp,
+      )
+    end
+
     result.subscription = next_subscription
     return result unless next_subscription.plan.pay_in_advance?
 
     BillSubscriptionJob.perform_later(
-      subscription: next_subscription,
-      timestamp: timestamp,
+      next_subscription,
+      timestamp,
     )
 
     result
@@ -82,7 +91,7 @@ class SubscriptionsService < BaseService
     return false unless current_subscription
     return false if current_plan.id == current_subscription.plan.id
 
-    current_plan.amount_cents <= current_subscription.plan.amount_cents
+    current_plan.amount_cents < current_subscription.plan.amount_cents
   end
 
   def create_subscription
@@ -95,8 +104,8 @@ class SubscriptionsService < BaseService
 
     if current_plan.pay_in_advance?
       BillSubscriptionJob.perform_later(
-        subscription: new_subscription,
-        timestamp: Time.zone.now.to_i,
+        new_subscription,
+        Time.zone.now.to_i,
       )
     end
 
@@ -118,15 +127,17 @@ class SubscriptionsService < BaseService
       new_subscription.mark_as_active!
     end
 
-    BillSubscriptionJob.perform_later(
-      subscription: current_subscription,
-      timestamp: Time.zone.now.to_i,
-    )
+    if current_subscription.plan.pay_in_arrear?
+      BillSubscriptionJob.perform_later(
+        current_subscription,
+        Time.zone.now.to_i,
+      )
+    end
 
     if current_plan.pay_in_advance?
       BillSubscriptionJob.perform_later(
-        subscription: new_subscription,
-        timestamp: Time.zone.now.to_i,
+        new_subscription,
+        Time.zone.now.to_i,
       )
     end
 
@@ -134,40 +145,16 @@ class SubscriptionsService < BaseService
   end
 
   def downgrade_subscription
-    new_subscription = Subscription.new(
+    # NOTE: When downgrading a subscription, we keep the current one active
+    #       until the next billing day. The new subscription will become active at this date
+    Subscription.create!(
       customer: current_customer,
       plan: current_plan,
       previous_subscription_id: current_subscription.id,
       anniversary_date: current_subscription.anniversary_date,
+      status: :pending,
     )
 
-    if current_subscription.plan.pay_in_advance?
-      # NOTE: When downgrading a payed in advance subscription, we keep the current one active
-      #       until the next billing day. The new subscription will become active at this date
-      new_subscription.pending!
-
-      return current_subscription
-    else
-      # NOTE: When downgrading a payed in arrear subscription, the new one becomes active immediatly
-      #       the previous one must be terminated and billed using the pro-rata
-      ActiveRecord::Base.transaction do
-        new_subscription.mark_as_active!
-        current_subscription.mark_as_terminated!
-      end
-
-      BillSubscriptionJob.perform_later(
-        subscription: current_subscription,
-        timestamp: Time.zone.now.to_i,
-      )
-
-      if current_plan.pay_in_advance?
-        BillSubscriptionJob.perform_later(
-          subscription: new_subscription,
-          timestamp: Time.zone.now.to_i,
-        )
-      end
-    end
-
-    new_subscription
+    current_subscription
   end
 end
