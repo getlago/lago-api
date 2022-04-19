@@ -120,7 +120,7 @@ module Fees
       # NOTE: number of days between the upgrade and the end of the periiod
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-      if previous_subscription.pay_in_advance?
+      if previous_subscription.plan.pay_in_advance?
         # NOTE: Previous subscription was payed in advance
         #       We have to bill the difference between old plan and new plan cost on the
         #       period between upgrade date and the end of the period
