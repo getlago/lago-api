@@ -63,7 +63,8 @@ class PlansService < BaseService
       unless plan.attached_to_subscriptions?
         created_charges_ids = []
 
-        args[:charges].each do |payload_charge|
+        hash_charges = args[:charges].map(&:to_h)
+        hash_charges.each do |payload_charge|
           charge = Charge.find_by(id: payload_charge[:id])
 
           next charge.update(payload_charge) if charge
@@ -73,7 +74,7 @@ class PlansService < BaseService
         end
 
         # NOTE: Delete charges that are no more linked to the plan
-        sanitize_charges(plan, args[:charges], created_charges_ids)
+        sanitize_charges(plan, hash_charges, created_charges_ids)
       end
     end
 
