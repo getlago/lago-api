@@ -66,6 +66,7 @@ input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   frequency: ChargeFrequency!
+  id: ID
   proRata: Boolean!
   vatRate: Float
 }
