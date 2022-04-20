@@ -60,6 +60,8 @@ module Fees
       aggregator_service = case billable_metric.aggregation_type.to_sym
                            when :count_agg
                              BillableMetrics::Aggregations::CountService
+                           when :sum_agg
+                             BillableMetrics::Aggregations::SumService
                            else
                              raise NotImplementedError
       end

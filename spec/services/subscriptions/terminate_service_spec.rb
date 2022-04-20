@@ -18,6 +18,12 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
+    it 'enqueues a BillSubscriptionJob' do
+      expect do
+        terminate_service.terminate
+      end.to have_enqueued_job(BillSubscriptionJob)
+    end
+
     context 'when subscription is not found' do
       let(:subscription) { OpenStruct.new(id: '123456') }
 
@@ -25,7 +31,6 @@ RSpec.describe Subscriptions::TerminateService do
         result = terminate_service.terminate
 
         expect(result.error).to eq('not_found')
-        expect(BillSubscriptionJob).to have_been_enqueued
       end
     end
   end
