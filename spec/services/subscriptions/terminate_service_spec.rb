@@ -25,6 +25,7 @@ RSpec.describe Subscriptions::TerminateService do
         result = terminate_service.terminate
 
         expect(result.error).to eq('not_found')
+        expect(BillSubscriptionJob).to have_been_enqueued
       end
     end
   end

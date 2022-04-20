@@ -8,11 +8,13 @@ module Subscriptions
     end
 
     def terminate
-      return result.fail!('not_found') unless subscription.present?
+      return result.fail!('not_found') if subscription.blank?
 
       subscription.mark_as_terminated!
 
-      # TODO: Bill what has to be billed when terminated
+      BillSubscriptionJob
+        .set(wait: rand(240).minutes)
+        .perform_later(subscription, subscription.terminated_at)
 
       result.subscription = subscription
       result
