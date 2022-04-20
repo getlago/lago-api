@@ -19,7 +19,7 @@ module Invoices
         )
 
         create_subscription_fee(invoice) if should_create_subscription_fee?
-        create_charges_fees(invoice)
+        create_charges_fees(invoice) if should_create_charge_fees?
 
         compute_amounts(invoice)
 
@@ -119,6 +119,14 @@ module Invoices
       #       fee if the plan is in pay in arrear, otherwise this fee will never
       #       be created.
       subscription.active? || (subscription.terminated? && subscription.plan.pay_in_arrear?)
+    end
+
+    def should_create_charge_fees?
+      # NOTE: When a subscription is upgraded, the charges will be billed at the end of the period
+      #       using the new subscription
+      return false if subscription.terminated? && subscription.upgraded?
+
+      true
     end
   end
 end

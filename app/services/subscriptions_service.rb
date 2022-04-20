@@ -16,6 +16,7 @@ class SubscriptionsService < BaseService
     result.fail_with_validations!(e.record)
   end
 
+  # NOTE: Called to terminate a downgraded subscription
   def terminate_and_start_next(subscription:, timestamp:)
     next_subscription = subscription.next_subscription
     return result unless next_subscription
@@ -30,12 +31,11 @@ class SubscriptionsService < BaseService
 
     # NOTE: Create an invoice for the terminated subscription
     #       if it has not been billed yet
-    if subscription.plan.pay_in_arrear?
-      BillSubscriptionJob.perform_later(
-        subscription,
-        timestamp,
-      )
-    end
+    #       or only for the charges if subscription was billed in advance
+    BillSubscriptionJob.perform_later(
+      subscription,
+      timestamp,
+    )
 
     result.subscription = next_subscription
     return result unless next_subscription.plan.pay_in_advance?
