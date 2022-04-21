@@ -6,7 +6,7 @@ class Subscription < ApplicationRecord
   belongs_to :previous_subscription, class_name: 'Subscription', optional: true
 
   has_one :organization, through: :customer
-  has_one :next_subscription, class_name: 'Subscription', foreign_key: :previous_subscription_id
+  has_many :next_subscriptions, class_name: 'Subscription', foreign_key: :previous_subscription_id
 
   has_many :invoices
   has_many :fees
@@ -39,5 +39,9 @@ class Subscription < ApplicationRecord
     return false unless next_subscription
 
     plan.amount_cents <= next_subscription.plan.amount_cents
+  end
+
+  def next_subscription
+    next_subscriptions.not_canceled.order(created_at: :desc).first
   end
 end
