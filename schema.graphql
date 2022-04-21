@@ -50,16 +50,10 @@ type Charge {
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
-  frequency: ChargeFrequency!
   id: ID!
   proRata: Boolean!
   updatedAt: ISO8601DateTime!
   vatRate: Float
-}
-
-enum ChargeFrequency {
-  one_time
-  recurring
 }
 
 input ChargeInput {
@@ -67,7 +61,6 @@ input ChargeInput {
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
-  frequency: ChargeFrequency!
   id: ID
   proRata: Boolean!
   vatRate: Float
