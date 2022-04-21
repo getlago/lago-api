@@ -22,6 +22,22 @@ module Api
         end
       end
 
+      # NOTE: We can't destroy a subscription, it will terminate it
+      def destroy
+        result = Subscriptions::TerminateService.new(params[:id]).terminate
+
+        if result.success?
+          render(
+            json: ::V1::SubscriptionSerializer.new(
+              result.subscription,
+              root_name: 'subscription',
+            )
+          )
+        else
+          validation_errors(result.error)
+        end
+      end
+
       private
 
       def create_params
