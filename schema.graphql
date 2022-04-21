@@ -163,7 +163,16 @@ type Customer {
   customerId: String!
   id: ID!
   name: String
-  subscriptions: [Subscription!]
+
+  """
+  Query subscriptions of a customer
+  """
+  subscriptions(
+    """
+    Statuses of subscriptions to retrieve
+    """
+    status: [StatusTypeEnum!]
+  ): [Subscription!]!
   updatedAt: ISO8601DateTime!
 }
 
@@ -182,7 +191,16 @@ type CustomerDetails {
   id: ID!
   invoices: [Invoice!]
   name: String
-  subscriptions: [Subscription!]
+
+  """
+  Query subscriptions of a customer
+  """
+  subscriptions(
+    """
+    Statuses of subscriptions to retrieve
+    """
+    status: [StatusTypeEnum!]
+  ): [Subscription!]!
   updatedAt: ISO8601DateTime!
 }
 
