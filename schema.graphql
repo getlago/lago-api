@@ -163,16 +163,7 @@ type Customer {
   customerId: String!
   id: ID!
   name: String
-
-  """
-  Query subscriptions of a customer
-  """
-  subscriptions(
-    """
-    Statuses of subscriptions to retrieve
-    """
-    status: [StatusTypeEnum!]
-  ): [Subscription!]!
+  subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
 }
 
