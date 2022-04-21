@@ -35,4 +35,8 @@ class Plan < ApplicationRecord
   def deletable?
     !attached_to_subscriptions?
   end
+
+  def has_trial?
+    trial_period.present?
+  end
 end
