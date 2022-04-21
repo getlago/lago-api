@@ -1,6 +1,6 @@
 enum AggregationTypeEnum {
   count_agg
-  max_count_agg
+  max_agg
   sum_agg
   unique_count_agg
 }

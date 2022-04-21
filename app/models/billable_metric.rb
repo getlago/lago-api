@@ -14,7 +14,7 @@ class BillableMetric < ApplicationRecord
   AGGREGATION_TYPES = %i[
     count_agg
     sum_agg
-    max_count_agg
+    max_agg
     unique_count_agg
   ].freeze
 

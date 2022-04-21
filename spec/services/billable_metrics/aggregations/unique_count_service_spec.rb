@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
-  subject(:max_service) do
+RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service do
+  subject(:count_service) do
     described_class.new(billable_metric: billable_metric, subscription: subscription)
   end
 
@@ -15,8 +15,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     create(
       :billable_metric,
       organization: organization,
-      aggregation_type: 'max_agg',
-      field_name: 'total_count',
+      aggregation_type: 'unique_count_agg',
+      field_name: 'anonymous_id',
     )
   end
 
@@ -31,22 +31,22 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       customer: customer,
       timestamp: Time.zone.now,
       properties: {
-        total_count: 12,
+        anonymous_id: 'foo_bar',
       },
     )
   end
 
   it 'aggregates the events' do
-    result = max_service.aggregate(from_date: from_date, to_date: to_date)
+    result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
-    expect(result.aggregation).to eq(12)
+    expect(result.aggregation).to eq(1)
   end
 
   context 'when events are out of bounds' do
     let(:to_date) { Time.zone.now - 2.days }
 
     it 'does not take events into account' do
-      result = max_service.aggregate(from_date: from_date, to_date: to_date)
+      result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
     end
@@ -58,30 +58,9 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
 
     it 'counts as zero' do
-      result = max_service.aggregate(from_date: from_date, to_date: to_date)
+      result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
-    end
-  end
-
-  context 'when properties is not an integer' do
-    before do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer: customer,
-        timestamp: Time.zone.now,
-        properties: {
-          total_count: 'foo_bar',
-        },
-      )
-    end
-
-    it 'returns a failed result' do
-      result = max_service.aggregate(from_date: from_date, to_date: to_date)
-
-      expect(result).not_to be_success
-      expect(result.error_code).to eq('aggregation_failure')
     end
   end
 end
