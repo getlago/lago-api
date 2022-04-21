@@ -14,7 +14,7 @@ module Resolvers
       def resolve(status: nil)
         subscriptions = object.subscriptions
         subscriptions = subscriptions.where(status: status) if status.present?
-        subscriptions
+        subscriptions.order(created_at: :desc)
       end
     end
   end
