@@ -19,7 +19,7 @@ module BillableMetrics
 
       delegate :customer, to: :subscription
 
-      def event_scope(from_date:, to_date:)
+      def events_scope(from_date:, to_date:)
         customer.events
           .from_date(from_date)
           .to_date(to_date)

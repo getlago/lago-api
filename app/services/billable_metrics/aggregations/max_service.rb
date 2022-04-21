@@ -2,17 +2,17 @@
 
 module BillableMetrics
   module Aggregations
-    class SumService < BillableMetrics::Aggregations::BaseService
+    class MaxService < BillableMetrics::Aggregations::BaseService
       def aggregate(from_date:, to_date:)
         result.aggregation = events_scope(from_date: from_date, to_date: to_date)
-          .sum(
+          .maximum(
             ActiveRecord::Base.sanitize_sql_for_conditions(
               [
                 '(events.properties->>?)::integer',
                 billable_metric.field_name,
               ],
             ),
-          )
+          ) || 0
 
         result
       rescue ActiveRecord::StatementInvalid => e
