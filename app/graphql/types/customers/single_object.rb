@@ -6,6 +6,7 @@ module Types
       graphql_name 'CustomerDetails'
 
       field :invoices, [Types::Invoices::Object]
+      field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
     end
   end
 end
