@@ -13,6 +13,7 @@ module Mutations
       argument :code, String, required: true
       argument :description, String
       argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
+      argument :field_name, String, required: false
 
       type Types::BillableMetrics::Object
 

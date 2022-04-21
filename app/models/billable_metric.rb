@@ -14,7 +14,7 @@ class BillableMetric < ApplicationRecord
   AGGREGATION_TYPES = %i[
     count_agg
     sum_agg
-    max_count_agg
+    max_agg
     unique_count_agg
   ].freeze
 
@@ -23,6 +23,7 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
+  validates :field_name, presence: true, if: :should_have_field_name?
 
   def attached_to_subscriptions?
     plans.joins(:subscriptions).exists?
@@ -30,5 +31,11 @@ class BillableMetric < ApplicationRecord
 
   def deletable?
     !attached_to_subscriptions?
+  end
+
+  private
+
+  def should_have_field_name?
+    !count_agg?
   end
 end

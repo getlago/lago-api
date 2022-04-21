@@ -31,7 +31,7 @@
               "deprecationReason": null
             },
             {
-              "name": "max_count_agg",
+              "name": "max_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -127,6 +127,20 @@
             },
             {
               "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "fieldName",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -351,6 +365,20 @@
             },
             {
               "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "fieldName",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -969,6 +997,18 @@
                   "name": "AggregationTypeEnum",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fieldName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -4453,6 +4493,18 @@
                   "name": "AggregationTypeEnum",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fieldName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

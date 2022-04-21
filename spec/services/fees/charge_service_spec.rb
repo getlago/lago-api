@@ -97,5 +97,34 @@ RSpec.describe Fees::ChargeService do
         end
       end
     end
+
+    context 'with all types of aggregation' do
+      BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
+        before do
+          billable_metric.update!(
+            aggregation_type: aggregation_type,
+            field_name: 'foo_bar',
+          )
+        end
+
+        it 'creates fees' do
+          result = charge_subscription_service.create
+
+          expect(result).to be_success
+
+          created_fee = result.fee
+
+          aggregate_failures do
+            expect(created_fee.id).not_to be_nil
+            expect(created_fee.invoice_id).to eq(invoice.id)
+            expect(created_fee.charge_id).to eq(charge.id)
+            expect(created_fee.amount_cents).to eq(0)
+            expect(created_fee.amount_currency).to eq('EUR')
+            expect(created_fee.vat_amount_cents).to eq(0)
+            expect(created_fee.vat_rate).to eq(20.0)
+          end
+        end
+      end
+    end
   end
 end

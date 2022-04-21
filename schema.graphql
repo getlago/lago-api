@@ -1,6 +1,6 @@
 enum AggregationTypeEnum {
   count_agg
-  max_count_agg
+  max_agg
   sum_agg
   unique_count_agg
 }
@@ -15,6 +15,7 @@ type BillableMetric {
   code: String!
   createdAt: ISO8601DateTime!
   description: String
+  fieldName: String
   id: ID!
   name: String!
   organization: Organization
@@ -36,6 +37,7 @@ type BillableMetricDetail {
   code: String!
   createdAt: ISO8601DateTime!
   description: String
+  fieldName: String
   id: ID!
   name: String!
   organization: Organization
@@ -94,6 +96,7 @@ input CreateBillableMetricInput {
   clientMutationId: String
   code: String!
   description: String!
+  fieldName: String
   name: String!
 }
 
@@ -666,6 +669,7 @@ input UpdateBillableMetricInput {
   clientMutationId: String
   code: String!
   description: String!
+  fieldName: String
   id: String!
   name: String!
 }
