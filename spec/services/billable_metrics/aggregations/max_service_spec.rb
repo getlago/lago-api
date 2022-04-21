@@ -31,6 +31,16 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       customer: customer,
       timestamp: Time.zone.now,
       properties: {
+        total_count: rand(10),
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      timestamp: Time.zone.now,
+      properties: {
         total_count: 12,
       },
     )
