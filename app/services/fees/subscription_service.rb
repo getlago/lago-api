@@ -203,6 +203,8 @@ module Fees
 
     # NOTE: cost of a single day in a period
     def single_day_price(amount_cents = plan.amount_cents)
+      from_date = invoice.from_date
+
       # NOTE: Duration in days of full billed period (without termination)
       #       WARNING: the method only handles beggining of period logic
       duration = case plan.interval.to_sym
