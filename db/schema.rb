@@ -36,7 +36,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_22_122223) do
     t.uuid "plan_id"
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
-    t.integer "frequency", null: false
     t.boolean "pro_rata", null: false
     t.float "vat_rate"
     t.integer "charge_model", default: 0, null: false

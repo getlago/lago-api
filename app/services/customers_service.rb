@@ -5,7 +5,7 @@ class CustomersService < BaseService
     customer = organization.customers.find_or_initialize_by(customer_id: params[:customer_id])
 
     customer.name = params[:name]
-    customer.country = params[:country]
+    customer.country = params[:country]&.upcase
     customer.address_line1 = params[:address_line1]
     customer.address_line2 = params[:address_line2]
     customer.state = params[:state]
@@ -43,7 +43,7 @@ class CustomersService < BaseService
     return result.fail!('not_found') unless customer
 
     customer.name = args[:name]
-    customer.country = args[:country]
+    customer.country = args[:country]&.upcase
     customer.address_line1 = args[:address_line1]
     customer.address_line2 = args[:address_line2]
     customer.state = args[:state]

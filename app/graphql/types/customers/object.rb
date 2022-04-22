@@ -10,7 +10,7 @@ module Types
       field :customer_id, String, null: false
       field :name, String
 
-      field :country, String, null: true
+      field :country, Types::Customers::CountryCodeEnum, null: true
       field :address_line1, String, null: true
       field :address_line2, String, null: true
       field :state, String, null: true
