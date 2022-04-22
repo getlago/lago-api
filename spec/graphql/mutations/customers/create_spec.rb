@@ -12,6 +12,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           name,
           customerId,
           city
+          country
         }
       }
     GQL
@@ -27,6 +28,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           name: 'John Doe',
           customerId: 'john_doe_2',
           city: 'London',
+          country: 'gb',
         },
       },
     )
@@ -38,6 +40,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['name']).to eq('John Doe')
       expect(result_data['customerId']).to eq('john_doe_2')
       expect(result_data['city']).to eq('London')
+      expect(result_data['country']).to eq('gb')
     end
   end
 
