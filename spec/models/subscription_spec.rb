@@ -36,6 +36,15 @@ RSpec.describe Subscription, type: :model do
 
         it { expect(previous_subscription).not_to be_upgraded }
       end
+
+      context 'when plans have different intervals' do
+        before do
+          previous_plan.update!(interval: 'monthly')
+          plan.update!(interval: 'yearly')
+        end
+
+        it { expect(previous_subscription).not_to be_upgraded }
+      end
     end
   end
 end
