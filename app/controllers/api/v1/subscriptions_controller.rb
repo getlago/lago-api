@@ -5,17 +5,17 @@ module Api
     class SubscriptionsController < Api::BaseController
       def create
         subscription_service = SubscriptionsService.new
-        result = subscription_service.create(
+        result = subscription_service.create_from_api(
           organization: current_organization,
-          params: create_params
+          params: create_params,
         )
 
         if result.success?
           render(
             json: ::V1::SubscriptionSerializer.new(
               result.subscription,
-              root_name: 'subscription'
-            )
+              root_name: 'subscription',
+            ),
           )
         else
           validation_errors(result.error)

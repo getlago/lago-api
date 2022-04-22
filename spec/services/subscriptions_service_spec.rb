@@ -7,7 +7,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
   let(:organization) { create(:organization) }
 
-  describe '.create' do
+  describe '.create_from_api' do
     let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
     let(:customer) { create(:customer, organization: organization) }
 
@@ -19,7 +19,7 @@ RSpec.describe SubscriptionsService, type: :service do
     end
 
     it 'creates a subscription' do
-      result = subscription_service.create(
+      result = subscription_service.create_from_api(
         organization: organization,
         params: params,
       )
@@ -46,7 +46,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'creates a customer' do
-        result = subscription_service.create(
+        result = subscription_service.create_from_api(
           organization: organization,
           params: params,
         )
@@ -69,7 +69,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
         it 'enqueued a job to bill the subscription' do
           expect do
-            subscription_service.create(
+            subscription_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -87,7 +87,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'fails' do
-        result = subscription_service.create(
+        result = subscription_service.create_from_api(
           organization: organization,
           params: params,
         )
@@ -106,7 +106,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'fails' do
-        result = subscription_service.create(
+        result = subscription_service.create_from_api(
           organization: organization,
           params: params,
         )
@@ -130,7 +130,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
       context 'when plan is the same' do
         it 'returns existing subscription' do
-          result = subscription_service.create(
+          result = subscription_service.create_from_api(
             organization: organization,
             params: params,
           )
@@ -151,7 +151,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'terminates the existing subscription' do
-            subscription_service.create(
+            subscription_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -162,7 +162,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'creates a new subscription' do
-            result = subscription_service.create(
+            result = subscription_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -182,7 +182,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
             it 'enqueues a job to bill the existing subscription' do
               expect do
-                subscription_service.create(
+                subscription_service.create_from_api(
                   organization: organization,
                   params: params,
                 )
@@ -195,7 +195,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
             it 'enqueues a job to bill the existing subscription' do
               expect do
-                subscription_service.create(
+                subscription_service.create_from_api(
                   organization: organization,
                   params: params,
                 )
@@ -216,7 +216,7 @@ RSpec.describe SubscriptionsService, type: :service do
             before { next_subscription }
 
             it 'canceled the next subscription' do
-              result = subscription_service.create(
+              result = subscription_service.create_from_api(
                 organization: organization,
                 params: params,
               )
@@ -242,7 +242,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'creates a new subscription' do
-            result = subscription_service.create(
+            result = subscription_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -260,7 +260,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'keeps the current subscription' do
-            result = subscription_service.create(
+            result = subscription_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -285,7 +285,7 @@ RSpec.describe SubscriptionsService, type: :service do
             before { next_subscription }
 
             it 'canceled the next subscription' do
-              result = subscription_service.create(
+              result = subscription_service.create_from_api(
                 organization: organization,
                 params: params,
               )
@@ -296,6 +296,73 @@ RSpec.describe SubscriptionsService, type: :service do
               end
             end
           end
+        end
+      end
+    end
+  end
+
+  describe '.create' do
+    let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
+    let(:customer) { create(:customer, organization: organization) }
+
+    let(:params) do
+      {
+        customer_id: customer.id,
+        plan_id: plan.id,
+        organization_id: organization.id,
+      }
+    end
+
+    it 'creates a subscription' do
+      result = subscription_service.create(**params)
+
+      expect(result).to be_success
+
+      subscription = result.subscription
+
+      aggregate_failures do
+        expect(subscription.customer_id).to eq(customer.id)
+        expect(subscription.plan_id).to eq(plan.id)
+        expect(subscription.started_at).to be_present
+        expect(subscription.anniversary_date).to be_present
+        expect(subscription).to be_active
+      end
+    end
+
+    context 'when customer does not exists' do
+      let(:params) do
+        {
+          customer_id: SecureRandom.uuid,
+          plan_code: plan.id,
+          organization_id: organization.id,
+        }
+      end
+
+      it 'fails' do
+        result = subscription_service.create(**params)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to eq('unable to find customer')
+        end
+      end
+    end
+
+    context 'when plan doest not exists' do
+      let(:params) do
+        {
+          customer_id: customer.id,
+          plan_code: 'invalid_plan',
+          organization_id: organization.id,
+        }
+      end
+
+      it 'fails' do
+        result = subscription_service.create(**params)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to eq('plan does not exists')
         end
       end
     end

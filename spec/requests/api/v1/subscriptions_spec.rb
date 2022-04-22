@@ -11,7 +11,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let(:params) do
       {
         customer_id: customer.customer_id,
-        plan_code: plan.code
+        plan_code: plan.code,
       }
     end
 
