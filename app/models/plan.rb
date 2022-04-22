@@ -40,6 +40,6 @@ class Plan < ApplicationRecord
     return amount_cents if yearly?
     return amount_cents * 12 if monthly?
 
-    amount_cents * 54
+    amount_cents * 52
   end
 end

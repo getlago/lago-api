@@ -19,7 +19,7 @@ RSpec.describe Plan, type: :model do
     context 'when plan is weekly' do
       before { plan.interval = 'weekly' }
 
-      it { expect(plan.yearly_amount_cents).to eq(5400) }
+      it { expect(plan.yearly_amount_cents).to eq(5200) }
     end
   end
 end
