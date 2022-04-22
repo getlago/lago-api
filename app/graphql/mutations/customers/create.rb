@@ -19,7 +19,7 @@ module Mutations
 
         result = CustomersService
           .new(context[:current_user])
-          .create(organization: current_organization, params: args)
+          .create(**args.merge(organization_id: current_organization.id))
 
         result.success? ? result.customer : execution_error(code: result.error_code, message: result.error)
       end
