@@ -4,9 +4,6 @@ module Fees
   class SubscriptionService < BaseService
     def initialize(invoice)
       @invoice = invoice
-      @from_date = invoice.from_date
-      @to_date = invoice.to_date
-
       super(nil)
     end
 
@@ -34,7 +31,7 @@ module Fees
 
     private
 
-    attr_reader :invoice, :from_date, :to_date
+    attr_reader :invoice
 
     delegate :plan, :subscription, to: :invoice
     delegate :previous_subscription, to: :subscription
@@ -80,15 +77,18 @@ module Fees
     end
 
     def first_subscription_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
       # NOTE: When pay in advance, first invoice has from_date = to_date
       #       To get the number of days to bill, we must
       #       jump to the end of the billing period
       if plan.pay_in_advance?
         case plan.interval.to_sym
         when :monthly
-          @to_date = invoice.to_date.end_of_month
+          to_date = invoice.to_date.end_of_month
         when :yearly
-          @to_date = invoice.to_date.end_of_year
+          to_date = invoice.to_date.end_of_year
         else
           raise NotImplementedError
         end
@@ -100,7 +100,7 @@ module Fees
 
         # NOTE: from_date is the trial end date if it happens during the period
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          @from_date = subscription.trial_end_date
+          from_date = subscription.trial_end_date
         end
       end
 
@@ -118,13 +118,16 @@ module Fees
     #       **day_cost** = (plan amount_cents / full period duration)
     #       amount_to_bill = (nb_day * day_cost)
     def terminated_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
         return 0 if subscription.trial_end_date >= to_date
 
         # NOTE: from_date is the trial end date if it happens during the period
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          @from_date = subscription.trial_end_date
+          from_date = subscription.trial_end_date
         end
       end
 
@@ -135,13 +138,16 @@ module Fees
     end
 
     def upgraded_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
         return 0 if subscription.trial_end_date >= to_date
 
         # NOTE: from_date is the trial end date if it happens during the period
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          @from_date = subscription.trial_end_date
+          from_date = subscription.trial_end_date
         end
       end
 
@@ -174,6 +180,9 @@ module Fees
     end
 
     def full_period_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
         return 0 if subscription.trial_end_date >= to_date
