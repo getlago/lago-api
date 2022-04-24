@@ -8,6 +8,7 @@ class BillableMetricsService < BaseService
       code: args[:code],
       description: args[:description],
       aggregation_type: args[:aggregation_type]&.to_sym,
+      field_name: args[:field_name],
     )
 
     result.billable_metric = metric
@@ -28,6 +29,7 @@ class BillableMetricsService < BaseService
     unless metric.attached_to_subscriptions?
       metric.code = args[:code]
       metric.aggregation_type = args[:aggregation_type]&.to_sym
+      metric.field_name = args[:field_name]
     end
 
     metric.save!

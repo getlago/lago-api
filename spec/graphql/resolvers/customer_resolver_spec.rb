@@ -9,7 +9,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         customer(id: $customerId) {
           id customerId name
           invoices { id }
-          subscriptions { id }
+          subscriptions(status: [active]) { id, status }
         }
       }
     GQL

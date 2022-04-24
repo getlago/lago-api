@@ -18,6 +18,13 @@ module BillableMetrics
       attr_accessor :billable_metric, :subscription
 
       delegate :customer, to: :subscription
+
+      def events_scope(from_date:, to_date:)
+        customer.events
+          .from_date(from_date)
+          .to_date(to_date)
+          .where(code: billable_metric.code)
+      end
     end
   end
 end

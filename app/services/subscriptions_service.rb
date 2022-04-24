@@ -121,6 +121,8 @@ class SubscriptionsService < BaseService
     )
 
     ActiveRecord::Base.transaction do
+      cancel_pending_subscription if pending_subscription?
+
       # NOTE: When upgrading, the new subscription becomes active immediatly
       #       The previous one must be terminated
       current_subscription.mark_as_terminated!
@@ -145,16 +147,30 @@ class SubscriptionsService < BaseService
   end
 
   def downgrade_subscription
-    # NOTE: When downgrading a subscription, we keep the current one active
-    #       until the next billing day. The new subscription will become active at this date
-    Subscription.create!(
-      customer: current_customer,
-      plan: current_plan,
-      previous_subscription_id: current_subscription.id,
-      anniversary_date: current_subscription.anniversary_date,
-      status: :pending,
-    )
+    ActiveRecord::Base.transaction do
+      cancel_pending_subscription if pending_subscription?
+
+      # NOTE: When downgrading a subscription, we keep the current one active
+      #       until the next billing day. The new subscription will become active at this date
+      Subscription.create!(
+        customer: current_customer,
+        plan: current_plan,
+        previous_subscription_id: current_subscription.id,
+        anniversary_date: current_subscription.anniversary_date,
+        status: :pending,
+      )
+    end
 
     current_subscription
+  end
+
+  def pending_subscription?
+    return false unless current_subscription&.next_subscription
+
+    current_subscription.next_subscription.pending?
+  end
+
+  def cancel_pending_subscription
+    current_subscription.next_subscription.mark_as_canceled!
   end
 end

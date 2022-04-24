@@ -6,7 +6,7 @@ class Subscription < ApplicationRecord
   belongs_to :previous_subscription, class_name: 'Subscription', optional: true
 
   has_one :organization, through: :customer
-  has_one :next_subscription, class_name: 'Subscription', foreign_key: :previous_subscription_id
+  has_many :next_subscriptions, class_name: 'Subscription', foreign_key: :previous_subscription_id
 
   has_many :invoices
   has_many :fees
@@ -45,5 +45,9 @@ class Subscription < ApplicationRecord
     return unless plan.has_trial?
 
     started_at.to_date + plan.trial_period.days
+  end
+
+  def next_subscription
+    next_subscriptions.not_canceled.order(created_at: :desc).first
   end
 end

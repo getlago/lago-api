@@ -202,6 +202,31 @@ RSpec.describe SubscriptionsService, type: :service do
               end.to have_enqueued_job(BillSubscriptionJob)
             end
           end
+
+          context 'with pending next subscription' do
+            let(:next_subscription) do
+              create(
+                :subscription,
+                status: :pending,
+                previous_subscription: subscription,
+                organization: subscription.organization,
+              )
+            end
+
+            before { next_subscription }
+
+            it 'canceled the next subscription' do
+              result = subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(next_subscription.reload).to be_canceled
+              end
+            end
+          end
         end
 
         context 'when we downgrade the plan' do
@@ -244,6 +269,31 @@ RSpec.describe SubscriptionsService, type: :service do
               expect(result.subscription.id).to eq(subscription.id)
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
+            end
+          end
+
+          context 'with pending next subscription' do
+            let(:next_subscription) do
+              create(
+                :subscription,
+                status: :pending,
+                previous_subscription: subscription,
+                organization: subscription.organization,
+              )
+            end
+
+            before { next_subscription }
+
+            it 'canceled the next subscription' do
+              result = subscription_service.create(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(next_subscription.reload).to be_canceled
+              end
             end
           end
         end
