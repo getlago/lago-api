@@ -142,9 +142,7 @@ module Fees
       to_date = invoice.to_date
 
       if plan.has_trial?
-        # NOTE: amount is 0 if trial cover the full period
-        return 0 if subscription.trial_end_date >= to_date
-
+        from_date = to_date + 1.day if subscription.trial_end_date >= to_date
         # NOTE: from_date is the trial end date if it happens during the period
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
           from_date = subscription.trial_end_date
@@ -191,7 +189,7 @@ module Fees
         #       for this case, we should not apply the full period amount
         #       but the prorata between the trial end date end the invoice to_date
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          @from_date = subscription.trial_end_day
+          from_date = subscription.trial_end_date
           number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
           return (number_of_day_to_bill * single_day_price).to_i

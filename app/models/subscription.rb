@@ -43,7 +43,6 @@ class Subscription < ApplicationRecord
 
   def trial_end_date
     return unless plan.has_trial?
-    return unless active?
 
     started_at.to_date + plan.trial_period.days
   end
