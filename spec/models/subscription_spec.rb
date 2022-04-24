@@ -52,14 +52,6 @@ RSpec.describe Subscription, type: :model do
       end
     end
 
-    context 'when subscription is not active' do
-      let(:subscription) { create(:pending_subscription, plan: plan) }
-
-      it 'returns nil' do
-        expect(subscription.trial_end_date).to be_nil
-      end
-    end
-
     context 'when plan has no trial' do
       let(:plan) { create(:plan) }
 
