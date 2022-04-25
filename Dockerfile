@@ -14,6 +14,7 @@ RUN apk add --no-cache \
   nodejs \
   python2 \
   tzdata \
+  openssl \
   postgresql-dev
 
 RUN bundle config build.nokogiri --use-system-libraries &&\

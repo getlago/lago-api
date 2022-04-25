@@ -5,6 +5,7 @@ queues:
   - default
   - clock
   - billing
+  - webhook
 
 production:
   concurrency: 10

@@ -23,6 +23,8 @@ module Invoices
 
         compute_amounts(invoice)
 
+        SendWebhookJob.perform_later(:invoice, invoice)
+
         result.invoice = invoice
       end
 

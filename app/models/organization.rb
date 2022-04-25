@@ -13,6 +13,7 @@ class Organization < ApplicationRecord
   before_create :generate_api_key
 
   validates :name, presence: true
+  validates :webhook_url, url: true, allow_nil: true
 
   private
 

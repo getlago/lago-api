@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
+COPY ./scripts/generate.rsa.sh /app/scripts/generate.rsa.sh
 
 RUN apk add --no-cache \
   git \
@@ -15,9 +16,12 @@ RUN apk add --no-cache \
   python2 \
   tzdata \
   postgresql-dev \
+  openssl \
   gcompat
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
  bundle install
 
-CMD ["./start.dev.sh"]
+RUN ./scripts/generate.rsa.sh
+
+CMD ["./scripts/start.dev.sh"]

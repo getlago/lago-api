@@ -12,7 +12,12 @@ class CollectionSerializer
   end
 
   def serialize
-    hash = { collection_name => serialize_models }
+    hash = if options.fetch(:use_root, true)
+      { collection_name => serialize_models }
+    else
+      serialize_models
+    end
+
     hash[:meta] = meta if meta?
     hash
   end
