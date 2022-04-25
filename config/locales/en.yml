@@ -7,4 +7,4 @@ en:
         inclusion: value_is_invalid
         invalid_date_range: invalid_date_range
         required: relation_must_exist
-        taken: value_already_exsit
+        taken: value_already_exist
