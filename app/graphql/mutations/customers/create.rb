@@ -33,7 +33,7 @@ module Mutations
           .new(context[:current_user])
           .create(**args.merge(organization_id: current_organization.id))
 
-        result.success? ? result.customer : execution_error(code: result.error_code, message: result.error)
+        result.success? ? result.customer : result_error(result)
       end
     end
   end

@@ -20,7 +20,7 @@ module Mutations
       def resolve(**args)
         result = BillableMetricsService.new(context[:current_user]).update(**args)
 
-        result.success? ? result.billable_metric : execution_error(code: result.error_code, message: result.error)
+        result.success? ? result.billable_metric : result_error(result)
       end
     end
   end

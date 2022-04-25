@@ -4,7 +4,7 @@ class BaseService
   class FailedResult < StandardError; end
 
   class Result < OpenStruct
-    attr_reader :error, :error_code
+    attr_reader :error, :error_code, :error_details
 
     def initialize
       super
@@ -17,10 +17,11 @@ class BaseService
       !failure
     end
 
-    def fail!(code, message = nil)
+    def fail!(code, message = nil, details = nil)
       @failure = true
       @error_code = code
       @error = message || code
+      @error_details = details
 
       # Return self to return result immediately in case of failure:
       # ```
@@ -30,7 +31,11 @@ class BaseService
     end
 
     def fail_with_validations!(record)
-      fail!('unprocessable_entity', record.errors.full_messages)
+      fail!(
+        'unprocessable_entity',
+        'Validation error on the record',
+        record.errors.messages,
+      )
     end
 
     def throw_error

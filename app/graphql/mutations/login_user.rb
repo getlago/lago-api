@@ -12,7 +12,7 @@ module Mutations
 
     def resolve(email:, password:)
       result = UsersService.new.login(email, password)
-      result.success? ? result : execution_error(code: result.error_code, message: result.error)
+      result.success? ? result : result_error(result)
     end
   end
 end

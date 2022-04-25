@@ -20,6 +20,6 @@ class Invoice < ApplicationRecord
   private
 
   def validate_date_bounds
-    errors.add(:from_date, 'from_date must be before to_date') if from_date > to_date
+    errors.add(:from_date, :invalid_date_range) if from_date > to_date
   end
 end
