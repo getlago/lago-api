@@ -19,16 +19,18 @@ RSpec.describe Fees::SubscriptionService do
       create(
         :subscription,
         plan: plan,
-        started_at: Time.zone.now - 3.months,
+        started_at: Time.zone.parse('2022-01-01 00:01'),
       )
     end
 
     let(:invoice) do
+      from_date = Time.zone.parse('2022-03-01 00:00')
+
       create(
         :invoice,
         subscription: subscription,
-        from_date: (Time.zone.now - 1.month).beginning_of_month,
-        to_date: (Time.zone.now - 1.month).end_of_month,
+        from_date: from_date,
+        to_date: from_date.end_of_month,
       )
     end
 
@@ -43,6 +45,37 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
         expect(created_fee.vat_amount_cents).to eq(20)
         expect(created_fee.vat_rate).to eq(20.0)
+      end
+    end
+
+    context 'when plan has a trial period' do
+      before do
+        plan.update(trial_period: trial_duration)
+        subscription.update(started_at: invoice.from_date)
+      end
+
+      context 'when trial end in period' do
+        let(:trial_duration) { 3 }
+
+        it 'creates a fee with prorated amount based on trial' do
+          result = fees_subscription_service.create
+          created_fee = result.fee
+
+          aggregate_failures do
+            expect(created_fee.id).not_to be_nil
+            expect(created_fee.amount_cents).to eq(90)
+          end
+        end
+      end
+
+      context 'when trial end after end of period' do
+        let(:trial_duration) { 45 }
+
+        it 'creates a fee with zero amount' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(0)
+        end
       end
     end
   end
@@ -83,6 +116,31 @@ RSpec.describe Fees::SubscriptionService do
           end
         end
 
+        context 'when plan has a trial period' do
+          before { plan.update(trial_period: trial_duration) }
+
+          context 'when trial end during period' do
+            let(:trial_duration) { 3 }
+
+            it 'creates a fee with prorated amount based on trial' do
+              result = fees_subscription_service.create
+              created_fee = result.fee
+
+              expect(created_fee.amount_cents).to eq(90)
+            end
+          end
+
+          context 'when trial end after end of period' do
+            let(:trial_duration) { 45 }
+
+            it 'creates a fee with zero amount' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(0)
+            end
+          end
+        end
+
         context 'when plan is pay in advance' do
           before { plan.update(pay_in_advance: true) }
 
@@ -90,8 +148,32 @@ RSpec.describe Fees::SubscriptionService do
             result = fees_subscription_service.create
             created_fee = result.fee
 
-            aggregate_failures do
-              expect(created_fee.amount_cents).to eq(100)
+            expect(created_fee.amount_cents).to eq(100)
+          end
+
+          context 'when plan has a trial period' do
+            before { plan.update(trial_period: trial_duration) }
+
+            context 'when trial end in period' do
+              let(:trial_duration) { 3 }
+
+              it 'creates a fee with prorated amount based on trial' do
+                result = fees_subscription_service.create
+                created_fee = result.fee
+
+                expect(created_fee.amount_cents).to eq(90)
+              end
+            end
+
+            context 'when trial end after period' do
+              let(:trial_duration) { 45 }
+
+              it 'creates a fee with zero amount' do
+                result = fees_subscription_service.create
+                created_fee = result.fee
+
+                expect(created_fee.amount_cents).to eq(0)
+              end
             end
           end
         end
@@ -120,6 +202,30 @@ RSpec.describe Fees::SubscriptionService do
           end
         end
 
+        context 'when plan has a trial period' do
+          before { plan.update(trial_period: trial_duration) }
+
+          context 'when trial end during the period' do
+            let(:trial_duration) { 3 }
+
+            it 'creates a fee with prorated amount based on trial' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(45)
+            end
+          end
+
+          context 'when trial end after the period end' do
+            let(:trial_duration) { 45 }
+
+            it 'creates a fee with zero amount' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(0)
+            end
+          end
+        end
+
         context 'when plan is pay in advance' do
           before { plan.update(pay_in_advance: true) }
 
@@ -129,6 +235,30 @@ RSpec.describe Fees::SubscriptionService do
 
             aggregate_failures do
               expect(created_fee.amount_cents).to eq(54)
+            end
+          end
+
+          context 'when plan has a trial period' do
+            before { plan.update(trial_period: trial_duration) }
+
+            context 'when trial end during the period' do
+              let(:trial_duration) { 3 }
+
+              it 'creates a fee with prorated amount based on trial' do
+                result = fees_subscription_service.create
+
+                expect(result.fee.amount_cents).to eq(45)
+              end
+            end
+
+            context 'when trial end after the period end' do
+              let(:trial_duration) { 45 }
+
+              it 'creates a fee with zero amount' do
+                result = fees_subscription_service.create
+
+                expect(result.fee.amount_cents).to eq(0)
+              end
             end
           end
         end
@@ -228,7 +358,7 @@ RSpec.describe Fees::SubscriptionService do
       create(
         :subscription,
         plan: plan,
-        started_at: Time.zone.now - 3.month,
+        started_at: Time.zone.parse('2022-01-01 00:00'),
       )
     end
 
@@ -254,6 +384,30 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.amount_cents).to eq(100)
       end
     end
+
+    context 'when plan has trial period' do
+      before { plan.update(trial_period: trial_duration) }
+
+      context 'when trial end during period' do
+        let(:trial_duration) { 3 }
+
+        it 'creates a fee with prorated amount on trial period' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(90)
+        end
+      end
+
+      context 'when trial end after period' do
+        let(:trial_duration) { 45 }
+
+        it 'creates a fee with 0 amount' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(0)
+        end
+      end
+    end
   end
 
   context 'when plan interval is not implemented' do
@@ -261,7 +415,7 @@ RSpec.describe Fees::SubscriptionService do
       create(
         :subscription,
         plan: plan,
-        started_at: (Time.zone.now - 2.week).beginning_of_week,
+        started_at: Time.zone.parse('2022-01-19 00:00').beginning_of_week,
       )
     end
 
@@ -297,7 +451,7 @@ RSpec.describe Fees::SubscriptionService do
       create(
         :subscription,
         plan: plan,
-        started_at: Time.zone.now - 3.month,
+        started_at: Time.zone.parse('2022-01-01 00:00'),
       )
     end
 
@@ -306,7 +460,7 @@ RSpec.describe Fees::SubscriptionService do
         :invoice,
         subscription: subscription,
         from_date: subscription.started_at + 1.month,
-        to_date: subscription.started_at + 2.month,
+        to_date: subscription.started_at + 2.months,
       )
     end
 
@@ -315,7 +469,7 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     it 'creates a fee' do
-      expect { fees_subscription_service.create }.to_not change { Fee.count }
+      expect { fees_subscription_service.create }.not_to change(Fee, :count)
     end
   end
 
@@ -334,7 +488,7 @@ RSpec.describe Fees::SubscriptionService do
         :invoice,
         subscription: subscription,
         from_date: subscription.started_at.beginning_of_month.to_date,
-        to_date: subscription.started_at.to_date,
+        to_date: subscription.started_at.to_date + 5.days,
       )
     end
 
@@ -351,10 +505,37 @@ RSpec.describe Fees::SubscriptionService do
       aggregate_failures do
         expect(created_fee.id).not_to be_nil
         expect(created_fee.invoice_id).to eq(invoice.id)
-        expect(created_fee.amount_cents).to eq(48)
+        expect(created_fee.amount_cents).to eq(64)
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
-        expect(created_fee.vat_amount_cents).to eq(9)
+        expect(created_fee.vat_amount_cents).to eq(12)
         expect(created_fee.vat_rate).to eq(20.0)
+      end
+    end
+
+    context 'when plan has trial period' do
+      before do
+        plan.update(trial_period: trial_duration)
+        create(:subscription, previous_subscription: subscription)
+      end
+
+      context 'when trial end before termination date' do
+        let(:trial_duration) { 3 }
+
+        it 'creates a fee with prorated amount based on trial period' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(9)
+        end
+      end
+
+      context 'when trial end after termination date' do
+        let(:trial_duration) { 45 }
+
+        it 'creates a fee with zero amount' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(0)
+        end
       end
     end
   end
@@ -376,8 +557,8 @@ RSpec.describe Fees::SubscriptionService do
       create(
         :invoice,
         subscription: subscription,
-        from_date: subscription.started_at.beginning_of_month.to_date,
-        to_date: subscription.started_at.to_date,
+        from_date: subscription.started_at,
+        to_date: subscription.started_at.to_date.end_of_month,
       )
     end
 
@@ -389,10 +570,34 @@ RSpec.describe Fees::SubscriptionService do
         aggregate_failures do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.amount_cents).to eq(9)
+          expect(created_fee.amount_cents).to eq(10)
           expect(created_fee.amount_currency).to eq(plan.amount_currency)
-          expect(created_fee.vat_amount_cents).to eq(1)
+          expect(created_fee.vat_amount_cents).to eq(2)
           expect(created_fee.vat_rate).to eq(20.0)
+        end
+      end
+
+      context 'when plan has trial period' do
+        before { plan.update(trial_period: trial_duration) }
+
+        context 'when trial period end before end of period' do
+          let(:trial_duration) { 3 }
+
+          it 'creates a fee with prorated amount based on the trial period' do
+            result = fees_subscription_service.create
+
+            expect(result.fee.amount_cents).to eq(9)
+          end
+        end
+
+        context 'when trial period end after end of period' do
+          let(:trial_duration) { 45 }
+
+          it 'creates a fee with zero amount' do
+            result = fees_subscription_service.create
+
+            expect(result.fee.amount_cents).to eq(0)
+          end
         end
       end
     end
@@ -407,10 +612,34 @@ RSpec.describe Fees::SubscriptionService do
         aggregate_failures do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.amount_cents).to eq(48)
+          expect(created_fee.amount_cents).to eq(54)
           expect(created_fee.amount_currency).to eq(plan.amount_currency)
-          expect(created_fee.vat_amount_cents).to eq(9)
+          expect(created_fee.vat_amount_cents).to eq(10)
           expect(created_fee.vat_rate).to eq(20.0)
+        end
+      end
+
+      context 'when plan has trial period' do
+        before { plan.update(trial_period: trial_duration) }
+
+        context 'when trial period end before period end' do
+          let(:trial_duration) { 3 }
+
+          it 'creates a fee with prorated amount based on the trial' do
+            result = fees_subscription_service.create
+
+            expect(result.fee.amount_cents).to eq(45)
+          end
+        end
+
+        context 'when trial period end after period end' do
+          let(:trial_duration) { 45 }
+
+          it 'creates a fee with zero amount' do
+            result = fees_subscription_service.create
+
+            expect(result.fee.amount_cents).to eq(0)
+          end
         end
       end
     end

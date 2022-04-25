@@ -47,4 +47,26 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '.trial_end_date' do
+    let(:plan) { create(:plan, trial_period: 3) }
+    let(:subscription) { create(:active_subscription, plan: plan) }
+
+    it 'returns the trial end date' do
+      trial_end_date = subscription.trial_end_date
+
+      aggregate_failures do
+        expect(trial_end_date).to be_present
+        expect(trial_end_date).to eq(subscription.started_at.to_date + 3.days)
+      end
+    end
+
+    context 'when plan has no trial' do
+      let(:plan) { create(:plan) }
+
+      it 'returns nil' do
+        expect(subscription.trial_end_date).to be_nil
+      end
+    end
+  end
 end

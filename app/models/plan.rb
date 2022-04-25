@@ -36,6 +36,10 @@ class Plan < ApplicationRecord
     !attached_to_subscriptions?
   end
 
+  def has_trial?
+    trial_period.present?
+  end
+
   # NOTE: Method used to compare plan for upgrade / downgrade on
   #       a same duration basis. It is not intended to be used
   #       directly for billing/invoicing purpose

@@ -41,6 +41,12 @@ class Subscription < ApplicationRecord
     plan.yearly_amount_cents <= next_subscription.plan.yearly_amount_cents
   end
 
+  def trial_end_date
+    return unless plan.has_trial?
+
+    started_at.to_date + plan.trial_period.days
+  end
+
   def next_subscription
     next_subscriptions.not_canceled.order(created_at: :desc).first
   end

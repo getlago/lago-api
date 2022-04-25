@@ -31,7 +31,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice
+    attr_reader :invoice
 
     delegate :plan, :subscription, to: :invoice
     delegate :previous_subscription, to: :subscription
@@ -52,7 +52,7 @@ module Fees
       return upgraded_amount if should_compute_upgraded_amount?
 
       # NOTE: bill a subscription on a full period
-      return plan.amount_cents if should_use_full_amount?
+      return full_period_amount if should_use_full_amount?
 
       # NOTE: bill a subscription for the first time (or after downgrade)
       first_subscription_amount
@@ -94,6 +94,16 @@ module Fees
         end
       end
 
+      if plan.has_trial?
+        # NOTE: amount is 0 if trial cover the full period
+        return 0 if subscription.trial_end_date >= to_date
+
+        # NOTE: from_date is the trial end date if it happens during the period
+        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
+          from_date = subscription.trial_end_date
+        end
+      end
+
       # NOTE: Number of days of the first period since subscription creation
       days_to_bill = (to_date + 1.day - from_date).to_i
 
@@ -111,6 +121,16 @@ module Fees
       from_date = invoice.from_date
       to_date = invoice.to_date
 
+      if plan.has_trial?
+        # NOTE: amount is 0 if trial cover the full period
+        return 0 if subscription.trial_end_date >= to_date
+
+        # NOTE: from_date is the trial end date if it happens during the period
+        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
+          from_date = subscription.trial_end_date
+        end
+      end
+
       # NOTE: number of days between beggining of the period and the termination date
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
@@ -121,7 +141,15 @@ module Fees
       from_date = invoice.from_date
       to_date = invoice.to_date
 
-      # NOTE: number of days between the upgrade and the end of the periiod
+      if plan.has_trial?
+        from_date = to_date + 1.day if subscription.trial_end_date >= to_date
+        # NOTE: from_date is the trial end date if it happens during the period
+        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
+          from_date = subscription.trial_end_date
+        end
+      end
+
+      # NOTE: number of days between the upgrade and the end of the period
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
       if previous_subscription.plan.pay_in_advance?
@@ -147,6 +175,28 @@ module Fees
         #       amount_to_bill = (nb_day * day_cost)
         (number_of_day_to_bill * single_day_price).to_i
       end
+    end
+
+    def full_period_amount
+      from_date = invoice.from_date
+      to_date = invoice.to_date
+
+      if plan.has_trial?
+        # NOTE: amount is 0 if trial cover the full period
+        return 0 if subscription.trial_end_date >= to_date
+
+        # NOTE: from_date is the trial end date if it happens during the period
+        #       for this case, we should not apply the full period amount
+        #       but the prorata between the trial end date end the invoice to_date
+        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
+          from_date = subscription.trial_end_date
+          number_of_day_to_bill = (to_date + 1.day - from_date).to_i
+
+          return (number_of_day_to_bill * single_day_price).to_i
+        end
+      end
+
+      plan.amount_cents
     end
 
     # NOTE: cost of a single day in a period
