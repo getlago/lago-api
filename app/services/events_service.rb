@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class EventsService < BaseService
-  def create(organization:, params:)
+  def create(organization:, params:, timestamp:)
     event = organization.events.find_by(id: params[:transaction_id])
 
     if event
@@ -20,6 +20,7 @@ class EventsService < BaseService
     event.properties = params[:properties]
 
     event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
+    event.timestamp ||= timestamp
 
     event.save!
 

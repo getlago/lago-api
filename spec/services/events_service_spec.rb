@@ -18,11 +18,13 @@ RSpec.describe EventsService, type: :service do
         timestamp: Time.zone.now.to_i,
       }
     end
+    let(:timestamp) { Time.zone.now.to_i }
 
     it 'creates a new event' do
       result = event_service.create(
         organization: organization,
         params: create_args,
+        timestamp: timestamp,
       )
 
       expect(result).to be_success
@@ -49,6 +51,7 @@ RSpec.describe EventsService, type: :service do
           event_service.create(
             organization: organization,
             params: create_args,
+            timestamp: timestamp,
           )
         end.not_to change { organization.events.count }
       end
@@ -69,6 +72,7 @@ RSpec.describe EventsService, type: :service do
         result = event_service.create(
           organization: organization,
           params: create_args,
+          timestamp: timestamp,
         )
 
         expect(result).not_to be_success

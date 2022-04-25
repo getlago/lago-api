@@ -4,7 +4,11 @@ module Api
   module V1
     class EventsController < Api::BaseController
       def create
-        CreateEventJob.perform_later(current_organization, create_params)
+        CreateEventJob.perform_later(
+          current_organization,
+          create_params,
+          Time.zone.now.to_i,
+        )
 
         head(:ok)
       end
@@ -18,7 +22,7 @@ module Api
             :customer_id,
             :code,
             :timestamp,
-            properties: [],
+            properties: {},
           )
       end
     end
