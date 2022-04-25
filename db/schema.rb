@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_04_21_093051) do
+ActiveRecord::Schema[7.0].define(version: 2022_04_22_122223) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -36,7 +36,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_21_093051) do
     t.uuid "plan_id"
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
-    t.integer "frequency", null: false
     t.boolean "pro_rata", null: false
     t.float "vat_rate"
     t.integer "charge_model", default: 0, null: false
@@ -50,6 +49,18 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_21_093051) do
     t.uuid "organization_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "country"
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "state"
+    t.string "zipcode"
+    t.string "email"
+    t.string "city"
+    t.string "url"
+    t.string "phone"
+    t.string "logo_url"
+    t.string "legal_name"
+    t.string "legal_number"
     t.index ["customer_id"], name: "index_customers_on_customer_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
   end

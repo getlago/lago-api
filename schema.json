@@ -919,6 +919,1511 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "CountryCode",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "AD",
+              "description": "Andorra",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AE",
+              "description": "United Arab Emirates",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AF",
+              "description": "Afghanistan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AG",
+              "description": "Antigua and Barbuda",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AI",
+              "description": "Anguilla",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AL",
+              "description": "Albania",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AM",
+              "description": "Armenia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AO",
+              "description": "Angola",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AQ",
+              "description": "Antarctica",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AR",
+              "description": "Argentina",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AS",
+              "description": "American Samoa",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AT",
+              "description": "Austria",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AU",
+              "description": "Australia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AW",
+              "description": "Aruba",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AX",
+              "description": "Åland Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "AZ",
+              "description": "Azerbaijan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BA",
+              "description": "Bosnia and Herzegovina",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BB",
+              "description": "Barbados",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BD",
+              "description": "Bangladesh",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BE",
+              "description": "Belgium",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BF",
+              "description": "Burkina Faso",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BG",
+              "description": "Bulgaria",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BH",
+              "description": "Bahrain",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BI",
+              "description": "Burundi",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BJ",
+              "description": "Benin",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BL",
+              "description": "Saint Barthélemy",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BM",
+              "description": "Bermuda",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BN",
+              "description": "Brunei Darussalam",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BO",
+              "description": "Bolivia (Plurinational State of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BQ",
+              "description": "Bonaire, Sint Eustatius and Saba",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BR",
+              "description": "Brazil",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BS",
+              "description": "Bahamas",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BT",
+              "description": "Bhutan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BV",
+              "description": "Bouvet Island",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BW",
+              "description": "Botswana",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BY",
+              "description": "Belarus",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "BZ",
+              "description": "Belize",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CA",
+              "description": "Canada",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CC",
+              "description": "Cocos (Keeling) Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CD",
+              "description": "Congo (Democratic Republic of the)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CF",
+              "description": "Central African Republic",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CG",
+              "description": "Congo",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CH",
+              "description": "Switzerland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CI",
+              "description": "Côte d'Ivoire",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CK",
+              "description": "Cook Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CL",
+              "description": "Chile",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CM",
+              "description": "Cameroon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CN",
+              "description": "China",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CO",
+              "description": "Colombia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CR",
+              "description": "Costa Rica",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CU",
+              "description": "Cuba",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CV",
+              "description": "Cabo Verde",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CW",
+              "description": "Curaçao",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CX",
+              "description": "Christmas Island",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CY",
+              "description": "Cyprus",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "CZ",
+              "description": "Czechia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "DE",
+              "description": "Germany",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "DJ",
+              "description": "Djibouti",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "DK",
+              "description": "Denmark",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "DM",
+              "description": "Dominica",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "DO",
+              "description": "Dominican Republic",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "DZ",
+              "description": "Algeria",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "EC",
+              "description": "Ecuador",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "EE",
+              "description": "Estonia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "EG",
+              "description": "Egypt",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "EH",
+              "description": "Western Sahara",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ER",
+              "description": "Eritrea",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ES",
+              "description": "Spain",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ET",
+              "description": "Ethiopia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "FI",
+              "description": "Finland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "FJ",
+              "description": "Fiji",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "FK",
+              "description": "Falkland Islands (Malvinas)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "FM",
+              "description": "Micronesia (Federated States of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "FO",
+              "description": "Faroe Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "FR",
+              "description": "France",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GA",
+              "description": "Gabon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GB",
+              "description": "United Kingdom of Great Britain and Northern Ireland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GD",
+              "description": "Grenada",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GE",
+              "description": "Georgia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GF",
+              "description": "French Guiana",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GG",
+              "description": "Guernsey",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GH",
+              "description": "Ghana",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GI",
+              "description": "Gibraltar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GL",
+              "description": "Greenland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GM",
+              "description": "Gambia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GN",
+              "description": "Guinea",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GP",
+              "description": "Guadeloupe",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GQ",
+              "description": "Equatorial Guinea",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GR",
+              "description": "Greece",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GS",
+              "description": "South Georgia and the South Sandwich Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GT",
+              "description": "Guatemala",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GU",
+              "description": "Guam",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GW",
+              "description": "Guinea-Bissau",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GY",
+              "description": "Guyana",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "HK",
+              "description": "Hong Kong",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "HM",
+              "description": "Heard Island and McDonald Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "HN",
+              "description": "Honduras",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "HR",
+              "description": "Croatia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "HT",
+              "description": "Haiti",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "HU",
+              "description": "Hungary",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ID",
+              "description": "Indonesia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IE",
+              "description": "Ireland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IL",
+              "description": "Israel",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IM",
+              "description": "Isle of Man",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IN",
+              "description": "India",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IO",
+              "description": "British Indian Ocean Territory",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IQ",
+              "description": "Iraq",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IR",
+              "description": "Iran (Islamic Republic of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IS",
+              "description": "Iceland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "IT",
+              "description": "Italy",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "JE",
+              "description": "Jersey",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "JM",
+              "description": "Jamaica",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "JO",
+              "description": "Jordan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "JP",
+              "description": "Japan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KE",
+              "description": "Kenya",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KG",
+              "description": "Kyrgyzstan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KH",
+              "description": "Cambodia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KI",
+              "description": "Kiribati",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KM",
+              "description": "Comoros",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KN",
+              "description": "Saint Kitts and Nevis",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KP",
+              "description": "Korea (Democratic People's Republic of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KR",
+              "description": "Korea (Republic of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KW",
+              "description": "Kuwait",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KY",
+              "description": "Cayman Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "KZ",
+              "description": "Kazakhstan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LA",
+              "description": "Lao People's Democratic Republic",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LB",
+              "description": "Lebanon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LC",
+              "description": "Saint Lucia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LI",
+              "description": "Liechtenstein",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LK",
+              "description": "Sri Lanka",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LR",
+              "description": "Liberia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LS",
+              "description": "Lesotho",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LT",
+              "description": "Lithuania",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LU",
+              "description": "Luxembourg",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LV",
+              "description": "Latvia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "LY",
+              "description": "Libya",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MA",
+              "description": "Morocco",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MC",
+              "description": "Monaco",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MD",
+              "description": "Moldova (Republic of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ME",
+              "description": "Montenegro",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MF",
+              "description": "Saint Martin (French part)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MG",
+              "description": "Madagascar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MH",
+              "description": "Marshall Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MK",
+              "description": "North Macedonia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ML",
+              "description": "Mali",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MM",
+              "description": "Myanmar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MN",
+              "description": "Mongolia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MO",
+              "description": "Macao",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MP",
+              "description": "Northern Mariana Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MQ",
+              "description": "Martinique",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MR",
+              "description": "Mauritania",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MS",
+              "description": "Montserrat",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MT",
+              "description": "Malta",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MU",
+              "description": "Mauritius",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MV",
+              "description": "Maldives",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MW",
+              "description": "Malawi",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MX",
+              "description": "Mexico",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MY",
+              "description": "Malaysia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "MZ",
+              "description": "Mozambique",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NA",
+              "description": "Namibia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NC",
+              "description": "New Caledonia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NE",
+              "description": "Niger",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NF",
+              "description": "Norfolk Island",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NG",
+              "description": "Nigeria",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NI",
+              "description": "Nicaragua",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NL",
+              "description": "Netherlands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NO",
+              "description": "Norway",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NP",
+              "description": "Nepal",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NR",
+              "description": "Nauru",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NU",
+              "description": "Niue",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NZ",
+              "description": "New Zealand",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "OM",
+              "description": "Oman",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PA",
+              "description": "Panama",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PE",
+              "description": "Peru",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PF",
+              "description": "French Polynesia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PG",
+              "description": "Papua New Guinea",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PH",
+              "description": "Philippines",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PK",
+              "description": "Pakistan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PL",
+              "description": "Poland",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PM",
+              "description": "Saint Pierre and Miquelon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PN",
+              "description": "Pitcairn",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PR",
+              "description": "Puerto Rico",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PS",
+              "description": "Palestine, State of",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PT",
+              "description": "Portugal",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PW",
+              "description": "Palau",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "PY",
+              "description": "Paraguay",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "QA",
+              "description": "Qatar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "RE",
+              "description": "Réunion",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "RO",
+              "description": "Romania",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "RS",
+              "description": "Serbia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "RU",
+              "description": "Russian Federation",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "RW",
+              "description": "Rwanda",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SA",
+              "description": "Saudi Arabia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SB",
+              "description": "Solomon Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SC",
+              "description": "Seychelles",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SD",
+              "description": "Sudan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SE",
+              "description": "Sweden",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SG",
+              "description": "Singapore",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SH",
+              "description": "Saint Helena, Ascension and Tristan da Cunha",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SI",
+              "description": "Slovenia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SJ",
+              "description": "Svalbard and Jan Mayen",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SK",
+              "description": "Slovakia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SL",
+              "description": "Sierra Leone",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SM",
+              "description": "San Marino",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SN",
+              "description": "Senegal",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SO",
+              "description": "Somalia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SR",
+              "description": "Suriname",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SS",
+              "description": "South Sudan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ST",
+              "description": "Sao Tome and Principe",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SV",
+              "description": "El Salvador",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SX",
+              "description": "Sint Maarten (Dutch part)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SY",
+              "description": "Syrian Arab Republic",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SZ",
+              "description": "Eswatini",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TC",
+              "description": "Turks and Caicos Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TD",
+              "description": "Chad",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TF",
+              "description": "French Southern Territories",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TG",
+              "description": "Togo",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TH",
+              "description": "Thailand",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TJ",
+              "description": "Tajikistan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TK",
+              "description": "Tokelau",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TL",
+              "description": "Timor-Leste",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TM",
+              "description": "Turkmenistan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TN",
+              "description": "Tunisia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TO",
+              "description": "Tonga",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TR",
+              "description": "Turkey",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TT",
+              "description": "Trinidad and Tobago",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TV",
+              "description": "Tuvalu",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TW",
+              "description": "Taiwan, Province of China",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ",
+              "description": "Tanzania, United Republic of",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "UA",
+              "description": "Ukraine",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "UG",
+              "description": "Uganda",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "UM",
+              "description": "United States Minor Outlying Islands",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "US",
+              "description": "United States of America",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "UY",
+              "description": "Uruguay",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "UZ",
+              "description": "Uzbekistan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VA",
+              "description": "Holy See",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VC",
+              "description": "Saint Vincent and the Grenadines",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VE",
+              "description": "Venezuela (Bolivarian Republic of)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VG",
+              "description": "Virgin Islands (British)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VI",
+              "description": "Virgin Islands (U.S.)",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VN",
+              "description": "Viet Nam",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "VU",
+              "description": "Vanuatu",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "WF",
+              "description": "Wallis and Futuna",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "WS",
+              "description": "Samoa",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "YE",
+              "description": "Yemen",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "YT",
+              "description": "Mayotte",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ZA",
+              "description": "South Africa",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ZM",
+              "description": "Zambia",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ZW",
+              "description": "Zimbabwe",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "INPUT_OBJECT",
           "name": "CreateBillableMetricInput",
           "description": "Autogenerated input type of CreateBillableMetric",
@@ -1064,6 +2569,150 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "country",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine1",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine2",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "state",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "phone",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "logoUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "legalName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "legalNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -1302,6 +2951,150 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "country",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine1",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine2",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "state",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "phone",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "logoUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "legalName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "legalNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -1339,6 +3132,34 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "addressLine1",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "addressLine2",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "canBeDeleted",
               "description": "Check if customer is deletable",
               "type": {
@@ -1349,6 +3170,34 @@
                   "name": "Boolean",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "country",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -1393,6 +3242,20 @@
               ]
             },
             {
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -1411,7 +3274,77 @@
               ]
             },
             {
+              "name": "legalName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "legalNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "logoUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "phone",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "state",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -1457,6 +3390,34 @@
                   "name": "ISO8601DateTime",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -1535,6 +3496,34 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "addressLine1",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "addressLine2",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "canBeDeleted",
               "description": "Check if customer is deletable",
               "type": {
@@ -1545,6 +3534,34 @@
                   "name": "Boolean",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "country",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -1581,6 +3598,20 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -1629,7 +3660,77 @@
               ]
             },
             {
+              "name": "legalName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "legalNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "logoUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "phone",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "state",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -1698,6 +3799,34 @@
                   "name": "ISO8601DateTime",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -4576,6 +6705,150 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "country",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine1",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine2",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "state",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "phone",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "logoUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "legalName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "legalNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

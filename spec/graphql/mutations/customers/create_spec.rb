@@ -10,7 +10,9 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         createCustomer(input: $input) {
           id,
           name,
-          customerId
+          customerId,
+          city
+          country
         }
       }
     GQL
@@ -25,6 +27,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         input: {
           name: 'John Doe',
           customerId: 'john_doe_2',
+          city: 'London',
+          country: 'GB',
         },
       },
     )
@@ -35,6 +39,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('John Doe')
       expect(result_data['customerId']).to eq('john_doe_2')
+      expect(result_data['city']).to eq('London')
+      expect(result_data['country']).to eq('GB')
     end
   end
 

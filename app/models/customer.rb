@@ -8,6 +8,7 @@ class Customer < ApplicationRecord
   has_many :invoices, through: :subscriptions
 
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
+  validates :country, country_code: true, if: :country?
 
   def attached_to_subscriptions?
     subscriptions.exists?
