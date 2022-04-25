@@ -573,24 +573,6 @@
               ]
             },
             {
-              "name": "frequency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "ChargeFrequency",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "id",
               "description": null,
               "type": {
@@ -663,29 +645,6 @@
           "enumValues": null
         },
         {
-          "kind": "ENUM",
-          "name": "ChargeFrequency",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "one_time",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "recurring",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
-        },
-        {
           "kind": "INPUT_OBJECT",
           "name": "ChargeInput",
           "description": null,
@@ -746,22 +705,6 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "frequency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "ChargeFrequency",
                   "ofType": null
                 }
               },

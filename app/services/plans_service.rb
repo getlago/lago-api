@@ -108,7 +108,6 @@ class PlansService < BaseService
       billable_metric_id: args[:billable_metric_id],
       amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
-      frequency: args[:frequency].to_sym,
       pro_rata: args[:pro_rata],
       vat_rate: args[:vat_rate],
       charge_model: args[:charge_model].to_sym,
@@ -116,7 +115,7 @@ class PlansService < BaseService
   end
 
   def sanitize_charges(plan, args_charges, created_charges_ids)
-    args_charges_ids = args_charges.select { |c| c[:id] != nil }.map { |c| c[:id] }
+    args_charges_ids = args_charges.reject { |c| c[:id].nil? }.map { |c| c[:id] }
     charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
     charges_ids.each do |charge_id|
       Charge.find_by(id: charge_id).destroy!

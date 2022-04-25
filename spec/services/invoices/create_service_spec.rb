@@ -20,7 +20,7 @@ RSpec.describe Invoices::CreateService, type: :service do
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
 
     before do
-      create(:one_time_charge, plan: subscription.plan, charge_model: 'standard')
+      create(:charge, plan: subscription.plan, charge_model: 'standard')
     end
 
     context 'when billed monthly' do

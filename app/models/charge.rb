@@ -8,16 +8,10 @@ class Charge < ApplicationRecord
 
   has_many :fees
 
-  FREQUENCIES = %i[
-    one_time
-    recurring
-  ].freeze
-
   CHARGE_MODELS = %i[
     standard
   ].freeze
 
-  enum frequency: FREQUENCIES
   enum charge_model: CHARGE_MODELS
 
   monetize :amount_cents

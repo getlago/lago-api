@@ -7,7 +7,7 @@ RSpec.describe Charges::ChargeModels::StandardService, type: :service do
 
   let(:charge) do
     create(
-      :one_time_charge,
+      :charge,
       amount_cents: 500,
       charge_model: 'standard',
     )
