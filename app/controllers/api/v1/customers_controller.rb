@@ -5,16 +5,16 @@ module Api
     class CustomersController < Api::BaseController
       def create
         service = CustomersService.new
-        result = service.create(
+        result = service.create_from_api(
           organization: current_organization,
-          params: create_params
+          params: create_params,
         )
 
         if result.success?
           render(
             json: ::V1::CustomerSerializer.new(
               result.customer,
-              root_name: 'customer'
+              root_name: 'customer',
             )
           )
         else
@@ -25,7 +25,22 @@ module Api
       private
 
       def create_params
-        params.require(:customer).permit(:customer_id, :name)
+        params.require(:customer).permit(
+          :customer_id,
+          :name,
+          :country,
+          :address_line1,
+          :address_line2,
+          :state,
+          :zipcode,
+          :email,
+          :city,
+          :url,
+          :phone,
+          :logo_url,
+          :legal_name,
+          :legal_number,
+        )
       end
     end
   end
