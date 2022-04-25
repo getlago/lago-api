@@ -38,7 +38,7 @@ class Subscription < ApplicationRecord
   def upgraded?
     return false unless next_subscription
 
-    plan.amount_cents <= next_subscription.plan.amount_cents
+    plan.yearly_amount_cents <= next_subscription.plan.yearly_amount_cents
   end
 
   def next_subscription

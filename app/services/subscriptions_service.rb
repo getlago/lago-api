@@ -84,14 +84,14 @@ class SubscriptionsService < BaseService
     return false unless current_subscription
     return false if current_plan.id == current_subscription.plan.id
 
-    current_plan.amount_cents >= current_subscription.plan.amount_cents
+    current_plan.yearly_amount_cents >= current_subscription.plan.yearly_amount_cents
   end
 
   def downgrade?
     return false unless current_subscription
     return false if current_plan.id == current_subscription.plan.id
 
-    current_plan.amount_cents < current_subscription.plan.amount_cents
+    current_plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
   end
 
   def create_subscription
