@@ -5,9 +5,9 @@ module Api
     class CustomersController < Api::BaseController
       def create
         service = CustomersService.new
-        result = service.create(
+        result = service.create_from_api(
           organization: current_organization,
-          params: create_params
+          params: create_params,
         )
 
         if result.success?

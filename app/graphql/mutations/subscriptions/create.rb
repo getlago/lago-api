@@ -23,8 +23,8 @@ module Mutations
             organization: current_organization,
             params: args,
           )
-        
-          result.success? ? result.subscription : execution_error(code: result.error_code, message: result.error)
+
+        result.success? ? result.subscription : execution_error(code: result.error_code, message: result.error)
       end
     end
   end

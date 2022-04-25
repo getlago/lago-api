@@ -9,7 +9,7 @@ RSpec.describe CustomersService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe 'create' do
+  describe 'create_from_api' do
     let(:create_args) do
       {
         customer_id: SecureRandom.uuid,
@@ -18,7 +18,7 @@ RSpec.describe CustomersService, type: :service do
     end
 
     it 'creates a new customer' do
-      result = customers_service.create(
+      result = customers_service.create_from_api(
         organization: organization,
         params: create_args,
       )
@@ -38,7 +38,7 @@ RSpec.describe CustomersService, type: :service do
       end
 
       it 'updates the customer' do
-        result = customers_service.create(
+        result = customers_service.create_from_api(
           organization: organization,
           params: create_args,
         )
@@ -57,10 +57,62 @@ RSpec.describe CustomersService, type: :service do
       end
 
       it 'return a failed result' do
-        result = customers_service.create(
+        result = customers_service.create_from_api(
           organization: organization,
           params: create_args,
         )
+
+        expect(result).not_to be_success
+      end
+    end
+  end
+
+  describe 'create' do
+    let(:create_args) do
+      {
+        customer_id: SecureRandom.uuid,
+        name: 'Foo Bar',
+        organization_id: organization.id,
+      }
+    end
+
+    it 'creates a new customer' do
+      result = customers_service.create(**create_args)
+
+      aggregate_failures do
+        expect(result).to be_success
+
+        customer = result.customer
+        expect(customer.id).to be_present
+        expect(customer.organization_id).to eq(organization.id)
+        expect(customer.customer_id).to eq(create_args[:customer_id])
+        expect(customer.name).to eq(create_args[:name])
+      end
+    end
+
+    context 'when customer already exists' do
+      let(:customer) do
+        create(:customer, organization: organization, customer_id: create_args[:customer_id])
+      end
+
+      before { customer }
+
+      it 'return a failed result' do
+        result = customers_service.create(**create_args)
+
+        expect(result).not_to be_success
+      end
+    end
+
+    context 'with validation error' do
+      let(:create_args) do
+        {
+          name: 'Foo Bar',
+        }
+      end
+
+      it 'return a failed result' do
+        result = customers_service.create(**create_args)
 
         expect(result).not_to be_success
       end
