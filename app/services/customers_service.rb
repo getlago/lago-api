@@ -30,6 +30,18 @@ class CustomersService < BaseService
       organization_id: args[:organization_id],
       customer_id: args[:customer_id],
       name: args[:name],
+      country: args[:country]&.upcase,
+      address_line1: args[:address_line1],
+      address_line2: args[:address_line2],
+      state: args[:state],
+      zipcode: args[:zipcode],
+      email: args[:email],
+      city: args[:city],
+      url: args[:url],
+      phone: args[:phone],
+      logo_url: args[:logo_url],
+      legal_name: args[:legal_name],
+      legal_number: args[:legal_number],
     )
 
     result.customer = customer
