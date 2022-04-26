@@ -10,7 +10,7 @@ module Webhooks
     end
 
     def call
-      payload = object_serializer
+      payload = object_serializer.serialize
       payload.merge(webhook_type: webhook_type)
 
       http_client = LagoHttpClient::Client.new(current_organization.webhook_url)
