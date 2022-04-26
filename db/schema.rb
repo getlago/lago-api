@@ -110,6 +110,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_25_155638) do
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
     t.integer "sequential_id"
+    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
   end
 

@@ -7,11 +7,12 @@ class Organization < ApplicationRecord
   has_many :plans
   has_many :customers
   has_many :subscriptions, through: :customers
+  has_many :invoices, through: :customers
   has_many :events
 
   before_create :generate_api_key
 
-  validates_presence_of :name
+  validates :name, presence: true
 
   private
 
