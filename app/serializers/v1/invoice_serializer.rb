@@ -5,6 +5,7 @@ module V1
     def serialize
       payload = {
         lago_id: model.id,
+        sequential_id: model.sequential_id,
         from_date: model.from_date,
         to_date: model.to_date,
         issuing_date: model.issuing_date,
