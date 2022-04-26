@@ -269,6 +269,8 @@ GEM
     websocket-driver (0.7.5)
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
+    with_advisory_lock (4.6.0)
+      activerecord (>= 4.2)
     zeitwerk (2.5.4)
 
 PLATFORMS
@@ -303,6 +305,7 @@ DEPENDENCIES
   simplecov
   tzinfo-data
   uglifier
+  with_advisory_lock
 
 RUBY VERSION
    ruby 3.0.1p64
