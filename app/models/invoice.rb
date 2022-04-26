@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invoice < ApplicationRecord
+  include Sequenced
+
   belongs_to :subscription
 
   has_many :fees
@@ -11,6 +13,8 @@ class Invoice < ApplicationRecord
 
   monetize :amount_cents
   monetize :vat_amount_cents
+
+  sequenced scope: ->(invoice) { invoice.organization.invoices }
 
   validates :from_date, presence: true
   validates :to_date, presence: true

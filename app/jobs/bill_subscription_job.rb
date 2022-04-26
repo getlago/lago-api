@@ -3,6 +3,8 @@
 class BillSubscriptionJob < ApplicationJob
   queue_as 'billing'
 
+  retry_on Sequenced::SequenceError
+
   def perform(subscription, timestamp)
     result = Invoices::CreateService.new(
       subscription: subscription,

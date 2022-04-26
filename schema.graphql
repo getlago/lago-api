@@ -1561,6 +1561,7 @@ type Invoice {
   id: ID!
   issuingDate: ISO8601Date!
   plan: Plan
+  sequentialId: ID!
   subscription: Subscription
   toDate: ISO8601Date!
   totalAmountCents: Int!
