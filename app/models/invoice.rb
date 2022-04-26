@@ -12,6 +12,8 @@ class Invoice < ApplicationRecord
   monetize :amount_cents
   monetize :vat_amount_cents
 
+  acts_as_sequenced
+
   validates :from_date, presence: true
   validates :to_date, presence: true
   validates :issuing_date, presence: true

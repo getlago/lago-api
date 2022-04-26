@@ -238,6 +238,9 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
+    sequenced (3.2.0)
+      activerecord (>= 3.0)
+      activesupport (>= 3.0)
     sidekiq (6.4.1)
       connection_pool (>= 2.2.2)
       rack (~> 2.0)
@@ -299,6 +302,7 @@ DEPENDENCIES
   rails (~> 7.0.2)
   rspec-rails
   sass-rails
+  sequenced
   sidekiq
   simplecov
   tzinfo-data
