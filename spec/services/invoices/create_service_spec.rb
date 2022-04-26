@@ -51,6 +51,12 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_currency).to eq('EUR')
         end
       end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          invoice_service.create
+        end.to have_enqueued_job(SendWebhookJob)
+      end
     end
 
     context 'when billed monthly on first month' do

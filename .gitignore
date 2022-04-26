@@ -37,3 +37,6 @@
 
 # Ignore Simplecov coverage status
 /coverage/*
+
+.rsa_private.pem
+.rsa_public.pem

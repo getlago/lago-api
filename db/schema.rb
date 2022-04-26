@@ -129,6 +129,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_25_155638) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "api_key"
+    t.string "webhook_url"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 

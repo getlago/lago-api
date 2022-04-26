@@ -1,1 +1,3 @@
 /tmp/*
+.rsa_private.pem
+.rsa_public.pem

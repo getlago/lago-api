@@ -32,4 +32,22 @@ class Fee < ApplicationRecord
     self.vat_amount_cents = (amount_cents * vat_rate / 100).to_i
     self.vat_amount_currency = amount_currency
   end
+
+  def item_type
+    return 'charge' if charge_fee?
+
+    'subscription'
+  end
+
+  def item_code
+    return billable_metric.code if charge_fee?
+
+    subscription.plan.code
+  end
+
+  def item_name
+    return billable_metric.name if charge_fee?
+
+    subscription.plan.name
+  end
 end

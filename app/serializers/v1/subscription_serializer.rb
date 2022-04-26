@@ -12,7 +12,7 @@ module V1
         started_at: model.started_at,
         terminated_at: model.terminated_at,
         canceled_at: model.canceled_at,
-        created_at: model.created_at
+        created_at: model.created_at,
       }
     end
   end
