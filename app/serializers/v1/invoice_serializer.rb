@@ -39,9 +39,7 @@ module V1
     end
 
     def fees
-      {
-        fees: ::CollectionSerializer.new(model.fees, ::V1::FeeSerializer, use_root: false).serialize,
-      }
+      ::CollectionSerializer.new(model.fees, ::V1::FeeSerializer, collection_name: 'fees').serialize
     end
   end
 end
