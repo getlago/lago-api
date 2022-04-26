@@ -7,14 +7,15 @@ RSpec.describe CreateEventJob, type: :job do
   let(:params) { {} }
   let(:event_service) { instance_double(EventsService) }
   let(:result) { BaseService::Result.new }
+  let(:timestamp) { Time.zone.now.to_i }
 
   it 'calls the event service' do
     allow(EventsService).to receive(:new).and_return(event_service)
     allow(event_service).to receive(:create)
-      .with(organization: organization, params: params)
+      .with(organization: organization, params: params, timestamp: timestamp)
       .and_return(result)
 
-    described_class.perform_now(organization, params)
+    described_class.perform_now(organization, params, timestamp)
 
     expect(EventsService).to have_received(:new)
     expect(event_service).to have_received(:create)
@@ -28,11 +29,11 @@ RSpec.describe CreateEventJob, type: :job do
     it 'raises an error' do
       allow(EventsService).to receive(:new).and_return(event_service)
       allow(event_service).to receive(:create)
-        .with(organization: organization, params: params)
+        .with(organization: organization, params: params, timestamp: timestamp)
         .and_return(result)
 
       expect do
-        described_class.perform_now(organization, params)
+        described_class.perform_now(organization, params, timestamp)
       end.to raise_error(BaseService::FailedResult)
 
       expect(EventsService).to have_received(:new)

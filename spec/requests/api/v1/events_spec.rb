@@ -10,7 +10,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       post_with_token(
         organization,
         '/api/v1/events',
-        {
+        event: {
           code: 'event_code',
           transaction_id: SecureRandom.uuid,
           timestamp: Time.zone.now.to_i,
