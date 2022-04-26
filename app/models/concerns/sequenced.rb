@@ -29,7 +29,7 @@ module Sequenced
       end
 
       # NOTE: If the application was unable to aquire the lock, the block returns false
-      raise  unless result
+      raise SequenceError, 'Unable to aquire lock on the database' unless result
 
       result
     end
@@ -52,4 +52,6 @@ module Sequenced
       @sequenced_options
     end
   end
+
+  class SequenceError < StandardError; end
 end
