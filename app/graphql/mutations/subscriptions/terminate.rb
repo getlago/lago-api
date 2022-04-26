@@ -18,7 +18,7 @@ module Mutations
 
         result = ::Subscriptions::TerminateService.new(args[:id]).terminate
 
-        result.success? ? result.subscription : execution_error(code: result.error_code, message: result.error)
+        result.success? ? result.subscription : result_error(result)
       end
     end
   end

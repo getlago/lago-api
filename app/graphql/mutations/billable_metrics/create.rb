@@ -24,7 +24,7 @@ module Mutations
           .new(context[:current_user])
           .create(**args.merge(organization_id: current_organization.id))
 
-        result.success? ? result.billable_metric : execution_error(code: result.error_code, message: result.error)
+        result.success? ? result.billable_metric : result_error(result)
       end
     end
   end

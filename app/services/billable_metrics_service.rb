@@ -14,7 +14,7 @@ class BillableMetricsService < BaseService
     result.billable_metric = metric
     result
   rescue ActiveRecord::RecordInvalid => e
-    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
+    result.fail_with_validations!(e.record)
   end
 
   def update(**args)
@@ -37,7 +37,7 @@ class BillableMetricsService < BaseService
     result.billable_metric = metric
     result
   rescue ActiveRecord::RecordInvalid => e
-    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
+    result.fail_with_validations!(e.record)
   end
 
   def destroy(id)

@@ -18,7 +18,7 @@ class PlansService < BaseService
     # Validates billable metrics
     metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
     if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-      return result.fail!('unprocessable_entity', 'Billable metrics does not exists')
+      return result.fail!('not_found', 'Billable metrics does not exists')
     end
 
     ActiveRecord::Base.transaction do
@@ -30,7 +30,7 @@ class PlansService < BaseService
     result.plan = plan
     result
   rescue ActiveRecord::RecordInvalid => e
-    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
+    result.fail_with_validations!(e.record)
   end
 
   def update(**args)
@@ -54,7 +54,7 @@ class PlansService < BaseService
 
     metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
     if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-      return result.fail!('unprocessable_entity', 'Billable metrics does not exists')
+      return result.fail!('not_found', 'Billable metrics does not exists')
     end
 
     ActiveRecord::Base.transaction do
@@ -81,7 +81,7 @@ class PlansService < BaseService
     result.plan = plan
     result
   rescue ActiveRecord::RecordInvalid => e
-    result.fail!('unprocessable_entity', e.record.errors.full_messages.join('\n'))
+    result.fail_with_validations!(e.record)
   end
 
   def destroy(id)

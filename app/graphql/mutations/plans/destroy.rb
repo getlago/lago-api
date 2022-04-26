@@ -15,7 +15,7 @@ module Mutations
       def resolve(id:)
         result = PlansService.new(context[:current_user]).destroy(id)
 
-        result.success? ? result.plan : execution_error(code: result.error, message: result.error)
+        result.success? ? result.plan : result_error(result)
       end
     end
   end

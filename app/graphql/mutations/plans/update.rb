@@ -26,7 +26,7 @@ module Mutations
       def resolve(**args)
         result = PlansService.new(context[:current_user]).update(**args)
 
-        result.success? ? result.plan : execution_error(code: result.error_code, message: result.message)
+        result.success? ? result.plan : result_error(result)
       end
     end
   end

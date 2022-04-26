@@ -15,7 +15,7 @@ module Mutations
       def resolve(id:)
         result = BillableMetricsService.new(context[:current_user]).destroy(id)
 
-        result.success? ? result.billable_metric : execution_error(code: result.error_code, message: result.error)
+        result.success? ? result.billable_metric : result_error(result)
       end
     end
   end

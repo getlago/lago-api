@@ -29,7 +29,7 @@ module Mutations
       def resolve(**args)
         result = CustomersService.new(context[:current_user]).update(**args)
 
-        result.success? ? result.customer : execution_error(code: result.error_code, message: result.message)
+        result.success? ? result.customer : result_error(result)
       end
     end
   end
