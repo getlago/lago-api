@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Plans::Create, type: :graphql do
+RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization: organization) }
@@ -32,8 +32,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          customerId: customer.customer_id,
-          planCode: plan.code,
+          customerId: customer.id,
+          planId: plan.id,
         },
       },
     )
@@ -56,8 +56,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            customerId: customer.customer_id,
-            planCode: plan.code,
+            customerId: customer.id,
+            planId: plan.id,
           },
         },
       )
@@ -73,8 +73,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            customerId: customer.customer_id,
-            planCode: plan.code,
+            customerId: customer.id,
+            planId: plan.id,
           },
         },
       )

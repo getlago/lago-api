@@ -1394,8 +1394,8 @@ input CreateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  customerId: String!
-  planCode: String!
+  customerId: ID!
+  planId: ID!
 }
 
 enum CurrencyEnum {
@@ -1919,6 +1919,7 @@ type Subscription {
   customer: Customer!
   id: ID!
   nextPlan: Plan
+  pendingStartDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
