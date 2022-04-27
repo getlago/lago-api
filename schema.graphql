@@ -1918,6 +1918,7 @@ type Subscription {
   customer: Customer!
   id: ID!
   nextPlan: Plan
+  pendingStartDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
   status: StatusTypeEnum

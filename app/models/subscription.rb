@@ -50,4 +50,10 @@ class Subscription < ApplicationRecord
   def next_subscription
     next_subscriptions.not_canceled.order(created_at: :desc).first
   end
+
+  def pending_start_date
+    return unless pending?
+
+    (created_at.end_of_month + 1.day).to_date
+  end
 end
