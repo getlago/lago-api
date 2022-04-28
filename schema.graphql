@@ -51,7 +51,6 @@ type Charge {
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
   id: ID!
-  proRata: Boolean!
   updatedAt: ISO8601DateTime!
   vatRate: Float
 }
@@ -62,7 +61,6 @@ input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   id: ID
-  proRata: Boolean!
   vatRate: Float
 }
 
