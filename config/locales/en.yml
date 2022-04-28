@@ -8,3 +8,4 @@ en:
         invalid_date_range: invalid_date_range
         required: relation_must_exist
         taken: value_already_exist
+        url_invalid: url_is_invalid
