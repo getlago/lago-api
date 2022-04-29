@@ -9,7 +9,8 @@ module Mutations
       graphql_name 'UpdateOrganization'
       description 'Updates an Organization'
 
-      argument :webhook_url, String
+      argument :webhook_url, String, required: false
+      argument :vat_rate, Float, required: false
 
       type Types::OrganizationType
 
