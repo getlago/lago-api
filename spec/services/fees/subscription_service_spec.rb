@@ -10,7 +10,6 @@ RSpec.describe Fees::SubscriptionService do
       :plan,
       amount_cents: 100,
       amount_currency: 'EUR',
-      vat_rate: 20,
     )
   end
 
@@ -443,7 +442,6 @@ RSpec.describe Fees::SubscriptionService do
         :plan,
         amount_cents: 100,
         amount_currency: 'EUR',
-        vat_rate: 20,
       )
     end
 

@@ -1380,7 +1380,6 @@ input CreatePlanInput {
   name: String!
   payInAdvance: Boolean!
   trialPeriod: Float
-  vatRate: Float
 }
 
 """
@@ -1787,7 +1786,6 @@ type Plan {
   payInAdvance: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
-  vatRate: Float
 }
 
 type PlanCollection {
@@ -1824,7 +1822,6 @@ type PlanDetails {
   payInAdvance: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
-  vatRate: Float
 }
 
 enum PlanInterval {
@@ -2046,7 +2043,6 @@ input UpdatePlanInput {
   name: String!
   payInAdvance: Boolean!
   trialPeriod: Float
-  vatRate: Float
 }
 
 type User {
