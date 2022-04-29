@@ -6,9 +6,9 @@ module V1
       payload = {
         lago_id: model.id,
         sequential_id: model.sequential_id,
-        from_date: model.from_date,
-        to_date: model.to_date,
-        issuing_date: model.issuing_date,
+        from_date: model.from_date.iso8601,
+        to_date: model.to_date.iso8601,
+        issuing_date: model.issuing_date.iso8601,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
