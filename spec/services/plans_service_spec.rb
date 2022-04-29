@@ -26,14 +26,12 @@ RSpec.describe PlansService, type: :service do
             billable_metric_id: billable_metrics.first.id,
             amount_cents: 100,
             amount_currency: 'USD',
-            pro_rata: false,
             charge_model: 'standard',
           },
           {
             billable_metric_id: billable_metrics.last.id,
             amount_cents: 300,
             amount_currency: 'EUR',
-            pro_rata: true,
             vat_rate: 10.5,
             charge_model: 'standard',
           },
@@ -94,14 +92,12 @@ RSpec.describe PlansService, type: :service do
             billable_metric_id: billable_metrics.first.id,
             amount_cents: 100,
             amount_currency: 'USD',
-            pro_rata: false,
             charge_model: 'standard',
           },
           {
             billable_metric_id: billable_metrics.last.id,
             amount_cents: 300,
             amount_currency: 'EUR',
-            pro_rata: true,
             vat_rate: 10.5,
             charge_model: 'standard',
           },
@@ -149,7 +145,6 @@ RSpec.describe PlansService, type: :service do
           billable_metric_id: billable_metrics.first.id,
           amount_cents: 300,
           amount_currency: 'USD',
-          pro_rata: false,
           charge_model: 'standard',
         )
       end
@@ -169,14 +164,12 @@ RSpec.describe PlansService, type: :service do
               billable_metric_id: billable_metrics.first.id,
               amount_cents: 100,
               amount_currency: 'USD',
-              pro_rata: false,
               charge_model: 'standard',
             },
             {
               billable_metric_id: billable_metrics.last.id,
               amount_cents: 300,
               amount_currency: 'EUR',
-              pro_rata: true,
               vat_rate: 10.5,
               charge_model: 'standard',
             },
@@ -198,7 +191,6 @@ RSpec.describe PlansService, type: :service do
           billable_metric_id: billable_metrics.first.id,
           amount_cents: 300,
           amount_currency: 'USD',
-          pro_rata: false,
           charge_model: 'standard',
         )
       end

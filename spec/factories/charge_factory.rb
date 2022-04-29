@@ -7,7 +7,6 @@ FactoryBot.define do
     amount_currency { 'EUR' }
     vat_rate { 20 }
 
-    pro_rata { false }
     charge_model { 'standard' }
   end
 end
