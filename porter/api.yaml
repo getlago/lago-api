@@ -21,6 +21,7 @@ container:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      SENTRY_DSN: ${SENTRY_DSN}
   lifecycle:
     postStart: null
     preStop: null
