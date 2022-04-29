@@ -50,7 +50,6 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               billableMetricId: billable_metrics.last.id,
               amountCents: 300,
               amountCurrency: 'EUR',
-              vatRate: 10.5,
               chargeModel: 'standard',
             },
           ],

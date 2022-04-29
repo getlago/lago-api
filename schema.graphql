@@ -52,7 +52,6 @@ type Charge {
   createdAt: ISO8601DateTime!
   id: ID!
   updatedAt: ISO8601DateTime!
-  vatRate: Float
 }
 
 input ChargeInput {
@@ -61,7 +60,6 @@ input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   id: ID
-  vatRate: Float
 }
 
 enum ChargeModelEnum {
