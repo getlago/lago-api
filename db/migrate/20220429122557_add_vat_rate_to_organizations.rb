@@ -2,7 +2,7 @@
 
 class AddVatRateToOrganizations < ActiveRecord::Migration[7.0]
   def up
-    add_column :organizations, :vat_rate, :float, null: true
+    add_column :organizations, :vat_rate, :float, null: false, default: 0
   end
 
   def down
