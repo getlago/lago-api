@@ -18,7 +18,7 @@ module Api
             ),
           )
         else
-          validation_errors(result.error)
+          validation_errors(result)
         end
       end
 
@@ -34,7 +34,7 @@ module Api
             )
           )
         else
-          validation_errors(result.error)
+          validation_errors(result)
         end
       end
 

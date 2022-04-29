@@ -23,13 +23,14 @@ module Api
       render json: { message: 'Unauthorized' }, status: :unauthorized
     end
 
-    def validation_errors(errors)
+    def validation_errors(error_result)
       render(
         json: {
           message: 'Unprocessable entity',
-          errors: errors
+          error: error_result.error,
+          error_details: error_result.error_details,
         },
-        status: :unprocessable_entity
+        status: :unprocessable_entity,
       )
     end
 

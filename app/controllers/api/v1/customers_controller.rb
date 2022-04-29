@@ -15,10 +15,10 @@ module Api
             json: ::V1::CustomerSerializer.new(
               result.customer,
               root_name: 'customer',
-            )
+            ),
           )
         else
-          validation_errors(result.error)
+          validation_errors(result)
         end
       end
 
