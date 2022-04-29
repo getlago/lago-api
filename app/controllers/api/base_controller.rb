@@ -13,7 +13,7 @@ module Api
 
       api_key = auth_header.split(' ').second
 
-      return unauthorized unless api_key
+      return unauthorized_error unless api_key
       return unauthorized_error unless current_organization(api_key)
 
       true
