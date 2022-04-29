@@ -5,6 +5,6 @@ if ENV['SENTRY_DSN']
     config.dsn = ENV['SENTRY_DSN']
     config.breadcrumbs_logger = %i[active_support_logger http_logger]
 
-    config.sample_trace_rate = 0
+    config.traces_sample_rate = 0
   end
 end
