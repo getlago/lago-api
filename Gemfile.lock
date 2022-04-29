@@ -249,6 +249,14 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
+    sentry-rails (5.3.0)
+      railties (>= 5.0)
+      sentry-ruby-core (~> 5.3.0)
+    sentry-ruby (5.3.0)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      sentry-ruby-core (= 5.3.0)
+    sentry-ruby-core (5.3.0)
+      concurrent-ruby
     sidekiq (6.4.1)
       connection_pool (>= 2.2.2)
       rack (~> 2.0)
@@ -315,6 +323,8 @@ DEPENDENCIES
   rails (~> 7.0.2)
   rspec-rails
   sass-rails
+  sentry-rails
+  sentry-ruby
   sidekiq
   simplecov
   tzinfo-data

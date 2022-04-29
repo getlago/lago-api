@@ -1,5 +1,7 @@
 #!/bin/bash
 
+./scripts/generate.rsa.sh
+
 rm -f ./tmp/pids/server.pid
 bundle install
 

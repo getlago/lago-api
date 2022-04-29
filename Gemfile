@@ -13,9 +13,6 @@ gem 'graphql'
 gem 'graphql-pagination'
 gem 'jwt'
 gem 'kaminari-activerecord'
-gem 'lograge'
-gem 'lograge-sql'
-gem 'logstash-event'
 gem 'money-rails'
 gem 'pg'
 gem 'puma', '~> 5.6'
@@ -24,6 +21,15 @@ gem 'rails', '~> 7.0.2'
 gem 'sidekiq'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 gem 'with_advisory_lock'
+
+# Logging
+gem 'lograge'
+gem 'lograge-sql'
+gem 'logstash-event'
+
+# Monitoring
+gem 'sentry-ruby'
+gem 'sentry-rails'
 
 group :development, :test do
   gem 'byebug'
