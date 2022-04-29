@@ -17,7 +17,7 @@ module Fees
         charge: charge,
         amount_cents: compute_amount,
         amount_currency: charge.amount_currency,
-        vat_rate: charge.vat_rate,
+        vat_rate: customer.applicable_vat_rate,
       )
 
       new_fee.compute_vat
@@ -33,7 +33,7 @@ module Fees
 
     attr_accessor :invoice, :charge
 
-    delegate :plan, :subscription, to: :invoice
+    delegate :customer, :plan, :subscription, to: :invoice
     delegate :billable_metric, to: :charge
 
     def compute_amount

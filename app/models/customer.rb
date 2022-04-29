@@ -22,4 +22,10 @@ class Customer < ApplicationRecord
   def active_subscription
     subscriptions.active.order(started_at: :desc).first
   end
+
+  def applicable_vat_rate
+    return vat_rate if vat_rate.present?
+
+    organization.vat_rate || 0
+  end
 end

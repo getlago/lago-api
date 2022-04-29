@@ -17,7 +17,7 @@ module Fees
         subscription: subscription,
         amount_cents: new_amount_cents,
         amount_currency: plan.amount_currency,
-        vat_rate: plan.vat_rate,
+        vat_rate: customer.applicable_vat_rate,
       )
 
       new_fee.compute_vat
@@ -33,7 +33,7 @@ module Fees
 
     attr_reader :invoice
 
-    delegate :plan, :subscription, to: :invoice
+    delegate :customer, :plan, :subscription, to: :invoice
     delegate :previous_subscription, to: :subscription
 
     def already_billed?
