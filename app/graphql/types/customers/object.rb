@@ -22,6 +22,7 @@ module Types
       field :logo_url, String, null: true
       field :legal_name, String, null: true
       field :legal_number, String, null: true
+      field :vat_rate, Float, null: true
 
       field :subscriptions, [Types::Subscriptions::Object]
 

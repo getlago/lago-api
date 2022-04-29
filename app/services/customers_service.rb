@@ -17,6 +17,7 @@ class CustomersService < BaseService
     customer.logo_url = params[:logo_url]
     customer.legal_name = params[:legal_name]
     customer.legal_number = params[:legal_number]
+    customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
     customer.save!
 
     result.customer = customer
@@ -42,6 +43,7 @@ class CustomersService < BaseService
       logo_url: args[:logo_url],
       legal_name: args[:legal_name],
       legal_number: args[:legal_number],
+      vat_rate: args[:vat_rate],
     )
 
     result.customer = customer
@@ -67,6 +69,7 @@ class CustomersService < BaseService
     customer.logo_url = args[:logo_url]
     customer.legal_name = args[:legal_name]
     customer.legal_number = args[:legal_number]
+    customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
 
     # NOTE: Only name is editable if customer is attached to subscriptions
     customer.customer_id = args[:customer_id] unless customer.attached_to_subscriptions?

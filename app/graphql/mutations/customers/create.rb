@@ -23,6 +23,7 @@ module Mutations
       argument :logo_url, String, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
+      argument :vat_rate, Float, required: false
 
       type Types::Customers::Object
 

@@ -40,6 +40,7 @@ module Api
           :logo_url,
           :legal_name,
           :legal_number,
+          :vat_rate,
         )
       end
     end
