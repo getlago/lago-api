@@ -3,6 +3,8 @@
 if [ "$RAILS_ENV" == "staging" ]
 then
   bundle exec rake db:create
+  bundle exec rake db:migrate
+  bundle exec rake db:seed
 fi
 
 rm -f ./tmp/pids/server.pid
