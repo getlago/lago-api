@@ -8,7 +8,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     <<~GQL
       mutation($input: UpdateOrganizationInput!) {
         updateOrganization(input: $input) {
-          webhookUrl
+          webhookUrl,
+          vatRate
         }
       }
     GQL
@@ -22,6 +23,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       variables: {
         input: {
           webhookUrl: 'http://foo.bar',
+          vatRate: 12.5,
         },
       },
     )
@@ -29,6 +31,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     result_data = result['data']['updateOrganization']
 
     expect(result_data['webhookUrl']).to eq('http://foo.bar')
+    expect(result_data['vatRate']).to eq(12.5)
   end
 
   context 'with invalid webhook url' do

@@ -9,7 +9,10 @@ module Organizations
     end
 
     def update(**args)
-      organization.update!(webhook_url: args[:webhook_url])
+      organization.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
+      organization.webhook_url = args[:webhook_url] if args.key?(:webhook_url)
+      organization.save!
+
       result.organization = organization
 
       result

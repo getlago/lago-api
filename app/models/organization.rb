@@ -14,6 +14,7 @@ class Organization < ApplicationRecord
 
   validates :name, presence: true
   validates :webhook_url, url: true, allow_nil: true
+  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
 
   private
 

@@ -1746,6 +1746,7 @@ type Organization {
   id: ID!
   name: String!
   updatedAt: ISO8601DateTime!
+  vatRate: Float
   webhookUrl: String
 }
 
@@ -2002,7 +2003,8 @@ input UpdateOrganizationInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  webhookUrl: String!
+  vatRate: Float
+  webhookUrl: String
 }
 
 """

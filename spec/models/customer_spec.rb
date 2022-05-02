@@ -41,21 +41,20 @@ RSpec.describe Customer, type: :model do
     context 'when customer does not have a vat_rate' do
       let(:organization_vat_rate) { 14 }
 
-      # NOTE: Uncomment after merge of organization vat_rate
-      # before do
-      #   customer.vat_rate = nil
-      #   customer.organization.vat_rate = organization_vat_rate
-      # end
+      before do
+        customer.vat_rate = nil
+        customer.organization.vat_rate = organization_vat_rate
+      end
 
-      # it 'returns the organization vat_rate' do
-      #   expect(customer.applicable_vat_rate).to eq(14)
-      # end
+      it 'returns the organization vat_rate' do
+        expect(customer.applicable_vat_rate).to eq(14)
+      end
 
-      # context 'when organization does not have a vat_rate' do
-      #   let(:organization_vat_rate) { nil }
+      context 'when organization does not have a vat_rate' do
+        let(:organization_vat_rate) { nil }
 
-      #   it { expect(customer.applicable_vat_rate).to eq(0) }
-      # end
+        it { expect(customer.applicable_vat_rate).to eq(0) }
+      end
     end
   end
 end
