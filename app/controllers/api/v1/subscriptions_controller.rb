@@ -23,8 +23,12 @@ module Api
       end
 
       # NOTE: We can't destroy a subscription, it will terminate it
-      def destroy
-        result = Subscriptions::TerminateService.new(params[:id]).terminate
+      def terminate
+        result = Subscriptions::TerminateService.new
+          .terminate_from_api(
+            organization: current_organization,
+            customer_id: params[:customer_id],
+          )
 
         if result.success?
           render(

@@ -17,4 +17,8 @@ class Customer < ApplicationRecord
   def deletable?
     !attached_to_subscriptions?
   end
+
+  def active_subscription
+    subscriptions.active.order(started_at: :desc).first
+  end
 end

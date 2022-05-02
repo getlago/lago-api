@@ -3,13 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::TerminateService do
-  subject(:terminate_service) { described_class.new(subscription.id) }
+  subject(:terminate_service) { described_class.new }
 
   describe '.terminate' do
     let(:subscription) { create(:subscription) }
 
     it 'terminates a subscription' do
-      result = terminate_service.terminate
+      result = terminate_service.terminate(subscription.id)
 
       aggregate_failures do
         expect(result.subscription).to be_present
@@ -20,7 +20,7 @@ RSpec.describe Subscriptions::TerminateService do
 
     it 'enqueues a BillSubscriptionJob' do
       expect do
-        terminate_service.terminate
+        terminate_service.terminate(subscription.id)
       end.to have_enqueued_job(BillSubscriptionJob)
     end
 
@@ -28,7 +28,7 @@ RSpec.describe Subscriptions::TerminateService do
       let(:subscription) { OpenStruct.new(id: '123456') }
 
       it 'returns an error' do
-        result = terminate_service.terminate
+        result = terminate_service.terminate(subscription.id)
 
         expect(result.error).to eq('not_found')
       end
