@@ -98,7 +98,7 @@ RSpec.describe Fees::SubscriptionService do
           create(
             :subscription,
             plan: plan,
-            started_at: (Time.zone.now - 3.months).beginning_of_month,
+            started_at: Time.zone.parse('2022-01-01 00:01'),
           )
         end
 
