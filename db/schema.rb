@@ -37,6 +37,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_29_125635) do
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
     t.integer "charge_model", default: 0, null: false
+    t.float "vat_rate"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
@@ -129,7 +130,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_29_125635) do
     t.datetime "updated_at", null: false
     t.string "api_key"
     t.string "webhook_url"
-    t.float "vat_rate"
+    t.float "vat_rate", default: 0.0, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 

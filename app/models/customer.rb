@@ -26,6 +26,7 @@ class Customer < ApplicationRecord
   def applicable_vat_rate
     return vat_rate if vat_rate.present?
 
-    organization.vat_rate || 0
+    # NOTE: Uncomment after merge of organization vat_rate
+    20.0 # organization.vat_rate || 0
   end
 end
