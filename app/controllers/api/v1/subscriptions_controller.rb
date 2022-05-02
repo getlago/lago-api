@@ -18,7 +18,7 @@ module Api
             ),
           )
         else
-          validation_errors(result.error)
+          validation_errors(result)
         end
       end
 
@@ -31,10 +31,10 @@ module Api
             json: ::V1::SubscriptionSerializer.new(
               result.subscription,
               root_name: 'subscription',
-            )
+            ),
           )
         else
-          validation_errors(result.error)
+          validation_errors(result)
         end
       end
 
