@@ -2,11 +2,11 @@
 
 require 'factory_bot_rails'
 
-user = User.find_or_initialize_by(email: 'gavin@hooli.com')
-user.update(password: 'ILoveLago') unless user.password_digest.present?
+return if User.find_by(email: 'gavin@hooli.com').present?
+
+user = User.create!(email: 'gavin@hooli.com', password: 'ILoveLago')
 organization = Organization.find_or_create_by(name: 'Hooli')
 Membership.find_or_create_by(user: user, organization: organization, role: :admin)
-
 
 billable_metric = FactoryBot.create(:billable_metric, organization: organization)
 plan = FactoryBot.create(:plan, organization: organization)
@@ -25,4 +25,3 @@ Subscription.all.find_each do |subscription|
     timestamp: Time.zone.now - 2.months,
   ).create
 end
-
