@@ -9,7 +9,7 @@ class Customer < ApplicationRecord
 
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, if: :country?
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than: 0 }, allow_nil: true
+  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
 
   def attached_to_subscriptions?
     subscriptions.exists?
