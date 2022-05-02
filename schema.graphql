@@ -1360,6 +1360,7 @@ input CreateCustomerInput {
   phone: String
   state: String
   url: String
+  vatRate: Float
   zipcode: String
 }
 
@@ -1431,6 +1432,7 @@ type Customer {
   subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
   url: String
+  vatRate: Float
   zipcode: String
 }
 
@@ -1472,6 +1474,7 @@ type CustomerDetails {
   ): [Subscription!]!
   updatedAt: ISO8601DateTime!
   url: String
+  vatRate: Float
   zipcode: String
 }
 
@@ -1987,6 +1990,7 @@ input UpdateCustomerInput {
   phone: String
   state: String
   url: String
+  vatRate: Float
   zipcode: String
 }
 

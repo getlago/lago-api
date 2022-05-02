@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_04_28_125035) do
+ActiveRecord::Schema[7.0].define(version: 2022_04_29_125635) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -60,6 +60,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_28_125035) do
     t.string "logo_url"
     t.string "legal_name"
     t.string "legal_number"
+    t.float "vat_rate"
     t.index ["customer_id"], name: "index_customers_on_customer_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
   end
@@ -129,6 +130,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_28_125035) do
     t.datetime "updated_at", null: false
     t.string "api_key"
     t.string "webhook_url"
+    t.float "vat_rate", default: 0.0, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 
@@ -142,9 +144,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_28_125035) do
     t.string "description"
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
-    t.float "vat_rate"
     t.float "trial_period"
     t.boolean "pay_in_advance", default: false, null: false
+    t.float "vat_rate"
     t.index ["code", "organization_id"], name: "index_plans_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_plans_on_organization_id"
   end
