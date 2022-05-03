@@ -9,3 +9,4 @@ Sidekiq.configure_client do |config|
 end
 
 Sidekiq.logger = Rails.logger
+Sidekiq.options[:max_retries] = 0
