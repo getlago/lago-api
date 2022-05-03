@@ -34,6 +34,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: lago-api-staging
           IMAGE_TAG: ${{ steps.extract_branch.outputs.branch }}
+          API_URL: https://${{ steps.extract_branch.outputs.branch }}-api.staging.getlago.com
         run: echo "##[set-output name=tag;]$(echo $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG)"
       - name: Build and push
         uses: docker/build-push-action@v2
