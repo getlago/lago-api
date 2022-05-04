@@ -28,16 +28,19 @@ gem 'lograge-sql'
 gem 'logstash-event'
 
 # Monitoring
-gem 'sentry-ruby'
 gem 'sentry-rails'
+gem 'sentry-ruby'
+
+group :development, :test, :staging do
+  gem 'factory_bot_rails'
+  gem 'faker'
+end
 
 group :development, :test do
   gem 'byebug'
   gem 'clockwork-test'
   gem 'debug', platforms: %i[mri mingw x64_mingw]
   gem 'dotenv'
-  gem 'factory_bot_rails'
-  gem 'faker'
   gem 'rspec-rails'
   gem 'simplecov', require: false
 end
