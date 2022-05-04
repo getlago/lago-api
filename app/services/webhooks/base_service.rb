@@ -42,10 +42,17 @@ module Webhooks
 
     def generate_signature(payload)
       JWT.encode(
-        payload.to_json,
+        {
+          data: payload.to_json,
+          iss: issuer,
+        },
         RsaPrivateKey,
         'RS256',
       )
+    end
+
+    def issuer
+      ENV['API_URL']
     end
   end
 end

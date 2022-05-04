@@ -50,10 +50,14 @@ RSpec.describe Webhooks::InvoicesService do
         signature,
         RsaPublicKey,
         true,
-        { algorithm: 'RS256' },
+        {
+          algorithm: 'RS256',
+          iss: ENV['API_URL'],
+          verify_iss: true,
+        },
       ).first
 
-      expect(decoded_signature).to eq(payload.to_json)
+      expect(decoded_signature['data']).to eq(payload.to_json)
     end
   end
 end
