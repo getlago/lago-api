@@ -56,23 +56,26 @@ class CustomersService < BaseService
     customer = result.user.customers.find_by(id: args[:id])
     return result.fail!('not_found') unless customer
 
-    customer.name = args[:name]
-    customer.country = args[:country]&.upcase
-    customer.address_line1 = args[:address_line1]
-    customer.address_line2 = args[:address_line2]
-    customer.state = args[:state]
-    customer.zipcode = args[:zipcode]
-    customer.email = args[:email]
-    customer.city = args[:city]
-    customer.url = args[:url]
-    customer.phone = args[:phone]
-    customer.logo_url = args[:logo_url]
-    customer.legal_name = args[:legal_name]
-    customer.legal_number = args[:legal_number]
+    customer.name = args[:name] if args.key?(:name)
+    customer.country = args[:country]&.upcase if args.key?(:country)
+    customer.address_line1 = args[:address_line1] if args.key?(:address_line1)
+    customer.address_line2 = args[:address_line2] if args.key?(:address_line2)
+    customer.state = args[:state] if args.key?(:state)
+    customer.zipcode = args[:zipcode] if args.key?(:zipcode)
+    customer.email = args[:email] if args.key?(:email)
+    customer.city = args[:city] if args.key?(:city)
+    customer.url = args[:url] if args.key?(:url)
+    customer.phone = args[:phone] if args.key?(:phone)
+    customer.logo_url = args[:logo_url] if args.key?(:logo_url)
+    customer.legal_name = args[:legal_name] if args.key?(:legal_name)
+    customer.legal_number = args[:legal_number] if args.key?(:legal_number)
     customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
 
-    # NOTE: Only name is editable if customer is attached to subscriptions
-    customer.customer_id = args[:customer_id] unless customer.attached_to_subscriptions?
+    # NOTE: Customer_id is not editable if customer is attached to subscriptions
+    if !customer.attached_to_subscriptions? && args.key?(:customer_id)
+      customer.customer_id = args[:customer_id]
+    end
+
     customer.save!
 
     result.customer = customer
