@@ -19,6 +19,7 @@ module Api
         params
           .require(:event)
           .permit(
+            :transaction_id,
             :customer_id,
             :code,
             :timestamp,

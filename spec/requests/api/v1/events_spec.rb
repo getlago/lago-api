@@ -13,6 +13,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         event: {
           code: 'event_code',
           transaction_id: SecureRandom.uuid,
+          customer_id: SecureRandom.uuid,
           timestamp: Time.zone.now.to_i,
           properties: {
             foo: 'bar',
