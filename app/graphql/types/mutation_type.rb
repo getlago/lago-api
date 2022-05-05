@@ -17,6 +17,7 @@ module Types
 
     field :create_customer, mutation: Mutations::Customers::Create
     field :update_customer, mutation: Mutations::Customers::Update
+    field :update_customer_vat_rate, mutation: Mutations::Customers::UpdateVatRate
     field :destroy_customer, mutation: Mutations::Customers::Destroy
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
