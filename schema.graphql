@@ -1746,7 +1746,7 @@ type Organization {
   id: ID!
   name: String!
   updatedAt: ISO8601DateTime!
-  vatRate: Float
+  vatRate: Float!
   webhookUrl: String
 }
 
