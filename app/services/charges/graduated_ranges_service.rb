@@ -3,7 +3,7 @@
 module Charges
   class GraduatedRangesService
     def initialize(ranges)
-      @ranges = ranges
+      @ranges = ranges.with_indifferent_access
       @errors = []
     end
 
@@ -17,7 +17,7 @@ module Charges
       ranges.each_with_index do |range, index|
         errors << :invalid_graduated_amount unless valid_amounts?(range)
         errors << :invalid_graduated_currency unless valid_currencies?(range)
-        errors << :invalid_graduated_currency unless valid_bounds?(range, index, last_to_value || 0)
+        errors << :invalid_graduated_ranges unless valid_bounds?(range, index, last_to_value || 0)
 
         last_to_value = range[:to_value]
       end
