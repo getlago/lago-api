@@ -1550,7 +1550,6 @@ type GraduatedRange {
   fromValue: Int!
   perUnitPriceAmountCents: Int!
   perUnitPriceAmountCurrency: CurrencyEnum!
-  toInfinity: Boolean!
   toValue: Int
 }
 
@@ -1560,7 +1559,6 @@ input GraduatedRangeInput {
   fromValue: Int!
   perUnitPriceAmountCents: Int!
   perUnitPriceAmountCurrency: CurrencyEnum!
-  toInfinity: Boolean!
   toValue: Int
 }
 
