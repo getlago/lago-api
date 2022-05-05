@@ -11,17 +11,22 @@ RSpec.describe Charge, type: :model do
     let(:charge_properties) { [{ 'foo' => 'bar' }] }
     let(:validation_service) { instance_double(Charges::GraduatedRangesService) }
 
+    let(:service_response) do
+      BaseService::Result.new.fail!(
+        :invalid_ranges,
+        [
+          :invalid_graduated_amount,
+          :invalid_graduated_currency,
+          :invalid_graduated_ranges,
+        ],
+      )
+    end
+
     it 'delegates to a validation service' do
       allow(Charges::GraduatedRangesService).to receive(:new)
         .and_return(validation_service)
       allow(validation_service).to receive(:validate)
-        .and_return(
-          [
-            :invalid_graduated_amount,
-            :invalid_graduated_currency,
-            :invalid_graduated_ranges,
-          ],
-        )
+        .and_return(service_response)
 
       aggregate_failures do
         expect(charge).not_to be_valid
@@ -31,7 +36,7 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages[:properties]).to include('invalid_graduated_ranges')
 
         expect(Charges::GraduatedRangesService).to have_received(:new)
-          .with(charge_properties)
+          .with(ranges: charge_properties)
         expect(validation_service).to have_received(:validate)
       end
     end
@@ -45,7 +50,7 @@ RSpec.describe Charge, type: :model do
         allow(Charges::GraduatedRangesService).to receive(:new)
           .and_return(validation_service)
         allow(validation_service).to receive(:validate)
-          .and_return([])
+          .and_return(service_response)
 
         charge.valid?
 

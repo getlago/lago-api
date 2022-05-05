@@ -1,28 +1,33 @@
 # frozen_string_literal: true
 
 module Charges
-  class GraduatedRangesService
-    def initialize(ranges)
-      @ranges = ranges.with_indifferent_access
-      @errors = []
+  class GraduatedRangesService < BaseService
+    def initialize(ranges:)
+      @ranges = ranges.map(&:with_indifferent_access)
+
+      super(nil)
     end
 
     def validate
+      errors = []
+
       if ranges.blank?
         errors << :missing_graduated_range
         return errors
       end
 
-      last_to_value = nil
+      next_from_value = 0
       ranges.each_with_index do |range, index|
         errors << :invalid_graduated_amount unless valid_amounts?(range)
         errors << :invalid_graduated_currency unless valid_currencies?(range)
-        errors << :invalid_graduated_ranges unless valid_bounds?(range, index, last_to_value || 0)
+        errors << :invalid_graduated_ranges unless valid_bounds?(range, index, next_from_value)
 
-        last_to_value = range[:to_value]
+        next_from_value = (range[:to_value] || 0) + 1
       end
 
-      errors.uniq
+      return result.fail!(:invalid_ranges, errors) if errors.present?
+
+      result
     end
 
     private
@@ -41,15 +46,15 @@ module Charges
         currencies.include?(range[:flat_amount_currency])
     end
 
-    def valid_bounds?(range, index, last_to_value)
-      range[:from_value] == (last_to_value + 1) && (
+    def valid_bounds?(range, index, next_from_value)
+      range[:from_value] == (next_from_value) && (
         index == (ranges.size - 1) && range[:to_value].nil? ||
         index < (ranges.size - 1) && (range[:to_value] || 0) > range[:from_value]
       )
     end
 
     def currencies
-      ACCEPTED_CURRENCIES.keys.map(&:to_s).map(&:upcase)
+      Currencies::ACCEPTED_CURRENCIES.keys.map(&:to_s).map(&:upcase)
     end
   end
 end
