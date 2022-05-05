@@ -7,7 +7,6 @@ module Types
 
       argument :from_value, Integer, required: true
       argument :to_value, Integer, required: false
-      argument :to_infinity, Boolean, required: true
 
       argument :per_unit_price_amount_cents, Integer, required: true
       argument :per_unit_price_amount_currency, Types::CurrencyEnum, required: true

@@ -18,4 +18,11 @@ class Charge < ApplicationRecord
   monetize :amount_cents
 
   validates :amount_currency, inclusion: { in: currency_list }
+  validate :validate_graduated_range, if: :graduated?
+
+  def validate_graduated_range
+    validation_errors = Charges::GraduatedRangesService.new(properties).validate
+
+    validation_errors.each { |error| errors.add(:properties, error) }
+  end
 end
