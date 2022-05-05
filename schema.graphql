@@ -50,6 +50,7 @@ type Charge {
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
+  graduatedRanges: [GraduatedRange!]
   id: ID!
   updatedAt: ISO8601DateTime!
 }
@@ -59,6 +60,7 @@ input ChargeInput {
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
+  graduatedRanges: [GraduatedRangeInput!]
   id: ID
 }
 
@@ -1540,6 +1542,26 @@ type DestroyPlanPayload {
   """
   clientMutationId: String
   id: ID
+}
+
+type GraduatedRange {
+  flatAmountCents: Int!
+  flatAmountCurrency: CurrencyEnum!
+  fromValue: Int!
+  perUnitPriceAmountCents: Int!
+  perUnitPriceAmountCurrency: CurrencyEnum!
+  toInfinity: Boolean!
+  toValue: Int
+}
+
+input GraduatedRangeInput {
+  flatAmountCents: Int!
+  flatAmountCurrency: CurrencyEnum!
+  fromValue: Int!
+  perUnitPriceAmountCents: Int!
+  perUnitPriceAmountCurrency: CurrencyEnum!
+  toInfinity: Boolean!
+  toValue: Int
 }
 
 """

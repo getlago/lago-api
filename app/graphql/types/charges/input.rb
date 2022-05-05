@@ -10,6 +10,8 @@ module Types
       argument :amount_cents, Integer, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
+
+      argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
     end
   end
 end

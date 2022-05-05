@@ -11,8 +11,16 @@ module Types
       field :amount_currency, Types::CurrencyEnum, null: false
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
 
+      field :graduated_ranges, [Types::Charges::GraduatedRange], null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def graduated_ranges
+        return unless object.graduated?
+
+        properties
+      end
     end
   end
 end

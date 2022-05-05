@@ -27,9 +27,24 @@ module Mutations
 
         result = PlansService
           .new(context[:current_user])
-          .create(**args.merge(organization_id: current_organization.id))
+          .create(**prepare_arguments(**args))
 
         result.success? ? result.plan : result_error(result)
+      end
+
+      def prepare_arguments(arguments)
+        result = arguments.merge(organization_id: current_organization.id)
+
+        if result[:charges].present?
+          result[:charges].map! do |charge|
+            output = charge.to_h
+            output[:properties] = output[:graduated_ranges]
+            output.delete(:graduated_ranges)
+            output
+          end
+        end
+
+        result
       end
     end
   end
