@@ -69,9 +69,9 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.charge_id).to eq(charge.id)
-          expect(created_fee.amount_cents).to eq(10)
+          expect(created_fee.amount_cents).to eq(0)
           expect(created_fee.amount_currency).to eq('EUR')
-          expect(created_fee.vat_amount_cents).to eq(2)
+          expect(created_fee.vat_amount_cents).to eq(0)
           expect(created_fee.vat_rate).to eq(20.0)
         end
       end
