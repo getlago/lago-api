@@ -45,8 +45,8 @@ type BillableMetricDetail {
 }
 
 type Charge {
-  amountCents: Int!
-  amountCurrency: CurrencyEnum!
+  amountCents: Int
+  amountCurrency: CurrencyEnum
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
@@ -56,7 +56,7 @@ type Charge {
 }
 
 input ChargeInput {
-  amountCents: Int!
+  amountCents: Int
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
@@ -1546,19 +1546,15 @@ type DestroyPlanPayload {
 
 type GraduatedRange {
   flatAmountCents: Int!
-  flatAmountCurrency: CurrencyEnum!
   fromValue: Int!
   perUnitPriceAmountCents: Int!
-  perUnitPriceAmountCurrency: CurrencyEnum!
   toValue: Int
 }
 
 input GraduatedRangeInput {
   flatAmountCents: Int!
-  flatAmountCurrency: CurrencyEnum!
   fromValue: Int!
   perUnitPriceAmountCents: Int!
-  perUnitPriceAmountCurrency: CurrencyEnum!
   toValue: Int
 }
 

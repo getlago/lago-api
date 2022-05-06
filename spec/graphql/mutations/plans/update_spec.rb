@@ -53,7 +53,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             },
             {
               billableMetricId: billable_metrics.last.id,
-              amountCents: 300,
               amountCurrency: 'EUR',
               chargeModel: 'graduated',
               graduatedRanges: [
@@ -61,17 +60,13 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
                   fromValue: 0,
                   toValue: 10,
                   perUnitPriceAmountCents: 2,
-                  perUnitPriceAmountCurrency: 'EUR',
                   flatAmountCents: 0,
-                  flatAmountCurrency: 'EUR',
                 },
                 {
                   fromValue: 11,
                   toValue: nil,
                   perUnitPriceAmountCents: 3,
-                  perUnitPriceAmountCurrency: 'EUR',
                   flatAmountCents: 3,
-                  flatAmountCurrency: 'EUR',
                 },
               ],
             },

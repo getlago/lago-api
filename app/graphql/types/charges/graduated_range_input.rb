@@ -9,10 +9,7 @@ module Types
       argument :to_value, Integer, required: false
 
       argument :per_unit_price_amount_cents, Integer, required: true
-      argument :per_unit_price_amount_currency, Types::CurrencyEnum, required: true
-
       argument :flat_amount_cents, Integer, required: true
-      argument :flat_amount_currency, Types::CurrencyEnum, required: true
     end
   end
 end

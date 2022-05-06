@@ -14,9 +14,11 @@ RSpec.describe Fees::ChargeService do
     create(
       :standard_charge,
       plan: subscription.plan,
-      charge_model: 'standard',
       billable_metric: billable_metric,
-      amount_cents: 20,
+      properties: {
+        amount_cents: 20,
+        amount_currency: 'EUR',
+      },
     )
   end
 
