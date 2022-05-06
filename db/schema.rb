@@ -36,6 +36,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_06_133655) do
     t.uuid "plan_id"
     t.integer "charge_model", default: 0, null: false
     t.jsonb "properties", default: "{}", null: false
+    t.string "amount_currency", null: false
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
