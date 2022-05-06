@@ -1,7 +1,22 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
+
 require 'simplecov'
-SimpleCov.start
+
+SimpleCov.start do
+  enable_coverage :branch
+
+  add_filter %r{^/config/}
+  add_filter %r{^/db/}
+  add_filter '/spec/'
+
+  add_group 'Controllers', 'app/controllers'
+  add_group 'Models', 'app/models'
+  add_group 'Jobs', %w[app/jobs app/workers]
+  add_group 'Services', 'app/services'
+  add_group 'GraphQL', 'app/graphql'
+end
+
 ENV['RAILS_ENV'] ||= 'test'
 require_relative '../config/environment'
 # Prevent database truncation if the environment is production
