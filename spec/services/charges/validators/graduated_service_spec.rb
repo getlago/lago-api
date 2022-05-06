@@ -15,7 +15,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
     it 'ensures the presence of ranges' do
       result = graduated_service.validate
 
-      expect(result).to include(:missing_graduated_range)
+      expect(result.error).to include(:missing_graduated_range)
     end
 
     context 'when ranges does not starts at 0' do

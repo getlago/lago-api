@@ -13,7 +13,7 @@ RSpec.describe Charge, type: :model do
 
     let(:service_response) do
       BaseService::Result.new.fail!(
-        :invalid_ranges,
+        :invalid_properties,
         [
           :invalid_amount,
           :invalid_graduated_ranges,
@@ -51,6 +51,55 @@ RSpec.describe Charge, type: :model do
         charge.valid?
 
         expect(Charges::Validators::GraduatedService).not_to have_received(:new)
+        expect(validation_service).not_to have_received(:validate)
+      end
+    end
+  end
+
+  describe '.validate_amount' do
+    subject(:charge) do
+      build(:standard_charge, properties: charge_properties)
+    end
+
+    let(:charge_properties) { [{ 'foo' => 'bar' }] }
+    let(:validation_service) { instance_double(Charges::Validators::StandardService) }
+
+    let(:service_response) do
+      BaseService::Result.new.fail!(
+        :invalid_properties,
+        [:invalid_amount],
+      )
+    end
+
+    it 'delegates to a validation service' do
+      allow(Charges::Validators::StandardService).to receive(:new)
+        .and_return(validation_service)
+      allow(validation_service).to receive(:validate)
+        .and_return(service_response)
+
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include('invalid_amount')
+
+        expect(Charges::Validators::StandardService).to have_received(:new)
+          .with(charge: charge)
+        expect(validation_service).to have_received(:validate)
+      end
+    end
+
+    context 'when charge model is not graduated' do
+      subject(:charge) { build(:graduacted_charge) }
+
+      it 'does not apply the validation' do
+        allow(Charges::Validators::StandardService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:validate)
+          .and_return(service_response)
+
+        charge.valid?
+
+        expect(Charges::Validators::StandardService).not_to have_received(:new)
         expect(validation_service).not_to have_received(:validate)
       end
     end
