@@ -15,7 +15,6 @@ module Mutations
       argument :pay_in_advance, Boolean, required: true
       argument :amount_cents, Integer, required: true
       argument :amount_currency, Types::CurrencyEnum
-      argument :vat_rate, Float, required: false
       argument :trial_period, Float, required: false
       argument :description, String, required: false
 

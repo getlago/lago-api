@@ -607,20 +607,6 @@
               "args": [
 
               ]
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
             }
           ],
           "inputFields": null,
@@ -705,18 +691,6 @@
                   "name": "ChargeModelEnum",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -2753,18 +2727,6 @@
                   "name": "CurrencyEnum",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -5300,20 +5262,6 @@
               "args": [
 
               ]
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
             }
           ],
           "inputFields": null,
@@ -5658,20 +5606,6 @@
                   "name": "ISO8601DateTime",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -7021,18 +6955,6 @@
                   "name": "CurrencyEnum",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

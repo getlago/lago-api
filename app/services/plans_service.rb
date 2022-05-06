@@ -11,7 +11,6 @@ class PlansService < BaseService
       pay_in_advance: args[:pay_in_advance],
       amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
-      vat_rate: args[:vat_rate],
       trial_period: args[:trial_period],
     )
 
@@ -48,7 +47,6 @@ class PlansService < BaseService
       plan.pay_in_advance = args[:pay_in_advance]
       plan.amount_cents = args[:amount_cents]
       plan.amount_currency = args[:amount_currency]
-      plan.vat_rate = args[:vat_rate]
       plan.trial_period = args[:trial_period]
     end
 
@@ -108,7 +106,6 @@ class PlansService < BaseService
       billable_metric_id: args[:billable_metric_id],
       amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
-      vat_rate: args[:vat_rate],
       charge_model: args[:charge_model].to_sym,
     )
   end

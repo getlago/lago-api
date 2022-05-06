@@ -14,7 +14,6 @@ module Types
       field :pay_in_advance, Boolean, null: false
       field :amount_cents, Integer, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
-      field :vat_rate, Float
       field :trial_period, Float
       field :description, String
 

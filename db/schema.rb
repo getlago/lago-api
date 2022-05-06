@@ -146,7 +146,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_29_125635) do
     t.string "amount_currency", null: false
     t.float "trial_period"
     t.boolean "pay_in_advance", default: false, null: false
-    t.float "vat_rate"
     t.index ["code", "organization_id"], name: "index_plans_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_plans_on_organization_id"
   end

@@ -52,7 +52,6 @@ type Charge {
   createdAt: ISO8601DateTime!
   id: ID!
   updatedAt: ISO8601DateTime!
-  vatRate: Float
 }
 
 input ChargeInput {
@@ -61,7 +60,6 @@ input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   id: ID
-  vatRate: Float
 }
 
 enum ChargeModelEnum {
@@ -1382,7 +1380,6 @@ input CreatePlanInput {
   name: String!
   payInAdvance: Boolean!
   trialPeriod: Float
-  vatRate: Float
 }
 
 """
@@ -1789,7 +1786,6 @@ type Plan {
   payInAdvance: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
-  vatRate: Float
 }
 
 type PlanCollection {
@@ -1826,7 +1822,6 @@ type PlanDetails {
   payInAdvance: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
-  vatRate: Float
 }
 
 enum PlanInterval {
@@ -2048,7 +2043,6 @@ input UpdatePlanInput {
   name: String!
   payInAdvance: Boolean!
   trialPeriod: Float
-  vatRate: Float
 }
 
 type User {
