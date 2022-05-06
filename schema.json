@@ -3937,7 +3937,7 @@
               ]
             },
             {
-              "name": "perUnitPriceAmountCents",
+              "name": "perUnitAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -4009,7 +4009,7 @@
               "deprecationReason": null
             },
             {
-              "name": "perUnitPriceAmountCents",
+              "name": "perUnitAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

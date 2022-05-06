@@ -38,13 +38,13 @@ RSpec.describe PlansService, type: :service do
               {
                 from_value: 0,
                 to_value: 10,
-                per_unit_price_amount_cents: 2,
+                per_unit_amount_cents: 2,
                 flat_amount_cents: 0,
               },
               {
                 from_value: 11,
                 to_value: nil,
-                per_unit_price_amount_cents: 3,
+                per_unit_amount_cents: 3,
                 flat_amount_cents: 3,
               },
             ],
@@ -118,13 +118,13 @@ RSpec.describe PlansService, type: :service do
               {
                 from_value: 0,
                 to_value: 10,
-                per_unit_price_amount_cents: 2,
+                per_unit_amount_cents: 2,
                 flat_amount_cents: 0,
               },
               {
                 from_value: 11,
                 to_value: nil,
-                per_unit_price_amount_cents: 3,
+                per_unit_amount_cents: 3,
                 flat_amount_cents: 3,
               },
             ],

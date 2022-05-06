@@ -59,13 +59,13 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
                 {
                   fromValue: 0,
                   toValue: 10,
-                  perUnitPriceAmountCents: 2,
+                  perUnitAmountCents: 2,
                   flatAmountCents: 0,
                 },
                 {
                   fromValue: 11,
                   toValue: nil,
-                  perUnitPriceAmountCents: 3,
+                  perUnitAmountCents: 3,
                   flatAmountCents: 3,
                 },
               ],

@@ -31,9 +31,9 @@ module Charges
       end
 
       def valid_amounts?(range)
-        range[:per_unit_price_amount_cents].is_a?(Numeric) &&
+        range[:per_unit_amount_cents].is_a?(Numeric) &&
           range[:flat_amount_cents].is_a?(Numeric) &&
-          !range[:per_unit_price_amount_cents].negative? &&
+          !range[:per_unit_amount_cents].negative? &&
           !range[:flat_amount_cents].negative?
       end
 

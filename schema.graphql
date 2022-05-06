@@ -1547,14 +1547,14 @@ type DestroyPlanPayload {
 type GraduatedRange {
   flatAmountCents: Int!
   fromValue: Int!
-  perUnitPriceAmountCents: Int!
+  perUnitAmountCents: Int!
   toValue: Int
 }
 
 input GraduatedRangeInput {
   flatAmountCents: Int!
   fromValue: Int!
-  perUnitPriceAmountCents: Int!
+  perUnitAmountCents: Int!
   toValue: Int
 }
 
