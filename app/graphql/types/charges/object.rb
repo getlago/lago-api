@@ -19,7 +19,7 @@ module Types
       def graduated_ranges
         return unless object.graduated?
 
-        properties
+        object.properties
       end
     end
   end
