@@ -51,7 +51,7 @@ RSpec.describe Fees::ChargeService do
             {
               from_value: 0,
               to_value: nil,
-              per_unit_price_amount_cents: 10,
+              per_unit_amount_cents: 10,
               flat_amount_cents: 10,
             },
           ],
