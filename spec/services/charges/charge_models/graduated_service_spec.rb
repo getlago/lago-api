@@ -26,9 +26,23 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
     )
   end
 
-  context 'when value is 0' do
-    it 'applies the flat_rate' do
-      expect(graduated_service.apply(value: 0).amount_cents).to eq(2)
-    end
+  it 'does not apply the flat amount for 0' do
+    expect(graduated_service.apply(value: 0).amount_cents).to eq(0)
+  end
+
+  it 'applies a unit amount for 1 and the flat rate for 1' do
+    expect(graduated_service.apply(value: 1).amount_cents).to eq(12)
+  end
+
+  it 'applies all unit amount for top bound' do
+    expect(graduated_service.apply(value: 10).amount_cents).to eq(102)
+  end
+
+  it 'applies next range flat amount for the next step' do
+    expect(graduated_service.apply(value: 11).amount_cents).to eq(110)
+  end
+
+  it 'applies next unit amount for more unit in next step' do
+    expect(graduated_service.apply(value: 12).amount_cents).to eq(115)
   end
 end
