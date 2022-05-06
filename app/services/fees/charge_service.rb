@@ -79,8 +79,6 @@ module Fees
       model_service = case charge.charge_model.to_sym
                       when :standard
                         Charges::ChargeModels::StandardService
-                      when :graduated
-                        Charges::ChargeModels::GraduatedService
                       else
                         raise NotImplementedError
       end

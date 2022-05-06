@@ -13,5 +13,4 @@ en:
         less_than_or_equal_to: value_is_out_of_range
         missing_graduated_range: missing_graduated_range
         invalid_amount: invalid_amount
-        invalid_currency: invalid_currency
         invalid_graduated_ranges: invalid_graduated_ranges
