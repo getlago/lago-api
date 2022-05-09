@@ -10,6 +10,7 @@ class Charge < ApplicationRecord
 
   CHARGE_MODELS = %i[
     standard
+    graduated
   ].freeze
 
   enum charge_model: CHARGE_MODELS
