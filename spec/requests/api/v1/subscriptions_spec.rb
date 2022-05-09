@@ -51,7 +51,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before { subscription }
 
     it 'terminates a subscription' do
-      delete_with_token(organization, "/api/v1/subscriptions/terminate?customer_id=#{customer.customer_id}")
+      delete_with_token(organization, "/api/v1/subscriptions?customer_id=#{customer.customer_id}")
 
       expect(response).to have_http_status(:success)
 
@@ -64,7 +64,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
     context 'with not existing subscription' do
       it 'returns an unprocessable entity error' do
-        delete_with_token(organization, '/api/v1/subscriptions/terminate?customer_id=123456')
+        delete_with_token(organization, '/api/v1/subscriptions?customer_id=123456')
 
         expect(response).to have_http_status(:unprocessable_entity)
       end

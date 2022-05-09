@@ -17,9 +17,10 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :customers, only: %i[create]
-      resources :subscriptions, only: %i[create] do
-        delete :terminate, on: :collection
-      end
+
+      resources :subscriptions, only: %i[create]
+      delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate
+
       resources :events, only: %i[create]
     end
   end
