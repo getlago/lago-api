@@ -7,8 +7,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
 
   let(:charge) do
     create(
-      :charge,
-      charge_model: :graduated,
+      :graduacted_charge,
       properties: [
         {
           from_value: 0,
