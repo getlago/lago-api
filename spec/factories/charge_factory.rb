@@ -18,12 +18,5 @@ FactoryBot.define do
       charge_model { 'graduated' }
       properties { [] }
     end
-
-    factory :graduated_charge do
-      charge_model { 'graduated' }
-      # TODO: remove after migration to properties for standard plan
-      amount_cents { 0 }
-      properties { [] }
-    end
   end
 end

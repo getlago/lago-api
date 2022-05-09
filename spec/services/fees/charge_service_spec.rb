@@ -44,11 +44,10 @@ RSpec.describe Fees::ChargeService do
     context 'with graduated charge model' do
       let(:charge) do
         create(
-          :charge,
+          :graduated_charge,
           plan: subscription.plan,
           charge_model: 'graduated',
           billable_metric: billable_metric,
-          amount_cents: 20,
           properties: [
             {
               from_value: 0,
