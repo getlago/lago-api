@@ -33,18 +33,11 @@ module Charges
       # NOTE: compute how many units to bill in the range
       def compute_range_units(from_value, to_value, value)
         # NOTE: value is higher than the to_value of the range
-<<<<<<< HEAD
         return to_value - from_value if to_value && value >= to_value
         return value if from_value.zero?
 
         # NOTE: value is in the range
         value - from_value + 1
-=======
-        return to_value - from_value if to_value && value > to_value
-
-        # NOTE: value is in the range
-        value - from_value
->>>>>>> d3257b9 (Rename per unit amount field)
       end
     end
   end
