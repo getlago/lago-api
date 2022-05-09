@@ -10,7 +10,7 @@ FactoryBot.define do
       amount_cents { Faker::Number.between(from: 100, to: 500) }
     end
 
-    factory :graduacted_charge do
+    factory :graduated_charge do
       charge_model { 'graduated' }
       # TODO: remove after migration to properties for standard plan
       amount_cents { 0 }
