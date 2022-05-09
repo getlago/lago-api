@@ -21,6 +21,10 @@ Rails.application.routes.draw do
         delete :terminate, on: :collection
       end
       resources :events, only: %i[create]
+
+      resources :webhooks, only: %i[] do
+        get :public_key, on: :collection
+      end
     end
   end
 end
