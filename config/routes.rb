@@ -22,6 +22,10 @@ Rails.application.routes.draw do
       delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate
 
       resources :events, only: %i[create]
+
+      resources :webhooks, only: %i[] do
+        get :public_key, on: :collection
+      end
     end
   end
 end
