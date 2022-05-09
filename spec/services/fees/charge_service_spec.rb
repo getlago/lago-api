@@ -12,7 +12,7 @@ RSpec.describe Fees::ChargeService do
   let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
   let(:charge) do
     create(
-      :charge,
+      :standard_charge,
       plan: subscription.plan,
       charge_model: 'standard',
       billable_metric: billable_metric,

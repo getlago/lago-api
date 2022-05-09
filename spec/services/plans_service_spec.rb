@@ -138,7 +138,7 @@ RSpec.describe PlansService, type: :service do
     context 'with existing charges' do
       let!(:existing_charge) do
         create(
-          :charge,
+          :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
           amount_cents: 300,
@@ -183,7 +183,7 @@ RSpec.describe PlansService, type: :service do
     context 'with charge to delete' do
       let!(:charge) do
         create(
-          :charge,
+          :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
           amount_cents: 300,
