@@ -14,7 +14,7 @@ FactoryBot.define do
       end
     end
 
-    factory :graduacted_charge do
+    factory :graduated_charge do
       charge_model { 'graduated' }
       properties { [] }
     end

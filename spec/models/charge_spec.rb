@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Charge, type: :model do
   describe '.validate_graduated_range' do
     subject(:charge) do
-      build(:graduacted_charge, properties: charge_properties)
+      build(:graduated_charge, properties: charge_properties)
     end
 
     let(:charge_properties) { [{ 'foo' => 'bar' }] }
@@ -89,7 +89,7 @@ RSpec.describe Charge, type: :model do
     end
 
     context 'when charge model is not graduated' do
-      subject(:charge) { build(:graduacted_charge) }
+      subject(:charge) { build(:graduated_charge) }
 
       it 'does not apply the validation' do
         allow(Charges::Validators::StandardService).to receive(:new)

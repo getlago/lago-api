@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Charges::Validators::GraduatedService, type: :service do
   subject(:graduated_service) { described_class.new(charge: charge) }
 
-  let(:charge) { build(:graduacted_charge, properties: ranges) }
+  let(:charge) { build(:graduated_charge, properties: ranges) }
 
   let(:ranges) do
     []
