@@ -11,7 +11,7 @@ Membership.find_or_create_by(user: user, organization: organization, role: :admi
 billable_metric = FactoryBot.create(:billable_metric, organization: organization)
 plan = FactoryBot.create(:plan, organization: organization)
 
-FactoryBot.create(:charge, plan: plan, billable_metric: billable_metric)
+FactoryBot.create(:standard_charge, plan: plan, billable_metric: billable_metric)
 
 customers = FactoryBot.create_list(:customer, 5, organization: organization)
 subscriptions = []

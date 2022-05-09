@@ -122,7 +122,7 @@ RSpec.describe BillableMetricsService, type: :service do
       let(:subscription) { create(:subscription) }
 
       before do
-        create(:charge, plan: subscription.plan, billable_metric: billable_metric)
+        create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric)
       end
 
       it 'returns an error' do
