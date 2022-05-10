@@ -1,23 +1,27 @@
 # frozen_string_literal: true
 
 module ChargeModelAttributesHandler
+  # NOTE: Map custom arguments of charge models into the properties hash
+  #       of each charges.
+  #       - Standard model only has one property `amount_cents`
+  #       - Graduated model relies on the the list of `GraduatedRange`
   def prepare_arguments(arguments)
-    if arguments[:charges].present?
-      arguments[:charges].map! do |charge|
-        output = charge.to_h
+    return arguments if arguments[:charges].blank?
 
-        if output.key?(:amount_cents)
-          # NOTE: Standard charge model
-          output[:properties] = { amount_cents: output[:amount_cents] }
-          output.delete(:amount_cents)
-        elsif output.key?(:graduated_ranges)
-          # NOTE: Graduated charge model
-          output[:properties] = output[:graduated_ranges]
-          output.delete(:graduated_ranges)
-        end
+    arguments[:charges].map! do |charge|
+      output = charge.to_h
 
-        output
+      if output.key?(:amount_cents)
+        # NOTE: Standard charge model
+        output[:properties] = { amount_cents: output[:amount_cents] }
+        output.delete(:amount_cents)
+      elsif output.key?(:graduated_ranges)
+        # NOTE: Graduated charge model
+        output[:properties] = output[:graduated_ranges]
+        output.delete(:graduated_ranges)
       end
+
+      output
     end
 
     arguments
