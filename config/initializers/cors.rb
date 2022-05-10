@@ -1,18 +1,17 @@
-# Be sure to restart your server when you modify this file.
+# frozen_string_literal: true
 
-# Avoid CORS issues when API is called from the frontend app.
-# Handle Cross-Origin Resource Sharing (CORS) in order to accept cross-origin AJAX requests.
+# NOTE: Read more: https://github.com/cyu/rack-cors
 
-# Read more: https://github.com/cyu/rack-cors
-
-Rails.application.config.middleware.insert_before 0, Rack::Cors do
+Rails.application.config.middleware.insert_before(0, Rack::Cors) do
   allow do
-    # NOTE: use env related constant instead
-    origins 'app.lago.dev' if Rails.env.development?
-    origins /[a-z0-9-]+\.staging\.getlago\.com/ if Rails.env.staging?
+    if Rails.env.development?
+      origins 'app.lago.dev'
+    elsif ENV['LAGO_FRONT_URL']
+      origins URI(ENV['LAGO_FRONT_URL']).host
+    end
 
     resource '*',
-      headers: :any,
-      methods: [:get, :post, :put, :patch, :delete, :options, :head]
+             headers: :any,
+             methods: %i[get post put patch delete options head]
   end
 end
