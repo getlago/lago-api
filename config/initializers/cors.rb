@@ -4,7 +4,11 @@
 
 Rails.application.config.middleware.insert_before(0, Rack::Cors) do
   allow do
-    origins URI(ENV['LAGO_FRONT_URL']).host
+    if Rails.env.development?
+      origins 'app.lago.dev'
+    else
+      origins URI(ENV['LAGO_FRONT_URL']).host
+    end
 
     resource '*',
              headers: :any,
