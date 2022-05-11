@@ -52,7 +52,7 @@ RSpec.describe Webhooks::InvoicesService do
         true,
         {
           algorithm: 'RS256',
-          iss: ENV['API_URL'],
+          iss: ENV['LAGO_API_URL'],
           verify_iss: true,
         },
       ).first

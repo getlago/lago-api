@@ -52,7 +52,7 @@ module Webhooks
     end
 
     def issuer
-      ENV['API_URL']
+      ENV['LAGO_API_URL']
     end
   end
 end
