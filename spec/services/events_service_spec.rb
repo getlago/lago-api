@@ -8,6 +8,43 @@ RSpec.describe EventsService, type: :service do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization: organization) }
 
+  describe '.validate_params' do
+    let(:event_arguments) do
+      {
+        transaction_id: SecureRandom.uuid,
+        customer_id: SecureRandom.uuid,
+        code: 'foo',
+      }
+    end
+
+    it 'validates the presence of the mandatory arguments' do
+      result = event_service.validate_params(params: event_arguments)
+
+      expect(result).to be_success
+    end
+
+    context 'with missing or nil arugments' do
+      let(:event_arguments) do
+        {
+          customer_id: SecureRandom.uuid,
+          code: nil,
+        }
+      end
+
+      it 'returns an error' do
+        result = event_service.validate_params(params: event_arguments)
+
+        expect(result).not_to be_success
+
+        aggregate_failures do
+          expect(result.error_code).to eq('missing_mandatory_param')
+          expect(result.error_details).to include(:transaction_id)
+          expect(result.error_details).to include(:code)
+        end
+      end
+    end
+  end
+
   describe 'create' do
     let(:create_args) do
       {
