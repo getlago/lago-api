@@ -34,7 +34,12 @@ RSpec.describe CustomersService, type: :service do
 
     context 'when customer already exists' do
       let!(:customer) do
-        create(:customer, organization: organization, customer_id: create_args[:customer_id])
+        create(
+          :customer,
+          organization: organization,
+          customer_id: create_args[:customer_id],
+          email: 'foo@bar.com',
+        )
       end
 
       it 'updates the customer' do
@@ -43,9 +48,26 @@ RSpec.describe CustomersService, type: :service do
           params: create_args,
         )
 
-        expect(result).to be_success
-        expect(result.customer).to eq(customer)
-        expect(result.customer.name).to eq(create_args[:name])
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.customer).to eq(customer)
+          expect(result.customer.name).to eq(create_args[:name])
+          expect(result.customer.customer_id).to eq(create_args[:customer_id])
+
+          # NOTE: It should not erase exsting properties
+          expect(result.customer.country).to eq(customer.country)
+          expect(result.customer.address_line1).to eq(customer.address_line1)
+          expect(result.customer.address_line2).to eq(customer.address_line2)
+          expect(result.customer.state).to eq(customer.state)
+          expect(result.customer.zipcode).to eq(customer.zipcode)
+          expect(result.customer.email).to eq(customer.email)
+          expect(result.customer.city).to eq(customer.city)
+          expect(result.customer.url).to eq(customer.url)
+          expect(result.customer.phone).to eq(customer.phone)
+          expect(result.customer.logo_url).to eq(customer.logo_url)
+          expect(result.customer.legal_name).to eq(customer.legal_name)
+          expect(result.customer.legal_number).to eq(customer.legal_number)
+        end
       end
     end
 

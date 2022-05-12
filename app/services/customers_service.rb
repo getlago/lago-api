@@ -4,19 +4,19 @@ class CustomersService < BaseService
   def create_from_api(organization:, params:)
     customer = organization.customers.find_or_initialize_by(customer_id: params[:customer_id])
 
-    customer.name = params[:name]
-    customer.country = params[:country]&.upcase
-    customer.address_line1 = params[:address_line1]
-    customer.address_line2 = params[:address_line2]
-    customer.state = params[:state]
-    customer.zipcode = params[:zipcode]
-    customer.email = params[:email]
-    customer.city = params[:city]
-    customer.url = params[:url]
-    customer.phone = params[:phone]
-    customer.logo_url = params[:logo_url]
-    customer.legal_name = params[:legal_name]
-    customer.legal_number = params[:legal_number]
+    customer.name = params[:name] if params.key?(:name)
+    customer.country = params[:country]&.upcase if params.key?(:country)
+    customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
+    customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
+    customer.state = params[:state] if params.key?(:state)
+    customer.zipcode = params[:zipcode] if params.key?(:zipcode)
+    customer.email = params[:email] if params.key?(:email)
+    customer.city = params[:city] if params.key?(:city)
+    customer.url = params[:url] if params.key?(:url)
+    customer.phone = params[:phone] if params.key?(:phone)
+    customer.logo_url = params[:logo_url] if params.key?(:logo_url)
+    customer.legal_name = params[:legal_name] if params.key?(:legal_name)
+    customer.legal_number = params[:legal_number] if params.key?(:legal_number)
     customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
     customer.save!
 

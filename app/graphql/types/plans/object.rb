@@ -34,7 +34,7 @@ module Types
       end
 
       def customer_count
-        object.customers.count
+        object.subscriptions.active.count
       end
 
       def can_be_deleted
