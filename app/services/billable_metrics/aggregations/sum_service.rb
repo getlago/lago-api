@@ -8,7 +8,7 @@ module BillableMetrics
           .sum(
             ActiveRecord::Base.sanitize_sql_for_conditions(
               [
-                '(events.properties->>?)::integer',
+                '(events.properties->>?)::numeric',
                 billable_metric.field_name,
               ],
             ),

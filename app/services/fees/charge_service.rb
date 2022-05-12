@@ -38,10 +38,16 @@ module Fees
 
     def compute_amount
       aggregated_events = aggregator.aggregate(from_date: from_date, to_date: invoice.to_date)
-      return result.fail!('aggregation_failure') unless aggregated_events.success?
+      unless aggregated_events.success?
+        result.fail!('aggregation_failure')
+        raise result.throw_error
+      end
 
       amount_result = charge_model.apply(value: aggregated_events.aggregation)
-      return result.fail!('charge_model_failure') unless amount_result.success?
+      unless amount_result.success?
+        result.fail!('charge_model_failure')
+        raise result.throw_error
+      end
 
       amount_result.amount_cents
     end
