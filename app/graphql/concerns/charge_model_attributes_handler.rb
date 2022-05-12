@@ -14,12 +14,14 @@ module ChargeModelAttributesHandler
       if output.key?(:amount_cents)
         # NOTE: Standard charge model
         output[:properties] = { amount_cents: output[:amount_cents] }
-        output.delete(:amount_cents)
       elsif output.key?(:graduated_ranges)
         # NOTE: Graduated charge model
         output[:properties] = output[:graduated_ranges]
-        output.delete(:graduated_ranges)
       end
+
+      # NOTE: delete fields used to build properties
+      output.delete(:graduated_ranges)
+      output.delete(:amount_cents)
 
       output
     end
