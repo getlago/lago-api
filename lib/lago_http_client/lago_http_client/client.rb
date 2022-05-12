@@ -7,6 +7,7 @@ module LagoHttpClient
     def initialize(url)
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
+      @http_client.use_ssl = true if uri.scheme == 'https'
     end
 
     def post(body, headers)
