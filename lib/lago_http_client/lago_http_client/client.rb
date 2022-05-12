@@ -6,7 +6,7 @@ module LagoHttpClient
 
     def initialize(url)
       @uri = URI(url)
-      @http_client = Net::HTTP.new(uri.path, uri.port)
+      @http_client = Net::HTTP.new(uri.host, uri.port)
     end
 
     def post(body, headers)
