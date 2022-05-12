@@ -7,4 +7,4 @@ else
 end
 
 RsaPrivateKey = OpenSSL::PKey::RSA.new(private_key_string)
-RsaPublicKey = Base64.encode64(RsaPrivateKey.public_key)
+RsaPublicKey = Base64.encode64(RsaPrivateKey.public_key.to_s)
