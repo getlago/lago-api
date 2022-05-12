@@ -32,7 +32,7 @@ module LagoHttpClient
     attr_reader :uri, :http_client
 
     def raise_error(response)
-      raise LagoClient::HttpError.new(response.code, response.body, uri)
+      raise ::LagoHttpClient::HttpError.new(response.code, response.body, uri)
     end
   end
 end
