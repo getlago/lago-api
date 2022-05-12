@@ -17,7 +17,7 @@ class EventsService < BaseService
     event.code = params[:code]
     event.transaction_id = params[:transaction_id]
     event.customer = current_customer
-    event.properties = params[:properties]
+    event.properties = params[:properties] || {}
 
     event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
     event.timestamp ||= timestamp

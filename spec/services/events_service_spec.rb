@@ -79,5 +79,36 @@ RSpec.describe EventsService, type: :service do
         expect(result.error).to eq('customer does not exists')
       end
     end
+
+    context 'when properties are empty' do
+      let(:create_args) do
+        {
+          customer_id: customer.customer_id,
+          code: 'event_code',
+          transaction_id: SecureRandom.uuid,
+          timestamp: Time.zone.now.to_i,
+        }
+      end
+
+      it 'creates a new event' do
+        result = event_service.create(
+          organization: organization,
+          params: create_args,
+          timestamp: timestamp,
+        )
+
+        expect(result).to be_success
+
+        event = result.event
+
+        aggregate_failures do
+          expect(event.customer_id).to eq(customer.id)
+          expect(event.organization_id).to eq(organization.id)
+          expect(event.code).to eq('event_code')
+          expect(event.timestamp).to be_a(Time)
+          expect(event.properties).to eq({})
+        end
+      end
+    end
   end
 end
