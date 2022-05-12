@@ -11,7 +11,7 @@ RSpec.describe Api::V1::WebhooksController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      expect(response.body).to eq(RsaPublicKey.to_s)
+      expect(response.body).to eq(Base64.encode64(RsaPublicKey.to_s))
     end
   end
 end
