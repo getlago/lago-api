@@ -164,5 +164,32 @@ RSpec.describe Fees::ChargeService do
         end
       end
     end
+
+    context 'with aggregation error' do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          aggregation_type: 'max_agg',
+          field_name: 'foo_bar',
+        )
+      end
+      let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
+      let(:error_result) { BaseService::Result.new.fail!('aggregation_failure') }
+
+      it 'returns an error' do
+        allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
+          .and_return(aggregator_service)
+        allow(aggregator_service).to receive(:aggregate)
+          .and_return(error_result)
+
+        result = charge_subscription_service.create
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('aggregation_failure')
+
+        expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
+        expect(aggregator_service).to have_received(:aggregate)
+      end
+    end
   end
 end

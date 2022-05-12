@@ -4,7 +4,7 @@ module Charges
   module ChargeModels
     class GraduatedService < Charges::ChargeModels::BaseService
       def apply(value:)
-        result.amount_cents = compute_amount(value)
+        result.amount_cents = compute_amount(value).to_i
         result
       end
 

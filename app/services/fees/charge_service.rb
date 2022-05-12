@@ -11,11 +11,14 @@ module Fees
     def create
       return result if already_billed?
 
+      amount_result = compute_amount
+      return result.fail!(amount_result.error_code, amount_result.error) unless amount_result.success?
+
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
         charge: charge,
-        amount_cents: compute_amount,
+        amount_cents: amount_result.amount_cents,
         amount_currency: charge.amount_currency,
         vat_rate: customer.applicable_vat_rate,
       )
@@ -38,12 +41,9 @@ module Fees
 
     def compute_amount
       aggregated_events = aggregator.aggregate(from_date: from_date, to_date: invoice.to_date)
-      return result.fail!('aggregation_failure') unless aggregated_events.success?
+      return aggregated_events unless aggregated_events.success?
 
-      amount_result = charge_model.apply(value: aggregated_events.aggregation)
-      return result.fail!('charge_model_failure') unless amount_result.success?
-
-      amount_result.amount_cents
+      charge_model.apply(value: aggregated_events.aggregation)
     end
 
     def already_billed?

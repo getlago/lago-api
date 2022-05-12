@@ -64,7 +64,27 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
   end
 
-  context 'when properties is not an integer' do
+  context 'when properties is a float' do
+    before do
+      create(
+        :event,
+        code: billable_metric.code,
+        customer: customer,
+        timestamp: Time.zone.now,
+        properties: {
+          total_count: 4.5,
+        },
+      )
+    end
+
+    it 'aggregates the events' do
+      result = sum_service.aggregate(from_date: from_date, to_date: to_date)
+
+      expect(result.aggregation).to eq(52.5)
+    end
+  end
+
+  context 'when properties is not a number' do
     before do
       create(
         :event,

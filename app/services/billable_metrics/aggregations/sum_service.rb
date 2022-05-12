@@ -5,18 +5,23 @@ module BillableMetrics
     class SumService < BillableMetrics::Aggregations::BaseService
       def aggregate(from_date:, to_date:)
         result.aggregation = events_scope(from_date: from_date, to_date: to_date)
-          .sum(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              [
-                '(events.properties->>?)::integer',
-                billable_metric.field_name,
-              ],
-            ),
-          )
+          .where("#{sanitized_field_name} IS NOT NULL")
+          .sum("(#{sanitized_field_name})::numeric")
 
         result
       rescue ActiveRecord::StatementInvalid => e
         result.fail!('aggregation_failure', e.message)
+      end
+
+      private
+
+      def sanitized_field_name
+        ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            'events.properties->>?',
+            billable_metric.field_name,
+          ],
+        )
       end
     end
   end

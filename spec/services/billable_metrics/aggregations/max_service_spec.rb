@@ -74,7 +74,27 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
   end
 
-  context 'when properties is not an integer' do
+  context 'when properties is a float' do
+    before do
+      create(
+        :event,
+        code: billable_metric.code,
+        customer: customer,
+        timestamp: Time.zone.now,
+        properties: {
+          total_count: 14.2,
+        },
+      )
+    end
+
+    it 'aggregates the events' do
+      result = max_service.aggregate(from_date: from_date, to_date: to_date)
+
+      expect(result.aggregation).to eq(14.2)
+    end
+  end
+
+  context 'when properties is not a number' do
     before do
       create(
         :event,
@@ -92,6 +112,24 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
 
       expect(result).not_to be_success
       expect(result.error_code).to eq('aggregation_failure')
+    end
+  end
+
+  context 'when properties is missing' do
+    before do
+      create(
+        :event,
+        code: billable_metric.code,
+        customer: customer,
+        timestamp: Time.zone.now,
+      )
+    end
+
+    it 'ignore the event' do
+      result = max_service.aggregate(from_date: from_date, to_date: to_date)
+
+      expect(result).to be_success
+      expect(result.aggregation).to eq(12)
     end
   end
 end

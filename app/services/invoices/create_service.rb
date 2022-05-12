@@ -23,10 +23,10 @@ module Invoices
 
         compute_amounts(invoice)
 
-        SendWebhookJob.perform_later(:invoice, invoice)
-
         result.invoice = invoice
       end
+
+      SendWebhookJob.perform_later(:invoice, result.invoice)
 
       result
     rescue ActiveRecord::RecordInvalid => e
