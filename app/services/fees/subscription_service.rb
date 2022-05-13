@@ -62,7 +62,7 @@ module Fees
       return false unless subscription.terminated?
       return false if subscription.plan.pay_in_advance?
 
-      subscription.upgraded?
+      subscription.upgraded? || subscription.next_subscription.nil?
     end
 
     def should_compute_upgraded_amount?
@@ -72,6 +72,7 @@ module Fees
       subscription.previous_subscription.upgraded?
     end
 
+    # NOTE: Subscription has already been billed once and is not terminated
     def should_use_full_amount?
       invoice.subscription.fees.subscription_kind.exists?
     end
