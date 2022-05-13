@@ -16,13 +16,13 @@ module ChargeModelAttributesHandler
       when :standard
         output[:properties] = { amount_cents: output[:amount_cents] }
       when :graduated
+        output[:properties] = output[:graduated_ranges]
+      when :package
         output[:properties] = {
           amount_cents: output[:amount_cents],
           package_size: output[:package_size],
           free_units: output[:free_units],
         }
-      when :package
-        output[:properties] = output[:graduated_ranges]
       end
 
       # NOTE: delete fields used to build properties
