@@ -104,4 +104,59 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '.validate_package' do
+    subject(:charge) do
+      build(:package_charge, properties: charge_properties)
+    end
+
+    let(:charge_properties) { [{ 'foo' => 'bar' }] }
+    let(:validation_service) { instance_double(Charges::Validators::PackageService) }
+
+    let(:service_response) do
+      BaseService::Result.new.fail!(
+        :invalid_properties,
+        [
+          :invalid_amount,
+          :invalid_free_units,
+          :invalid_package_size,
+        ],
+      )
+    end
+
+    it 'delegates to a validation service' do
+      allow(Charges::Validators::PackageService).to receive(:new)
+        .and_return(validation_service)
+      allow(validation_service).to receive(:validate)
+        .and_return(service_response)
+
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include('invalid_amount')
+        expect(charge.errors.messages[:properties]).to include('invalid_free_units')
+        expect(charge.errors.messages[:properties]).to include('invalid_package_size')
+
+        expect(Charges::Validators::PackageService).to have_received(:new)
+          .with(charge: charge)
+        expect(validation_service).to have_received(:validate)
+      end
+    end
+
+    context 'when charge model is not package' do
+      subject(:charge) { build(:standard_charge) }
+
+      it 'does not apply the validation' do
+        allow(Charges::Validators::PackageService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:validate)
+          .and_return(service_response)
+
+        charge.valid?
+
+        expect(Charges::Validators::PackageService).not_to have_received(:new)
+        expect(validation_service).not_to have_received(:validate)
+      end
+    end
+  end
 end
