@@ -16,5 +16,16 @@ FactoryBot.define do
       amount_cents { 0 }
       properties { [] }
     end
+
+    factory :package_charge do
+      charge_model { 'package' }
+      properties do
+        {
+          amount_cents: 100,
+          free_units: 10,
+          package_size: 10,
+        }
+      end
+    end
   end
 end
