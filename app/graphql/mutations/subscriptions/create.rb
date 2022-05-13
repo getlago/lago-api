@@ -17,7 +17,7 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = SubscriptionsService
+        result = ::Subscriptions::CreateService
           .new
           .create(**args.merge(organization_id: current_organization.id))
 
