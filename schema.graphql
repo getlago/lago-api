@@ -64,6 +64,7 @@ input ChargeInput {
 
 enum ChargeModelEnum {
   graduated
+  package
   standard
 }
 
