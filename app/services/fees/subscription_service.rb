@@ -15,7 +15,7 @@ module Fees
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
-        amount_cents: new_amount_cents,
+        amount_cents: new_amount_cents.round,
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
       )
@@ -107,7 +107,7 @@ module Fees
       # NOTE: Number of days of the first period since subscription creation
       days_to_bill = (to_date + 1.day - from_date).to_i
 
-      (days_to_bill * single_day_price).to_i
+      days_to_bill * single_day_price
     end
 
     # NOTE: When terminating a pay in arrerar subscription, we need to
@@ -134,7 +134,7 @@ module Fees
       # NOTE: number of days between beggining of the period and the termination date
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-      (number_of_day_to_bill * single_day_price).to_i
+      number_of_day_to_bill * single_day_price
     end
 
     def upgraded_amount
@@ -164,7 +164,7 @@ module Fees
         #       amount_to_bill = nb_day * (new_day_price - old_day_price)
         old_day_price = single_day_price(previous_subscription.plan.amount_cents)
 
-        (number_of_day_to_bill * (single_day_price - old_day_price)).to_i
+        number_of_day_to_bill * (single_day_price - old_day_price)
       else
         # NOTE: Previous subscription was payed in arrear
         #       We only bill the days between the upgrade date and the end of the period
@@ -173,7 +173,7 @@ module Fees
         #       **nb_day** = number of days between upgrade and the end of the period
         #       **day_cost** = (plan amount_cents / full period duration)
         #       amount_to_bill = (nb_day * day_cost)
-        (number_of_day_to_bill * single_day_price).to_i
+        number_of_day_to_bill * single_day_price
       end
     end
 
@@ -192,7 +192,7 @@ module Fees
           from_date = subscription.trial_end_date
           number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-          return (number_of_day_to_bill * single_day_price).to_i
+          return number_of_day_to_bill * single_day_price
         end
       end
 
@@ -214,7 +214,7 @@ module Fees
                    raise NotImplementedError
       end
 
-      amount_cents.to_f / duration.to_i
+      amount_cents.fdiv(duration.to_i)
     end
   end
 end
