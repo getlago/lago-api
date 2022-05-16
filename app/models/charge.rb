@@ -32,6 +32,7 @@ class Charge < ApplicationRecord
 
   def validate_graduated_range
     validation_result = Charges::Validators::GraduatedService.new(charge: self).validate
+    return if validation_result.success?
 
     validation_result.error.each { |error| errors.add(:properties, error) }
   end

@@ -11,6 +11,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
       properties: {
         amount_cents: 100,
         package_size: 10,
+        free_units: 0,
       },
     )
   end

@@ -21,8 +21,6 @@ FactoryBot.define do
 
     factory :package_charge do
       charge_model { 'package' }
-      # TODO: remove after migration to properties for standard plan
-      amount_cents { 0 }
       properties do
         {
           amount_cents: 100,
