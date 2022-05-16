@@ -10,6 +10,8 @@ module Webhooks
     end
 
     def call
+      return unless current_organization&.webhook_url?
+
       payload = object_serializer.serialize
       payload.merge(webhook_type: webhook_type)
 

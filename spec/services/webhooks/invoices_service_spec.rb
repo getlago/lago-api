@@ -5,9 +5,10 @@ require 'rails_helper'
 RSpec.describe Webhooks::InvoicesService do
   subject(:webhook_invoice_service) { described_class.new(invoice) }
 
-  let(:organization) { create(:organization, webhook_url: 'http://foo.bar') }
+  let(:organization) { create(:organization, webhook_url: webhook_url) }
   let(:subscription) { create(:subscription, organization: organization) }
   let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:webhook_url) { 'http://foo.bar' }
 
   before { create_list(:fee, 4, invoice: invoice) }
 
@@ -25,6 +26,21 @@ RSpec.describe Webhooks::InvoicesService do
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post)
+    end
+
+    context 'without webhook_url' do
+      let(:webhook_url) { nil }
+
+      it 'does not call the organization webhook url' do
+        allow(LagoHttpClient::Client).to receive(:new)
+          .and_return(lago_client)
+        allow(lago_client).to receive(:post)
+
+        webhook_invoice_service.call
+
+        expect(LagoHttpClient::Client).not_to have_received(:new)
+        expect(lago_client).not_to have_received(:post)
+      end
     end
   end
 
