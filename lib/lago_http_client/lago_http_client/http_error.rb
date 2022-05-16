@@ -5,8 +5,6 @@ module LagoHttpClient
     attr_reader :error_code, :error_body, :uri
 
     def initialize(code, body, uri)
-      super
-
       @error_code = code
       @error_body = body
       @uri = uri
