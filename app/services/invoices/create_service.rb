@@ -26,7 +26,7 @@ module Invoices
         result.invoice = invoice
       end
 
-      SendWebhookJob.perform_later(:invoice, result.invoice)
+      SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -129,6 +129,10 @@ module Invoices
       return false if subscription.terminated? && subscription.upgraded?
 
       true
+    end
+
+    def should_deliver_webhook?
+      subscription.organization.webhook_url?
     end
   end
 end

@@ -57,6 +57,16 @@ RSpec.describe Invoices::CreateService, type: :service do
           invoice_service.create
         end.to have_enqueued_job(SendWebhookJob)
       end
+
+      context 'when organization does not have a webhook url' do
+        before { subscription.organization.update!(webhook_url: nil) }
+
+        it 'does not enqueues a SendWebhookJob' do
+          expect do
+            invoice_service.create
+          end.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
     end
 
     context 'when billed monthly on first month' do
