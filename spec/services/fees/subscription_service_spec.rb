@@ -492,8 +492,6 @@ RSpec.describe Fees::SubscriptionService do
 
     before do
       plan.update!(pay_in_advance: false)
-
-      create(:subscription, previous_subscription: subscription)
     end
 
     it 'creates a fee' do
@@ -507,6 +505,26 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
         expect(created_fee.vat_amount_cents).to eq(13)
         expect(created_fee.vat_rate).to eq(20.0)
+      end
+    end
+
+    context 'with a next subscription' do
+      before do
+        create(:subscription, previous_subscription: subscription)
+      end
+
+      it 'creates a fee' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(64)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+          expect(created_fee.vat_amount_cents).to eq(12)
+          expect(created_fee.vat_rate).to eq(20.0)
+        end
       end
     end
 

@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe SubscriptionsService, type: :service do
-  subject(:subscription_service) { described_class.new }
+RSpec.describe Subscriptions::CreateService, type: :service do
+  subject(:create_service) { described_class.new }
 
   let(:organization) { create(:organization) }
 
@@ -19,7 +19,7 @@ RSpec.describe SubscriptionsService, type: :service do
     end
 
     it 'creates a subscription' do
-      result = subscription_service.create_from_api(
+      result = create_service.create_from_api(
         organization: organization,
         params: params,
       )
@@ -46,7 +46,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'creates a customer' do
-        result = subscription_service.create_from_api(
+        result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
@@ -69,7 +69,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
         it 'enqueued a job to bill the subscription' do
           expect do
-            subscription_service.create_from_api(
+            create_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -87,7 +87,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'fails' do
-        result = subscription_service.create_from_api(
+        result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
@@ -106,7 +106,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'fails' do
-        result = subscription_service.create_from_api(
+        result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
@@ -130,7 +130,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
       context 'when plan is the same' do
         it 'returns existing subscription' do
-          result = subscription_service.create_from_api(
+          result = create_service.create_from_api(
             organization: organization,
             params: params,
           )
@@ -151,7 +151,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'terminates the existing subscription' do
-            subscription_service.create_from_api(
+            create_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -162,7 +162,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'creates a new subscription' do
-            result = subscription_service.create_from_api(
+            result = create_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -182,7 +182,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
             it 'enqueues a job to bill the existing subscription' do
               expect do
-                subscription_service.create_from_api(
+                create_service.create_from_api(
                   organization: organization,
                   params: params,
                 )
@@ -195,7 +195,7 @@ RSpec.describe SubscriptionsService, type: :service do
 
             it 'enqueues a job to bill the existing subscription' do
               expect do
-                subscription_service.create_from_api(
+                create_service.create_from_api(
                   organization: organization,
                   params: params,
                 )
@@ -216,7 +216,7 @@ RSpec.describe SubscriptionsService, type: :service do
             before { next_subscription }
 
             it 'canceled the next subscription' do
-              result = subscription_service.create_from_api(
+              result = create_service.create_from_api(
                 organization: organization,
                 params: params,
               )
@@ -242,7 +242,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'creates a new subscription' do
-            result = subscription_service.create_from_api(
+            result = create_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -260,7 +260,7 @@ RSpec.describe SubscriptionsService, type: :service do
           end
 
           it 'keeps the current subscription' do
-            result = subscription_service.create_from_api(
+            result = create_service.create_from_api(
               organization: organization,
               params: params,
             )
@@ -285,7 +285,7 @@ RSpec.describe SubscriptionsService, type: :service do
             before { next_subscription }
 
             it 'canceled the next subscription' do
-              result = subscription_service.create_from_api(
+              result = create_service.create_from_api(
                 organization: organization,
                 params: params,
               )
@@ -314,7 +314,7 @@ RSpec.describe SubscriptionsService, type: :service do
     end
 
     it 'creates a subscription' do
-      result = subscription_service.create(**params)
+      result = create_service.create(**params)
 
       expect(result).to be_success
 
@@ -339,7 +339,7 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'fails' do
-        result = subscription_service.create(**params)
+        result = create_service.create(**params)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -358,81 +358,12 @@ RSpec.describe SubscriptionsService, type: :service do
       end
 
       it 'fails' do
-        result = subscription_service.create(**params)
+        result = create_service.create(**params)
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to eq('plan does not exists')
         end
-      end
-    end
-  end
-
-  describe '.terminate_and_start_next' do
-    let(:subscription) { create(:subscription) }
-    let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }
-    let(:timestamp) { Time.zone.now.to_i }
-
-    before { next_subscription }
-
-    it 'terminates the subscription' do
-      result = subscription_service.terminate_and_start_next(
-        subscription: subscription,
-        timestamp: timestamp,
-      )
-
-      aggregate_failures do
-        expect(result).to be_success
-        expect(subscription.reload).to be_terminated
-      end
-    end
-
-    it 'starts the next subscription' do
-      result = subscription_service.terminate_and_start_next(
-        subscription: subscription,
-        timestamp: timestamp,
-      )
-
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.subscription.id).to eq(next_subscription.id)
-        expect(result.subscription).to be_active
-      end
-    end
-
-    context 'when terminated subscription is payed in arrear' do
-      before { subscription.plan.update!(pay_in_advance: false) }
-
-      it 'enqueues a job to bill the existing subscription' do
-        expect do
-          subscription_service.terminate_and_start_next(
-            subscription: subscription,
-            timestamp: timestamp,
-          )
-        end.to have_enqueued_job(BillSubscriptionJob)
-      end
-    end
-
-    context 'when next subscription is payed in advance' do
-      let(:plan) { create(:plan, pay_in_advance: true) }
-      let(:next_subscription) do
-        create(
-          :subscription,
-          previous_subscription_id: subscription.id,
-          plan: plan,
-          status: :pending,
-        )
-      end
-
-      before { subscription.plan.update!(pay_in_advance: true) }
-
-      it 'enqueues a job to bill the existing subscription' do
-        expect do
-          subscription_service.terminate_and_start_next(
-            subscription: subscription,
-            timestamp: timestamp,
-          )
-        end.to have_enqueued_job(BillSubscriptionJob).twice
       end
     end
   end

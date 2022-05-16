@@ -4,7 +4,7 @@ module Api
   module V1
     class SubscriptionsController < Api::BaseController
       def create
-        subscription_service = SubscriptionsService.new
+        subscription_service = Subscriptions::CreateService.new
         result = subscription_service.create_from_api(
           organization: current_organization,
           params: create_params,
