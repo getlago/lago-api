@@ -520,9 +520,9 @@ RSpec.describe Fees::SubscriptionService do
         aggregate_failures do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.amount_cents).to eq(64)
+          expect(created_fee.amount_cents).to eq(65)
           expect(created_fee.amount_currency).to eq(plan.amount_currency)
-          expect(created_fee.vat_amount_cents).to eq(12)
+          expect(created_fee.vat_amount_cents).to eq(13)
           expect(created_fee.vat_rate).to eq(20.0)
         end
       end
