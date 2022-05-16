@@ -18,5 +18,18 @@ FactoryBot.define do
       charge_model { 'graduated' }
       properties { [] }
     end
+
+    factory :package_charge do
+      charge_model { 'package' }
+      # TODO: remove after migration to properties for standard plan
+      amount_cents { 0 }
+      properties do
+        {
+          amount_cents: 100,
+          free_units: 10,
+          package_size: 10,
+        }
+      end
+    end
   end
 end

@@ -749,6 +749,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "package",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
