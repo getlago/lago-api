@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_05_05_122825) do
+ActiveRecord::Schema[7.0].define(version: 2022_05_06_133655) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -34,7 +34,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_05_122825) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "plan_id"
-    t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
     t.integer "charge_model", default: 0, null: false
     t.jsonb "properties", default: "{}", null: false

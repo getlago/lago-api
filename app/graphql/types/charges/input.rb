@@ -7,9 +7,14 @@ module Types
 
       argument :id, ID, required: false
       argument :billable_metric_id, ID, required: true
-      argument :amount_cents, Integer, required: true
-      argument :amount_currency, Types::CurrencyEnum, required: true
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
+      argument :amount_currency, Types::CurrencyEnum, required: true
+
+      # NOTE: Standard charge model
+      argument :amount_cents, Integer, required: false
+
+      # NOTE: Graduated charge model
+      argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
     end
   end
 end

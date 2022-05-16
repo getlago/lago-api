@@ -4,7 +4,7 @@ module Charges
   module ChargeModels
     class StandardService < Charges::ChargeModels::BaseService
       def apply(value:)
-        result.amount_cents = (value * charge.amount_cents).to_i
+        result.amount_cents = (value * charge.properties['amount_cents']).to_i
         result
       end
     end

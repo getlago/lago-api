@@ -17,7 +17,11 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           payInAdvance,
           amountCents,
           amountCurrency,
-          charges { id, billableMetric { id name code } }
+          charges {
+            id,
+            billableMetric { id name code },
+            graduatedRanges { fromValue, toValue }
+          }
         }
       }
     GQL
@@ -49,9 +53,22 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             },
             {
               billableMetricId: billable_metrics.last.id,
-              amountCents: 300,
               amountCurrency: 'EUR',
-              chargeModel: 'standard',
+              chargeModel: 'graduated',
+              graduatedRanges: [
+                {
+                  fromValue: 0,
+                  toValue: 10,
+                  perUnitAmountCents: 2,
+                  flatAmountCents: 0,
+                },
+                {
+                  fromValue: 11,
+                  toValue: nil,
+                  perUnitAmountCents: 3,
+                  flatAmountCents: 3,
+                },
+              ],
             },
           ],
         },
@@ -69,6 +86,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['amountCents']).to eq(200)
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['charges'].count).to eq(2)
+      expect(result_data['charges'][1]['graduatedRanges'].count).to eq(2)
     end
   end
 

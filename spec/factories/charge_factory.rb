@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :charge do
     billable_metric
@@ -7,13 +9,13 @@ FactoryBot.define do
 
     factory :standard_charge do
       charge_model { 'standard' }
-      amount_cents { Faker::Number.between(from: 100, to: 500) }
+      properties do
+        { amount_cents: Faker::Number.between(from: 100, to: 500) }
+      end
     end
 
     factory :graduated_charge do
       charge_model { 'graduated' }
-      # TODO: remove after migration to properties for standard plan
-      amount_cents { 0 }
       properties { [] }
     end
   end

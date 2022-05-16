@@ -4,6 +4,7 @@ module Mutations
   module Plans
     class Update < BaseMutation
       include AuthenticableApiUser
+      include ChargeModelAttributesHandler
 
       graphql_name 'UpdatePlan'
       description 'Updates an existing Plan'
@@ -23,7 +24,8 @@ module Mutations
       type Types::Plans::Object
 
       def resolve(**args)
-        result = PlansService.new(context[:current_user]).update(**args)
+        result = PlansService.new(context[:current_user])
+          .update(**prepare_arguments(**args))
 
         result.success? ? result.plan : result_error(result)
       end

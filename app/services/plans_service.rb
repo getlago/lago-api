@@ -104,9 +104,9 @@ class PlansService < BaseService
   def create_charge(plan, args)
     plan.charges.create!(
       billable_metric_id: args[:billable_metric_id],
-      amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
       charge_model: args[:charge_model].to_sym,
+      properties: args[:properties] || {},
     )
   end
 

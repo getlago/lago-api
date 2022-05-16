@@ -24,15 +24,30 @@ RSpec.describe PlansService, type: :service do
         charges: [
           {
             billable_metric_id: billable_metrics.first.id,
-            amount_cents: 100,
             amount_currency: 'USD',
             charge_model: 'standard',
+            properties: {
+              amount_cents: 100,
+            },
           },
           {
             billable_metric_id: billable_metrics.last.id,
-            amount_cents: 300,
             amount_currency: 'EUR',
-            charge_model: 'standard',
+            charge_model: 'graduated',
+            properties: [
+              {
+                from_value: 0,
+                to_value: 10,
+                per_unit_amount_cents: 2,
+                flat_amount_cents: 0,
+              },
+              {
+                from_value: 11,
+                to_value: nil,
+                per_unit_amount_cents: 3,
+                flat_amount_cents: 3,
+              },
+            ],
           },
         ],
       }
@@ -89,15 +104,30 @@ RSpec.describe PlansService, type: :service do
         charges: [
           {
             billable_metric_id: billable_metrics.first.id,
-            amount_cents: 100,
             amount_currency: 'USD',
             charge_model: 'standard',
+            properties: {
+              amount_cents: 100,
+            },
           },
           {
             billable_metric_id: billable_metrics.last.id,
-            amount_cents: 300,
             amount_currency: 'EUR',
-            charge_model: 'standard',
+            charge_model: 'graduated',
+            properties: [
+              {
+                from_value: 0,
+                to_value: 10,
+                per_unit_amount_cents: 2,
+                flat_amount_cents: 0,
+              },
+              {
+                from_value: 11,
+                to_value: nil,
+                per_unit_amount_cents: 3,
+                flat_amount_cents: 3,
+              },
+            ],
           },
         ],
       }
@@ -141,9 +171,10 @@ RSpec.describe PlansService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_cents: 300,
-          amount_currency: 'USD',
-          charge_model: 'standard',
+          properties: {
+            amount_cents: 300,
+            amount_currency: 'USD',
+          },
         )
       end
 
@@ -160,15 +191,19 @@ RSpec.describe PlansService, type: :service do
             {
               id: existing_charge.id,
               billable_metric_id: billable_metrics.first.id,
-              amount_cents: 100,
               amount_currency: 'USD',
               charge_model: 'standard',
+              properties: {
+                amount_cents: 100,
+              },
             },
             {
               billable_metric_id: billable_metrics.last.id,
-              amount_cents: 300,
               amount_currency: 'EUR',
               charge_model: 'standard',
+              properties: {
+                amount_cents: 300,
+              }
             },
           ],
         }
@@ -186,9 +221,10 @@ RSpec.describe PlansService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_cents: 300,
           amount_currency: 'USD',
-          charge_model: 'standard',
+          properties: {
+            amount_cents: 300,
+          },
         )
       end
 
