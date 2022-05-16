@@ -12,5 +12,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.GH_TOKEN}}
+          repository: getlago/lago-deploy
           event-type: api-push-main
           client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
