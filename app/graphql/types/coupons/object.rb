@@ -19,6 +19,10 @@ module Types
       # NOTE: Free days coupons
       field :day_count, Integer, null: true
 
+      field :expiration, Types::Coupons::ExpirationEnum, null: false
+      field :expiration_duration, Integer, null: true
+      field :expiration_users, Integer, null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 

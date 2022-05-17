@@ -1346,15 +1346,24 @@ type Coupon {
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
   dayCount: Int
+  expiration: CouponExpiration!
+  expirationDuration: Int
+  expirationUsers: Int
   id: ID!
   name: String!
   organization: Organization
   updatedAt: ISO8601DateTime!
 }
 
+enum CouponExpiration {
+  no_expiration
+  time_limit
+  user_limit
+}
+
 enum CouponTypeEnum {
   fixed_amount
-  free_days
+  fixed_days
 }
 
 """
@@ -1387,6 +1396,9 @@ input CreateCouponInput {
   code: String
   couponType: CouponTypeEnum!
   dayCount: Int
+  expiration: CouponExpiration!
+  expirationDuration: Int
+  expirationUsers: Int
   name: String!
 }
 

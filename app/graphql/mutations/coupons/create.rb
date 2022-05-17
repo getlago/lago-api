@@ -20,6 +20,10 @@ module Mutations
       # NOTE: Free days coupons
       argument :day_count, Integer, required: false
 
+      argument :expiration, Types::Coupons::ExpirationEnum, required: true
+      argument :expiration_duration, Integer, required: false
+      argument :expiration_users, Integer, required: false
+
       type Types::Coupons::Object
 
       def resolve(**args)

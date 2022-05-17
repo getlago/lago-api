@@ -3,9 +3,10 @@ FactoryBot.define do
     organization
     name { Faker::Name.name }
     code { Faker::Name.name.underscore }
+    expiration { 'no_expiration' }
 
-    factory :free_days_coupon do
-      coupon_type { 'free_days' }
+    factory :fixed_days_coupon do
+      coupon_type { 'fixed_days' }
       day_count { rand(30) }
     end
 

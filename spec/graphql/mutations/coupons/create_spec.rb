@@ -14,7 +14,10 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           couponType,
           dayCount,
           amountCents,
-          amountCurrency
+          amountCurrency,
+          expiration,
+          expirationDuration,
+          expirationUsers
         }
       }
     GQL
@@ -32,6 +35,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           couponType: 'fixed_amount',
           amountCents: 5000,
           amountCurrency: 'EUR',
+          expiration: 'time_limit',
+          expirationDuration: 3,
         },
       },
     )
@@ -44,6 +49,9 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['code']).to eq('free-beer')
       expect(result_data['amountCents']).to eq('5000')
       expect(result_data['amountCurrency']).to eq('EUR')
+      expect(result_data['expiration']).to eq('time_limit')
+      expect(result_data['expirationDuration']).to eq(3)
+      expect(result_data['expirationUsers']).to eq(nil)
     end
   end
 
@@ -59,6 +67,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
             couponType: 'fixed_amount',
             amountCents: 5000,
             amountCurrency: 'EUR',
+            expiration: 'time_limit',
+            expirationDuration: 3,
           },
         },
       )
@@ -79,6 +89,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
             couponType: 'fixed_amount',
             amountCents: 5000,
             amountCurrency: 'EUR',
+            expiration: 'time_limit',
+            expirationDuration: 3,
           },
         },
       )
