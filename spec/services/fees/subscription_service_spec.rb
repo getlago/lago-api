@@ -616,12 +616,32 @@ RSpec.describe Fees::SubscriptionService do
           end
         end
       end
+
+      context 'when new plan is pay in advance' do
+        before { plan.update(pay_in_advance: true) }
+
+        let(:invoice) do
+          create(
+            :invoice,
+            subscription: subscription,
+            from_date: subscription.started_at,
+            to_date: subscription.started_at,
+          )
+        end
+
+        it 'creates a subscrition fee' do
+          result = fees_subscription_service.create
+          created_fee = result.fee
+
+          expect(created_fee.amount_cents).to eq(11)
+        end
+      end
     end
 
     context 'when previous subscription was payed in arrear' do
       before { previous_plan.update!(pay_in_advance: false) }
 
-      it 'creates a subscription' do
+      it 'creates a subscription fee' do
         result = fees_subscription_service.create
         created_fee = result.fee
 
@@ -656,6 +676,25 @@ RSpec.describe Fees::SubscriptionService do
 
             expect(result.fee.amount_cents).to eq(0)
           end
+        end
+      end
+
+      context 'when new plan is pay in advance' do
+        before { plan.update(pay_in_advance: true) }
+
+        let(:invoice) do
+          create(
+            :invoice,
+            subscription: subscription,
+            from_date: subscription.started_at,
+            to_date: subscription.started_at,
+          )
+        end
+
+        it 'creates a subscription fee' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(55)
         end
       end
     end

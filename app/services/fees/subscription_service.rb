@@ -142,6 +142,19 @@ module Fees
       from_date = invoice.from_date
       to_date = invoice.to_date
 
+      # NOTE: when plan is pay in advance, the to date should be the
+      # end of the actual period
+      if plan.pay_in_advance?
+        case plan.interval.to_sym
+        when :monthly
+          to_date = invoice.to_date.end_of_month
+        when :yearly
+          to_date = invoice.to_date.end_of_year
+        else
+          raise NotImplementedError
+        end
+      end
+
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
         # NOTE: from_date is the trial end date if it happens during the period
