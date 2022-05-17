@@ -27,7 +27,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   end
 
   let(:billable_metrics) do
-    create_list(:billable_metric, 2, organization: organization)
+    create_list(:billable_metric, 3, organization: organization)
   end
 
   it 'creates a plan' do
@@ -49,6 +49,14 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               amountCents: 100,
               amountCurrency: 'USD',
               chargeModel: 'standard',
+            },
+            {
+              billableMetricId: billable_metrics.second.id,
+              amountCurrency: 'EUR',
+              chargeModel: 'package',
+              amountCents: 300,
+              freeUnits: 10,
+              packageSize: 10,
             },
             {
               billableMetricId: billable_metrics.last.id,
@@ -84,8 +92,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(result_data['payInAdvance']).to eq(false)
       expect(result_data['amountCents']).to eq(200)
       expect(result_data['amountCurrency']).to eq('EUR')
-      expect(result_data['charges'].count).to eq(2)
-      expect(result_data['charges'][1]['graduatedRanges'].count).to eq(2)
+      expect(result_data['charges'].count).to eq(3)
+      expect(result_data['charges'][2]['graduatedRanges'].count).to eq(2)
     end
   end
 

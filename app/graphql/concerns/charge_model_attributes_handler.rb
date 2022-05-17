@@ -5,23 +5,31 @@ module ChargeModelAttributesHandler
   #       of each charges.
   #       - Standard model only has one property `amount_cents`
   #       - Graduated model relies on the the list of `GraduatedRange`
+  #       - Package model has properties `amount_cents`, `package_size` and `free_units`
   def prepare_arguments(arguments)
     return arguments if arguments[:charges].blank?
 
     arguments[:charges].map! do |charge|
       output = charge.to_h
 
-      if output.key?(:amount_cents)
-        # NOTE: Standard charge model
+      case output[:charge_model].to_sym
+      when :standard
         output[:properties] = { amount_cents: output[:amount_cents] }
-      elsif output.key?(:graduated_ranges)
-        # NOTE: Graduated charge model
+      when :graduated
         output[:properties] = output[:graduated_ranges]
+      when :package
+        output[:properties] = {
+          amount_cents: output[:amount_cents],
+          package_size: output[:package_size],
+          free_units: output[:free_units],
+        }
       end
 
       # NOTE: delete fields used to build properties
       output.delete(:graduated_ranges)
       output.delete(:amount_cents)
+      output.delete(:free_units)
+      output.delete(:package_size)
 
       output
     end

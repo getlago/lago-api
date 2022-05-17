@@ -10,11 +10,15 @@ module Types
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
 
-      # NOTE: Standard charge model
+      # NOTE: Standard and Package charge model
       argument :amount_cents, Integer, required: false
 
       # NOTE: Graduated charge model
       argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
+
+      # NOTE: Package charge model
+      argument :free_units, Integer, required: false
+      argument :package_size, Integer, required: false
     end
   end
 end
