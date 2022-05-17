@@ -22,5 +22,7 @@ module Types
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
     field :terminate_subscription, mutation: Mutations::Subscriptions::Terminate
+
+    field :create_coupon, mutation: Mutations::Coupons::Create
   end
 end
