@@ -28,12 +28,14 @@ gem 'lograge-sql'
 gem 'logstash-event'
 
 # Monitoring
+gem 'newrelic_rpm'
 gem 'sentry-rails'
 gem 'sentry-ruby'
 
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'
+  gem 'timecop'
 end
 
 group :development, :test do
