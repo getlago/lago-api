@@ -181,6 +181,7 @@ GEM
       digest
       net-protocol
       timeout
+    newrelic_rpm (8.7.0)
     nio4r (2.5.8)
     nokogiri (1.13.4-aarch64-linux)
       racc (~> 1.4)
@@ -328,6 +329,7 @@ DEPENDENCIES
   lograge-sql
   logstash-event
   money-rails
+  newrelic_rpm
   pg
   puma (~> 5.6)
   rack-cors
@@ -338,6 +340,7 @@ DEPENDENCIES
   sentry-ruby
   sidekiq
   simplecov
+  timecop
   tzinfo-data
   uglifier
   webmock
