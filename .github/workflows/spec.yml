@@ -1,5 +1,5 @@
-name: "Spec"
-on: [push]
+name: Run Spec
+on: push
 jobs:
   test:
     runs-on: ubuntu-latest
