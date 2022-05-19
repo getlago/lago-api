@@ -17,10 +17,6 @@ class CreateCoupons < ActiveRecord::Migration[7.0]
       t.integer :expiration, null: false
       t.integer :expiration_duration, null: true
 
-      t.integer :expiration, null: false
-      t.integer :expiration_users, null: true
-      t.integer :expiration_duration, null: true
-
       t.index %i[organization_id code], unique: true, where: 'code IS NOT NULL'
 
       t.timestamps
