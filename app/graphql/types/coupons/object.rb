@@ -21,8 +21,14 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
 
+      field :customer_count, Integer, null: false, description: 'Number of customers using this coupon'
+
       field :can_be_deleted, Boolean, null: false do
         description 'Check if coupon is deletable'
+      end
+
+      def customer_count
+        0 # TODO: Add it with logic to assign coupon to a customer
       end
 
       def can_be_deleted

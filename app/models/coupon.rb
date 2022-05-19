@@ -28,7 +28,7 @@ class Coupon < ApplicationRecord
 
   validates :expiration_duration, numericality: { greater_than: 0 }, if: :time_limit?
 
-  def can_be_deleted
+  def deletable?
     # TODO: implement logic
     true
   end
