@@ -5,31 +5,28 @@ class Coupon < ApplicationRecord
 
   belongs_to :organization
 
-  COUPON_TYPES = %i[
-    fixed_amount
-    fixed_days
+  STATUSES = [
+    :active,
+    :terminated,
   ].freeze
 
-  EXPIRATION_TYPE = %i[
-    no_expiration
-    user_limit
-    time_limit
+  EXPIRATION_TYPES = [
+    :no_expiration,
+    :time_limit,
   ].freeze
 
-  enum coupon_type: COUPON_TYPES
-  enum expiration: EXPIRATION_TYPE
+  enum status: STATUSES
+  enum expiration: EXPIRATION_TYPES
 
-  monetize :amount_cents, allow_nil: true
+  monetize :amount_cents
 
   validates :name, presence: true
   validates :code, uniqueness: { scope: :organization_id, allow_nil: true }
 
-  validates :amount_cents, numericality: { greater_than: 0 }, if: :fixed_amount?
-  validates :amount_currency, inclusion: { in: currency_list }, if: :fixed_amount?
-  validates :day_count, numericality: { greater_than: 0 }, if: :fixed_days?
+  validates :amount_cents, numericality: { greater_than: 0 }
+  validates :amount_currency, inclusion: { in: currency_list }
 
   validates :expiration_duration, numericality: { greater_than: 0 }, if: :time_limit?
-  validates :expiration_users, numericality: { greater_than: 0 }, if: :user_limit?
 
   def can_be_deleted
     # TODO: implement logic

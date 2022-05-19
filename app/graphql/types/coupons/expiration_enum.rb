@@ -5,7 +5,7 @@ module Types
     class ExpirationEnum < Types::BaseEnum
       graphql_name 'CouponExpiration'
 
-      Coupon::EXPIRATION_TYPE.each do |type|
+      Coupon::EXPIRATION_TYPES.each do |type|
         value type
       end
     end

@@ -11,18 +11,11 @@ module Mutations
 
       argument :name, String, required: true
       argument :code, String, required: false
-      argument :coupon_type, Types::Coupons::CouponTypeEnum, required: true
-
-      # NOTE: Fixed amount coupons
-      argument :amount_cents, GraphQL::Types::BigInt, required: false
-      argument :amount_currency, Types::CurrencyEnum, required: false
-
-      # NOTE: Free days coupons
-      argument :day_count, Integer, required: false
+      argument :amount_cents, GraphQL::Types::BigInt, required: true
+      argument :amount_currency, Types::CurrencyEnum, required: true
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
       argument :expiration_duration, Integer, required: false
-      argument :expiration_users, Integer, required: false
 
       type Types::Coupons::Object
 

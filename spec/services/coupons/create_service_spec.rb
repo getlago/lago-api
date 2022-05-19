@@ -14,8 +14,8 @@ RSpec.describe Coupons::CreateService, type: :service do
         name: 'Super Coupon',
         code: 'free-beer',
         organization_id: organization.id,
-        coupon_type: 'fixed_days',
-        day_count: 5,
+        amount_cents: 100,
+        amount_currency: 'EUR',
         expiration: 'time_limit',
         expiration_duration: 3,
       }
@@ -29,7 +29,7 @@ RSpec.describe Coupons::CreateService, type: :service do
     context 'with validation error' do
       before do
         create(
-          :fixed_days_coupon,
+          :coupon,
           organization: organization,
           code: 'free-beer',
         )
