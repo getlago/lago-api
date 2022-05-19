@@ -1,0 +1,33 @@
+# frozen_string_literal: true
+
+module Types
+  module Coupons
+    class Object < Types::BaseObject
+      graphql_name 'Coupon'
+
+      field :id, ID, null: false
+      field :organization, Types::OrganizationType
+
+      field :name, String, null: false
+      field :code, String, null: true
+      field :status, Types::Coupons::StatusEnum, null: false
+      field :amount_cents, GraphQL::Types::BigInt
+      field :amount_currency, Types::CurrencyEnum
+
+      field :expiration, Types::Coupons::ExpirationEnum, null: false
+      field :expiration_duration, Integer, null: true
+
+      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
+
+      field :can_be_deleted, Boolean, null: false do
+        description 'Check if coupon is deletable'
+      end
+
+      def can_be_deleted
+        object.deletable?
+      end
+    end
+  end
+end

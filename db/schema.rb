@@ -41,6 +41,22 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_17_095914) do
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
 
+  create_table "coupons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "name", null: false
+    t.string "code"
+    t.integer "status", default: 0, null: false
+    t.datetime "terminated_at"
+    t.bigint "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.integer "expiration", null: false
+    t.integer "expiration_duration"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(code IS NOT NULL)"
+    t.index ["organization_id"], name: "index_coupons_on_organization_id"
+  end
+
   create_table "customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "customer_id", null: false
     t.string "name"
