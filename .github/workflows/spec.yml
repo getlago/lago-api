@@ -1,7 +1,8 @@
 name: Run Spec
 on: push
 jobs:
-  test:
+  run-spec:
+    name: Run Spec
     runs-on: ubuntu-latest
     services:
       postgres:
