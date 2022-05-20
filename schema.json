@@ -3332,8 +3332,32 @@
           "inputFields": null,
           "enumValues": [
             {
+              "name": "DKK",
+              "description": "Danish Krone",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "EUR",
               "description": "Euro",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "GBP",
+              "description": "Pound Sterling",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "NOK",
+              "description": "Norwegian Krone",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "SEK",
+              "description": "Swedish Krona",
               "isDeprecated": false,
               "deprecationReason": null
             },

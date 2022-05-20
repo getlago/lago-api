@@ -1457,9 +1457,29 @@ input CreateSubscriptionInput {
 
 enum CurrencyEnum {
   """
+  Danish Krone
+  """
+  DKK
+
+  """
   Euro
   """
   EUR
+
+  """
+  Pound Sterling
+  """
+  GBP
+
+  """
+  Norwegian Krone
+  """
+  NOK
+
+  """
+  Swedish Krona
+  """
+  SEK
 
   """
   American Dollar
