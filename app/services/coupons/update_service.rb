@@ -7,11 +7,14 @@ module Coupons
       return result.fail!('not_found') unless coupon
 
       coupon.name = args[:name]
-      coupon.code = args[:code]
-      coupon.amount_cents = args[:amount_cents]
-      coupon.amount_currency = args[:amount_currency]
-      coupon.expiration = args[:expiration]&.to_sym
-      coupon.expiration_duration = args[:expiration_duration]
+
+      unless coupon.attached_to_customers?
+        coupon.code = args[:code]
+        coupon.amount_cents = args[:amount_cents]
+        coupon.amount_currency = args[:amount_currency]
+        coupon.expiration = args[:expiration]&.to_sym
+        coupon.expiration_duration = args[:expiration_duration]
+      end
 
       coupon.save!
 
