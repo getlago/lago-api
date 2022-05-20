@@ -1338,6 +1338,41 @@ type Coupon {
   canBeDeleted: Boolean!
   code: String
   createdAt: ISO8601DateTime!
+
+  """
+  Number of customers using this coupon
+  """
+  customerCount: Int!
+  expiration: CouponExpiration!
+  expirationDuration: Int
+  id: ID!
+  name: String!
+  organization: Organization
+  status: CouponStatusEnum!
+  terminatedAt: ISO8601DateTime
+  updatedAt: ISO8601DateTime!
+}
+
+type CouponCollection {
+  collection: [Coupon!]!
+  metadata: CollectionMetadata!
+}
+
+type CouponDetails {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+
+  """
+  Check if coupon is deletable
+  """
+  canBeDeleted: Boolean!
+  code: String
+  createdAt: ISO8601DateTime!
+
+  """
+  Number of customers using this coupon
+  """
+  customerCount: Int!
   expiration: CouponExpiration!
   expirationDuration: Int
   id: ID!
@@ -1961,6 +1996,28 @@ type Query {
     limit: Int
     page: Int
   ): BillableMetricCollection!
+
+  """
+  Query a single coupon of an organization
+  """
+  coupon(
+    """
+    Uniq ID of the coupon
+    """
+    id: ID!
+  ): CouponDetails
+
+  """
+  Query coupons of an organization
+  """
+  coupons(
+    """
+    List of coupon IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+  ): CouponCollection!
 
   """
   Retrives currently connected user
