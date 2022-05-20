@@ -17,6 +17,12 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         },
         {
           from_value: 11,
+          to_value: 20,
+          per_unit_amount_cents: 5,
+          flat_amount_cents: 3,
+        },
+        {
+          from_value: 21,
           to_value: nil,
           per_unit_amount_cents: 5,
           flat_amount_cents: 3,
@@ -43,5 +49,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
 
   it 'applies next unit amount for more unit in next step' do
     expect(graduated_service.apply(value: 12).amount_cents).to eq(115)
+  end
+
+  it 'applies last unit amount for more unit in last step' do
+    expect(graduated_service.apply(value: 21).amount_cents).to eq(163)
   end
 end
