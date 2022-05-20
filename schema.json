@@ -2635,6 +2635,20 @@
               ]
             },
             {
+              "name": "expirationDate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "expirationDuration",
               "description": null,
               "type": {
@@ -2933,6 +2947,20 @@
                   "name": "CouponExpiration",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "expirationDate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,

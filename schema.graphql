@@ -1352,6 +1352,7 @@ type Coupon {
   """
   customerCount: Int!
   expiration: CouponExpiration!
+  expirationDate: ISO8601Date
   expirationDuration: Int
   id: ID!
   name: String!
@@ -1382,6 +1383,7 @@ type CouponDetails {
   """
   customerCount: Int!
   expiration: CouponExpiration!
+  expirationDate: ISO8601Date
   expirationDuration: Int
   id: ID!
   name: String!
