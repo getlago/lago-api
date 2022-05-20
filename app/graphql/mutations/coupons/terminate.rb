@@ -13,7 +13,7 @@ module Mutations
       type Types::Coupons::Object
 
       def resolve(id:)
-        result = ::Coupons::DestroyService.new(context[:current_user]).terminate(id)
+        result = ::Coupons::TerminateService.new(context[:current_user]).terminate(id)
 
         result.success? ? result.coupon : result_error(result)
       end
