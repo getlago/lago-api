@@ -33,6 +33,10 @@ module Charges
       # NOTE: compute how many units to bill in the range
       def compute_range_units(from_value, to_value, value)
         # NOTE: value is higher than the to_value of the range
+        if to_value && value >= to_value
+          return to_value - (from_value.zero? ? 1 : from_value) + 1
+        end
+
         return to_value - from_value if to_value && value >= to_value
         return value if from_value.zero?
 
