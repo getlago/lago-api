@@ -11,6 +11,7 @@ en:
         url_invalid: url_is_invalid
         greater_than_or_equal_to: value_is_out_of_range
         less_than_or_equal_to: value_is_out_of_range
+        greater_than: value_is_out_of_range
         missing_graduated_range: missing_graduated_range
         invalid_amount: invalid_amount
         invalid_graduated_ranges: invalid_graduated_ranges
