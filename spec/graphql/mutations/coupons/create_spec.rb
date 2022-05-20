@@ -44,7 +44,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Super Coupon')
       expect(result_data['code']).to eq('free-beer')
-      expect(result_data['amountCents']).to eq('5000')
+      expect(result_data['amountCents']).to eq(5000)
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['expiration']).to eq('time_limit')
       expect(result_data['expirationDuration']).to eq(3)
