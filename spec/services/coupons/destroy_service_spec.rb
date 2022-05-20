@@ -31,4 +31,26 @@ RSpec.describe Coupons::DestroyService, type: :service do
     #   # TODO
     # end
   end
+
+  describe 'terminate' do
+    it 'terminates the coupon' do
+      result = destroy_service.terminate(coupon.id)
+
+      expect(result).to be_success
+      expect(result.coupon).to be_terminated
+    end
+
+    context 'when coupon is already terminated' do
+      before { coupon.mark_as_terminated! }
+
+      it 'does not impact the coupon' do
+        terminated_at = coupon.terminated_at
+        result = destroy_service.terminate(coupon.id)
+
+        expect(result).to be_success
+        expect(result.coupon).to be_terminated
+        expect(result.coupon.terminated_at).to eq(terminated_at)
+      end
+    end
+  end
 end

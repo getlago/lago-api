@@ -36,4 +36,9 @@ class Coupon < ApplicationRecord
   def deletable?
     !attached_to_customer?
   end
+
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
+    terminated!
+  end
 end
