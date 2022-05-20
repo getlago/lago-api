@@ -24,5 +24,6 @@ module Types
     field :terminate_subscription, mutation: Mutations::Subscriptions::Terminate
 
     field :create_coupon, mutation: Mutations::Coupons::Create
+    field :update_coupon, mutation: Mutations::Coupons::Update
   end
 end

@@ -11,8 +11,8 @@ module Types
       field :name, String, null: false
       field :code, String, null: true
       field :status, Types::Coupons::StatusEnum, null: false
-      field :amount_cents, GraphQL::Types::BigInt
-      field :amount_currency, Types::CurrencyEnum
+      field :amount_cents, Integer, null: false
+      field :amount_currency, Types::CurrencyEnum, null: false
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
       field :expiration_duration, Integer, null: true
