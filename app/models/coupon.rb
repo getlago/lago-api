@@ -28,8 +28,17 @@ class Coupon < ApplicationRecord
 
   validates :expiration_duration, numericality: { greater_than: 0 }, if: :time_limit?
 
-  def deletable?
+  def attached_to_customer?
     # TODO: implement logic
-    true
+    false
+  end
+
+  def deletable?
+    !attached_to_customer?
+  end
+
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
+    terminated!
   end
 end
