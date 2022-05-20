@@ -10,10 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_05_17_095914) do
+ActiveRecord::Schema[7.0].define(version: 2022_05_20_121235) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+
+  create_table "applied_coupons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "coupon_id", null: false
+    t.uuid "customer_id", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true
+    t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
+    t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
+  end
 
   create_table "billable_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false

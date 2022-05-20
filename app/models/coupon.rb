@@ -5,6 +5,9 @@ class Coupon < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :applied_coupons
+  has_many :customers, through: :applied_coupons
+
   STATUSES = [
     :active,
     :terminated,
@@ -28,13 +31,12 @@ class Coupon < ApplicationRecord
 
   validates :expiration_duration, numericality: { greater_than: 0 }, if: :time_limit?
 
-  def attached_to_customer?
-    # TODO: implement logic
-    false
+  def attached_to_customers?
+    applied_coupons.exists?
   end
 
   def deletable?
-    !attached_to_customer?
+    !attached_to_customers?
   end
 
   def mark_as_terminated!(timestamp = Time.zone.now)
