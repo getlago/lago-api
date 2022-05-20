@@ -16,10 +16,11 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:coupon) { create(:coupon, organization: organization) }
+
+  before { coupon }
 
   it 'returns a list of coupons' do
-    coupon = create(:coupon, organization: organization)
-
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

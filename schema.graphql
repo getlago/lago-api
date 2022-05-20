@@ -1359,8 +1359,8 @@ type CouponCollection {
 }
 
 type CouponDetails {
-  amountCents: BigInt
-  amountCurrency: CurrencyEnum
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
 
   """
   Check if coupon is deletable
