@@ -31,6 +31,16 @@ class Coupon < ApplicationRecord
 
   validates :expiration_duration, numericality: { greater_than: 0 }, if: :time_limit?
 
+  scope :order_by_status_and_expiration, lambda {
+    order(
+      [
+        'coupons.status ASC',
+        'coupons.expiration_type ASC',
+        'coupons.created_at + make_interval(days => COALESCE(coupons.expiration_duration, 0)) ASC',
+      ].join(', '),
+    )
+  }
+
   def attached_to_customers?
     applied_coupons.exists?
   end
