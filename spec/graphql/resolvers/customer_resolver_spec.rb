@@ -10,6 +10,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           id customerId name
           invoices { id }
           subscriptions(status: [active]) { id, status }
+          appliedCoupons { id amountCents amountCurrency coupon { id name } }
         }
       }
     GQL

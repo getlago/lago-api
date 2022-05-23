@@ -16,6 +16,7 @@ module Types
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
       field :expiration_duration, Integer, null: true
+      field :expiration_date, GraphQL::Types::ISO8601Date, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -33,6 +34,12 @@ module Types
 
       def can_be_deleted
         object.deletable?
+      end
+
+      def expiration_date
+        return unless object.expiration_duration
+
+        object.created_at.to_date + object.expiration_duration.days
       end
     end
   end

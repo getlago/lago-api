@@ -5,6 +5,14 @@ enum AggregationTypeEnum {
   unique_count_agg
 }
 
+type AppliedCoupon {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  coupon: Coupon!
+  createdAt: ISO8601DateTime!
+  id: ID!
+}
+
 type BillableMetric {
   aggregationType: AggregationTypeEnum!
 
@@ -1344,6 +1352,7 @@ type Coupon {
   """
   customerCount: Int!
   expiration: CouponExpiration!
+  expirationDate: ISO8601Date
   expirationDuration: Int
   id: ID!
   name: String!
@@ -1374,6 +1383,7 @@ type CouponDetails {
   """
   customerCount: Int!
   expiration: CouponExpiration!
+  expirationDate: ISO8601Date
   expirationDuration: Int
   id: ID!
   name: String!
@@ -1551,6 +1561,7 @@ type CustomerCollection {
 type CustomerDetails {
   addressLine1: String
   addressLine2: String
+  appliedCoupons: [AppliedCoupon!]
 
   """
   Check if customer is deletable

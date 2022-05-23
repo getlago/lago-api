@@ -18,6 +18,7 @@ module Resolvers
 
       coupons = current_organization
         .coupons
+        .order_by_status_and_expiration
         .page(page)
         .limit(limit)
 
