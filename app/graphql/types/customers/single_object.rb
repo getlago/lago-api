@@ -7,7 +7,7 @@ module Types
 
       field :invoices, [Types::Invoices::Object]
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
-      field :applied_coupon, Types::AppliedCoupons::Object, null: true
+      field :applied_coupons, [Types::AppliedCoupons::Object], null: true
 
       def invoices
         object.invoices.order(issuing_date: :desc)

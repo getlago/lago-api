@@ -1561,7 +1561,7 @@ type CustomerCollection {
 type CustomerDetails {
   addressLine1: String
   addressLine2: String
-  appliedCoupon: AppliedCoupon
+  appliedCoupons: [AppliedCoupon!]
 
   """
   Check if customer is deletable

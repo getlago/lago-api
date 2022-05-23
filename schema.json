@@ -4238,12 +4238,20 @@
               ]
             },
             {
-              "name": "appliedCoupon",
+              "name": "appliedCoupons",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "AppliedCoupon",
-                "ofType": null
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "AppliedCoupon",
+                    "ofType": null
+                  }
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
