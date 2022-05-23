@@ -27,5 +27,7 @@ module Types
     field :update_coupon, mutation: Mutations::Coupons::Update
     field :destroy_coupon, mutation: Mutations::Coupons::Destroy
     field :terminate_coupon, mutation: Mutations::Coupons::Terminate
+
+    field :terminate_applied_coupon, mutation: Mutations::AppliedCoupons::Terminate
   end
 end
