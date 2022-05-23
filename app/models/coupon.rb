@@ -33,11 +33,13 @@ class Coupon < ApplicationRecord
 
   scope :order_by_status_and_expiration, lambda {
     order(
-      [
-        'coupons.status ASC',
-        'coupons.expiration_type ASC',
-        'coupons.created_at + make_interval(days => COALESCE(coupons.expiration_duration, 0)) ASC',
-      ].join(', '),
+      Arel.sql(
+        [
+          'coupons.status ASC',
+          'coupons.expiration ASC',
+          'coupons.created_at + make_interval(days => COALESCE(coupons.expiration_duration, 0)) ASC',
+        ].join(', '),
+      ),
     )
   }
 

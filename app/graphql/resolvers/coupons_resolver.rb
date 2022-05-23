@@ -18,7 +18,7 @@ module Resolvers
 
       coupons = current_organization
         .coupons
-        .order(status: :asc, terminated_at: :asc)
+        .order_by_status_and_expiration
         .page(page)
         .limit(limit)
 
