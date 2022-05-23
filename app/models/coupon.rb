@@ -55,4 +55,10 @@ class Coupon < ApplicationRecord
     self.terminated_at ||= timestamp
     terminated!
   end
+
+  def expiration_date
+    return unless expiration_duration
+
+    created_at.to_date + object.expiration_duration.days
+  end
 end

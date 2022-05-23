@@ -23,6 +23,10 @@ Rails.application.routes.draw do
 
       resources :events, only: %i[create]
 
+      resources :coupons, only: %i[] do
+        post :assign, on: :collection
+      end
+
       resources :webhooks, only: %i[] do
         get :public_key, on: :collection
       end
