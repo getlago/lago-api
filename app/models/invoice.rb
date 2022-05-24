@@ -6,6 +6,7 @@ class Invoice < ApplicationRecord
   belongs_to :subscription
 
   has_many :fees
+  has_many :credits
 
   has_one :customer, through: :subscription
   has_one :organization, through: :subscription
