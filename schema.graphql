@@ -1865,7 +1865,7 @@ type Mutation {
   ): RegisterUser
 
   """
-  Unbassign a coupon from a customer
+  Unassign a coupon from a customer
   """
   terminateAppliedCoupon(
     """

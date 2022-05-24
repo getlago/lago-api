@@ -5954,7 +5954,7 @@
             },
             {
               "name": "terminateAppliedCoupon",
-              "description": "Unbassign a coupon from a customer",
+              "description": "Unassign a coupon from a customer",
               "type": {
                 "kind": "OBJECT",
                 "name": "AppliedCoupon",
