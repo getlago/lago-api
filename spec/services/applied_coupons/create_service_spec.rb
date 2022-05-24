@@ -64,7 +64,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('unable to find customer') }
+      it { expect(create_result.error).to eq('unable_to_find_customer') }
     end
 
     context 'when coupon is not found' do
@@ -72,7 +72,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon does not exists') }
+      it { expect(create_result.error).to eq('coupon_does_not_exist') }
     end
 
     context 'when coupon is inactive' do
@@ -80,7 +80,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon does not exists') }
+      it { expect(create_result.error).to eq('coupon_does_not_exist') }
     end
 
     context 'when customer does not have a subscription' do
@@ -155,7 +155,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('unable to find customer') }
+      it { expect(create_result.error).to eq('unable_to_find_customer') }
     end
 
     context 'when coupon is not found' do
@@ -163,7 +163,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon does not exists') }
+      it { expect(create_result.error).to eq('coupon_does_not_exist') }
     end
 
     context 'when coupon is inactive' do
@@ -171,7 +171,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon does not exists') }
+      it { expect(create_result.error).to eq('coupon_does_not_exist') }
     end
 
     context 'when customer does not have a subscription' do

@@ -7,7 +7,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
   let(:customer) { create(:customer, organization: organization) }
   let(:coupon) { create(:coupon, organization: organization) }
 
-  describe 'assign' do
+  describe 'apply' do
     before do
       create(:active_subscription, customer: customer)
     end
@@ -22,13 +22,13 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     it 'returns a success' do
       post_with_token(
         organization,
-        '/api/v1/coupons/assign',
-        { coupon: params },
+        '/api/v1/coupons/apply',
+        { applied_coupon: params },
       )
 
       expect(response).to have_http_status(:success)
 
-      result = JSON.parse(response.body, symbolize_names: true)[:coupon]
+      result = JSON.parse(response.body, symbolize_names: true)[:applied_coupon]
 
       aggregate_failures do
         expect(result[:lago_id]).to be_present
@@ -40,6 +40,20 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         expect(result[:expiration_date]).to be_nil
         expect(result[:created_at]).to be_present
         expect(result[:terminated_at]).to be_nil
+      end
+    end
+
+    context 'with invalid params' do
+      let(:params) do
+        {
+          name: 'Foo Bar',
+        }
+      end
+
+      it 'returns an unprocessable_entity' do
+        post_with_token(organization, '/api/v1/coupons/apply', { applied_coupon: params })
+
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end

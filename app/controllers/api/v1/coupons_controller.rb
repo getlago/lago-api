@@ -3,18 +3,18 @@
 module Api
   module V1
     class CouponsController < Api::BaseController
-      def assign
+      def apply
         service = AppliedCoupons::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
-          args: assign_params,
+          args: apply_params,
         )
 
         if result.success?
           render(
             json: ::V1::AppliedCouponSerializer.new(
               result.applied_coupon,
-              root_name: 'coupon',
+              root_name: 'applied_coupon',
             ),
           )
         else
@@ -24,8 +24,8 @@ module Api
 
       private
 
-      def assign_params
-        params.require(:coupon).permit(
+      def apply_params
+        params.require(:applied_coupon).permit(
           :customer_id,
           :coupon_code,
           :amount_cents,
