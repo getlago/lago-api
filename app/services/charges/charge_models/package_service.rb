@@ -13,6 +13,7 @@ module Charges
       def compute_amount(value)
         # NOTE: exclude free units from the count
         billed_units = value - free_units
+        return 0 if billed_units.negative?
 
         # NOTE: Check how many packages (groups of units) are consumed
         #       It's rounded up, because a group counts from its first unit
