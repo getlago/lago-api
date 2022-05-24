@@ -9,7 +9,7 @@ module V1
         item: {
           type: model.item_type,
           code: model.item_code,
-          name: modle.item_name,
+          name: model.item_name,
         },
       }
     end
