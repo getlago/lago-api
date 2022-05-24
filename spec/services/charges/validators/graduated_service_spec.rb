@@ -58,7 +58,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with no range per unit amount cents' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount_cents: nil, flat_amount_cents: 0 }]
+        [{ from_value: 0, to_value: nil, per_unit_amount: nil, flat_amount: '0' }]
       end
 
       it { expect(graduated_service.validate.error).to include(:invalid_amount) }
@@ -66,7 +66,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with invalid range per unit amount cents' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount_cents: 'foo', flat_amount_cents: 0 }]
+        [{ from_value: 0, to_value: nil, per_unit_amount: 'foo', flat_amount: '0' }]
       end
 
       it { expect(graduated_service.validate.error).to include(:invalid_amount) }
@@ -74,7 +74,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with negative range per unit amount cents' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount_cents: -2, flat_amount_cents: 0 }]
+        [{ from_value: 0, to_value: nil, per_unit_amount: '-2', flat_amount: 0 }]
       end
 
       it { expect(graduated_service.validate.error).to include(:invalid_amount) }
@@ -82,7 +82,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with no range flat amount cents' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount_cents: 0, flat_amount_cents: nil }]
+        [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: nil }]
       end
 
       it { expect(graduated_service.validate.error).to include(:invalid_amount) }
@@ -90,7 +90,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with invalid range flat amount cents' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount_cents: 0, flat_amount_cents: 'foo' }]
+        [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: 'foo' }]
       end
 
       it { expect(graduated_service.validate.error).to include(:invalid_amount) }
@@ -98,7 +98,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with negative range flat amount cents' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount_cents: 0, flat_amount_cents: -2 }]
+        [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '-2' }]
       end
 
       it { expect(graduated_service.validate.error).to include(:invalid_amount) }
@@ -110,20 +110,20 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
           {
             from_value: 0,
             to_value: 10,
-            per_unit_amount_cents: 0,
-            flat_amount_cents: 0,
+            per_unit_amount: '0',
+            flat_amount: '0',
           },
           {
             from_value: 11,
             to_value: 20,
-            per_unit_amount_cents: 10,
-            flat_amount_cents: 20,
+            per_unit_amount: '10',
+            flat_amount: '20',
           },
           {
             from_value: 21,
             to_value: nil,
-            per_unit_amount_cents: 15,
-            flat_amount_cents: 30,
+            per_unit_amount: '15',
+            flat_amount: '30',
           },
         ]
       end

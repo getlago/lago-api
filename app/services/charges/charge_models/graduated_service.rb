@@ -11,11 +11,14 @@ module Charges
 
       def compute_amount(value)
         ranges.reduce(0) do |result_amount, range|
+          flat_amount = BigDecimal(range[:flat_amount])
+          per_unit_amount = BigDecimal(range[:per_unit_amount])
+
           # NOTE: Add flat amount to the total
-          result_amount += range[:flat_amount_cents] unless value.zero?
+          result_amount += flat_amount unless value.zero?
 
           units = compute_range_units(range[:from_value], range[:to_value], value)
-          result_amount += units * range[:per_unit_amount_cents]
+          result_amount += units * per_unit_amount
 
           # NOTE: value is between the bounds of the current range,
           #       we must stop the loop

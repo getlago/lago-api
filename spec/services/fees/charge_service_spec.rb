@@ -16,7 +16,7 @@ RSpec.describe Fees::ChargeService do
       plan: subscription.plan,
       billable_metric: billable_metric,
       properties: {
-        amount_cents: 20,
+        amount: '20',
         amount_currency: 'EUR',
       },
     )
@@ -53,8 +53,8 @@ RSpec.describe Fees::ChargeService do
             {
               from_value: 0,
               to_value: nil,
-              per_unit_amount_cents: 10,
-              flat_amount_cents: 10,
+              per_unit_amount: '10',
+              flat_amount: '10',
             },
           ],
         )
@@ -131,9 +131,9 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.charge_id).to eq(charge.id)
-          expect(created_fee.amount_cents).to eq(20)
+          expect(created_fee.amount_cents).to eq(2000)
           expect(created_fee.amount_currency).to eq('EUR')
-          expect(created_fee.vat_amount_cents).to eq(4)
+          expect(created_fee.vat_amount_cents).to eq(400)
           expect(created_fee.vat_rate).to eq(20.0)
           expect(created_fee.units).to eq(1)
         end

@@ -11,7 +11,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
     {
       package_size: 10,
       free_units: 10,
-      amount_cents: 100,
+      amount: '100',
     }
   end
 
@@ -34,7 +34,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: 10,
           free_units: 10,
-          amount_cents: 'foo',
+          amount: 'foo',
         }
       end
 
@@ -46,7 +46,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: 10,
           free_units: 10,
-          amount_cents: -3,
+          amount: '-3',
         }
       end
 
@@ -57,7 +57,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
       let(:package_properties) do
         {
           free_units: 10,
-          amount_cents: 100,
+          amount: '100',
         }
       end
 
@@ -69,7 +69,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: 'foo',
           free_units: 10,
-          amount_cents: 100,
+          amount: '100',
         }
       end
 
@@ -81,7 +81,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: -3,
           free_units: 10,
-          amount_cents: 100,
+          amount: '100',
         }
       end
 
@@ -93,7 +93,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: 0,
           free_units: 10,
-          amount_cents: 100,
+          amount: '100',
         }
       end
 
@@ -104,7 +104,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
       let(:package_properties) do
         {
           package_size: 10,
-          amount_cents: 100,
+          amount: '100',
         }
       end
 
@@ -116,7 +116,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: 10,
           free_units: 'foo',
-          amount_cents: 100,
+          amount: '100',
         }
       end
 
@@ -128,7 +128,7 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         {
           package_size: 10,
           free_units: -3,
-          amount_cents: 100,
+          amount: '100',
         }
       end
 

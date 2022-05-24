@@ -14,7 +14,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       # NOTE: Standard and Package charge model
-      field :amount_cents, Integer, null: true
+      field :amount, String, null: true
 
       # NOTE: Graduated charge model
       field :graduated_ranges, [Types::Charges::GraduatedRange], null: true
@@ -23,10 +23,10 @@ module Types
       field :free_units, Integer, null: true
       field :package_size, Integer, null: true
 
-      def amount_cents
+      def amount
         return unless object.standard? || object.package?
 
-        object.properties['amount_cents']
+        object.properties['amount']
       end
 
       def graduated_ranges
