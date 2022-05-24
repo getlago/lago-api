@@ -29,7 +29,7 @@ class Fee < ApplicationRecord
   end
 
   def compute_vat
-    self.vat_amount_cents = (amount_cents * vat_rate / 100).to_i
+    self.vat_amount_cents = (amount_cents * vat_rate).fdiv(100).ceil
     self.vat_amount_currency = amount_currency
   end
 

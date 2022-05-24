@@ -242,5 +242,65 @@ RSpec.describe Invoices::CreateService, type: :service do
         end
       end
     end
+
+    context 'with applied coupon' do
+      let(:timestamp) { Time.zone.now.beginning_of_month }
+      let(:applied_coupon) do
+        create(
+          :applied_coupon,
+          customer: subscription.customer,
+          amount_cents: 10,
+          amount_currency: plan.amount_currency,
+        )
+      end
+
+      let(:plan) do
+        create(:plan, interval: 'monthly')
+      end
+
+      before { applied_coupon }
+
+      it 'creates an invoice' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.from_date).to eq(timestamp - 1.month)
+          expect(result.invoice.subscription).to eq(subscription)
+          expect(result.invoice.issuing_date.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+          expect(result.invoice.amount_cents).to eq(90)
+          expect(result.invoice.amount_currency).to eq('EUR')
+          expect(result.invoice.vat_amount_cents).to eq(18)
+          expect(result.invoice.vat_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(108)
+          expect(result.invoice.total_amount_currency).to eq('EUR')
+
+          expect(result.invoice.credits.count).to eq(1)
+        end
+      end
+
+      context 'when coupon has a difference currency' do
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            customer: subscription.customer,
+            amount_cents: 10,
+            amount_currency: 'NOK',
+          )
+        end
+
+        it 'ignore the coupon' do
+          result = invoice_service.create
+
+          expect(result).to be_success
+          expect(result.invoice.credits.count).to be_zero
+        end
+      end
+    end
   end
 end
