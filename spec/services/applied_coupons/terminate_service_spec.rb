@@ -1,0 +1,35 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe AppliedCoupons::TerminateService, type: :service do
+  subject(:terminate_service) { described_class.new(membership.user) }
+
+  let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
+
+  let(:coupon) { create(:coupon, status: 'active', organization: organization) }
+  let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+
+  describe 'terminate' do
+    it 'terminates the applied coupon' do
+      result = terminate_service.terminate(applied_coupon.id)
+
+      expect(result).to be_success
+      expect(result.applied_coupon).to be_terminated
+    end
+
+    context 'when applied coupon is already terminated' do
+      before { applied_coupon.mark_as_terminated! }
+
+      it 'does not impact the applied coupon' do
+        terminated_at = applied_coupon.reload.terminated_at
+        result = terminate_service.terminate(applied_coupon.id)
+
+        expect(result).to be_success
+        expect(result.applied_coupon).to be_terminated
+        expect(result.applied_coupon.terminated_at).to eq(terminated_at)
+      end
+    end
+  end
+end

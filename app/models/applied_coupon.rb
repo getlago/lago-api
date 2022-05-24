@@ -17,4 +17,9 @@ class AppliedCoupon < ApplicationRecord
 
   validates :amount_cents, numericality: { greater_than: 0 }
   validates :amount_currency, inclusion: { in: currency_list }
+
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
+    terminated!
+  end
 end
