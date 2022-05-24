@@ -34,7 +34,7 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
     coupons_response = result['data']['coupons']
 
     aggregate_failures do
-      expect(coupons_response['collection'].count).to eq(organization.coupons.count)
+      expect(coupons_response['collection'].count).to eq(organization.coupons.active.count)
       expect(coupons_response['collection'].first['id']).to eq(coupon.id)
       expect(coupons_response['collection'].first['canBeDeleted']).to be_truthy
 
