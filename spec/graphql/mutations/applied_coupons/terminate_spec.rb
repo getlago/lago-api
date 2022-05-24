@@ -29,7 +29,6 @@ RSpec.describe Mutations::AppliedCoupons::Terminate, type: :graphql do
       },
     )
 
-
     data = result['data']['terminateAppliedCoupon']
 
     expect(data['id']).to eq(applied_coupon.id)

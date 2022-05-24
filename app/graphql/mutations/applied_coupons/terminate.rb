@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
 
       graphql_name 'TerminateAppliedCoupon'
-      description 'Unbassign a coupon from a customer'
+      description 'Unassign a coupon from a customer'
 
       argument :id, ID, required: true
 
