@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::V1::CouponsController, type: :request do
+RSpec.describe Api::V1::AppliedCouponsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization: organization) }
   let(:coupon) { create(:coupon, organization: organization) }
@@ -22,7 +22,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     it 'returns a success' do
       post_with_token(
         organization,
-        '/api/v1/coupons/apply',
+        '/api/v1/applied_coupons',
         { applied_coupon: params },
       )
 
@@ -51,7 +51,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       end
 
       it 'returns an unprocessable_entity' do
-        post_with_token(organization, '/api/v1/coupons/apply', { applied_coupon: params })
+        post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
 
         expect(response).to have_http_status(:unprocessable_entity)
       end

@@ -2,12 +2,12 @@
 
 module Api
   module V1
-    class CouponsController < Api::BaseController
-      def apply
+    class AppliedCouponsController < Api::BaseController
+      def create
         service = AppliedCoupons::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
-          args: apply_params,
+          args: create_params,
         )
 
         if result.success?
@@ -24,7 +24,7 @@ module Api
 
       private
 
-      def apply_params
+      def create_params
         params.require(:applied_coupon).permit(
           :customer_id,
           :coupon_code,
