@@ -6,6 +6,7 @@ module V1
       {
         lago_id: model.id,
         lago_coupon_id: model.coupon.id,
+        coupon_code: model.coupon.code,
         customer_id: model.customer.customer_id,
         lago_customer_id: model.customer.id,
         amount_cents: model.amount_cents,
