@@ -6,7 +6,7 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        coupons(limit: 5) {
+        coupons(limit: 5, status: active) {
           collection { id canBeDeleted }
           metadata { currentPage, totalCount }
         }
@@ -18,7 +18,11 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:coupon) { create(:coupon, organization: organization) }
 
-  before { coupon }
+  before do
+    coupon
+
+    create(:coupon, organization: organization, status: :terminated)
+  end
 
   it 'returns a list of coupons' do
     result = execute_graphql(

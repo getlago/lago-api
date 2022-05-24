@@ -10,10 +10,11 @@ module Resolvers
     argument :ids, [ID], required: false, description: 'List of coupon IDs to fetch'
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :status, Types::Coupons::StatusEnum, required: false
 
     type Types::Coupons::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil)
+    def resolve(ids: nil, page: nil, limit: nil, status: nil)
       validate_organization!
 
       coupons = current_organization
@@ -22,6 +23,7 @@ module Resolvers
         .page(page)
         .limit(limit)
 
+      coupons = coupons.where(status: status) if status.present?
       coupons = coupons.where(id: ids) if ids.present?
 
       coupons

@@ -2106,6 +2106,7 @@ type Query {
     ids: [ID!]
     limit: Int
     page: Int
+    status: CouponStatusEnum
   ): CouponCollection!
 
   """
