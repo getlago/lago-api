@@ -19,12 +19,7 @@ module Coupons
         .active
         .time_limit
         .expired
-
-      coupons.find_each do |coupon|
-        coupon.mark_as_terminated!
-
-        coupon.applied_coupons.active.find_each(&:mark_as_terminated!)
-      end
+        .find_each(&:mark_as_terminated!)
     end
   end
 end

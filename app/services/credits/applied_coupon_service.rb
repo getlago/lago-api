@@ -12,16 +12,20 @@ module Credits
     def create
       return result if already_applied?
 
+      credit_amount = compute_amount
+
       new_credit = Credit.create!(
         invoice: invoice,
         applied_coupon: applied_coupon,
-        amount_cents: compute_amount,
+        amount_cents: credit_amount,
         amount_currency: applied_coupon.amount_currency,
       )
 
+      applied_coupon.mark_as_terminated! if credit_amount >= remaining_amount
+
       result.credit = new_credit
       result
-    rescue ActriveRecord::RecordInvalid => e
+    rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
     end
 
@@ -36,9 +40,16 @@ module Credits
     end
 
     def compute_amount
-      return invoice.amount_cents if applied_coupon.amount_cents > invoice.amount_cents
+      return invoice.amount_cents if remaining_amount > invoice.amount_cents
 
-      applied_coupon.amount_cents
+      remaining_amount
+    end
+
+    def remaining_amount
+      return @remaining_amount if @remaining_amount
+
+      already_applied_amount = applied_coupon.credits.sum(:amount_cents)
+      @remaining_amount = applied_coupon.amount_cents - already_applied_amount
     end
   end
 end

@@ -28,6 +28,13 @@ RSpec.describe Credits::AppliedCouponService do
       expect(result.credit.applied_coupon).to eq(applied_coupon)
     end
 
+    it 'terminates the applied coupon' do
+      result = credit_service.create
+
+      expect(result).to be_success
+      expect(applied_coupon.reload).to be_terminated
+    end
+
     context 'when coupon amount is higher than invoice amount' do
       let(:amount_cents) { 10 }
 
@@ -36,6 +43,13 @@ RSpec.describe Credits::AppliedCouponService do
 
         expect(result).to be_success
         expect(result.credit.amount_cents).to eq(10)
+      end
+
+      it 'does not terminate the applied coupon' do
+        result = credit_service.create
+
+        expect(result).to be_success
+        expect(applied_coupon.reload).not_to be_terminated
       end
     end
 
@@ -53,6 +67,34 @@ RSpec.describe Credits::AppliedCouponService do
       it 'does not create another credit' do
         expect { credit_service.create }
           .not_to change(Credit, :count)
+      end
+    end
+
+    context 'when coupon is partialy used' do
+      before do
+        create(
+          :credit,
+          applied_coupon: applied_coupon,
+          amount_cents: 10,
+        )
+      end
+
+      it 'applies the remaining amount' do
+        result = credit_service.create
+
+        expect(result).to be_success
+
+        expect(result.credit.amount_cents).to eq(2)
+        expect(result.credit.amount_currency).to eq('EUR')
+        expect(result.credit.invoice).to eq(invoice)
+        expect(result.credit.applied_coupon).to eq(applied_coupon)
+      end
+
+      it 'terminates the applied coupon' do
+        result = credit_service.create
+
+        expect(result).to be_success
+        expect(applied_coupon.reload).to be_terminated
       end
     end
   end

@@ -144,9 +144,8 @@ module Invoices
 
     def should_create_credit?
       return false if applied_coupon.nil?
-      return false if applied_coupon.amount_currency != plan.amount_currency
 
-      applied_coupon.coupon.active?
+      applied_coupon.amount_currency == plan.amount_currency
     end
 
     def create_credit(invoice)
