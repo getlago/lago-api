@@ -13,6 +13,7 @@ module V1
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
         vat_amount_currency: model.vat_amount_currency,
+        units: model.units,
       }
     end
   end

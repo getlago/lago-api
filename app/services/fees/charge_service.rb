@@ -21,6 +21,7 @@ module Fees
         amount_cents: amount_result.amount_cents,
         amount_currency: charge.amount_currency,
         vat_rate: customer.applicable_vat_rate,
+        units: amount_result.units,
       )
 
       new_fee.compute_vat
