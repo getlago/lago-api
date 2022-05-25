@@ -35,12 +35,6 @@ module Types
       def can_be_deleted
         object.deletable?
       end
-
-      def expiration_date
-        return unless object.expiration_duration
-
-        object.created_at.to_date + object.expiration_duration.days
-      end
     end
   end
 end
