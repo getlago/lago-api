@@ -17,6 +17,8 @@ module Types
       field :payload, GraphQL::Types::JSON, null: false
       field :billable_metric_name, String, null: true
 
+      field :no_billable_metric, Boolean, null: false
+
       def received_at
         object.created_at
       end
@@ -35,6 +37,10 @@ module Types
             properties: object.properties || {},
           },
         }
+      end
+
+      def no_billable_metric
+        object.billable_metric_name.blank?
       end
     end
   end

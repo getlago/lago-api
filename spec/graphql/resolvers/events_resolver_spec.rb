@@ -15,7 +15,8 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
             timestamp,
             receivedAt,
             payload,
-            billableMetricName
+            billableMetricName,
+            noBillableMetric
           }
           metadata { currentPage, totalCount }
         }
@@ -59,6 +60,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       expect(events_response['collection'].first['receivedAt']).to eq(event.created_at.iso8601)
       expect(events_response['collection'].first['payload']).to be_present
       expect(events_response['collection'].first['billableMetricName']).to eq(billable_metric.name)
+      expect(events_response['collection'].first['noBillableMetric']).to eq(false)
     end
   end
 end

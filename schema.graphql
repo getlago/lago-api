@@ -1705,9 +1705,10 @@ type Event {
   code: String!
   customerId: String!
   id: ID!
+  noBillableMetric: Boolean!
   payload: JSON!
   receivedAt: ISO8601DateTime!
-  timestamp: ISO8601DateTime!
+  timestamp: ISO8601DateTime
   transactionId: String
 }
 
