@@ -14,7 +14,7 @@ module Types
       end
 
       def applied_coupons
-        object.applied_coupons.active.order(created_at: :asc).first
+        object.applied_coupons.active.order(created_at: :asc)
       end
     end
   end
