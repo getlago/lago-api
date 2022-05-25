@@ -20,8 +20,20 @@ module Resolvers
         .order(timestamp: :desc)
         .includes(:customer)
         .joins('LEFT OUTER JOIN billable_metrics ON billable_metrics.code = events.code')
-        .where(billable_metrics: { organization_id: current_organization.id })
-        .select('events.*, billable_metrics.name as billable_metric_name')
+        .where(
+          [
+            'billable_metrics.organization_id = ?',
+            'billable_metrics.organization_id IS NULL',
+          ].join(' OR '),
+          current_organization.id,
+        )
+        .select(
+          [
+            'events.*',
+            'billable_metrics.name as billable_metric_name',
+            'billable_metrics.field_name as billable_metric_field_name',
+          ].join(','),
+        )
         .page(page)
         .per(limit)
     end

@@ -16,7 +16,8 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
             receivedAt,
             payload,
             billableMetricName,
-            noBillableMetric
+            matchBillableMetric,
+            matchCustomField
           }
           metadata { currentPage, totalCount }
         }
@@ -60,7 +61,48 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       expect(events_response['collection'].first['receivedAt']).to eq(event.created_at.iso8601)
       expect(events_response['collection'].first['payload']).to be_present
       expect(events_response['collection'].first['billableMetricName']).to eq(billable_metric.name)
-      expect(events_response['collection'].first['noBillableMetric']).to eq(false)
+      expect(events_response['collection'].first['matchBillableMetric']).to be_truthy
+      expect(events_response['collection'].first['matchCustomField']).to be_truthy
+    end
+  end
+
+  context 'with missing billable_metric' do
+    let(:event) do
+      create(
+        :event,
+        code: 'foo',
+        organization: organization,
+        timestamp: Time.zone.now - 2.days,
+        properties: { foo_bar: 1234 },
+      )
+    end
+
+    it 'returns a list of events' do
+      event
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+      )
+
+      events_response = result['data']['events']
+      expect(events_response['collection'].first['matchBillableMetric']).to be_falsey
+    end
+  end
+
+  context 'with missing custom field' do
+    let(:billable_metric) { create(:billable_metric, organization: organization, field_name: 'mandatory') }
+
+    it 'returns a list of events' do
+      event
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+      )
+
+      events_response = result['data']['events']
+      expect(events_response['collection'].first['matchCustomField']).to be_falsey
     end
   end
 end

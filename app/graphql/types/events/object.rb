@@ -17,7 +17,8 @@ module Types
       field :payload, GraphQL::Types::JSON, null: false
       field :billable_metric_name, String, null: true
 
-      field :no_billable_metric, Boolean, null: false
+      field :match_billable_metric, Boolean, null: false
+      field :match_custom_field, Boolean, null: false
 
       def received_at
         object.created_at
@@ -39,8 +40,14 @@ module Types
         }
       end
 
-      def no_billable_metric
-        object.billable_metric_name.blank?
+      def match_billable_metric
+        object.billable_metric_name.present?
+      end
+
+      def match_custom_field
+        return true if object.billable_metric_field_name.blank?
+
+        object.properties.key?(object.billable_metric_field_name)
       end
     end
   end
