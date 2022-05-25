@@ -213,6 +213,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_23_124137) do
     t.datetime "updated_at", null: false
   end
 
+  add_foreign_key "add_ons", "organizations"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"

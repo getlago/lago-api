@@ -2,7 +2,7 @@
 
 module Types
   module AddOns
-    class SingleObject < Types::Coupons::Object
+    class SingleObject < Types::AddOns::Object
       graphql_name 'AddOnDetails'
     end
   end

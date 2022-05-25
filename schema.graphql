@@ -18,26 +18,12 @@ type AddOnCollection {
 type AddOnDetails {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
-
-  """
-  Check if coupon is deletable
-  """
-  canBeDeleted: Boolean!
-  code: String
+  code: String!
   createdAt: ISO8601DateTime!
-
-  """
-  Number of customers using this coupon
-  """
-  customerCount: Int!
-  expiration: CouponExpiration!
-  expirationDate: ISO8601Date
-  expirationDuration: Int
+  description: String
   id: ID!
   name: String!
   organization: Organization
-  status: CouponStatusEnum!
-  terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
 }
 
@@ -2332,7 +2318,7 @@ input UpdateAddOnInput {
   clientMutationId: String
   code: String!
   description: String
-  id: String!
+  id: ID!
   name: String!
 }
 

@@ -9,8 +9,8 @@ module AddOns
         code: args[:code],
         description: args[:description],
         amount_cents: args[:amount_cents],
-        amount_currency: args[:amount_currency]
-        )
+        amount_currency: args[:amount_currency],
+      )
 
       result.add_on = add_on
       result

@@ -8,7 +8,7 @@ module Mutations
       graphql_name 'UpdateAddOn'
       description 'Update an existing add-on'
 
-      argument :id, String, required: true
+      argument :id, ID, required: true
       argument :name, String, required: true
       argument :code, String, required: true
       argument :description, String, required: false
