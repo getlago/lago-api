@@ -13,7 +13,7 @@ module Types
         object.invoices.order(issuing_date: :desc)
       end
 
-      def applied_coupon
+      def applied_coupons
         object.applied_coupons.active.order(created_at: :asc).first
       end
     end
