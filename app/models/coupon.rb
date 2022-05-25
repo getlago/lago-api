@@ -66,6 +66,6 @@ class Coupon < ApplicationRecord
   def expiration_date
     return unless expiration_duration
 
-    created_at.to_date + object.expiration_duration.days
+    created_at.to_date + expiration_duration.days
   end
 end

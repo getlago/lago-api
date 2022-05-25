@@ -29,7 +29,7 @@ module Types
       end
 
       def customer_count
-        0 # TODO: Add it with logic to assign coupon to a customer
+        object.applied_coupons.active.count
       end
 
       def can_be_deleted
