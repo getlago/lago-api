@@ -16,5 +16,10 @@ module Types
 
     # Validation errors
     value 'user_already_exists', 'User already exists in the database.'
+
+    # Customer related errors
+    value 'no_active_subscription', 'Customer does not have an active subscription.'
+    value 'currencies_does_not_match', 'Currency from customer subscription differs from the provided one.'
+    value 'coupon_already_applied', 'Coupon is already applied to the customer'
   end
 end

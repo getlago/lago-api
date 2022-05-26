@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_05_23_124137) do
+ActiveRecord::Schema[7.0].define(version: 2022_05_25_121920) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -36,7 +36,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_23_124137) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true
+    t.datetime "terminated_at", precision: nil
+    t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true, where: "(status = 0)"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
   end

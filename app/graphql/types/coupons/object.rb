@@ -29,17 +29,11 @@ module Types
       end
 
       def customer_count
-        0 # TODO: Add it with logic to assign coupon to a customer
+        object.applied_coupons.active.count
       end
 
       def can_be_deleted
         object.deletable?
-      end
-
-      def expiration_date
-        return unless object.expiration_duration
-
-        object.created_at.to_date + object.expiration_duration.days
       end
     end
   end

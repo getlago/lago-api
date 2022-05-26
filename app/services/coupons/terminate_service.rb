@@ -13,5 +13,18 @@ module Coupons
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
     end
+
+    def terminate_all_expired
+      coupons = Coupon
+        .active
+        .time_limit
+        .expired
+
+      coupons.find_each do |coupon|
+        coupon.mark_as_terminated!
+
+        coupon.applied_coupons.active.find_each(&:mark_as_terminated!)
+      end
+    end
   end
 end

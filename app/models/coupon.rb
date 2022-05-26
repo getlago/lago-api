@@ -43,6 +43,13 @@ class Coupon < ApplicationRecord
     )
   }
 
+  scope :expired, lambda {
+    where(
+      '(coupons.created_at + make_interval(days => coupons.expiration_duration)) < ?',
+      Time.zone.now.beginning_of_day,
+    )
+  }
+
   def attached_to_customers?
     applied_coupons.exists?
   end
@@ -54,5 +61,11 @@ class Coupon < ApplicationRecord
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
+  end
+
+  def expiration_date
+    return unless expiration_duration
+
+    created_at.to_date + expiration_duration.days
   end
 end
