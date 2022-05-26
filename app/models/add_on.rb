@@ -5,6 +5,9 @@ class AddOn < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :applied_add_ons
+  has_many :customers, through: :applied_add_ons
+
   monetize :amount_cents
 
   validates :name, presence: true

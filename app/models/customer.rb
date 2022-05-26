@@ -8,6 +8,8 @@ class Customer < ApplicationRecord
   has_many :invoices, through: :subscriptions
   has_many :applied_coupons
   has_many :coupons, through: :applied_coupons
+  has_many :applied_add_ons
+  has_many :add_ons, through: :applied_add_ons
 
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, if: :country?

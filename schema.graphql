@@ -34,6 +34,14 @@ enum AggregationTypeEnum {
   unique_count_agg
 }
 
+type AppliedAddOn {
+  addOn: AddOn!
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  id: ID!
+}
+
 type AppliedCoupon {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
@@ -1622,6 +1630,7 @@ type CustomerCollection {
 type CustomerDetails {
   addressLine1: String
   addressLine2: String
+  appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
 
   """
