@@ -35,7 +35,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_26_101535) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["add_on_id", "customer_id"], name: "index_applied_add_ons_on_add_on_id_and_customer_id", unique: true
+    t.index ["add_on_id", "customer_id"], name: "index_applied_add_ons_on_add_on_id_and_customer_id"
     t.index ["add_on_id"], name: "index_applied_add_ons_on_add_on_id"
     t.index ["customer_id"], name: "index_applied_add_ons_on_customer_id"
   end

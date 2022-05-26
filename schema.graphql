@@ -3,6 +3,11 @@ type AddOn {
   amountCurrency: CurrencyEnum!
   code: String!
   createdAt: ISO8601DateTime!
+
+  """
+  Number of customers using this add-on
+  """
+  customerCount: Int!
   description: String
   id: ID!
   name: String!
@@ -20,6 +25,11 @@ type AddOnDetails {
   amountCurrency: CurrencyEnum!
   code: String!
   createdAt: ISO8601DateTime!
+
+  """
+  Number of customers using this add-on
+  """
+  customerCount: Int!
   description: String
   id: ID!
   name: String!
