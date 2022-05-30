@@ -10,7 +10,10 @@ RSpec.describe Webhooks::InvoicesService do
   let(:invoice) { create(:invoice, subscription: subscription) }
   let(:webhook_url) { 'http://foo.bar' }
 
-  before { create_list(:fee, 4, invoice: invoice) }
+  before do
+    create_list(:fee, 4, invoice: invoice)
+    create_list(:credit, 4, invoice: invoice)
+  end
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }

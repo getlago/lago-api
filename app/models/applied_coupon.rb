@@ -6,6 +6,8 @@ class AppliedCoupon < ApplicationRecord
   belongs_to :coupon
   belongs_to :customer
 
+  has_many :credits
+
   STATUSES = [
     :active,
     :terminated,

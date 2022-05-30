@@ -57,39 +57,15 @@ RSpec.describe Coupons::TerminateService, type: :service do
       )
     end
 
-    let(:to_expire_applied_coupon) do
-      create(
-        :applied_coupon,
-        coupon: to_expire_coupons.last,
-        status: 'active',
-      )
-    end
-
-    let(:to_keep_active_applied_coupon) do
-      create(
-        :applied_coupon,
-        coupon: to_keep_active_coupons.last,
-        status: 'active',
-      )
-    end
-
     before do
-      to_expire_applied_coupon
-      to_keep_active_applied_coupon
+      to_expire_coupons
+      to_keep_active_coupons
 
       terminate_service.terminate_all_expired
     end
 
     it 'terminates the expired coupons' do
       expect(Coupon.terminated.count).to eq(3)
-    end
-
-    it 'expires the applied coupons' do
-      expect(to_expire_applied_coupon.reload).to be_terminated
-    end
-
-    it 'does not update other applied coupons' do
-      expect(to_keep_active_applied_coupon.reload).to be_active
     end
   end
 end

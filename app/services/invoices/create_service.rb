@@ -23,6 +23,12 @@ module Invoices
 
         compute_amounts(invoice)
 
+        create_credit(invoice) if should_create_credit?
+
+        invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
+        invoice.total_amount_currency = plan.amount_currency
+        invoice.save!
+
         result.invoice = invoice
       end
 
@@ -37,7 +43,7 @@ module Invoices
 
     attr_accessor :subscription, :timestamp
 
-    delegate :plan, to: :subscription
+    delegate :plan, :customer, to: :subscription
 
     def from_date
       return @from_date if @from_date.present?
@@ -97,11 +103,6 @@ module Invoices
       invoice.amount_currency = plan.amount_currency
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
       invoice.vat_amount_currency = plan.amount_currency
-
-      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-      invoice.total_amount_currency = plan.amount_currency
-
-      invoice.save!
     end
 
     def create_subscription_fee(invoice)
@@ -133,6 +134,31 @@ module Invoices
 
     def should_deliver_webhook?
       subscription.organization.webhook_url?
+    end
+
+    def applied_coupon
+      return @applied_coupon if @applied_coupon
+
+      @applied_coupon = customer.applied_coupons.active.first
+    end
+
+    def should_create_credit?
+      return false if applied_coupon.nil?
+
+      applied_coupon.amount_currency == plan.amount_currency
+    end
+
+    def create_credit(invoice)
+      credit_result = Credits::AppliedCouponService.new(
+        invoice: invoice,
+        applied_coupon: applied_coupon,
+      ).create
+      raise credit_result.throw_error unless credit_result.success?
+
+      # NOTE: Since credit impact the invoice amount we need to recompute the amount
+      #       and the VAT amount
+      invoice.amount_cents = invoice.amount_cents - credit_result.credit.amount_cents
+      invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
     end
   end
 end
