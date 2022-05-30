@@ -19,6 +19,23 @@ module AppliedAddOns
       )
     end
 
+    def create_from_api(organization:, args:)
+      @customer = Customer.find_by(
+        customer_id: args[:customer_id],
+        organization_id: organization.id,
+      )
+
+      @add_on = AddOn.find_by(
+        code: args[:add_on_code],
+        organization_id: organization.id,
+      )
+
+      process_creation(
+        amount_cents: args[:amount_cents] || add_on&.amount_cents,
+        amount_currency: args[:amount_currency] || add_on&.amount_currency,
+      )
+    end
+
     private
 
     attr_reader :customer, :add_on
