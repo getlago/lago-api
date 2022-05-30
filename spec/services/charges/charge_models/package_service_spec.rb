@@ -30,7 +30,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
     context 'when free units is higher than the value' do
       before { charge.properties['free_units'] = 200 }
 
-      it { expect(package_service.apply(value: 121).amount_cents).to eq(0) }
+      it { expect(package_service.apply(value: 121).amount).to eq(0) }
     end
   end
 end
