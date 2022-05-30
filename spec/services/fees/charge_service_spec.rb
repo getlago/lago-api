@@ -7,8 +7,23 @@ RSpec.describe Fees::ChargeService do
     described_class.new(invoice: invoice, charge: charge)
   end
 
-  let(:subscription) { create(:subscription) }
-  let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:subscription) do
+    create(
+      :subscription,
+      status: :active,
+      started_at: DateTime.parse('2022-03-15'),
+    )
+  end
+
+  let(:invoice) do
+    create(
+      :invoice,
+      subscription: subscription,
+      from_date: subscription.started_at,
+      to_date: subscription.started_at.end_of_month,
+    )
+  end
+
   let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
   let(:charge) do
     create(
@@ -16,7 +31,7 @@ RSpec.describe Fees::ChargeService do
       plan: subscription.plan,
       billable_metric: billable_metric,
       properties: {
-        amount_cents: 20,
+        amount: '20',
         amount_currency: 'EUR',
       },
     )
@@ -53,10 +68,21 @@ RSpec.describe Fees::ChargeService do
             {
               from_value: 0,
               to_value: nil,
-              per_unit_amount_cents: 10,
-              flat_amount_cents: 10,
+              per_unit_amount: '0.01',
+              flat_amount: '0.01',
             },
           ],
+        )
+      end
+
+      before do
+        create_list(
+          :event,
+          4,
+          organization: subscription.organization,
+          customer: subscription.customer,
+          code: charge.billable_metric.code,
+          timestamp: DateTime.parse('2022-03-16'),
         )
       end
 
@@ -71,11 +97,11 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.charge_id).to eq(charge.id)
-          expect(created_fee.amount_cents).to eq(0)
+          expect(created_fee.amount_cents).to eq(5)
           expect(created_fee.amount_currency).to eq('EUR')
-          expect(created_fee.vat_amount_cents).to eq(0)
+          expect(created_fee.vat_amount_cents).to eq(1)
           expect(created_fee.vat_rate).to eq(20.0)
-          expect(created_fee.units).to eq(0)
+          expect(created_fee.units.to_s).to eq('4.0')
         end
       end
     end
@@ -131,9 +157,9 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.id).not_to be_nil
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.charge_id).to eq(charge.id)
-          expect(created_fee.amount_cents).to eq(20)
+          expect(created_fee.amount_cents).to eq(2000)
           expect(created_fee.amount_currency).to eq('EUR')
-          expect(created_fee.vat_amount_cents).to eq(4)
+          expect(created_fee.vat_amount_cents).to eq(400)
           expect(created_fee.vat_rate).to eq(20.0)
           expect(created_fee.units).to eq(1)
         end

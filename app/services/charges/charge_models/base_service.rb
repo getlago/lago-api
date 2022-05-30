@@ -10,7 +10,7 @@ module Charges
 
       def apply(value:)
         result.units = value
-        result.amount_cents = compute_amount(value).to_i
+        result.amount = compute_amount(value)
         result
       end
 

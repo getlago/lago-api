@@ -11,7 +11,7 @@ module Types
       argument :amount_currency, Types::CurrencyEnum, required: true
 
       # NOTE: Standard and Package charge model
-      argument :amount_cents, Integer, required: false
+      argument :amount, String, required: false
 
       # NOTE: Graduated charge model
       argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false

@@ -995,11 +995,11 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "amountCents",
+              "name": "amount",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Int",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -1235,11 +1235,11 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCents",
+              "name": "amount",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Int",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -5833,14 +5833,14 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "flatAmountCents",
+              "name": "flatAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Int",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -5869,14 +5869,14 @@
               ]
             },
             {
-              "name": "perUnitAmountCents",
+              "name": "perUnitAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Int",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -5941,14 +5941,14 @@
               "deprecationReason": null
             },
             {
-              "name": "perUnitAmountCents",
+              "name": "perUnitAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Int",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -5957,14 +5957,14 @@
               "deprecationReason": null
             },
             {
-              "name": "flatAmountCents",
+              "name": "flatAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Int",
+                  "name": "String",
                   "ofType": null
                 }
               },

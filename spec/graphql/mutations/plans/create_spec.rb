@@ -46,7 +46,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           charges: [
             {
               billableMetricId: billable_metrics.first.id,
-              amountCents: 100,
+              amount: '100.00',
               amountCurrency: 'USD',
               chargeModel: 'standard',
             },
@@ -54,7 +54,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               billableMetricId: billable_metrics.second.id,
               amountCurrency: 'EUR',
               chargeModel: 'package',
-              amountCents: 300,
+              amount: '300.00',
               freeUnits: 10,
               packageSize: 10,
             },
@@ -66,14 +66,14 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 {
                   fromValue: 0,
                   toValue: 10,
-                  perUnitAmountCents: 2,
-                  flatAmountCents: 0,
+                  perUnitAmount: '2.00',
+                  flatAmount: '0',
                 },
                 {
                   fromValue: 11,
                   toValue: nil,
-                  perUnitAmountCents: 3,
-                  flatAmountCents: 3,
+                  perUnitAmount: '3.00',
+                  flatAmount: '3.00',
                 },
               ],
             },

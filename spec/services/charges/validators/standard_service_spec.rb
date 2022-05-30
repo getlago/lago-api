@@ -16,19 +16,19 @@ RSpec.describe Charges::Validators::StandardService, type: :service do
     end
 
     context 'when amount is not an integer' do
-      let(:properties) { { amount_cents: 'Foo' } }
+      let(:properties) { { amount: 'Foo' } }
 
       it { expect(standard_service.validate.error).to include(:invalid_amount) }
     end
 
     context 'when amount is negative' do
-      let(:properties) { { amount_cents: -12 } }
+      let(:properties) { { amount: '-12' } }
 
       it { expect(standard_service.validate.error).to include(:invalid_amount) }
     end
 
     context 'with an applicable amount' do
-      let(:properties) { { amount_cents: 12 } }
+      let(:properties) { { amount: '12' } }
 
       it { expect(standard_service.validate).to be_success }
     end
