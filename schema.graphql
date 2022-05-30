@@ -1700,6 +1700,24 @@ type DestroyPlanPayload {
   id: ID
 }
 
+type Event {
+  billableMetricName: String
+  code: String!
+  customerId: String!
+  id: ID!
+  matchBillableMetric: Boolean!
+  matchCustomField: Boolean!
+  payload: JSON!
+  receivedAt: ISO8601DateTime!
+  timestamp: ISO8601DateTime
+  transactionId: String
+}
+
+type EventCollection {
+  collection: [Event!]!
+  metadata: CollectionMetadata!
+}
+
 type GraduatedRange {
   flatAmountCents: Int!
   fromValue: Int!
@@ -1741,6 +1759,11 @@ type Invoice {
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
 }
+
+"""
+Represents untyped JSON
+"""
+scalar JSON
 
 type LoginUser {
   token: String!
@@ -2135,6 +2158,11 @@ type Query {
     limit: Int
     page: Int
   ): CustomerCollection!
+
+  """
+  Query events of an organization
+  """
+  events(limit: Int, page: Int): EventCollection
 
   """
   Query a single plan of an organization

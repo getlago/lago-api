@@ -15,6 +15,7 @@ module Types
     field :coupon, resolver: Resolvers::CouponResolver
     field :customers, resolver: Resolvers::CustomersResolver
     field :customer, resolver: Resolvers::CustomerResolver
+    field :events, resolver: Resolvers::EventsResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :plan, resolver: Resolvers::PlanResolver
   end
