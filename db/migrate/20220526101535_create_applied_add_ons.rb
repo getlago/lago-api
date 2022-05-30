@@ -7,7 +7,7 @@ class CreateAppliedAddOns < ActiveRecord::Migration[7.0]
       t.integer :amount_cents, null: false
       t.string :amount_currency, null: false
 
-      t.index %i[add_on_id customer_id], unique: true
+      t.index %i[add_on_id customer_id]
 
       t.timestamps
     end

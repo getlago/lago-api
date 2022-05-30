@@ -7,7 +7,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     <<~GQL
       query($addOnId: ID!) {
         addOn(id: $addOnId) {
-          id, name
+          id, name, customerCount
         }
       }
     GQL
@@ -16,6 +16,17 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:add_on) { create(:add_on, organization: organization) }
+  let(:customer) { create(:customer, organization: organization) }
+  let(:customer2) { create(:customer, organization: organization) }
+  let(:applied_add_on_list) { create_list(:applied_add_on, 3, add_on: add_on, customer: customer) }
+  let(:applied_add_on) { create(:applied_add_on, add_on: add_on, customer: customer2) }
+
+  before do
+    customer
+    customer2
+    applied_add_on_list
+    applied_add_on
+  end
 
   it 'returns a single add-on' do
     result = execute_graphql(
@@ -32,6 +43,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     aggregate_failures do
       expect(add_on_response['id']).to eq(add_on.id)
       expect(add_on_response['name']).to eq(add_on.name)
+      expect(add_on_response['customerCount']).to eq(2)
     end
   end
 

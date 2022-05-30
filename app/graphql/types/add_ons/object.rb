@@ -17,6 +17,12 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      field :customer_count, Integer, null: false, description: 'Number of customers using this add-on'
+
+      def customer_count
+        object.applied_add_ons.select(:customer_id).distinct.count
+      end
     end
   end
 end
