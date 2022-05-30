@@ -14,6 +14,8 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
             transactionId,
             timestamp,
             receivedAt,
+            ipAddress,
+            apiClient,
             payload,
             billableMetricName,
             matchBillableMetric,
@@ -37,6 +39,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       organization: organization,
       timestamp: Time.zone.now - 2.days,
       properties: { foo_bar: 1234 },
+      metadata: { user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11' },
     )
   end
 
@@ -59,6 +62,8 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       expect(events_response['collection'].first['transactionId']).to eq(event.transaction_id)
       expect(events_response['collection'].first['timestamp']).to eq(event.timestamp.iso8601)
       expect(events_response['collection'].first['receivedAt']).to eq(event.created_at.iso8601)
+      expect(events_response['collection'].first['ipAddress']).to eq(event.metadata['ip_address'])
+      expect(events_response['collection'].first['apiClient']).to eq(event.metadata['user_agent'])
       expect(events_response['collection'].first['payload']).to be_present
       expect(events_response['collection'].first['billableMetricName']).to eq(billable_metric.name)
       expect(events_response['collection'].first['matchBillableMetric']).to be_truthy
