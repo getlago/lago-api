@@ -10,6 +10,7 @@ class Organization < ApplicationRecord
   has_many :invoices, through: :customers
   has_many :events
   has_many :coupons
+  has_many :add_ons
 
   before_create :generate_api_key
 

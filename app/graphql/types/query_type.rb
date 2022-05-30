@@ -9,6 +9,8 @@ module Types
 
     field :current_user, resolver: Resolvers::CurrentUserResolver
 
+    field :add_ons, resolver: Resolvers::AddOnsResolver
+    field :add_on, resolver: Resolvers::AddOnResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :coupons, resolver: Resolvers::CouponsResolver

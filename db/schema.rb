@@ -15,6 +15,19 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_25_122759) do
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
+  create_table "add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "description"
+    t.bigint "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true
+    t.index ["organization_id"], name: "index_add_ons_on_organization_id"
+  end
+
   create_table "applied_coupons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "coupon_id", null: false
     t.uuid "customer_id", null: false
@@ -213,6 +226,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_25_122759) do
     t.datetime "updated_at", null: false
   end
 
+  add_foreign_key "add_ons", "organizations"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"

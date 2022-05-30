@@ -30,5 +30,9 @@ module Types
 
     field :create_applied_coupon, mutation: Mutations::AppliedCoupons::Create
     field :terminate_applied_coupon, mutation: Mutations::AppliedCoupons::Terminate
+
+    field :create_add_on, mutation: Mutations::AddOns::Create
+    field :update_add_on, mutation: Mutations::AddOns::Update
+    field :destroy_add_on, mutation: Mutations::AddOns::Destroy
   end
 end
