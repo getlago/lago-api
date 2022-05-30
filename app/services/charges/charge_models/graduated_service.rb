@@ -3,12 +3,7 @@
 module Charges
   module ChargeModels
     class GraduatedService < Charges::ChargeModels::BaseService
-      def apply(value:)
-        result.amount_cents = compute_amount(value).to_i
-        result
-      end
-
-      private
+      protected
 
       def ranges
         charge.properties.map(&:with_indifferent_access)

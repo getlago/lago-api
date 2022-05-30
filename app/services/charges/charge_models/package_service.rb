@@ -3,12 +3,8 @@
 module Charges
   module ChargeModels
     class PackageService < Charges::ChargeModels::BaseService
-      def apply(value:)
-        result.amount_cents = compute_amount(value).to_i
-        result
-      end
 
-      private
+      protected
 
       def compute_amount(value)
         # NOTE: exclude free units from the count

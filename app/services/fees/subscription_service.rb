@@ -18,6 +18,7 @@ module Fees
         amount_cents: new_amount_cents.round,
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
+        units: 1,
       )
 
       new_fee.compute_vat

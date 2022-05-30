@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_05_25_121920) do
+ActiveRecord::Schema[7.0].define(version: 2022_05_25_122759) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -131,6 +131,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_25_121920) do
     t.float "vat_rate"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "units", default: "0.0", null: false
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
