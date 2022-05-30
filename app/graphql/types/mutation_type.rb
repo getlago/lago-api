@@ -34,5 +34,7 @@ module Types
     field :create_add_on, mutation: Mutations::AddOns::Create
     field :update_add_on, mutation: Mutations::AddOns::Update
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
+
+    field :create_applied_add_on, mutation: Mutations::AppliedAddOns::Create
   end
 end
