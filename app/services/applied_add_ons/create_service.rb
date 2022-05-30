@@ -58,6 +58,12 @@ module AppliedAddOns
         amount_currency: amount_currency,
       )
 
+      BillAddOnJob.perform_later(
+        active_subscription,
+        applied_add_on,
+        Time.zone.now.to_date
+      )
+
       result.applied_add_on = applied_add_on
       result
     rescue ActiveRecord::RecordInvalid => e

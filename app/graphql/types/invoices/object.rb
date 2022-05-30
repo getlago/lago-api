@@ -14,8 +14,8 @@ module Types
       field :vat_amount_cents, Integer, null: false
       field :vat_amount_currency, Types::CurrencyEnum, null: false
 
-      field :from_date, GraphQL::Types::ISO8601Date, null: false
-      field :to_date, GraphQL::Types::ISO8601Date, null: false
+      field :from_date, GraphQL::Types::ISO8601Date, null: true
+      field :to_date, GraphQL::Types::ISO8601Date, null: true
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
