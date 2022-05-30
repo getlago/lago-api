@@ -11,6 +11,7 @@ module Api
           current_organization,
           create_params,
           Time.zone.now.to_i,
+          event_metadata,
         )
 
         head(:ok)
@@ -28,6 +29,13 @@ module Api
             :timestamp,
             properties: {},
           )
+      end
+
+      def event_metadata
+        {
+          user_agent: request.user_agent,
+          ip_address: request.remote_ip,
+        }
       end
     end
   end
