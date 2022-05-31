@@ -64,4 +64,4 @@ The contribution documentation is available [here](https://github.com/getlago/la
 
 ## License
 
-Lago Node.js client is distributed under [AGPL-3.0](LICENSE).
+Lago is distributed under [AGPL-3.0](LICENSE).
