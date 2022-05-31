@@ -97,6 +97,15 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       it { expect(create_result.error).to eq('coupon_already_applied') }
     end
 
+    context 'when an other coupon is already applied to the customer' do
+      let(:other_coupon) { create(:coupon, status: 'active', organization: organization) }
+
+      before { create(:applied_coupon, customer: customer, coupon: other_coupon) }
+
+      it { expect(create_result).not_to be_success }
+      it { expect(create_result.error).to eq('coupon_already_applied') }
+    end
+
     context 'when currency of coupon does not match customer currency' do
       let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
 

@@ -70,7 +70,7 @@ module AppliedCoupons
     end
 
     def coupon_already_applied?
-      customer.applied_coupons.active.where(coupon_id: coupon.id).exists?
+      customer.applied_coupons.active.exists?
     end
 
     def applicable_currency?(currency)
