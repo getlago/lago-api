@@ -1,0 +1,24 @@
+name: Release
+on:
+  repository_dispatch:
+    types: [release]
+jobs:
+  build-image:
+    name: Build Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Log In to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action
+        with:
+          context: .
+          push: true
+          tags: getlago/api:${{ github.event.client_payload.version }}
