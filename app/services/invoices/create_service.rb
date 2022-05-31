@@ -107,13 +107,13 @@ module Invoices
 
     def create_subscription_fee(invoice)
       fee_result = Fees::SubscriptionService.new(invoice).create
-      raise fee_result.throw_error unless fee_result.success?
+      fee_result.throw_error unless fee_result.success?
     end
 
     def create_charges_fees(invoice)
       subscription.plan.charges.each do |charge|
         fee_result = Fees::ChargeService.new(invoice: invoice, charge: charge).create
-        raise fee_result.throw_error unless fee_result.success?
+        fee_result.throw_error unless fee_result.success?
       end
     end
 
@@ -153,7 +153,7 @@ module Invoices
         invoice: invoice,
         applied_coupon: applied_coupon,
       ).create
-      raise credit_result.throw_error unless credit_result.success?
+      credit_result.throw_error unless credit_result.success?
 
       # NOTE: Since credit impact the invoice amount we need to recompute the amount
       #       and the VAT amount

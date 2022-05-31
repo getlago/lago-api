@@ -10,6 +10,6 @@ class CreateEventJob < ApplicationJob
       timestamp: timestamp,
     )
 
-    raise result.throw_error unless result.success?
+    result.throw_error unless result.success?
   end
 end
