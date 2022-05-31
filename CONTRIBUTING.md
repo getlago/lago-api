@@ -25,6 +25,7 @@ The following is a set of guidelines for contributing to Lago and its packages, 
 [Styleguides](#styleguides)
 
 - [Git Commit Messages](#git-commit-messages)
+- [General style guide](#general-style-guide)
 
 [Additional Notes](#additional-notes)
 
@@ -36,9 +37,10 @@ This project and everyone participating in it is governed by the [Code of Conduc
 
 ## I don't want to read this whole thing I just have a question!!!
 
-- [Github Discussions, the official Lago](https://github.com/getlago/lago-api/discussions)
-- [Lago FAQ](https://github.com/getlago/lago-api/discussions)
+- [Github Discussions, the official Lago](https://github.com/getlago/lago/discussions)
+- [Lago FAQ](https://github.com/getlago/lago/discussions)
 - [Lago official documentation](https://doc.getlago.com/docs/guide/intro)
+- [Lago Discussions](https://community.getlago.com/)
 
 ## What should I know before I get started?
 
@@ -48,9 +50,9 @@ Lago is an open source project. When you initially consider contributing to Lago
 
 Here's a list of Lago's elements:
 
-- [lago/core](https://github.com/getlago/lago) - Lago Core!
-- [lago/front](https://github.com/getlago/lago-front) - Lago's UI (you are here 📍)
-- [lago/api](https://github.com/getlago/lago-api) - Lago's API.
+- [lago](https://github.com/getlago/lago) - The entry point of the lago application
+- [lago/front](https://github.com/getlago/lago-front) - Lago's UI
+- [lago/api](https://github.com/getlago/lago-api) - Lago's API (you are here 📍)
 
 #### The different clients
 
@@ -62,7 +64,7 @@ Also, because Lago is extensible, it's possible that a feature you've become acc
 
 ### Design Decisions
 
-If you have a question around how we do things, check to see if it is documented in the wiki of the related repository. If it is _not_ documented there, please open a new topic on [Github Discussions](https://github.com/getlago/lago-api/discussions) and ask your question.
+If you have a question around how we do things, check to see if it is documented in the wiki of the related repository. If it is _not_ documented there, please open a new topic on [Github Discussions](https://github.com/getlago/lago/discussions) and ask your question.
 
 ## How Can I Contribute?
 
@@ -70,13 +72,13 @@ If you have a question around how we do things, check to see if it is documented
 
 This section guides you through submitting a bug report for Lago. Following these guidelines helps maintainers and the community understand your report :pencil:, reproduce the behavior :computer: :computer:, and find related reports :mag_right:.
 
-Before creating bug reports, please check [this list](#before-submitting-a-bug-report) as you might find out that you don't need to create one. When you are creating a bug report, please [include as many details as possible](#how-do-i-submit-a-good-bug-report). Fill out the required [template](https://github.com/getlago/lago-api/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBUG%5D%3A+), the information it asks for helps us resolve issues faster.
+Before creating bug reports, please check [this list](#before-submitting-a-bug-report) as you might find out that you don't need to create one. When you are creating a bug report, please [include as many details as possible](#how-do-i-submit-a-good-bug-report). Fill out the required [template](https://github.com/getlago/lago-api/issues/new?assignees=&labels=%F0%9F%90%9E+bug&template=bug.md&title=%5BBUG%5D%3A+), the information it asks for helps us resolve issues faster.
 
 > **Note:** If you find a **Closed** issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
 
 #### Before Submitting A Bug Report
 
-- **Check the [discussions](https://github.com/getlago/lago-api/discussions)** for a list of common questions and problems.
+- **Check the [discussions](https://github.com/getlago/lago/discussions)** for a list of common questions and problems.
 - **Determine [which element the problem should be reported in](#lago-and-packages)**.
 - **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3Agetlago)** to see if the problem has already been reported. If it has **and the issue is still open**, add a comment to the existing issue instead of opening a new one.
 
@@ -112,7 +114,7 @@ Include details about your configuration and environment:
 
 This section guides you through submitting an enhancement suggestion for Lago, including completely new features and minor improvements to existing functionality. Following these guidelines helps maintainers and the community understand your suggestion :pencil: and find related suggestions :mag_right:.
 
-Before creating enhancement suggestions, please check [this list](#before-submitting-an-enhancement-suggestion) as you might find out that you don't need to create one. When you are creating an enhancement suggestion, please [include as many details as possible](#how-do-i-submit-a-good-enhancement-suggestion). Fill in the [template](https://github.com/getlago/lago-api/issues/new?assignees=&labels=feature&template=feature_request.md&title=%5BFEAT%5D%3A+), including the steps that you imagine you would take if the feature you're requesting existed.
+Before creating enhancement suggestions, please check [this list](#before-submitting-an-enhancement-suggestion) as you might find out that you don't need to create one. When you are creating an enhancement suggestion, please [include as many details as possible](#how-do-i-submit-a-good-enhancement-suggestion). Fill in the [template](https://github.com/getlago/lago-node-js/issues/new?assignees=&labels=%F0%9F%9B%A0+feature&template=feature.md&title=%5BFEAT%5D%3A+), including the steps that you imagine you would take if the feature you're requesting existed.
 
 #### Before Submitting An Enhancement Suggestion
 
@@ -144,7 +146,7 @@ Both issue lists are sorted by total number of comments. While not perfect, numb
 
 #### Local development
 
-Lago Core and all packages can be developed locally. For instructions on how to do this, see the following sections in the [Lago documentation](https://github.com/getlago/lago-api):
+Lago and all packages can be developed locally. For instructions on how to do this, see the dedicated section in the README or in the wiki of the related repository.
 
 ### Pull Requests
 
@@ -188,21 +190,23 @@ Please open an issue if you have suggestions for new labels.
 
 #### Type of Issue and Issue State
 
-| Label name       | :mag_right:                                                         | Description                                                |
-| ---------------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `feature`        | [Issues](https://github.com/getlago/lago-api/labels/feature)        | Feature requests.                                          |
-| `enhancement`    | [Issues](https://github.com/getlago/lago-api/labels/enhancement)    | Improvement requests (of existing features).               |
-| `documentation`  | [Issues](https://github.com/getlago/lago-api/labels/documentation)  | Feature requests.                                          |
-| `bug`            | [Issues](https://github.com/getlago/lago-api/labels/bug)            | Confirmed bugs or reports that are very likely to be bugs. |
-| `infrastructure` | [Issues](https://github.com/getlago/lago-api/labels/Infrastructure) | Chore related issues                                       |
-| `dependencies`   | [Issues](https://github.com/getlago/lago-api/labels/dependencies)   | Issues reported on the wrong repository                    |
-
-You can find the other labels that will allow you to categorize more your issue [here](https://github.com/getlago/lago-api/labels)
+| Label name      | :mag_right:                                                                          | Description                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `feature`       | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%9B%A0%20feature)        | Feature requests.                                                                                                                    |
+| `improvement`   | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%8C%88%20improvement)    | Improvement requests (of existing features).                                                                                         |
+| `documentation` | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%93%84%20Documentation)  | Feature requests.                                                                                                                    |
+| `bug`           | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%90%9E%20bug)            | Confirmed bugs or reports that are very likely to be bugs.                                                                           |
+| `critical bug`  | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%99%80%20Critical%20bug) | Confirmed critical bugs or reports that are very likely to be bugs.                                                                  |
+| `chore`         | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%A5%B7%20chore)          | Chore related issues                                                                                                                 |
+| `help-wanted`   | [Issues](https://github.com/getlago/lago-api/labels/help-wanted)                         | The Lago core team would appreciate help from the community in resolving these issues.                                               |
+| `beginner`      | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%90%A3%20Beginner)       | Less complex issues which would be good first issues to work on for users who want to contribute to Lago.                            |
+| `wontfix`       | [Issues](https://github.com/getlago/lago-api/labels/%E2%9D%8C%20wontfix)           | The Lago core team has decided not to fix these issues for now, either because they're working as intended or for some other reason. |
+| `dependencies`  | [Issues](https://github.com/getlago/lago-api/labels/%F0%9F%94%97%20dependencies)   | Issues reported on the wrong repository                                                                                              |
 
 #### Pull Request Labels
 
 | Label name         | :mag_right:                                                                                      | Description                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `needs-review`     | [PR](https://github.com/getlago/lago-front/pulls?q=is%3Apr+is%3Aopen+review%3Arequired)          | Pull requests which need code review, and approval from maintainers or Lago core team.   |
-| `requires-changes` | [PR](https://github.com/getlago/lago-front/pulls?q=is%3Apr+is%3Aopen+review%3Achanges-requested) | Pull requests which need to be updated based on review comments and then reviewed again. |
-| `review-approved`  | [PR](https://github.com/getlago/lago-front/pulls?q=is%3Apr+is%3Aopen+review%3Aapproved)          | That has been approved                                                                   |
+| `needs-review`     | [PR](https://github.com/getlago/lago-api/pulls?q=is%3Apr+is%3Aopen+review%3Arequired)          | Pull requests which need code review, and approval from maintainers or Lago core team.   |
+| `requires-changes` | [PR](https://github.com/getlago/lago-api/pulls?q=is%3Apr+is%3Aopen+review%3Achanges-requested) | Pull requests which need to be updated based on review comments and then reviewed again. |
+| `review-approved`  | [PR](https://github.com/getlago/lago-api/pulls?q=is%3Apr+is%3Aopen+review%3Aapproved)          | That has been approved                                                                   |
