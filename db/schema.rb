@@ -239,6 +239,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_26_101535) do
   end
 
   add_foreign_key "add_ons", "organizations"
+  add_foreign_key "applied_add_ons", "add_ons"
+  add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
