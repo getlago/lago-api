@@ -14,8 +14,8 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.find_or_create_by!(
           subscription: subscription,
-          from_date: nil,
-          to_date: nil,
+          from_date: date,
+          to_date: date,
           issuing_date: date,
         )
 

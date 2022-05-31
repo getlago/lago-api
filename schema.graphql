@@ -1847,13 +1847,13 @@ type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
-  fromDate: ISO8601Date
+  fromDate: ISO8601Date!
   id: ID!
   issuingDate: ISO8601Date!
   plan: Plan
   sequentialId: ID!
   subscription: Subscription
-  toDate: ISO8601Date
+  toDate: ISO8601Date!
   totalAmountCents: Int!
   totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
