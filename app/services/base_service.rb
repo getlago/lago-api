@@ -11,7 +11,7 @@ class BaseService
     def format_message(result)
       return result.error unless result.error_details
 
-      "#{result.error} #{[result.error_details].flatten.join(', ')}"
+      "#{result.error}: #{[result.error_details].flatten.join(', ')}"
     end
   end
 
