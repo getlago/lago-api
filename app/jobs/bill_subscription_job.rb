@@ -11,6 +11,6 @@ class BillSubscriptionJob < ApplicationJob
       timestamp: timestamp,
     ).create
 
-    raise result.throw_error unless result.success?
+    result.throw_error unless result.success?
   end
 end
