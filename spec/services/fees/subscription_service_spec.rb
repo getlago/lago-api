@@ -370,6 +370,7 @@ RSpec.describe Fees::SubscriptionService do
         subscription: subscription,
         from_date: subscription.started_at.to_date,
         to_date: subscription.started_at.end_of_month.to_date,
+        issuing_date: subscription.started_at.end_of_month.to_date + 1.day,
       )
     end
 
@@ -407,6 +408,18 @@ RSpec.describe Fees::SubscriptionService do
           result = fees_subscription_service.create
 
           expect(result.fee.amount_cents).to eq(0)
+        end
+      end
+
+      context 'when plan is pay in advance' do
+        let(:trial_duration) { 45 }
+
+        before { plan.update(pay_in_advance: true) }
+
+        it 'creates a fee with prorated amount on trial period' do
+          result = fees_subscription_service.create
+
+          expect(result.fee.amount_cents).to eq(50)
         end
       end
     end
