@@ -18,6 +18,7 @@ module Resolvers
 
       add_ons = current_organization
         .add_ons
+        .order(created_at: :desc)
         .page(page)
         .limit(limit)
 
