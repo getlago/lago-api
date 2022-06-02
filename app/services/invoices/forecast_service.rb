@@ -89,11 +89,6 @@ module Invoices
       @issuing_date
     end
 
-    def add_subscription_fee
-      fee_result = Fees::SubscriptionService.new(invoice).forecast
-      fee_result.throw_error unless fee_result.success?
-    end
-
     def add_charge_fee
       subscription.plan.charges.each do |charge|
         fee_result = Fees::ChargeService.new(
@@ -108,11 +103,9 @@ module Invoices
     end
 
     def compute_amounts
-      fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
-
-      invoice.amount_cents = fee_amounts.sum(&:amount_cents)
+      invoice.amount_cents = invoice.fees.sum(&:amount_cents)
       invoice.amount_currency = plan.amount_currency
-      invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
+      invoice.vat_amount_cents = invoice.fees.sum(&:vat_amount_cents)
       invoice.vat_amount_currency = plan.amount_currency
       invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
       invoice.total_amount_currency = plan.amount_currency
