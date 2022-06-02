@@ -12,7 +12,7 @@ module Invoices
 
     def create
       ActiveRecord::Base.transaction do
-        invoice = Invoice.find_or_create_by!(
+        invoice = Invoice.create!(
           subscription: subscription,
           from_date: date,
           to_date: date,
