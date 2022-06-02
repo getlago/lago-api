@@ -5,12 +5,13 @@ class Fee < ApplicationRecord
 
   belongs_to :invoice
   belongs_to :charge, optional: true
-  belongs_to :add_on, optional: true
+  belongs_to :applied_add_on, optional: true
   belongs_to :subscription
 
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
   has_one :billable_metric, through: :charge
+  has_one :add_on, through: :applied_add_on
 
   monetize :amount_cents
   monetize :vat_amount_cents
@@ -19,11 +20,11 @@ class Fee < ApplicationRecord
   validates :vat_amount_currency, inclusion: { in: currency_list }
   validates :units, numericality: { greated_than_or_equal_to: 0 }
 
-  scope :subscription_kind, -> { where(charge_id: nil, add_on_id: nil) }
+  scope :subscription_kind, -> { where(charge_id: nil, applied_add_on_id: nil) }
   scope :charge_kind, -> { where.not(charge_id: nil) }
 
   def subscription_fee?
-    charge_id.blank? && add_on_id.blank?
+    charge_id.blank? && applied_add_on_id.blank?
   end
 
   def charge_fee?
@@ -31,7 +32,7 @@ class Fee < ApplicationRecord
   end
 
   def add_on_fee?
-    add_on_id.present?
+    applied_add_on_id.present?
   end
 
   def compute_vat

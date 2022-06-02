@@ -22,7 +22,7 @@ RSpec.describe Fees::AddOnService do
       aggregate_failures do
         expect(created_fee.id).not_to be_nil
         expect(created_fee.invoice_id).to eq(invoice.id)
-        expect(created_fee.add_on_id).to eq(applied_add_on.add_on_id)
+        expect(created_fee.applied_add_on_id).to eq(applied_add_on.id)
         expect(created_fee.amount_cents).to eq(200)
         expect(created_fee.amount_currency).to eq('EUR')
         expect(created_fee.vat_amount_cents).to eq(40)
@@ -35,7 +35,7 @@ RSpec.describe Fees::AddOnService do
       before do
         create(
           :fee,
-          add_on: applied_add_on.add_on,
+          applied_add_on: applied_add_on,
           subscription: subscription,
           invoice: invoice,
         )

@@ -14,7 +14,7 @@ module Fees
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
-        add_on_id: applied_add_on.add_on_id,
+        applied_add_on: applied_add_on,
         amount_cents: applied_add_on.amount_cents,
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
@@ -37,7 +37,7 @@ module Fees
     delegate :customer, :plan, :subscription, to: :invoice
 
     def already_billed?
-      existing_fee = invoice.fees.find_by(add_on_id: applied_add_on.add_on_id)
+      existing_fee = invoice.fees.find_by(applied_add_on_id: applied_add_on.id)
       return false unless existing_fee
 
       result.fee = existing_fee

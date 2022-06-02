@@ -19,7 +19,7 @@ RSpec.describe Fee, type: :model do
 
   describe '.add_on_fee?' do
     it 'checks presence of the add-on' do
-      expect(fee_model.new(add_on_id: SecureRandom.uuid).add_on_fee?).to be_truthy
+      expect(fee_model.new(applied_add_on_id: SecureRandom.uuid).add_on_fee?).to be_truthy
     end
   end
 
@@ -51,7 +51,7 @@ RSpec.describe Fee, type: :model do
 
     context 'when it is a add-on fee' do
       it 'returns add_on' do
-        expect(fee_model.new(add_on_id: SecureRandom.uuid).item_type).to eq('add_on')
+        expect(fee_model.new(applied_add_on_id: SecureRandom.uuid).item_type).to eq('add_on')
       end
     end
   end
@@ -74,10 +74,10 @@ RSpec.describe Fee, type: :model do
     end
 
     context 'when it is a add-on fee' do
-      let(:add_on) { create(:add_on) }
+      let(:applied_add_on) { create(:applied_add_on) }
 
       it 'returns add on code' do
-        expect(fee_model.new(add_on: add_on).item_code).to eq(add_on.code)
+        expect(fee_model.new(applied_add_on: applied_add_on).item_code).to eq(applied_add_on.add_on.code)
       end
     end
   end
@@ -100,10 +100,10 @@ RSpec.describe Fee, type: :model do
     end
 
     context 'when it is a add-on fee' do
-      let(:add_on) { create(:add_on) }
+      let(:applied_add_on) { create(:applied_add_on) }
 
       it 'returns add on name' do
-        expect(fee_model.new(add_on: add_on).item_name).to eq(add_on.name)
+        expect(fee_model.new(applied_add_on: applied_add_on).item_name).to eq(applied_add_on.add_on.name)
       end
     end
   end
