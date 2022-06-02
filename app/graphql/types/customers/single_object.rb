@@ -11,7 +11,7 @@ module Types
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
 
       def invoices
-        object.invoices.order(issuing_date: :desc)
+        object.invoices.order(created_at: :desc)
       end
 
       def applied_coupons
@@ -19,7 +19,7 @@ module Types
       end
 
       def applied_add_ons
-        object.applied_add_ons.order(created_at: :asc)
+        object.applied_add_ons.order(created_at: :desc)
       end
     end
   end
