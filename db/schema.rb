@@ -139,6 +139,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_01_150058) do
     t.datetime "timestamp", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "metadata", default: {}, null: false
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
     t.index ["organization_id", "transaction_id"], name: "index_events_on_organization_id_and_transaction_id", unique: true

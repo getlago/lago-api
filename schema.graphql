@@ -111,7 +111,7 @@ type BillableMetricDetail {
 }
 
 type Charge {
-  amountCents: Int
+  amount: String
   amountCurrency: CurrencyEnum
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
@@ -124,7 +124,7 @@ type Charge {
 }
 
 input ChargeInput {
-  amountCents: Int
+  amount: String
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
@@ -1812,10 +1812,12 @@ type DestroyPlanPayload {
 }
 
 type Event {
+  apiClient: String
   billableMetricName: String
   code: String!
   customerId: String!
   id: ID!
+  ipAddress: String
   matchBillableMetric: Boolean!
   matchCustomField: Boolean!
   payload: JSON!
@@ -1830,16 +1832,16 @@ type EventCollection {
 }
 
 type GraduatedRange {
-  flatAmountCents: Int!
+  flatAmount: String!
   fromValue: Int!
-  perUnitAmountCents: Int!
+  perUnitAmount: String!
   toValue: Int
 }
 
 input GraduatedRangeInput {
-  flatAmountCents: Int!
+  flatAmount: String!
   fromValue: Int!
-  perUnitAmountCents: Int!
+  perUnitAmount: String!
   toValue: Int
 }
 

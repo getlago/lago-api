@@ -14,12 +14,12 @@ module ChargeModelAttributesHandler
 
       case output[:charge_model].to_sym
       when :standard
-        output[:properties] = { amount_cents: output[:amount_cents] }
+        output[:properties] = { amount: output[:amount] }
       when :graduated
         output[:properties] = output[:graduated_ranges]
       when :package
         output[:properties] = {
-          amount_cents: output[:amount_cents],
+          amount: output[:amount],
           package_size: output[:package_size],
           free_units: output[:free_units],
         }
@@ -27,7 +27,7 @@ module ChargeModelAttributesHandler
 
       # NOTE: delete fields used to build properties
       output.delete(:graduated_ranges)
-      output.delete(:amount_cents)
+      output.delete(:amount)
       output.delete(:free_units)
       output.delete(:package_size)
 

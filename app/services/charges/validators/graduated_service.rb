@@ -31,10 +31,24 @@ module Charges
       end
 
       def valid_amounts?(range)
-        range[:per_unit_amount_cents].is_a?(Numeric) &&
-          range[:flat_amount_cents].is_a?(Numeric) &&
-          !range[:per_unit_amount_cents].negative? &&
-          !range[:flat_amount_cents].negative?
+        # NOTE: as we want to be the more precise with decimals, we only
+        # accept amount that are in string to avoid float bad parsing
+        # and use BigDecimal as a source of truth when computing amounts
+        return false unless range[:per_unit_amount].is_a?(String)
+        return false unless range[:flat_amount].is_a?(String)
+
+        per_unit_amount = BigDecimal(range[:per_unit_amount])
+        flat_amount = BigDecimal(range[:flat_amount])
+
+        per_unit_amount.finite? &&
+          flat_amount.finite? &&
+          (per_unit_amount.zero? || per_unit_amount.positive?) &&
+          (flat_amount.zero? || flat_amount.positive?)
+      # NOTE: If BigDecimal can't parse the amount, it will trigger
+      # an ArgumentError is the type is not a numeric, ei: 'foo'
+      # a TypeError is the amount is nil
+      rescue ArgumentError, TypeError
+        false
       end
 
       def valid_bounds?(range, index, next_from_value)

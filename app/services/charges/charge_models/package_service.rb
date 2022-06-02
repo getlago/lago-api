@@ -3,7 +3,6 @@
 module Charges
   module ChargeModels
     class PackageService < Charges::ChargeModels::BaseService
-
       protected
 
       def compute_amount(value)
@@ -15,7 +14,7 @@ module Charges
         #       It's rounded up, because a group counts from its first unit
         package_count = billed_units.fdiv(package_size).ceil
 
-        package_count * charge.properties['amount_cents']
+        package_count * BigDecimal(charge.properties['amount'])
       end
 
       def free_units

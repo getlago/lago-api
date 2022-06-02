@@ -186,6 +186,11 @@ module Fees
       to_date = invoice.to_date
 
       if plan.has_trial?
+        if plan.pay_in_advance?
+          from_date = invoice.issuing_date
+          to_date = invoice.issuing_date.end_of_month
+        end
+
         # NOTE: amount is 0 if trial cover the full period
         return 0 if subscription.trial_end_date >= to_date
 
@@ -196,7 +201,7 @@ module Fees
           from_date = subscription.trial_end_date
           number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-          return number_of_day_to_bill * single_day_price(plan)
+          return number_of_day_to_bill * single_day_price(plan, from_date)
         end
       end
 
@@ -204,8 +209,8 @@ module Fees
     end
 
     # NOTE: cost of a single day in a period
-    def single_day_price(target_plan)
-      from_date = invoice.from_date
+    def single_day_price(target_plan, optional_from_date = nil)
+      from_date = optional_from_date || invoice.from_date
 
       # NOTE: Duration in days of full billed period (without termination)
       #       WARNING: the method only handles beggining of period logic

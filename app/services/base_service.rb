@@ -1,7 +1,19 @@
 # frozen_string_literal: true
 
 class BaseService
-  class FailedResult < StandardError; end
+  class FailedResult < StandardError
+    def initialize(result)
+      super(format_message(result))
+    end
+
+    private
+
+    def format_message(result)
+      return result.error unless result.error_details
+
+      "#{result.error}: #{[result.error_details].flatten.join(', ')}"
+    end
+  end
 
   class Result < OpenStruct
     attr_reader :error, :error_code, :error_details
@@ -41,7 +53,7 @@ class BaseService
     def throw_error
       return if success?
 
-      FailedResult.new(error)
+      raise FailedResult, self
     end
 
     private

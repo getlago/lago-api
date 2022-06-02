@@ -14,11 +14,17 @@ module Fees
       amount_result = compute_amount
       return result.fail!(amount_result.error_code, amount_result.error) unless amount_result.success?
 
+      # NOTE: amount_result should be a BigDecimal, we need to round it
+      # to the currency decimals and transform it into currency cents
+      currency = invoice.amount.currency
+      rounded_amount = amount_result.amount.round(currency.exponent)
+      amount_cents = rounded_amount * currency.subunit_to_unit
+
       new_fee = Fee.new(
         invoice: invoice,
         subscription: subscription,
         charge: charge,
-        amount_cents: amount_result.amount_cents,
+        amount_cents: amount_cents,
         amount_currency: charge.amount_currency,
         vat_rate: customer.applicable_vat_rate,
         units: amount_result.units,

@@ -1,59 +1,21 @@
 # Lago API
 
-## Local Environment Configuration
+Lago is an open-source Stripe Billing alternative.
 
-- Install [rbenv](https://github.com/rbenv/rbenv)
-```shell
-# Ubuntu
-sudo apt install rbenv
+This library will allow you to build an entire billing logic from scratch, even the most complex one. Lago is a real-time event-based library made for usage-based billing, subscription-based billing, and all the nuances of pricing in between.
 
-# macOS
-brew install rbenv
-brew install libpq
+## Documentation
 
-rbenv init
-# close and re-open your terminal
-curl -fsSL https://github.com/rbenv/rbenv-installer/raw/main/bin/rbenv-doctor | bash
-rbenv install 3.0.1
-rbenv global 3.0.1
-```
+The official Lago documentation is available here : https://doc.getlago.com
 
-- Install project dependencies
-```shell
-gem install bundler
-bundle install
-```
-- Create a file named `config/master.key`, get the value for it into [1Password](https://start.1password.com/open/i?a=CV2K6WPYLZBXXGIKIUYUJOA3Z4&v=4k453pfxong4lipf3oookha7ei&i=kc2v2trpahmnzcl5k3krdl2z3y&h=my.1password.com)
-```shell
-touch ./config/master.key
-```
-- Copy the `.env.dist` to `.env`
-```shell
-cp .env.dist .env
-```
+## Contributing
 
-- Install Rubocop locally (required for all developers)
-```shell
-gem install rubocop rubocop-rspec rubocop-performance rubocop-rails rubocop-thread_safety
-```
+The contribution documentation is available [here](https://github.com/getlago/lago-api/blob/main/CONTRIBUTING.md)
 
-- Start the database by running `docker-compose up db`
-- Prepare the database and run migrations
-```shell
-rake db:setup
-rake db:migrate
-```
+## Development Environment
 
-- Launch the server
-```shell
-rails s
-```
+Check the wiki [guide](https://github.com/getlago/lago-api/wiki)
 
-## GraphQL
+## License
 
-### Generate GraphQL Schema
-
-- You need to regenerate the schema each time you change something about GraphQL, if you don't, it will make your specs fail.
-```shell
-$ rake graphql:schema:dump
-```
+Lago is distributed under [AGPL-3.0](LICENSE).
