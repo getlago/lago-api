@@ -7,6 +7,7 @@ class AddOn < ApplicationRecord
 
   has_many :applied_add_ons
   has_many :customers, through: :applied_add_ons
+  has_many :fees
 
   monetize :amount_cents
 

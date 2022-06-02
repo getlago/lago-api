@@ -28,13 +28,13 @@ RSpec.describe Webhooks::AddOnService do
       expect(lago_client).to have_received(:post)
     end
 
-    it 'builds payload with add_on.created webhook type' do
+    it 'builds payload with invoice.add_on_added webhook type' do
       webhook_add_on_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post) do |payload|
-        expect(payload[:webhook_type]).to eq 'add_on.created'
+        expect(payload[:webhook_type]).to eq 'invoice.add_on_added'
       end
     end
 

@@ -12,12 +12,12 @@ module Webhooks
       ::V1::InvoiceSerializer.new(
         object,
         root_name: 'invoice',
-        includes: %i[customer subscription],
+        includes: %i[customer subscription fees],
       )
     end
 
     def webhook_type
-      'add_on.created'
+      'invoice.add_on_added'
     end
   end
 end

@@ -19,6 +19,8 @@ module Invoices
           issuing_date: date,
         )
 
+        create_add_on_fee(invoice)
+
         compute_amounts(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
@@ -42,12 +44,17 @@ module Invoices
     delegate :plan, to: :subscription
 
     def compute_amounts(invoice)
-      vat_rate = applied_add_on.customer.organization.vat_rate
+      fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
-      invoice.amount_cents = applied_add_on.amount_cents
+      invoice.amount_cents = fee_amounts.sum(&:amount_cents)
       invoice.amount_currency = plan.amount_currency
-      invoice.vat_amount_cents = (applied_add_on.amount_cents * vat_rate).fdiv(100).ceil
+      invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
       invoice.vat_amount_currency = plan.amount_currency
+    end
+
+    def create_add_on_fee(invoice)
+      fee_result = Fees::AddOnService.new(invoice: invoice, applied_add_on: applied_add_on).create
+      raise fee_result.throw_error unless fee_result.success?
     end
 
     def should_deliver_webhook?
