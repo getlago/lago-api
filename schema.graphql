@@ -1831,6 +1831,31 @@ type EventCollection {
   metadata: CollectionMetadata!
 }
 
+type Forecast {
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  fees: [ForecastedFee!]
+  fromDate: ISO8601Date!
+  issuingDate: ISO8601Date!
+  toDate: ISO8601Date!
+  totalAmountCents: Int!
+  totalAmountCurrency: CurrencyEnum!
+  vatAmountCents: Int!
+  vatAmountCurrency: CurrencyEnum!
+}
+
+type ForecastedFee {
+  aggregationType: AggregationTypeEnum!
+  amountCents: Int!
+  amountCurrency: CurrencyEnum!
+  billableMetricCode: String!
+  billableMetricName: String!
+  chargeModel: ChargeModelEnum!
+  units: Int!
+  vatAmountCents: Int!
+  vatAmountCurrency: CurrencyEnum!
+}
+
 type GraduatedRange {
   flatAmount: String!
   fromValue: Int!
@@ -2338,6 +2363,11 @@ type Query {
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
+
+  """
+  Query the forecast of customer usage
+  """
+  forecast(customerId: ID): Forecast!
 
   """
   Query a single plan of an organization
