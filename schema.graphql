@@ -1768,10 +1768,12 @@ type DestroyPlanPayload {
 }
 
 type Event {
+  apiClient: String
   billableMetricName: String
   code: String!
   customerId: String!
   id: ID!
+  ipAddress: String
   matchBillableMetric: Boolean!
   matchCustomField: Boolean!
   payload: JSON!

@@ -62,6 +62,7 @@ RSpec.describe EventsService, type: :service do
         organization: organization,
         params: create_args,
         timestamp: timestamp,
+        metadata: {},
       )
 
       expect(result).to be_success
@@ -89,6 +90,7 @@ RSpec.describe EventsService, type: :service do
             organization: organization,
             params: create_args,
             timestamp: timestamp,
+            metadata: {},
           )
         end.not_to change { organization.events.count }
       end
@@ -110,6 +112,7 @@ RSpec.describe EventsService, type: :service do
           organization: organization,
           params: create_args,
           timestamp: timestamp,
+          metadata: {},
         )
 
         expect(result).not_to be_success
@@ -132,6 +135,7 @@ RSpec.describe EventsService, type: :service do
           organization: organization,
           params: create_args,
           timestamp: timestamp,
+          metadata: {},
         )
 
         expect(result).to be_success

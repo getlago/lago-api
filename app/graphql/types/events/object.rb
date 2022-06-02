@@ -13,6 +13,8 @@ module Types
 
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
       field :received_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :api_client, String, null: true
+      field :ip_address, String, null: true
 
       field :payload, GraphQL::Types::JSON, null: false
       field :billable_metric_name, String, null: true

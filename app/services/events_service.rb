@@ -10,7 +10,7 @@ class EventsService < BaseService
     result.fail!('missing_mandatory_param', nil, missing_arguments)
   end
 
-  def create(organization:, params:, timestamp:)
+  def create(organization:, params:, timestamp:, metadata:)
     event = organization.events.find_by(id: params[:transaction_id])
 
     if event
@@ -27,6 +27,7 @@ class EventsService < BaseService
     event.transaction_id = params[:transaction_id]
     event.customer = current_customer
     event.properties = params[:properties] || {}
+    event.metadata = metadata || {}
 
     event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
     event.timestamp ||= timestamp
