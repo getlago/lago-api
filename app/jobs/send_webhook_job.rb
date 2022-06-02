@@ -11,6 +11,8 @@ class SendWebhookJob < ApplicationJob
     case webhook_type
     when :invoice
       Webhooks::InvoicesService.new(object).call
+    when :add_on
+      Webhooks::AddOnService.new(object).call
     else
       raise NotImplementedError
     end

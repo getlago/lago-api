@@ -2,18 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::InvoicesService do
-  subject(:webhook_invoice_service) { described_class.new(invoice) }
+RSpec.describe Webhooks::AddOnService do
+  subject(:webhook_add_on_service) { described_class.new(invoice) }
 
   let(:organization) { create(:organization, webhook_url: webhook_url) }
   let(:subscription) { create(:subscription, organization: organization) }
   let(:invoice) { create(:invoice, subscription: subscription) }
   let(:webhook_url) { 'http://foo.bar' }
-
-  before do
-    create_list(:fee, 4, invoice: invoice)
-    create_list(:credit, 4, invoice: invoice)
-  end
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -26,20 +21,20 @@ RSpec.describe Webhooks::InvoicesService do
     end
 
     it 'calls the organization webhook url' do
-      webhook_invoice_service.call
+      webhook_add_on_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post)
     end
 
-    it 'builds payload with add_on.created webhook type' do
-      webhook_invoice_service.call
+    it 'builds payload with invoice.add_on_added webhook type' do
+      webhook_add_on_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post) do |payload|
-        expect(payload[:webhook_type]).to eq 'invoice.created'
+        expect(payload[:webhook_type]).to eq 'invoice.add_on_added'
       end
     end
 
@@ -47,7 +42,7 @@ RSpec.describe Webhooks::InvoicesService do
       let(:webhook_url) { nil }
 
       it 'does not call the organization webhook url' do
-        webhook_invoice_service.call
+        webhook_add_on_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
         expect(lago_client).not_to have_received(:post)
@@ -60,18 +55,18 @@ RSpec.describe Webhooks::InvoicesService do
       ::V1::InvoiceSerializer.new(
         invoice,
         root_name: 'invoice',
-        includes: %i[customer subscription fees],
-      ).serialize.merge(webook_type: 'invoice.created')
+        includes: %i[customer subscription],
+      ).serialize.merge(webook_type: 'add_on.created')
     end
 
     it 'generates the query headers' do
-      headers = webhook_invoice_service.__send__(:generate_headers, payload)
+      headers = webhook_add_on_service.__send__(:generate_headers, payload)
 
       expect(headers).to include(have_key('X-Lago-Signature'))
     end
 
     it 'generates a correct signature' do
-      signature = webhook_invoice_service.__send__(:generate_signature, payload)
+      signature = webhook_add_on_service.__send__(:generate_signature, payload)
 
       decoded_signature = JWT.decode(
         signature,

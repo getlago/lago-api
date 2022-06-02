@@ -43,6 +43,10 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       expect(create_result.applied_add_on.amount_currency).to eq(add_on.amount_currency)
     end
 
+    it 'enqueues a job to bill the add-on' do
+      expect { create_result }.to have_enqueued_job(BillAddOnJob)
+    end
+
     context 'with overridden amount and currency' do
       let(:amount_cents) { 123 }
       let(:amount_currency) { 'EUR' }
@@ -117,6 +121,10 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       expect(create_result.applied_add_on.add_on).to eq(add_on)
       expect(create_result.applied_add_on.amount_cents).to eq(add_on.amount_cents)
       expect(create_result.applied_add_on.amount_currency).to eq(add_on.amount_currency)
+    end
+
+    it 'enqueues a job to bill the add-on' do
+      expect { create_result }.to have_enqueued_job(BillAddOnJob)
     end
 
     context 'with overridden amount' do
