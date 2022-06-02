@@ -15,4 +15,12 @@ class AddOn < ApplicationRecord
 
   validates :amount_cents, numericality: { greater_than: 0 }
   validates :amount_currency, inclusion: { in: currency_list }
+
+  def attached_to_customers?
+    applied_add_ons.exists?
+  end
+
+  def deletable?
+    !attached_to_customers?
+  end
 end
