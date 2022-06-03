@@ -44,6 +44,16 @@ RSpec.describe Webhooks::InvoicesService do
       end
     end
 
+    it 'builds payload with the object type root key' do
+      webhook_invoice_service.call
+
+      expect(LagoHttpClient::Client).to have_received(:new)
+        .with(organization.webhook_url)
+      expect(lago_client).to have_received(:post) do |payload|
+        expect(payload['invoice']).to be_present
+      end
+    end
+
     context 'without webhook_url' do
       let(:webhook_url) { nil }
 
