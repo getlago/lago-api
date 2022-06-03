@@ -39,7 +39,8 @@ RSpec.describe Webhooks::InvoicesService do
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post) do |payload|
-        expect(payload[:webhook_type]).to eq 'invoice.created'
+        expect(payload[:webhook_type]).to eq('invoice.created')
+        expect(payload[:object_type]).to eq('invoice')
       end
     end
 

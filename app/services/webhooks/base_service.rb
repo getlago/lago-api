@@ -13,7 +13,10 @@ module Webhooks
       return unless current_organization&.webhook_url?
 
       payload = object_serializer.serialize
-      payload = payload.merge(webhook_type: webhook_type)
+      payload = payload.merge(
+        webhook_type: webhook_type,
+        object_type: object_type,
+      )
 
       http_client = LagoHttpClient::Client.new(current_organization.webhook_url)
       headers = generate_headers(payload)
@@ -33,6 +36,10 @@ module Webhooks
     end
 
     def webhook_type
+      # Empty
+    end
+
+    def object_type
       # Empty
     end
 
