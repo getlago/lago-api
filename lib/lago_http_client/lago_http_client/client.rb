@@ -25,7 +25,7 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body)
+      JSON.parse(response.body&.presence || '{}')
     end
 
     private
