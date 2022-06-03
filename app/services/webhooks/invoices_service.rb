@@ -19,5 +19,9 @@ module Webhooks
     def webhook_type
       'invoice.created'
     end
+
+    def object_type
+      'invoice'
+    end
   end
 end

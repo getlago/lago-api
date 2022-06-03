@@ -19,5 +19,9 @@ module Webhooks
     def webhook_type
       'invoice.add_on_added'
     end
+
+    def object_type
+      'invoice'
+    end
   end
 end
