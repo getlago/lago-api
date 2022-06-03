@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
-require 'spec_helper'
+require 'rails_helper'
 
 RSpec.describe LagoHttpClient::Client do
   subject(:client) { described_class.new(url) }
+
   let(:url) { 'http://example.com/api/v1/example' }
 
   describe '#post' do
@@ -25,6 +26,16 @@ RSpec.describe LagoHttpClient::Client do
 
         expect(response['status']).to eq 200
         expect(response['message']).to eq 'Success'
+      end
+
+      context 'when response body is blank' do
+        let(:response) { '' }
+
+        it 'returns an empty response' do
+          response = client.post('', {})
+
+          expect(response).to eq({})
+        end
       end
     end
 
