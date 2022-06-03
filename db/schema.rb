@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_05_30_091046) do
+ActiveRecord::Schema[7.0].define(version: 2022_06_01_150058) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -26,6 +26,18 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_30_091046) do
     t.datetime "updated_at", null: false
     t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true
     t.index ["organization_id"], name: "index_add_ons_on_organization_id"
+  end
+
+  create_table "applied_add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "add_on_id", null: false
+    t.uuid "customer_id", null: false
+    t.integer "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["add_on_id", "customer_id"], name: "index_applied_add_ons_on_add_on_id_and_customer_id"
+    t.index ["add_on_id"], name: "index_applied_add_ons_on_add_on_id"
+    t.index ["customer_id"], name: "index_applied_add_ons_on_customer_id"
   end
 
   create_table "applied_coupons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -146,6 +158,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_30_091046) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false
+    t.uuid "applied_add_on_id"
+    t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
@@ -228,6 +242,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_30_091046) do
   end
 
   add_foreign_key "add_ons", "organizations"
+  add_foreign_key "applied_add_ons", "add_ons"
+  add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
@@ -236,6 +252,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_30_091046) do
   add_foreign_key "customers", "organizations"
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
+  add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"

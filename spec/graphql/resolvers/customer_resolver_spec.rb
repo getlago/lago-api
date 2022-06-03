@@ -11,6 +11,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           invoices { id }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
+          appliedAddOns { id amountCents amountCurrency addOn { id name } }
         }
       }
     GQL
@@ -22,9 +23,11 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     create(:customer, organization: organization)
   end
   let(:subscription) { create(:subscription, customer: customer) }
+  let(:applied_add_on) { create(:applied_add_on, customer: customer) }
 
   before do
     create_list(:invoice, 2, subscription: subscription)
+    applied_add_on
   end
 
   it 'returns a single customer' do
@@ -43,6 +46,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['id']).to eq(customer.id)
       expect(customer_response['subscriptions'].count).to eq(1)
       expect(customer_response['invoices'].count).to eq(2)
+      expect(customer_response['appliedAddOns'].count).to eq(1)
     end
   end
 
