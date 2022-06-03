@@ -121,6 +121,8 @@ module Invoices
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrear, otherwise this fee will never
       #       be created.
+      return false if subscription.plan.yearly && issuing_date.month != 1
+
       subscription.active? || (subscription.terminated? && subscription.plan.pay_in_arrear?)
     end
 

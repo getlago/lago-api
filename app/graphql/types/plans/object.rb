@@ -16,6 +16,7 @@ module Types
       field :amount_currency, Types::CurrencyEnum, null: false
       field :trial_period, Float
       field :description, String
+      field :bill_charges_monthly, Boolean
 
       field :charges, [Types::Charges::Object]
 

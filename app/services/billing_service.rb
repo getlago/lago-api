@@ -34,6 +34,12 @@ class BillingService
       .merge(Plan.monthly)
       .select(:id).to_sql
 
+    # Bill charges monthly for yearly plans
+    sql << Subscription.active.joins(:plan)
+      .merge(Plan.yearly)
+      .merge(Plan.bill_charges_monthly)
+      .select(:id).to_sql
+
     # We are on the first day of the year
     if today.month == 1
       # Billed yearly
@@ -42,6 +48,6 @@ class BillingService
         .select(:id).to_sql
     end
 
-    Subscription.where("id in (#{sql.join(' UNION ')})")
+    Subscription.where("id in (#{sql.join(' UNION ')})").uniq
   end
 end
