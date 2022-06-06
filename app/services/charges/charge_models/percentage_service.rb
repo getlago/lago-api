@@ -6,26 +6,32 @@ module Charges
       protected
 
       def compute_amount(value)
-        amount = value * BigDecimal(rate)
+        compute_percentage_amount(value) + compute_fixed_amount(value)
+      end
 
-        return amount if BigDecimal(fixed_amount_value).zero?
+      def compute_percentage_amount(value)
+        value * rate
+      end
 
-        return amount + BigDecimal(fixed_amount_value) if fixed_amount_target == 'all_units'
+      def compute_fixed_amount(value)
+        return 0 if fixed_amount.zero?
 
-        amount + (value * BigDecimal(fixed_amount_value))
+        return fixed_amount if fixed_amount_target == 'all_units'
+
+        value * fixed_amount
       end
 
       # NOTE: FE divides percentage rate with 100 and sends to BE
       def rate
-        charge.properties['rate']
-      end
-
-      def fixed_amount_value
-        charge.properties['fixed_amount_value'] || 0
+        BigDecimal(charge.properties['rate'])
       end
 
       def fixed_amount_target
         charge.properties['fixed_amount_target']
+      end
+
+      def fixed_amount
+        @fixed_amount ||= BigDecimal(charge.properties['fixed_amount'] || 0)
       end
     end
   end

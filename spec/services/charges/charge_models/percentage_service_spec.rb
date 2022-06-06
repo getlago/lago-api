@@ -10,7 +10,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       :percentage_charge,
       properties: {
         rate: '0.0555',
-        fixed_amount_value: '0',
+        fixed_amount: '0',
         fixed_amount_target: 'each_unit',
       },
     )
@@ -28,7 +28,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         :percentage_charge,
         properties: {
           rate: '0.0555',
-          fixed_amount_value: '2',
+          fixed_amount: '2',
           fixed_amount_target: 'each_unit',
         },
       )
@@ -45,7 +45,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         :percentage_charge,
         properties: {
           rate: '0.0555',
-          fixed_amount_value: '2',
+          fixed_amount: '2',
           fixed_amount_target: 'all_units',
         },
       )
