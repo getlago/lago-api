@@ -137,6 +137,7 @@ input ChargeInput {
 enum ChargeModelEnum {
   graduated
   package
+  percentage
   standard
 }
 

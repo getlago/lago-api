@@ -12,6 +12,7 @@ class Charge < ApplicationRecord
     standard
     graduated
     package
+    percentage
   ].freeze
 
   enum charge_model: CHARGE_MODELS
