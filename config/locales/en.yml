@@ -17,3 +17,6 @@ en:
         invalid_graduated_ranges: invalid_graduated_ranges
         invalid_free_units: invalid_free_units
         invalid_package_size: invalid_package_size
+        invalid_rate: invalid_rate
+        invalid_fixed_amount: invalid_fixed_amount
+        invalid_fixed_amount_target: invalid_fixed_amount_target

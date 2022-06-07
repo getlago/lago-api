@@ -14,8 +14,6 @@ module Charges
       end
 
       def compute_fixed_amount(value)
-        return 0 if fixed_amount.zero?
-
         return fixed_amount if fixed_amount_target == 'all_units'
 
         value * fixed_amount

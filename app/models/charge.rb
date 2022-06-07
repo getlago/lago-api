@@ -21,6 +21,7 @@ class Charge < ApplicationRecord
   validate :validate_amount, if: :standard?
   validate :validate_graduated_range, if: :graduated?
   validate :validate_package, if: :package?
+  validate :validate_percentage, if: :percentage?
 
   private
 
@@ -40,6 +41,13 @@ class Charge < ApplicationRecord
 
   def validate_package
     validation_result = Charges::Validators::PackageService.new(charge: self).validate
+    return if validation_result.success?
+
+    validation_result.error.each { |error| errors.add(:properties, error) }
+  end
+
+  def validate_percentage
+    validation_result = Charges::Validators::PercentageService.new(charge: self).validate
     return if validation_result.success?
 
     validation_result.error.each { |error| errors.add(:properties, error) }

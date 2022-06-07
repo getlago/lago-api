@@ -116,10 +116,13 @@ type Charge {
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
+  fixedAmount: String
+  fixedAmountTarget: String
   freeUnits: Int
   graduatedRanges: [GraduatedRange!]
   id: ID!
   packageSize: Int
+  rate: String
   updatedAt: ISO8601DateTime!
 }
 
@@ -128,10 +131,13 @@ input ChargeInput {
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
+  fixedAmount: String
+  fixedAmountTarget: String
   freeUnits: Int
   graduatedRanges: [GraduatedRangeInput!]
   id: ID
   packageSize: Int
+  rate: String
 }
 
 enum ChargeModelEnum {
