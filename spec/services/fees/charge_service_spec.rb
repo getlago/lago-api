@@ -21,6 +21,7 @@ RSpec.describe Fees::ChargeService do
       subscription: subscription,
       from_date: subscription.started_at,
       to_date: subscription.started_at.end_of_month,
+      charges_from_date: subscription.started_at,
     )
   end
 

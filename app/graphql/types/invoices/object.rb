@@ -16,6 +16,7 @@ module Types
 
       field :from_date, GraphQL::Types::ISO8601Date, null: false
       field :to_date, GraphQL::Types::ISO8601Date, null: false
+      field :charges_from_date, GraphQL::Types::ISO8601Date, null: true
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
