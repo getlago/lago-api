@@ -121,6 +121,31 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.charge_kind.count).to eq(1)
         end
       end
+
+      context 'when plan has bill charges monthly option' do
+        before { plan.update(bill_charges_monthly: true) }
+
+        context 'when subscription has already been billed' do
+          before do
+            first_invoice_timestamp = (subscription.started_at.end_of_year + 1.day).to_i
+            described_class.new(subscription: subscription, timestamp: first_invoice_timestamp).create
+          end
+
+          let(:timestamp) { (subscription.started_at.end_of_year + 1.month + 1.day).to_i }
+
+          it 'creates an invoice for charges' do
+            byebug
+            result = invoice_service.create
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.invoice.fees.subscription_kind.count).to eq(0)
+              expect(result.invoice.fees.charge_kind.count).to eq(1)
+            end
+          end
+        end
+      end
     end
 
     context 'when billed yearly on first year' do

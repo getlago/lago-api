@@ -74,6 +74,21 @@ RSpec.describe BillingService, type: :service do
           expect { billing_service.call }.not_to have_enqueued_job
         end
       end
+
+      context 'when charges are billed monthly' do
+        before { plan.update(bill_charges_monthly: true) }
+
+        it 'enqueues a job on billing day' do
+          current_date = DateTime.parse('01 Fev 2022')
+
+          travel_to(current_date) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(subscription, current_date.to_i)
+          end
+        end
+      end
     end
 
     context 'when downgraded' do
