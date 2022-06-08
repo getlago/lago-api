@@ -26,7 +26,7 @@ module Types
       # NOTE: Percentage charge model
       field :rate, String, null: true
       field :fixed_amount, String, null: true
-      field :fixed_amount_target, String, null: true
+      field :fixed_amount_target, Types::Charges::FixedAmountTargetEnum, null: true
 
       def amount
         return unless object.standard? || object.package?

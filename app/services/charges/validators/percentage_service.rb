@@ -53,7 +53,7 @@ module Charges
       def valid_fixed_amount_target?
         fixed_amount_target.present? &&
           fixed_amount_target.is_a?(String) &&
-          (fixed_amount_target == 'all_units' || fixed_amount_target == 'each_unit')
+          Charge::FIXED_AMOUNT_TARGETS.include?(fixed_amount_target)
       end
     end
   end

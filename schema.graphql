@@ -117,7 +117,7 @@ type Charge {
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
   fixedAmount: String
-  fixedAmountTarget: String
+  fixedAmountTarget: FixedAmountTargetEnum
   freeUnits: Int
   graduatedRanges: [GraduatedRange!]
   id: ID!
@@ -132,7 +132,7 @@ input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   fixedAmount: String
-  fixedAmountTarget: String
+  fixedAmountTarget: FixedAmountTargetEnum
   freeUnits: Int
   graduatedRanges: [GraduatedRangeInput!]
   id: ID
@@ -1836,6 +1836,11 @@ type Event {
 type EventCollection {
   collection: [Event!]!
   metadata: CollectionMetadata!
+}
+
+enum FixedAmountTargetEnum {
+  all_units
+  each_unit
 }
 
 type GraduatedRange {
