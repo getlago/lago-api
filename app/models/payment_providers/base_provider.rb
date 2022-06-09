@@ -8,16 +8,16 @@ module PaymentProviders
 
     encrypts :secrets
 
-    def json_secrets
-      JSON.parse(secrests || '{}')
+    def secrets_json
+      JSON.parse(secrets || '{}')
     end
 
-    def push_to_secrests(value)
-      self.secrests = json_secrets.merge(value).to_json
+    def push_to_secrets(key:, value:)
+      self.secrets = secrets_json.merge(key => value).to_json
     end
 
     def get_from_secrets(key)
-      json_secrets[key.to_s]
+      secrets_json[key.to_s]
     end
   end
 end

@@ -2,20 +2,23 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
-    def api_key=(api_key)
-      push_to_secrests({ api_key: api_key })
+    validates :api, presence: true
+
+
+    def public_key=(public_key)
+      push_to_secrets(key: 'public_key', value: public_key)
     end
 
-    def api_key
-      get_from_secrets(:api_key)
+    def public_key
+      get_from_secrets('public_key')
     end
 
     def secret_key=(secret_key)
-      push_to_secrests({ secret_key: secret_key })
+      push_to_secrets(key: 'secret_key', value: secret_key)
     end
 
     def secret_key
-      get_from_secrets(:api_key)
+      get_from_secrets('secret_key')
     end
   end
 end
