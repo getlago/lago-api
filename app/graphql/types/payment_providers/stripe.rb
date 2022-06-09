@@ -6,7 +6,7 @@ module Types
       graphql_name 'StripeProvider'
 
       field :id, ID, null: false
-      field :api_key, String, null: false
+      field :public_key, String, null: false
     end
   end
 end
