@@ -2181,6 +2181,7 @@ type Organization {
   createdAt: ISO8601DateTime!
   id: ID!
   name: String!
+  stripeProvider: StripeProvider
   updatedAt: ISO8601DateTime!
   vatRate: Float!
   webhookUrl: String
@@ -2409,6 +2410,11 @@ enum StatusTypeEnum {
   canceled
   pending
   terminated
+}
+
+type StripeProvider {
+  apiKey: String!
+  id: ID!
 }
 
 type Subscription {

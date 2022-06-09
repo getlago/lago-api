@@ -9,5 +9,7 @@ module Types
     field :webhook_url, String
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+    field :stripe_provider, Types::PaymentProviders::Stripe, null: true
   end
 end
