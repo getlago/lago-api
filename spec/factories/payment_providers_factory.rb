@@ -4,10 +4,10 @@ FactoryBot.define do
   factory :stripe_provider, class: 'PaymentProviders::StripeProvider' do
     organization
     type { 'PaymentProviders::StripeProvider' }
-    properties { {} }
+    settings { {} }
 
     secrets do
-      { api_key: SecureRandom.uuid, api_secret: SecureRandom.uuid }.to_json
+      { public_key: SecureRandom.uuid, secret_key: SecureRandom.uuid }.to_json
     end
   end
 end
