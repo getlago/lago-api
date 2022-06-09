@@ -35,6 +35,8 @@ module Charges
       end
 
       def valid_fixed_amount?
+        return true if fixed_amount.nil? && fixed_amount_target.nil?
+
         return false unless fixed_amount.is_a?(String)
 
         decimal_amount = BigDecimal(fixed_amount)
@@ -51,6 +53,8 @@ module Charges
       end
 
       def valid_fixed_amount_target?
+        return true if fixed_amount.nil? && fixed_amount_target.nil?
+
         fixed_amount_target.present? &&
           fixed_amount_target.is_a?(String) &&
           Charge::FIXED_AMOUNT_TARGETS.include?(fixed_amount_target)

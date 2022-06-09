@@ -9,7 +9,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     create(
       :percentage_charge,
       properties: {
-        rate: '0.0555',
+        rate: '5.55',
         fixed_amount: '0',
         fixed_amount_target: 'each_unit',
       },
@@ -27,7 +27,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       create(
         :percentage_charge,
         properties: {
-          rate: '0.0555',
+          rate: '5.55',
           fixed_amount: '2',
           fixed_amount_target: 'each_unit',
         },
@@ -44,7 +44,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       create(
         :percentage_charge,
         properties: {
-          rate: '0.0555',
+          rate: '5.5555',
           fixed_amount: '2',
           fixed_amount_target: 'all_units',
         },
@@ -52,7 +52,13 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
 
     it 'applies the percentage rate and the additional charge on all inits' do
-      expect(percentage_service.apply(value: 100).amount).to eq(7.55)
+      expect(percentage_service.apply(value: 100).amount).to eq(7.5555)
+    end
+
+    context 'with value equal to zero' do
+      it 'applies the percentage rate and the additional charge on all inits' do
+        expect(percentage_service.apply(value: 0).amount).to eq(0)
+      end
     end
   end
 end

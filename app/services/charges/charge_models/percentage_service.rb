@@ -10,10 +10,12 @@ module Charges
       end
 
       def compute_percentage_amount(value)
-        value * rate
+        value * (rate.fdiv(100))
       end
 
       def compute_fixed_amount(value)
+        return 0 if value.zero?
+
         return fixed_amount if fixed_amount_target == 'all_units'
 
         value * fixed_amount

@@ -135,6 +135,16 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       it { expect(percentage_service.validate.error).to include(:invalid_fixed_amount_target) }
     end
 
+    context 'without fixed amount and fixed amount target' do
+      let(:percentage_properties) do
+        {
+          rate: '0.25'
+        }
+      end
+
+      it { expect(percentage_service.validate.error).to be nil }
+    end
+
     context 'when fixed amount target is not string' do
       let(:percentage_properties) do
         {
