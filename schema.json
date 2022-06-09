@@ -9327,14 +9327,14 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "apiKey",
+              "name": "id",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -9345,14 +9345,14 @@
               ]
             },
             {
-              "name": "id",
+              "name": "publicKey",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "ID",
+                  "name": "String",
                   "ofType": null
                 }
               },

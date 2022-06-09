@@ -2,8 +2,8 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
-    validates :api, presence: true
-
+    validates :public_key, presence: true
+    validates :secret_key, presence: true
 
     def public_key=(public_key)
       push_to_secrets(key: 'public_key', value: public_key)

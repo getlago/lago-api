@@ -2,7 +2,7 @@
 
 module Types
   module PaymentProviders
-    class Stripe < Types:: BaseObject
+    class Stripe < Types::BaseObject
       graphql_name 'StripeProvider'
 
       field :id, ID, null: false

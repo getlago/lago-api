@@ -2413,8 +2413,8 @@ enum StatusTypeEnum {
 }
 
 type StripeProvider {
-  apiKey: String!
   id: ID!
+  publicKey: String!
 }
 
 type Subscription {
