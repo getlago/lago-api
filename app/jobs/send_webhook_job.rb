@@ -7,12 +7,14 @@ class SendWebhookJob < ApplicationJob
 
   retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 3
 
-  def perform(webhook_type, object)
+  def perform(webhook_type, object, organization = nil)
     case webhook_type
     when :invoice
       Webhooks::InvoicesService.new(object).call
     when :add_on
       Webhooks::AddOnService.new(object).call
+    when :event
+      Webhooks::EventService.new(object, organization).call
     else
       raise NotImplementedError
     end

@@ -5,8 +5,9 @@ require 'lago_http_client'
 module Webhooks
   # NOTE: Abstract Service, should not be used directly
   class BaseService
-    def initialize(object)
+    def initialize(object, organization = nil)
       @object = object
+      @organization = organization
     end
 
     def call
@@ -25,7 +26,7 @@ module Webhooks
 
     private
 
-    attr_reader :object
+    attr_reader :object, :organization
 
     def object_serializer
       # Empty
