@@ -22,6 +22,23 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
+  context 'when fixed amount value is nil and fixed amount target is nil' do
+    let(:charge) do
+      create(
+        :percentage_charge,
+        properties: {
+          rate: '5.55',
+          fixed_amount: nil,
+          fixed_amount_target: nil,
+        },
+      )
+    end
+
+    it 'applies the percentage rate to the value' do
+      expect(percentage_service.apply(value: 100).amount).to eq(5.55)
+    end
+  end
+
   context 'when fixed amount value is NOT zero and should be applied on each unit' do
     let(:charge) do
       create(
