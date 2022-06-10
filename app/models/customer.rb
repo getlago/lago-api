@@ -14,6 +14,10 @@ class Customer < ApplicationRecord
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
 
+  PAYMENT_PROVIDERS = %i[lago stripe].freeze
+
+  enum payment_provider: PAYMENT_PROVIDERS
+
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, if: :country?
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
