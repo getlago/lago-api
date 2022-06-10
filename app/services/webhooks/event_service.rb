@@ -5,7 +5,7 @@ module Webhooks
     private
 
     def current_organization
-      @current_organization ||= organization
+      @current_organization ||= Organization.find(object[:organization_id])
     end
 
     def object_serializer

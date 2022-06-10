@@ -49,19 +49,20 @@ RSpec.describe SendWebhookJob, type: :job do
           transaction_id: SecureRandom.uuid,
           code: 'code'
         },
-        error: 'Code does not exist'
+        error: 'Code does not exist',
+        organization_id: organization.id
       }
     end
 
     before do
       allow(Webhooks::EventService).to receive(:new)
-        .with(object, organization)
+        .with(object)
         .and_return(webhook_event_service)
       allow(webhook_event_service).to receive(:call)
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(:event, object, organization)
+      described_class.perform_now(:event, object)
 
       expect(Webhooks::EventService).to have_received(:new)
       expect(webhook_event_service).to have_received(:call)

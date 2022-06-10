@@ -11,7 +11,8 @@ RSpec.describe ErrorSerializer do
         transaction_id: transaction_id,
         code: 'code'
       },
-      error: 'Code does not exist'
+      error: 'Code does not exist',
+      organization_id: 'testtest'
     }
   end
   let(:json_response_hash) do

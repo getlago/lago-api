@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::EventService do
-  subject(:webhook_event_service) { described_class.new(object, organization) }
+  subject(:webhook_event_service) { described_class.new(object) }
 
   let(:organization) { create(:organization, webhook_url: webhook_url) }
   let(:webhook_url) { 'http://foo.bar' }
@@ -14,7 +14,8 @@ RSpec.describe Webhooks::EventService do
         transaction_id: SecureRandom.uuid,
         code: 'code'
       },
-      error: 'Code does not exist'
+      error: 'Code does not exist',
+      organization_id: organization.id
     }
   end
 
