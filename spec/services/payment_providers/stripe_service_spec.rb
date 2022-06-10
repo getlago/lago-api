@@ -16,7 +16,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       expect do
         stripe_service.create_or_update(
           organization_id: organization.id,
-          public_key: public_key,
           secret_key: secret_key,
           create_customers: true,
           send_zero_amount_invoice: false,
@@ -32,7 +31,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'updates the existing provider' do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
-          public_key: public_key,
           secret_key: secret_key,
           create_customers: true,
           send_zero_amount_invoice: false,
@@ -42,7 +40,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         aggregate_failures do
           expect(result.stripe_provider.id).to eq(stripe_provider.id)
-          expect(result.stripe_provider.public_key).to eq(public_key)
           expect(result.stripe_provider.secret_key).to eq(secret_key)
           expect(result.stripe_provider.create_customers).to be_truthy
           expect(result.stripe_provider.send_zero_amount_invoice).to be_falsey
@@ -54,6 +51,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'returns an error result' do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
+          secret_key: nil,
         )
 
         expect(result).not_to be_success

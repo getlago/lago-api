@@ -7,12 +7,10 @@ module PaymentProviders
         organization_id: args[:organization_id],
       )
 
-      stripe_provider.update!(
-        public_key: args[:public_key],
-        secret_key: args[:secret_key],
-        create_customers: args[:create_customers],
-        send_zero_amount_invoice: args[:send_zero_amount_invoice],
-      )
+      stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
+      stripe_provider.create_customers = args[:create_customers]
+      stripe_provider.send_zero_amount_invoice = args[:send_zero_amount_invoice]
+      stripe_provider.save!
 
       result.stripe_provider = stripe_provider
       result

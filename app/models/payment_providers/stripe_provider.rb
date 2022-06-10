@@ -2,19 +2,10 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
-    validates :public_key, presence: true
     validates :secret_key, presence: true
 
     validates :create_customers, inclusion: { in: [true, false] }
     validates :send_zero_amount_invoice, inclusion: { in: [true, false] }
-
-    def public_key=(public_key)
-      push_to_secrets(key: 'public_key', value: public_key)
-    end
-
-    def public_key
-      get_from_secrets('public_key')
-    end
 
     def secret_key=(secret_key)
       push_to_secrets(key: 'secret_key', value: secret_key)

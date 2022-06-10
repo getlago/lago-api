@@ -56,7 +56,6 @@ input AddStripePaymentProviderInput {
   """
   clientMutationId: String
   createCustomers: Boolean!
-  publicKey: String!
   secretKey: String!
   sendZeroAmountInvoice: Boolean!
 }
@@ -2471,7 +2470,7 @@ enum StatusTypeEnum {
 type StripeProvider {
   createCustomers: Boolean!
   id: ID!
-  publicKey: String!
+  secretKey: String!
   sendZeroAmountInvoice: Boolean!
 }
 

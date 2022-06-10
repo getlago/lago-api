@@ -6,7 +6,7 @@ FactoryBot.define do
     type { 'PaymentProviders::StripeProvider' }
 
     secrets do
-      { public_key: SecureRandom.uuid, secret_key: SecureRandom.uuid }.to_json
+      { secret_key: SecureRandom.uuid }.to_json
     end
 
     settings do

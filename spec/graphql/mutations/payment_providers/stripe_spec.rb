@@ -10,7 +10,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
       mutation($input: AddStripePaymentProviderInput!) {
         addStripePaymentProvider(input: $input) {
           id,
-          publicKey
+          secretKey
           createCustomers
           sendZeroAmountInvoice
         }
@@ -18,8 +18,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
     GQL
   end
 
-  let(:public_key) { SecureRandom.uuid }
-  let(:secret_key) { SecureRandom.uuid }
+  let(:secret_key) { 'sk_12345678901234567890' }
 
   it 'creates a stripe provider' do
     result = execute_graphql(
@@ -28,7 +27,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          publicKey: public_key,
           secretKey: secret_key,
           createCustomers: false,
           sendZeroAmountInvoice: false,
@@ -40,7 +38,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['publicKey']).to eq(public_key)
+      expect(result_data['secretKey']).to eq('sk_************')
       expect(result_data['createCustomers']).to eq(false)
       expect(result_data['sendZeroAmountInvoice']).to eq(false)
     end
@@ -53,7 +51,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            publicKey: public_key,
             secretKey: secret_key,
             createCustomers: false,
             sendZeroAmountInvoice: false,
@@ -72,7 +69,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            publicKey: public_key,
             secretKey: secret_key,
             createCustomers: false,
             sendZeroAmountInvoice: false,

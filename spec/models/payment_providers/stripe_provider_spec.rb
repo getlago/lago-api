@@ -7,17 +7,24 @@ RSpec.describe PaymentProviders::StripeProvider, type: :model do
 
   let(:attributes) {}
 
-  describe 'public_key' do
-    it 'assigns and retrieve a secret key' do
-      stripe_provider.public_key = 'foo_bar'
-      expect(stripe_provider.public_key).to eq('foo_bar')
-    end
-  end
-
   describe 'secret_key' do
     it 'assigns and retrieve a secret key' do
       stripe_provider.secret_key = 'foo_bar'
       expect(stripe_provider.secret_key).to eq('foo_bar')
+    end
+  end
+
+  describe 'create_customers' do
+    it 'assigns and settings' do
+      stripe_provider.create_customers = true
+      expect(stripe_provider.create_customers).to be_truthy
+    end
+  end
+
+  describe 'send_zero_amount_invoice' do
+    it 'assigns and settings' do
+      stripe_provider.send_zero_amount_invoice = true
+      expect(stripe_provider.send_zero_amount_invoice).to be_truthy
     end
   end
 end
