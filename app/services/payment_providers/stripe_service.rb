@@ -10,6 +10,8 @@ module PaymentProviders
       stripe_provider.update!(
         public_key: args[:public_key],
         secret_key: args[:secret_key],
+        create_customers: args[:create_customers],
+        send_zero_amount_invoice: args[:send_zero_amount_invoice],
       )
 
       result.stripe_provider = stripe_provider

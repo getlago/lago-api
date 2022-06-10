@@ -6,7 +6,7 @@ class CreatePaymentProviders < ActiveRecord::Migration[7.0]
       t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
       t.string :type, null: false
       t.string :secrets
-      t.jsonb :settings, null: false, default: true
+      t.jsonb :settings, null: false, default: {}
 
       t.timestamps
     end

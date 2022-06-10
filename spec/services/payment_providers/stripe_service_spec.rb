@@ -18,6 +18,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           organization_id: organization.id,
           public_key: public_key,
           secret_key: secret_key,
+          create_customers: true,
+          send_zero_amount_invoice: false,
         )
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
@@ -32,6 +34,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           organization_id: organization.id,
           public_key: public_key,
           secret_key: secret_key,
+          create_customers: true,
+          send_zero_amount_invoice: false,
         )
 
         expect(result).to be_success
@@ -40,6 +44,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result.stripe_provider.id).to eq(stripe_provider.id)
           expect(result.stripe_provider.public_key).to eq(public_key)
           expect(result.stripe_provider.secret_key).to eq(secret_key)
+          expect(result.stripe_provider.create_customers).to be_truthy
+          expect(result.stripe_provider.send_zero_amount_invoice).to be_falsey
         end
       end
     end

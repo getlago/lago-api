@@ -12,6 +12,9 @@ module Mutations
       argument :public_key, String, required: true
       argument :secret_key, String, required: true
 
+      argument :create_customers, Boolean, required: true
+      argument :send_zero_amount_invoice, Boolean, required: true
+
       type Types::PaymentProviders::Stripe
 
       def resolve(**args)

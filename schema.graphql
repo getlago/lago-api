@@ -55,8 +55,10 @@ input AddStripePaymentProviderInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  createCustomers: Boolean!
   publicKey: String!
   secretKey: String!
+  sendZeroAmountInvoice: Boolean!
 }
 
 enum AggregationTypeEnum {
@@ -2467,8 +2469,10 @@ enum StatusTypeEnum {
 }
 
 type StripeProvider {
+  createCustomers: Boolean!
   id: ID!
   publicKey: String!
+  sendZeroAmountInvoice: Boolean!
 }
 
 type Subscription {
