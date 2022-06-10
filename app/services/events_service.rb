@@ -72,12 +72,14 @@ class EventsService < BaseService
   end
 
   def send_webhook_notice(organization, params)
+    return unless organization.webhook_url?
+
     object = {
       input_params: params,
       error: result.error,
       organization_id: organization.id
     }
 
-    SendWebhookJob.perform_later(:event, object) if organization.webhook_url?
+    SendWebhookJob.perform_later(:event, object)
   end
 end
