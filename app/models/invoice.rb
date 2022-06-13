@@ -15,6 +15,10 @@ class Invoice < ApplicationRecord
   monetize :amount_cents
   monetize :vat_amount_cents
 
+  INVOICE_TYPES = %i[subscription add_on].freeze
+
+  enum invoice_type: INVOICE_TYPES
+
   sequenced scope: ->(invoice) { invoice.organization.invoices }
 
   validates :from_date, presence: true
