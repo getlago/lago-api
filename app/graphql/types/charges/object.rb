@@ -23,6 +23,11 @@ module Types
       field :free_units, Integer, null: true
       field :package_size, Integer, null: true
 
+      # NOTE: Percentage charge model
+      field :rate, String, null: true
+      field :fixed_amount, String, null: true
+      field :fixed_amount_target, Types::Charges::FixedAmountTargetEnum, null: true
+
       def amount
         return unless object.standard? || object.package?
 
@@ -45,6 +50,24 @@ module Types
         return unless object.package?
 
         object.properties['package_size']
+      end
+
+      def rate
+        return unless object.percentage?
+
+        object.properties['rate']
+      end
+
+      def fixed_amount
+        return unless object.percentage?
+
+        object.properties['fixed_amount']
+      end
+
+      def fixed_amount_target
+        return unless object.percentage?
+
+        object.properties['fixed_amount_target']
       end
     end
   end
