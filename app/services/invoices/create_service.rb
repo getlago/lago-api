@@ -17,6 +17,7 @@ module Invoices
           to_date: to_date,
           charges_from_date: charges_from_date,
           issuing_date: issuing_date,
+          invoice_type: :subscription,
         )
 
         create_subscription_fee(invoice) if should_create_subscription_fee?

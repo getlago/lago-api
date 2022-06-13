@@ -17,6 +17,7 @@ module Invoices
           from_date: date,
           to_date: date,
           issuing_date: date,
+          invoice_type: :add_on,
         )
 
         create_add_on_fee(invoice)
