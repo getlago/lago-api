@@ -44,7 +44,7 @@ RSpec.describe Webhooks::EventService do
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post) do |payload|
         expect(payload[:webhook_type]).to eq('event.error')
-        expect(payload[:object_type]).to eq('error')
+        expect(payload[:object_type]).to eq('event_error')
       end
     end
 

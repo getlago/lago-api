@@ -66,7 +66,7 @@ class EventsService < BaseService
   end
 
   def valid_code?(code, organization)
-    valid_codes = organization.billable_metrics.all.pluck(:code)
+    valid_codes = organization.billable_metrics.pluck(:code)
 
     valid_codes.include? code
   end

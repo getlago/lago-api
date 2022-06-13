@@ -11,7 +11,7 @@ module Webhooks
     def object_serializer
       ::ErrorSerializer.new(
         OpenStruct.new(object),
-        root_name: 'error_event',
+        root_name: 'event_error',
       )
     end
 
@@ -20,7 +20,7 @@ module Webhooks
     end
 
     def object_type
-      'error'
+      'event_error'
     end
   end
 end

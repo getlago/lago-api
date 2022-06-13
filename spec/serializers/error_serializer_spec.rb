@@ -17,7 +17,7 @@ RSpec.describe ErrorSerializer do
   end
   let(:json_response_hash) do
     {
-      'error_event' => {
+      'event_error' => {
         'status' => 422,
         'error' => 'Unprocessable entity',
         'message' => 'Code does not exist',
@@ -30,7 +30,7 @@ RSpec.describe ErrorSerializer do
     }
   end
   let(:serializer) do
-    described_class.new(OpenStruct.new(object), root_name: 'error_event')
+    described_class.new(OpenStruct.new(object), root_name: 'event_error')
   end
   let(:result) { JSON.parse(serializer.to_json) }
 
