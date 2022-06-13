@@ -56,4 +56,8 @@ class Subscription < ApplicationRecord
 
     (created_at.end_of_month + 1.day).to_date
   end
+
+  def already_billed?
+    fees.subscription_kind.any?
+  end
 end

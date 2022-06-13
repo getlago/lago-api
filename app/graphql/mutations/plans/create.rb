@@ -18,6 +18,7 @@ module Mutations
       argument :amount_currency, Types::CurrencyEnum
       argument :trial_period, Float, required: false
       argument :description, String, required: false
+      argument :bill_charges_monthly, Boolean, required: false
 
       argument :charges, [Types::Charges::Input]
 

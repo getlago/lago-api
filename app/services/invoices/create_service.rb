@@ -15,6 +15,7 @@ module Invoices
           subscription: subscription,
           from_date: from_date,
           to_date: to_date,
+          charges_from_date: charges_from_date,
           issuing_date: issuing_date,
         )
 
@@ -60,9 +61,23 @@ module Invoices
       # NOTE: On first billing period, subscription might start after the computed start of period
       #       ei: if we bill on beginning of period, and user registered on the 15th, the invoice should
       #       start on the 15th (subscription date) and not on the 1st
-      @from_date = subscription.started_at.to_date if from_date < subscription.started_at
+      @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
 
       @from_date
+    end
+
+    def charges_from_date
+      return @charges_from_date if @charges_from_date.present?
+
+      @charges_from_date = if subscription.plan.yearly? && subscription.plan.bill_charges_monthly
+        (Time.zone.at(timestamp) - 1.month).to_date
+      else
+        from_date
+      end
+
+      @charges_from_date = subscription.started_at.to_date if @charges_from_date < subscription.started_at
+
+      @charges_from_date
     end
 
     def to_date
@@ -79,7 +94,7 @@ module Invoices
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
       #       billed immediatly. An invoice must be generated for it with only the subscription fee.
       #       The invoicing period will be only one day: the subscription day
-      @to_date = subscription.started_at.to_date if to_date < subscription.started_at
+      @to_date = subscription.started_at.to_date if @to_date < subscription.started_at
 
       @to_date
     end
@@ -118,10 +133,23 @@ module Invoices
     end
 
     def should_create_subscription_fee?
+      return false unless should_create_yearly_subscription_fee?
+
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrear, otherwise this fee will never
       #       be created.
       subscription.active? || (subscription.terminated? && subscription.plan.pay_in_arrear?)
+    end
+
+    def should_create_yearly_subscription_fee?
+      return true unless subscription.plan.yearly?
+
+      # NOTE: we do not want to create a subscription fee for plans with bill_charges_monthly activated
+      # But we want to keep the subscription charge when it has to proceed
+      # Cases when we want to charge a subscription:
+      #   - Plan is pay in advance, we're at the beginning of the period (month 1) or subscription has never been billed
+      #   - Plan is pay in arrear and we're at the beginning of the period (month 1)
+      Time.zone.at(timestamp).to_date.month == 1 || (subscription.plan.pay_in_advance && !subscription.already_billed?)
     end
 
     def should_create_charge_fees?

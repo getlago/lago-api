@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_06_01_150058) do
+ActiveRecord::Schema[7.0].define(version: 2022_06_07_082458) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -179,6 +179,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_01_150058) do
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
     t.integer "sequential_id"
+    t.date "charges_from_date"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
   end
@@ -215,6 +216,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_01_150058) do
     t.string "amount_currency", null: false
     t.float "trial_period"
     t.boolean "pay_in_advance", default: false, null: false
+    t.boolean "bill_charges_monthly"
     t.index ["code", "organization_id"], name: "index_plans_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_plans_on_organization_id"
   end

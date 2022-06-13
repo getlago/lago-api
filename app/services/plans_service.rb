@@ -12,6 +12,7 @@ class PlansService < BaseService
       amount_cents: args[:amount_cents],
       amount_currency: args[:amount_currency],
       trial_period: args[:trial_period],
+      bill_charges_monthly: args[:interval].to_sym == :yearly ? args[:bill_charges_monthly] || false : nil,
     )
 
     # Validates billable metrics
@@ -48,6 +49,7 @@ class PlansService < BaseService
       plan.amount_cents = args[:amount_cents]
       plan.amount_currency = args[:amount_currency]
       plan.trial_period = args[:trial_period]
+      plan.bill_charges_monthly = args[:interval].to_sym == :yearly ? args[:bill_charges_monthly] || false : nil
     end
 
     metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
