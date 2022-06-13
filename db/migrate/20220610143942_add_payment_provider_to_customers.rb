@@ -2,6 +2,6 @@
 
 class AddPaymentProviderToCustomers < ActiveRecord::Migration[7.0]
   def change
-    add_column :customers, :payment_provider, :string, default: 'lago'
+    add_column :customers, :payment_provider, :string, default: 'external'
   end
 end
