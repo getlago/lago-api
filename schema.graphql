@@ -1875,6 +1875,7 @@ type Invoice {
   createdAt: ISO8601DateTime!
   fromDate: ISO8601Date!
   id: ID!
+  invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
   plan: Plan
   sequentialId: ID!
@@ -1885,6 +1886,11 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
+}
+
+enum InvoiceTypeEnum {
+  add_on
+  subscription
 }
 
 """
