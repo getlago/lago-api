@@ -29,5 +29,16 @@ FactoryBot.define do
         }
       end
     end
+
+    factory :percentage_charge do
+      charge_model { 'percentage' }
+      properties do
+        {
+          rate: '0.0555',
+          fixed_amount: '2',
+          fixed_amount_target: 'each_unit',
+        }
+      end
+    end
   end
 end

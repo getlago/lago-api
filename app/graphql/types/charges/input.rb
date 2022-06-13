@@ -19,6 +19,11 @@ module Types
       # NOTE: Package charge model
       argument :free_units, Integer, required: false
       argument :package_size, Integer, required: false
+
+      # NOTE: Percentage charge model
+      argument :rate, String, required: false
+      argument :fixed_amount, String, required: false
+      argument :fixed_amount_target, Types::Charges::FixedAmountTargetEnum, required: false
     end
   end
 end

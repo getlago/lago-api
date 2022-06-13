@@ -116,10 +116,13 @@ type Charge {
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
+  fixedAmount: String
+  fixedAmountTarget: FixedAmountTargetEnum
   freeUnits: Int
   graduatedRanges: [GraduatedRange!]
   id: ID!
   packageSize: Int
+  rate: String
   updatedAt: ISO8601DateTime!
 }
 
@@ -128,15 +131,19 @@ input ChargeInput {
   amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
+  fixedAmount: String
+  fixedAmountTarget: FixedAmountTargetEnum
   freeUnits: Int
   graduatedRanges: [GraduatedRangeInput!]
   id: ID
   packageSize: Int
+  rate: String
 }
 
 enum ChargeModelEnum {
   graduated
   package
+  percentage
   standard
 }
 
@@ -1829,6 +1836,11 @@ type Event {
 type EventCollection {
   collection: [Event!]!
   metadata: CollectionMetadata!
+}
+
+enum FixedAmountTargetEnum {
+  all_units
+  each_unit
 }
 
 type GraduatedRange {

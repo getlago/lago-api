@@ -23,6 +23,12 @@ module ChargeModelAttributesHandler
           package_size: output[:package_size],
           free_units: output[:free_units],
         }
+      when :percentage
+        output[:properties] = {
+          rate: output[:rate],
+          fixed_amount: output[:fixed_amount],
+          fixed_amount_target: output[:fixed_amount_target],
+        }
       end
 
       # NOTE: delete fields used to build properties
@@ -30,6 +36,9 @@ module ChargeModelAttributesHandler
       output.delete(:amount)
       output.delete(:free_units)
       output.delete(:package_size)
+      output.delete(:rate)
+      output.delete(:fixed_amount)
+      output.delete(:fixed_amount_target)
 
       output
     end

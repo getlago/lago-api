@@ -90,6 +90,8 @@ module Fees
                         Charges::ChargeModels::GraduatedService
                       when :package
                         Charges::ChargeModels::PackageService
+                      when :percentage
+                        Charges::ChargeModels::PercentageService
                       else
                         raise NotImplementedError
       end
