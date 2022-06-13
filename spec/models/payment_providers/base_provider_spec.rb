@@ -5,12 +5,13 @@ require 'rails_helper'
 RSpec.describe PaymentProviders::BaseProvider, type: :model do
   subject(:provider) { described_class.new(attributes) }
 
-  let(:attributes) do
-    { secrets: secrets.to_json }
-  end
   let(:secrets) { { 'api_key' => api_key, 'api_secret' => api_secret } }
   let(:api_key) { SecureRandom.uuid }
   let(:api_secret) { SecureRandom.uuid }
+
+  let(:attributes) do
+    { secrets: secrets.to_json }
+  end
 
   describe '.json_secrets' do
     it { expect(provider.secrets_json).to eq(secrets) }
