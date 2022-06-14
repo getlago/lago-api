@@ -4811,6 +4811,12 @@
               "deprecationReason": null
             },
             {
+              "name": "IDR",
+              "description": "Indonesian Rupiah",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "NOK",
               "description": "Norwegian Krone",
               "isDeprecated": false,

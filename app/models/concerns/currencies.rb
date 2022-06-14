@@ -7,6 +7,7 @@ module Currencies
     DKK: 'Danish Krone',
     EUR: 'Euro',
     GBP: 'Pound Sterling',
+    IDR: 'Indonesian Rupiah',
     NOK: 'Norwegian Krone',
     SEK: 'Swedish Krona',
     USD: 'American Dollar',

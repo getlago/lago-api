@@ -1636,6 +1636,11 @@ enum CurrencyEnum {
   GBP
 
   """
+  Indonesian Rupiah
+  """
+  IDR
+
+  """
   Norwegian Krone
   """
   NOK
