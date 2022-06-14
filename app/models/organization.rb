@@ -11,6 +11,9 @@ class Organization < ApplicationRecord
   has_many :events
   has_many :coupons
   has_many :add_ons
+  has_many :payment_providers
+
+  has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
 
   before_create :generate_api_key
 

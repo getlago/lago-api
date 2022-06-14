@@ -205,6 +205,16 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_13_130634) do
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 
+  create_table "payment_providers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "type", null: false
+    t.string "secrets"
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
+  end
+
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "name", null: false
@@ -262,6 +272,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_13_130634) do
   add_foreign_key "invoices", "subscriptions"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "payment_providers", "organizations"
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"

@@ -12,5 +12,10 @@ module LagoApi
     config.eager_load_paths << Rails.root.join('lib/lago_http_client')
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
+
+    # Configuration for active record encryption
+    config.active_record.encryption.primary_key = ENV['ENCRYPTION_PRIMARY_KEY']
+    config.active_record.encryption.deterministic_key = ENV['ENCRYPTION_DETERMINISTIC_KEY']
+    config.active_record.encryption.key_derivation_salt = ENV['ENCRYPTION_KEY_DERIVATION_SALT']
   end
 end
