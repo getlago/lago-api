@@ -14,9 +14,9 @@ module PaymentProviderCustomers
         payment_provider_id: payment_provider_id,
       )
       provider_customer.provider_customer_id = params[:provider_customer_id]
-      # TODO: Handle settings and create customer on stripe if no customer id
-
       provider_customer.save!
+
+      PaymentProviderCustomers::StripeCreateJob.perform_later(provider_customer)
 
       result.provider_customer = provider_customer
       result
