@@ -22,6 +22,9 @@ gem 'sidekiq'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 gem 'with_advisory_lock'
 
+# Payment processing
+gem 'stripe'
+
 # Logging
 gem 'lograge'
 gem 'lograge-sql'
