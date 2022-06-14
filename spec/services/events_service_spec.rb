@@ -6,6 +6,7 @@ RSpec.describe EventsService, type: :service do
   subject(:event_service) { described_class.new }
 
   let(:organization) { create(:organization) }
+  let(:billable_metric)  { create(:billable_metric, organization: organization) }
   let(:customer) { create(:customer, organization: organization) }
 
   describe '.validate_params' do
@@ -49,7 +50,7 @@ RSpec.describe EventsService, type: :service do
     let(:create_args) do
       {
         customer_id: customer.customer_id,
-        code: 'event_code',
+        code: billable_metric.code,
         transaction_id: SecureRandom.uuid,
         properties: { foo: 'bar' },
         timestamp: Time.zone.now.to_i,
@@ -72,7 +73,7 @@ RSpec.describe EventsService, type: :service do
       aggregate_failures do
         expect(event.customer_id).to eq(customer.id)
         expect(event.organization_id).to eq(organization.id)
-        expect(event.code).to eq('event_code')
+        expect(event.code).to eq(billable_metric.code)
         expect(event.timestamp).to be_a(Time)
       end
     end
@@ -100,6 +101,41 @@ RSpec.describe EventsService, type: :service do
       let(:create_args) do
         {
           customer_id: SecureRandom.uuid,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          properties: { foo: 'bar' },
+          timestamp: Time.zone.now.to_i,
+        }
+      end
+
+      it 'fails' do
+        result = event_service.create(
+          organization: organization,
+          params: create_args,
+          timestamp: timestamp,
+          metadata: {},
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to eq('customer does not exist')
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          event_service.create(
+            organization: organization,
+            params: create_args,
+            timestamp: timestamp,
+            metadata: {},
+          )
+        end.to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
+    context 'when code does not exist' do
+      let(:create_args) do
+        {
+          customer_id: customer.customer_id,
           code: 'event_code',
           transaction_id: SecureRandom.uuid,
           properties: { foo: 'bar' },
@@ -116,7 +152,18 @@ RSpec.describe EventsService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error).to eq('customer does not exists')
+        expect(result.error).to eq('code does not exist')
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          event_service.create(
+            organization: organization,
+            params: create_args,
+            timestamp: timestamp,
+            metadata: {},
+          )
+        end.to have_enqueued_job(SendWebhookJob)
       end
     end
 
@@ -124,7 +171,7 @@ RSpec.describe EventsService, type: :service do
       let(:create_args) do
         {
           customer_id: customer.customer_id,
-          code: 'event_code',
+          code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           timestamp: Time.zone.now.to_i,
         }
@@ -145,7 +192,7 @@ RSpec.describe EventsService, type: :service do
         aggregate_failures do
           expect(event.customer_id).to eq(customer.id)
           expect(event.organization_id).to eq(organization.id)
-          expect(event.code).to eq('event_code')
+          expect(event.code).to eq(billable_metric.code)
           expect(event.timestamp).to be_a(Time)
           expect(event.properties).to eq({})
         end

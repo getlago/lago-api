@@ -19,7 +19,19 @@ class EventsService < BaseService
     end
 
     unless current_customer(organization.id, params[:customer_id])
-      return result.fail!('missing_argument', 'customer does not exists')
+      result.fail!('missing_argument', 'customer does not exist')
+
+      send_webhook_notice(organization, params)
+
+      return result
+    end
+
+    unless valid_code?(params[:code], organization)
+      result.fail!('missing_argument', 'code does not exist')
+
+      send_webhook_notice(organization, params)
+
+      return result
     end
 
     event = organization.events.new
@@ -38,6 +50,10 @@ class EventsService < BaseService
     result
   rescue ActiveRecord::RecordInvalid => e
     result.fail_with_validations!(e.record)
+
+    send_webhook_notice(organization, params)
+
+    result
   end
 
   private
@@ -47,5 +63,23 @@ class EventsService < BaseService
       customer_id: customer_id,
       organization_id: organization_id,
     )
+  end
+
+  def valid_code?(code, organization)
+    valid_codes = organization.billable_metrics.pluck(:code)
+
+    valid_codes.include? code
+  end
+
+  def send_webhook_notice(organization, params)
+    return unless organization.webhook_url?
+
+    object = {
+      input_params: params,
+      error: result.error,
+      organization_id: organization.id
+    }
+
+    SendWebhookJob.perform_later(:event, object)
   end
 end

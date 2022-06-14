@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe SendWebhookJob, type: :job do
   let(:webhook_invoice_service) { instance_double(Webhooks::InvoicesService) }
   let(:webhook_add_on_service) { instance_double(Webhooks::AddOnService) }
+  let(:webhook_event_service) { instance_double(Webhooks::EventService) }
   let(:organization) { create(:organization, webhook_url: 'http://foo.bar') }
   let(:invoice) { create(:invoice) }
 
@@ -37,6 +38,34 @@ RSpec.describe SendWebhookJob, type: :job do
 
       expect(Webhooks::AddOnService).to have_received(:new)
       expect(webhook_add_on_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is event' do
+    let(:object) do
+      {
+        input_params: {
+          customer_id: 'customer',
+          transaction_id: SecureRandom.uuid,
+          code: 'code'
+        },
+        error: 'Code does not exist',
+        organization_id: organization.id
+      }
+    end
+
+    before do
+      allow(Webhooks::EventService).to receive(:new)
+        .with(object)
+        .and_return(webhook_event_service)
+      allow(webhook_event_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      described_class.perform_now(:event, object)
+
+      expect(Webhooks::EventService).to have_received(:new)
+      expect(webhook_event_service).to have_received(:call)
     end
   end
 
