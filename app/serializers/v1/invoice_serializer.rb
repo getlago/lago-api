@@ -11,6 +11,7 @@ module V1
         charges_from_date: model.to_date.iso8601,
         issuing_date: model.issuing_date.iso8601,
         invoice_type: model.invoice_type,
+        status: model.status,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
