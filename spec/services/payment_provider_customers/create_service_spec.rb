@@ -11,10 +11,13 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
     { provider_customer_id: 'stripe_id' }
   end
 
+  let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
+
   describe '.create' do
     it 'creates a payment_provider_customer' do
       result = create_service.create(
         customer_class: PaymentProviderCustomers::StripeCustomer,
+        payment_provider_id: stripe_provider.id,
         params: create_params,
       )
 
