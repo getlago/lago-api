@@ -19,6 +19,6 @@ class Invoices::UpdateService < BaseService
   private
 
   def valid_status?(status)
-    Invoice::STATUS.include? status.to_sym
+    Invoice::STATUS.include? status&.to_sym
   end
 end

@@ -60,6 +60,20 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context 'when invoice status is not present' do
+      let(:update_args) {{}}
+
+      it 'returns an error' do
+        result = invoice_service.update_from_api(
+          invoice_id: invoice_id,
+          params: update_args,
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to eq('invalid_status')
+      end
+    end
+
     context 'with validation error' do
       before do
         invoice.issuing_date = nil
