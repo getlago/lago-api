@@ -16,9 +16,10 @@ module PaymentProviderCustomers
       provider_customer.provider_customer_id = params[:provider_customer_id]
       provider_customer.save!
 
-      PaymentProviderCustomers::StripeCreateJob.perform_later(provider_customer)
-
       result.provider_customer = provider_customer
+
+      create_customer_on_provider_service
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -29,5 +30,13 @@ module PaymentProviderCustomers
     attr_accessor :customer
 
     delegate :organization, to: :customer
+
+    def create_customer_on_provider_service
+      # NOTE: the customer already exists on the service provider
+      return if result.provider_customer.provider_customer_id?
+      return unless organization.stripe_payment_provider&.create_customers
+
+      PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer)
+    end
   end
 end
