@@ -4,10 +4,18 @@
 
 Rails.application.config.middleware.insert_before(0, Rack::Cors) do
   allow do
-    if Rails.env.development?
+    if ENV.key?('LAGO_FRONT_URL')
+      uri = URI(ENV['LAGO_FRONT_URL'])
+
+      frontend_origin = if uri.port.in?([80, 443])
+        uri.host
+      else
+        [uri.host, uri.port].join(':')
+      end
+
+      origins frontend_origin
+    elsif Rails.env.development?
       origins 'app.lago.dev', 'api'
-    elsif ENV['LAGO_FRONT_URL']
-      origins URI(ENV['LAGO_FRONT_URL']).host
     end
 
     resource '*',
