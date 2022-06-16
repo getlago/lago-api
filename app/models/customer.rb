@@ -14,12 +14,12 @@ class Customer < ApplicationRecord
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
 
-  PAYMENT_PROVIDERS = %w[external stripe].freeze
+  PAYMENT_PROVIDERS = %w[stripe].freeze
 
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, if: :country?
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }
+  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
 
   def attached_to_subscriptions?
     subscriptions.exists?
