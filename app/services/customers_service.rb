@@ -115,6 +115,7 @@ class CustomersService < BaseService
       customer.update!(payment_provider: 'stripe')
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create(
+        customer_class: PaymentProviderCustomers::StripeCustomer,
         params: billing_configuration,
       )
       create_result.throw_error unless create_result.success?

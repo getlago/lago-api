@@ -8,8 +8,8 @@ module PaymentProviderCustomers
       super(nil)
     end
 
-    def create(params:)
-      provider_customer = PaymentProviderCustomers::StripeCustomer.find_or_initialize_by(
+    def create(customer_class:, params:)
+      provider_customer = customer_class.find_or_initialize_by(
         customer_id: customer.id,
         # TODO: attache payment provider of the organization
       )

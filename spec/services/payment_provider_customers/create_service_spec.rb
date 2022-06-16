@@ -13,7 +13,10 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
   describe '.create' do
     it 'creates a payment_provider_customer' do
-      result = create_service.create(params: create_params)
+      result = create_service.create(
+        customer_class: PaymentProviderCustomers::StripeCustomer,
+        params: create_params,
+      )
 
       expect(result).to be_success
       expect(result.provider_customer).to be_present
