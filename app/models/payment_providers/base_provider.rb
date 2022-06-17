@@ -6,6 +6,7 @@ module PaymentProviders
 
     belongs_to :organization
     has_many :payment_provider_customers
+    has_many :payments
 
     encrypts :secrets
 

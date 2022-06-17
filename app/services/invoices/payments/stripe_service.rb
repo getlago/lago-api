@@ -10,10 +10,63 @@ module Invoices
       end
 
       def create
-        Stripe::Charge.create(
+        return result unless should_process_payment?
+
+        ensure_provider_customer
+
+        stripe_result = Stripe::Charge.create(
+          stripe_payment_payload,
+          { api_key: api_key },
+        )
+
+        payment = Payment.new(
+          invoice: invoice,
+          payment_provider: organization.stripe_provider,
+          payment_provider_customer: customer.stripe_customer,
+          amount_cents: stripe_result.amount,
+          amount_currency: stripe_result.currency&.upcase,
+          payment_id: stripe_result.id,
+          status: stripe_result.status,
+        )
+        payment.save!
+
+        # TODO: change invoice status
+        #       invoice.update!(status: stripe_result.status)
+
+        result.invoice = invoice
+        result.payment = payment
+        result
+      end
+
+      private
+
+      attr_accessor :invoice
+
+      delegate :organization, :customer, to: :invoice
+
+      def should_process_payment?
+        return false unless organization.stripe_payment_provider
+        return true if invoice.total_amount_cents.positive?
+
+        organization.stripe_payment_provider.send_zero_amount_invoice?
+      end
+
+      def ensure_provider_customer
+        return if customer&.stripe_customer&.provider_customer_id
+
+        # TODO: create customer on stripe
+        #       wait for merge of https://github.com/getlago/lago-api/pull/268
+      end
+
+      def stripe_api_key
+        organization.stripe_payment_provider.secret_key
+      end
+
+      def stripe_payment_payload
+        {
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
-          # customer: customer.stripe_customer&.provider_customer_id,
+          customer: customer.stripe_customer.provider_customer_id,
           description: '', # TODO
           metadata: {
             lago_customer_id: customer.id,
@@ -23,17 +76,7 @@ module Invoices
             invoice_to_date: invoice.to_date.iso8601,
             invoice_type: invoice.invoice_type,
           },
-        )
-      end
-
-      private
-
-      attr_accessor :invoice
-
-      delegate :organization, :customer, to: :invoice
-
-      def stripe_api_key
-        # TODO: organization.stripe_payment_provider.secret_key
+        }
       end
     end
   end
