@@ -17,18 +17,18 @@ module Invoices
         stripe_result = Stripe::Charge.create(
           stripe_payment_payload,
           {
-            api_key: api_key,
+            api_key: stripe_api_key,
             idempotency_key: invoice.id,
           },
         )
 
         payment = Payment.new(
           invoice: invoice,
-          payment_provider: organization.stripe_provider,
-          payment_provider_customer: customer.stripe_customer,
+          payment_provider_id: organization.stripe_payment_provider.id,
+          payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
-          payment_id: stripe_result.id,
+          provider_payment_id: stripe_result.id,
           status: stripe_result.status,
         )
         payment.save!
@@ -50,7 +50,7 @@ module Invoices
         return false unless organization.stripe_payment_provider
         return true if invoice.total_amount_cents.positive?
 
-        organization.stripe_payment_provider.send_zero_amount_invoice?
+        organization.stripe_payment_provider.send_zero_amount_invoice
       end
 
       def ensure_provider_customer
@@ -69,7 +69,8 @@ module Invoices
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
-          description: '', # TODO
+          # TODO: use invoice reference instead
+          description: "Lago - #{organization.name} - Invoice #{invoice.sequential_id}",
           metadata: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,

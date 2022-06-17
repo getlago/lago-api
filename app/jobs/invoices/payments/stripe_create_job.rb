@@ -6,7 +6,8 @@ module Invoices
       queue_as 'billing'
 
       def perform(invoice)
-        Invoices::Payments::StripeService.new(invoice).create
+        result = Invoices::Payments::StripeService.new(invoice).create
+        result.throw_error unless result.success?
       end
     end
   end

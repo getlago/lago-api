@@ -12,6 +12,7 @@ RSpec.describe Invoices::Payments::StripeCreateJob, type: :job do
       .with(invoice)
       .and_return(stripe_service)
     allow(stripe_service).to receive(:create)
+      .and_return(BaseService::Result.new)
 
     described_class.perform_now(invoice)
 
