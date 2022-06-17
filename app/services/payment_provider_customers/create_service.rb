@@ -34,6 +34,8 @@ module PaymentProviderCustomers
     def create_customer_on_provider_service
       # NOTE: the customer already exists on the service provider
       return if result.provider_customer.provider_customer_id?
+
+      # NOTE: organization does not have stripe config or does not enforce customer creation on stripe
       return unless organization.stripe_payment_provider&.create_customers
 
       PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer)
