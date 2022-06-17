@@ -16,8 +16,10 @@ class Invoice < ApplicationRecord
   monetize :vat_amount_cents
 
   INVOICE_TYPES = %i[subscription add_on].freeze
+  STATUS = %i[pending succeeded failed].freeze
 
   enum invoice_type: INVOICE_TYPES
+  enum status: STATUS
 
   sequenced scope: ->(invoice) { invoice.organization.invoices }
 
