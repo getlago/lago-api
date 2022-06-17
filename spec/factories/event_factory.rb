@@ -7,5 +7,6 @@ FactoryBot.define do
 
     transaction_id { SecureRandom.uuid }
     code { Faker::Name.name.underscore }
+    timestamp { Time.current }
   end
 end
