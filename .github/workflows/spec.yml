@@ -23,9 +23,9 @@ jobs:
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
-      ENCRYPTION_PRIMARY_KEY: ${{ secrets.ENCRYPTION_PRIMARY_KEY }}
-      ENCRYPTION_DETERMINISTIC_KEY: ${{ secrets.ENCRYPTION_DETERMINISTIC_KEY }}
-      ENCRYPTION_KEY_DERIVATION_SALT: ${{ secrets.ENCRYPTION_KEY_DERIVATION_SALT }}
+      ENCRYPTION_PRIMARY_KEY: 5I9mjfzry2P787x4S5ZuDdJwXNgYEwqo
+      ENCRYPTION_DETERMINISTIC_KEY: SGiZzmh18EjBF9gSW8LCNk7pelauWVr4
+      ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
