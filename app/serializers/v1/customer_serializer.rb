@@ -32,7 +32,7 @@ module V1
         payment_provider: model.payment_provider,
       }
 
-      if model.payment_provider.to_sym == :stripe
+      if model.payment_provider&.to_sym == :stripe
         configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
         configuration.merge!(model.stripe_customer.settings || {})
       end

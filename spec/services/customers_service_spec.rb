@@ -144,8 +144,7 @@ RSpec.describe CustomersService, type: :service do
         aggregate_failures do
           customer = result.customer
           expect(customer.id).to be_present
-          expect(customer.payment_provider).to eq('external')
-
+          expect(customer.payment_provider).to be_nil
           expect(customer.stripe_customer).to be_nil
         end
       end
