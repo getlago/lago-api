@@ -5,7 +5,8 @@ require Rails.root.join('lib/lago_http_client/lago_http_client')
 class SendWebhookJob < ApplicationJob
   queue_as 'webhook'
 
-  retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 3
+  retry_on LagoHttpClient::HttpError, wait: :exponentially_longer,
+    attempts: ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i
 
   def perform(webhook_type, object)
     case webhook_type
