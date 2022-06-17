@@ -36,6 +36,7 @@ module Invoices
       end
 
       SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
+      create_payment(result.invoice)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -189,6 +190,13 @@ module Invoices
       #       and the VAT amount
       invoice.amount_cents = invoice.amount_cents - credit_result.credit.amount_cents
       invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
+    end
+
+    def create_payment(invoice)
+      case customer.payment_provider&.to_sym
+      when :stripe
+        Invoices::Payments::StripeCreateJob.perform_later(invoice)
+      end
     end
   end
 end
