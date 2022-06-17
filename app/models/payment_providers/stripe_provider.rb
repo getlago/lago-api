@@ -30,5 +30,13 @@ module PaymentProviders
     def send_zero_amount_invoice
       get_from_settings('send_zero_amount_invoice')
     end
+
+    def webhook_id=(value)
+      push_to_settings(key: 'webhook_id', value: value)
+    end
+
+    def webhook_id
+      get_from_settings('webhook_id')
+    end
   end
 end
