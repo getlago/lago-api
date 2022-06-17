@@ -16,7 +16,10 @@ module Invoices
 
         stripe_result = Stripe::Charge.create(
           stripe_payment_payload,
-          { api_key: api_key },
+          {
+            api_key: api_key,
+            idempotency_key: invoice.id,
+          },
         )
 
         payment = Payment.new(
@@ -30,8 +33,7 @@ module Invoices
         )
         payment.save!
 
-        # TODO: change invoice status
-        #       invoice.update!(status: stripe_result.status)
+        update_invoice_status(payment.status)
 
         result.invoice = invoice
         result.payment = payment
@@ -77,6 +79,12 @@ module Invoices
             invoice_type: invoice.invoice_type,
           },
         }
+      end
+
+      def update_invoice_status(status)
+        return unless Invoice::STATUS.include?(status&.to_sym)
+
+        invoice.update!(status: status)
       end
     end
   end
