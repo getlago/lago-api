@@ -41,6 +41,16 @@ module Api
       )
     end
 
+    def not_found_error
+      render(
+        json: {
+          status: 404,
+          error: 'Not Found',
+        },
+        status: :not_found
+      )
+    end
+
     def current_organization(api_key = nil)
       @current_organization ||= Organization.find_by(api_key: api_key)
     end

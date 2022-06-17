@@ -17,6 +17,22 @@ module Api
         head(:ok)
       end
 
+      def show
+        event = Event.find_by(
+          organization: current_organization,
+          transaction_id: params[:id]
+        )
+
+        return not_found_error unless event
+
+        render(
+          json: ::V1::EventSerializer.new(
+            event,
+            root_name: 'event',
+          )
+        )
+      end
+
       private
 
       def create_params
