@@ -21,7 +21,23 @@ module V1
         logo_url: model.logo_url,
         legal_name: model.legal_name,
         legal_number: model.legal_number,
+        billing_configuration: billing_configuration,
       }
+    end
+
+    private
+
+    def billing_configuration
+      configuration = {
+        payment_provider: model.payment_provider,
+      }
+
+      if model.payment_provider&.to_sym == :stripe
+        configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
+        configuration.merge!(model.stripe_customer.settings || {})
+      end
+
+      configuration
     end
   end
 end

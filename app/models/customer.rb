@@ -10,10 +10,16 @@ class Customer < ApplicationRecord
   has_many :coupons, through: :applied_coupons
   has_many :applied_add_ons
   has_many :add_ons, through: :applied_add_ons
+  has_many :payment_provider_customers
+
+  has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
+
+  PAYMENT_PROVIDERS = %w[stripe].freeze
 
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, if: :country?
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
 
   def attached_to_subscriptions?
     subscriptions.exists?

@@ -18,7 +18,10 @@ class CustomersService < BaseService
     customer.legal_name = params[:legal_name] if params.key?(:legal_name)
     customer.legal_number = params[:legal_number] if params.key?(:legal_number)
     customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
+
     customer.save!
+
+    assign_billing_configuration(customer, params)
 
     result.customer = customer
     result
@@ -99,5 +102,27 @@ class CustomersService < BaseService
 
     result.customer = customer
     result
+  end
+
+  private
+
+  def assign_billing_configuration(customer, params)
+    return unless params.key?(:billing_configuration)
+
+    billing_configuration = params[:billing_configuration]
+
+    unless billing_configuration[:payment_provider] == 'stripe'
+      customer.update!(payment_provider: nil)
+      return
+    end
+
+    customer.update!(payment_provider: 'stripe')
+
+    create_result = PaymentProviderCustomers::CreateService.new(customer).create(
+      customer_class: PaymentProviderCustomers::StripeCustomer,
+      payment_provider_id: customer.organization.stripe_payment_provider&.id,
+      params: billing_configuration,
+    )
+    create_result.throw_error unless create_result.success?
   end
 end

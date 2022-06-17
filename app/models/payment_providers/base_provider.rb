@@ -5,6 +5,7 @@ module PaymentProviders
     self.table_name = 'payment_providers'
 
     belongs_to :organization
+    has_many :payment_provider_customers
 
     encrypts :secrets
 

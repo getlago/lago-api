@@ -87,6 +87,68 @@ RSpec.describe CustomersService, type: :service do
         expect(result).not_to be_success
       end
     end
+
+    context 'with stripe configuration' do
+      let(:create_args) do
+        {
+          customer_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          billing_configuration: {
+            payment_provider: 'stripe',
+            provider_customer_id: 'stripe_id',
+          },
+        }
+      end
+
+      it 'creates a stripe customer' do
+        result = customers_service.create_from_api(
+          organization: organization,
+          params: create_args,
+        )
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          customer = result.customer
+          expect(customer.id).to be_present
+          expect(customer.payment_provider).to eq('stripe')
+
+          expect(customer.stripe_customer).to be_present
+
+          stripe_customer = customer.stripe_customer
+          expect(stripe_customer.id).to be_present
+          expect(stripe_customer.provider_customer_id).to eq('stripe_id')
+        end
+      end
+    end
+
+    context 'with unknown payment provider' do
+      let(:create_args) do
+        {
+          customer_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          billing_configuration: {
+            payment_provider: 'foo',
+          },
+        }
+      end
+
+      it 'does not create a payment provider customer' do
+        result = customers_service.create_from_api(
+          organization: organization,
+          params: create_args,
+        )
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          customer = result.customer
+          expect(customer.id).to be_present
+          expect(customer.payment_provider).to be_nil
+          expect(customer.stripe_customer).to be_nil
+        end
+      end
+    end
   end
 
   describe 'create' do
