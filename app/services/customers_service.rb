@@ -21,7 +21,8 @@ class CustomersService < BaseService
 
     customer.save!
 
-    assign_billing_configuration(customer, params)
+    # NOTE: handle configuration for configured payment providers
+    handle_api_billing_configuration(customer, params)
 
     result.customer = customer
     result
@@ -49,6 +50,9 @@ class CustomersService < BaseService
       vat_rate: args[:vat_rate],
     )
 
+    # NOTE: handle configuration for configured payment providers
+    create_billing_configuration(customer)
+
     result.customer = customer
     result
   rescue ActiveRecord::RecordInvalid => e
@@ -73,6 +77,7 @@ class CustomersService < BaseService
     customer.legal_name = args[:legal_name] if args.key?(:legal_name)
     customer.legal_number = args[:legal_number] if args.key?(:legal_number)
     customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
+    customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
 
     # NOTE: Customer_id is not editable if customer is attached to subscriptions
     if !customer.attached_to_subscriptions? && args.key?(:customer_id)
@@ -80,6 +85,9 @@ class CustomersService < BaseService
     end
 
     customer.save!
+
+    # NOTE: if payment provider is updated, we need to create/update the provider customer
+    create_or_update_provider_customer(customer) if customer.payment_provider_previously_changed?
 
     result.customer = customer
     result
@@ -106,8 +114,20 @@ class CustomersService < BaseService
 
   private
 
-  def assign_billing_configuration(customer, params)
-    return unless params.key?(:billing_configuration)
+  # NOTE: Check if a payment provider is configured in the organization and
+  #       force creation of provider customers
+  def create_billing_configuration(customer)
+    return unless customer.organization.stripe_payment_provider&.create_customers
+
+    customer.update!(payment_provider: 'stripe')
+    create_or_update_provider_customer(customer)
+  end
+
+  def handle_api_billing_configuration(customer, params)
+    unless params.key?(:billing_configuration)
+      create_billing_configuration(customer) if customer.id_previously_changed?
+      return
+    end
 
     billing_configuration = params[:billing_configuration]
 
@@ -117,8 +137,13 @@ class CustomersService < BaseService
     end
 
     customer.update!(payment_provider: 'stripe')
+    create_or_update_provider_customer(customer, billing_configuration)
+  end
 
-    create_result = PaymentProviderCustomers::CreateService.new(customer).create(
+  def create_or_update_provider_customer(customer, billing_configuration = {})
+    return unless customer.payment_provider == 'stripe'
+
+    create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
       customer_class: PaymentProviderCustomers::StripeCustomer,
       payment_provider_id: customer.organization.stripe_payment_provider&.id,
       params: billing_configuration,

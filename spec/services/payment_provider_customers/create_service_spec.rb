@@ -12,9 +12,9 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
     { provider_customer_id: 'stripe_id' }
   end
 
-  describe '.create' do
+  describe '.create_or_update' do
     it 'creates a payment_provider_customer' do
-      result = create_service.create(
+      result = create_service.create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
         payment_provider_id: stripe_provider.id,
         params: create_params,
@@ -40,7 +40,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
       it 'enqueues a job to create the customer on the provider' do
         expect do
-          create_service.create(
+          create_service.create_or_update(
             customer_class: PaymentProviderCustomers::StripeCustomer,
             payment_provider_id: stripe_provider.id,
             params: create_params,

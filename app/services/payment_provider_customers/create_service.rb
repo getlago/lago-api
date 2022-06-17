@@ -8,12 +8,16 @@ module PaymentProviderCustomers
       super(nil)
     end
 
-    def create(customer_class:, payment_provider_id:, params:)
+    def create_or_update(customer_class:, payment_provider_id:, params:)
       provider_customer = customer_class.find_or_initialize_by(
         customer_id: customer.id,
         payment_provider_id: payment_provider_id,
       )
-      provider_customer.provider_customer_id = params[:provider_customer_id]
+
+      if params.key?(:provider_customer_id)
+        provider_customer.provider_customer_id = params[:provider_customer_id]
+      end
+
       provider_customer.save!
 
       result.provider_customer = provider_customer
