@@ -36,8 +36,8 @@ module Api
             invoices,
             ::V1::InvoiceSerializer,
             collection_name: 'invoices',
-            meta: pagination_metadata(invoices)
-          )
+            meta: pagination_metadata(invoices),
+          ),
         )
       end
 

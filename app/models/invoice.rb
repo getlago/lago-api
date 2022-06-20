@@ -15,8 +15,13 @@ class Invoice < ApplicationRecord
   has_one :organization, through: :subscription
   has_one :plan, through: :subscription
 
+  has_one_attached :file
+
   monetize :amount_cents
   monetize :vat_amount_cents
+  monetize :total_amount_cents
+  monetize :charge_amount_cents
+  monetize :credit_amount_cents
 
   INVOICE_TYPES = %i[subscription add_on].freeze
   STATUS = %i[pending succeeded failed].freeze
@@ -30,6 +35,28 @@ class Invoice < ApplicationRecord
   validates :to_date, presence: true
   validates :issuing_date, presence: true
   validate :validate_date_bounds
+
+  def file_url
+    return if file.blank?
+
+    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
+  end
+
+  def charge_amount_cents
+    fees.charge_kind.sum(:amount_cents)
+  end
+
+  def charge_amount_currency
+    amount_currency
+  end
+
+  def credit_amount_cents
+    credits.sum(:amount_cents)
+  end
+
+  def credit_amount_currency
+    amount_currency
+  end
 
   private
 

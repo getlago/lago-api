@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'net/http/post/multipart'
+
 module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
@@ -26,6 +28,29 @@ module LagoHttpClient
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
       JSON.parse(response.body&.presence || '{}')
+    end
+
+    def post_multipart_file(file_content, file_type, file_name, options = {})
+      params = options.merge(
+        {
+          'file1' => UploadIO.new(
+            StringIO.new(file_content),
+            file_type,
+            file_name,
+          ),
+        },
+      )
+
+      req = Net::HTTP::Post::Multipart.new(
+        uri.path,
+        params,
+      )
+
+      response = http_client.request(req)
+
+      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+
+      response
     end
 
     private

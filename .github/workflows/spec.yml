@@ -27,6 +27,7 @@ jobs:
       ENCRYPTION_DETERMINISTIC_KEY: SGiZzmh18EjBF9gSW8LCNk7pelauWVr4
       ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
       LAGO_API_URL: https://api.lago.dev
+      LAGO_PDF_URL: https://pdf.lago.dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v2

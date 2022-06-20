@@ -13,7 +13,7 @@ Rails.application.configure do
   config.consider_all_requests_local = false
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
-  config.active_storage.service = if ENV['LAGO_USE_AWS_S3']
+  config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present?
     :amazon
   else
     :local
