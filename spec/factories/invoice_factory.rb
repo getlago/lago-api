@@ -9,5 +9,6 @@ FactoryBot.define do
     charges_from_date { Time.zone.now - 1.month }
     issuing_date { Time.zone.now - 1.day }
     status { 'pending' }
+    number { 'LAGO-001' }
   end
 end
