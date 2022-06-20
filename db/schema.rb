@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
+ActiveRecord::Schema[7.0].define(version: 2022_06_20_142257) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -183,6 +183,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
     t.date "charges_from_date"
     t.integer "invoice_type", default: 0, null: false
     t.integer "status", default: 0, null: false
+    t.string "number", default: "", null: false
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
   end
@@ -204,6 +205,17 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
     t.string "api_key"
     t.string "webhook_url"
     t.float "vat_rate", default: 0.0, null: false
+    t.string "country"
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "state"
+    t.string "zipcode"
+    t.string "email"
+    t.string "city"
+    t.string "logo"
+    t.string "legal_name"
+    t.string "legal_number"
+    t.text "invoice_footer"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 
