@@ -3,8 +3,8 @@
 FactoryBot.define do
   factory :payment do
     invoice
-    payment_provider
-    payment_provider_customer
+    association :payment_provider, factory: :stripe_provider
+    association :payment_provider_customer, factory: :stripe_customer
 
     amount_cents { 200 }
     amount_currency { 'EUR' }

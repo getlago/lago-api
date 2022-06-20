@@ -144,4 +144,53 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
   end
+
+  describe '.update_status' do
+    let(:payment) do
+      create(
+        :payment,
+        invoice: invoice,
+        provider_payment_id: 'ch_123456',
+      )
+    end
+
+    before { payment }
+
+    it 'updates the payment and invoice status' do
+      result = stripe_service.update_status(
+        provider_payment_id: 'ch_123456',
+        status: 'succeeded',
+      )
+
+      expect(result).to be_success
+      expect(result.payment.status).to eq('succeeded')
+      expect(result.invoice.status).to eq('succeeded')
+    end
+
+    context 'when invoice is already succeeded' do
+      before { invoice.succeeded! }
+
+      it 'does not update the status of invoice and payment' do
+        result = stripe_service.update_status(
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+        )
+
+        expect(result).to be_success
+        expect(result.invoice.status).to eq('succeeded')
+      end
+    end
+
+    context 'with invalid status' do
+      it 'does not update the status of invoice and payment' do
+        result = stripe_service.update_status(
+          provider_payment_id: 'ch_123456',
+          status: 'foo-bar',
+        )
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('invalid_invoice_status')
+      end
+    end
+  end
 end
