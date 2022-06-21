@@ -1579,8 +1579,10 @@ input CreateCustomerInput {
   legalNumber: String
   logoUrl: String
   name: String!
+  paymentProvider: String
   phone: String
   state: String
+  stripeCustomer: StripeCustomerInput
   url: String
   vatRate: Float
   zipcode: String
@@ -2319,10 +2321,12 @@ type Customer {
   legalNumber: String
   logoUrl: String
   name: String
+  paymentProvider: String
   phone: String
   sequentialId: String!
   slug: String!
   state: String
+  stripeCustomer: StripeCustomer
   subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
   url: String
@@ -2356,10 +2360,12 @@ type CustomerDetails {
   legalNumber: String
   logoUrl: String
   name: String
+  paymentProvider: String
   phone: String
   sequentialId: String!
   slug: String!
   state: String
+  stripeCustomer: StripeCustomer
 
   """
   Query subscriptions of a customer
@@ -3133,6 +3139,15 @@ enum StatusTypeEnum {
   terminated
 }
 
+type StripeCustomer {
+  id: ID!
+  providerCustomerId: ID
+}
+
+input StripeCustomerInput {
+  providerCustomerId: ID
+}
+
 type StripeProvider {
   createCustomers: Boolean!
   id: ID!
@@ -3260,8 +3275,10 @@ input UpdateCustomerInput {
   legalNumber: String
   logoUrl: String
   name: String!
+  paymentProvider: String
   phone: String
   state: String
+  stripeCustomer: StripeCustomerInput
   url: String
   vatRate: Float
   zipcode: String

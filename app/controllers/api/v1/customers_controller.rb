@@ -4,7 +4,7 @@ module Api
   module V1
     class CustomersController < Api::BaseController
       def create
-        service = CustomersService.new
+        service = Customers::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
           params: create_params,

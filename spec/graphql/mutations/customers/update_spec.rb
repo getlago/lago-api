@@ -6,6 +6,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
+  let(:stripe_provider) { create(:stripe_provider, organization: organization) }
 
   let(:mutation) do
     <<~GQL
@@ -14,12 +15,15 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           id,
           name,
           customerId
+          paymentProvider
+          stripeCustomer { id, providerCustomerId }
         }
       }
     GQL
   end
 
   it 'updates a customer' do
+    stripe_provider
     customer_id = SecureRandom.uuid
 
     result = execute_graphql(
@@ -30,6 +34,10 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           id: customer.id,
           name: 'Updated customer',
           customerId: customer_id,
+          paymentProvider: 'stripe',
+          stripeCustomer: {
+            providerCustomerId: 'cu_12345',
+          },
         },
       },
     )
@@ -40,6 +48,9 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated customer')
       expect(result_data['customerId']).to eq(customer_id)
+      expect(result_data['paymentProvider']).to eq('stripe')
+      expect(result_data['stripeCustomer']['id']).to be_present
+      expect(result_data['stripeCustomer']['providerCustomerId']).to eq('cu_12345')
     end
   end
 

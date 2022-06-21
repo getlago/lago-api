@@ -1,64 +1,6 @@
 # frozen_string_literal: true
 
 class CustomersService < BaseService
-  def create_from_api(organization:, params:)
-    customer = organization.customers.find_or_initialize_by(customer_id: params[:customer_id])
-
-    customer.name = params[:name] if params.key?(:name)
-    customer.country = params[:country]&.upcase if params.key?(:country)
-    customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
-    customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
-    customer.state = params[:state] if params.key?(:state)
-    customer.zipcode = params[:zipcode] if params.key?(:zipcode)
-    customer.email = params[:email] if params.key?(:email)
-    customer.city = params[:city] if params.key?(:city)
-    customer.url = params[:url] if params.key?(:url)
-    customer.phone = params[:phone] if params.key?(:phone)
-    customer.logo_url = params[:logo_url] if params.key?(:logo_url)
-    customer.legal_name = params[:legal_name] if params.key?(:legal_name)
-    customer.legal_number = params[:legal_number] if params.key?(:legal_number)
-    customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
-
-    customer.save!
-
-    # NOTE: handle configuration for configured payment providers
-    handle_api_billing_configuration(customer, params)
-
-    result.customer = customer
-    result
-  rescue ActiveRecord::RecordInvalid => e
-    result.fail_with_validations!(e.record)
-  end
-
-  def create(**args)
-    customer = Customer.create!(
-      organization_id: args[:organization_id],
-      customer_id: args[:customer_id],
-      name: args[:name],
-      country: args[:country]&.upcase,
-      address_line1: args[:address_line1],
-      address_line2: args[:address_line2],
-      state: args[:state],
-      zipcode: args[:zipcode],
-      email: args[:email],
-      city: args[:city],
-      url: args[:url],
-      phone: args[:phone],
-      logo_url: args[:logo_url],
-      legal_name: args[:legal_name],
-      legal_number: args[:legal_number],
-      vat_rate: args[:vat_rate],
-    )
-
-    # NOTE: handle configuration for configured payment providers
-    create_billing_configuration(customer)
-
-    result.customer = customer
-    result
-  rescue ActiveRecord::RecordInvalid => e
-    result.fail_with_validations!(e.record)
-  end
-
   def update(**args)
     customer = result.user.customers.find_by(id: args[:id])
     return result.fail!('not_found') unless customer
@@ -87,7 +29,9 @@ class CustomersService < BaseService
     customer.save!
 
     # NOTE: if payment provider is updated, we need to create/update the provider customer
-    create_or_update_provider_customer(customer) if customer.payment_provider_previously_changed?
+    if customer.payment_provider_previously_changed?
+      create_or_update_provider_customer(customer, args[:stripe_customer])
+    end
 
     result.customer = customer
     result
@@ -116,25 +60,8 @@ class CustomersService < BaseService
 
   # NOTE: Check if a payment provider is configured in the organization and
   #       force creation of provider customers
-  def create_billing_configuration(customer)
+  def create_billing_configuration(customer, billing_configuration = {})
     return unless customer.organization.stripe_payment_provider&.create_customers
-
-    customer.update!(payment_provider: 'stripe')
-    create_or_update_provider_customer(customer)
-  end
-
-  def handle_api_billing_configuration(customer, params)
-    unless params.key?(:billing_configuration)
-      create_billing_configuration(customer) if customer.id_previously_changed?
-      return
-    end
-
-    billing_configuration = params[:billing_configuration]
-
-    unless billing_configuration[:payment_provider] == 'stripe'
-      customer.update!(payment_provider: nil)
-      return
-    end
 
     customer.update!(payment_provider: 'stripe')
     create_or_update_provider_customer(customer, billing_configuration)
