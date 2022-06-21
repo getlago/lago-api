@@ -2885,6 +2885,7 @@ type Organization {
   apiKey: String!
   createdAt: ISO8601DateTime!
   id: ID!
+  logoUrl: String
   name: String!
   stripeProvider: StripeProvider
   updatedAt: ISO8601DateTime!
@@ -3271,6 +3272,7 @@ input UpdateOrganizationInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  logo: String
   vatRate: Float
   webhookUrl: String
 }

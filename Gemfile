@@ -35,6 +35,10 @@ gem 'newrelic_rpm'
 gem 'sentry-rails'
 gem 'sentry-ruby'
 
+# Storage
+gem 'active_storage_base64'
+gem 'aws-sdk-s3', require: false
+
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'

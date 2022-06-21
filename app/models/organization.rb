@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Organization < ApplicationRecord
+  include ActiveStorageSupport::SupportForBase64
+
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics
@@ -15,6 +17,8 @@ class Organization < ApplicationRecord
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
 
+  has_one_base64_attached :logo
+
   before_create :generate_api_key
 
   validates :name, presence: true
@@ -23,6 +27,10 @@ class Organization < ApplicationRecord
   validates :country, country_code: true, if: :country?
   validates :invoice_footer, length: { maximum: 600 }
   validates :email, email: true, if: :email?
+
+  def logo_url
+    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
+  end
 
   private
 

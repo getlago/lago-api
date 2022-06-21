@@ -11,6 +11,7 @@ module Organizations
     def update(**args)
       organization.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
       organization.webhook_url = args[:webhook_url] if args.key?(:webhook_url)
+      organization.logo = { data: args[:logo] }
       organization.save!
 
       result.organization = organization

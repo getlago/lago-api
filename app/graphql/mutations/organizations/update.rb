@@ -11,6 +11,7 @@ module Mutations
 
       argument :webhook_url, String, required: false
       argument :vat_rate, Float, required: false
+      argument :logo, String, required: false
 
       type Types::OrganizationType
 
