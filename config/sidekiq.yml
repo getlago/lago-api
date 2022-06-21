@@ -4,6 +4,7 @@ retry: 1
 queues:
   - default
   - clock
+  - providers
   - billing
   - webhook
 
