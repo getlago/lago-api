@@ -25,7 +25,7 @@ module Types
       field :legal_name, String, null: true
       field :legal_number, String, null: true
       field :vat_rate, Float, null: true
-      field :payment_provider, String, null: true
+      field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
 
       field :stripe_customer, Types::PaymentProviderCustomers::Stripe, null: true
       field :subscriptions, [Types::Subscriptions::Object]

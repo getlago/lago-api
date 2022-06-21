@@ -4550,8 +4550,8 @@
               "name": "paymentProvider",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "ProviderTypeEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -5845,8 +5845,8 @@
               "name": "paymentProvider",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "ProviderTypeEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -6353,8 +6353,8 @@
               "name": "paymentProvider",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "ProviderTypeEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -9900,6 +9900,23 @@
           ]
         },
         {
+          "kind": "ENUM",
+          "name": "ProviderTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "stripe",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "OBJECT",
           "name": "Query",
           "description": null,
@@ -11686,8 +11703,8 @@
               "name": "paymentProvider",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "ProviderTypeEnum",
                 "ofType": null
               },
               "defaultValue": null,

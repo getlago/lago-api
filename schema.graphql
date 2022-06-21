@@ -1579,7 +1579,7 @@ input CreateCustomerInput {
   legalNumber: String
   logoUrl: String
   name: String!
-  paymentProvider: String
+  paymentProvider: ProviderTypeEnum
   phone: String
   state: String
   stripeCustomer: StripeCustomerInput
@@ -2321,7 +2321,7 @@ type Customer {
   legalNumber: String
   logoUrl: String
   name: String
-  paymentProvider: String
+  paymentProvider: ProviderTypeEnum
   phone: String
   sequentialId: String!
   slug: String!
@@ -2360,7 +2360,7 @@ type CustomerDetails {
   legalNumber: String
   logoUrl: String
   name: String
-  paymentProvider: String
+  paymentProvider: ProviderTypeEnum
   phone: String
   sequentialId: String!
   slug: String!
@@ -2989,6 +2989,10 @@ enum PlanInterval {
   yearly
 }
 
+enum ProviderTypeEnum {
+  stripe
+}
+
 type Query {
   """
   Query a single add-on of an organization
@@ -3275,7 +3279,7 @@ input UpdateCustomerInput {
   legalNumber: String
   logoUrl: String
   name: String!
-  paymentProvider: String
+  paymentProvider: ProviderTypeEnum
   phone: String
   state: String
   stripeCustomer: StripeCustomerInput
