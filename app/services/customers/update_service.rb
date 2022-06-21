@@ -42,17 +42,10 @@ module Customers
 
     private
 
-    # NOTE: Check if a payment provider is configured in the organization and
-    #       force creation of provider customers
-    def create_billing_configuration(customer, billing_configuration = {})
-      return unless customer.organization.stripe_payment_provider&.create_customers
-
-      customer.update!(payment_provider: 'stripe')
-      create_or_update_provider_customer(customer, billing_configuration)
-    end
-
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      return unless customer.payment_provider == 'stripe'
+      handle_stripe_customer = customer.payment_provider == 'stripe'
+      handle_stripe_customer ||= (billing_configuration || {})[:provider_customer_id]
+      return unless handle_stripe_customer
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
