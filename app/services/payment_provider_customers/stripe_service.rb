@@ -9,7 +9,8 @@ module PaymentProviderCustomers
     end
 
     def create
-      return if stripe_customer.provider_customer_id?
+      result.stripe_customer = stripe_customer
+      return result if stripe_customer.provider_customer_id?
 
       stripe_result = Stripe::Customer.create(
         stripe_create_payload,
