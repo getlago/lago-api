@@ -21,12 +21,26 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           send_zero_amount_invoice: false,
         )
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
+
+      expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
     end
 
     context 'when organization already have a stripe provider' do
-      let(:stripe_provider) { create(:stripe_provider, organization: organization) }
+      let(:stripe_provider) do
+        create(
+          :stripe_provider,
+          organization: organization,
+          webhook_id: 'we_123456',
+          secret_key: 'secret',
+        )
+      end
 
-      before { stripe_provider }
+      before do
+        stripe_provider
+
+        allow(::Stripe::WebhookEndpoint).to receive(:delete)
+          .with('we_123456', {}, { api_key: 'secret' })
+      end
 
       it 'updates the existing provider' do
         result = stripe_service.create_or_update(
@@ -43,6 +57,10 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result.stripe_provider.secret_key).to eq(secret_key)
           expect(result.stripe_provider.create_customers).to be_truthy
           expect(result.stripe_provider.send_zero_amount_invoice).to be_falsey
+
+          expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
+            .with(stripe_provider)
+          expect(::Stripe::WebhookEndpoint).to have_received(:delete)
         end
       end
     end

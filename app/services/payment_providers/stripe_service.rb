@@ -20,7 +20,8 @@ module PaymentProviders
       stripe_provider.save!
 
       if secret_key != stripe_provider.secret_key
-        # TODO: Unregister previously configured webhooks
+        unregister_webhook(stripe_provider, secret_key)
+
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
       end
 
@@ -80,6 +81,24 @@ module PaymentProviders
           provider_payment_id: event.data.object.id,
           status: event.data.object.status,
         )
+    end
+
+    private
+
+    def unregister_webhook(stripe_provider, api_key)
+      return if stripe_provider.webhook_id.blank?
+
+      ::Stripe::WebhookEndpoint.delete(
+        stripe_provider.webhook_id, {}, { api_key: api_key }
+      )
+    rescue StandardError => e
+      # NOTE: Since removing the webbook end-point is not critical
+      #       we don't want any error with it to break the update of the
+      #       payment provider
+      Rails.logger.error(e.message)
+      Rails.logger.error(e.backtrace.join("\n"))
+
+      Sentry.capture_exception(error)
     end
   end
 end
