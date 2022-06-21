@@ -13,7 +13,7 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        result = CustomersService.new(context[:current_user]).destroy(id: id)
+        result = ::Customers::DestroyService.new(context[:current_user]).destroy(id: id)
 
         result.success? ? result.customer : result_error(result)
       end
