@@ -10,7 +10,10 @@ module Clockwork
   end
 
   error_handler do |error|
-    # TODO: plug error handler here
+    Rails.logger.error(e.message)
+    Rails.logger.error(e.backtrace.join("\n"))
+
+    Sentry.capture_exception(error)
   end
 
   every(1.day, 'schedule:bill_customers', at: '01:00') do
