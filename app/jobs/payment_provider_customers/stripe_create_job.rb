@@ -9,7 +9,8 @@ module PaymentProviderCustomers
     retry_on Stripe::RateLimitError, wait: :exponentially_longer, attempts: 6
 
     def perform(stripe_customer)
-      PaymentProviderCustomers::StripeService.new(stripe_customer).create
+      result = PaymentProviderCustomers::StripeService.new(stripe_customer).create
+      result.throw_error
     end
   end
 end
