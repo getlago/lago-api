@@ -14,15 +14,16 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
   describe '.create_or_update' do
     it 'creates a stripe provider' do
       expect do
-        stripe_service.create_or_update(
+        result = stripe_service.create_or_update(
           organization_id: organization.id,
           secret_key: secret_key,
           create_customers: true,
           send_zero_amount_invoice: false,
         )
-      end.to change(PaymentProviders::StripeProvider, :count).by(1)
 
-      expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
+        expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
+          .with(result.stripe_provider)
+      end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 
     context 'when organization already have a stripe provider' do
