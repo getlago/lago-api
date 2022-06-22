@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Organization < ApplicationRecord
-  include ActiveStorageSupport::SupportForBase64
-
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics
@@ -28,10 +26,6 @@ class Organization < ApplicationRecord
   validates :invoice_footer, length: { maximum: 600 }
   validates :email, email: true, if: :email?
   validates :logo, image: { authorized_content_type: %w[image/png image/jpg], max_size: 800.kilobytes }, if: :logo?
-
-  def logo_url
-    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
-  end
 
   def logo_url
     Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
