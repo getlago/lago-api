@@ -104,6 +104,8 @@ module Fees
 
       if subscription.previous_subscription.upgraded?
         date = case plan.interval.to_sym
+               when :weekly
+                 invoice.charges_from_date.beginning_of_week
                when :monthly
                  invoice.charges_from_date.beginning_of_month
                when :yearly

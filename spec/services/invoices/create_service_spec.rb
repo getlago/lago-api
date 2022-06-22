@@ -103,6 +103,60 @@ RSpec.describe Invoices::CreateService, type: :service do
       end
     end
 
+    context 'when billed weekly' do
+      let(:timestamp) { Time.zone.now.beginning_of_week }
+
+      let(:plan) do
+        create(:plan, interval: 'weekly')
+      end
+
+      it 'creates an invoice' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.from_date).to eq(timestamp - 1.week)
+          expect(result.invoice.subscription).to eq(subscription)
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+        end
+      end
+    end
+
+    context 'when billed weekly on first week' do
+      let(:timestamp) { Time.zone.now.beginning_of_week }
+      let(:started_at) { timestamp - 3.days }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          anniversary_date: started_at.to_date,
+          started_at: started_at,
+        )
+      end
+
+      let(:plan) do
+        create(:plan, interval: 'weekly')
+      end
+
+      it 'creates an invoice' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.from_date).to eq(subscription.anniversary_date)
+          expect(result.invoice.subscription).to eq(subscription)
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+        end
+      end
+    end
+
     context 'when billed yearly' do
       let(:timestamp) { Time.zone.now.beginning_of_year }
 
