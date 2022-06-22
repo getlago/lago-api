@@ -57,4 +57,26 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
+
+  describe 'slug' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+
+    let(:customer) do
+      build(
+        :customer,
+        organization: organization,
+      )
+    end
+
+    it 'assigns a sequential id and a slug to a new customer' do
+      customer.save
+      organization_id_substring = organization.id.last(4).upcase
+
+      aggregate_failures do
+        expect(customer).to be_valid
+        expect(customer.sequential_id).to eq(1)
+        expect(customer.slug).to eq("LAG-#{organization_id_substring}-001")
+      end
+    end
+  end
 end

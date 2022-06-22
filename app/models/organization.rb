@@ -20,6 +20,9 @@ class Organization < ApplicationRecord
   validates :name, presence: true
   validates :webhook_url, url: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
+  validates :country, country_code: true, if: :country?
+  validates :invoice_footer, length: { maximum: 600 }
+  validates :email, email: true, if: :email?
 
   private
 

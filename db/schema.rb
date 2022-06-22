@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
+ActiveRecord::Schema[7.0].define(version: 2022_06_21_090834) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -127,6 +127,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
     t.string "legal_number"
     t.float "vat_rate"
     t.string "payment_provider"
+    t.string "slug"
+    t.bigint "sequential_id"
     t.index ["customer_id"], name: "index_customers_on_customer_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
   end
@@ -179,11 +181,11 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
     t.string "vat_amount_currency"
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
-    t.integer "sequential_id"
     t.date "charges_from_date"
     t.integer "invoice_type", default: 0, null: false
     t.integer "status", default: 0, null: false
-    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
+    t.string "number", default: "", null: false
+    t.integer "sequential_id"
     t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
   end
 
@@ -204,6 +206,17 @@ ActiveRecord::Schema[7.0].define(version: 2022_06_14_110841) do
     t.string "api_key"
     t.string "webhook_url"
     t.float "vat_rate", default: 0.0, null: false
+    t.string "country"
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "state"
+    t.string "zipcode"
+    t.string "email"
+    t.string "city"
+    t.string "logo"
+    t.string "legal_name"
+    t.string "legal_number"
+    t.text "invoice_footer"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
   end
 

@@ -98,4 +98,18 @@ RSpec.describe Invoice, type: :model do
       end
     end
   end
+
+  describe 'number' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { build(:invoice, subscription: subscription) }
+
+    it 'generates the invoice number' do
+      invoice.save
+      organization_id_substring = organization.id.last(4).upcase
+
+      expect(invoice.number).to eq("LAG-#{organization_id_substring}-001-001")
+    end
+  end
 end

@@ -3,6 +3,8 @@
 class Invoice < ApplicationRecord
   include Sequenced
 
+  before_save :ensure_number
+
   belongs_to :subscription
 
   has_many :fees
@@ -21,7 +23,7 @@ class Invoice < ApplicationRecord
   enum invoice_type: INVOICE_TYPES
   enum status: STATUS
 
-  sequenced scope: ->(invoice) { invoice.organization.invoices }
+  sequenced scope: ->(invoice) { invoice.customer.invoices }
 
   validates :from_date, presence: true
   validates :to_date, presence: true
@@ -32,5 +34,13 @@ class Invoice < ApplicationRecord
 
   def validate_date_bounds
     errors.add(:from_date, :invalid_date_range) if from_date > to_date
+  end
+
+  def ensure_number
+    return if number.present?
+
+    formatted_sequential_id = format('%03d', sequential_id)
+
+    self.number = "#{customer.slug}-#{formatted_sequential_id}"
   end
 end

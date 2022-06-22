@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class Customer < ApplicationRecord
+  include Sequenced
+
+  before_save :ensure_slug
+
   belongs_to :organization
 
   has_many :subscriptions
@@ -15,6 +19,8 @@ class Customer < ApplicationRecord
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
 
   PAYMENT_PROVIDERS = %w[stripe].freeze
+
+  sequenced scope: ->(customer) { customer.organization.customers }
 
   validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, if: :country?
@@ -37,5 +43,18 @@ class Customer < ApplicationRecord
     return vat_rate if vat_rate.present?
 
     organization.vat_rate || 0
+  end
+
+  private
+
+  def ensure_slug
+    return if slug.present?
+
+    formatted_sequential_id = format('%03d', sequential_id)
+    organization_name_substring = organization.name.first(3).upcase
+    organization_id_substring = organization.id.last(4).upcase
+    organization_slug = "#{organization_name_substring}-#{organization_id_substring}"
+
+    self.slug = "#{organization_slug}-#{formatted_sequential_id}"
   end
 end
