@@ -9,6 +9,8 @@ module Types
 
       field :customer_id, String, null: false
       field :name, String
+      field :sequential_id, String, null: false
+      field :slug, String, null: false
 
       field :country, Types::Customers::CountryCodeEnum, null: true
       field :address_line1, String, null: true
