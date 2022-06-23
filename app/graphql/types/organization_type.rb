@@ -11,8 +11,8 @@ module Types
     field :legal_name, String
     field :legal_number, String
     field :email, String
-    field :address_line_1, String
-    field :address_line_2, String
+    field :address_line1, String
+    field :address_line2, String
     field :state, String
     field :zipcode, String
     field :city, String

@@ -15,8 +15,8 @@ module Mutations
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :email, String, required: false
-      argument :address_line_1, String, required: false
-      argument :address_line_2, String, required: false
+      argument :address_line1, String, required: false
+      argument :address_line2, String, required: false
       argument :state, String, required: false
       argument :zipcode, String, required: false
       argument :city, String, required: false
