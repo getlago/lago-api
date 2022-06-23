@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class StripeService < BaseService
-    WEBHOOKS_ENVENTS = [
+    WEBHOOKS_EVENTS = [
       'charge.failed',
       'charge.succeeded',
     ].freeze
@@ -37,7 +37,7 @@ module PaymentProviders
       stripe_webhook = ::Stripe::WebhookEndpoint.create(
         {
           url: URI.join(ENV['LAGO_API_URL'], "webhooks/stripe/#{organization_id}"),
-          enabled_events: WEBHOOKS_ENVENTS,
+          enabled_events: WEBHOOKS_EVENTS,
         },
         { api_key: stripe_provider.secret_key },
       )
@@ -74,7 +74,7 @@ module PaymentProviders
 
     def handle_event(event_json)
       event = ::Stripe::Event.construct_from(event_json)
-      return result.fail!('invalid_stripe_event_type') unless WEBHOOKS_ENVENTS.include?(event.type)
+      return result.fail!('invalid_stripe_event_type') unless WEBHOOKS_EVENTS.include?(event.type)
 
       Invoices::Payments::StripeService
         .new.update_status(

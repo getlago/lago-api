@@ -3,7 +3,7 @@
 module PaymentProviders
   module Stripe
     class HandleEventJob < ApplicationJob
-      queue_as 'billing'
+      queue_as 'providers'
 
       def perform(event)
         result = PaymentProviders::StripeService.new.handle_event(event)
