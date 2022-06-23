@@ -65,9 +65,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         aggregate_failures do
           expect(result.invoice).to be_nil
           expect(result.payment).to be_nil
-        end
 
-        expect(Stripe::Charge).not_to have_received(:create)
+          expect(Stripe::Charge).not_to have_received(:create)
+        end
       end
     end
 
@@ -89,9 +89,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         aggregate_failures do
           expect(result.invoice).to be_nil
           expect(result.payment).to be_nil
-        end
 
-        expect(Stripe::Charge).not_to have_received(:create)
+          expect(Stripe::Charge).not_to have_received(:create)
+        end
       end
 
       context 'when send_zero_amount_invoice is turned on' do
@@ -113,9 +113,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
             expect(result.payment.id).to be_present
             expect(result.payment.amount_cents).to eq(0)
-          end
 
-          expect(Stripe::Charge).to have_received(:create)
+            expect(Stripe::Charge).to have_received(:create)
+          end
         end
       end
     end
