@@ -40,6 +40,21 @@ module Invoices
         result
       end
 
+      def update_status(provider_payment_id:, status:)
+        payment = Payment.find_by(provider_payment_id: provider_payment_id)
+        return result.fail!('stripe_payment_not_found') unless payment
+
+        result.payment = payment
+        result.invoice = payment.invoice
+        return result if payment.invoice.succeeded?
+
+        payment.update!(status: status)
+        payment.invoice.update!(status: status)
+        result
+      rescue ArgumentError
+        result.fail!('invalid_invoice_status')
+      end
+
       private
 
       attr_accessor :invoice
@@ -94,21 +109,6 @@ module Invoices
         return unless Invoice::STATUS.include?(status&.to_sym)
 
         invoice.update!(status: status)
-      end
-
-      def update_status(provider_payment_id:, status:)
-        payment = Payment.find_by(provider_payment_id: provider_payment_id)
-        return result.fail!('stripe_payment_not_found') unless payment
-
-        result.payment = payment
-        result.invoice = payment.invoice
-        return result if payment.invoice.succeeded?
-
-        payment.update!(status: status)
-        payment.invoice.update!(status: status)
-        result
-      rescue ArgumentError
-        result.fail!('invalid_invoice_status')
       end
     end
   end
