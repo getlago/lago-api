@@ -54,10 +54,19 @@ module Invoices
       end
 
       def ensure_provider_customer
-        return if customer&.stripe_customer&.provider_customer_id
+        return if customer.stripe_customer&.provider_customer_id
 
-        # TODO: create customer on stripe
-        #       wait for merge of https://github.com/getlago/lago-api/pull/268
+        customer_result = PaymentProviderCustomers::CreateService.new(customer)
+          .create_or_update(
+            customer_class: PaymentProviderCustomers::StripeCustomer,
+            payment_provider_id: organization.stripe_payment_provider.id,
+            params: {},
+            async: false,
+          )
+        customer_result.throw_error
+
+        # NOTE: stripe customer is created on an other instance of the customer
+        customer.stripe_customer&.reload
       end
 
       def stripe_api_key
@@ -69,8 +78,7 @@ module Invoices
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
-          # TODO: use invoice reference instead
-          description: "Lago - #{organization.name} - Invoice #{invoice.sequential_id}",
+          description: "Lago - #{organization.name} - Invoice #{invoice.number}",
           metadata: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,

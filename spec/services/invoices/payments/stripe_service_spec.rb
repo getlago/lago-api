@@ -120,16 +120,28 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
-    # context 'when customer does not have a provider customer id' do
-    #   let(:stripe_customer) {}
+    context 'when customer does not have a provider customer id' do
+      let(:stripe_customer) {}
 
-    #   it 'creates the customer' do
-    #     result = stripe_service.create
+      before do
+        allow(Stripe::Customer).to receive(:create)
+          .and_return(
+            Stripe::Customer.construct_from(
+              id: 'cus_123456',
+            ),
+          )
+      end
 
-    #     expect(result).to be_success
-    #     expect(customer.stripe_customer).to be_present
-    #     expect(Stripe::Charge).to have_received(:create)
-    #   end
-    # end
+      it 'creates the customer' do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(customer.stripe_customer).to be_present
+        expect(customer.stripe_customer.provider_customer_id).to eq('cus_123456')
+
+        expect(Stripe::Customer).to have_received(:create)
+        expect(Stripe::Charge).to have_received(:create)
+      end
+    end
   end
 end
