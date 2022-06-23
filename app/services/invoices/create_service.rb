@@ -65,14 +65,7 @@ module Invoices
       # NOTE: In case of upgrade when we are terminating old plan (paying in arrear),
       # we should move to the beginning of the billing period
       if subscription.terminated? && subscription.plan.pay_in_arrear? && !subscription.downgraded?
-        @from_date = case subscription.plan.interval.to_sym
-                     when :monthly
-                       Time.zone.at(timestamp).to_date.beginning_of_month
-                     when :yearly
-                       Time.zone.at(timestamp).to_date.beginning_of_year
-                     else
-                       raise NotImplementedError
-                     end
+        @from_date = compute_termination_from_date
       end
 
       # NOTE: On first billing period, subscription might start after the computed start of period
@@ -204,6 +197,17 @@ module Invoices
       #       and the VAT amount
       invoice.amount_cents = invoice.amount_cents - credit_result.credit.amount_cents
       invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
+    end
+
+    def compute_termination_from_date
+      case subscription.plan.interval.to_sym
+      when :monthly
+        Time.zone.at(timestamp).to_date.beginning_of_month
+      when :yearly
+        Time.zone.at(timestamp).to_date.beginning_of_year
+      else
+        raise NotImplementedError
+      end
     end
   end
 end
