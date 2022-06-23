@@ -26,12 +26,11 @@ class BillingService
   def billable_subscriptions
     sql = []
     today = Time.zone.now
-    is_monday = today.to_date == today.beginning_of_week.to_date
 
-    return Subscription.none unless (today.day == 1 || is_monday)
+    return Subscription.none unless (today.day == 1 || today.monday?)
 
     # For weekly interval we send invoices on Monday
-    if is_monday
+    if today.monday?
       sql << Subscription.active.joins(:plan)
         .merge(Plan.weekly)
         .select(:id).to_sql
