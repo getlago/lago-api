@@ -61,9 +61,9 @@ module Invoices
                      raise NotImplementedError
                    end
 
-      # NOTE: In case we are terminating old plan (paying in arrear),
+      # NOTE: In case of upgrade when we are terminating old plan (paying in arrear),
       # we should move to the beginning of the billing period
-      if subscription.terminated?
+      if subscription.terminated? && subscription.plan.pay_in_arrear?
         @from_date = case subscription.plan.interval.to_sym
                      when :monthly
                        Time.zone.at(timestamp).to_date.beginning_of_month
