@@ -14,7 +14,7 @@ module Types
       # NOTE: Secret key is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value
       def secret_key
-        object.secret_key[0..2] + ('*' * 12)
+        ('•' * (object.secret_key.size - 3)) + object.secret_key[-3..]
       end
     end
   end
