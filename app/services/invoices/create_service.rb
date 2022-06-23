@@ -59,6 +59,19 @@ module Invoices
                      (Time.zone.at(timestamp) - 1.year).to_date
                    else
                      raise NotImplementedError
+                   end
+
+      # NOTE: In case we are terminating old plan (paying in arrear),
+      # we should move to the beginning of the billing period
+      if subscription.terminated?
+        @from_date = case subscription.plan.interval.to_sym
+                     when :monthly
+                       Time.zone.at(timestamp).to_date.beginning_of_month
+                     when :yearly
+                       Time.zone.at(timestamp).to_date.beginning_of_year
+                     else
+                       raise NotImplementedError
+                     end
       end
 
       # NOTE: On first billing period, subscription might start after the computed start of period

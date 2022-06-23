@@ -221,7 +221,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         create(:plan, interval: 'monthly', pay_in_advance: false)
       end
 
-      let(:timestamp) { Time.zone.now.beginning_of_month }
+      let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
       let(:started_at) { Time.zone.today - 3.months }
       let(:terminated_at) { timestamp - 2.days }
       let(:subscription) do
@@ -240,6 +240,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
         aggregate_failures do
           expect(result.invoice.to_date.to_s).to eq((terminated_at.to_date - 1.day).to_s)
+          expect(result.invoice.from_date.to_s).to eq((terminated_at.to_date.beginning_of_month).to_s)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
         end
       end
@@ -250,7 +251,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         create(:plan, interval: 'monthly', pay_in_advance: false)
       end
 
-      let(:timestamp) { Time.zone.now.beginning_of_month }
+      let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
       let(:started_at) { Time.zone.today - 3.months }
       let(:terminated_at) { timestamp - 2.days }
       let(:subscription) do
@@ -275,6 +276,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
         aggregate_failures do
           expect(result.invoice.to_date.to_s).to eq((terminated_at.to_date - 1.day).to_s)
+          expect(result.invoice.from_date.to_s).to eq((terminated_at.to_date.beginning_of_month).to_s)
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end
