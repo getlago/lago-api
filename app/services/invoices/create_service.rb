@@ -62,7 +62,7 @@ module Invoices
                      raise NotImplementedError
                    end
 
-      # NOTE: In case of upgrade when we are terminating old plan (paying in arrear),
+      # NOTE: In case of termination or upgrade when we are terminating old plan(paying in arrear),
       # we should move to the beginning of the billing period
       if subscription.terminated? && subscription.plan.pay_in_arrear? && !subscription.downgraded?
         @from_date = compute_termination_from_date
