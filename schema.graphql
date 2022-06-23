@@ -2907,7 +2907,7 @@ type Organization {
   logoUrl: String
   name: String!
   state: String
-  stripeProvider: StripeProvider
+  stripePaymentProvider: StripeProvider
   updatedAt: ISO8601DateTime!
   vatRate: Float!
   webhookUrl: String

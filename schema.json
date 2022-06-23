@@ -9118,7 +9118,7 @@
               ]
             },
             {
-              "name": "stripeProvider",
+              "name": "stripePaymentProvider",
               "description": null,
               "type": {
                 "kind": "OBJECT",
