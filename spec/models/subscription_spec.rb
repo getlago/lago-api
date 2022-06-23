@@ -48,6 +48,51 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
+  describe '.downgraded?' do
+    let(:previous_subscription) { nil }
+    let(:plan) { create(:plan, amount_cents: 100) }
+
+    let(:subscription) do
+      create(
+        :subscription,
+        previous_subscription: previous_subscription,
+        plan: plan,
+      )
+    end
+
+    context 'without next subscription' do
+      it { expect(subscription).not_to be_downgraded }
+    end
+
+    context 'with next subscription' do
+      let(:previous_plan) { create(:plan, amount_cents: 200) }
+      let(:previous_subscription) do
+        create(:subscription, plan: previous_plan)
+      end
+
+      before { subscription }
+
+      it { expect(previous_subscription).to be_downgraded }
+
+      context 'when previous plan was less expensive' do
+        let(:previous_plan) do
+          create(:plan, amount_cents: plan.amount_cents - 10)
+        end
+
+        it { expect(previous_subscription).not_to be_downgraded }
+      end
+
+      context 'when plans have different intervals' do
+        before do
+          previous_plan.update!(interval: 'yearly')
+          plan.update!(interval: 'monthly')
+        end
+
+        it { expect(previous_subscription).not_to be_downgraded }
+      end
+    end
+  end
+
   describe '.trial_end_date' do
     let(:plan) { create(:plan, trial_period: 3) }
     let(:subscription) { create(:active_subscription, plan: plan) }
