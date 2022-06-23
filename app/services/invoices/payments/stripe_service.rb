@@ -66,7 +66,7 @@ module Invoices
         customer_result.throw_error
 
         # NOTE: stripe customer is created on an other instance of the customer
-        customer.stripe_customer&.reload
+        customer.reload
       end
 
       def stripe_api_key

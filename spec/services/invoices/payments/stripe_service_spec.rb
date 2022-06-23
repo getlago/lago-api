@@ -136,7 +136,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         result = stripe_service.create
 
         expect(result).to be_success
-        expect(customer.stripe_customer).to be_present
+        expect(customer.stripe_customer.reload).to be_present
         expect(customer.stripe_customer.provider_customer_id).to eq('cus_123456')
 
         expect(Stripe::Customer).to have_received(:create)
