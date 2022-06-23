@@ -201,6 +201,8 @@ module Invoices
 
     def compute_termination_from_date
       case subscription.plan.interval.to_sym
+      when :weekly
+        Time.zone.at(timestamp).to_date.beginning_of_week
       when :monthly
         Time.zone.at(timestamp).to_date.beginning_of_month
       when :yearly
