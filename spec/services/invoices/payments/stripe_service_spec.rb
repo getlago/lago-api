@@ -143,6 +143,32 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(Stripe::Charge).to have_received(:create)
       end
     end
+
+    context 'with card error on stripe' do
+      let(:customer) { create(:customer, organization: organization) }
+
+      let(:subscription) do
+        create(:subscription, organization: organization, customer: customer)
+      end
+
+      let(:organization) do
+        create(:organization, webhook_url: 'https://webhook.com')
+      end
+
+      before do
+        subscription
+
+        allow(Stripe::Charge).to receive(:create)
+          .and_raise(Stripe::CardError.new('error', {}))
+      end
+
+      it 'delivers an error webhook' do
+        expect { stripe_service.create }
+          .to raise_error(Stripe::CardError)
+
+        expect(SendWebhookJob).to have_been_enqueued
+      end
+    end
   end
 
   describe '.update_status' do
