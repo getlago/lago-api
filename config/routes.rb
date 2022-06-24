@@ -31,4 +31,8 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  resources :webhooks, only: [] do
+    post 'stripe/:organization_id', to: 'webhooks#stripe', on: :collection, as: :stripe
+  end
 end

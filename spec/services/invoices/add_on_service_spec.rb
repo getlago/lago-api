@@ -63,5 +63,15 @@ RSpec.describe Invoices::AddOnService, type: :service do
         end.not_to have_enqueued_job(SendWebhookJob)
       end
     end
+
+    context 'when customer payment_provider is stripe' do
+      before { subscription.customer.update!(payment_provider: 'stripe') }
+
+      it 'enqueu a job to create a payment' do
+        expect do
+          invoice_service.create
+        end.to have_enqueued_job(Invoices::Payments::StripeCreateJob)
+      end
+    end
   end
 end

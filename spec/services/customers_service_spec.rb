@@ -149,6 +149,59 @@ RSpec.describe CustomersService, type: :service do
         end
       end
     end
+
+    context 'when forcing customer creation on stripe' do
+      before do
+        create(
+          :stripe_provider,
+          organization: organization,
+          create_customers: true,
+        )
+      end
+
+      it 'creates a payment provider customer' do
+        result = customers_service.create_from_api(
+          organization: organization,
+          params: create_args,
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.id).to be_present
+          expect(customer.payment_provider).to eq('stripe')
+          expect(customer.stripe_customer).to be_present
+        end
+      end
+
+      context 'when customer is updated' do
+        before do
+          create(
+            :customer,
+            organization: organization,
+            customer_id: create_args[:customer_id],
+            email: 'foo@bar.com',
+          )
+        end
+
+        it 'does not create a payment provider customer' do
+          result = customers_service.create_from_api(
+            organization: organization,
+            params: create_args,
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            customer = result.customer
+            expect(customer.id).to be_present
+            expect(customer.payment_provider).to be_nil
+            expect(customer.stripe_customer).not_to be_present
+          end
+        end
+      end
+    end
   end
 
   describe 'create' do
@@ -201,6 +254,29 @@ RSpec.describe CustomersService, type: :service do
         expect(result).not_to be_success
       end
     end
+
+    context 'with payment provider' do
+      before do
+        create(
+          :stripe_provider,
+          organization: organization,
+          create_customers: true,
+        )
+      end
+
+      it 'creates a payment provider customer' do
+        result = customers_service.create(**create_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.id).to be_present
+          expect(customer.payment_provider).to eq('stripe')
+          expect(customer.stripe_customer).to be_present
+        end
+      end
+    end
   end
 
   describe 'update' do
@@ -249,6 +325,29 @@ RSpec.describe CustomersService, type: :service do
         aggregate_failures do
           expect(updated_customer.name).to eq('Updated customer name')
           expect(updated_customer.customer_id).to eq(customer.customer_id)
+        end
+      end
+    end
+
+    context 'when updating payment provider' do
+      let(:update_args) do
+        {
+          id: customer.id,
+          name: 'Updated customer name',
+          customer_id: customer_id,
+          payment_provider: 'stripe',
+        }
+      end
+
+      it 'creates a payment provider customer' do
+        result = customers_service.update(**update_args)
+
+        expect(result).to be_success
+
+        updated_customer = result.customer
+        aggregate_failures do
+          expect(updated_customer.payment_provider).to eq('stripe')
+          expect(updated_customer.stripe_customer).to be_present
         end
       end
     end

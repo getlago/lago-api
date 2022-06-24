@@ -7,6 +7,8 @@ module PaymentProviderCustomers
     belongs_to :customer
     belongs_to :payment_provider, optional: true
 
+    has_many :payments
+
     def push_to_settings(key:, value:)
       self.settings ||= {}
       settings[key] = value

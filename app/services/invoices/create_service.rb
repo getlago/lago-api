@@ -36,6 +36,7 @@ module Invoices
       end
 
       SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
+      create_payment(result.invoice)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -209,6 +210,13 @@ module Invoices
         Time.zone.at(timestamp).to_date.beginning_of_year
       else
         raise NotImplementedError
+      end
+    end
+
+    def create_payment(invoice)
+      case customer.payment_provider&.to_sym
+      when :stripe
+        Invoices::Payments::StripeCreateJob.perform_later(invoice)
       end
     end
   end

@@ -33,6 +33,7 @@ module Invoices
       end
 
       SendWebhookJob.perform_later(:add_on, result.invoice) if should_deliver_webhook?
+      create_payment(result.invoice)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -43,7 +44,7 @@ module Invoices
 
     attr_accessor :subscription, :date, :applied_add_on
 
-    delegate :plan, to: :subscription
+    delegate :plan, :customer, to: :subscription
 
     def compute_amounts(invoice)
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
@@ -61,6 +62,13 @@ module Invoices
 
     def should_deliver_webhook?
       subscription.organization.webhook_url?
+    end
+
+    def create_payment(invoice)
+      case customer.payment_provider&.to_sym
+      when :stripe
+        Invoices::Payments::StripeCreateJob.perform_later(invoice)
+      end
     end
   end
 end

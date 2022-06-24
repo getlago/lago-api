@@ -3,7 +3,14 @@
 require 'rails_helper'
 
 RSpec.describe Organization, type: :model do
-  subject(:organization) { described_class.new(name: 'PiedPiper') }
+  subject(:organization) do
+    described_class.new(
+      name: 'PiedPiper',
+      email: 'foo@bar.com',
+      country: 'FR',
+      invoice_footer: 'this is an invoice footer',
+    )
+  end
 
   describe 'Validations' do
     it 'is valid with valid attributes' do
@@ -30,6 +37,24 @@ RSpec.describe Organization, type: :model do
 
     it 'is invalid with invalid webhook url' do
       organization.webhook_url = 'foobar'
+
+      expect(organization).not_to be_valid
+    end
+
+    it 'is invalid with invalid email' do
+      organization.email = 'foo.bar'
+
+      expect(organization).not_to be_valid
+    end
+
+    it 'is invalid with invalid country' do
+      organization.country = 'ZWX'
+
+      expect(organization).not_to be_valid
+    end
+
+    it 'is invalid with invalid invoice footer' do
+      organization.invoice_footer = SecureRandom.alphanumeric(601)
 
       expect(organization).not_to be_valid
     end
