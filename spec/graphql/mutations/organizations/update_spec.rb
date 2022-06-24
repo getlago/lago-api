@@ -12,6 +12,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           vatRate,
           legalNumber,
           legalName,
+          email,
           addressLine1,
           addressLine2,
           state,

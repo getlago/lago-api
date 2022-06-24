@@ -14,6 +14,7 @@ RSpec.describe Organizations::UpdateService do
         vat_rate: 12.5,
         legal_name: 'Foobar',
         legal_number: '1234',
+        email: 'foo@bar.com',
         address_line1: 'Line 1',
         address_line2: 'Line 2',
         state: 'Foobar',
@@ -27,6 +28,7 @@ RSpec.describe Organizations::UpdateService do
       expect(result.organization.vat_rate).to eq(12.5)
       expect(result.organization.legal_name).to eq('Foobar')
       expect(result.organization.legal_number).to eq('1234')
+      expect(result.organization.email).to eq('foo@bar.com')
       expect(result.organization.address_line1).to eq('Line 1')
       expect(result.organization.address_line2).to eq('Line 2')
       expect(result.organization.state).to eq('Foobar')
