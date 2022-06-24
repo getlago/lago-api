@@ -2,7 +2,6 @@
 
 module PaymentProviders
   class StripeService < BaseService
-
     # NOTE: find the complete list of event types at https://stripe.com/docs/api/events/types
     WEBHOOKS_EVENTS = [
       'charge.failed',
@@ -26,6 +25,13 @@ module PaymentProviders
         unregister_webhook(stripe_provider, secret_key)
 
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
+
+        # NOTE: ensure existing payment_provider_customers are
+        #       attached to the provider
+        reatach_provider_customers(
+          organization_id: args[:organization_id],
+          stripe_provider: stripe_provider
+        )
       end
 
       result.stripe_provider = stripe_provider
@@ -67,7 +73,7 @@ module PaymentProviders
 
       PaymentProviders::Stripe::HandleEventJob.perform_later(
         organization: organization,
-        event: event.to_json
+        event: event.to_json,
       )
 
       result.event = event
@@ -115,6 +121,13 @@ module PaymentProviders
       Rails.logger.error(e.backtrace.join("\n"))
 
       Sentry.capture_exception(error)
+    end
+
+    def reatach_provider_customers(organization_id:, stripe_provider:)
+      PaymentProviderCustomers::StripeCustomer
+        .joins(:customer)
+        .where(payment_provider_id: nil, customers: { organization_id: organization_id })
+        .update_all(payment_provider_id: stripe_provider.id)
     end
   end
 end
