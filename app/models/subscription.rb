@@ -41,6 +41,12 @@ class Subscription < ApplicationRecord
     plan.yearly_amount_cents <= next_subscription.plan.yearly_amount_cents
   end
 
+  def downgraded?
+    return false unless next_subscription
+
+    plan.yearly_amount_cents > next_subscription.plan.yearly_amount_cents
+  end
+
   def trial_end_date
     return unless plan.has_trial?
 

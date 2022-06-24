@@ -2,6 +2,8 @@
 
 module Fees
   class SubscriptionService < BaseService
+    WEEK_DURATION = 7.freeze
+
     def initialize(invoice)
       @invoice = invoice
       super(nil)
@@ -87,6 +89,8 @@ module Fees
       #       jump to the end of the billing period
       if plan.pay_in_advance?
         case plan.interval.to_sym
+        when :weekly
+          to_date = invoice.to_date.end_of_week
         when :monthly
           to_date = invoice.to_date.end_of_month
         when :yearly
@@ -133,7 +137,7 @@ module Fees
         end
       end
 
-      # NOTE: number of days between beggining of the period and the termination date
+      # NOTE: number of days between beginning of the period and the termination date
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
       number_of_day_to_bill * single_day_price(plan)
@@ -213,8 +217,10 @@ module Fees
       from_date = optional_from_date || invoice.from_date
 
       # NOTE: Duration in days of full billed period (without termination)
-      #       WARNING: the method only handles beggining of period logic
+      #       WARNING: the method only handles beginning of period logic
       duration = case target_plan.interval.to_sym
+                 when :weekly
+                   WEEK_DURATION
                  when :monthly
                    (from_date.end_of_month + 1.day) - from_date.beginning_of_month
                  when :yearly
@@ -232,6 +238,8 @@ module Fees
       # NOTE: when plan is pay in advance, the to date should be the
       # end of the actual period
       case plan.interval.to_sym
+      when :weekly
+        invoice.to_date.end_of_week
       when :monthly
         invoice.to_date.end_of_month
       when :yearly
