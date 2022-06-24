@@ -167,6 +167,15 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           .to raise_error(Stripe::CardError)
 
         expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            :payment_provider_invoice_payment_error,
+            invoice,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: 'error',
+              error_code: nil,
+            },
+          )
       end
     end
   end
