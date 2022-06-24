@@ -30,9 +30,7 @@ module Customers
       customer.save!
 
       # NOTE: if payment provider is updated, we need to create/update the provider customer
-      if customer.payment_provider_previously_changed?
-        create_or_update_provider_customer(customer, args[:stripe_customer])
-      end
+      create_or_update_provider_customer(customer, args[:stripe_customer])
 
       result.customer = customer
       result
