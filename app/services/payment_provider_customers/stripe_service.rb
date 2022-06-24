@@ -46,7 +46,7 @@ module PaymentProviderCustomers
           idempotency_key: customer.id,
         },
       )
-    rescue Stripe::InvalidRequestError => e # TODO
+    rescue Stripe::InvalidRequestError => e
       deliver_error_webhook(e)
 
       raise
