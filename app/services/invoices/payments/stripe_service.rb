@@ -49,6 +49,18 @@ module Invoices
         result.fail!('invalid_invoice_status')
       end
 
+      def reprocess_pending_invoices(organization_id:, stripe_customer_id:)
+        stripe_customer = PaymentProviderCustomers::StripeCustomer
+          .joins(:customer)
+          .where(customers: { organization_id: organization_id })
+          .find_by(provider_customer_id: stripe_customer_id)
+        return result unless stripe_customer
+
+        stripe_customer.customer.invoices.pending.find_each do |invoice|
+          Invoices::Payments::StripeCreateJob.perform_later(invoice)
+        end
+      end
+
       private
 
       attr_accessor :invoice
@@ -56,6 +68,7 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def should_process_payment?
+        return false unless invoice.pending?
         return false unless organization.stripe_payment_provider
         return true if invoice.total_amount_cents.positive?
 

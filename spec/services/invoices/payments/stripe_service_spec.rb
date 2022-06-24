@@ -6,7 +6,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
   subject(:stripe_service) { described_class.new(invoice) }
 
   let(:customer) { create(:customer) }
-  let(:stripe_payment_provider) { create(:stripe_provider, organization: customer.organization) }
+  let(:organization) { customer.organization }
+  let(:stripe_payment_provider) { create(:stripe_provider, organization: organization) }
   let(:stripe_customer) { create(:stripe_customer, customer: customer) }
 
   let(:invoice) do
@@ -226,6 +227,22 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).not_to be_success
         expect(result.error_code).to eq('invalid_invoice_status')
       end
+    end
+  end
+
+  describe '.reprocess_pending_invoices' do
+    before do
+      invoice
+    end
+
+    it 'enqueues jobs to reprocess the pending payment' do
+      stripe_service.reprocess_pending_invoices(
+        organization_id: organization.id,
+        stripe_customer_id: stripe_customer.provider_customer_id,
+      )
+
+      expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued
+        .with(invoice)
     end
   end
 end

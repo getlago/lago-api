@@ -114,7 +114,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     let(:event_result) { Stripe::Event.construct_from(event) }
 
     let(:event) do
-      path = Rails.root.join('spec/fixtures/stripe/event.json')
+      path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
       JSON.parse(File.read(path))
     end
 
@@ -177,11 +177,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     let(:payment_service) { instance_double(Invoices::Payments::StripeService) }
     let(:payment_service_result) { BaseService::Result.new }
 
-    let(:event) do
-      path = Rails.root.join('spec/fixtures/stripe/event.json')
-      JSON.parse(File.read(path))
-    end
-
     before do
       allow(Invoices::Payments::StripeService).to receive(:new)
         .and_return(payment_service)
@@ -189,13 +184,49 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         .and_return(payment_service_result)
     end
 
-    it 'routes the event to an other service' do
-      result = stripe_service.handle_event(event)
+    context 'when charge event' do
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
+        JSON.parse(File.read(path))
+      end
 
-      expect(result).to be_success
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization: organization,
+          event_json: event,
+        )
 
-      expect(Invoices::Payments::StripeService).to have_received(:new)
-      expect(payment_service).to have_received(:update_status)
+        expect(result).to be_success
+
+        expect(Invoices::Payments::StripeService).to have_received(:new)
+        expect(payment_service).to have_received(:update_status)
+      end
+    end
+
+    context 'when customer event' do
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/customer_event.json')
+        JSON.parse(File.read(path))
+      end
+
+      before do
+        allow(Invoices::Payments::StripeService).to receive(:new)
+          .and_return(payment_service)
+        allow(payment_service).to receive(:reprocess_pending_invoices)
+          .and_return(payment_service_result)
+      end
+
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization: organization,
+          event_json: event,
+        )
+
+        expect(result).to be_success
+
+        expect(Invoices::Payments::StripeService).to have_received(:new)
+        expect(payment_service).to have_received(:reprocess_pending_invoices)
+      end
     end
 
     context 'when event does not match an expected event type' do
@@ -210,7 +241,10 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
 
       it 'returns an error result' do
-        result = stripe_service.handle_event(event)
+        result = stripe_service.handle_event(
+          organization: organization,
+          event_json: event,
+        )
 
         expect(result).not_to be_success
         expect(result.error_code).to eq('invalid_stripe_event_type')
