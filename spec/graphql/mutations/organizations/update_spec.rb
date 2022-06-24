@@ -35,6 +35,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           vatRate: 12.5,
           legalNumber: '1234',
           legalName: 'Foobar',
+          email: 'foo@bar.com',
           addressLine1: 'Line 1',
           addressLine2: 'Line 2',
           state: 'Foobar',
@@ -52,6 +53,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     expect(result_data['vatRate']).to eq(12.5)
     expect(result_data['legalNumber']).to eq('1234')
     expect(result_data['legalName']).to eq('Foobar')
+    expect(result_data['email']).to eq('foo@bar.com')
     expect(result_data['addressLine1']).to eq('Line 1')
     expect(result_data['addressLine2']).to eq('Line 2')
     expect(result_data['state']).to eq('Foobar')

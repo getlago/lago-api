@@ -13,6 +13,7 @@ module Organizations
       organization.webhook_url = args[:webhook_url] if args.key?(:webhook_url)
       organization.legal_name = args[:legal_name] if args.key?(:legal_name)
       organization.legal_number = args[:legal_number] if args.key?(:legal_number)
+      organization.email = args[:email] if args.key?(:email)
       organization.address_line1 = args[:address_line1] if args.key?(:address_line1)
       organization.address_line2 = args[:address_line2] if args.key?(:address_line2)
       organization.state = args[:state] if args.key?(:state)
