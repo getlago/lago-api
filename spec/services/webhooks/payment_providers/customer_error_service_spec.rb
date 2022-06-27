@@ -32,11 +32,13 @@ RSpec.describe Webhooks::PaymentProviders::CustomerErrorService do
     it 'builds payload with customer.payment_provider_error webhook type' do
       webhook_service.call
 
-      expect(LagoHttpClient::Client).to have_received(:new)
-        .with(organization.webhook_url)
-      expect(lago_client).to have_received(:post) do |payload|
-        expect(payload[:webhook_type]).to eq('customer.payment_provider_error')
-        expect(payload[:object_type]).to eq('payment_provider_customer_error')
+      aggregate_failures do
+        expect(LagoHttpClient::Client).to have_received(:new)
+          .with(organization.webhook_url)
+        expect(lago_client).to have_received(:post) do |payload|
+          expect(payload[:webhook_type]).to eq('customer.payment_provider_error')
+          expect(payload[:object_type]).to eq('payment_provider_customer_error')
+        end
       end
     end
   end
