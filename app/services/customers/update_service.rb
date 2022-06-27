@@ -41,8 +41,9 @@ module Customers
     private
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      handle_stripe_customer = customer.payment_provider == 'stripe'
+      handle_stripe_customer = customer.payment_provider.present?
       handle_stripe_customer ||= (billing_configuration || {})[:provider_customer_id]
+      handle_stripe_customer ||= customer.stripe_customer&.provider_customer_id.present?
       return unless handle_stripe_customer
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(

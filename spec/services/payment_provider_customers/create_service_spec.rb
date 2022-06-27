@@ -48,5 +48,45 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
         end.to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
       end
     end
+
+    context 'when removing the provider customer id and should create on service' do
+      let(:create_params) do
+        { provider_customer_id: nil }
+      end
+
+      let(:stripe_provider) do
+        create(
+          :stripe_provider,
+          organization: customer.organization,
+          create_customers: true,
+        )
+      end
+
+      let(:stripe_customer) do
+        create(
+          :stripe_customer,
+          customer: customer,
+          payment_provider: stripe_provider,
+        )
+      end
+
+      before { stripe_customer }
+
+      it 'updates the provider customer' do
+        expect do
+          result = create_service.create_or_update(
+            customer_class: PaymentProviderCustomers::StripeCustomer,
+            payment_provider_id: stripe_provider.id,
+            params: create_params,
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.provider_customer.provider_customer_id).to be_nil
+          end
+        end.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
+      end
+    end
   end
 end

@@ -106,6 +106,39 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect(customer.stripe_customer.provider_customer_id).to eq('cus_12345')
           end
         end
+
+        context 'when removing a provider customer id' do
+          let(:update_args) do
+            {
+              id: customer.id,
+              customer_id: SecureRandom.uuid,
+              name: 'Foo Bar',
+              organization_id: organization.id,
+              payment_provider: nil,
+              stripe_customer: { provider_customer_id: nil },
+            }
+          end
+
+          let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+
+          before { stripe_customer }
+
+          it 'removes the provider customer id' do
+            result = customers_service.update(**update_args)
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              customer = result.customer
+              expect(customer.id).to eq(customer.id)
+              expect(customer.payment_provider).to be_nil
+
+              customer.stripe_customer.reload
+              expect(customer.stripe_customer).to eq(stripe_customer)
+              expect(customer.stripe_customer.provider_customer_id).to be_nil
+            end
+          end
+        end
       end
     end
   end

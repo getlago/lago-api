@@ -5,7 +5,7 @@ module PaymentProviderCustomers
     self.table_name = 'payment_provider_customers'
 
     belongs_to :customer
-    belongs_to :payment_provider, optional: true
+    belongs_to :payment_provider, optional: true, class_name: 'PaymentProviders::BaseProvider'
 
     has_many :payments
 
