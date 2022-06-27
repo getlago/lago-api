@@ -13,7 +13,7 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        result = BillableMetricsService.new(context[:current_user]).destroy(id)
+        result = ::BillableMetrics::DestroyService.new(context[:current_user]).destroy(id)
 
         result.success? ? result.billable_metric : result_error(result)
       end
