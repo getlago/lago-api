@@ -28,9 +28,9 @@ module PaymentProviders
 
         # NOTE: ensure existing payment_provider_customers are
         #       attached to the provider
-        reatach_provider_customers(
+        reattach_provider_customers(
           organization_id: args[:organization_id],
-          stripe_provider: stripe_provider
+          stripe_provider: stripe_provider,
         )
       end
 
@@ -123,7 +123,7 @@ module PaymentProviders
       Sentry.capture_exception(error)
     end
 
-    def reatach_provider_customers(organization_id:, stripe_provider:)
+    def reattach_provider_customers(organization_id:, stripe_provider:)
       PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
         .where(payment_provider_id: nil, customers: { organization_id: organization_id })
