@@ -12,14 +12,13 @@ module PaymentProviderCustomers
       result.stripe_customer = stripe_customer
       return result if stripe_customer.provider_customer_id?
 
-      stripe_result = Stripe::Customer.create(
-        stripe_create_payload,
-        { api_key: api_key },
-      )
+      stripe_result = create_stripe_customer
 
       stripe_customer.update!(
         provider_customer_id: stripe_result.id,
       )
+
+      deliver_success_webhook
 
       result.stripe_customer = stripe_customer
       result
@@ -37,6 +36,20 @@ module PaymentProviderCustomers
 
     def api_key
       organization.stripe_payment_provider.secret_key
+    end
+
+    def create_stripe_customer
+      Stripe::Customer.create(
+        stripe_create_payload,
+        {
+          api_key: api_key,
+          idempotency_key: customer.id,
+        },
+      )
+    rescue Stripe::InvalidRequestError => e
+      deliver_error_webhook(e)
+
+      raise
     end
 
     def stripe_create_payload
@@ -57,6 +70,28 @@ module PaymentProviderCustomers
         },
         phone: customer.phone,
       }
+    end
+
+    def deliver_success_webhook
+      return unless customer.organization.webhook_url?
+
+      SendWebhookJob.perform_later(
+        :payment_provider_customer_created,
+        customer,
+      )
+    end
+
+    def deliver_error_webhook(stripe_error)
+      return unless customer.organization.webhook_url?
+
+      SendWebhookJob.perform_later(
+        :payment_provider_customer_error,
+        customer,
+        provider_error: {
+          message: stripe_error.message,
+          error_code: stripe_error.code,
+        },
+      )
     end
   end
 end

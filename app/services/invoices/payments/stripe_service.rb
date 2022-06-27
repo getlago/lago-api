@@ -14,13 +14,7 @@ module Invoices
 
         ensure_provider_customer
 
-        stripe_result = Stripe::Charge.create(
-          stripe_payment_payload,
-          {
-            api_key: stripe_api_key,
-            idempotency_key: invoice.id,
-          },
-        )
+        stripe_result = create_stripe_charge
 
         payment = Payment.new(
           invoice: invoice,
@@ -55,6 +49,18 @@ module Invoices
         result.fail!('invalid_invoice_status')
       end
 
+      def reprocess_pending_invoices(organization_id:, stripe_customer_id:)
+        stripe_customer = PaymentProviderCustomers::StripeCustomer
+          .joins(:customer)
+          .where(customers: { organization_id: organization_id })
+          .find_by(provider_customer_id: stripe_customer_id)
+        return result unless stripe_customer
+
+        stripe_customer.customer.invoices.pending.find_each do |invoice|
+          Invoices::Payments::StripeCreateJob.perform_later(invoice)
+        end
+      end
+
       private
 
       attr_accessor :invoice
@@ -62,6 +68,7 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def should_process_payment?
+        return false unless invoice.pending?
         return false unless organization.stripe_payment_provider
         return true if invoice.total_amount_cents.positive?
 
@@ -88,11 +95,26 @@ module Invoices
         organization.stripe_payment_provider.secret_key
       end
 
+      def create_stripe_charge
+        Stripe::Charge.create(
+          stripe_payment_payload,
+          {
+            api_key: stripe_api_key,
+            idempotency_key: invoice.id,
+          },
+        )
+      rescue Stripe::CardError => e
+        deliver_error_webhook(e)
+
+        raise
+      end
+
       def stripe_payment_payload
         {
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
+          receipt_email: customer.email,
           description: "Lago - #{organization.name} - Invoice #{invoice.number}",
           metadata: {
             lago_customer_id: customer.id,
@@ -109,6 +131,20 @@ module Invoices
         return unless Invoice::STATUS.include?(status&.to_sym)
 
         invoice.update!(status: status)
+      end
+
+      def deliver_error_webhook(stripe_error)
+        return unless invoice.organization.webhook_url?
+
+        SendWebhookJob.perform_later(
+          :payment_provider_invoice_payment_error,
+          invoice,
+          provider_customer_id: customer.stripe_customer.provider_customer_id,
+          provider_error: {
+            message: stripe_error.message,
+            error_code: stripe_error.code,
+          },
+        )
       end
     end
   end

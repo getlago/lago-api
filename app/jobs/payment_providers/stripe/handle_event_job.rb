@@ -5,8 +5,11 @@ module PaymentProviders
     class HandleEventJob < ApplicationJob
       queue_as 'providers'
 
-      def perform(event)
-        result = PaymentProviders::StripeService.new.handle_event(event)
+      def perform(organization:, event:)
+        result = PaymentProviders::StripeService.new.handle_event(
+          organization: organization,
+          event_json: event,
+        )
         result.throw_error
       end
     end

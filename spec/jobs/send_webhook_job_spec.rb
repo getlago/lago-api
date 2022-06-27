@@ -69,6 +69,91 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is payment_provider_invoice_payment_errors' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentProviders::InvoicePaymentFailureService) }
+
+    let(:webhook_options) do
+      {
+        provider_error: {
+          message: 'message',
+          error_code: 'code',
+        },
+      }
+    end
+
+    before do
+      allow(Webhooks::PaymentProviders::InvoicePaymentFailureService).to receive(:new)
+        .with(invoice, webhook_options)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      described_class.perform_now(
+        :payment_provider_invoice_payment_error,
+        invoice,
+        webhook_options,
+      )
+
+      expect(Webhooks::PaymentProviders::InvoicePaymentFailureService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is payment_provider_customer_created' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerCreatedService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::PaymentProviders::CustomerCreatedService).to receive(:new)
+        .with(customer)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      described_class.perform_now(
+        :payment_provider_customer_created,
+        customer,
+      )
+
+      expect(Webhooks::PaymentProviders::CustomerCreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is payment_provider_customer_error' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerErrorService) }
+    let(:customer) { create(:customer) }
+
+    let(:webhook_options) do
+      {
+        provider_error: {
+          message: 'message',
+          error_code: 'code',
+        },
+      }
+    end
+
+    before do
+      allow(Webhooks::PaymentProviders::CustomerErrorService).to receive(:new)
+        .with(customer, webhook_options)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      described_class.perform_now(
+        :payment_provider_customer_error,
+        customer,
+        webhook_options,
+      )
+
+      expect(Webhooks::PaymentProviders::CustomerErrorService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
       expect { described_class.perform_now(:subscription, invoice) }

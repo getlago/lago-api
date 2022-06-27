@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe PaymentProviders::Stripe::HandleEventJob, type: :job do
   let(:stripe_service) { instance_double(PaymentProviders::StripeService) }
   let(:result) { BaseService::Result.new }
+  let(:organization) { create(:organization) }
 
   let(:stripe_event) do
     {}
@@ -18,7 +19,10 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob, type: :job do
   end
 
   it 'calls the handle event service' do
-    described_class.perform_now(stripe_event)
+    described_class.perform_now(
+      organization: organization,
+      event: stripe_event,
+    )
 
     expect(PaymentProviders::StripeService).to have_received(:new)
     expect(stripe_service).to have_received(:handle_event)

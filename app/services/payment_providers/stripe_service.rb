@@ -2,9 +2,11 @@
 
 module PaymentProviders
   class StripeService < BaseService
+    # NOTE: find the complete list of event types at https://stripe.com/docs/api/events/types
     WEBHOOKS_EVENTS = [
       'charge.failed',
       'charge.succeeded',
+      'customer.updated',
     ].freeze
 
     def create_or_update(**args)
@@ -23,6 +25,13 @@ module PaymentProviders
         unregister_webhook(stripe_provider, secret_key)
 
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
+
+        # NOTE: ensure existing payment_provider_customers are
+        #       attached to the provider
+        reattach_provider_customers(
+          organization_id: args[:organization_id],
+          stripe_provider: stripe_provider,
+        )
       end
 
       result.stripe_provider = stripe_provider
@@ -62,7 +71,10 @@ module PaymentProviders
         organization&.stripe_payment_provider&.webhook_secret,
       )
 
-      PaymentProviders::Stripe::HandleEventJob.perform_later(event.to_json)
+      PaymentProviders::Stripe::HandleEventJob.perform_later(
+        organization: organization,
+        event: event.to_json,
+      )
 
       result.event = event
       result
@@ -72,15 +84,25 @@ module PaymentProviders
       result.fail!('webhook_error', 'Invalid signature')
     end
 
-    def handle_event(event_json)
+    def handle_event(organization:, event_json:)
       event = ::Stripe::Event.construct_from(event_json)
       return result.fail!('invalid_stripe_event_type') unless WEBHOOKS_EVENTS.include?(event.type)
 
-      Invoices::Payments::StripeService
-        .new.update_status(
-          provider_payment_id: event.data.object.id,
-          status: event.data.object.status,
-        )
+      case event.type
+      when 'charge.failed', 'charge.succeeded'
+        Invoices::Payments::StripeService
+          .new.update_status(
+            provider_payment_id: event.data.object.id,
+            status: event.data.object.status,
+          )
+      when 'customer.updated'
+        Invoices::Payments::StripeService
+          .new
+          .reprocess_pending_invoices(
+            organization_id: organization.id,
+            stripe_customer_id: event.data.object.id,
+          )
+      end
     end
 
     private
@@ -99,6 +121,13 @@ module PaymentProviders
       Rails.logger.error(e.backtrace.join("\n"))
 
       Sentry.capture_exception(error)
+    end
+
+    def reattach_provider_customers(organization_id:, stripe_provider:)
+      PaymentProviderCustomers::StripeCustomer
+        .joins(:customer)
+        .where(payment_provider_id: nil, customers: { organization_id: organization_id })
+        .update_all(payment_provider_id: stripe_provider.id)
     end
   end
 end

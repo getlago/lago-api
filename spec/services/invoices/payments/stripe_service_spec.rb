@@ -6,7 +6,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
   subject(:stripe_service) { described_class.new(invoice) }
 
   let(:customer) { create(:customer) }
-  let(:stripe_payment_provider) { create(:stripe_provider, organization: customer.organization) }
+  let(:organization) { customer.organization }
+  let(:stripe_payment_provider) { create(:stripe_provider, organization: organization) }
   let(:stripe_customer) { create(:stripe_customer, customer: customer) }
 
   let(:invoice) do
@@ -143,6 +144,41 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(Stripe::Charge).to have_received(:create)
       end
     end
+
+    context 'with card error on stripe' do
+      let(:customer) { create(:customer, organization: organization) }
+
+      let(:subscription) do
+        create(:subscription, organization: organization, customer: customer)
+      end
+
+      let(:organization) do
+        create(:organization, webhook_url: 'https://webhook.com')
+      end
+
+      before do
+        subscription
+
+        allow(Stripe::Charge).to receive(:create)
+          .and_raise(Stripe::CardError.new('error', {}))
+      end
+
+      it 'delivers an error webhook' do
+        expect { stripe_service.create }
+          .to raise_error(Stripe::CardError)
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            :payment_provider_invoice_payment_error,
+            invoice,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: 'error',
+              error_code: nil,
+            },
+          )
+      end
+    end
   end
 
   describe '.update_status' do
@@ -191,6 +227,22 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).not_to be_success
         expect(result.error_code).to eq('invalid_invoice_status')
       end
+    end
+  end
+
+  describe '.reprocess_pending_invoices' do
+    before do
+      invoice
+    end
+
+    it 'enqueues jobs to reprocess the pending payment' do
+      stripe_service.reprocess_pending_invoices(
+        organization_id: organization.id,
+        stripe_customer_id: stripe_customer.provider_customer_id,
+      )
+
+      expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued
+        .with(invoice)
     end
   end
 end
