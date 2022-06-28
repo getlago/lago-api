@@ -102,6 +102,7 @@ module Customers
         customer_class: PaymentProviderCustomers::StripeCustomer,
         payment_provider_id: customer.organization.stripe_payment_provider&.id,
         params: billing_configuration,
+        async: !(billing_configuration || {})[:sync],
       )
       create_result.throw_error unless create_result.success?
     end

@@ -41,7 +41,7 @@ module Api
           :legal_name,
           :legal_number,
           :vat_rate,
-          billing_configuration: [:payment_provider, :provider_customer_id],
+          billing_configuration: [:payment_provider, :provider_customer_id, :sync],
         )
       end
     end
