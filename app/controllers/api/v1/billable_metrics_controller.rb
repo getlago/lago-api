@@ -6,7 +6,7 @@ module Api
       def create
         service = BillableMetrics::CreateService.new
         result = service.create(
-          **create_params.merge(organization_id: current_organization.id)
+          **input_params.merge(organization_id: current_organization.id)
         )
 
         if result.success?
@@ -21,9 +21,30 @@ module Api
         end
       end
 
+      def update
+        service = BillableMetrics::UpdateService.new
+        result = service.update_from_api(
+          code: params[:code],
+          params: input_params,
+        )
+
+        if result.success?
+          render(
+            json: ::V1::BillableMetricSerializer.new(
+              result.billable_metric,
+              root_name: 'billable_metric',
+              ),
+            )
+        elsif result.error_code == 'not_found'
+          not_found_error
+        else
+          validation_errors(result)
+        end
+      end
+
       private
 
-      def create_params
+      def input_params
         params.require(:billable_metric).permit(
           :name,
           :code,

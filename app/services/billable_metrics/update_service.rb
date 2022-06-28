@@ -24,5 +24,26 @@ module BillableMetrics
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
     end
+
+    def update_from_api(code:, params:)
+      metric = BillableMetric.find_by(code: code)
+      return result.fail!('not_found', 'billable metric does not exist') unless metric
+
+      metric.name = params[:name] if params.key?(:name)
+      metric.description = params[:description] if params.key?(:description)
+
+      unless metric.attached_to_subscriptions?
+        metric.code = params[:code] if params.key?(:code)
+        metric.aggregation_type = params[:aggregation_type] if params.key?(:aggregation_type)
+        metric.field_name = params[:field_name] if params.key?(:field_name)
+      end
+
+      metric.save!
+
+      result.billable_metric = metric
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.fail_with_validations!(e.record)
+    end
   end
 end
