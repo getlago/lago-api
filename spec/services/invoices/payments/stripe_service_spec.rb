@@ -24,9 +24,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       stripe_payment_provider
       stripe_customer
 
-      allow(Stripe::Charge).to receive(:create)
+      allow(Stripe::PaymentIntent).to receive(:create)
         .and_return(
-          Stripe::Charge.construct_from(
+          Stripe::PaymentIntent.construct_from(
             id: 'ch_123456',
             status: 'pending',
             amount: invoice.total_amount_cents,
@@ -52,7 +52,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result.payment.status).to eq('pending')
       end
 
-      expect(Stripe::Charge).to have_received(:create)
+      expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
     context 'with no payment provider' do
@@ -67,7 +67,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.invoice).to be_nil
           expect(result.payment).to be_nil
 
-          expect(Stripe::Charge).not_to have_received(:create)
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
         end
       end
     end
@@ -91,7 +91,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.invoice).to be_nil
           expect(result.payment).to be_nil
 
-          expect(Stripe::Charge).not_to have_received(:create)
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
         end
       end
 
@@ -115,7 +115,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             expect(result.payment.id).to be_present
             expect(result.payment.amount_cents).to eq(0)
 
-            expect(Stripe::Charge).to have_received(:create)
+            expect(Stripe::PaymentIntent).to have_received(:create)
           end
         end
       end
@@ -141,7 +141,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(customer.stripe_customer.provider_customer_id).to eq('cus_123456')
 
         expect(Stripe::Customer).to have_received(:create)
-        expect(Stripe::Charge).to have_received(:create)
+        expect(Stripe::PaymentIntent).to have_received(:create)
       end
     end
 
@@ -159,7 +159,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       before do
         subscription
 
-        allow(Stripe::Charge).to receive(:create)
+        allow(Stripe::PaymentIntent).to receive(:create)
           .and_raise(Stripe::CardError.new('error', {}))
       end
 

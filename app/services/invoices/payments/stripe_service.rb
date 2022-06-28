@@ -14,7 +14,7 @@ module Invoices
 
         ensure_provider_customer
 
-        stripe_result = create_stripe_charge
+        stripe_result = create_stripe_payment
 
         payment = Payment.new(
           invoice: invoice,
@@ -95,8 +95,8 @@ module Invoices
         organization.stripe_payment_provider.secret_key
       end
 
-      def create_stripe_charge
-        Stripe::Charge.create(
+      def create_stripe_payment
+        Stripe::PaymentIntent.create(
           stripe_payment_payload,
           {
             api_key: stripe_api_key,
@@ -114,7 +114,10 @@ module Invoices
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
+          confirm: true,
+          off_session: true,
           receipt_email: customer.email,
+          error_on_requires_action: true,
           description: "Lago - #{organization.name} - Invoice #{invoice.number}",
           metadata: {
             lago_customer_id: customer.id,
