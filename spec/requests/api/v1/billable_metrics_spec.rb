@@ -140,9 +140,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'when billable metric is attached to active subscription' do
-      let(:subscription) { create(:subscription, plan: plan) }
-      let(:charge) { create(:standard_charge, plan: plan, billable_metric: billable_metric) }
-      let(:plan) { create(:plan) }
+      let(:subscription) { create(:subscription) }
+      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
       let(:billable_metric) { create(:billable_metric, organization: organization) }
 
       before do
