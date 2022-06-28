@@ -60,6 +60,33 @@ module Api
         end
       end
 
+      def show
+        metric = current_organization.billable_metrics.find_by(
+          code: params[:code]
+        )
+
+        return not_found_error unless metric
+
+        render(
+          json: ::V1::BillableMetricSerializer.new(
+            metric,
+            root_name: 'billable_metric',
+          )
+        )
+      end
+
+      def index
+        metrics = current_organization.billable_metrics
+
+        render(
+          json: ::CollectionSerializer.new(
+            metrics,
+            ::V1::BillableMetricSerializer,
+            collection_name: 'billable_metrics'
+          )
+        )
+      end
+
       private
 
       def input_params
