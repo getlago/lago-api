@@ -5,7 +5,7 @@ class ModelSerializer
 
   def initialize(model, options = {})
     @model = model
-    @options = options&.with_indifferent_access
+    @options = options
   end
 
   def serialize

@@ -7,7 +7,7 @@ module Webhooks
   class BaseService
     def initialize(object, options = {})
       @object = object
-      @options = options
+      @options = options&.with_indifferent_access
     end
 
     def call
