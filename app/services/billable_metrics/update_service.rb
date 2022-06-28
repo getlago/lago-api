@@ -25,8 +25,8 @@ module BillableMetrics
       result.fail_with_validations!(e.record)
     end
 
-    def update_from_api(code:, params:)
-      metric = BillableMetric.find_by(code: code)
+    def update_from_api(organization:, code:, params:)
+      metric = organization.billable_metrics.find_by(code: code)
       return result.fail!('not_found', 'billable metric does not exist') unless metric
 
       metric.name = params[:name] if params.key?(:name)

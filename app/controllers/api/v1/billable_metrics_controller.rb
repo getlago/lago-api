@@ -24,6 +24,7 @@ module Api
       def update
         service = BillableMetrics::UpdateService.new
         result = service.update_from_api(
+          organization: current_organization,
           code: params[:code],
           params: input_params,
         )
@@ -33,12 +34,29 @@ module Api
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
               root_name: 'billable_metric',
-              ),
-            )
-        elsif result.error_code == 'not_found'
-          not_found_error
+            ),
+          )
         else
-          validation_errors(result)
+          render_error_response(result)
+        end
+      end
+
+      def destroy
+        service = BillableMetrics::DestroyService.new
+        result = service.destroy_from_api(
+          organization: current_organization,
+          code: params[:code]
+        )
+
+        if result.success?
+          render(
+            json: ::V1::BillableMetricSerializer.new(
+              result.billable_metric,
+              root_name: 'billable_metric',
+            ),
+          )
+        else
+          render_error_response(result)
         end
       end
 
