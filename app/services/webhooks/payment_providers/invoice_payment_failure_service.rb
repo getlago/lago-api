@@ -13,7 +13,7 @@ module Webhooks
         ::V1::PaymentProviders::InvoicePaymentErrorSerializer.new(
           object,
           root_name: object_type,
-          options: options,
+          provider_error: options,
         )
       end
 
