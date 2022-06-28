@@ -77,12 +77,16 @@ module Api
 
       def index
         metrics = current_organization.billable_metrics
+                                      .order(created_at: :desc)
+                                      .page(params[:page])
+                                      .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
             metrics,
             ::V1::BillableMetricSerializer,
-            collection_name: 'billable_metrics'
+            collection_name: 'billable_metrics',
+            meta: pagination_metadata(metrics)
           )
         )
       end

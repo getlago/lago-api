@@ -2,6 +2,8 @@
 
 module Api
   class BaseController < ApplicationController
+    include Pagination
+
     before_action :authenticate
 
     private
