@@ -127,9 +127,20 @@ module Invoices
             invoice_to_date: invoice.to_date.iso8601,
             invoice_type: invoice.invoice_type,
           },
-          automatic_payment_methods: {
-            enabled: true,
-          },
+          payment_method_types: %w[
+            acss_debit
+            au_becs_debit
+            bacs_debit
+            bancontact
+            boleto
+            card
+            card_present
+            ideal
+            link
+            sepa_debit
+            sofort
+            us_bank_account
+          ],
         }
       end
 
