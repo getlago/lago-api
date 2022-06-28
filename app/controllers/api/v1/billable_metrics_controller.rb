@@ -6,7 +6,10 @@ module Api
       def create
         service = BillableMetrics::CreateService.new
         result = service.create(
-          **input_params.merge(organization_id: current_organization.id)
+          **input_params
+            .merge(organization_id: current_organization.id)
+            .to_h
+            .symbolize_keys
         )
 
         if result.success?
