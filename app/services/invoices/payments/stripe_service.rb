@@ -127,6 +127,9 @@ module Invoices
             invoice_to_date: invoice.to_date.iso8601,
             invoice_type: invoice.invoice_type,
           },
+          automatic_payment_methods: {
+            enabled: true,
+          },
         }
       end
 
