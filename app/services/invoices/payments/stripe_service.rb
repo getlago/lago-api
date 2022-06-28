@@ -49,18 +49,6 @@ module Invoices
         result.fail!('invalid_invoice_status')
       end
 
-      def reprocess_pending_invoices(organization_id:, stripe_customer_id:)
-        stripe_customer = PaymentProviderCustomers::StripeCustomer
-          .joins(:customer)
-          .where(customers: { organization_id: organization_id })
-          .find_by(provider_customer_id: stripe_customer_id)
-        return result unless stripe_customer
-
-        stripe_customer.customer.invoices.pending.find_each do |invoice|
-          Invoices::Payments::StripeCreateJob.perform_later(invoice)
-        end
-      end
-
       private
 
       attr_accessor :invoice
@@ -95,6 +83,25 @@ module Invoices
         organization.stripe_payment_provider.secret_key
       end
 
+      def stripe_payment_method
+        payment_method = customer.stripe_customer.payment_method_id
+        return payment_method if payment_method.present?
+
+        payment_method = Stripe::PaymentMethod.list(
+          {
+            customer: customer.stripe_customer.provider_customer_id,
+            type: 'card', # TODO: Supported payment method type
+          },
+          {
+            api_key: stripe_api_key,
+          },
+        ).first
+        customer.stripe_customer.payment_method_id = payment_method&.id
+        customer.stripe_customer.save!
+
+        payment_method&.id
+      end
+
       def create_stripe_payment
         Stripe::PaymentIntent.create(
           stripe_payment_payload,
@@ -114,6 +121,7 @@ module Invoices
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
+          payment_method: stripe_payment_method,
           confirm: true,
           off_session: true,
           receipt_email: customer.email,
@@ -127,20 +135,6 @@ module Invoices
             invoice_to_date: invoice.to_date.iso8601,
             invoice_type: invoice.invoice_type,
           },
-          payment_method_types: %w[
-            acss_debit
-            au_becs_debit
-            bacs_debit
-            bancontact
-            boleto
-            card
-            card_present
-            ideal
-            link
-            sepa_debit
-            sofort
-            us_bank_account
-          ],
         }
       end
 

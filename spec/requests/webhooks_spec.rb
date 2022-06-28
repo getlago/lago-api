@@ -17,7 +17,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:stripe_service) { instance_double(PaymentProviders::StripeService) }
 
     let(:event) do
-      path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
+      path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
       JSON.parse(File.read(path))
     end
 
