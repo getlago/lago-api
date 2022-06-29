@@ -15,6 +15,8 @@ class Organization < ApplicationRecord
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
 
+  has_one_attached :logo
+
   before_create :generate_api_key
 
   validates :name, presence: true
@@ -23,6 +25,11 @@ class Organization < ApplicationRecord
   validates :country, country_code: true, if: :country?
   validates :invoice_footer, length: { maximum: 600 }
   validates :email, email: true, if: :email?
+  validates :logo, image: { authorized_content_type: %w[image/png image/jpg], max_size: 800.kilobytes }, if: :logo?
+
+  def logo_url
+    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
+  end
 
   private
 

@@ -58,6 +58,36 @@ RSpec.describe Organization, type: :model do
 
       expect(organization).not_to be_valid
     end
+
+    it 'is valid with logo' do
+      organization.logo.attach(
+        io: File.open(Rails.root.join('spec/factories/images/logo.png')),
+        content_type: 'image/png',
+        filename: 'logo',
+      )
+
+      expect(organization).to be_valid
+    end
+
+    it 'is invalid with too big logo' do
+      organization.logo.attach(
+        io: File.open(Rails.root.join('spec/factories/images/big_sized_logo.jpg')),
+        content_type: 'image/jpeg',
+        filename: 'logo',
+      )
+
+      expect(organization).not_to be_valid
+    end
+
+    it 'is invalid with unsupported logo content type' do
+      organization.logo.attach(
+        io: File.open(Rails.root.join('spec/factories/images/logo.gif')),
+        content_type: 'image/gif',
+        filename: 'logo',
+      )
+
+      expect(organization).not_to be_valid
+    end
   end
 
   describe 'Callbacks' do

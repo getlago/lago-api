@@ -7,6 +7,7 @@ module Types
     field :api_key, String, null: false
     field :vat_rate, Float, null: false
     field :webhook_url, String
+    field :logo_url, String
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
