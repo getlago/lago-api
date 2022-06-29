@@ -11,8 +11,18 @@ module Organizations
     def update(**args)
       organization.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
       organization.webhook_url = args[:webhook_url] if args.key?(:webhook_url)
+      organization.legal_name = args[:legal_name] if args.key?(:legal_name)
+      organization.legal_number = args[:legal_number] if args.key?(:legal_number)
+      organization.email = args[:email] if args.key?(:email)
+      organization.address_line1 = args[:address_line1] if args.key?(:address_line1)
+      organization.address_line2 = args[:address_line2] if args.key?(:address_line2)
+      organization.state = args[:state] if args.key?(:state)
+      organization.zipcode = args[:zipcode] if args.key?(:zipcode)
+      organization.city = args[:city] if args.key?(:city)
+      organization.country = args[:country] if args.key?(:country)
+      organization.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
 
-      handle_base64_logo(args[:logo])
+      handle_base64_logo(args[:logo]) if args.key?(:logo)
 
       organization.save!
 

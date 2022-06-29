@@ -8,6 +8,16 @@ module Types
     field :vat_rate, Float, null: false
     field :webhook_url, String
     field :logo_url, String
+    field :legal_name, String
+    field :legal_number, String
+    field :email, String
+    field :address_line1, String
+    field :address_line2, String
+    field :state, String
+    field :zipcode, String
+    field :city, String
+    field :invoice_footer, String
+    field :country, Types::Customers::CountryCodeEnum, null: true
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 

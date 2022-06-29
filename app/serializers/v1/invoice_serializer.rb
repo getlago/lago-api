@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         sequential_id: model.sequential_id,
+        number: model.number,
         from_date: model.from_date.iso8601,
         to_date: model.to_date.iso8601,
         charges_from_date: model.to_date.iso8601,

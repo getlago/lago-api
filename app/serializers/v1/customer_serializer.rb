@@ -7,6 +7,8 @@ module V1
         lago_id: model.id,
         customer_id: model.customer_id,
         name: model.name,
+        sequential_id: model.sequential_id,
+        slug: model.slug,
         vat_rate: model.vat_rate,
         created_at: model.created_at.iso8601,
         country: model.country,

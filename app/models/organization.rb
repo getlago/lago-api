@@ -28,6 +28,8 @@ class Organization < ApplicationRecord
   validates :logo, image: { authorized_content_type: %w[image/png image/jpg], max_size: 800.kilobytes }, if: :logo?
 
   def logo_url
+    return if logo.blank?
+
     Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
   end
 

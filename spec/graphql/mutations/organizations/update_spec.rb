@@ -9,7 +9,17 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       mutation($input: UpdateOrganizationInput!) {
         updateOrganization(input: $input) {
           webhookUrl,
-          vatRate
+          vatRate,
+          legalNumber,
+          legalName,
+          email,
+          addressLine1,
+          addressLine2,
+          state,
+          zipcode,
+          city,
+          country,
+          invoiceFooter
         }
       }
     GQL
@@ -24,6 +34,16 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         input: {
           webhookUrl: 'http://foo.bar',
           vatRate: 12.5,
+          legalNumber: '1234',
+          legalName: 'Foobar',
+          email: 'foo@bar.com',
+          addressLine1: 'Line 1',
+          addressLine2: 'Line 2',
+          state: 'Foobar',
+          zipcode: 'FOO1234',
+          city: 'Foobar',
+          country: 'FR',
+          invoiceFooter: 'invoice footer',
         },
       },
     )
@@ -32,6 +52,16 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
 
     expect(result_data['webhookUrl']).to eq('http://foo.bar')
     expect(result_data['vatRate']).to eq(12.5)
+    expect(result_data['legalNumber']).to eq('1234')
+    expect(result_data['legalName']).to eq('Foobar')
+    expect(result_data['email']).to eq('foo@bar.com')
+    expect(result_data['addressLine1']).to eq('Line 1')
+    expect(result_data['addressLine2']).to eq('Line 2')
+    expect(result_data['state']).to eq('Foobar')
+    expect(result_data['zipcode']).to eq('FOO1234')
+    expect(result_data['city']).to eq('Foobar')
+    expect(result_data['country']).to eq('FR')
+    expect(result_data['invoiceFooter']).to eq('invoice footer')
   end
 
   context 'with invalid webhook url' do

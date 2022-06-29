@@ -7,6 +7,7 @@ module Types
 
       field :id, ID, null: false
       field :sequential_id, ID, null: false
+      field :number, String, null: false
       field :amount_cents, Integer, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
       field :total_amount_cents, Integer, null: false
