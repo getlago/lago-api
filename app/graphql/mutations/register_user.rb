@@ -10,6 +10,10 @@ module Mutations
 
     type Types::Payloads::RegisterUserType
 
+    def self.visible?(context)
+      super && ! ENV.key?('LAGO_DISABLE_SIGNUP')
+    end
+
     def resolve(email:, password:, organization_name:)
       result = UsersService.new.register(
         email,
