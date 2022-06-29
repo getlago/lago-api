@@ -2574,6 +2574,7 @@ type Invoice {
   number: String!
   plan: Plan
   sequentialId: ID!
+  status: InvoiceStatusTypeEnum!
   subscription: Subscription
   toDate: ISO8601Date!
   totalAmountCents: Int!
@@ -2581,6 +2582,12 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
+}
+
+enum InvoiceStatusTypeEnum {
+  failed
+  pending
+  succeeded
 }
 
 enum InvoiceTypeEnum {
