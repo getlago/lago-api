@@ -22,6 +22,7 @@ Rails.application.routes.draw do
       delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate
 
       resources :billable_metrics, param: :code
+      resources :coupons, param: :code
       resources :events, only: %i[create show]
       resources :applied_coupons, only: %i[create]
       resources :applied_add_ons, only: %i[create]
