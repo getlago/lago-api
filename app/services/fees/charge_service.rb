@@ -5,7 +5,6 @@ module Fees
     def initialize(invoice:, charge:)
       @invoice = invoice
       @charge = charge
-      @persisted = true
       super(nil)
     end
 
@@ -22,14 +21,12 @@ module Fees
     end
 
     def current_usage
-      @persisted = false
-
       init_fee
     end
 
     private
 
-    attr_accessor :invoice, :charge, :persisted
+    attr_accessor :invoice, :charge
 
     delegate :customer, :plan, :subscription, to: :invoice
     delegate :billable_metric, to: :charge
@@ -113,7 +110,7 @@ module Fees
     end
 
     def charges_from_date
-      return invoice.charges_from_date if !persisted || !subscription.previous_subscription
+      return invoice.charges_from_date unless subscription.previous_subscription
 
       if subscription.previous_subscription.upgraded?
         date = case plan.interval.to_sym
