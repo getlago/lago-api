@@ -115,6 +115,7 @@ module Invoices
         )
       rescue Stripe::CardError => e
         deliver_error_webhook(e)
+        update_invoice_status(:failed)
 
         raise
       end
