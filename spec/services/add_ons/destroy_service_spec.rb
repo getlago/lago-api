@@ -28,4 +28,24 @@ RSpec.describe AddOns::DestroyService, type: :service do
       end
     end
   end
+
+  describe 'destroy_from_api' do
+    let(:add_on) { create(:add_on, organization: organization) }
+
+    it 'destroys the add_on' do
+      code = add_on.code
+
+      expect { destroy_service.destroy_from_api(organization: organization, code: code) }
+        .to change(AddOn, :count).by(-1)
+    end
+
+    context 'when add-on is not found' do
+      it 'returns an error' do
+        result = destroy_service.destroy_from_api(organization: organization, code: 'invalid12345')
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('not_found')
+      end
+    end
+  end
 end
