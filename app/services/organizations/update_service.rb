@@ -33,6 +33,27 @@ module Organizations
       result.fail_with_validations!(e.record)
     end
 
+    def update_from_api(params:)
+      organization.webhook_url = params[:webhook_url] if params.key?(:webhook_url)
+      organization.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
+      organization.country = params[:country] if params.key?(:country)
+      organization.address_line1 = params[:address_line1] if params.key?(:address_line1)
+      organization.address_line2 = params[:address_line2] if params.key?(:address_line2)
+      organization.state = params[:state] if params.key?(:state)
+      organization.zipcode = params[:zipcode] if params.key?(:zipcode)
+      organization.email = params[:email] if params.key?(:email)
+      organization.city = params[:city] if params.key?(:city)
+      organization.legal_name = params[:legal_name] if params.key?(:legal_name)
+      organization.legal_number = params[:legal_number] if params.key?(:legal_number)
+      organization.invoice_footer = params[:invoice_footer] if params.key?(:invoice_footer)
+      organization.save!
+
+      result.organization = organization
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.fail_with_validations!(e.record)
+    end
+
     private
 
     attr_reader :organization
