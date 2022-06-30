@@ -22,6 +22,35 @@ module Api
         end
       end
 
+      def show
+        invoice = Invoice.find_by(id: params[:id])
+
+        return not_found_error unless invoice
+
+        render(
+          json: ::V1::InvoiceSerializer.new(
+            invoice,
+            root_name: 'invoice',
+          )
+        )
+      end
+
+      def index
+        invoices = current_organization.invoices
+                                       .order(created_at: :desc)
+                                       .page(params[:page])
+                                       .per(params[:per_page] || PER_PAGE)
+
+        render(
+          json: ::CollectionSerializer.new(
+            invoices,
+            ::V1::InvoiceSerializer,
+            collection_name: 'invoices',
+            meta: pagination_metadata(invoices)
+          )
+        )
+      end
+
       private
 
       def update_params
