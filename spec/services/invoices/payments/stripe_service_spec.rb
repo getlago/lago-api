@@ -8,7 +8,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization: organization) }
-  let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+  let(:stripe_customer) { create(:stripe_customer, customer: customer, payment_method_id: 'pm_123456') }
 
   let(:invoice) do
     create(
@@ -24,9 +24,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       stripe_payment_provider
       stripe_customer
 
-      allow(Stripe::Charge).to receive(:create)
+      allow(Stripe::PaymentIntent).to receive(:create)
         .and_return(
-          Stripe::Charge.construct_from(
+          Stripe::PaymentIntent.construct_from(
             id: 'ch_123456',
             status: 'pending',
             amount: invoice.total_amount_cents,
@@ -52,7 +52,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result.payment.status).to eq('pending')
       end
 
-      expect(Stripe::Charge).to have_received(:create)
+      expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
     context 'with no payment provider' do
@@ -64,10 +64,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).to be_success
 
         aggregate_failures do
-          expect(result.invoice).to be_nil
+          expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(Stripe::Charge).not_to have_received(:create)
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
         end
       end
     end
@@ -88,35 +88,12 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).to be_success
 
         aggregate_failures do
-          expect(result.invoice).to be_nil
+          expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(Stripe::Charge).not_to have_received(:create)
-        end
-      end
+          expect(result.invoice).to be_succeeded
 
-      context 'when send_zero_amount_invoice is turned on' do
-        let(:stripe_payment_provider) do
-          create(
-            :stripe_provider,
-            organization: customer.organization,
-            send_zero_amount_invoice: true,
-          )
-        end
-
-        it 'creates a stripe payment and a payment' do
-          result = stripe_service.create
-
-          expect(result).to be_success
-
-          aggregate_failures do
-            expect(result.invoice).to be_pending
-
-            expect(result.payment.id).to be_present
-            expect(result.payment.amount_cents).to eq(0)
-
-            expect(Stripe::Charge).to have_received(:create)
-          end
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
         end
       end
     end
@@ -131,6 +108,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               id: 'cus_123456',
             ),
           )
+
+        allow(Stripe::PaymentMethod).to receive(:list)
+          .and_return(Stripe::ListObject.construct_from(data: []))
       end
 
       it 'creates the customer' do
@@ -141,7 +121,42 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(customer.stripe_customer.provider_customer_id).to eq('cus_123456')
 
         expect(Stripe::Customer).to have_received(:create)
-        expect(Stripe::Charge).to have_received(:create)
+        expect(Stripe::PaymentMethod).to have_received(:list)
+        expect(Stripe::PaymentIntent).to have_received(:create)
+      end
+    end
+
+    context 'when customer does not have a payment method' do
+      let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+
+      before do
+        allow(Stripe::PaymentMethod).to receive(:list)
+          .and_return(Stripe::ListObject.construct_from(
+            data: [
+              {
+                id: 'pm_123456',
+                object: 'payment_method',
+                card: { 'brand': 'visa' },
+                created: 1_656_422_973,
+                customer: 'cus_123456',
+                livemode: false,
+                metadata: {},
+                type: 'card',
+              },
+            ],
+          ))
+      end
+
+      it 'retrieves the payment method' do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(customer.stripe_customer.reload).to be_present
+        expect(customer.stripe_customer.provider_customer_id).to eq(stripe_customer.provider_customer_id)
+        expect(customer.stripe_customer.payment_method_id).to eq('pm_123456')
+
+        expect(Stripe::PaymentMethod).to have_received(:list)
+        expect(Stripe::PaymentIntent).to have_received(:create)
       end
     end
 
@@ -159,7 +174,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       before do
         subscription
 
-        allow(Stripe::Charge).to receive(:create)
+        allow(Stripe::PaymentIntent).to receive(:create)
           .and_raise(Stripe::CardError.new('error', {}))
       end
 
@@ -227,22 +242,6 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).not_to be_success
         expect(result.error_code).to eq('invalid_invoice_status')
       end
-    end
-  end
-
-  describe '.reprocess_pending_invoices' do
-    before do
-      invoice
-    end
-
-    it 'enqueues jobs to reprocess the pending payment' do
-      stripe_service.reprocess_pending_invoices(
-        organization_id: organization.id,
-        stripe_customer_id: stripe_customer.provider_customer_id,
-      )
-
-      expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued
-        .with(invoice)
     end
   end
 end

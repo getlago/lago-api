@@ -10,7 +10,7 @@ FactoryBot.define do
     end
 
     settings do
-      { send_zero_amount_invoice: false, create_customers: true }
+      { create_customers: true }
     end
   end
 end

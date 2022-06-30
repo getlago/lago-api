@@ -24,11 +24,14 @@ module Mutations
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :vat_rate, Float, required: false
+      argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
+
+      argument :stripe_customer, Types::PaymentProviderCustomers::StripeInput, required: false
 
       type Types::Customers::Object
 
       def resolve(**args)
-        result = CustomersService.new(context[:current_user]).update(**args)
+        result = ::Customers::UpdateService.new(context[:current_user]).update(**args)
 
         result.success? ? result.customer : result_error(result)
       end

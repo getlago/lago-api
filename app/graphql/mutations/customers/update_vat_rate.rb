@@ -14,7 +14,7 @@ module Mutations
       type Types::Customers::SingleObject
 
       def resolve(id:, vat_rate:)
-        result = CustomersService.new(context[:current_user]).update(
+        result = ::Customers::UpdateService.new(context[:current_user]).update(
           id: id,
           vat_rate: vat_rate,
         )

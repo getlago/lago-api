@@ -21,13 +21,6 @@ RSpec.describe PaymentProviders::StripeProvider, type: :model do
     end
   end
 
-  describe 'send_zero_amount_invoice' do
-    it 'assigns and retrieve a setting' do
-      stripe_provider.send_zero_amount_invoice = true
-      expect(stripe_provider.send_zero_amount_invoice).to be_truthy
-    end
-  end
-
   describe 'webhook_id' do
     it 'assigns and retrieve a setting' do
       stripe_provider.webhook_id = 'webhook_id'

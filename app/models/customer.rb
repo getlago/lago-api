@@ -14,7 +14,9 @@ class Customer < ApplicationRecord
   has_many :coupons, through: :applied_coupons
   has_many :applied_add_ons
   has_many :add_ons, through: :applied_add_ons
-  has_many :payment_provider_customers
+  has_many :payment_provider_customers,
+           class_name: 'PaymentProviderCustomers::BaseCustomer',
+           dependent: :destroy
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
 

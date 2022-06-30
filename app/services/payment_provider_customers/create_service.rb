@@ -14,7 +14,7 @@ module PaymentProviderCustomers
         payment_provider_id: payment_provider_id,
       )
 
-      if params.key?(:provider_customer_id)
+      if (params || {}).key?(:provider_customer_id)
         provider_customer.provider_customer_id = params[:provider_customer_id]
       end
 
@@ -38,6 +38,9 @@ module PaymentProviderCustomers
     def create_customer_on_provider_service(async)
       # NOTE: the customer already exists on the service provider
       return if result.provider_customer.provider_customer_id?
+
+      # NOTE: the customer id wa removed from the customer
+      return if result.provider_customer.provider_customer_id_previously_changed?
 
       # NOTE: organization does not have stripe config or does not enforce customer creation on stripe
       return unless organization.stripe_payment_provider&.create_customers

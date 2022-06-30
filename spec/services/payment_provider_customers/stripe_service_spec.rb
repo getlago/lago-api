@@ -73,4 +73,51 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
   end
+
+  describe '.update_payment_method' do
+    let(:stripe_customer) do
+      create(:stripe_customer, customer: customer, provider_customer_id: 'cus_123456')
+    end
+
+    it 'updates the customer payment method' do
+      result = stripe_service.update_payment_method(
+        organization_id: organization.id,
+        stripe_customer_id: stripe_customer.provider_customer_id,
+        payment_method_id: 'pm_123456',
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.stripe_customer.payment_method_id).to eq('pm_123456')
+      end
+    end
+
+    context 'with pending invoices' do
+      let(:invoice) do
+        create(
+          :invoice,
+          customer: customer,
+          total_amount_cents: 200,
+          total_amount_currency: 'EUR',
+        )
+      end
+
+      before { invoice }
+
+      it 'enqueues jobs to reprocess the pending payment' do
+        result = stripe_service.update_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: stripe_customer.provider_customer_id,
+          payment_method_id: 'pm_123456',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued
+            .with(invoice)
+        end
+      end
+    end
+  end
 end

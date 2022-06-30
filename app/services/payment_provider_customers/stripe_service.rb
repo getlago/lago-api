@@ -2,7 +2,7 @@
 
 module PaymentProviderCustomers
   class StripeService < BaseService
-    def initialize(stripe_customer)
+    def initialize(stripe_customer = nil)
       @stripe_customer = stripe_customer
 
       super(nil)
@@ -22,6 +22,24 @@ module PaymentProviderCustomers
 
       result.stripe_customer = stripe_customer
       result
+    end
+
+    def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
+      stripe_customer = PaymentProviderCustomers::StripeCustomer
+        .joins(:customer)
+        .where(customers: { organization_id: organization_id })
+        .find_by(provider_customer_id: stripe_customer_id)
+      return result.fail!('not_found') unless stripe_customer
+
+      stripe_customer.payment_method_id = payment_method_id
+      stripe_customer.save!
+
+      reprocess_pending_invoices(customer)
+
+      result.stripe_customer = stripe_customer
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.fail_with_validations!(e.record)
     end
 
     private
@@ -92,6 +110,12 @@ module PaymentProviderCustomers
           error_code: stripe_error.code,
         },
       )
+    end
+
+    def reprocess_pending_invoices(customer)
+      customer.invoices.where(status: [:pending, :failed]).find_each do |invoice|
+        Invoices::Payments::StripeCreateJob.perform_later(invoice)
+      end
     end
   end
 end

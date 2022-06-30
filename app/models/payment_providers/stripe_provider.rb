@@ -5,7 +5,6 @@ module PaymentProviders
     validates :secret_key, presence: true
 
     validates :create_customers, inclusion: { in: [true, false] }
-    validates :send_zero_amount_invoice, inclusion: { in: [true, false] }
 
     def secret_key=(secret_key)
       push_to_secrets(key: 'secret_key', value: secret_key)
@@ -21,14 +20,6 @@ module PaymentProviders
 
     def create_customers
       get_from_settings('create_customers')
-    end
-
-    def send_zero_amount_invoice=(value)
-      push_to_settings(key: 'send_zero_amount_invoice', value: value)
-    end
-
-    def send_zero_amount_invoice
-      get_from_settings('send_zero_amount_invoice')
     end
 
     def webhook_id=(value)

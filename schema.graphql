@@ -55,9 +55,8 @@ input AddStripePaymentProviderInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  createCustomers: Boolean!
-  secretKey: String!
-  sendZeroAmountInvoice: Boolean!
+  createCustomers: Boolean
+  secretKey: String
 }
 
 enum AggregationTypeEnum {
@@ -1579,8 +1578,10 @@ input CreateCustomerInput {
   legalNumber: String
   logoUrl: String
   name: String!
+  paymentProvider: ProviderTypeEnum
   phone: String
   state: String
+  stripeCustomer: StripeCustomerInput
   url: String
   vatRate: Float
   zipcode: String
@@ -2319,10 +2320,12 @@ type Customer {
   legalNumber: String
   logoUrl: String
   name: String
+  paymentProvider: ProviderTypeEnum
   phone: String
   sequentialId: String!
   slug: String!
   state: String
+  stripeCustomer: StripeCustomer
   subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
   url: String
@@ -2356,10 +2359,12 @@ type CustomerDetails {
   legalNumber: String
   logoUrl: String
   name: String
+  paymentProvider: ProviderTypeEnum
   phone: String
   sequentialId: String!
   slug: String!
   state: String
+  stripeCustomer: StripeCustomer
 
   """
   Query subscriptions of a customer
@@ -2901,7 +2906,7 @@ type Organization {
   logoUrl: String
   name: String!
   state: String
-  stripeProvider: StripeProvider
+  stripePaymentProvider: StripeProvider
   updatedAt: ISO8601DateTime!
   vatRate: Float!
   webhookUrl: String
@@ -2981,6 +2986,10 @@ enum PlanInterval {
   monthly
   weekly
   yearly
+}
+
+enum ProviderTypeEnum {
+  stripe
 }
 
 type Query {
@@ -3133,11 +3142,19 @@ enum StatusTypeEnum {
   terminated
 }
 
+type StripeCustomer {
+  id: ID!
+  providerCustomerId: ID
+}
+
+input StripeCustomerInput {
+  providerCustomerId: ID
+}
+
 type StripeProvider {
   createCustomers: Boolean!
   id: ID!
   secretKey: String!
-  sendZeroAmountInvoice: Boolean!
 }
 
 type Subscription {
@@ -3260,8 +3277,10 @@ input UpdateCustomerInput {
   legalNumber: String
   logoUrl: String
   name: String!
+  paymentProvider: ProviderTypeEnum
   phone: String
   state: String
+  stripeCustomer: StripeCustomerInput
   url: String
   vatRate: Float
   zipcode: String

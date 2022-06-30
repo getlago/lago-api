@@ -4,9 +4,9 @@ module PaymentProviders
   class StripeService < BaseService
     # NOTE: find the complete list of event types at https://stripe.com/docs/api/events/types
     WEBHOOKS_EVENTS = [
-      'charge.failed',
-      'charge.succeeded',
-      'customer.updated',
+      'setup_intent.succeeded',
+      'payment_intent.payment_failed',
+      'payment_intent.succeeded',
     ].freeze
 
     def create_or_update(**args)
@@ -17,8 +17,7 @@ module PaymentProviders
       secret_key = stripe_provider.secret_key
 
       stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
-      stripe_provider.create_customers = args[:create_customers]
-      stripe_provider.send_zero_amount_invoice = args[:send_zero_amount_invoice]
+      stripe_provider.create_customers = args[:create_customers] if args.key?(:create_customers)
       stripe_provider.save!
 
       if secret_key != stripe_provider.secret_key
@@ -89,18 +88,22 @@ module PaymentProviders
       return result.fail!('invalid_stripe_event_type') unless WEBHOOKS_EVENTS.include?(event.type)
 
       case event.type
-      when 'charge.failed', 'charge.succeeded'
+      when 'setup_intent.succeeded'
+        result = PaymentProviderCustomers::StripeService
+          .new
+          .update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: event.data.object.customer,
+            payment_method_id: event.data.object.payment_method,
+          )
+        result.throw_error || result
+      when 'payment_intent.payment_failed', 'payment_intent.succeeded'
+        status = event.type == 'payment_intent.succeeded' ? 'succeeded' : 'failed'
+
         Invoices::Payments::StripeService
           .new.update_status(
             provider_payment_id: event.data.object.id,
-            status: event.data.object.status,
-          )
-      when 'customer.updated'
-        Invoices::Payments::StripeService
-          .new
-          .reprocess_pending_invoices(
-            organization_id: organization.id,
-            stripe_customer_id: event.data.object.id,
+            status: status,
           )
       end
     end

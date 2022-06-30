@@ -4,7 +4,7 @@ module Api
   module V1
     class CustomersController < Api::BaseController
       def create
-        service = CustomersService.new
+        service = Customers::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
           params: create_params,
@@ -41,7 +41,7 @@ module Api
           :legal_name,
           :legal_number,
           :vat_rate,
-          billing_configuration: [:payment_provider, :provider_customer_id],
+          billing_configuration: [:payment_provider, :provider_customer_id, :sync],
         )
       end
     end

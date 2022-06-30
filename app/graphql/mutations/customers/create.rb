@@ -25,12 +25,15 @@ module Mutations
       argument :legal_number, String, required: false
       argument :vat_rate, Float, required: false
 
+      argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
+      argument :stripe_customer, Types::PaymentProviderCustomers::StripeInput, required: false
+
       type Types::Customers::Object
 
       def resolve(**args)
         validate_organization!
 
-        result = CustomersService
+        result = ::Customers::CreateService
           .new(context[:current_user])
           .create(**args.merge(organization_id: current_organization.id))
 

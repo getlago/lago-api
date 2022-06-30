@@ -12,7 +12,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
           id,
           secretKey
           createCustomers
-          sendZeroAmountInvoice
         }
       }
     GQL
@@ -29,7 +28,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
         input: {
           secretKey: secret_key,
           createCustomers: false,
-          sendZeroAmountInvoice: false,
         },
       },
     )
@@ -38,9 +36,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['secretKey']).to eq('sk_************')
+      expect(result_data['secretKey']).to eq('••••••••…890')
       expect(result_data['createCustomers']).to eq(false)
-      expect(result_data['sendZeroAmountInvoice']).to eq(false)
     end
   end
 
@@ -53,7 +50,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
           input: {
             secretKey: secret_key,
             createCustomers: false,
-            sendZeroAmountInvoice: false,
           },
         },
       )
@@ -71,7 +67,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
           input: {
             secretKey: secret_key,
             createCustomers: false,
-            sendZeroAmountInvoice: false,
           },
         },
       )

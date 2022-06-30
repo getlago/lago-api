@@ -18,7 +18,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           organization_id: organization.id,
           secret_key: secret_key,
           create_customers: true,
-          send_zero_amount_invoice: false,
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
@@ -48,7 +47,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           organization_id: organization.id,
           secret_key: secret_key,
           create_customers: true,
-          send_zero_amount_invoice: false,
         )
 
         expect(result).to be_success
@@ -57,7 +55,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result.stripe_provider.id).to eq(stripe_provider.id)
           expect(result.stripe_provider.secret_key).to eq(secret_key)
           expect(result.stripe_provider.create_customers).to be_truthy
-          expect(result.stripe_provider.send_zero_amount_invoice).to be_falsey
 
           expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
             .with(stripe_provider)
@@ -114,7 +111,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     let(:event_result) { Stripe::Event.construct_from(event) }
 
     let(:event) do
-      path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
+      path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
       JSON.parse(File.read(path))
     end
 
@@ -175,18 +172,19 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
   describe '.handle_event' do
     let(:payment_service) { instance_double(Invoices::Payments::StripeService) }
-    let(:payment_service_result) { BaseService::Result.new }
+    let(:provider_customer_service) { instance_double(PaymentProviderCustomers::StripeService) }
+    let(:service_result) { BaseService::Result.new }
 
     before do
       allow(Invoices::Payments::StripeService).to receive(:new)
         .and_return(payment_service)
       allow(payment_service).to receive(:update_status)
-        .and_return(payment_service_result)
+        .and_return(service_result)
     end
 
-    context 'when charge event' do
+    context 'when payment intent event' do
       let(:event) do
-        path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
+        path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
         JSON.parse(File.read(path))
       end
 
@@ -203,17 +201,17 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
     end
 
-    context 'when customer event' do
+    context 'when setup intent event' do
       let(:event) do
-        path = Rails.root.join('spec/fixtures/stripe/customer_event.json')
+        path = Rails.root.join('spec/fixtures/stripe/setup_intent_event.json')
         JSON.parse(File.read(path))
       end
 
       before do
-        allow(Invoices::Payments::StripeService).to receive(:new)
-          .and_return(payment_service)
-        allow(payment_service).to receive(:reprocess_pending_invoices)
-          .and_return(payment_service_result)
+        allow(PaymentProviderCustomers::StripeService).to receive(:new)
+          .and_return(provider_customer_service)
+        allow(provider_customer_service).to receive(:update_payment_method)
+          .and_return(service_result)
       end
 
       it 'routes the event to an other service' do
@@ -224,8 +222,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(result).to be_success
 
-        expect(Invoices::Payments::StripeService).to have_received(:new)
-        expect(payment_service).to have_received(:reprocess_pending_invoices)
+        expect(PaymentProviderCustomers::StripeService).to have_received(:new)
+        expect(provider_customer_service).to have_received(:update_payment_method)
       end
     end
 

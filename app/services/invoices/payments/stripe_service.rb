@@ -10,11 +10,17 @@ module Invoices
       end
 
       def create
+        result.invoice = invoice
         return result unless should_process_payment?
+
+        unless invoice.total_amount_cents.positive?
+          update_invoice_status(:succeeded)
+          return result
+        end
 
         ensure_provider_customer
 
-        stripe_result = create_stripe_charge
+        stripe_result = create_stripe_payment
 
         payment = Payment.new(
           invoice: invoice,
@@ -29,7 +35,6 @@ module Invoices
 
         update_invoice_status(payment.status)
 
-        result.invoice = invoice
         result.payment = payment
         result
       end
@@ -49,18 +54,6 @@ module Invoices
         result.fail!('invalid_invoice_status')
       end
 
-      def reprocess_pending_invoices(organization_id:, stripe_customer_id:)
-        stripe_customer = PaymentProviderCustomers::StripeCustomer
-          .joins(:customer)
-          .where(customers: { organization_id: organization_id })
-          .find_by(provider_customer_id: stripe_customer_id)
-        return result unless stripe_customer
-
-        stripe_customer.customer.invoices.pending.find_each do |invoice|
-          Invoices::Payments::StripeCreateJob.perform_later(invoice)
-        end
-      end
-
       private
 
       attr_accessor :invoice
@@ -68,11 +61,9 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def should_process_payment?
-        return false unless invoice.pending?
-        return false unless organization.stripe_payment_provider
-        return true if invoice.total_amount_cents.positive?
+        return false if invoice.succeeded?
 
-        organization.stripe_payment_provider.send_zero_amount_invoice
+        organization.stripe_payment_provider.present?
       end
 
       def ensure_provider_customer
@@ -95,8 +86,27 @@ module Invoices
         organization.stripe_payment_provider.secret_key
       end
 
-      def create_stripe_charge
-        Stripe::Charge.create(
+      def stripe_payment_method
+        payment_method = customer.stripe_customer.payment_method_id
+        return payment_method if payment_method.present?
+
+        payment_method = Stripe::PaymentMethod.list(
+          {
+            customer: customer.stripe_customer.provider_customer_id,
+            type: 'card', # TODO: Supported payment method type
+          },
+          {
+            api_key: stripe_api_key,
+          },
+        ).first
+        customer.stripe_customer.payment_method_id = payment_method&.id
+        customer.stripe_customer.save!
+
+        payment_method&.id
+      end
+
+      def create_stripe_payment
+        Stripe::PaymentIntent.create(
           stripe_payment_payload,
           {
             api_key: stripe_api_key,
@@ -105,6 +115,7 @@ module Invoices
         )
       rescue Stripe::CardError => e
         deliver_error_webhook(e)
+        update_invoice_status(:failed)
 
         raise
       end
@@ -114,7 +125,11 @@ module Invoices
           amount: invoice.total_amount_cents,
           currency: invoice.total_amount_currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
+          payment_method: stripe_payment_method,
+          confirm: true,
+          off_session: true,
           receipt_email: customer.email,
+          error_on_requires_action: true,
           description: "Lago - #{organization.name} - Invoice #{invoice.number}",
           metadata: {
             lago_customer_id: customer.id,
