@@ -17,8 +17,8 @@ module Api
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
               root_name: 'billable_metric',
-              ),
-            )
+            ),
+          )
         else
           validation_errors(result)
         end
