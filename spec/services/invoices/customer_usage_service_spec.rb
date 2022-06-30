@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::ForecastService, type: :service do
+RSpec.describe Invoices::CustomerUsageService, type: :service do
   subject(:invoice_service) do
     described_class.new(membership.user)
   end

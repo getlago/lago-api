@@ -12,7 +12,7 @@ module Resolvers
       type Types::Invoices::Usage, null: false
 
       def resolve(customer_id:)
-        result = Invoices::ForecastService.new(context[:current_user])
+        result = Invoices::CustomerUsageService.new(context[:current_user])
           .forecast(customer_id: customer_id)
 
         result.success? ? result.invoice : result_error(result)

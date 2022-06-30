@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class ForecastService < BaseService
+  class CustomerUsageService < BaseService
     def forecast(customer_id:)
       return result.fail!('not_found') unless customer(customer_id: customer_id)
       return result.fail!('no_active_subscription') if subscription.blank?
