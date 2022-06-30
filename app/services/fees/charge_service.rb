@@ -5,6 +5,7 @@ module Fees
     def initialize(invoice:, charge:)
       @invoice = invoice
       @charge = charge
+      @persisted = true
       super(nil)
     end
 
@@ -20,15 +21,15 @@ module Fees
       result.fail_with_validations!(e.record)
     end
 
-    def forecast
-      @forecast_mode = true
+    def current_usage
+      @persisted = false
 
       init_fee
     end
 
     private
 
-    attr_accessor :invoice, :charge, :forecast_mode
+    attr_accessor :invoice, :charge, :persisted
 
     delegate :customer, :plan, :subscription, to: :invoice
     delegate :billable_metric, to: :charge
@@ -112,7 +113,7 @@ module Fees
     end
 
     def charges_from_date
-      return invoice.charges_from_date if forecast_mode || !subscription.previous_subscription
+      return invoice.charges_from_date if !persisted || !subscription.previous_subscription
 
       if subscription.previous_subscription.upgraded?
         date = case plan.interval.to_sym

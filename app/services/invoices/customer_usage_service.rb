@@ -95,7 +95,7 @@ module Invoices
         fee_result = Fees::ChargeService.new(
           invoice: invoice,
           charge: charge,
-        ).forecast
+        ).current_usage
 
         fee_result.throw_error unless fee_result.success?
 

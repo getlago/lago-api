@@ -225,7 +225,7 @@ RSpec.describe Fees::ChargeService do
     end
   end
 
-  describe '.forecast' do
+  describe '.current_usage' do
     context 'with all types of aggregation' do
       BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
         before do
@@ -236,21 +236,21 @@ RSpec.describe Fees::ChargeService do
         end
 
         it 'initializes fees' do
-          result = charge_subscription_service.forecast
+          result = charge_subscription_service.current_usage
 
           expect(result).to be_success
 
-          forecasted_fee = result.fee
+          usage_fee = result.fee
 
           aggregate_failures do
-            expect(forecasted_fee.id).to be_nil
-            expect(forecasted_fee.invoice_id).to eq(invoice.id)
-            expect(forecasted_fee.charge_id).to eq(charge.id)
-            expect(forecasted_fee.amount_cents).to eq(0)
-            expect(forecasted_fee.amount_currency).to eq('EUR')
-            expect(forecasted_fee.vat_amount_cents).to eq(0)
-            expect(forecasted_fee.vat_rate).to eq(20.0)
-            expect(forecasted_fee.units).to eq(0)
+            expect(usage_fee.id).to be_nil
+            expect(usage_fee.invoice_id).to eq(invoice.id)
+            expect(usage_fee.charge_id).to eq(charge.id)
+            expect(usage_fee.amount_cents).to eq(0)
+            expect(usage_fee.amount_currency).to eq('EUR')
+            expect(usage_fee.vat_amount_cents).to eq(0)
+            expect(usage_fee.vat_rate).to eq(20.0)
+            expect(usage_fee.units).to eq(0)
           end
         end
       end
@@ -286,21 +286,21 @@ RSpec.describe Fees::ChargeService do
       end
 
       it 'initialize a fee' do
-        result = charge_subscription_service.forecast
+        result = charge_subscription_service.current_usage
 
         expect(result).to be_success
 
-        forecasted_fee = result.fee
+        usage_fee = result.fee
 
         aggregate_failures do
-          expect(forecasted_fee.id).to be_nil
-          expect(forecasted_fee.invoice_id).to eq(invoice.id)
-          expect(forecasted_fee.charge_id).to eq(charge.id)
-          expect(forecasted_fee.amount_cents).to eq(5)
-          expect(forecasted_fee.amount_currency).to eq('EUR')
-          expect(forecasted_fee.vat_amount_cents).to eq(1)
-          expect(forecasted_fee.vat_rate).to eq(20.0)
-          expect(forecasted_fee.units.to_s).to eq('4.0')
+          expect(usage_fee.id).to be_nil
+          expect(usage_fee.invoice_id).to eq(invoice.id)
+          expect(usage_fee.charge_id).to eq(charge.id)
+          expect(usage_fee.amount_cents).to eq(5)
+          expect(usage_fee.amount_currency).to eq('EUR')
+          expect(usage_fee.vat_amount_cents).to eq(1)
+          expect(usage_fee.vat_rate).to eq(20.0)
+          expect(usage_fee.units.to_s).to eq('4.0')
         end
       end
     end
@@ -322,7 +322,7 @@ RSpec.describe Fees::ChargeService do
         allow(aggregator_service).to receive(:aggregate)
           .and_return(error_result)
 
-        result = charge_subscription_service.forecast
+        result = charge_subscription_service.current_usage
 
         expect(result).not_to be_success
         expect(result.error_code).to eq('aggregation_failure')
