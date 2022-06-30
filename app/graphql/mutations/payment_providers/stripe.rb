@@ -12,7 +12,6 @@ module Mutations
       argument :secret_key, String, required: false
 
       argument :create_customers, Boolean, required: false
-      argument :send_zero_amount_invoice, Boolean, required: false
 
       type Types::PaymentProviders::Stripe
 

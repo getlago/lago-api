@@ -9,7 +9,6 @@ module Types
       field :secret_key, String, null: false
 
       field :create_customers, Boolean, null: false
-      field :send_zero_amount_invoice, Boolean, null: false
 
       # NOTE: Secret key is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value

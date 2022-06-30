@@ -18,7 +18,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           organization_id: organization.id,
           secret_key: secret_key,
           create_customers: true,
-          send_zero_amount_invoice: false,
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
@@ -48,7 +47,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           organization_id: organization.id,
           secret_key: secret_key,
           create_customers: true,
-          send_zero_amount_invoice: false,
         )
 
         expect(result).to be_success
@@ -57,7 +55,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result.stripe_provider.id).to eq(stripe_provider.id)
           expect(result.stripe_provider.secret_key).to eq(secret_key)
           expect(result.stripe_provider.create_customers).to be_truthy
-          expect(result.stripe_provider.send_zero_amount_invoice).to be_falsey
 
           expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
             .with(stripe_provider)

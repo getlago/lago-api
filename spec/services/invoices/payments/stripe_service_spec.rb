@@ -64,7 +64,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).to be_success
 
         aggregate_failures do
-          expect(result.invoice).to be_nil
+          expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
           expect(Stripe::PaymentIntent).not_to have_received(:create)
@@ -88,35 +88,12 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).to be_success
 
         aggregate_failures do
-          expect(result.invoice).to be_nil
+          expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
+          expect(result.invoice).to be_succeeded
+
           expect(Stripe::PaymentIntent).not_to have_received(:create)
-        end
-      end
-
-      context 'when send_zero_amount_invoice is turned on' do
-        let(:stripe_payment_provider) do
-          create(
-            :stripe_provider,
-            organization: customer.organization,
-            send_zero_amount_invoice: true,
-          )
-        end
-
-        it 'creates a stripe payment and a payment' do
-          result = stripe_service.create
-
-          expect(result).to be_success
-
-          aggregate_failures do
-            expect(result.invoice).to be_pending
-
-            expect(result.payment.id).to be_present
-            expect(result.payment.amount_cents).to eq(0)
-
-            expect(Stripe::PaymentIntent).to have_received(:create)
-          end
         end
       end
     end

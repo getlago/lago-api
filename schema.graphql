@@ -57,7 +57,6 @@ input AddStripePaymentProviderInput {
   clientMutationId: String
   createCustomers: Boolean
   secretKey: String
-  sendZeroAmountInvoice: Boolean
 }
 
 enum AggregationTypeEnum {
@@ -3156,7 +3155,6 @@ type StripeProvider {
   createCustomers: Boolean!
   id: ID!
   secretKey: String!
-  sendZeroAmountInvoice: Boolean!
 }
 
 type Subscription {

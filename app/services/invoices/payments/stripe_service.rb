@@ -10,7 +10,13 @@ module Invoices
       end
 
       def create
+        result.invoice = invoice
         return result unless should_process_payment?
+
+        unless invoice.total_amount_cents.positive?
+          update_invoice_status(:succeeded)
+          return result
+        end
 
         ensure_provider_customer
 
@@ -29,7 +35,6 @@ module Invoices
 
         update_invoice_status(payment.status)
 
-        result.invoice = invoice
         result.payment = payment
         result
       end
@@ -56,11 +61,9 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def should_process_payment?
-        return false unless invoice.pending?
-        return false unless organization.stripe_payment_provider
-        return true if invoice.total_amount_cents.positive?
+        return false if invoice.succeeded?
 
-        organization.stripe_payment_provider.send_zero_amount_invoice
+        organization.stripe_payment_provider.present?
       end
 
       def ensure_provider_customer
