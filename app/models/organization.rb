@@ -25,7 +25,7 @@ class Organization < ApplicationRecord
   validates :country, country_code: true, if: :country?
   validates :invoice_footer, length: { maximum: 600 }
   validates :email, email: true, if: :email?
-  validates :logo, image: { authorized_content_type: %w[image/png image/jpg], max_size: 800.kilobytes }, if: :logo?
+  validates :logo, image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes }, if: :logo?
 
   def logo_url
     return if logo.blank?
