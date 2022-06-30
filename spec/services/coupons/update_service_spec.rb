@@ -83,11 +83,11 @@ RSpec.describe Coupons::UpdateService, type: :service do
       aggregate_failures do
         expect(result).to be_success
 
-        metric = result.coupon
-        expect(metric.id).to eq(coupon.id)
-        expect(metric.name).to eq(update_args[:name])
-        expect(metric.code).to eq(update_args[:code])
-        expect(metric.expiration).to eq(update_args[:expiration])
+        coupon_result = result.coupon
+        expect(coupon_result.id).to eq(coupon.id)
+        expect(coupon_result.name).to eq(update_args[:name])
+        expect(coupon_result.code).to eq(update_args[:code])
+        expect(coupon_result.expiration).to eq(update_args[:expiration])
       end
     end
 
