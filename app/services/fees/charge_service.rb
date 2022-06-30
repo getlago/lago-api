@@ -5,6 +5,7 @@ module Fees
     def initialize(invoice:, charge:)
       @invoice = invoice
       @charge = charge
+      @persisted = true
       super(nil)
     end
 
@@ -110,7 +111,7 @@ module Fees
     end
 
     def charges_from_date
-      return invoice.charges_from_date if forecast_mode || !subscription.previous_subscription
+      return invoice.charges_from_date if !persisted || !subscription.previous_subscription
 
       if subscription.previous_subscription.upgraded?
         date = case plan.interval.to_sym
