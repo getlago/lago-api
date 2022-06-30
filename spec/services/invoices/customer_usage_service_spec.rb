@@ -4,18 +4,20 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CustomerUsageService, type: :service do
   subject(:invoice_service) do
-    described_class.new(membership.user)
+    described_class.new(membership.user, customer_id: customer_id)
   end
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:customer_id) {}
 
-  describe '.forecast' do
+  describe '.usage' do
     let(:billable_metric) do
       create(:billable_metric, aggregation_type: 'count_agg')
     end
 
     let(:customer) { create(:customer, organization: organization) }
+    let(:customer_id) { customer.id }
     let(:subscription) do
       create(
         :subscription,
@@ -33,7 +35,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
     context 'when billed monthly' do
       it 'intialize an invoice' do
-        result = invoice_service.forecast(customer_id: customer.id)
+        result = invoice_service.usage
 
         aggregate_failures do
           expect(result).to be_success
@@ -58,7 +60,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         before { subscription.update!(started_at: Time.zone.today) }
 
         it 'changes the from date of the invoice' do
-          result = invoice_service.forecast(customer_id: customer.id)
+          result = invoice_service.usage
 
           aggregate_failures do
             expect(result).to be_success
@@ -74,7 +76,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       let(:plan) { create(:plan, interval: 'yearly') }
 
       it 'intialize an invoice' do
-        result = invoice_service.forecast(customer_id: customer.id)
+        result = invoice_service.usage
 
         aggregate_failures do
           expect(result).to be_success
@@ -97,8 +99,10 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     end
 
     context 'when customer is not found' do
+      let(:customer_id) { 'foo' }
+
       it 'returns an error' do
-        result = invoice_service.forecast(customer_id: 'foo')
+        result = invoice_service.usage
 
         expect(result).not_to be_success
         expect(result.error_code).to eq('not_found')
@@ -109,7 +113,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       let(:subscription) { nil }
 
       it 'returns an error' do
-        result = invoice_service.forecast(customer_id: customer.id)
+        result = invoice_service.usage
 
         expect(result).not_to be_success
         expect(result.error_code).to eq('no_active_subscription')

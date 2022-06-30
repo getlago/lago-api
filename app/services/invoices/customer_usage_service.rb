@@ -2,13 +2,19 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def forecast(customer_id:)
-      return result.fail!('not_found') unless customer(customer_id: customer_id)
+    def initialize(current_user, customer_id:)
+      super(current_user)
+
+      customer(customer_id: customer_id)
+    end
+
+    def usage
+      return result.fail!('not_found') unless customer
       return result.fail!('no_active_subscription') if subscription.blank?
 
       invoice = Invoice.new(
         subscription: subscription,
-        charges_from_date: from_date,
+        charges_from_date: charges_from_date,
         from_date: from_date,
         to_date: to_date,
         issuing_date: issuing_date,
@@ -38,17 +44,12 @@ module Invoices
       @subscription ||= customer.active_subscription
     end
 
-    def previous_invoice
-      @previous_invoice ||= @subscription.invoices.order(issuing_date: :asc).first
-    end
-
     def from_date
       return @from_date if @from_date.present?
 
-      # NOTE: If a previous invoice exists, the forecast should start on the next day
-      return @from_date = previous_invoice.to_date + 1.day if previous_invoice.present?
-
       @from_date = case subscription.plan.interval.to_sym
+                   when :weekly
+                     Time.zone.today.beginning_of_week
                    when :monthly
                      Time.zone.today.beginning_of_month
                    when :yearly
@@ -63,6 +64,20 @@ module Invoices
       @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
 
       @from_date
+    end
+
+    def charges_from_date
+      return @charges_from_date if @charges_from_date.present?
+
+      @charges_from_date = if subscription.plan.yearly? && subscription.plan.bill_charges_monthly
+        Time.zone.today.beginning_of_month
+      else
+        from_date
+      end
+
+      @charges_from_date = subscription.started_at.to_date if @charges_from_date < subscription.started_at
+
+      @charges_from_date
     end
 
     def to_date
