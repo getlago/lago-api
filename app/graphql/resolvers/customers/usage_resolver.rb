@@ -2,14 +2,14 @@
 
 module Resolvers
   module Customers
-    class ForecastResolver < Resolvers::BaseResolver
+    class UsageResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
 
-      description 'Query the forecast of customer usage'
+      description 'Query the usage of the customer on the current billing period'
 
       argument :customer_id, type: ID, required: false
 
-      type Types::Invoices::Forecast, null: false
+      type Types::Invoices::Usage, null: false
 
       def resolve(customer_id:)
         result = Invoices::ForecastService.new(context[:current_user])

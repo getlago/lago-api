@@ -18,7 +18,7 @@ module Types
     field :customers, resolver: Resolvers::CustomersResolver
     field :customer, resolver: Resolvers::CustomerResolver
     field :events, resolver: Resolvers::EventsResolver
-    field :forecast, resolver: Resolvers::Customers::ForecastResolver
+    field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :plan, resolver: Resolvers::PlanResolver
   end

@@ -8,6 +8,7 @@ module Invoices
 
       invoice = Invoice.new(
         subscription: subscription,
+        charges_from_date: from_date,
         from_date: from_date,
         to_date: to_date,
         issuing_date: issuing_date,
