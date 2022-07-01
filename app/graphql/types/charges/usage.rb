@@ -5,7 +5,7 @@ module Types
     class Usage < Types::BaseObject
       graphql_name 'ChargeUsage'
 
-      field :units, GraphQL::Types::BigInt, null: false
+      field :units, GraphQL::Types::Float, null: false
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
 

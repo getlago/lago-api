@@ -2,9 +2,10 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(current_user, customer_id:)
+    def initialize(current_user, customer_id:, organization_id: nil)
       super(current_user)
 
+      @organization_id = organization_id
       customer(customer_id: customer_id)
     end
 
@@ -30,13 +31,15 @@ module Invoices
 
     private
 
+    attr_reader :organization_id
+
     delegate :invoice, to: :result
     delegate :plan, to: :subscription
 
     def customer(customer_id: nil)
       @customer ||= Customer.find_by(
         id: customer_id,
-        organization_id: result.user.organization_ids,
+        organization_id: organization_id || result.user.organization_ids,
       )
     end
 
