@@ -13,12 +13,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::CouponSerializer.new(
-              result.coupon,
-              root_name: 'coupon',
-            ),
-          )
+          render_coupon(result.coupon)
         else
           validation_errors(result)
         end
@@ -33,12 +28,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::CouponSerializer.new(
-              result.coupon,
-              root_name: 'coupon',
-            ),
-          )
+          render_coupon(result.coupon)
         else
           render_error_response(result)
         end
@@ -52,12 +42,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::CouponSerializer.new(
-              result.coupon,
-              root_name: 'coupon',
-            ),
-          )
+          render_coupon(result.coupon)
         else
           render_error_response(result)
         end
@@ -70,12 +55,7 @@ module Api
 
         return not_found_error unless coupon
 
-        render(
-          json: ::V1::CouponSerializer.new(
-            coupon,
-            root_name: 'coupon',
-          )
-        )
+        render_coupon(coupon)
       end
 
       def index
@@ -104,6 +84,15 @@ module Api
           :amount_currency,
           :expiration,
           :expiration_duration,
+        )
+      end
+
+      def render_coupon(coupon)
+        render(
+          json: ::V1::CouponSerializer.new(
+            coupon,
+            root_name: 'coupon',
+          ),
         )
       end
     end
