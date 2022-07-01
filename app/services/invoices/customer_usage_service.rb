@@ -84,6 +84,8 @@ module Invoices
       return @to_date if @to_date.present?
 
       @to_date = case subscription.plan.interval.to_sym
+                 when :weekly
+                   Time.zone.today.end_of_week
                  when :monthly
                    Time.zone.today.end_of_month
                  when :yearly
