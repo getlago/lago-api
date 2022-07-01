@@ -13,12 +13,31 @@ module Invoices
       return result.fail!('not_found') unless customer
       return result.fail!('no_active_subscription') if subscription.blank?
 
-      current_usage = Rails.cache.fetch(cache_key, expires_in: cache_expiration) do
-        compute_usage
-      end
-
-      result.usage = JSON.parse(current_usage, object_class: OpenStruct)
+      result.usage = JSON.parse(compute_usage, object_class: OpenStruct)
       result
+    end
+
+    # NOTE: Since computing customer usage could take some time as it as to
+    #       loop over a lot of records in database, the result is stored in a cache store.
+    #       - The cache expiration is at most, the end date of the billing period
+    #         + 1 day to handle cache generated on the last billing period
+    #       - The cache key includes the customer id and the creation date of the last customer event
+    # TODO: Refresh cache automatically when receiving an new event
+    def compute_usage
+      Rails.cache.fetch(cache_key, expires_in: cache_expiration.days) do
+        @invoice = Invoice.new(
+          subscription: subscription,
+          charges_from_date: charges_from_date,
+          from_date: from_date,
+          to_date: to_date,
+          issuing_date: issuing_date,
+        )
+
+        add_charge_fee
+        compute_amounts
+
+        format_usage
+      end
     end
 
     private
@@ -36,21 +55,6 @@ module Invoices
 
     def subscription
       @subscription ||= customer.active_subscription
-    end
-
-    def compute_usage
-      @invoice = Invoice.new(
-        subscription: subscription,
-        charges_from_date: charges_from_date,
-        from_date: from_date,
-        to_date: to_date,
-        issuing_date: issuing_date,
-      )
-
-      add_charge_fee
-      compute_amounts
-
-      format_usage
     end
 
     def from_date
@@ -150,7 +154,7 @@ module Invoices
     end
 
     def cache_expiration
-      (to_date - Time.zone.today).to_i
+      (to_date - Time.zone.today).to_i + 1
     end
 
     def format_usage
@@ -180,7 +184,7 @@ module Invoices
               aggregation_type: fee.billable_metric.aggregation_type,
             },
           }
-        end
+        end,
       }.to_json
     end
   end
