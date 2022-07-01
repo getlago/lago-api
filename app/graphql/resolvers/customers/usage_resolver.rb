@@ -16,7 +16,7 @@ module Resolvers
           .new(context[:current_user], customer_id: customer_id)
           .usage
 
-        result.success? ? result.invoice : result_error(result)
+        result.success? ? result.usage : result_error(result)
       end
     end
   end

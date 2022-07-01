@@ -13,27 +13,18 @@ module Invoices
       return result.fail!('not_found') unless customer
       return result.fail!('no_active_subscription') if subscription.blank?
 
-      invoice = Invoice.new(
-        subscription: subscription,
-        charges_from_date: charges_from_date,
-        from_date: from_date,
-        to_date: to_date,
-        issuing_date: issuing_date,
-      )
+      current_usage = Rails.cache.fetch(cache_key, expires_in: cache_expiration) do
+        compute_usage
+      end
 
-      result.invoice = invoice
-
-      add_charge_fee
-      compute_amounts
-
+      result.usage = JSON.parse(current_usage, object_class: OpenStruct)
       result
     end
 
     private
 
-    attr_reader :organization_id
+    attr_reader :organization_id, :invoice
 
-    delegate :invoice, to: :result
     delegate :plan, to: :subscription
 
     def customer(customer_id: nil)
@@ -45,6 +36,21 @@ module Invoices
 
     def subscription
       @subscription ||= customer.active_subscription
+    end
+
+    def compute_usage
+      @invoice = Invoice.new(
+        subscription: subscription,
+        charges_from_date: charges_from_date,
+        from_date: from_date,
+        to_date: to_date,
+        issuing_date: issuing_date,
+      )
+
+      add_charge_fee
+      compute_amounts
+
+      format_usage
     end
 
     def from_date
@@ -134,6 +140,48 @@ module Invoices
       invoice.vat_amount_currency = plan.amount_currency
       invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
       invoice.total_amount_currency = plan.amount_currency
+    end
+
+    def cache_key
+      return @cache_key if @cache_key
+
+      last_event_created_at = customer.events.order(:created_at).last&.created_at || customer.created_at
+      @cache_key = "current_usage/#{customer.id}-#{last_event_created_at.iso8601}"
+    end
+
+    def cache_expiration
+      (to_date - Time.zone.today).to_i
+    end
+
+    def format_usage
+      {
+        from_date: invoice.charges_from_date.iso8601,
+        to_date: invoice.to_date.iso8601,
+        issuing_date: invoice.issuing_date.iso8601,
+        amount_cents: invoice.amount_cents,
+        amount_currency: invoice.amount_currency,
+        total_amount_cents: invoice.total_amount_cents,
+        total_amount_currency: invoice.total_amount_currency,
+        vat_amount_cents: invoice.vat_amount_cents,
+        vat_amount_currency: invoice.vat_amount_currency,
+        fees: invoice.fees.map do |fee|
+          {
+            units: fee.units,
+            amount_cents: fee.amount_cents,
+            amount_currency: fee.amount_currency,
+            charge: {
+              id: fee.charge.id,
+              charge_model: fee.charge.charge_model,
+            },
+            billable_metric: {
+              id: fee.billable_metric.id,
+              name: fee.billable_metric.name,
+              code: fee.billable_metric.code,
+              aggregation_type: fee.billable_metric.aggregation_type,
+            },
+          }
+        end
+      }.to_json
     end
   end
 end

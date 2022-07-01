@@ -4,7 +4,7 @@ module V1
   class CustomerUsageSerializer < ModelSerializer
     def serialize
       payload = {
-        from_date: model.charges_from_date,
+        from_date: model.from_date,
         to_date: model.to_date,
         issuing_date: model.issuing_date,
         amount_cents: model.amount_cents,

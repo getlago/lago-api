@@ -30,7 +30,7 @@ module Api
         if result.success?
           render(
             json: ::V1::CustomerUsageSerializer.new(
-              result.invoice,
+              result.usage,
               root_name: 'customer_usage',
               includes: %i[charges_usage],
             ),

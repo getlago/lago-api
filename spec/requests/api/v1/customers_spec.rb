@@ -129,10 +129,10 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(usage_response[:vat_amount_currency]).to eq('EUR')
 
         charge_usage = usage_response[:charges_usage].first
-        expect(charge_usage[:billable_metric_name]).to eq(billable_metric.name)
-        expect(charge_usage[:billable_metric_code]).to eq(billable_metric.code)
-        expect(charge_usage[:billable_metric_aggregation_type]).to eq('count_agg')
-        expect(charge_usage[:charge_model]).to eq('graduated')
+        expect(charge_usage[:billable_metric][:name]).to eq(billable_metric.name)
+        expect(charge_usage[:billable_metric][:code]).to eq(billable_metric.code)
+        expect(charge_usage[:billable_metric][:aggregation_type]).to eq('count_agg')
+        expect(charge_usage[:charge][:charge_model]).to eq('graduated')
         expect(charge_usage[:units]).to eq('4.0')
         expect(charge_usage[:amount_cents]).to eq(5)
         expect(charge_usage[:amount_currency]).to eq('EUR')
