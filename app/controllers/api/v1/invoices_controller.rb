@@ -11,12 +11,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::InvoiceSerializer.new(
-              result.invoice,
-              root_name: 'invoice',
-            ),
-          )
+          render_invoice(result.invoice)
         else
           validation_errors(result)
         end
@@ -27,12 +22,7 @@ module Api
 
         return not_found_error unless invoice
 
-        render(
-          json: ::V1::InvoiceSerializer.new(
-            invoice,
-            root_name: 'invoice',
-          )
-        )
+        render_invoice(invoice)
       end
 
       def index
@@ -55,6 +45,16 @@ module Api
 
       def update_params
         params.require(:invoice).permit(:status)
+      end
+
+      def render_invoice(invoice)
+        render(
+          json: ::V1::InvoiceSerializer.new(
+            invoice,
+            root_name: 'invoice',
+            includes: %i[customer subscription fees],
+          ),
+        )
       end
     end
   end
