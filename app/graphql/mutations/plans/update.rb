@@ -25,7 +25,7 @@ module Mutations
       type Types::Plans::Object
 
       def resolve(**args)
-        result = PlansService.new(context[:current_user])
+        result = ::Plans::UpdateService.new(context[:current_user])
           .update(**prepare_arguments(**args))
 
         result.success? ? result.plan : result_error(result)
