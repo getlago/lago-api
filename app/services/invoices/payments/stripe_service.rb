@@ -49,6 +49,7 @@ module Invoices
 
         payment.update!(status: status)
         payment.invoice.update!(status: status)
+
         result
       rescue ArgumentError
         result.fail!('invalid_invoice_status')
@@ -128,7 +129,6 @@ module Invoices
           payment_method: stripe_payment_method,
           confirm: true,
           off_session: true,
-          receipt_email: customer.email,
           error_on_requires_action: true,
           description: "Lago - #{organization.name} - Invoice #{invoice.number}",
           metadata: {
