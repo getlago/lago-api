@@ -154,7 +154,10 @@ module Invoices
     end
 
     def cache_expiration
-      (to_date - Time.zone.today).to_i + 1
+      expiration = (to_date - Time.zone.today).to_i + 1
+
+      # Prevent storing cache for too long
+      expiration > 4 ? 4 : expiration
     end
 
     def format_usage
