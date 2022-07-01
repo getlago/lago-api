@@ -13,12 +13,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::AddOnSerializer.new(
-              result.add_on,
-              root_name: 'add_on',
-            ),
-          )
+          render_add_on(result.add_on)
         else
           validation_errors(result)
         end
@@ -33,12 +28,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::AddOnSerializer.new(
-              result.add_on,
-              root_name: 'add_on',
-            ),
-          )
+          render_add_on(result.add_on)
         else
           render_error_response(result)
         end
@@ -52,12 +42,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::AddOnSerializer.new(
-              result.add_on,
-              root_name: 'add_on',
-            ),
-          )
+          render_add_on(result.add_on)
         else
           render_error_response(result)
         end
@@ -70,12 +55,7 @@ module Api
 
         return not_found_error unless add_on
 
-        render(
-          json: ::V1::AddOnSerializer.new(
-            add_on,
-            root_name: 'add_on',
-          )
-        )
+        render_add_on(add_on)
       end
 
       def index
@@ -103,6 +83,15 @@ module Api
           :amount_cents,
           :amount_currency,
           :description,
+        )
+      end
+
+      def render_add_on(add_on)
+        render(
+          json: ::V1::AddOnSerializer.new(
+            add_on,
+            root_name: 'add_on',
+          ),
         )
       end
     end
