@@ -17,15 +17,17 @@ module Plans
       )
 
       # Validates billable metrics
-      metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
-      if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-        return result.fail!('not_found', 'Billable metrics does not exists')
+      if args[:charges].present?
+        metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
+        if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
+          return result.fail!('not_found', 'Billable metrics does not exists')
+        end
       end
 
       ActiveRecord::Base.transaction do
         plan.save!
 
-        args[:charges].each { |c| create_charge(plan, c) }
+        args[:charges].each { |c| create_charge(plan, c) } if args[:charges].present?
       end
 
       result.plan = plan

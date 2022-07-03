@@ -69,7 +69,8 @@ module Api
             plans,
             ::V1::PlanSerializer,
             collection_name: 'plans',
-            meta: pagination_metadata(plans)
+            meta: pagination_metadata(plans),
+            includes: %i[charges],
           )
         )
       end

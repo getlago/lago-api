@@ -40,4 +40,37 @@ RSpec.describe Plans::DestroyService, type: :service do
       end
     end
   end
+
+  describe 'destroy_from_api' do
+    let(:plan) { create(:plan, organization: organization) }
+
+    it 'destroys the plan' do
+      code = plan.code
+
+      expect { plans_service.destroy_from_api(organization: organization, code: code) }
+        .to change(Plan, :count).by(-1)
+    end
+
+    context 'when plan is not found' do
+      it 'returns an error' do
+        result = plans_service.destroy_from_api(organization: organization, code: 'invalid12345')
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('not_found')
+      end
+    end
+
+    context 'when plan is attached to subscription' do
+      let(:subscription) { create(:subscription, plan: plan) }
+
+      before { subscription }
+
+      it 'returns an error' do
+        result = plans_service.destroy_from_api(organization: organization, code: plan.code)
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('forbidden')
+      end
+    end
+  end
 end

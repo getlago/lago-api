@@ -65,7 +65,7 @@ module Plans
       ActiveRecord::Base.transaction do
         plan.save!
 
-        process_charges(plan, params[:charges]) unless params[:charges].blank?
+        process_charges(plan, params[:charges] || [])
       end
 
       result.plan = plan
