@@ -5,8 +5,15 @@ module Invoices
     def initialize(current_user, customer_id:, organization_id: nil)
       super(current_user)
 
-      @organization_id = organization_id
-      customer(customer_id: customer_id)
+      if organization_id.present?
+        @organization_id = organization_id
+        @customer = Customer.find_by(
+          customer_id: customer_id,
+          organization_id: organization_id,
+        )
+      else
+        customer(customer_id: customer_id)
+      end
     end
 
     def usage
@@ -42,14 +49,14 @@ module Invoices
 
     private
 
-    attr_reader :organization_id, :invoice
+    attr_reader :invoice
 
     delegate :plan, to: :subscription
 
     def customer(customer_id: nil)
       @customer ||= Customer.find_by(
         id: customer_id,
-        organization_id: organization_id || result.user.organization_ids,
+        organization_id: result.user.organization_ids,
       )
     end
 
