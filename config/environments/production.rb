@@ -30,13 +30,13 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  if ENV['MEMCACHE_SERVERS'].present?
-    config.cache_store(:mem_cache_store)
+  if ENV['LAGO_MEMCACHE_SERVERS'].present?
+    config.cache_store(:mem_cache_store, ENV['LAGO_MEMCACHE_SERVERS'].split(','))
 
-  elsif ENV['REDIS_CACHE_URL'].present?
+  elsif ENV['LAGO_REDIS_CACHE_URL'].present?
     config.cache_store(
       :redis_cache_store, {
-        url: ENV['REDIS_CACHE_URL'],
+        url: ENV['LAGO_REDIS_CACHE_URL'],
         error_handler: ->(method:, returning:, exception:) {
           Rails.logger.error(exception.message)
           Rails.logger.error(exception.backtrace.join("\n"))
