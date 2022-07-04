@@ -7,7 +7,7 @@ module Api
         validate_result = EventsService.new.validate_params(params: create_params)
         return validation_errors(validate_result) unless validate_result.success?
 
-        CreateEventJob.perform_later(
+        Events::CreateJob.perform_later(
           current_organization,
           create_params,
           Time.zone.now.to_i,
