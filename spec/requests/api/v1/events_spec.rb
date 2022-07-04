@@ -22,7 +22,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       )
 
       expect(response).to have_http_status(:ok)
-      expect(CreateEventJob).to have_been_enqueued
+      expect(Events::CreateJob).to have_been_enqueued
     end
 
     context 'with missing arguments' do
@@ -35,7 +35,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity)
 
-        expect(CreateEventJob).not_to have_been_enqueued
+        expect(Events::CreateJob).not_to have_been_enqueued
       end
     end
   end
