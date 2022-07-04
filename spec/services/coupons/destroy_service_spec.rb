@@ -27,9 +27,51 @@ RSpec.describe Coupons::DestroyService, type: :service do
       end
     end
 
-    # context 'when coupon is attached to customers' do
-    #   # TODO
-    # end
+    context 'when coupon is attached to customer' do
+      let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+
+      before { applied_coupon }
+
+      it 'returns an error' do
+        result = destroy_service.destroy(coupon.id)
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('forbidden')
+      end
+    end
+  end
+
+  describe 'destroy_from_api' do
+    let(:coupon) { create(:coupon, organization: organization) }
+
+    it 'destroys the coupon' do
+      code = coupon.code
+
+      expect { destroy_service.destroy_from_api(organization: organization, code: code) }
+        .to change(Coupon, :count).by(-1)
+    end
+
+    context 'when coupon is not found' do
+      it 'returns an error' do
+        result = destroy_service.destroy_from_api(organization: organization, code: 'invalid12345')
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('not_found')
+      end
+    end
+
+    context 'when coupon is attached to customer' do
+      let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+
+      before { applied_coupon }
+
+      it 'returns an error' do
+        result = destroy_service.destroy_from_api(organization: organization, code: coupon.code)
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('forbidden')
+      end
+    end
   end
 
   describe 'terminate' do

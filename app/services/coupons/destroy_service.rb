@@ -19,6 +19,23 @@ module Coupons
       result
     end
 
+    def destroy_from_api(organization:, code:)
+      coupon = organization.coupons.find_by(code: code)
+      return result.fail!('not_found', 'coupon does not exist') unless coupon
+
+      unless coupon.deletable?
+        return result.fail!(
+          'forbidden',
+          'coupon is attached to an active customer',
+        )
+      end
+
+      coupon.destroy!
+
+      result.coupon = coupon
+      result
+    end
+
     def terminate(id)
       coupon = result.user.coupons.find_by(id: id)
       return result.fail!('not_found') unless coupon
