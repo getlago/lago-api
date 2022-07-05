@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Utils
-  class StatusService
-    VERSION_FILE = 'LAGO_VERSIONS'
-    GITHUB_BASE_URL = 'https://github.com/getlago/lago'
+  class VersionService < BaseService
+    VERSION_FILE = Rails.root.join('LAGO_VERSION')
+    GITHUB_BASE_URL = 'https://github.com/getlago/lago-api'
 
     def version
       result.version = OpenStruct.new(
@@ -24,17 +24,17 @@ module Utils
     end
 
     def github_url
-      "#{GITHUB_TAG_BASE_URL}/tree/#{file_content}"
+      "#{GITHUB_BASE_URL}/tree/#{file_content}"
     rescue Errno::ENOENT
-      GITHUB_TAG_BASE_URL
+      GITHUB_BASE_URL
     end
 
     def file_content
-      @file_content ||= File.read(LAGO_VERSIONS).chop
+      @file_content ||= File.read(VERSION_FILE).squish
     end
 
     def release_date
-      File.ctime(VERSION_FILE)
+      File.ctime(VERSION_FILE).to_date.iso8601
     end
 
     def git_hash?

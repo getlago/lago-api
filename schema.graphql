@@ -2316,6 +2316,11 @@ enum CurrencyEnum {
   ZMW
 }
 
+type CurrentVersion {
+  githubUrl: String!
+  number: String!
+}
+
 type Customer {
   addressLine1: String
   addressLine2: String
@@ -3098,6 +3103,11 @@ type Query {
   Retrives currently connected user
   """
   currentUser: User!
+
+  """
+  Retrieve the version of the application
+  """
+  currentVersion: CurrentVersion!
 
   """
   Query a single customer of an organization

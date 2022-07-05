@@ -21,5 +21,6 @@ module Types
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :plan, resolver: Resolvers::PlanResolver
+    field :current_version, resolver: Resolvers::VersionResolver
   end
 end
