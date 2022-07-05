@@ -41,6 +41,16 @@ module Api
         )
       end
 
+      def download
+        invoice = Invoice.find_by(id: params[:id])
+
+        return not_found_error unless invoice
+
+        Invoice::GenerateJob.perform_later(invoice)
+
+        head(:ok)
+      end
+
       private
 
       def update_params
