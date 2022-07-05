@@ -132,7 +132,10 @@ module Invoices
     end
 
     def add_charge_fee
-      subscription.plan.charges.each do |charge|
+      query = subscription.plan.charges.joins(:billable_metric)
+        .order(Arel.sql('lower(unaccent(billable_metrics.name)) ASC'))
+
+      query.each do |charge|
         fee_result = Fees::ChargeService.new(
           invoice: invoice,
           charge: charge,
