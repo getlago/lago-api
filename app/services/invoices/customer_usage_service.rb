@@ -89,7 +89,11 @@ module Invoices
                  when :monthly
                    Time.zone.today.end_of_month
                  when :yearly
-                   Time.zone.today.end_of_year
+                   if subscription.plan.bill_charges_monthly
+                     Time.zone.today.end_of_month
+                   else
+                     Time.zone.today.end_of_year
+                   end
                  else
                    raise NotImplementedError
       end
