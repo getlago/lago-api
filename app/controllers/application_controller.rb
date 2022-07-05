@@ -2,6 +2,15 @@
 
 class ApplicationController < ActionController::API
   def health
-    render json: { message: 'Success' }, status: :ok
+    result = Utils::VersionService.new.version
+
+    render(
+      json: {
+        version: result.version.number,
+        github_url: result.version.github_url,
+        message: 'Success',
+      },
+      status: :ok,
+    )
   end
 end
