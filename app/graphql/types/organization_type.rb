@@ -17,7 +17,7 @@ module Types
     field :zipcode, String
     field :city, String
     field :invoice_footer, String
-    field :country, Types::Customers::CountryCodeEnum, null: true
+    field :country, Types::CountryCodeEnum, null: true
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 

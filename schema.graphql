@@ -3317,7 +3317,7 @@ input UpdateOrganizationInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  country: String
+  country: CountryCode
   email: String
   invoiceFooter: String
   legalName: String

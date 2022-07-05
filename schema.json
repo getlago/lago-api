@@ -11938,8 +11938,8 @@
               "name": "country",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "CountryCode",
                 "ofType": null
               },
               "defaultValue": null,
