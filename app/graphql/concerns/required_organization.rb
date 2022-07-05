@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'current_context'
+
 module RequiredOrganization
   extend ActiveSupport::Concern
 
@@ -10,6 +12,9 @@ module RequiredOrganization
   def validate_organization!
     raise organization_error('Missing organization id') unless current_organization
     raise organization_error('Not in organization') unless organization_member?
+
+    ::CurrentContext.organization_id = current_organization.id
+    ::CurrentContext.membership_id = context[:current_user]&.id
 
     true
   end

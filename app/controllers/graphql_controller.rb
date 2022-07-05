@@ -3,7 +3,6 @@
 class GraphqlController < ApplicationController
   include AuthenticableUser
   include OrganizationHeader
-  include Trackable
 
   rescue_from JWT::ExpiredSignature do
     render_graphql_error(code: 'expired_jwt_token', status: 401)
