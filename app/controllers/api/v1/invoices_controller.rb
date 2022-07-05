@@ -46,7 +46,16 @@ module Api
 
         return not_found_error unless invoice
 
-        Invoice::GenerateJob.perform_later(invoice)
+        if invoice.file.present?
+          return render(
+            json: ::V1::InvoiceSerializer.new(
+              invoice,
+              root_name: 'invoice',
+            ),
+          )
+        end
+
+        Invoices::GenerateJob.perform_later(invoice)
 
         head(:ok)
       end

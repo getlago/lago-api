@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Webhooks
-  class InvoicesService < Webhooks::BaseService
+  class InvoiceService < Webhooks::BaseService
     private
 
     def current_organization
