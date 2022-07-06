@@ -11,7 +11,7 @@ module Mutations
 
       argument :name, String, required: true
       argument :customer_id, String, required: true
-      argument :country, Types::Customers::CountryCodeEnum, required: false
+      argument :country, Types::CountryCodeEnum, required: false
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false
       argument :state, String, required: false

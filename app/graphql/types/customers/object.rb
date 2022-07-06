@@ -12,7 +12,7 @@ module Types
       field :sequential_id, String, null: false
       field :slug, String, null: false
 
-      field :country, Types::Customers::CountryCodeEnum, null: true
+      field :country, Types::CountryCodeEnum, null: true
       field :address_line1, String, null: true
       field :address_line2, String, null: true
       field :state, String, null: true

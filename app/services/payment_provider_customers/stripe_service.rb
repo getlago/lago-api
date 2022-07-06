@@ -113,7 +113,7 @@ module PaymentProviderCustomers
     end
 
     def reprocess_pending_invoices(customer)
-      customer.invoices.where(status: [:pending, :failed]).find_each do |invoice|
+      customer.invoices.pending.find_each do |invoice|
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
       end
     end

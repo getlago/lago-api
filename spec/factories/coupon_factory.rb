@@ -2,7 +2,7 @@ FactoryBot.define do
   factory :coupon do
     organization
     name { Faker::Name.name }
-    code { Faker::Name.name.underscore }
+    code { Faker::Name.first_name }
     status { 'active' }
     expiration { 'no_expiration' }
     amount_cents { 200 }

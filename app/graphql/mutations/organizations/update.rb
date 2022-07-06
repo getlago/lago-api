@@ -20,7 +20,7 @@ module Mutations
       argument :state, String, required: false
       argument :zipcode, String, required: false
       argument :city, String, required: false
-      argument :country, String, required: false
+      argument :country, Types::CountryCodeEnum, required: false
       argument :invoice_footer, String, required: false
 
       type Types::OrganizationType

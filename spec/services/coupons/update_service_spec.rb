@@ -58,4 +58,65 @@ RSpec.describe Coupons::UpdateService, type: :service do
       end
     end
   end
+
+  describe 'update_from_api' do
+    let(:coupon) { create(:coupon, organization: organization) }
+    let(:name) { 'New Coupon' }
+    let(:update_args) do
+      {
+        name: name,
+        code: 'coupon1_code',
+        amount_cents: 123,
+        amount_currency: 'EUR',
+        expiration: 'time_limit',
+        expiration_duration: 15
+      }
+    end
+
+    it 'updates the coupon' do
+      result = subject.update_from_api(
+        organization: organization,
+        code: coupon.code,
+        params: update_args
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+
+        coupon_result = result.coupon
+        expect(coupon_result.id).to eq(coupon.id)
+        expect(coupon_result.name).to eq(update_args[:name])
+        expect(coupon_result.code).to eq(update_args[:code])
+        expect(coupon_result.expiration).to eq(update_args[:expiration])
+      end
+    end
+
+    context 'with validation errors' do
+      let(:name) { nil }
+
+      it 'returns an error' do
+        result = subject.update_from_api(
+          organization: organization,
+          code: coupon.code,
+          params: update_args
+        )
+
+        expect(result).to_not be_success
+        expect(result.error_code).to eq('unprocessable_entity')
+      end
+    end
+
+    context 'when coupon is not found' do
+      it 'returns an error' do
+        result = subject.update_from_api(
+          organization: organization,
+          code: 'fake_code12345',
+          params: update_args
+        )
+
+        expect(result).to_not be_success
+        expect(result.error_code).to eq('not_found')
+      end
+    end
+  end
 end

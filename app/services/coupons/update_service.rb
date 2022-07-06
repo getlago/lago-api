@@ -23,5 +23,27 @@ module Coupons
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
     end
+
+    def update_from_api(organization:, code:, params:)
+      coupon = organization.coupons.find_by(code: code)
+      return result.fail!('not_found', 'coupon does not exist') unless coupon
+
+      coupon.name = params[:name] if params.key?(:name)
+
+      unless coupon.attached_to_customers?
+        coupon.code = params[:code] if params.key?(:code)
+        coupon.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
+        coupon.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
+        coupon.expiration = params[:expiration] if params.key?(:expiration)
+        coupon.expiration_duration = params[:expiration_duration] if params.key?(:expiration_duration)
+      end
+
+      coupon.save!
+
+      result.coupon = coupon
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.fail_with_validations!(e.record)
+    end
   end
 end

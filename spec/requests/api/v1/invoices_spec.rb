@@ -32,4 +32,75 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
   end
+
+  describe 'show' do
+    let(:invoice) { create(:invoice) }
+
+    it 'returns a invoice' do
+      get_with_token(
+        organization,
+        "/api/v1/invoices/#{invoice.id}"
+      )
+
+      expect(response).to have_http_status(:success)
+
+      result = JSON.parse(response.body, symbolize_names: true)[:invoice]
+
+      expect(result[:lago_id]).to eq(invoice.id)
+      expect(result[:status]).to eq(invoice.status)
+    end
+
+    context 'when invoice does not exist' do
+      it 'returns not found' do
+        get_with_token(
+          organization,
+          "/api/v1/invoices/555"
+        )
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe 'index' do
+    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:subscription) { create(:subscription, customer: customer) }
+    let(:customer) {  create(:customer, organization: organization) }
+
+    before { invoice }
+
+    it 'returns invoices' do
+      get_with_token(organization, '/api/v1/invoices')
+
+      expect(response).to have_http_status(:success)
+
+      records = JSON.parse(response.body, symbolize_names: true)[:invoices]
+
+      expect(records.count).to eq(1)
+      expect(records.first[:lago_id]).to eq(invoice.id)
+      expect(records.first[:status]).to eq(invoice.status)
+    end
+
+    context 'with pagination' do
+      let(:invoice2) { create(:invoice, subscription: subscription2) }
+      let(:subscription2) { create(:subscription, customer: customer) }
+
+      before { invoice2 }
+
+      it 'returns invoices with correct meta data' do
+        get_with_token(organization, '/api/v1/invoices?page=1&per_page=1')
+
+        expect(response).to have_http_status(:success)
+
+        response_body = JSON.parse(response.body, symbolize_names: true)
+
+        expect(response_body[:invoices].count).to eq(1)
+        expect(response_body[:meta][:current_page]).to eq(1)
+        expect(response_body[:meta][:next_page]).to eq(2)
+        expect(response_body[:meta][:prev_page]).to eq(nil)
+        expect(response_body[:meta][:total_pages]).to eq(2)
+        expect(response_body[:meta][:total_count]).to eq(2)
+      end
+    end
+  end
 end

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe CreateEventJob, type: :job do
+RSpec.describe Events::CreateJob, type: :job do
   let(:organization) { create(:organization) }
   let(:params) { {} }
   let(:event_service) { instance_double(EventsService) }
@@ -13,7 +13,7 @@ RSpec.describe CreateEventJob, type: :job do
   it 'calls the event service' do
     allow(EventsService).to receive(:new).and_return(event_service)
     allow(event_service).to receive(:create)
-      .with(organization: organization, params: params, timestamp: timestamp, metadata: metadata)
+      .with(organization: organization, params: params, timestamp: Time.zone.at(timestamp), metadata: metadata)
       .and_return(result)
 
     described_class.perform_now(organization, params, timestamp, metadata)
@@ -30,7 +30,7 @@ RSpec.describe CreateEventJob, type: :job do
     it 'raises an error' do
       allow(EventsService).to receive(:new).and_return(event_service)
       allow(event_service).to receive(:create)
-        .with(organization: organization, params: params, timestamp: timestamp, metadata: metadata)
+        .with(organization: organization, params: params, timestamp: Time.zone.at(timestamp), metadata: metadata)
         .and_return(result)
 
       expect do

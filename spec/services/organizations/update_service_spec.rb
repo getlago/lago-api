@@ -55,4 +55,49 @@ RSpec.describe Organizations::UpdateService do
       end
     end
   end
+
+  describe 'update_from_api' do
+    let(:country) { 'pl' }
+    let(:update_args) do
+      {
+        webhook_url: 'http://test.example',
+        vat_rate: 20,
+        country: country,
+        address_line1: 'address1',
+        address_line2: 'address2',
+        state: 'state',
+        zipcode: '10000',
+        email: 'mail@example.com',
+        city: 'test_city',
+        legal_name: 'test1',
+        legal_number: '123',
+        invoice_footer: 'footer',
+      }
+    end
+
+    it 'updates an organization' do
+      result = subject.update_from_api(params: update_args)
+
+      aggregate_failures do
+        expect(result).to be_success
+
+        organization_response = result.organization
+        expect(organization_response.name).to eq(organization.name)
+        expect(organization_response.webhook_url).to eq(update_args[:webhook_url])
+        expect(organization_response.vat_rate).to eq(update_args[:vat_rate])
+        expect(organization_response.invoice_footer).to eq(update_args[:invoice_footer])
+      end
+    end
+
+    context 'with validation errors' do
+      let(:country) { '---' }
+
+      it 'returns an error' do
+        result = subject.update_from_api(params: update_args)
+
+        expect(result).to_not be_success
+        expect(result.error_code).to eq('unprocessable_entity')
+      end
+    end
+  end
 end
