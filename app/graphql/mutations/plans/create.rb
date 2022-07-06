@@ -27,7 +27,7 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = PlansService
+        result = ::Plans::CreateService
           .new(context[:current_user])
           .create(
             **(

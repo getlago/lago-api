@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       resources :applied_coupons, only: %i[create]
       resources :applied_add_ons, only: %i[create]
       resources :invoices, only: %i[update show index]
+      resources :plans, param: :code
 
       put '/organizations', to: 'organizations#update'
 
