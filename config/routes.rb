@@ -29,6 +29,8 @@ Rails.application.routes.draw do
       resources :applied_add_ons, only: %i[create]
       resources :invoices, only: %i[update show index]
 
+      put '/organizations', to: 'organizations#update'
+
       resources :webhooks, only: %i[] do
         get :public_key, on: :collection
       end
