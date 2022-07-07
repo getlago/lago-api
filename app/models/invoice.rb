@@ -20,8 +20,10 @@ class Invoice < ApplicationRecord
   monetize :amount_cents
   monetize :vat_amount_cents
   monetize :total_amount_cents
-  monetize :charge_amount_cents
-  monetize :credit_amount_cents
+
+  # NOTE: Readonly fields
+  monetize :charge_amount_cents, disable_validation: true, allow_nil: true
+  monetize :credit_amount_cents, disable_validation: true, allow_nil: true
 
   INVOICE_TYPES = %i[subscription add_on].freeze
   STATUS = %i[pending succeeded failed].freeze
