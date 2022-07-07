@@ -86,15 +86,17 @@ module Plans
     end
 
     def process_charges(plan, params_charges)
-      return if plan.attached_to_subscriptions?
-
       created_charges_ids = []
 
       hash_charges = params_charges.map { |c| c.to_h.deep_symbolize_keys }
       hash_charges.each do |payload_charge|
         charge = Charge.find_by(id: payload_charge[:id])
 
-        next charge.update(payload_charge) if charge
+        if charge
+          # NOTE: charges cannot be edited if plan is attached to a subscription
+          charge.update(payload_charge) unless plan.attached_to_subscriptions?
+          next
+        end
 
         created_charge = create_charge(plan, payload_charge)
         created_charges_ids.push(created_charge.id)
