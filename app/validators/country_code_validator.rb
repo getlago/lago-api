@@ -8,6 +8,6 @@ class CountryCodeValidator < ActiveModel::EachValidator
   protected
 
   def valid?(value)
-    value && ISO3166::Country.new(value)
+    value && ISO3166::Country.new(value).present?
   end
 end

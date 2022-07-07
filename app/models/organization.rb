@@ -22,7 +22,7 @@ class Organization < ApplicationRecord
   validates :name, presence: true
   validates :webhook_url, url: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
-  validates :country, country_code: true, if: :country?
+  validates :country, country_code: true, unless: -> { country.nil? }
   validates :invoice_footer, length: { maximum: 600 }
   validates :email, email: true, if: :email?
   validates :logo, image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes }, if: :logo?

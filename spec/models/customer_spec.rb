@@ -23,6 +23,9 @@ RSpec.describe Customer, type: :model do
 
       customer.country = 'foo'
       expect(customer).not_to be_valid
+
+      customer.country = ''
+      expect(customer).not_to be_valid
     end
   end
 
