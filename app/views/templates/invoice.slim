@@ -7,7 +7,7 @@ html
     link rel='stylesheet' href='https://rsms.me/inter/inter.css'
     title Invoice
   body
-    scss: 
+    css: 
       h1, h2, p { margin: 0; padding: 0; }
       html { font-family: Inter, sans-serif; }
       h1 { color: #19212e; font-weight: 700; font-size: 24px; line-height: 32px; }
@@ -262,26 +262,25 @@ html
             td.body-2 Total due
             td.body-1 = total_amount.format
 
-      - if subscription?
-        h2.invoice-details-title.title-2.mb-24 Details
-        - if fees.charge_kind.any?       
-          .body-1 Charges
-          .mb-24.body-3
-            | List of charges used from #{from_date.strftime('%b %d, %Y')} to #{to_date.strftime('%b %d, %Y')}
-          .charge-details.mb-24
-            table.charge-details-table width="100%"
-              - fees.charge_kind.each do |fee|
-                tr
-                  td width="70%"
-                    .body-1 = fee.billable_metric.name
-                    .body-3
-                      | Total unit: #{fee.units}
-                  td.body-1 width="30%" = fee.amount.format
-            
-            table.total-table width="100%"
+      - if subscription? && fees.charge_kind.any?    
+        h2.invoice-details-title.title-2.mb-24 Details      
+        .body-1 Charges
+        .mb-24.body-3
+          | List of charges used from #{from_date.strftime('%b %d, %Y')} to #{to_date.strftime('%b %d, %Y')}
+        .charge-details.mb-24
+          table.charge-details-table width="100%"
+            - fees.charge_kind.each do |fee|
               tr
-                td.body-2 width="70%" Sub total
-                td.body-1 width="30%" = charge_amount.format
+                td width="70%"
+                  .body-1 = fee.billable_metric.name
+                  .body-3
+                    | Total unit: #{fee.units}
+                td.body-1 width="30%" = fee.amount.format
+          
+          table.total-table width="100%"
+            tr
+              td.body-2 width="70%" Sub total
+              td.body-1 width="30%" = charge_amount.format
       
       p.body-3.mb-24 = organization.invoice_footer
 
