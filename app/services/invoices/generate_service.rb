@@ -3,13 +3,6 @@
 module Invoices
   class GenerateService < BaseService
     include ActiveSupport::NumberHelper
-
-    def generate_from_api(invoice_id:)
-      invoice = Invoice.find(invoice_id)
-
-      return result.fail!('not_found') if invoice.blank?
-    end
-
     def generate(invoice_id:)
       invoice = Invoice.find_by(id: invoice_id)
 
