@@ -51,6 +51,10 @@ RSpec.describe Organization, type: :model do
       organization.country = 'ZWX'
 
       expect(organization).not_to be_valid
+
+      organization.country = ''
+
+      expect(organization).not_to be_valid
     end
 
     it 'is invalid with invalid invoice footer' do
