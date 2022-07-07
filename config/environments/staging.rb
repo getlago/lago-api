@@ -35,4 +35,19 @@ Rails.application.configure do
   config.active_record.dump_schema_after_migration = false
 
   config.hosts << /[a-z0-9-]+\.staging\.getlago\.com/
+
+  if ENV['LAGO_MEMCACHE_SERVERS'].present?
+    config.cache_store = :mem_cache_store, ENV['LAGO_MEMCACHE_SERVERS'].split(',')
+
+  elsif ENV['LAGO_REDIS_CACHE_URL'].present?
+    config.cache_store = :redis_cache_store, {
+      url: ENV['LAGO_REDIS_CACHE_URL'],
+      error_handler: ->(method:, returning:, exception:) {
+        Rails.logger.error(exception.message)
+        Rails.logger.error(exception.backtrace.join("\n"))
+
+        Sentry.capture_exception(exception)
+      },
+    }
+  end
 end

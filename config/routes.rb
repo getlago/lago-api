@@ -16,7 +16,9 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :customers, only: %i[create]
+      resources :customers, only: %i[create] do
+        get :current_usage
+      end
 
       resources :subscriptions, only: %i[create]
       delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate

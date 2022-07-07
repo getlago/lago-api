@@ -170,7 +170,7 @@ type ChargeUsage {
   amountCurrency: CurrencyEnum!
   billableMetric: BillableMetric!
   charge: Charge!
-  units: BigInt!
+  units: Float!
 }
 
 type CollectionMetadata {

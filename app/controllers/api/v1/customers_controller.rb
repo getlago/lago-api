@@ -22,6 +22,24 @@ module Api
         end
       end
 
+      def current_usage
+        service = Invoices::CustomerUsageService
+          .new(nil, customer_id: params[:customer_id], organization_id: current_organization.id)
+        result = service.usage
+
+        if result.success?
+          render(
+            json: ::V1::CustomerUsageSerializer.new(
+              result.usage,
+              root_name: 'customer_usage',
+              includes: %i[charges_usage],
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params

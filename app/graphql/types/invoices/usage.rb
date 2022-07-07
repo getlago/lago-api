@@ -21,10 +21,6 @@ module Types
       def charges_usage
         object.fees
       end
-
-      def from_date
-        object.charges_from_date
-      end
     end
   end
 end

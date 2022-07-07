@@ -1727,7 +1727,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Float",
                   "ofType": null
                 }
               },

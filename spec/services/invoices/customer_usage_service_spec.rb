@@ -40,19 +40,18 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.id).to be_nil
-          expect(result.invoice.from_date).to eq(Time.zone.today.beginning_of_month)
-          expect(result.invoice.to_date).to eq(Time.zone.today.end_of_month)
-          expect(result.invoice.subscription).to eq(subscription)
-          expect(result.invoice.issuing_date.to_date).to eq(Time.zone.today.end_of_month)
-          expect(result.invoice.fees.size).to eq(1)
+          expect(result.usage.id).to be_nil
+          expect(result.usage.from_date).to eq(Time.zone.today.beginning_of_month.iso8601)
+          expect(result.usage.to_date).to eq(Time.zone.today.end_of_month.iso8601)
+          expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_month.iso8601)
+          expect(result.usage.fees.size).to eq(1)
 
-          expect(result.invoice.amount_cents).to eq(0)
-          expect(result.invoice.amount_currency).to eq('EUR')
-          expect(result.invoice.vat_amount_cents).to eq(0)
-          expect(result.invoice.vat_amount_currency).to eq('EUR')
-          expect(result.invoice.total_amount_cents).to eq(0)
-          expect(result.invoice.total_amount_currency).to eq('EUR')
+          expect(result.usage.amount_cents).to eq(0)
+          expect(result.usage.amount_currency).to eq('EUR')
+          expect(result.usage.vat_amount_cents).to eq(0)
+          expect(result.usage.vat_amount_currency).to eq('EUR')
+          expect(result.usage.total_amount_cents).to eq(0)
+          expect(result.usage.total_amount_currency).to eq('EUR')
         end
       end
 
@@ -65,8 +64,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(result.invoice.id).to be_nil
-            expect(result.invoice.from_date).to eq(subscription.started_at)
+            expect(result.usage.id).to be_nil
+            expect(result.usage.from_date).to eq(subscription.started_at.to_date.iso8601)
           end
         end
       end
@@ -81,19 +80,18 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.id).to be_nil
-          expect(result.invoice.from_date).to eq(Time.zone.today.beginning_of_year)
-          expect(result.invoice.to_date).to eq(Time.zone.today.end_of_year)
-          expect(result.invoice.subscription).to eq(subscription)
-          expect(result.invoice.issuing_date.to_date).to eq(Time.zone.today.end_of_year)
-          expect(result.invoice.fees.size).to eq(1)
+          expect(result.usage.id).to be_nil
+          expect(result.usage.from_date).to eq(Time.zone.today.beginning_of_year.iso8601)
+          expect(result.usage.to_date).to eq(Time.zone.today.end_of_year.iso8601)
+          expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_year.iso8601)
+          expect(result.usage.fees.size).to eq(1)
 
-          expect(result.invoice.amount_cents).to eq(0)
-          expect(result.invoice.amount_currency).to eq('EUR')
-          expect(result.invoice.vat_amount_cents).to eq(0)
-          expect(result.invoice.vat_amount_currency).to eq('EUR')
-          expect(result.invoice.total_amount_cents).to eq(0)
-          expect(result.invoice.total_amount_currency).to eq('EUR')
+          expect(result.usage.amount_cents).to eq(0)
+          expect(result.usage.amount_currency).to eq('EUR')
+          expect(result.usage.vat_amount_cents).to eq(0)
+          expect(result.usage.vat_amount_currency).to eq('EUR')
+          expect(result.usage.total_amount_cents).to eq(0)
+          expect(result.usage.total_amount_currency).to eq('EUR')
         end
       end
     end

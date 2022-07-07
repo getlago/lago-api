@@ -65,4 +65,78 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
   end
+
+  describe '.current_usage' do
+    let(:customer) { create(:customer, organization: organization) }
+    let(:organization) { create(:organization) }
+    let(:subscription) do
+      create(
+        :subscription,
+        plan: plan,
+        customer: customer,
+        started_at: Time.zone.now - 2.years,
+      )
+    end
+    let(:plan) { create(:plan, interval: 'monthly') }
+
+    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+    let(:charge) do
+      create(
+        :graduated_charge,
+        plan: subscription.plan,
+        charge_model: 'graduated',
+        billable_metric: billable_metric,
+        properties: [
+          {
+            from_value: 0,
+            to_value: nil,
+            per_unit_amount: '0.01',
+            flat_amount: '0.01',
+          },
+        ],
+      )
+    end
+
+    before do
+      subscription
+      charge
+
+      create_list(
+        :event,
+        4,
+        organization: organization,
+        customer: customer,
+        code: billable_metric.code,
+        timestamp: Time.zone.now,
+      )
+    end
+
+    it 'returns the usage for the customer' do
+      get_with_token(organization, "/api/v1/customers/#{customer.customer_id}/current_usage")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        usage_response = JSON.parse(response.body, symbolize_names: true)[:customer_usage]
+        expect(usage_response[:from_date]).to eq(Time.zone.today.beginning_of_month.iso8601)
+        expect(usage_response[:to_date]).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(usage_response[:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(usage_response[:amount_cents]).to eq(5)
+        expect(usage_response[:amount_currency]).to eq('EUR')
+        expect(usage_response[:total_amount_cents]).to eq(6)
+        expect(usage_response[:total_amount_currency]).to eq('EUR')
+        expect(usage_response[:vat_amount_cents]).to eq(1)
+        expect(usage_response[:vat_amount_currency]).to eq('EUR')
+
+        charge_usage = usage_response[:charges_usage].first
+        expect(charge_usage[:billable_metric][:name]).to eq(billable_metric.name)
+        expect(charge_usage[:billable_metric][:code]).to eq(billable_metric.code)
+        expect(charge_usage[:billable_metric][:aggregation_type]).to eq('count_agg')
+        expect(charge_usage[:charge][:charge_model]).to eq('graduated')
+        expect(charge_usage[:units]).to eq('4.0')
+        expect(charge_usage[:amount_cents]).to eq(5)
+        expect(charge_usage[:amount_currency]).to eq('EUR')
+      end
+    end
+  end
 end
