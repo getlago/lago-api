@@ -71,7 +71,7 @@ Charge.create_with(
 
   next if customer.events.exists?
 
-  # NOTE: Assigns events to the customer
+  # NOTE: Assigns valid events
   5.times do
     time = Time.zone.now - rand(1..20).days
 
@@ -92,6 +92,7 @@ Charge.create_with(
     )
   end
 
+  # NOTE: Assigns events missing custom property
   5.times do
     time = Time.zone.now - rand(1..20).days
 
@@ -110,6 +111,7 @@ Charge.create_with(
     )
   end
 
+  # NOTE: Assigns events with invalid code
   5.times do
     time = Time.zone.now - rand(1..20).days
 
@@ -121,6 +123,29 @@ Charge.create_with(
       created_at: time,
       code: 'foo',
       properties: {},
+      metadata: {
+        user_agent: 'Lago Python v0.1.5',
+        ip_address: Faker::Internet.ip_v4_address,
+      },
+    )
+  end
+end
+
+# NOTE: Regenerate events for the customers
+organization.customers.find_each do |customer|
+  5.times do
+    time = Time.zone.now
+
+    Event.create!(
+      customer: customer,
+      organization: organization,
+      transaction_id: SecureRandom.uuid,
+      timestamp: time - rand(0..24).hours,
+      created_at: time,
+      code: billable_metric.code,
+      properties: {
+        custom_field: 10,
+      },
       metadata: {
         user_agent: 'Lago Python v0.1.5',
         ip_address: Faker::Internet.ip_v4_address,

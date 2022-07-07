@@ -224,4 +224,112 @@ RSpec.describe Fees::ChargeService do
       end
     end
   end
+
+  describe '.current_usage' do
+    context 'with all types of aggregation' do
+      BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
+        before do
+          billable_metric.update!(
+            aggregation_type: aggregation_type,
+            field_name: 'foo_bar',
+          )
+        end
+
+        it 'initializes fees' do
+          result = charge_subscription_service.current_usage
+
+          expect(result).to be_success
+
+          usage_fee = result.fee
+
+          aggregate_failures do
+            expect(usage_fee.id).to be_nil
+            expect(usage_fee.invoice_id).to eq(invoice.id)
+            expect(usage_fee.charge_id).to eq(charge.id)
+            expect(usage_fee.amount_cents).to eq(0)
+            expect(usage_fee.amount_currency).to eq('EUR')
+            expect(usage_fee.vat_amount_cents).to eq(0)
+            expect(usage_fee.vat_rate).to eq(20.0)
+            expect(usage_fee.units).to eq(0)
+          end
+        end
+      end
+    end
+
+    context 'with graduated charge model' do
+      let(:charge) do
+        create(
+          :graduated_charge,
+          plan: subscription.plan,
+          charge_model: 'graduated',
+          billable_metric: billable_metric,
+          properties: [
+            {
+              from_value: 0,
+              to_value: nil,
+              per_unit_amount: '0.01',
+              flat_amount: '0.01',
+            },
+          ],
+        )
+      end
+
+      before do
+        create_list(
+          :event,
+          4,
+          organization: subscription.organization,
+          customer: subscription.customer,
+          code: charge.billable_metric.code,
+          timestamp: DateTime.parse('2022-03-16'),
+        )
+      end
+
+      it 'initialize a fee' do
+        result = charge_subscription_service.current_usage
+
+        expect(result).to be_success
+
+        usage_fee = result.fee
+
+        aggregate_failures do
+          expect(usage_fee.id).to be_nil
+          expect(usage_fee.invoice_id).to eq(invoice.id)
+          expect(usage_fee.charge_id).to eq(charge.id)
+          expect(usage_fee.amount_cents).to eq(5)
+          expect(usage_fee.amount_currency).to eq('EUR')
+          expect(usage_fee.vat_amount_cents).to eq(1)
+          expect(usage_fee.vat_rate).to eq(20.0)
+          expect(usage_fee.units.to_s).to eq('4.0')
+        end
+      end
+    end
+
+    context 'with aggregation error' do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          aggregation_type: 'max_agg',
+          field_name: 'foo_bar',
+        )
+      end
+      let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
+      let(:error_result) { BaseService::Result.new.fail!('aggregation_failure') }
+
+      it 'returns an error' do
+        allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
+          .and_return(aggregator_service)
+        allow(aggregator_service).to receive(:aggregate)
+          .and_return(error_result)
+
+        result = charge_subscription_service.current_usage
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq('aggregation_failure')
+
+        expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
+        expect(aggregator_service).to have_received(:aggregate)
+      end
+    end
+  end
 end

@@ -11,6 +11,27 @@ module Fees
     def create
       return result if already_billed?
 
+      init_fee
+      return result unless result.success?
+
+      result.fee.save!
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.fail_with_validations!(e.record)
+    end
+
+    def current_usage
+      init_fee
+    end
+
+    private
+
+    attr_accessor :invoice, :charge
+
+    delegate :customer, :plan, :subscription, to: :invoice
+    delegate :billable_metric, to: :charge
+
+    def init_fee
       amount_result = compute_amount
       return result.fail!(amount_result.error_code, amount_result.error) unless amount_result.success?
 
@@ -31,20 +52,9 @@ module Fees
       )
 
       new_fee.compute_vat
-      new_fee.save!
-
       result.fee = new_fee
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
     end
-
-    private
-
-    attr_accessor :invoice, :charge
-
-    delegate :customer, :plan, :subscription, to: :invoice
-    delegate :billable_metric, to: :charge
 
     def compute_amount
       aggregated_events = aggregator.aggregate(from_date: charges_from_date, to_date: invoice.to_date)
