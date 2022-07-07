@@ -21,7 +21,7 @@ module Invoices
       template = File.read(Rails.root.join('app/views/templates/invoice.slim'), encoding: 'UTF-8')
       invoice_html = Slim::Template.new { template }.render(invoice)
 
-      pdf_url = "#{ENV['LAGO_PDF_URL']}/forms/chromium/convert/html"
+      pdf_url = URI.join(ENV['LAGO_PDF_URL'], '/forms/chromium/convert/html').to_s
       http_client = LagoHttpClient::Client.new(pdf_url)
       response = http_client.post_multipart_file(
         invoice_html,
