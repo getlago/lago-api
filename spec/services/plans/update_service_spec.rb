@@ -169,17 +169,60 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context 'when attached to a subscription' do
+      let(:existing_charge) do
+        create(
+          :standard_charge,
+          plan_id: plan.id,
+          billable_metric_id: billable_metrics.first.id,
+          amount_currency: 'USD',
+          properties: {
+            amount: '300',
+          },
+        )
+      end
+
+      let(:update_args) do
+        {
+          id: plan.id,
+          name: plan_name,
+          code: 'new_plan',
+          interval: 'monthly',
+          pay_in_advance: false,
+          amount_cents: 200,
+          amount_currency: 'EUR',
+          charges: [
+            {
+              id: existing_charge.id,
+              billable_metric_id: billable_metrics.first.id,
+              amount_currency: 'USD',
+              charge_model: 'standard',
+              properties: {
+                amount: '100',
+              },
+            },
+            {
+              billable_metric_id: billable_metrics.last.id,
+              amount_currency: 'EUR',
+              charge_model: 'standard',
+              properties: {
+                amount: '300',
+              }
+            },
+          ],
+        }
+      end
+
       before do
         create(:subscription, plan: plan)
       end
 
-      it 'updates only name and description' do
+      it 'updates only name description and new charges' do
         result = plans_service.update(**update_args)
 
         updated_plan = result.plan
         aggregate_failures do
           expect(updated_plan.name).to eq('Updated plan name')
-          expect(plan.charges.count).to eq(0)
+          expect(plan.charges.count).to eq(2)
         end
       end
     end
@@ -262,7 +305,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect(plan_result.name).to eq(update_args[:name])
           expect(plan_result.description).to eq(update_args[:description])
           expect(plan_result.amount_cents).not_to eq(update_args[:amount_cents])
-          expect(plan.charges.count).to eq(0)
+          expect(plan.charges.count).to eq(2)
         end
       end
     end

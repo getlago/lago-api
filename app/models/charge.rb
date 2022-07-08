@@ -3,7 +3,7 @@
 class Charge < ApplicationRecord
   include Currencies
 
-  belongs_to :plan
+  belongs_to :plan, touch: true
   belongs_to :billable_metric
 
   has_many :fees
