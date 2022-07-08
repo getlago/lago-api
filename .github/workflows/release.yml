@@ -16,6 +16,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+      - name: Add version into docker image
+        run: echo ${{ github.event.client_payload.version }} > LAGO_VERSION
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
