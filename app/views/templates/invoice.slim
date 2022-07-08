@@ -165,7 +165,8 @@ html
     .wrapper
       .mb-24
         h1.invoice-title Invoice
-        img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
+        - if organization.logo.present?
+          img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
       
       .mb-24.overflow-auto
         .invoice-information-column
@@ -226,8 +227,6 @@ html
                   | Add On - #{fees.first.add_on.name}
                 - elsif subscription?
                   | Subscription - #{plan.name}
-              .body-3
-                | From #{from_date.strftime('%b %d, %Y')} to #{to_date.strftime('%b %d, %Y')}
             - if add_on?
               td.body-1 style="text-align: right;" width="30%"
                 = fees.first&.amount&.format
@@ -238,16 +237,12 @@ html
             tr
               td width="70%"
                 .body-1 All usage based fees
-                .body-3
-                  | From #{from_date.strftime('%b %d, %Y')} to #{to_date.strftime('%b %d, %Y')}
               td.body-1 style="text-align: right;" width="30%"
                 = charge_amount.format
           - if credits.any?
             tr
               td width="70%"
                 .body-1 Coupons
-                .body-3
-                  | From #{from_date.strftime('%b %d, %Y')} to #{to_date.strftime('%b %d, %Y')}
               td.body-1 style="text-align: right; color: #008559;" width="30%"
                 = credit_amount.format
 
