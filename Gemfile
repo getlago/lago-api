@@ -30,6 +30,9 @@ gem 'lograge'
 gem 'lograge-sql'
 gem 'logstash-event'
 
+# Multipart support
+gem 'multipart-post'
+
 # Monitoring
 gem 'newrelic_rpm'
 gem 'sentry-rails'
@@ -37,6 +40,9 @@ gem 'sentry-ruby'
 
 # Storage
 gem 'aws-sdk-s3', require: false
+
+# PDF Templating
+gem 'slim'
 
 group :development, :test, :staging do
   gem 'factory_bot_rails'

@@ -39,5 +39,7 @@ module Types
 
     field :destroy_payment_provider, mutation: Mutations::PaymentProviders::Destroy
     field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe
+
+    field :download_invoice, mutation: Mutations::Invoices::Download
   end
 end

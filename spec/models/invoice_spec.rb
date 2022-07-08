@@ -112,4 +112,28 @@ RSpec.describe Invoice, type: :model do
       expect(invoice.number).to eq("LAG-#{organization_id_substring}-001-001")
     end
   end
+
+  describe 'charge_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:fees) { create_list(:fee, 3, invoice: invoice) }
+
+    it 'returns the charges amount' do
+      expect(invoice.charge_amount.to_s).to eq('0.00')
+    end
+  end
+
+  describe 'credit_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:credit) { create(:credit, invoice: invoice) }
+
+    it 'returns the credits amount' do
+      expect(invoice.credit_amount.to_s).to eq('0.00')
+    end
+  end
 end

@@ -33,6 +33,15 @@ class Organization < ApplicationRecord
     Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
   end
 
+  def base64_logo
+    return if logo.blank?
+
+    logo.blob.open do |tempfile|
+      data = tempfile.read
+      Base64.encode64(data)
+    end
+  end
+
   private
 
   def generate_api_key

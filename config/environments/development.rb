@@ -25,7 +25,7 @@ Rails.application.configure do
     config.cache_store = :null_store
   end
 
-  config.active_storage.service = if ENV['LAGO_USE_AWS_S3']
+  config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present?
     :amazon
   else
     :local
