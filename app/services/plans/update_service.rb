@@ -52,7 +52,7 @@ module Plans
         plan.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         plan.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
         plan.trial_period = params[:trial_period] if params.key?(:trial_period)
-        plan.bill_charges_monthly = params[:interval].to_sym == :yearly ? params[:bill_charges_monthly] || false : nil
+        plan.bill_charges_monthly = params[:interval]&.to_sym == :yearly ? params[:bill_charges_monthly] || false : nil
       end
 
       unless params[:charges].blank?
@@ -80,7 +80,7 @@ module Plans
       plan.charges.create!(
         billable_metric_id: args[:billable_metric_id],
         amount_currency: args[:amount_currency],
-        charge_model: args[:charge_model].to_sym,
+        charge_model: args[:charge_model]&.to_sym,
         properties: args[:properties] || {},
       )
     end
