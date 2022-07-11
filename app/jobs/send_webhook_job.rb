@@ -27,6 +27,11 @@ class SendWebhookJob < ApplicationJob
       Webhooks::PaymentProviders::CustomerCreatedService.new(object).call
     when :payment_provider_customer_error
       Webhooks::PaymentProviders::CustomerErrorService.new(object, options).call
+
+    # NOTE: This add the new way of managing webhooks
+    # A refact has to be done to improve webhooks management internally
+    when 'invoice.generated'
+      Webhooks::Invoices::GeneratedService.new(object).call
     else
       raise NotImplementedError
     end
