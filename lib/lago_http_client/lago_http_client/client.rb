@@ -29,7 +29,7 @@ module LagoHttpClient
 
       JSON.parse(response.body&.presence || '{}')
     rescue JSON::ParserError
-      response.body
+      response.body&.presence || '{}'
     end
 
     def post_multipart_file(file_content, file_type, file_name, options = {})
