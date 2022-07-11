@@ -37,6 +37,7 @@ gem 'multipart-post'
 gem 'newrelic_rpm'
 gem 'sentry-rails'
 gem 'sentry-ruby'
+gem 'sentry-sidekiq'
 
 # Storage
 gem 'aws-sdk-s3', require: false
