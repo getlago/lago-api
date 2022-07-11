@@ -28,6 +28,8 @@ module LagoHttpClient
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
       JSON.parse(response.body&.presence || '{}')
+    rescue JSON::ParserError
+      response.body&.presence || '{}'
     end
 
     def post_multipart_file(file_content, file_type, file_name, options = {})

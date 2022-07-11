@@ -37,6 +37,16 @@ RSpec.describe LagoHttpClient::Client do
           expect(response).to eq({})
         end
       end
+
+      context 'when response is not a JSON' do
+        let(:response) { 'Accepted' }
+
+        it 'returns response body' do
+          response = client.post('', {})
+
+          expect(response).to eq('Accepted')
+        end
+      end
     end
 
     context 'when response status code is NOT 2xx' do
@@ -44,7 +54,7 @@ RSpec.describe LagoHttpClient::Client do
         {
           'status' => 422,
           'error' => 'Unprocessable Entity',
-          'message' => 'Validation error on the record'
+          'message' => 'Validation error on the record',
         }.to_json
       end
 
