@@ -22,7 +22,7 @@ module Invoices
         )
 
         create_subscription_fee(invoice) if should_create_subscription_fee?
-        create_charges_fees(invoice) if should_create_charge_fees?
+        create_charges_fees(invoice) if should_create_charge_fees?(invoice)
 
         compute_amounts(invoice)
 
@@ -163,10 +163,14 @@ module Invoices
       Time.zone.at(timestamp).to_date.month == 1 || (subscription.plan.pay_in_advance && !subscription.already_billed?)
     end
 
-    def should_create_charge_fees?
+    def should_create_charge_fees?(invoice)
       # NOTE: When a subscription is upgraded, the charges will be billed at the end of the period
       #       using the new subscription
       return false if subscription.terminated? && subscription.upgraded?
+
+      # NOTE: Charges should not be billed in advance when we are just upgrading to a new
+      #       pay_in_advance subscription
+      return false if plan.pay_in_advance? && subscription.invoices.where.not(id: invoice.id).count.zero?
 
       true
     end
