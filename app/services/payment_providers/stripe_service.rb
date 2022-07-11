@@ -84,7 +84,7 @@ module PaymentProviders
     end
 
     def handle_event(organization:, event_json:)
-      event = ::Stripe::Event.construct_from(event_json)
+      event = ::Stripe::Event.construct_from(JSON.parse(event_json))
       return result.fail!('invalid_stripe_event_type') unless WEBHOOKS_EVENTS.include?(event.type)
 
       case event.type

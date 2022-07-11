@@ -185,7 +185,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     context 'when payment intent event' do
       let(:event) do
         path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
-        JSON.parse(File.read(path))
+        File.read(path)
       end
 
       it 'routes the event to an other service' do
@@ -204,7 +204,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     context 'when setup intent event' do
       let(:event) do
         path = Rails.root.join('spec/fixtures/stripe/setup_intent_event.json')
-        JSON.parse(File.read(path))
+        File.read(path)
       end
 
       before do
@@ -241,7 +241,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'returns an error result' do
         result = stripe_service.handle_event(
           organization: organization,
-          event_json: event,
+          event_json: event.to_json,
         )
 
         expect(result).not_to be_success
