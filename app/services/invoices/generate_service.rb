@@ -7,7 +7,7 @@ module Invoices
     def generate_from_api(invoice)
       generate_pdf(invoice)
 
-      SendWebhookJob.perform_later('invoice.generated', result.invoice)
+      SendWebhookJob.perform_later('invoice.generated', invoice)
     end
 
     def generate(invoice_id:)
