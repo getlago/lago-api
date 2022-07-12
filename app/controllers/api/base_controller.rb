@@ -3,6 +3,7 @@
 module Api
   class BaseController < ApplicationController
     include Pagination
+    include Common
 
     before_action :authenticate
 

@@ -27,11 +27,11 @@ module Api
 
       def index
         invoices = current_organization.invoices
-                                       .where(date_from_criteria)
-                                       .where(date_to_criteria)
-                                       .order(created_at: :desc)
-                                       .page(params[:page])
-                                       .per(params[:per_page] || PER_PAGE)
+        invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
+        invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
+        invoices = invoices.order(created_at: :desc)
+                           .page(params[:page])
+                           .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
@@ -60,23 +60,11 @@ module Api
       end
 
       def date_from_criteria
-        return {} unless params[:issuing_date_from]
-
-        date_from = Date._strptime(params[:issuing_date_from])
-
-        return {} unless date_from
-
-        {issuing_date: Date.new(date_from[:year], date_from[:mon], date_from[:mday])..}
+        {issuing_date: Date.strptime(params[:issuing_date_from])..}
       end
 
       def date_to_criteria
-        return {} unless params[:issuing_date_to]
-
-        date_to = Date._strptime(params[:issuing_date_to])
-
-        return {} unless date_to
-
-        {issuing_date: ..Date.new(date_to[:year], date_to[:mon], date_to[:mday])}
+        {issuing_date: ..Date.strptime(params[:issuing_date_to])}
       end
     end
   end
