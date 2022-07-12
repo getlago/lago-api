@@ -3,6 +3,13 @@
 module Invoices
   class GenerateService < BaseService
     include ActiveSupport::NumberHelper
+
+    def generate_from_api(invoice)
+      generate_pdf(invoice)
+
+      SendWebhookJob.perform_later('invoice.generated', invoice)
+    end
+
     def generate(invoice_id:)
       invoice = Invoice.find_by(id: invoice_id)
 

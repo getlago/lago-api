@@ -19,6 +19,7 @@ module V1
         vat_amount_currency: model.vat_amount_currency,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.total_amount_currency,
+        file_url: model.file_url,
       }
 
       payload = payload.merge(customer) if include?(:customer)

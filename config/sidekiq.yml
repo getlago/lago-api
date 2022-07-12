@@ -7,6 +7,7 @@ queues:
   - providers
   - billing
   - webhook
+  - invoices
 
 production:
   concurrency: 10

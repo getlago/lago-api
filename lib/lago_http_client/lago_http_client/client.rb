@@ -55,6 +55,29 @@ module LagoHttpClient
       response
     end
 
+    def post_multipart_file(file_content, file_type, file_name, options = {})
+      params = options.merge(
+        {
+          'file1' => UploadIO.new(
+            StringIO.new(file_content),
+            file_type,
+            file_name,
+          ),
+        },
+      )
+
+      req = Net::HTTP::Post::Multipart.new(
+        uri.path,
+        params,
+      )
+
+      response = http_client.request(req)
+
+      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+
+      response
+    end
+
     private
 
     attr_reader :uri, :http_client

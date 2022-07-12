@@ -41,6 +41,25 @@ module Api
         )
       end
 
+      def download
+        invoice = Invoice.find_by(id: params[:id])
+
+        return not_found_error unless invoice
+
+        if invoice.file.present?
+          return render(
+            json: ::V1::InvoiceSerializer.new(
+              invoice,
+              root_name: 'invoice',
+            ),
+          )
+        end
+
+        Invoices::GenerateJob.perform_later(invoice)
+
+        head(:ok)
+      end
+
       private
 
       def update_params
