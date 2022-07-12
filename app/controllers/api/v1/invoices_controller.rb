@@ -27,9 +27,11 @@ module Api
 
       def index
         invoices = current_organization.invoices
-                                       .order(created_at: :desc)
-                                       .page(params[:page])
-                                       .per(params[:per_page] || PER_PAGE)
+        invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
+        invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
+        invoices = invoices.order(created_at: :desc)
+                           .page(params[:page])
+                           .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
@@ -74,6 +76,14 @@ module Api
             includes: %i[customer subscription fees],
           ),
         )
+      end
+
+      def date_from_criteria
+        {issuing_date: Date.strptime(params[:issuing_date_from])..}
+      end
+
+      def date_to_criteria
+        {issuing_date: ..Date.strptime(params[:issuing_date_to])}
       end
     end
   end

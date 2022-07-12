@@ -88,7 +88,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
-          charges: [:billable_metric_id, :amount_currency, :charge_model, properties: {}],
+          charges: [:id, :billable_metric_id, :amount_currency, :charge_model, properties: {}],
         )
       end
 

@@ -102,5 +102,32 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response_body[:meta][:total_count]).to eq(2)
       end
     end
+
+    context 'with issuing_date params' do
+      let(:invoice) { create(:invoice, subscription: subscription, issuing_date: 5.days.ago.to_date) }
+      let(:invoice2) { create(:invoice, subscription: subscription2, issuing_date: 3.days.ago.to_date) }
+      let(:subscription2) { create(:subscription, customer: customer) }
+      let(:invoice3) { create(:invoice, subscription: subscription3, issuing_date: 1.day.ago.to_date) }
+      let(:subscription3) { create(:subscription, customer: customer) }
+
+      before do
+        invoice2
+        invoice3
+      end
+
+      it 'returns invoices with correct issuing date' do
+        get_with_token(
+          organization,
+          "/api/v1/invoices?issuing_date_from=#{2.days.ago.to_date}&issuing_date_to=#{Date.tomorrow.to_date}"
+        )
+
+        expect(response).to have_http_status(:success)
+
+        records = JSON.parse(response.body, symbolize_names: true)[:invoices]
+
+        expect(records.count).to eq(1)
+        expect(records.first[:lago_id]).to eq(invoice3.id)
+      end
+    end
   end
 end
