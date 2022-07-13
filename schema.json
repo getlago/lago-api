@@ -13708,7 +13708,7 @@
               ]
             },
             {
-              "name": "specifiedByUrl",
+              "name": "specifiedByURL",
               "description": null,
               "type": {
                 "kind": "SCALAR",
