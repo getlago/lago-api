@@ -181,7 +181,11 @@ html
       .mb-24.overflow-auto
         .billing-information-column
           .body-1 From
-          .body-2 = organization.name
+          .body-2
+            - if organization.legal_name.present?
+              | #{organization.legal_name}
+            - else
+              | #{organization.name}
           .body-2 = organization.address_line1
           .body-2 = organization.address_line2
           .body-2
