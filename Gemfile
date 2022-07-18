@@ -22,6 +22,9 @@ gem 'sidekiq'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 gem 'with_advisory_lock'
 
+# Analytics
+gem 'analytics-ruby', '~> 2.4.0', :require => 'segment/analytics'
+
 # Payment processing
 gem 'stripe'
 

@@ -13,6 +13,23 @@ module BillableMetrics
       )
 
       result.billable_metric = metric
+
+      Analytics.track(
+        event: 'billable_metric_created',
+        user_id: result.user.memberships.first.id, # TODO: Hash the value
+        properties: {
+          code: metric.code,
+          name: metric.name,
+          description: metric.description,
+          aggregationType: metric.aggregation_type,
+          aggregationProperty: metric.field_name,
+          hostingType: ENV['LAGO_CLOUD'] ? "cloud" : "self",
+          organizationId: metric.organization_id, # TODO: hash
+          version: "" # TODO
+        },
+      )
+
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)

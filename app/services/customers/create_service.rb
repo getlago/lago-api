@@ -26,6 +26,9 @@ module Customers
       handle_api_billing_configuration(customer, params)
 
       result.customer = customer
+
+      track_user_creation(customer, result.user.memberships.first.id)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -56,6 +59,9 @@ module Customers
       create_billing_configuration(customer, args[:stripe_customer])
 
       result.customer = customer
+
+      track_user_creation(customer, result.user.memberships.first.id)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -105,6 +111,21 @@ module Customers
         async: !(billing_configuration || {})[:sync],
       )
       create_result.throw_error unless create_result.success?
+    end
+
+    def track_user_creation(customer, user_id)
+      Analytics.track(
+      event: 'customer_created',
+      user_id: user_id, # TODO: Hash the value
+      properties: {
+        customerId: {{id of the customer}}
+        creationDate: {{datetime of the customer creation in Lago}}
+        paymentProvider: "stripe"
+        hostingType: ENV['LAGO_CLOUD'] ? "cloud" : "self",
+        organizationId: result.user.organizations.first.id, # TODO: hash,
+        version: "" # TODO
+      },
+    )
     end
   end
 end

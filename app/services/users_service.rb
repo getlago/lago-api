@@ -6,6 +6,16 @@ class UsersService < BaseService
     result.token = generate_token if result.user
     result.fail!('incorrect_login_or_password') unless result.user
 
+    Analytics.identify(
+      user_id: result.user.memberships.first.id, # TODO: Hash the value
+      traits: {
+        email: ENV['LAGO_CLOUD'] ? result.user.email : null,
+        hostingType: ENV['LAGO_CLOUD'] ? "cloud" : "self",
+        organizationCreationDate: result.user.organizations.first.created_at,
+        version: "" # TODO
+      },
+    )
+
     result
   end
 
