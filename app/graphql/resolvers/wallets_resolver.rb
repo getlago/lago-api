@@ -1,22 +1,24 @@
 # frozen_string_literal
 
 module Resolvers
-  class WalletsResolver < GraphQL::Schema::Resolver
+  class WalletsResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 
     description 'Query wallets'
 
     argument :ids, [ID], required: false, description: 'List of wallet IDs to fetch'
-    argument :customer_id, required: true
+    argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
     argument :status, Types::Wallets::StatusEnum, required: false
 
     type Types::Wallets::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, status: nil)
+    def resolve(customer_id: nil, ids: nil, page: nil, limit: nil, status: nil)
       validate_organization!
+
+      current_customer = Customer.find(customer_id)
 
       wallets = current_customer
         .wallets
@@ -29,12 +31,6 @@ module Resolvers
       wallets
     rescue ActiveRecord::RecordNotFound
       not_found_error
-    end
-
-    private
-
-    def current_customer
-      @current_customer ||= Customer.find(customer_id)
     end
   end
 end

@@ -3230,6 +3230,34 @@ type Query {
     limit: Int
     page: Int
   ): PlanCollection!
+
+  """
+  Query a single wallet
+  """
+  wallet(
+    """
+    Uniq ID of the wallet
+    """
+    id: ID!
+  ): WalletDetails
+
+  """
+  Query wallets
+  """
+  wallets(
+    """
+    Uniq ID of the customer
+    """
+    customerId: ID!
+
+    """
+    List of wallet IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    status: WalletStatusEnum
+  ): WalletCollection!
 }
 
 type RegisterUser {
@@ -3509,7 +3537,29 @@ type Wallet {
   updatedAt: ISO8601DateTime!
 }
 
+type WalletCollection {
+  collection: [Wallet!]!
+  metadata: CollectionMetadata!
+}
+
+type WalletDetails {
+  balance: String!
+  consumedCredits: String!
+  createdAt: ISO8601DateTime!
+  creditsBalance: String!
+  currency: CurrencyEnum!
+  customer: Customer
+  expirationDate: ISO8601Date
+  id: ID!
+  lastBalanceSyncAt: ISO8601DateTime
+  lastConsumedCreditSyncAt: ISO8601DateTime
+  name: String!
+  rateAmount: String!
+  status: WalletStatusEnum!
+  updatedAt: ISO8601DateTime!
+}
+
 enum WalletStatusEnum {
   active
-  expired
+  terminated
 }

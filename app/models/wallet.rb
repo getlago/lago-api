@@ -3,9 +3,11 @@
 class Wallet < ApplicationRecord
   belongs_to :customer
 
+  has_one :organization, through: :customer
+
   STATUSES = [
     :active,
-    :expired,
+    :terminated,
   ].freeze
 
   enum status: STATUSES
