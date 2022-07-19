@@ -172,7 +172,11 @@ module Fees
         #       amount_to_bill = nb_day * (new_day_price - old_day_price)
         old_day_price = single_day_price(previous_subscription.plan)
 
-        new_number_of_day_to_bill * single_day_price(plan) - old_number_of_day_to_bill * old_day_price
+        amount = new_number_of_day_to_bill * single_day_price(plan) - old_number_of_day_to_bill * old_day_price
+
+        return 0 if amount.negative?
+
+        amount
       else
         # NOTE: Previous subscription was payed in arrear
         #       We only bill the days between the upgrade date and the end of the period

@@ -18,7 +18,6 @@ module Invoices
           charges_from_date: charges_from_date,
           issuing_date: issuing_date,
           invoice_type: :subscription,
-          status: :pending,
         )
 
         create_subscription_fee(invoice) if should_create_subscription_fee?
@@ -30,6 +29,7 @@ module Invoices
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.total_amount_currency = plan.amount_currency
+        invoice.status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.save!
 
         result.invoice = invoice
