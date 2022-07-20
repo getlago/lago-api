@@ -334,7 +334,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_18_083657) do
     t.string "name"
     t.string "rate_amount", null: false
     t.string "credits_balance", default: "0.00", null: false
-    t.string "balance", null: false
+    t.string "balance", default: "0.00", null: false
     t.string "consumed_credits", default: "0.00", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
