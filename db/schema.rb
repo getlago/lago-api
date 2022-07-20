@@ -339,6 +339,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_18_083657) do
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
+    t.datetime "terminated_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"

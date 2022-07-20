@@ -17,6 +17,7 @@ class CreateWallets < ActiveRecord::Migration[7.0]
       t.timestamp :expiration_date
       t.timestamp :last_balance_sync_at
       t.timestamp :last_consumed_credit_at
+      t.timestamp :terminated_at
 
       t.timestamps
     end
