@@ -9,10 +9,10 @@ class CreateWallets < ActiveRecord::Migration[7.0]
       t.string :currency, null: false
 
       t.string :name
-      t.string :rate_amount, null: false
-      t.string :credits_balance, null: false, default: '0.00'
-      t.string :balance, null: false, default: '0.00'
-      t.string :consumed_credits, null: false, default: '0.00'
+      t.decimal :rate_amount, null: false, default: 0, precision: 5
+      t.decimal :credits_balance, null: false, default: 0, precision: 5
+      t.decimal :balance, null: false, default: 0, precision: 5
+      t.decimal :consumed_credits, null: false, default: 0, precision: 5
 
       t.timestamp :expiration_date
       t.timestamp :last_balance_sync_at
