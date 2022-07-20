@@ -3,7 +3,7 @@
 module Wallets
   class CreateService < BaseService
     def create(**args)
-      @current_customer = Customer.find_by(
+      current_customer = Customer.find_by(
         id: args[:customer_id],
         organization_id: args[:organization_id],
       )
@@ -18,10 +18,11 @@ module Wallets
         return result.fail!('no_active_subscription', 'customer does not have any active subscription')
       end
 
-      wallet = customer.wallets.create!(
+      wallet = current_customer.wallets.create!(
         name: args[:name],
         rate_amount: args[:rate_amount],
         expiration_date: args[:expiration_date],
+        currency: default_currency(current_customer),
         status: :active,
       )
 
@@ -29,6 +30,12 @@ module Wallets
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
+    end
+
+    private
+
+    def default_currency(customer)
+      customer.active_subscription&.plan&.amount_currency
     end
   end
 end

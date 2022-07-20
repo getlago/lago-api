@@ -23,7 +23,7 @@ module Mutations
 
         result = ::Wallets::CreateService
           .new(context[:current_user])
-          .create(**args)
+          .create(**args.merge(organization_id: current_organization.id))
 
         result.success? ? result.wallet : result_error(result)
       end

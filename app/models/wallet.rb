@@ -11,4 +11,9 @@ class Wallet < ApplicationRecord
   ].freeze
 
   enum status: STATUSES
+
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
+    terminated!
+  end
 end

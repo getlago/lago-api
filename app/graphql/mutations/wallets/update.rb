@@ -10,6 +10,7 @@ module Mutations
       description 'Updates a new Customer Wallet'
 
       argument :id, ID, required: true
+      argument :name, String, required: false
       argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Wallets::Object

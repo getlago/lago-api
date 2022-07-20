@@ -13,10 +13,10 @@ module Mutations
 
       type Types::Wallets::Object
 
-      def resolve(**args)
+      def resolve(id:)
         result = ::Wallets::TerminateService.new(context[:current_user]).terminate(id)
 
-        result.success? ? result.coupon : result_error(result)
+        result.success? ? result.wallet : result_error(result)
       end
     end
   end
