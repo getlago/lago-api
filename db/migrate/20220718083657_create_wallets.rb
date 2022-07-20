@@ -11,7 +11,7 @@ class CreateWallets < ActiveRecord::Migration[7.0]
       t.string :name
       t.string :rate_amount, null: false
       t.string :credits_balance, null: false, default: '0.00'
-      t.string :balance, null: false, defualt: '0.00'
+      t.string :balance, null: false, default: '0.00'
       t.string :consumed_credits, null: false, default: '0.00'
 
       t.timestamp :expiration_date
