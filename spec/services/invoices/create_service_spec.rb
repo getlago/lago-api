@@ -338,15 +338,15 @@ RSpec.describe Invoices::CreateService, type: :service do
 
     context 'when subscription is pay in advance and is an upgrade' do
       let(:plan) do
-        create(:plan, interval: 'monthly', pay_in_advance: true)
+        create(:plan, interval: :monthly, pay_in_advance: true, amount_cents: 1000)
       end
 
       let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
       let(:started_at) { Time.zone.today - 3.months }
       let(:terminated_at) { timestamp - 2.days }
-      let(:previous_plan) { create(:plan, amount_cents: plan.amount_cents + 20) }
+      let(:previous_plan) { create(:plan, amount_cents: 10000, interval: :yearly, pay_in_advance: true) }
 
-      let(:presious_subscription) do
+      let(:previous_subscription) do
         create(
           :subscription,
           plan: previous_plan,
@@ -361,7 +361,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         create(
           :subscription,
           plan: plan,
-          previous_subscription: presious_subscription,
+          previous_subscription: previous_subscription,
           anniversary_date: started_at.to_date,
           started_at: terminated_at + 1.day,
         )
@@ -369,12 +369,14 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       before { subscription }
 
-      it 'creates an invoice without charge fee' do
+      it 'creates an invoice without charge fee and with amount equal to zero' do
         result = invoice_service.create
 
         aggregate_failures do
           expect(result.invoice.to_date.to_s).to eq(subscription.started_at.to_date.to_s)
           expect(result.invoice.from_date.to_s).to eq(subscription.started_at.to_date.to_s)
+          expect(result.invoice.total_amount_cents).to eq(0)
+          expect(result.invoice.status).to eq('succeeded')
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end
