@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_07_18_083657) do
+ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -327,22 +327,33 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_18_083657) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "wallet_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "wallet_id", null: false
+    t.integer "transaction_type", null: false
+    t.integer "status", null: false
+    t.decimal "amount", precision: 5, default: "0", null: false
+    t.decimal "credit_amount", precision: 5, default: "0", null: false
+    t.datetime "settled_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
+  end
+
   create_table "wallets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "customer_id", null: false
+    t.uuid "customers_id", null: false
     t.integer "status", null: false
     t.string "currency", null: false
     t.string "name"
     t.string "rate_amount", null: false
     t.string "credits_balance", default: "0.00", null: false
-    t.string "balance", default: "0.00", null: false
+    t.string "balance", null: false
     t.string "consumed_credits", default: "0.00", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
-    t.datetime "terminated_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customer_id"], name: "index_wallets_on_customer_id"
+    t.index ["customers_id"], name: "index_wallets_on_customers_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -373,5 +384,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_18_083657) do
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
-  add_foreign_key "wallets", "customers"
+  add_foreign_key "wallet_transactions", "wallets"
+  add_foreign_key "wallets", "customers", column: "customers_id"
 end
