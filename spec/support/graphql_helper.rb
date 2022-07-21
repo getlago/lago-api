@@ -12,13 +12,13 @@ module GraphQLHelper
       context: {
         controller: controller,
         current_user: current_user,
-        current_organization: current_organization
-      }
+        current_organization: current_organization,
+      },
     )
 
     LagoApiSchema.execute(
       query,
-      **args
+      **args,
     )
   end
 
@@ -37,14 +37,14 @@ module GraphQLHelper
   def expect_unauthorized_error(result)
     expect_graphql_error(
       result: result,
-      message: :unauthorized
+      message: :unauthorized,
     )
   end
 
   def expect_forbidden_error(result)
     expect_graphql_error(
       result: result,
-      message: :forbidden
+      message: :forbidden,
     )
   end
 end

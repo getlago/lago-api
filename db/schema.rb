@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_07_13_171816) do
+ActiveRecord::Schema[7.0].define(version: 2022_07_18_083657) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -327,6 +327,24 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_13_171816) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "wallets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.integer "status", null: false
+    t.string "currency", null: false
+    t.string "name"
+    t.decimal "rate_amount", precision: 5, default: "0", null: false
+    t.decimal "credits_balance", precision: 5, default: "0", null: false
+    t.decimal "balance", precision: 5, default: "0", null: false
+    t.decimal "consumed_credits", precision: 5, default: "0", null: false
+    t.datetime "expiration_date", precision: nil
+    t.datetime "last_balance_sync_at", precision: nil
+    t.datetime "last_consumed_credit_at", precision: nil
+    t.datetime "terminated_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_wallets_on_customer_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "add_ons", "organizations"
@@ -355,4 +373,5 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_13_171816) do
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
+  add_foreign_key "wallets", "customers"
 end

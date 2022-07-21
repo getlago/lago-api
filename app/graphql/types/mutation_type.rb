@@ -41,5 +41,9 @@ module Types
     field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe
 
     field :download_invoice, mutation: Mutations::Invoices::Download
+
+    field :create_customer_wallet, mutation: Mutations::Wallets::Create
+    field :update_customer_wallet, mutation: Mutations::Wallets::Update
+    field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate
   end
 end
