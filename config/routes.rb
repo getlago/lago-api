@@ -20,7 +20,7 @@ Rails.application.routes.draw do
         get :current_usage
       end
 
-      resources :subscriptions, only: %i[create update]
+      resources :subscriptions, only: %i[create update index]
       delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code

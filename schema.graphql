@@ -2324,6 +2324,10 @@ type CurrentVersion {
 }
 
 type Customer {
+  """
+  Number of active subscriptions per customer
+  """
+  activeSubscriptionCount: Int!
   addressLine1: String
   addressLine2: String
 
@@ -2360,6 +2364,10 @@ type CustomerCollection {
 }
 
 type CustomerDetails {
+  """
+  Number of active subscriptions per customer
+  """
+  activeSubscriptionCount: Int!
   addressLine1: String
   addressLine2: String
   appliedAddOns: [AppliedAddOn!]
