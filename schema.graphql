@@ -3531,7 +3531,7 @@ type Wallet {
   expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
-  lastConsumedCreditSyncAt: ISO8601DateTime
+  lastConsumedCreditAt: ISO8601DateTime
   name: String!
   rateAmount: String!
   status: WalletStatusEnum!
@@ -3554,7 +3554,7 @@ type WalletDetails {
   expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
-  lastConsumedCreditSyncAt: ISO8601DateTime
+  lastConsumedCreditAt: ISO8601DateTime
   name: String!
   rateAmount: String!
   status: WalletStatusEnum!

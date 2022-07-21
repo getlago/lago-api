@@ -13329,7 +13329,7 @@
               ]
             },
             {
-              "name": "lastConsumedCreditSyncAt",
+              "name": "lastConsumedCreditAt",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -13649,7 +13649,7 @@
               ]
             },
             {
-              "name": "lastConsumedCreditSyncAt",
+              "name": "lastConsumedCreditAt",
               "description": null,
               "type": {
                 "kind": "SCALAR",
