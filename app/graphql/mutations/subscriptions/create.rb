@@ -11,6 +11,8 @@ module Mutations
 
       argument :customer_id, ID, required: true
       argument :plan_id, ID, required: true
+      argument :name, String, required: false
+      argument :subscription_id, ID, required: false
 
       type Types::Subscriptions::Object
 

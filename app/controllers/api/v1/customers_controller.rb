@@ -24,7 +24,9 @@ module Api
 
       def current_usage
         service = Invoices::CustomerUsageService
-          .new(nil, customer_id: params[:customer_id], organization_id: current_organization.id)
+          .new(nil, customer_id: params[:customer_id], subscription_id: params[:subscription_id],
+               organization_id: current_organization.id
+          )
         result = service.usage
 
         if result.success?

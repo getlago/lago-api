@@ -10,6 +10,8 @@ module Types
       field :plan, Types::Plans::Object, null: false
 
       field :status, Types::Subscriptions::StatusTypeEnum
+      field :name, String, null: true
+      field :next_name, String, null: true
 
       field :anniversary_date, GraphQL::Types::ISO8601Date
       field :canceled_at, GraphQL::Types::ISO8601DateTime
@@ -24,6 +26,10 @@ module Types
 
       def next_plan
         object.next_subscription&.plan
+      end
+
+      def next_name
+        object.next_subscription&.name
       end
     end
   end
