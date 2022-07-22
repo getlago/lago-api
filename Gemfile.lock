@@ -76,6 +76,7 @@ GEM
       tzinfo (~> 2.0)
     addressable (2.8.0)
       public_suffix (>= 2.0.2, < 5.0)
+    analytics-ruby (2.4.0)
     aws-eventstream (1.2.0)
     aws-partitions (1.605.0)
     aws-sdk-core (3.131.2)
@@ -329,6 +330,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  analytics-ruby (~> 2.4.0)
   aws-sdk-s3
   bcrypt
   bootsnap
