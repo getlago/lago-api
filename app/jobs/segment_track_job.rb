@@ -1,11 +1,21 @@
 class SegmentTrackJob < ApplicationJob
   queue_as :default
 
-  def perform(membership_id:, event:, properties:)
+  def perform(event:, properties:)
     SEGMENT_CLIENT.track(
-      membership_id: membership_id,
+      user_id: CurrentContext.membership,
       event: event,
-      properties: properties
+      properties: properties.merge(hosting_type, version)
     )
+  end
+
+  private
+
+  def hosting_type
+    { hosting_type: ENV['HOSTING_TYPE'] }
+  end
+
+  def version
+    { version: Utils::VersionService.new.version.version.number }
   end
 end
