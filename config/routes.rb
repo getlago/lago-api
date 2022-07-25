@@ -21,7 +21,7 @@ Rails.application.routes.draw do
       end
 
       resources :subscriptions, only: %i[create update index]
-      delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate
+      delete '/subscriptions/:id', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code
       resources :billable_metrics, param: :code
