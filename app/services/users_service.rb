@@ -59,6 +59,7 @@ class UsersService < BaseService
 
   def track_user_register(organization)
     SegmentTrackJob.perform_later(
+      membership_id: CurrentContext.membership,
       event: 'user_register',
       properties: {
         organization_name: organization.name,

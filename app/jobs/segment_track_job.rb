@@ -1,9 +1,9 @@
 class SegmentTrackJob < ApplicationJob
   queue_as :default
 
-  def perform(event:, properties:)
+  def perform(membership_id:, event:, properties:)
     SEGMENT_CLIENT.track(
-      user_id: CurrentContext.membership,
+      user_id: membership_id,
       event: event,
       properties: properties.merge(hosting_type, version)
     )
@@ -12,7 +12,7 @@ class SegmentTrackJob < ApplicationJob
   private
 
   def hosting_type
-    { hosting_type: ENV['HOSTING_TYPE'] }
+    { hosting_type: ENV['LAGO_CLOUD'] == 'true' ? 'cloud' : 'self' }
   end
 
   def version

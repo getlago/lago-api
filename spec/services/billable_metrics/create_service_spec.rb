@@ -9,6 +9,10 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
   let(:organization) { membership.organization }
 
   describe 'create' do
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     let(:create_args) do
       {
         name: 'New Metric',
@@ -22,6 +26,23 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
     it 'creates a billable metric' do
       expect { create_service.create(**create_args) }
         .to change { BillableMetric.count }.by(1)
+    end
+
+    it 'calls SegmentTrackJob' do
+      metric = create_service.create(**create_args).billable_metric
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'billable_metric_create',
+        properties: {
+          code: metric.code,
+          name: metric.name,
+          description: metric.description,
+          aggregation_type: metric.aggregation_type,
+          aggregation_property: metric.field_name,
+          organization_id: metric.organization_id
+        }
+      )
     end
 
     context 'with validation error' do

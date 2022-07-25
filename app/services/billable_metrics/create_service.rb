@@ -13,9 +13,27 @@ module BillableMetrics
       )
 
       result.billable_metric = metric
+      track_billable_metric_create(metric)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
+    end
+
+    private
+
+    def track_billable_metric_create(metric)
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'billable_metric_create',
+        properties: {
+          code: metric.code,
+          name: metric.name,
+          description: metric.description,
+          aggregation_type: metric.aggregation_type,
+          aggregation_property: metric.field_name,
+          organization_id: metric.organization_id
+        }
+      )
     end
   end
 end

@@ -11,6 +11,7 @@ RSpec.describe UsersService, type: :service do
       result = subject.register('email', 'password', 'organization_name')
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
         event: 'user_register',
         properties: {
           organization_name: result.organization.name,
