@@ -340,20 +340,21 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
   end
 
   create_table "wallets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "customers_id", null: false
+    t.uuid "customer_id", null: false
     t.integer "status", null: false
     t.string "currency", null: false
     t.string "name"
     t.string "rate_amount", null: false
     t.string "credits_balance", default: "0.00", null: false
-    t.string "balance", null: false
+    t.string "balance", default: "0.00", null: false
     t.string "consumed_credits", default: "0.00", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
+    t.datetime "terminated_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customers_id"], name: "index_wallets_on_customers_id"
+    t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -385,5 +386,5 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "wallet_transactions", "wallets"
-  add_foreign_key "wallets", "customers", column: "customers_id"
+  add_foreign_key "wallets", "customers"
 end
