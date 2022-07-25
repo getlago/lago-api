@@ -20,8 +20,9 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :last_balance_sync_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :last_consumed_credit_sync_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :last_consumed_credit_at, GraphQL::Types::ISO8601DateTime, null: true
     end
   end
 end

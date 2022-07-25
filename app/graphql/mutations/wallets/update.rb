@@ -9,13 +9,18 @@ module Mutations
       graphql_name 'UpdateCustomerWallet'
       description 'Updates a new Customer Wallet'
 
-      argument :id, String, required: true
+      argument :id, ID, required: true
+      argument :name, String, required: false
       argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Wallets::Object
 
       def resolve(**args)
-        # Empty
+        result = ::Wallets::UpdateService
+          .new(context[:current_user])
+          .update(**args)
+
+        result.success? ? result.wallet : result_error(result)
       end
     end
   end

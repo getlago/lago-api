@@ -1609,7 +1609,7 @@ input CreateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  customerId: String!
+  customerId: ID!
   expirationDate: ISO8601Date
   grantedCredits: String!
   name: String
@@ -3347,7 +3347,7 @@ input TerminateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  id: String!
+  id: ID!
 }
 
 """
@@ -3463,7 +3463,8 @@ input UpdateCustomerWalletInput {
   """
   clientMutationId: String
   expirationDate: ISO8601Date
-  id: String!
+  id: ID!
+  name: String
 }
 
 """
@@ -3530,10 +3531,11 @@ type Wallet {
   expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
-  lastConsumedCreditSyncAt: ISO8601DateTime
+  lastConsumedCreditAt: ISO8601DateTime
   name: String!
   rateAmount: String!
   status: WalletStatusEnum!
+  terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
 }
 
@@ -3552,10 +3554,11 @@ type WalletDetails {
   expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
-  lastConsumedCreditSyncAt: ISO8601DateTime
+  lastConsumedCreditAt: ISO8601DateTime
   name: String!
   rateAmount: String!
   status: WalletStatusEnum!
+  terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
 }
 
