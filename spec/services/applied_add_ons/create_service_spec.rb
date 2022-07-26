@@ -34,6 +34,10 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
 
     let(:create_result) { create_service.create(**create_args) }
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'applied the add-on to the customer' do
       expect { create_result }.to change(AppliedAddOn, :count).by(1)
 
@@ -45,6 +49,20 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
 
     it 'enqueues a job to bill the add-on' do
       expect { create_result }.to have_enqueued_job(BillAddOnJob)
+    end
+
+    it 'calls SegmentTrackJob' do
+      applied_add_on = create_result.applied_add_on
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'applied_add_on_create',
+        properties: {
+          customer_id: applied_add_on.customer.id,
+          addon_code: applied_add_on.add_on.code,
+          addon_name: applied_add_on.add_on.name
+        }
+      )
     end
 
     context 'with overridden amount and currency' do
@@ -114,6 +132,10 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       )
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'applied the add-on to the customer' do
       expect { create_result }.to change(AppliedAddOn, :count).by(1)
 
@@ -125,6 +147,20 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
 
     it 'enqueues a job to bill the add-on' do
       expect { create_result }.to have_enqueued_job(BillAddOnJob)
+    end
+
+    it 'calls SegmentTrackJob' do
+      applied_add_on = create_result.applied_add_on
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'applied_add_on_create',
+        properties: {
+          customer_id: applied_add_on.customer.id,
+          addon_code: applied_add_on.add_on.code,
+          addon_name: applied_add_on.add_on.name
+        }
+      )
     end
 
     context 'with overridden amount' do

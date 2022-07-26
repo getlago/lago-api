@@ -157,6 +157,7 @@ module Subscriptions
     def subscription_type
       return 'downgrade' if downgrade?
       return 'upgrade' if upgrade?
+
       'create'
     end
 
