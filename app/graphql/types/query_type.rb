@@ -24,5 +24,7 @@ module Types
     field :current_version, resolver: Resolvers::VersionResolver
     field :wallets, resolver: Resolvers::WalletsResolver
     field :wallet, resolver: Resolvers::WalletResolver
+    field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
+    field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
   end
 end

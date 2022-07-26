@@ -5,6 +5,8 @@ class Wallet < ApplicationRecord
 
   has_one :organization, through: :customer
 
+  has_many :wallet_transactions
+
   STATUSES = [
     :active,
     :terminated,
