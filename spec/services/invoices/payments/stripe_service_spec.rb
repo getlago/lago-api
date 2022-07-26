@@ -33,6 +33,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             currency: invoice.total_amount_currency,
           ),
         )
+      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     it 'creates a stripe payment and a payment' do
@@ -53,6 +54,20 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       expect(Stripe::PaymentIntent).to have_received(:create)
+    end
+
+    it 'calls SegmentTrackJob' do
+      invoice = stripe_service.create.payment.invoice
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'payment_status_changed',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          payment_status: invoice.status
+        }
+      )
     end
 
     context 'with no payment provider' do
@@ -205,7 +220,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       )
     end
 
-    before { payment }
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+      payment
+    end
 
     it 'updates the payment and invoice status' do
       result = stripe_service.update_status(
@@ -216,6 +234,23 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       expect(result).to be_success
       expect(result.payment.status).to eq('succeeded')
       expect(result.invoice.status).to eq('succeeded')
+    end
+
+    it 'calls SegmentTrackJob' do
+      invoice = stripe_service.update_status(
+        provider_payment_id: 'ch_123456',
+        status: 'succeeded',
+      ).payment.invoice
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'payment_status_changed',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          payment_status: invoice.status
+        }
+      )
     end
 
     context 'when invoice is already succeeded' do
