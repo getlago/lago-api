@@ -46,7 +46,7 @@ RSpec.describe Subscriptions::TerminateService do
 
       before { next_subscription }
 
-      it 'canceled the next subscription' do
+      it 'cancels the next subscription' do
         result = terminate_service.terminate(subscription.id)
 
         aggregate_failures do
