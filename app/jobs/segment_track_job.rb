@@ -2,6 +2,8 @@ class SegmentTrackJob < ApplicationJob
   queue_as :default
 
   def perform(membership_id:, event:, properties:)
+    return if ENV['LAGO_DISABLE_SEGMENT'] == 'true'
+
     SEGMENT_CLIENT.track(
       user_id: membership_id,
       event: event,

@@ -10,6 +10,10 @@ describe SegmentTrackJob, job: true do
       { method: 1 }
     end
 
+    before do
+      stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => '')
+    end
+
     it "calls SegmentTrackJob's process method" do
       expect(SEGMENT_CLIENT).to receive(:track)
         .with(
@@ -33,6 +37,15 @@ describe SegmentTrackJob, job: true do
           hash_including(properties: hash_including(hosting_type: 'cloud'))
         )
 
+        subject.perform_now(membership_id: membership_id, event: event, properties: properties)
+      end
+    end
+
+    context 'when LAGO_DISABLE_SEGMENT is true' do
+      it 'does not call SegmentTrackJob' do
+        stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => 'true')
+
+        expect(SEGMENT_CLIENT).not_to receive(:track)
         subject.perform_now(membership_id: membership_id, event: event, properties: properties)
       end
     end
