@@ -28,6 +28,7 @@ jobs:
       ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
       LAGO_API_URL: https://api.lago.dev
       LAGO_PDF_URL: https://pdf.lago.dev
+      SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
