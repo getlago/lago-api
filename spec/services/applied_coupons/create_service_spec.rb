@@ -34,6 +34,10 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
     let(:create_result) { create_service.create(**create_args) }
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'applied the coupon to the customer' do
       expect { create_result }.to change(AppliedCoupon, :count).by(1)
 
@@ -41,6 +45,21 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       expect(create_result.applied_coupon.coupon).to eq(coupon)
       expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
       expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
+    end
+
+    it 'calls SegmentTrackJob' do
+      applied_coupon = create_result.applied_coupon
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'applied_coupon_create',
+        properties: {
+          customer_id: applied_coupon.customer.id,
+          coupon_code: applied_coupon.coupon.code,
+          coupon_name: applied_coupon.coupon.name,
+          organization_id: applied_coupon.coupon.organization_id
+        }
+      )
     end
 
     context 'with overridden amount' do
@@ -134,13 +153,32 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       )
     end
 
-    it 'applied the coupon to the customer' do
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
+    it 'applies the coupon to the customer' do
       expect { create_result }.to change(AppliedCoupon, :count).by(1)
 
       expect(create_result.applied_coupon.customer).to eq(customer)
       expect(create_result.applied_coupon.coupon).to eq(coupon)
       expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
       expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
+    end
+
+    it 'calls SegmentTrackJob' do
+      applied_coupon = create_result.applied_coupon
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'applied_coupon_create',
+        properties: {
+          customer_id: applied_coupon.customer.id,
+          coupon_code: applied_coupon.coupon.code,
+          coupon_name: applied_coupon.coupon.name,
+          organization_id: applied_coupon.coupon.organization_id
+        }
+      )
     end
 
     context 'with overridden amount' do
