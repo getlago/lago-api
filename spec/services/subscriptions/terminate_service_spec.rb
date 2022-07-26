@@ -33,6 +33,28 @@ RSpec.describe Subscriptions::TerminateService do
         expect(result.error).to eq('not_found')
       end
     end
+
+    context 'when pending next subscription' do
+      let(:subscription) { create(:subscription) }
+      let(:next_subscription) do
+        create(
+          :subscription,
+          previous_subscription: subscription,
+          status: :pending,
+        )
+      end
+
+      before { next_subscription }
+
+      it 'cancels the next subscription' do
+        result = terminate_service.terminate(subscription.id)
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(next_subscription.reload).to be_canceled
+        end
+      end
+    end
   end
 
   describe '.terminate_and_start_next' do

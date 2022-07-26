@@ -63,6 +63,9 @@ module Subscriptions
           .perform_later(subscription, subscription.terminated_at)
       end
 
+      # NOTE: Pending next subscription should be canceled as well
+      subscription.next_subscription&.mark_as_canceled!
+
       result.subscription = subscription
       result
     end
