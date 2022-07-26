@@ -3,8 +3,9 @@
 class Event < ApplicationRecord
   belongs_to :organization
   belongs_to :customer
+  belongs_to :subscription
 
-  validates :transaction_id, presence: true, uniqueness: { scope: :organization_id }
+  validates :transaction_id, presence: true, uniqueness: { scope: :subscription_id }
   validates :code, presence: true
 
   scope :from_date, ->(from_date) { where('events.timestamp >= ?', from_date.beginning_of_day) }

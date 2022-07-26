@@ -33,6 +33,7 @@ Rails.application.routes.draw do
         post :download, on: :member
       end
       resources :plans, param: :code
+      post '/events/batch', to: 'events#batch'
 
       put '/organizations', to: 'organizations#update'
 

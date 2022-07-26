@@ -10,6 +10,7 @@ module V1
         code: model.code,
         timestamp: model.timestamp.iso8601,
         properties: model.properties,
+        subscription_id: model.subscription_id,
         created_at: model.created_at.iso8601
       }
     end

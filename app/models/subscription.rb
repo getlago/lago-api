@@ -7,6 +7,7 @@ class Subscription < ApplicationRecord
 
   has_one :organization, through: :customer
   has_many :next_subscriptions, class_name: 'Subscription', foreign_key: :previous_subscription_id
+  has_many :events
 
   has_many :invoices
   has_many :fees
