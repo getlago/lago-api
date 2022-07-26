@@ -31,7 +31,7 @@ class UsersService < BaseService
       )
     end
 
-    track_user_register(result.organization)
+    track_user_register(result.organization, result.membership)
 
     result
   end
@@ -57,9 +57,9 @@ class UsersService < BaseService
     }
   end
 
-  def track_user_register(organization)
+  def track_user_register(organization, membership)
     SegmentTrackJob.perform_later(
-      membership_id: CurrentContext.membership,
+      membership_id: "membership/#{membership.id}",
       event: 'user_register',
       properties: {
         organization_name: organization.name,
