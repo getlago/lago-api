@@ -31,6 +31,8 @@ class UsersService < BaseService
       )
     end
 
+    track_user_register(result.organization, result.membership)
+
     result
   end
 
@@ -53,5 +55,16 @@ class UsersService < BaseService
       sub: result.user.id,
       exp: Time.now.to_i + 8640 # 6 hours expiration
     }
+  end
+
+  def track_user_register(organization, membership)
+    SegmentTrackJob.perform_later(
+      membership_id: "membership/#{membership.id}",
+      event: 'user_register',
+      properties: {
+        organization_name: organization.name,
+        organization_id: organization.id,
+      }
+    )
   end
 end
