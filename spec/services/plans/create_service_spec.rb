@@ -53,6 +53,10 @@ RSpec.describe Plans::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates a plan' do
       expect { plans_service.create(**create_args) }
         .to change(Plan, :count).by(1)
@@ -60,6 +64,30 @@ RSpec.describe Plans::CreateService, type: :service do
       plan = Plan.order(:created_at).last
 
       expect(plan.charges.count).to eq(2)
+    end
+
+    it 'calls SegmentTrackJob' do
+      plan = plans_service.create(**create_args).plan
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'plan_create',
+        properties: {
+          code: plan.code,
+          name: plan.name,
+          description: plan.description,
+          plan_interval: plan.interval,
+          plan_amount_cents: plan.amount_cents,
+          plan_period: 'arrears',
+          trial: plan.trial_period,
+          nb_charges: 2,
+          nb_standard_charges: 1,
+          nb_percentage_charges: 0,
+          nb_graduated_charges: 1,
+          nb_package_charges: 0,
+          organization_id: plan.organization_id
+        }
+      )
     end
 
     context 'with validation error' do
