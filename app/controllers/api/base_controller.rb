@@ -6,6 +6,7 @@ module Api
     include Common
 
     before_action :authenticate
+    include Trackable
 
     private
 
