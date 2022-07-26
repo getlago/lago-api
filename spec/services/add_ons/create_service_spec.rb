@@ -20,9 +20,27 @@ RSpec.describe AddOns::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates an add-on' do
       expect { create_service.create(**create_args) }
         .to change(AddOn, :count).by(1)
+    end
+
+    it 'calls SegmentTrackJob' do
+      add_on = create_service.create(**create_args).add_on
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'add_on_create',
+        properties: {
+          addon_code: add_on.code,
+          addon_name: add_on.name,
+          organization_id: add_on.organization_id
+        }
+      )
     end
 
     context 'with validation error' do
