@@ -18,18 +18,32 @@ RSpec.describe Invoices::CreateService, type: :service do
     end
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+    let(:timestamp) { Time.zone.now.beginning_of_month }
+
+    let(:plan) do
+      create(:plan, interval: 'monthly')
+    end
 
     before do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
+    it 'calls SegmentTrackJob' do
+      invoice = invoice_service.create.invoice
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'invoice_create',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          invoice_type: invoice.invoice_type
+        }
+      )
     end
 
     context 'when billed monthly' do
-      let(:timestamp) { Time.zone.now.beginning_of_month }
-
-      let(:plan) do
-        create(:plan, interval: 'monthly')
-      end
-
       it 'creates an invoice' do
         result = invoice_service.create
 

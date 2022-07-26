@@ -37,6 +37,7 @@ module Invoices
 
       SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
       create_payment(result.invoice)
+      track_invoice_create(result.invoice)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -222,6 +223,18 @@ module Invoices
       when :stripe
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
       end
+    end
+
+    def track_invoice_create(invoice)
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'invoice_create',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          invoice_type: invoice.invoice_type
+        }
+      )
     end
   end
 end
