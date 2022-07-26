@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_07_18_124337) do
+ActiveRecord::Schema[7.0].define(version: 2022_07_25_152220) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -317,6 +317,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_18_124337) do
     t.uuid "previous_subscription_id"
     t.date "anniversary_date"
     t.string "name"
+    t.string "unique_id", null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end

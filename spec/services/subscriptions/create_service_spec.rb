@@ -16,6 +16,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         customer_id: customer.customer_id,
         plan_code: plan.code,
         name: 'invoice display name',
+        unique_id: SecureRandom.uuid,
       }
     end
 
@@ -44,6 +45,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: SecureRandom.uuid,
           plan_code: plan.code,
+          unique_id: SecureRandom.uuid,
         }
       end
 
@@ -85,6 +87,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: nil,
           plan_code: plan.code,
+          unique_id: SecureRandom.uuid,
         }
       end
 
@@ -104,6 +107,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: customer.customer_id,
           plan_code: 'invalid_plan',
+          unique_id: SecureRandom.uuid,
         }
       end
 
@@ -125,6 +129,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_code: plan.code,
           name: 'invoice display name',
           subscription_id: subscription.id,
+          unique_id: SecureRandom.uuid,
         }
       end
       let(:subscription) do
@@ -146,7 +151,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           {
             customer_id: customer.customer_id,
             plan_code: new_plan.code,
-            name: 'invoice display name new'
+            name: 'invoice display name new',
+            unique_id: SecureRandom.uuid,
           }
         end
 
@@ -182,6 +188,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               plan_code: higher_plan.code,
               name: 'invoice display name new',
               subscription_id: subscription.id,
+              unique_id: SecureRandom.uuid,
             }
           end
 
@@ -276,6 +283,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               plan_code: lower_plan.code,
               name: 'invoice display name new',
               subscription_id: subscription.id,
+              unique_id: SecureRandom.uuid,
             }
           end
 
