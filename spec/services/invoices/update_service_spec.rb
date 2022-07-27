@@ -15,6 +15,10 @@ RSpec.describe Invoices::UpdateService do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'updates the invoice' do
       result = invoice_service.update_from_api(
         invoice_id: invoice_id,
@@ -26,6 +30,23 @@ RSpec.describe Invoices::UpdateService do
         expect(result.invoice).to eq(invoice)
         expect(result.invoice.status).to eq(update_args[:status])
       end
+    end
+
+    it 'calls SegmentTrackJob' do
+      invoice = invoice_service.update_from_api(
+        invoice_id: invoice_id,
+        params: update_args,
+      ).invoice
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'payment_status_changed',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          payment_status: invoice.status
+        }
+      )
     end
 
     context 'when invoice does not exist' do

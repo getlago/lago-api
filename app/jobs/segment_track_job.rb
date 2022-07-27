@@ -5,7 +5,7 @@ class SegmentTrackJob < ApplicationJob
     return if ENV['LAGO_DISABLE_SEGMENT'] == 'true'
 
     SEGMENT_CLIENT.track(
-      user_id: membership_id,
+      user_id: membership_id || 'membership/unidentifiable',
       event: event,
       properties: properties.merge(hosting_type, version)
     )

@@ -34,6 +34,7 @@ module Invoices
         payment.save!
 
         update_invoice_status(payment.status)
+        track_payment_status_changed(payment.invoice)
 
         result.payment = payment
         result
@@ -49,6 +50,7 @@ module Invoices
 
         payment.update!(status: status)
         payment.invoice.update!(status: status)
+        track_payment_status_changed(payment.invoice)
 
         result
       rescue ArgumentError
@@ -159,6 +161,18 @@ module Invoices
             message: stripe_error.message,
             error_code: stripe_error.code,
           },
+        )
+      end
+
+      def track_payment_status_changed(invoice)
+        SegmentTrackJob.perform_later(
+          membership_id: CurrentContext.membership,
+          event: 'payment_status_changed',
+          properties: {
+            organization_id: invoice.organization.id,
+            invoice_id: invoice.id,
+            payment_status: invoice.status
+          }
         )
       end
     end

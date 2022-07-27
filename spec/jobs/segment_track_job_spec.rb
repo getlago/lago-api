@@ -4,7 +4,7 @@ describe SegmentTrackJob, job: true do
   subject { described_class }
 
   describe '.perform' do
-    let(:membership_id) { CurrentContext.membership }
+    let(:membership_id) { "membership/#{SecureRandom.uuid}" }
     let(:event) { 'event' }
     let(:properties) do
       { method: 1 }
@@ -12,6 +12,7 @@ describe SegmentTrackJob, job: true do
 
     before do
       stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => '')
+      allow(CurrentContext).to receive(:membership).and_return(membership_id)
     end
 
     it "calls SegmentTrackJob's process method" do
@@ -38,6 +39,16 @@ describe SegmentTrackJob, job: true do
         )
 
         subject.perform_now(membership_id: membership_id, event: event, properties: properties)
+      end
+    end
+
+    context 'when membership is nil' do
+      it 'sends event to an unidentifiable membership' do
+        expect(SEGMENT_CLIENT).to receive(:track).with(
+          hash_including(user_id: 'membership/unidentifiable')
+        )
+
+        subject.perform_now(membership_id: nil, event: event, properties: properties)
       end
     end
 
