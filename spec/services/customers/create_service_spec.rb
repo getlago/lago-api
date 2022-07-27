@@ -44,7 +44,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'customer_create',
+        event: 'customer_created',
         properties: {
           customer_id: customer.id,
           created_at: customer.created_at,
@@ -258,7 +258,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'customer_create',
+        event: 'customer_created',
         properties: {
           customer_id: customer.id,
           created_at: customer.created_at,

@@ -39,7 +39,7 @@ class UsersService < BaseService
     end
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
-    track_user_register(result.organization, result.membership)
+    track_organization_registered(result.organization, result.membership)
 
     result
   end
@@ -65,10 +65,10 @@ class UsersService < BaseService
     }
   end
 
-  def track_user_register(organization, membership)
+  def track_organization_registered(organization, membership)
     SegmentTrackJob.perform_later(
       membership_id: "membership/#{membership.id}",
-      event: 'user_register',
+      event: 'organization_registered',
       properties: {
         organization_name: organization.name,
         organization_id: organization.id,

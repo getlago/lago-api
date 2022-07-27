@@ -14,7 +14,7 @@ module Coupons
       )
 
       result.coupon = coupon
-      track_coupon_create(result.coupon)
+      track_coupon_created(result.coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -22,10 +22,10 @@ module Coupons
 
     private
 
-    def track_coupon_create(coupon)
+    def track_coupon_created(coupon)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'coupon_create',
+        event: 'coupon_created',
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,

@@ -21,7 +21,7 @@ RSpec.describe UsersService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: "membership/#{result.membership.id}",
-        event: 'user_register',
+        event: 'organization_registered',
         properties: {
           organization_name: result.organization.name,
           organization_id: result.organization.id

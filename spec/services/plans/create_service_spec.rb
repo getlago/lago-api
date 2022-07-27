@@ -71,7 +71,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'plan_create',
+        event: 'plan_created',
         properties: {
           code: plan.code,
           name: plan.name,

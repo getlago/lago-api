@@ -26,7 +26,7 @@ module Customers
       handle_api_billing_configuration(customer, params)
 
       result.customer = customer
-      track_customer_create(customer)
+      track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -57,7 +57,7 @@ module Customers
       create_billing_configuration(customer, args[:stripe_customer])
 
       result.customer = customer
-      track_customer_create(customer)
+      track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -109,10 +109,10 @@ module Customers
       create_result.throw_error unless create_result.success?
     end
 
-    def track_customer_create(customer)
+    def track_customer_created(customer)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'customer_create',
+        event: 'customer_created',
         properties: {
           customer_id: customer.id,
           created_at: customer.created_at,
