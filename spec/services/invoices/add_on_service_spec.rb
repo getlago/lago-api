@@ -24,6 +24,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
 
     before do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     it 'creates an invoice' do
@@ -52,6 +53,20 @@ RSpec.describe Invoices::AddOnService, type: :service do
       expect do
         invoice_service.create
       end.to have_enqueued_job(SendWebhookJob)
+    end
+
+    it 'calls SegmentTrackJob' do
+      invoice = invoice_service.create.invoice
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'invoice_created',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          invoice_type: invoice.invoice_type
+        }
+      )
     end
 
     context 'when organization does not have a webhook url' do

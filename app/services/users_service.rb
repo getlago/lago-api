@@ -5,10 +5,7 @@ class UsersService < BaseService
     result.user = User.find_by(email: email)&.authenticate(password)
     result.token = generate_token if result.user
 
-    unless result.user
-      result.fail!('incorrect_login_or_password')
-      return result
-    end
+    return result.fail!('incorrect_login_or_password') unless result.user
 
     # Note: We're tracking the first membership linked to the user.
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.user.memberships.first.id}")
