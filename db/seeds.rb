@@ -131,6 +131,41 @@ Charge.create_with(
   end
 end
 
+first_customer = organization.customers.first
+
+wallet = Wallet.create!(
+  customer: first_customer,
+  name: 'My Active Wallet',
+  status: :active,
+  rate_amount: BigDecimal('1.00'),
+  balance: BigDecimal('100.00'),
+  credits_balance: BigDecimal('100.00'),
+  currency: 'EUR',
+)
+
+Wallet.create!(
+  customer: first_customer,
+  name: 'My Terminated Wallet',
+  status: :terminated,
+  terminated_at: Time.zone.now - 3.days,
+  rate_amount: BigDecimal('1.00'),
+  balance: BigDecimal('86.00'),
+  credits_balance: BigDecimal('86.00'),
+  consumed_credits: BigDecimal('114.00'),
+  currency: 'EUR',
+)
+
+3.times do
+  WalletTransaction.create!(
+    wallet: wallet,
+    transaction_type: :outbound,
+    status: :settled,
+    amount: BigDecimal('10.00'),
+    credit_amount: BigDecimal('10.00'),
+    settled_at: Time.zone.now,
+  )
+end
+
 # NOTE: Regenerate events for the customers
 organization.customers.find_each do |customer|
   5.times do
