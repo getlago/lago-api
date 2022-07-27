@@ -17,6 +17,10 @@ RSpec.describe Customers::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates a new customer' do
       result = customers_service.create_from_api(
         organization: organization,
@@ -30,6 +34,24 @@ RSpec.describe Customers::CreateService, type: :service do
       expect(customer.organization_id).to eq(organization.id)
       expect(customer.customer_id).to eq(create_args[:customer_id])
       expect(customer.name).to eq(create_args[:name])
+    end
+
+    it 'calls SegmentTrackJob' do
+      customer = customers_service.create_from_api(
+        organization: organization,
+        params: create_args,
+      ).customer
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'customer_create',
+        properties: {
+          customer_id: customer.id,
+          created_at: customer.created_at,
+          payment_provider: customer.payment_provider,
+          organization_id: customer.organization_id
+        }
+      )
     end
 
     context 'when customer already exists' do
@@ -213,6 +235,10 @@ RSpec.describe Customers::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates a new customer' do
       result = customers_service.create(**create_args)
 
@@ -225,6 +251,21 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.customer_id).to eq(create_args[:customer_id])
         expect(customer.name).to eq(create_args[:name])
       end
+    end
+
+    it 'calls SegmentTrackJob' do
+      customer = customers_service.create(**create_args).customer
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'customer_create',
+        properties: {
+          customer_id: customer.id,
+          created_at: customer.created_at,
+          payment_provider: customer.payment_provider,
+          organization_id: customer.organization_id
+        }
+      )
     end
 
     context 'when customer already exists' do

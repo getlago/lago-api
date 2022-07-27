@@ -65,6 +65,7 @@ module AppliedAddOns
       )
 
       result.applied_add_on = applied_add_on
+      track_applied_add_on_create(result.applied_add_on)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -80,6 +81,18 @@ module AppliedAddOns
 
     def active_subscription
       @active_subscription ||= customer.active_subscription
+    end
+
+    def track_applied_add_on_create(applied_add_on)
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'applied_add_on_create',
+        properties: {
+          customer_id: applied_add_on.customer.id,
+          addon_code: applied_add_on.add_on.code,
+          addon_name: applied_add_on.add_on.name
+        }
+      )
     end
   end
 end

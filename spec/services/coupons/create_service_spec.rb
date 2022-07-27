@@ -21,9 +21,27 @@ RSpec.describe Coupons::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates a coupon' do
       expect { create_service.create(**create_args) }
         .to change(Coupon, :count).by(1)
+    end
+
+    it 'calls SegmentTrackJob' do
+      coupon = create_service.create(**create_args).coupon
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'coupon_create',
+        properties: {
+          coupon_code: coupon.code,
+          coupon_name: coupon.name,
+          organization_id: coupon.organization_id
+        }
+      )
     end
 
     context 'with validation error' do

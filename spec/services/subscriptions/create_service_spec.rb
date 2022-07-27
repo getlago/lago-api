@@ -18,6 +18,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates a subscription' do
       result = create_service.create_from_api(
         organization: organization,
@@ -35,6 +39,26 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.anniversary_date).to be_present
         expect(subscription).to be_active
       end
+    end
+
+    it 'calls SegmentTrackJob' do
+      subscription = create_service.create_from_api(
+        organization: organization,
+        params: params,
+      ).subscription
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'subscription_create',
+        properties: {
+          created_at: subscription.created_at,
+          customer_id: subscription.customer_id,
+          plan_code: subscription.plan.code,
+          plan_name: subscription.plan.name,
+          subscription_type: 'create',
+          organization_id: subscription.organization.id
+        }
+      )
     end
 
     context 'when customer does not exists' do
@@ -313,6 +337,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       }
     end
 
+    before do
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
     it 'creates a subscription' do
       result = create_service.create(**params)
 
@@ -327,6 +355,23 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.anniversary_date).to be_present
         expect(subscription).to be_active
       end
+    end
+
+    it 'calls SegmentTrackJob' do
+      subscription = create_service.create(**params).subscription
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'subscription_create',
+        properties: {
+          created_at: subscription.created_at,
+          customer_id: subscription.customer_id,
+          plan_code: subscription.plan.code,
+          plan_name: subscription.plan.name,
+          subscription_type: 'create',
+          organization_id: subscription.organization.id
+        }
+      )
     end
 
     context 'when customer does not exists' do

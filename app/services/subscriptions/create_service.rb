@@ -43,6 +43,7 @@ module Subscriptions
       return result.fail!('missing_argument', 'plan does not exists') unless current_plan
 
       result.subscription = handle_subscription
+      track_subscription_create(result.subscription)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -151,6 +152,28 @@ module Subscriptions
 
     def cancel_pending_subscription
       current_subscription.next_subscription.mark_as_canceled!
+    end
+
+    def subscription_type
+      return 'downgrade' if downgrade?
+      return 'upgrade' if upgrade?
+
+      'create'
+    end
+
+    def track_subscription_create(subscription)
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'subscription_create',
+        properties: {
+          created_at: subscription.created_at,
+          customer_id: subscription.customer_id,
+          plan_code: subscription.plan.code,
+          plan_name: subscription.plan.name,
+          subscription_type: subscription_type,
+          organization_id: subscription.organization.id
+        }
+      )
     end
   end
 end
