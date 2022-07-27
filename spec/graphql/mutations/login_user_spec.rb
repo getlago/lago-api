@@ -19,6 +19,7 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
 
   it 'returns token and user' do
     user = create(:user)
+    create(:membership, user: user)
 
     result = execute_graphql(
       query: mutation,
