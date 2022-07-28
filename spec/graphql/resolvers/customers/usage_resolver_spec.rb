@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
   let(:query) do
     <<~GQL
-      query($customerId: ID!) {
-        customerUsage(customerId: $customerId) {
+      query($customerId: ID!, $subscriptionId: ID!) {
+        customerUsage(customerId: $customerId, subscriptionId: $subscriptionId) {
           fromDate,
           toDate,
           issuingDate,
@@ -81,6 +81,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       query: query,
       variables: {
         customerId: customer.id,
+        subscriptionId: subscription.id
       },
     )
 

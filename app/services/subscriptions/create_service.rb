@@ -17,7 +17,7 @@ module Subscriptions
         code: params[:plan_code]&.strip,
       )
       @name = params[:name]&.strip
-      @current_subscription = find_current_subscription(@current_customer, params[:subscription_id])
+      @current_subscription = find_current_subscription(params[:subscription_id])
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
@@ -35,7 +35,7 @@ module Subscriptions
         id: args[:plan_id]&.strip,
       )
       @name = args[:name]&.strip
-      @current_subscription = find_current_subscription(@current_customer, args[:subscription_id])
+      @current_subscription = find_current_subscription(args[:subscription_id])
 
       process_create
     end
@@ -53,18 +53,18 @@ module Subscriptions
       result.fail_with_validations!(e.record)
     end
 
-    def find_current_subscription(customer, subscription_id)
-      return nil unless customer
+    def find_current_subscription(subscription_id)
+      return nil unless current_customer
       return nil unless subscription_id
 
-      customer.subscriptions.active.find_by(id: subscription_id)
+      current_customer.subscriptions.active.find_by(id: subscription_id)
     end
 
     def handle_subscription
       return upgrade_subscription if upgrade?
       return downgrade_subscription if downgrade?
 
-      current_subscription || create_subscription
+      create_subscription
     end
 
     def upgrade?
@@ -82,6 +82,10 @@ module Subscriptions
     end
 
     def create_subscription
+      if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
+        return result.fail!('missing_argument', 'invalid_currency')
+      end
+
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
@@ -184,6 +188,12 @@ module Subscriptions
           organization_id: subscription.organization.id
         }
       )
+    end
+
+    def currency_missmatch?(old_plan, new_plan)
+      return false unless old_plan
+
+      old_plan.amount_currency != new_plan.amount_currency
     end
   end
 end

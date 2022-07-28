@@ -8,12 +8,13 @@ module Resolvers
       description 'Query the usage of the customer on the current billing period'
 
       argument :customer_id, type: ID, required: false
+      argument :subscription_id, type: ID, required: true
 
       type Types::Invoices::Usage, null: false
 
-      def resolve(customer_id:)
+      def resolve(customer_id:, subscription_id:)
         result = Invoices::CustomerUsageService
-          .new(context[:current_user], customer_id: customer_id)
+          .new(context[:current_user], customer_id: customer_id, subscription_id: subscription_id)
           .usage
 
         result.success? ? result.usage : result_error(result)
