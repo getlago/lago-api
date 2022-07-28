@@ -9,6 +9,7 @@ module Types
       field :code, String, null: false
 
       field :customer_id, String, null: false
+      field :subscription_id, String, null: false
       field :transaction_id, String, null: true
 
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
@@ -35,6 +36,7 @@ module Types
           event: {
             transaction_id: object.transaction_id,
             customer_id: object.customer.customer_id,
+            subscription_id: object.subscription_id,
             code: object.code,
             timestamp: object.timestamp.to_i,
             properties: object.properties || {},
