@@ -65,11 +65,7 @@ module Invoices
     def find_subscription(subscription_id)
       return nil unless customer
 
-      active_subscriptions = customer.active_subscriptions
-
-      return nil unless active_subscriptions
-
-      active_subscriptions.find_by(id: subscription_id)
+      customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
     def from_date

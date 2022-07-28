@@ -62,7 +62,7 @@ module Subscriptions
       return nil unless current_customer
       return nil unless subscription_id
 
-      current_customer.subscriptions.active.find_by(id: subscription_id)
+      current_customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
     def handle_subscription

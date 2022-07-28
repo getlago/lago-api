@@ -9,6 +9,13 @@ module Subscriptions
       process_terminate(subscription)
     end
 
+    def terminate_from_api(organization:, subscription_id:)
+      subscription = organization.subscriptions.find_by(id: subscription_id)
+      return result.fail!('not_found', 'subscription is not found') if subscription.blank?
+
+      process_terminate(subscription)
+    end
+
     # NOTE: Called to terminate a downgraded subscription
     def terminate_and_start_next(subscription:, timestamp:)
       next_subscription = subscription.next_subscription
