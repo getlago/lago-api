@@ -17,6 +17,20 @@ module Api
         head(:ok)
       end
 
+      def batch
+        validate_result = EventsService.new.validate_batch_params(params: batch_params)
+        return validation_errors(validate_result) unless validate_result.success?
+
+        Events::CreateBatchJob.perform_later(
+          current_organization,
+          batch_params,
+          Time.zone.now.to_i,
+          event_metadata,
+        )
+
+        head(:ok)
+      end
+
       def show
         event = Event.find_by(
           organization: current_organization,
@@ -43,6 +57,20 @@ module Api
             :customer_id,
             :code,
             :timestamp,
+            :subscription_id,
+            properties: {},
+          )
+      end
+
+      def batch_params
+        params
+          .require(:event)
+          .permit(
+            :transaction_id,
+            :customer_id,
+            :code,
+            :timestamp,
+            subscription_ids: [],
             properties: {},
           )
       end
