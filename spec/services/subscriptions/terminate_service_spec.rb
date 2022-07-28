@@ -57,6 +57,51 @@ RSpec.describe Subscriptions::TerminateService do
     end
   end
 
+  describe '.terminate_from_api' do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
+    let(:subscription) do
+      create(
+        :subscription,
+        customer: customer,
+        plan: plan,
+        status: :active,
+        anniversary_date: Time.zone.now.to_date,
+        started_at: Time.zone.now,
+      )
+    end
+
+    it 'terminates a subscription' do
+      result = terminate_service
+        .terminate_from_api(organization: organization,
+                            customer_id: customer.customer_id,
+                            subscription_id: subscription.id
+        )
+
+      aggregate_failures do
+        expect(result.subscription).to be_present
+        expect(result.subscription).to be_terminated
+        expect(result.subscription.terminated_at).to be_present
+      end
+    end
+
+    it 'enqueues a BillSubscriptionJob' do
+      expect do
+        terminate_service.terminate(subscription.id)
+      end.to have_enqueued_job(BillSubscriptionJob)
+    end
+
+    context 'when subscription is not found' do
+      it 'returns an error' do
+        result = terminate_service
+          .terminate_from_api(organization: organization, customer_id: customer.customer_id, subscription_id: 'invalid')
+
+        expect(result.error).to eq('no_active_subscription')
+      end
+    end
+  end
+
   describe '.terminate_and_start_next' do
     let(:subscription) { create(:subscription) }
     let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }

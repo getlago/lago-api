@@ -164,18 +164,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
       before { subscription }
 
-      context 'when plan is the same' do
-        it 'returns new subscription' do
-          result = create_service.create_from_api(
-            organization: organization,
-            params: params,
-          )
-
-          expect(result).to be_success
-          expect(result.subscription.id).not_to eq(subscription.id)
-        end
-      end
-
       context 'when new plan has different currency than the old plan' do
         let(:new_plan) { create(:plan, amount_cents: 200, organization: organization, amount_currency: 'USD') }
         let(:params) do
@@ -186,14 +174,26 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           }
         end
 
-        it 'terminates the existing subscription' do
+        it 'fails' do
+          result = create_service.create_from_api(
+            organization: organization,
+            params: params,
+            )
+
+          expect(result).not_to be_success
+          expect(result.error).to eq('currencies does not match')
+        end
+      end
+
+      context 'when plan is the same' do
+        it 'returns new subscription' do
           result = create_service.create_from_api(
             organization: organization,
             params: params,
           )
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('invalid_currency')
+          expect(result).to be_success
+          expect(result.subscription.id).not_to eq(subscription.id)
         end
       end
 
