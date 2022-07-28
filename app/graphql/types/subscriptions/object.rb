@@ -11,6 +11,7 @@ module Types
 
       field :status, Types::Subscriptions::StatusTypeEnum
       field :name, String, null: true
+      field :next_name, String, null: true
 
       field :anniversary_date, GraphQL::Types::ISO8601Date
       field :canceled_at, GraphQL::Types::ISO8601DateTime
@@ -30,6 +31,10 @@ module Types
       # TODO: remove after billing time introduction
       def anniversary_date
         object.subscription_date
+      end
+
+      def next_name
+        object.next_subscription&.name
       end
     end
   end
