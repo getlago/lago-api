@@ -3386,6 +3386,7 @@ type StripeProvider {
 }
 
 type Subscription {
+  anniversaryDate: ISO8601Date
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
   customer: Customer!
@@ -3398,7 +3399,6 @@ type Subscription {
   plan: Plan!
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
-  subscriptionDate: ISO8601Date
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
 }

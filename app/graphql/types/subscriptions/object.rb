@@ -14,7 +14,7 @@ module Types
       field :next_name, String, null: true
       field :next_pending_start_date, GraphQL::Types::ISO8601Date
 
-      field :subscription_date, GraphQL::Types::ISO8601Date
+      field :anniversary_date, GraphQL::Types::ISO8601Date
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
