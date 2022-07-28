@@ -2350,6 +2350,11 @@ type Customer {
   createdAt: ISO8601DateTime!
   customerId: String!
   email: String
+
+  """
+  Define if a customer has an active wallet
+  """
+  hasActiveWallet: Boolean!
   id: ID!
   legalName: String
   legalNumber: String
@@ -2388,6 +2393,11 @@ type CustomerDetails {
   createdAt: ISO8601DateTime!
   customerId: String!
   email: String
+
+  """
+  Define if a customer has an active wallet
+  """
+  hasActiveWallet: Boolean!
   id: ID!
   invoices: [Invoice!]
   legalName: String
@@ -3600,11 +3610,6 @@ type WalletTransaction {
   amount: String!
   createdAt: ISO8601DateTime!
   creditAmount: String!
-
-  """
-  Define if a customer has an active wallet
-  """
-  hasActiveWallet: Boolean!
   id: ID!
   settledAt: ISO8601DateTime
   status: WalletTransactionStatusEnum!
@@ -3622,11 +3627,6 @@ type WalletTransactionDetails {
   amount: String!
   createdAt: ISO8601DateTime!
   creditAmount: String!
-
-  """
-  Define if a customer has an active wallet
-  """
-  hasActiveWallet: Boolean!
   id: ID!
   settledAt: ISO8601DateTime
   status: WalletTransactionStatusEnum!

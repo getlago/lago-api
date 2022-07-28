@@ -16,12 +16,6 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
-
-      field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
-
-      def has_active_wallet
-        object.wallets.active.any?
-      end
     end
   end
 end
