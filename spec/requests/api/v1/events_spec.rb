@@ -58,7 +58,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       )
 
       expect(response).to have_http_status(:ok)
-      expect(Events::CreateJob).to have_been_enqueued
+      expect(Events::CreateBatchJob).to have_been_enqueued
     end
 
     context 'with missing arguments' do
@@ -78,7 +78,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(Events::CreateJob).not_to have_been_enqueued
+        expect(Events::CreateBatchJob).not_to have_been_enqueued
       end
     end
   end
@@ -96,9 +96,12 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
       api_event = JSON.parse(response.body)['event']
 
-      %w[code transaction_id customer_id subscription_id].each do |property|
+      %w[code transaction_id].each do |property|
         expect(api_event[property]).to eq event.attributes[property]
       end
+
+      expect(api_event['lago_subscription_id']).to eq event.subscription_id
+      expect(api_event['lago_customer_id']).to eq event.customer_id
     end
 
     context 'with a non-existing transaction_id' do

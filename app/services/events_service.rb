@@ -2,10 +2,10 @@
 
 class EventsService < BaseService
   def validate_params(params:)
-    mandatory_augments = %i[transaction_id code]
+    mandatory_arguments = %i[transaction_id code]
     mandatory_subscription_arguments = %i[subscription_id customer_id]
 
-    missing_arguments = mandatory_augments.select { |arg| params[arg].blank? }
+    missing_arguments = mandatory_arguments.select { |arg| params[arg].blank? }
     missing_subscription_arguments = mandatory_subscription_arguments.select { |arg| params[arg].blank? }
     return result if missing_arguments.blank? && missing_subscription_arguments.count <= 1
 
@@ -13,9 +13,9 @@ class EventsService < BaseService
   end
 
   def validate_batch_params(params:)
-    mandatory_augments = %i[transaction_id code subscription_ids]
+    mandatory_arguments = %i[transaction_id code subscription_ids]
 
-    missing_arguments = mandatory_augments.select { |arg| params[arg].blank? }
+    missing_arguments = mandatory_arguments.select { |arg| params[arg].blank? }
     return result if missing_arguments.blank?
 
     result.fail!('missing_mandatory_param', nil, missing_arguments)

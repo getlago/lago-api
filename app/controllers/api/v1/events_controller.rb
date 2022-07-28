@@ -21,12 +21,11 @@ module Api
         validate_result = EventsService.new.validate_batch_params(params: batch_params)
         return validation_errors(validate_result) unless validate_result.success?
 
-        Events::CreateJob.perform_later(
+        Events::CreateBatchJob.perform_later(
           current_organization,
           batch_params,
           Time.zone.now.to_i,
           event_metadata,
-          true
         )
 
         head(:ok)
