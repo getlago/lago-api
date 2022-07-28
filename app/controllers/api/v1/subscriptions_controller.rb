@@ -58,6 +58,25 @@ module Api
         end
       end
 
+      def index
+        customer = Customer.find_by(customer_id: params[:customer_id])
+
+        return not_found_error unless customer
+
+        subscriptions = customer.active_subscriptions
+                                .page(params[:page])
+                                .per(params[:per_page] || PER_PAGE)
+
+        render(
+          json: ::CollectionSerializer.new(
+            subscriptions,
+            ::V1::SubscriptionSerializer,
+            collection_name: 'subscriptions',
+            meta: pagination_metadata(subscriptions),
+          ),
+        )
+      end
+
       private
 
       def create_params
