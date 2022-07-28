@@ -12,6 +12,7 @@ module Types
       field :status, Types::Subscriptions::StatusTypeEnum
       field :name, String, null: true
       field :next_name, String, null: true
+      field :next_pending_start_date, GraphQL::Types::ISO8601Date
 
       field :anniversary_date, GraphQL::Types::ISO8601Date
       field :canceled_at, GraphQL::Types::ISO8601DateTime
