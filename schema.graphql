@@ -1647,7 +1647,9 @@ input CreateSubscriptionInput {
   """
   clientMutationId: String
   customerId: ID!
+  name: String
   planId: ID!
+  subscriptionId: ID
 }
 
 enum CurrencyEnum {
@@ -3347,6 +3349,7 @@ type Subscription {
   createdAt: ISO8601DateTime!
   customer: Customer!
   id: ID!
+  name: String
   nextPlan: Plan
   pendingStartDate: ISO8601Date
   plan: Plan!
