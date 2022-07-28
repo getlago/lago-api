@@ -3212,7 +3212,7 @@ type Query {
   """
   Query the usage of the customer on the current billing period
   """
-  customerUsage(customerId: ID): CustomerUsage!
+  customerUsage(customerId: ID, subscriptionId: ID!): CustomerUsage!
 
   """
   Query customers of an organization
