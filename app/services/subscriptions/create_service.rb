@@ -59,9 +59,6 @@ module Subscriptions
     end
 
     def find_current_subscription(subscription_id)
-      return nil unless current_customer
-      return nil unless subscription_id
-
       current_customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
