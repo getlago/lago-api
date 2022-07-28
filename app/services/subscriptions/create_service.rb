@@ -68,7 +68,7 @@ module Subscriptions
       return upgrade_subscription if upgrade?
       return downgrade_subscription if downgrade?
 
-      create_subscription
+      existing_subscription || create_subscription
     end
 
     def upgrade?
@@ -197,6 +197,10 @@ module Subscriptions
       return false unless old_plan
 
       old_plan.amount_currency != new_plan.amount_currency
+    end
+
+    def existing_subscription
+      @existing_subscription ||= Subscription.active.find_by(unique_id: unique_id, customer_id: current_customer.id)
     end
   end
 end
