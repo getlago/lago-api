@@ -171,10 +171,13 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "metadata", default: {}, null: false
+    t.uuid "subscription_id"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
-    t.index ["organization_id", "transaction_id"], name: "index_events_on_organization_id_and_transaction_id", unique: true
     t.index ["organization_id"], name: "index_events_on_organization_id"
+    t.index ["subscription_id", "code"], name: "index_events_on_subscription_id_and_code"
+    t.index ["subscription_id", "transaction_id"], name: "index_events_on_subscription_id_and_transaction_id", unique: true
+    t.index ["subscription_id"], name: "index_events_on_subscription_id"
   end
 
   create_table "fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -372,6 +375,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
   add_foreign_key "customers", "organizations"
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
+  add_foreign_key "events", "subscriptions"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"

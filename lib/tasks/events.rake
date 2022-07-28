@@ -8,4 +8,11 @@ namespace :events do
       event.update!(timestamp: event.created_at)
     end
   end
+
+  desc 'Fill missing subscription_id'
+  task fill_subscription: :environment do
+    Event.where(subscription_id: nil).find_each do |event|
+      event.update!(subscription_id: event.customer.active_subscription&.id)
+    end
+  end
 end

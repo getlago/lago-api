@@ -2603,6 +2603,7 @@ type Event {
   matchCustomField: Boolean!
   payload: JSON!
   receivedAt: ISO8601DateTime!
+  subscriptionId: String!
   timestamp: ISO8601DateTime
   transactionId: String
 }
