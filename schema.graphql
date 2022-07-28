@@ -3600,9 +3600,14 @@ type WalletTransaction {
   amount: String!
   createdAt: ISO8601DateTime!
   creditAmount: String!
+
+  """
+  Define if a customer has an active wallet
+  """
+  hasActiveWallet: Boolean!
   id: ID!
   settledAt: ISO8601DateTime
-  status: WalletStatusEnum!
+  status: WalletTransactionStatusEnum!
   transactionType: WalletTransactionTransactionTypeEnum!
   updatedAt: ISO8601DateTime!
   wallet: Wallet
@@ -3617,9 +3622,14 @@ type WalletTransactionDetails {
   amount: String!
   createdAt: ISO8601DateTime!
   creditAmount: String!
+
+  """
+  Define if a customer has an active wallet
+  """
+  hasActiveWallet: Boolean!
   id: ID!
   settledAt: ISO8601DateTime
-  status: WalletStatusEnum!
+  status: WalletTransactionStatusEnum!
   transactionType: WalletTransactionTransactionTypeEnum!
   updatedAt: ISO8601DateTime!
   wallet: Wallet
