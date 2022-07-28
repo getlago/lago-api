@@ -46,6 +46,11 @@ module Subscriptions
       return result.fail!('missing_argument', 'unable to find customer') unless current_customer
       return result.fail!('missing_argument', 'plan does not exists') unless current_plan
 
+      if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
+        return result.fail!('currencies_does_not_match', 'currencies does not match')
+      end
+
+
       result.subscription = handle_subscription
       track_subscription_created(result.subscription)
       result
@@ -82,10 +87,6 @@ module Subscriptions
     end
 
     def create_subscription
-      if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
-        return result.fail!('missing_argument', 'invalid_currency')
-      end
-
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
