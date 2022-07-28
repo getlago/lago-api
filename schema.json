@@ -5917,6 +5917,24 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "activeSubscriptionCount",
+              "description": "Number of active subscriptions per customer",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "addressLine1",
               "description": null,
               "type": {
@@ -6376,6 +6394,24 @@
           ],
           "possibleTypes": null,
           "fields": [
+            {
+              "name": "activeSubscriptionCount",
+              "description": "Number of active subscriptions per customer",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
             {
               "name": "addressLine1",
               "description": null,

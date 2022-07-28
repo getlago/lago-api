@@ -34,6 +34,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
+      field :active_subscription_count, Integer, null: false, description: 'Number of active subscriptions per customer'
 
       field :can_be_deleted, Boolean, null: false do
         description 'Check if customer is deletable'
@@ -45,6 +46,10 @@ module Types
 
       def has_active_wallet
         object.wallets.active.any?
+      end
+
+      def active_subscription_count
+        object.active_subscriptions.count
       end
     end
   end
