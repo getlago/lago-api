@@ -24,7 +24,11 @@ module Api
 
       # NOTE: We can't destroy a subscription, it will terminate it
       def terminate
-        result = Subscriptions::TerminateService.new.terminate(params[:subscription_id])
+        result = Subscriptions::TerminateService.new
+          .terminate_from_api(
+            organization: current_organization,
+            subscription_id: params[:id]
+          )
 
         if result.success?
           render(
@@ -41,18 +45,19 @@ module Api
       def update
         service = Subscriptions::UpdateService.new
 
-        result = service.update(**{
+        result = service.update_from_api(
+          organization: current_organization,
           id: params[:id],
-          name: update_params[:name]
-        })
+          params: update_params
+        )
 
         if result.success?
           render(
             json: ::V1::SubscriptionSerializer.new(
               result.subscription,
               root_name: 'subscription',
-              ),
-            )
+            ),
+          )
         else
           render_error_response(result)
         end

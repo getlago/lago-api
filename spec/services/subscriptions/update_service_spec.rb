@@ -44,4 +44,45 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
   end
+
+  describe 'update_from_api' do
+    let(:organization) { membership.organization }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, customer: customer) }
+
+    before { subscription }
+
+    let(:update_args) do
+      {
+        name: 'new name'
+      }
+    end
+
+    it 'updates the subscription' do
+      result = update_service.update_from_api(
+        organization: organization,
+        id: subscription.id,
+        params: update_args
+      )
+
+      expect(result).to be_success
+
+      aggregate_failures do
+        expect(result.subscription.name).to eq('new name')
+      end
+    end
+
+    context 'with invalid id' do
+      it 'returns an error' do
+        result = update_service.update_from_api(
+          organization: organization,
+          id: subscription.id + '123',
+          params: update_args
+        )
+
+        expect(result).to_not be_success
+        expect(result.error_code).to eq('not_found')
+      end
+    end
+  end
 end

@@ -75,10 +75,23 @@ class Subscription < ApplicationRecord
     return unless following_subscription
     return unless following_subscription.pending?
 
-    (following_subscription.created_at.end_of_month + 1.day).to_date
+    last_interval_date(self)
   end
 
   def already_billed?
     fees.subscription_kind.any?
+  end
+
+  def last_interval_date(subscription)
+    case subscription.plan.interval.to_sym
+    when :weekly
+      (subscription.created_at.end_of_week + 1.day).to_date
+    when :monthly
+      (subscription.created_at.end_of_month + 1.day).to_date
+    when :yearly
+      (subscription.created_at.end_of_year + 1.day).to_date
+    else
+      raise NotImplementedError
+    end
   end
 end
