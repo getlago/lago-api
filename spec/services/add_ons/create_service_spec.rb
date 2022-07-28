@@ -34,7 +34,7 @@ RSpec.describe AddOns::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'add_on_create',
+        event: 'add_on_created',
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,

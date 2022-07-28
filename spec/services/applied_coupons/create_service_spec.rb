@@ -52,7 +52,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'applied_coupon_create',
+        event: 'applied_coupon_created',
         properties: {
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,
@@ -171,7 +171,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'applied_coupon_create',
+        event: 'applied_coupon_created',
         properties: {
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,

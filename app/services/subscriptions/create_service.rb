@@ -43,7 +43,7 @@ module Subscriptions
       return result.fail!('missing_argument', 'plan does not exists') unless current_plan
 
       result.subscription = handle_subscription
-      track_subscription_create(result.subscription)
+      track_subscription_created(result.subscription)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -161,10 +161,10 @@ module Subscriptions
       'create'
     end
 
-    def track_subscription_create(subscription)
+    def track_subscription_created(subscription)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'subscription_create',
+        event: 'subscription_created',
         properties: {
           created_at: subscription.created_at,
           customer_id: subscription.customer_id,

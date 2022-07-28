@@ -49,7 +49,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'subscription_create',
+        event: 'subscription_created',
         properties: {
           created_at: subscription.created_at,
           customer_id: subscription.customer_id,
@@ -362,7 +362,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'subscription_create',
+        event: 'subscription_created',
         properties: {
           created_at: subscription.created_at,
           customer_id: subscription.customer_id,

@@ -13,7 +13,7 @@ module AddOns
       )
 
       result.add_on = add_on
-      track_add_on_create(result.add_on)
+      track_add_on_created(result.add_on)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -21,10 +21,10 @@ module AddOns
 
     private
 
-    def track_add_on_create(add_on)
+    def track_add_on_created(add_on)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'add_on_create',
+        event: 'add_on_created',
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,

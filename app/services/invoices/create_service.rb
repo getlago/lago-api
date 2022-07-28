@@ -37,7 +37,7 @@ module Invoices
 
       SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
       create_payment(result.invoice)
-      track_invoice_create(result.invoice)
+      track_invoice_created(result.invoice)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -225,10 +225,10 @@ module Invoices
       end
     end
 
-    def track_invoice_create(invoice)
+    def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'invoice_create',
+        event: 'invoice_created',
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,

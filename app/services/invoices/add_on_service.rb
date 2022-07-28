@@ -29,6 +29,7 @@ module Invoices
         invoice.total_amount_currency = plan.amount_currency
         invoice.save!
 
+        track_invoice_created(invoice)
         result.invoice = invoice
       end
 
@@ -69,6 +70,18 @@ module Invoices
       when :stripe
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
       end
+    end
+
+    def track_invoice_created(invoice)
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'invoice_created',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          invoice_type: invoice.invoice_type
+        }
+      )
     end
   end
 end

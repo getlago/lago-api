@@ -35,7 +35,7 @@ RSpec.describe Coupons::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'coupon_create',
+        event: 'coupon_created',
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,

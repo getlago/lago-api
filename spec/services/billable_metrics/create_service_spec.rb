@@ -33,7 +33,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'billable_metric_create',
+        event: 'billable_metric_created',
         properties: {
           code: metric.code,
           name: metric.name,

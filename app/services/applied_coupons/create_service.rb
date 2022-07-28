@@ -60,7 +60,7 @@ module AppliedCoupons
       )
 
       result.applied_coupon = applied_coupon
-      track_applied_coupon_create(result.applied_coupon)
+      track_applied_coupon_created(result.applied_coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -78,10 +78,10 @@ module AppliedCoupons
       customer.active_subscription.plan.amount_currency == currency
     end
 
-    def track_applied_coupon_create(applied_coupon)
+    def track_applied_coupon_created(applied_coupon)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'applied_coupon_create',
+        event: 'applied_coupon_created',
         properties: {
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,

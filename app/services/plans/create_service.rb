@@ -31,7 +31,7 @@ module Plans
       end
 
       result.plan = plan
-      track_plan_create(plan)
+      track_plan_created(plan)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -48,12 +48,12 @@ module Plans
       )
     end
 
-    def track_plan_create(plan)
+    def track_plan_created(plan)
       count_by_charge_model = plan.charges.group(:charge_model).count
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'plan_create',
+        event: 'plan_created',
         properties: {
           code: plan.code,
           name: plan.name,

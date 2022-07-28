@@ -34,7 +34,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'invoice_create',
+        event: 'invoice_created',
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,

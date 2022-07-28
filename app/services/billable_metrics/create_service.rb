@@ -13,7 +13,7 @@ module BillableMetrics
       )
 
       result.billable_metric = metric
-      track_billable_metric_create(metric)
+      track_billable_metric_created(metric)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
@@ -21,10 +21,10 @@ module BillableMetrics
 
     private
 
-    def track_billable_metric_create(metric)
+    def track_billable_metric_created(metric)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'billable_metric_create',
+        event: 'billable_metric_created',
         properties: {
           code: metric.code,
           name: metric.name,
