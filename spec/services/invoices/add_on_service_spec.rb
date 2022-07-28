@@ -15,7 +15,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       create(
         :subscription,
         plan: plan,
-        anniversary_date: (Time.zone.now - 2.years).to_date,
+        subscription_date: (Time.zone.now - 2.years).to_date,
         started_at: Time.zone.now - 2.years,
       )
     end

@@ -36,7 +36,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.customer_id).to eq(customer.id)
         expect(subscription.plan_id).to eq(plan.id)
         expect(subscription.started_at).to be_present
-        expect(subscription.anniversary_date).to be_present
+        expect(subscription.subscription_date).to be_present
         expect(subscription).to be_active
       end
     end
@@ -83,7 +83,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(subscription.customer.customer_id).to eq(params[:customer_id])
           expect(subscription.plan_id).to eq(plan.id)
           expect(subscription.started_at).to be_present
-          expect(subscription.anniversary_date).to be_present
+          expect(subscription.subscription_date).to be_present
           expect(subscription).to be_active
         end
       end
@@ -147,7 +147,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           customer: customer,
           plan: plan,
           status: :active,
-          anniversary_date: Time.zone.now.to_date,
+          subscription_date: Time.zone.now.to_date,
           started_at: Time.zone.now,
         )
       end
@@ -197,7 +197,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result.subscription).to be_active
               expect(result.subscription.plan.id).to eq(higher_plan.id)
               expect(result.subscription.previous_subscription_id).to eq(subscription.id)
-              expect(result.subscription.anniversary_date).to eq(subscription.anniversary_date)
+              expect(result.subscription.subscription_date).to eq(subscription.subscription_date)
             end
           end
 
@@ -278,7 +278,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(next_subscription.id).not_to eq(subscription.id)
               expect(next_subscription).to be_pending
               expect(next_subscription.plan_id).to eq(lower_plan.id)
-              expect(next_subscription.anniversary_date).to eq(subscription.anniversary_date)
+              expect(next_subscription.subscription_date).to eq(subscription.subscription_date)
               expect(next_subscription.previous_subscription).to eq(subscription)
             end
           end
@@ -352,7 +352,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.customer_id).to eq(customer.id)
         expect(subscription.plan_id).to eq(plan.id)
         expect(subscription.started_at).to be_present
-        expect(subscription.anniversary_date).to be_present
+        expect(subscription.subscription_date).to be_present
         expect(subscription).to be_active
       end
     end
