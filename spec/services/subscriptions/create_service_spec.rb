@@ -10,13 +10,14 @@ RSpec.describe Subscriptions::CreateService, type: :service do
   describe '.create_from_api' do
     let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
     let(:customer) { create(:customer, organization: organization) }
+    let(:unique_id) { SecureRandom.uuid }
 
     let(:params) do
       {
         customer_id: customer.customer_id,
         plan_code: plan.code,
         name: 'invoice display name',
-        unique_id: SecureRandom.uuid,
+        unique_id: unique_id,
       }
     end
 
@@ -45,7 +46,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: SecureRandom.uuid,
           plan_code: plan.code,
-          unique_id: SecureRandom.uuid,
+          unique_id: unique_id,
         }
       end
 
@@ -87,7 +88,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: nil,
           plan_code: plan.code,
-          unique_id: SecureRandom.uuid,
+          unique_id: unique_id,
         }
       end
 
@@ -107,7 +108,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: customer.customer_id,
           plan_code: 'invalid_plan',
-          unique_id: SecureRandom.uuid,
+          unique_id: unique_id,
         }
       end
 
@@ -129,7 +130,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_code: plan.code,
           name: 'invoice display name',
           subscription_id: subscription.id,
-          unique_id: SecureRandom.uuid,
+          unique_id: unique_id,
         }
       end
       let(:subscription) do
@@ -152,7 +153,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             customer_id: customer.customer_id,
             plan_code: new_plan.code,
             name: 'invoice display name new',
-            unique_id: SecureRandom.uuid,
+            unique_id: unique_id,
           }
         end
 
@@ -167,7 +168,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
       end
 
-      context 'when plan is the same' do
+      context 'when plan is the same and unique id is different' do
         it 'returns new subscription' do
           result = create_service.create_from_api(
             organization: organization,
@@ -176,6 +177,22 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
           expect(result).to be_success
           expect(result.subscription.id).not_to eq(subscription.id)
+        end
+      end
+
+      context 'when plan is the same and unique id is the same' do
+        before do
+          subscription.update!(unique_id: unique_id)
+        end
+
+        it 'returns existing subscription' do
+          result = create_service.create_from_api(
+            organization: organization,
+            params: params,
+          )
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
         end
       end
 
@@ -188,7 +205,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               plan_code: higher_plan.code,
               name: 'invoice display name new',
               subscription_id: subscription.id,
-              unique_id: SecureRandom.uuid,
+              unique_id: unique_id,
             }
           end
 
@@ -283,7 +300,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               plan_code: lower_plan.code,
               name: 'invoice display name new',
               subscription_id: subscription.id,
-              unique_id: SecureRandom.uuid,
+              unique_id: unique_id,
             }
           end
 
