@@ -8,6 +8,7 @@ module V1
         lago_customer_id: model.customer_id,
         customer_id: model.customer.customer_id,
         name: model.name,
+        unique_id: model.unique_id,
         plan_code: model.plan.code,
         status: model.status,
         started_at: model.started_at&.iso8601,

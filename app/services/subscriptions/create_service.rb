@@ -2,7 +2,7 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan, :current_subscription, :name
+    attr_reader :current_customer, :current_plan, :current_subscription, :name, :unique_id
 
     def create_from_api(organization:, params:)
       if params[:customer_id]
@@ -17,6 +17,7 @@ module Subscriptions
         code: params[:plan_code]&.strip,
       )
       @name = params[:name]&.strip
+      @unique_id = params[:unique_id]&.strip
       @current_subscription = find_current_subscription(params[:subscription_id])
 
       process_create
@@ -35,6 +36,7 @@ module Subscriptions
         id: args[:plan_id]&.strip,
       )
       @name = args[:name]&.strip
+      @unique_id = SecureRandom.uuid
       @current_subscription = find_current_subscription(args[:subscription_id])
 
       process_create
@@ -88,7 +90,8 @@ module Subscriptions
         customer: current_customer,
         plan_id: current_plan.id,
         subscription_date: Time.zone.now.to_date,
-        name: name
+        name: name,
+        unique_id: unique_id
       )
       new_subscription.mark_as_active!
 
@@ -107,6 +110,7 @@ module Subscriptions
         customer: current_customer,
         plan: current_plan,
         name: name,
+        unique_id: current_subscription.unique_id,
         previous_subscription_id: current_subscription.id,
         subscription_date: current_subscription.subscription_date,
       )
@@ -147,6 +151,7 @@ module Subscriptions
           customer: current_customer,
           plan: current_plan,
           name: name,
+          unique_id: current_subscription.unique_id,
           previous_subscription_id: current_subscription.id,
           subscription_date: current_subscription.subscription_date,
           status: :pending,

@@ -317,6 +317,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
     t.date "subscription_date"
     t.integer "billing_time", default: 0, null: false
     t.string "name"
+    t.string "unique_id", null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end

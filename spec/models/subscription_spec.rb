@@ -124,4 +124,29 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '.valid_unique_id' do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:plan) { create(:plan) }
+    let(:unique_id) { SecureRandom.uuid }
+    let(:subscription) { create(:active_subscription, plan: plan, customer: customer) }
+    let(:new_subscription) { build(:active_subscription, plan: plan, unique_id: unique_id, customer: customer) }
+
+    before { subscription }
+
+    context 'when unique_id is unique' do
+      it 'does not raise validation error if unique_id is unique' do
+        expect(new_subscription).to be_valid
+      end
+    end
+
+    context 'when unique_id is NOT unique' do
+      let(:unique_id) { subscription.unique_id }
+
+      it 'raises validation error' do
+        expect(new_subscription).not_to be_valid
+      end
+    end
+  end
 end

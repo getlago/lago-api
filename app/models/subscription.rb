@@ -11,6 +11,9 @@ class Subscription < ApplicationRecord
   has_many :invoices
   has_many :fees
 
+  validates :unique_id, presence: true
+  validate :validate_unique_id, on: :create
+
   STATUSES = [
     :pending,
     :active,
@@ -93,5 +96,12 @@ class Subscription < ApplicationRecord
     else
       raise NotImplementedError
     end
+  end
+
+  def validate_unique_id
+    return unless active?
+
+    used_ids = customer&.active_subscriptions&.pluck(:unique_id)
+    errors.add(:unique_id, :value_already_exists) if used_ids&.include?(unique_id)
   end
 end

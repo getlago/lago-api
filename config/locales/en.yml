@@ -22,3 +22,4 @@ en:
         invalid_fixed_amount_target: invalid_fixed_amount_target
         invalid_content_type: invalid_content_type
         invalid_size: invalid_size
+        value_already_exists: value_already_exists
