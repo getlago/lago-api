@@ -69,6 +69,15 @@ class Subscription < ApplicationRecord
     (created_at.end_of_month + 1.day).to_date
   end
 
+  def next_pending_start_date
+    following_subscription = next_subscription
+
+    return unless following_subscription
+    return unless following_subscription.pending?
+
+    (following_subscription.created_at.end_of_month + 1.day).to_date
+  end
+
   def already_billed?
     fees.subscription_kind.any?
   end

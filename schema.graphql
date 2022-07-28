@@ -3369,6 +3369,7 @@ type Subscription {
   id: ID!
   name: String
   nextName: String
+  nextPendingStartDate: ISO8601Date
   nextPlan: Plan
   pendingStartDate: ISO8601Date
   plan: Plan!
