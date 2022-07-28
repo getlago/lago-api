@@ -53,9 +53,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before { subscription }
 
     it 'terminates a subscription' do
-      delete_with_token(organization,
-                        "/api/v1/subscriptions?customer_id=#{customer.customer_id}&subscription_id=#{subscription.id}"
-      )
+      delete_with_token(organization, "/api/v1/subscriptions?subscription_id=#{subscription.id}")
 
       expect(response).to have_http_status(:success)
 
@@ -66,9 +64,9 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(result[:terminated_at]).to be_present
     end
 
-    context 'with not existing customer' do
+    context 'with not existing subscription' do
       it 'returns a not found error' do
-        delete_with_token(organization, '/api/v1/subscriptions?customer_id=123456')
+        delete_with_token(organization, '/api/v1/subscriptions?subscription_id=123456')
 
         expect(response).to have_http_status(:not_found)
       end
