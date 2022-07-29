@@ -36,9 +36,6 @@ module Invoices
       Rails.cache.fetch(cache_key, expires_in: cache_expiration.days) do
         @invoice = Invoice.new(
           customer: subscription.customer,
-          charges_from_date: charges_from_date,
-          from_date: from_date,
-          to_date: to_date,
           issuing_date: issuing_date,
         )
 
@@ -189,8 +186,8 @@ module Invoices
 
     def format_usage
       {
-        from_date: invoice.charges_from_date.iso8601,
-        to_date: invoice.to_date.iso8601,
+        from_date: charges_from_date.iso8601,
+        to_date: to_date.iso8601,
         issuing_date: invoice.issuing_date.iso8601,
         amount_cents: invoice.amount_cents,
         amount_currency: invoice.amount_currency,
