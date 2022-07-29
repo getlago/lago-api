@@ -11,12 +11,12 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
   it 'calls the invoices create service' do
     allow(Invoices::CreateService).to receive(:new)
-      .with(subscription: subscription, timestamp: timestamp)
+      .with(subscriptions: [subscription], timestamp: timestamp)
       .and_return(invoice_service)
     allow(invoice_service).to receive(:create)
       .and_return(result)
 
-    described_class.perform_now(subscription, timestamp)
+    described_class.perform_now([subscription], timestamp)
 
     expect(Invoices::CreateService).to have_received(:new)
     expect(invoice_service).to have_received(:create)
@@ -29,13 +29,13 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
     it 'raises an error' do
       allow(Invoices::CreateService).to receive(:new)
-        .with(subscription: subscription, timestamp: timestamp)
+        .with(subscriptions: [subscription], timestamp: timestamp)
         .and_return(invoice_service)
       allow(invoice_service).to receive(:create)
         .and_return(result)
 
       expect do
-        described_class.perform_now(subscription, timestamp)
+        described_class.perform_now([subscription], timestamp)
       end.to raise_error(BaseService::FailedResult)
 
       expect(Invoices::CreateService).to have_received(:new)

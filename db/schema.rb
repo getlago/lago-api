@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_07_27_161448) do
+ActiveRecord::Schema[7.0].define(version: 2022_07_29_062203) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -194,6 +194,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_27_161448) do
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
+    t.jsonb "properties", default: {}, null: false
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
@@ -210,8 +211,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_27_161448) do
   end
 
   create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.date "from_date", null: false
-    t.date "to_date", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "issuing_date"
@@ -221,7 +220,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_27_161448) do
     t.string "vat_amount_currency"
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
-    t.date "charges_from_date"
     t.integer "invoice_type", default: 0, null: false
     t.integer "status", default: 0, null: false
     t.string "number", default: "", null: false

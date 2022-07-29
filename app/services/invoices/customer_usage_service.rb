@@ -141,13 +141,22 @@ module Invoices
         fee_result = Fees::ChargeService.new(
           invoice: invoice,
           charge: charge,
-          subscription: subscription
+          subscription: subscription,
+          boundaries: boundaries
         ).current_usage
 
         fee_result.throw_error unless fee_result.success?
 
         invoice.fees << fee_result.fee
       end
+    end
+
+    def boundaries
+      {
+        from_date: from_date,
+        to_date: to_date,
+        charges_from_date: charges_from_date
+      }
     end
 
     def compute_amounts

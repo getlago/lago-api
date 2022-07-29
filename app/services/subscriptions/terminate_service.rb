@@ -33,7 +33,7 @@ module Subscriptions
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
       BillSubscriptionJob.perform_later(
-        subscription,
+        [subscription],
         timestamp,
       )
 
@@ -41,7 +41,7 @@ module Subscriptions
       return result unless next_subscription.plan.pay_in_advance?
 
       BillSubscriptionJob.perform_later(
-        next_subscription,
+        [next_subscription],
         timestamp,
       )
 
@@ -57,7 +57,7 @@ module Subscriptions
         subscription.mark_as_terminated!
 
         BillSubscriptionJob
-          .perform_later(subscription, subscription.terminated_at)
+          .perform_later([subscription], subscription.terminated_at)
       end
 
       # NOTE: Pending next subscription should be canceled as well
