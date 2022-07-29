@@ -13,7 +13,7 @@ module Invoices
 
     def create
       ActiveRecord::Base.transaction do
-        invoice = Invoice.find_or_create_by!(
+        invoice = Invoice.create!(
           customer: customer,
           issuing_date: (Time.zone.at(timestamp) - 1.day).to_date,
           invoice_type: :subscription,
@@ -112,18 +112,6 @@ module Invoices
       @to_date = subscription.started_at.to_date if @to_date < subscription.started_at
 
       @to_date
-    end
-
-    def issuing_date(subscription)
-      return @issuing_date if @issuing_date.present?
-
-      # NOTE: When price plan is configured as `pay_in_advance`, we issue the invoice for the first day of
-      #       the period, it's on the last day otherwise
-      @issuing_date = to_date(subscription)
-
-      @issuing_date = Time.zone.at(timestamp).to_date if subscription.plan.pay_in_advance?
-
-      @issuing_date
     end
 
     def compute_amounts(invoice)
