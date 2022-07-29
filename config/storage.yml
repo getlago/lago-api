@@ -12,6 +12,7 @@ amazon:
   secret_access_key: <%= ENV['LAGO_AWS_S3_SECRET_ACCESS_KEY'] %>
   region: <%= ENV['LAGO_AWS_S3_REGION'] %>
   bucket: <%= ENV['LAGO_AWS_S3_BUCKET'] %>
+  endpoint: <%= ENV['LAGO_AWS_S3_ENDPOINT'] %>
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:
