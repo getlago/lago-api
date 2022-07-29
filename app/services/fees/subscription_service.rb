@@ -4,15 +4,15 @@ module Fees
   class SubscriptionService < BaseService
     WEEK_DURATION = 7.freeze
 
-    def initialize(invoice, subscription)
+    def initialize(invoice, subscription, boundaries)
       @invoice = invoice
       @subscription = subscription
+      @boundaries = OpenStruct.new(boundaries)
+
       super(nil)
     end
 
     def create
-      return result if already_billed?
-
       new_amount_cents = compute_amount
 
       new_fee = Fee.new(
@@ -22,6 +22,7 @@ module Fees
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
+        properties: boundaries.to_h
       )
 
       new_fee.compute_vat
@@ -35,18 +36,10 @@ module Fees
 
     private
 
-    attr_reader :invoice, :subscription
+    attr_reader :invoice, :subscription, :boundaries
 
     delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
-
-    def already_billed?
-      existing_fee = invoice.fees.subscription_kind.first
-      return false unless existing_fee
-
-      result.fee = existing_fee
-      true
-    end
 
     def compute_amount
       # NOTE: bill for the last time a subscription that was upgraded
@@ -82,8 +75,8 @@ module Fees
     end
 
     def first_subscription_amount
-      from_date = invoice.from_date
-      to_date = invoice.to_date
+      from_date = boundaries.from_date
+      to_date = boundaries.to_date
 
       # NOTE: When pay in advance, first invoice has from_date = to_date
       #       To get the number of days to bill, we must
@@ -91,11 +84,11 @@ module Fees
       if plan.pay_in_advance?
         case plan.interval.to_sym
         when :weekly
-          to_date = invoice.to_date.end_of_week
+          to_date = boundaries.to_date.end_of_week
         when :monthly
-          to_date = invoice.to_date.end_of_month
+          to_date = boundaries.to_date.end_of_month
         when :yearly
-          to_date = invoice.to_date.end_of_year
+          to_date = boundaries.to_date.end_of_year
         else
           raise NotImplementedError
         end
@@ -125,8 +118,8 @@ module Fees
     #       **day_cost** = (plan amount_cents / full period duration)
     #       amount_to_bill = (nb_day * day_cost)
     def terminated_amount
-      from_date = invoice.from_date
-      to_date = invoice.to_date
+      from_date = boundaries.from_date
+      to_date = boundaries.to_date
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
@@ -145,9 +138,9 @@ module Fees
     end
 
     def upgraded_amount
-      from_date = invoice.from_date
-      to_date = compute_to_date(invoice.to_date, plan)
-      old_to_date = compute_to_date(invoice.to_date, previous_subscription.plan)
+      from_date = boundaries.from_date
+      to_date = compute_to_date(boundaries.to_date, plan)
+      old_to_date = compute_to_date(boundaries.to_date, previous_subscription.plan)
 
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
@@ -191,8 +184,8 @@ module Fees
     end
 
     def full_period_amount
-      from_date = invoice.from_date
-      to_date = invoice.to_date
+      from_date = boundaries.from_date
+      to_date = boundaries.to_date
 
       if plan.has_trial?
         if plan.pay_in_advance?
@@ -219,7 +212,7 @@ module Fees
 
     # NOTE: cost of a single day in a period
     def single_day_price(target_plan, optional_from_date = nil)
-      from_date = optional_from_date || invoice.from_date
+      from_date = optional_from_date || boundaries.from_date
 
       # NOTE: Duration in days of full billed period (without termination)
       #       WARNING: the method only handles beginning of period logic
@@ -244,11 +237,11 @@ module Fees
       # end of the actual period
       case plan.interval.to_sym
       when :weekly
-        invoice.to_date.end_of_week
+        boundaries.to_date.end_of_week
       when :monthly
-        invoice.to_date.end_of_month
+        boundaries.to_date.end_of_month
       when :yearly
-        invoice.to_date.end_of_year
+        boundaries.to_date.end_of_year
       else
         raise NotImplementedError
       end

@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CreateService, type: :service do
   subject(:invoice_service) do
-    described_class.new(subscription: subscription, timestamp: timestamp.to_i)
+    described_class.new(subscriptions: subscriptions, timestamp: timestamp.to_i)
   end
 
   describe 'create' do
@@ -16,6 +16,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         started_at: Time.zone.now - 2.years,
       )
     end
+    let(:subscriptions) { [subscription] }
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now.beginning_of_month }
@@ -50,8 +51,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(timestamp - 1.month)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.issuing_date.to_date).to eq(timestamp - 1.day)
           expect(result.invoice.invoice_type).to eq('subscription')
@@ -75,7 +76,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       end
 
       context 'when organization does not have a webhook url' do
-        before { subscription.organization.update!(webhook_url: nil) }
+        before { subscription.customer.organization.update!(webhook_url: nil) }
 
         it 'does not enqueues a SendWebhookJob' do
           expect do
@@ -92,6 +93,49 @@ RSpec.describe Invoices::CreateService, type: :service do
             invoice_service.create
           end.to have_enqueued_job(Invoices::Payments::StripeCreateJob)
         end
+      end
+    end
+
+    context 'when billed monthly and two subscriptions are given' do
+      let(:subscription2) do
+        create(
+          :subscription,
+          plan: plan,
+          customer: subscription.customer,
+          anniversary_date: (Time.zone.now - 2.years).to_date,
+          started_at: Time.zone.now - 2.years,
+        )
+      end
+      let(:subscriptions) { [subscription, subscription2] }
+
+      it 'creates an invoice for both subscriptions' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
+          expect(result.invoice.subscriptions).to eq(subscriptions)
+          expect(result.invoice.issuing_date.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.invoice_type).to eq('subscription')
+          expect(result.invoice.status).to eq('pending')
+          expect(result.invoice.fees.subscription_kind.count).to eq(2)
+          expect(result.invoice.fees.charge_kind.count).to eq(2)
+
+          expect(result.invoice.amount_cents).to eq(200)
+          expect(result.invoice.amount_currency).to eq('EUR')
+          expect(result.invoice.vat_amount_cents).to eq(40)
+          expect(result.invoice.vat_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(240)
+          expect(result.invoice.total_amount_currency).to eq('EUR')
+        end
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          invoice_service.create
+        end.to have_enqueued_job(SendWebhookJob)
       end
     end
 
@@ -118,8 +162,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(subscription.subscription_date)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (subscription.subscription_date).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -140,8 +184,9 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(timestamp - 1.week)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.week).to_date.to_s
+          subscription.anniversary_date
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -172,8 +217,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(subscription.subscription_date)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (subscription.subscription_date).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -194,8 +239,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(timestamp - 1.year)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.year).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -208,7 +253,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         context 'when subscription has already been billed' do
           before do
             first_invoice_timestamp = (subscription.started_at.end_of_year + 1.day).to_i
-            described_class.new(subscription: subscription, timestamp: first_invoice_timestamp).create
+            described_class.new(subscriptions: [subscription], timestamp: first_invoice_timestamp).create
           end
 
           let(:timestamp) { (subscription.started_at.end_of_year + 1.month + 1.day).to_i }
@@ -221,7 +266,8 @@ RSpec.describe Invoices::CreateService, type: :service do
 
               expect(result.invoice.fees.subscription_kind.count).to eq(0)
               expect(result.invoice.fees.charge_kind.count).to eq(1)
-              expect(result.invoice.charges_from_date).to eq(Time.zone.at(timestamp).to_date - 1.month)
+              expect(result.invoice.fees.first.properties['charges_from_date'])
+                .to eq (Time.zone.at(timestamp).to_date - 1.month).to_s
             end
           end
         end
@@ -250,8 +296,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq((timestamp - 1.day).to_date)
-          expect(result.invoice.from_date).to eq(subscription.subscription_date)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (subscription.subscription_date).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -279,7 +325,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         result = invoice_service.create
 
         aggregate_failures do
-          expect(result.invoice.issuing_date).to eq(timestamp.to_date)
+          expect(result.invoice.issuing_date).to eq(timestamp - 1.day)
         end
       end
     end
@@ -307,8 +353,10 @@ RSpec.describe Invoices::CreateService, type: :service do
         result = invoice_service.create
 
         aggregate_failures do
-          expect(result.invoice.to_date.to_s).to eq((terminated_at.to_date - 1.day).to_s)
-          expect(result.invoice.from_date.to_s).to eq((terminated_at.to_date.beginning_of_month).to_s)
+          expect(result.invoice.fees.first.properties['to_date'])
+            .to eq (terminated_at.to_date - 1.day).to_s
+          expect(result.invoice.fees.first.properties['from_date'])
+            .to eq (terminated_at.to_date.beginning_of_month).to_s
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
         end
       end
@@ -343,8 +391,10 @@ RSpec.describe Invoices::CreateService, type: :service do
         result = invoice_service.create
 
         aggregate_failures do
-          expect(result.invoice.to_date.to_s).to eq((terminated_at.to_date - 1.day).to_s)
-          expect(result.invoice.from_date.to_s).to eq((terminated_at.to_date.beginning_of_month).to_s)
+          expect(result.invoice.fees.first.properties['to_date'])
+            .to eq (terminated_at.to_date - 1.day).to_s
+          expect(result.invoice.fees.first.properties['from_date'])
+            .to eq (terminated_at.to_date.beginning_of_month).to_s
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end
@@ -387,8 +437,10 @@ RSpec.describe Invoices::CreateService, type: :service do
         result = invoice_service.create
 
         aggregate_failures do
-          expect(result.invoice.to_date.to_s).to eq(subscription.started_at.to_date.to_s)
-          expect(result.invoice.from_date.to_s).to eq(subscription.started_at.to_date.to_s)
+          expect(result.invoice.fees.first.properties['to_date'])
+            .to eq (subscription.started_at.to_date.to_s).to_s
+          expect(result.invoice.fees.first.properties['from_date'])
+            .to eq (subscription.started_at.to_date.to_s).to_s
           expect(result.invoice.total_amount_cents).to eq(0)
           expect(result.invoice.status).to eq('succeeded')
           expect(result.invoice.fees.charge_kind.count).to eq(0)
@@ -419,8 +471,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.to_date).to eq(timestamp - 1.day)
-          expect(result.invoice.from_date).to eq(timestamp - 1.month)
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.issuing_date.to_date).to eq(timestamp - 1.day)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
