@@ -5,18 +5,23 @@ class BillingService
     # Keep track of billing time for retry and tracking purpose
     billing_timestamp = Time.zone.now.to_i
 
-    billable_subscriptions.find_each do |subscription|
-      if subscription.next_subscription&.pending?
-        # NOTE: In case of downgrade, subscription remain active until the end of the period,
-        #       a next subscription is pending, the current one must be terminated
-        Subscriptions::TerminateJob
-          .set(wait: rand(240).minutes)
-          .perform_later(subscription, billing_timestamp)
-      else
-        BillSubscriptionJob
-          .set(wait: rand(240).minutes)
-          .perform_later(subscription, billing_timestamp)
+    billable_subscriptions.group_by(&:customer_id).each do |_customer_id, customer_subscriptions|
+      billing_subscriptions = []
+      customer_subscriptions.each do |subscription|
+        if subscription.next_subscription&.pending?
+          # NOTE: In case of downgrade, subscription remain active until the end of the period,
+          #       a next subscription is pending, the current one must be terminated
+          Subscriptions::TerminateJob
+            .set(wait: rand(240).minutes)
+            .perform_later(subscription, billing_timestamp)
+        else
+          billing_subscriptions << subscription
+        end
       end
+
+      BillSubscriptionJob
+        .set(wait: rand(240).minutes)
+        .perform_later(billing_subscriptions, billing_timestamp)
     end
   end
 
