@@ -13,7 +13,7 @@ module Invoices
     def create
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
-          subscription: subscription,
+          customer: subscription.customer,
           from_date: date,
           to_date: date,
           issuing_date: date,
@@ -28,6 +28,7 @@ module Invoices
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.total_amount_currency = plan.amount_currency
         invoice.save!
+        invoice.subscriptions << subscription
 
         track_invoice_created(invoice)
         result.invoice = invoice
@@ -57,7 +58,8 @@ module Invoices
     end
 
     def create_add_on_fee(invoice)
-      fee_result = Fees::AddOnService.new(invoice: invoice, applied_add_on: applied_add_on).create
+      fee_result = Fees::AddOnService
+        .new(invoice: invoice, applied_add_on: applied_add_on, subscription: subscription).create
       raise fee_result.throw_error unless fee_result.success?
     end
 

@@ -63,8 +63,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'index' do
-    let(:invoice) { create(:invoice, subscription: subscription) }
-    let(:subscription) { create(:subscription, customer: customer) }
+    let(:invoice) { create(:invoice, customer: customer) }
     let(:customer) {  create(:customer, organization: organization) }
 
     before { invoice }
@@ -82,8 +81,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'with pagination' do
-      let(:invoice2) { create(:invoice, subscription: subscription2) }
-      let(:subscription2) { create(:subscription, customer: customer) }
+      let(:invoice2) { create(:invoice, customer: customer) }
 
       before { invoice2 }
 
@@ -104,11 +102,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'with issuing_date params' do
-      let(:invoice) { create(:invoice, subscription: subscription, issuing_date: 5.days.ago.to_date) }
-      let(:invoice2) { create(:invoice, subscription: subscription2, issuing_date: 3.days.ago.to_date) }
-      let(:subscription2) { create(:subscription, customer: customer) }
-      let(:invoice3) { create(:invoice, subscription: subscription3, issuing_date: 1.day.ago.to_date) }
-      let(:subscription3) { create(:subscription, customer: customer) }
+      let(:invoice) { create(:invoice, customer: customer, issuing_date: 5.days.ago.to_date) }
+      let(:invoice2) { create(:invoice, customer: customer, issuing_date: 3.days.ago.to_date) }
+      let(:invoice3) { create(:invoice, customer: customer, issuing_date: 1.day.ago.to_date) }
 
       before do
         invoice2

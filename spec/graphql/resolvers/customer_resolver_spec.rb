@@ -26,8 +26,9 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:applied_add_on) { create(:applied_add_on, customer: customer) }
 
   before do
-    create_list(:invoice, 2, subscription: subscription)
+    create_list(:invoice, 2, customer: customer)
     applied_add_on
+    subscription
   end
 
   it 'returns a single customer' do

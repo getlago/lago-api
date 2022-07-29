@@ -4,8 +4,9 @@ module Fees
   class SubscriptionService < BaseService
     WEEK_DURATION = 7.freeze
 
-    def initialize(invoice)
+    def initialize(invoice, subscription)
       @invoice = invoice
+      @subscription = subscription
       super(nil)
     end
 
@@ -34,10 +35,10 @@ module Fees
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :subscription
 
-    delegate :customer, :plan, :subscription, to: :invoice
-    delegate :previous_subscription, to: :subscription
+    delegate :customer, to: :invoice
+    delegate :previous_subscription, :plan, to: :subscription
 
     def already_billed?
       existing_fee = invoice.fees.subscription_kind.first
@@ -77,7 +78,7 @@ module Fees
 
     # NOTE: Subscription has already been billed once and is not terminated
     def should_use_full_amount?
-      invoice.subscription.fees.subscription_kind.exists?
+      subscription.fees.subscription_kind.exists?
     end
 
     def first_subscription_amount

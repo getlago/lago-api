@@ -24,14 +24,14 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe 'sequential_id' do
-    let(:subscription) { create(:subscription) }
+    let(:customer) { create(:customer) }
 
     let(:invoice) do
       build(
         :invoice,
         from_date: Time.zone.now - 2.days,
         to_date: Time.zone.now,
-        subscription: subscription,
+        customer: customer,
       )
     end
 
@@ -63,7 +63,7 @@ RSpec.describe Invoice, type: :model do
           :invoice,
           from_date: Time.zone.now - 2.days,
           to_date: Time.zone.now,
-          subscription: subscription,
+          customer: customer,
           sequential_id: 5,
         )
       end
@@ -103,7 +103,7 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
     let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { build(:invoice, subscription: subscription) }
+    let(:invoice) { build(:invoice, customer: customer) }
 
     it 'generates the invoice number' do
       invoice.save
@@ -117,7 +117,7 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
     let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:invoice) { create(:invoice, customer: customer) }
     let(:fees) { create_list(:fee, 3, invoice: invoice) }
 
     it 'returns the charges amount' do
@@ -129,7 +129,7 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
     let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:invoice) { create(:invoice, customer: customer) }
     let(:credit) { create(:credit, invoice: invoice) }
 
     it 'returns the credits amount' do

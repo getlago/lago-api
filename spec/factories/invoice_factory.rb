@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :invoice do
-    subscription
+    customer
 
     from_date { Time.zone.now - 1.month }
     to_date { Time.zone.now - 1.day }

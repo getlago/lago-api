@@ -230,7 +230,7 @@ html
                 - if add_on?
                   | Add On - #{fees.first.add_on.name}
                 - elsif subscription?
-                  | Subscription - #{plan.name}
+                  | Subscription - #{plans.first.name}
             - if add_on?
               td.body-1 style="text-align: right;" width="30%"
                 = fees.first&.amount&.format

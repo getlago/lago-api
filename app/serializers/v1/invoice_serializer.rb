@@ -23,7 +23,7 @@ module V1
       }
 
       payload = payload.merge(customer) if include?(:customer)
-      payload = payload.merge(subscription) if include?(:subscription)
+      payload = payload.merge(subscriptions) if include?(:subscriptions)
       payload = payload.merge(fees) if include?(:fees)
       payload = payload.merge(credits) if include?(:credits)
 
@@ -38,10 +38,9 @@ module V1
       }
     end
 
-    def subscription
-      {
-        subscription: ::V1::SubscriptionSerializer.new(model.subscription).serialize,
-      }
+    def subscriptions
+      ::CollectionSerializer
+        .new(model.subscriptions, ::V1::SubscriptionSerializer, collection_name: 'subscriptions').serialize
     end
 
     def fees

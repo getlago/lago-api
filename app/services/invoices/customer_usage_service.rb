@@ -35,7 +35,7 @@ module Invoices
     def compute_usage
       Rails.cache.fetch(cache_key, expires_in: cache_expiration.days) do
         @invoice = Invoice.new(
-          subscription: subscription,
+          customer: subscription.customer,
           charges_from_date: charges_from_date,
           from_date: from_date,
           to_date: to_date,
@@ -141,6 +141,7 @@ module Invoices
         fee_result = Fees::ChargeService.new(
           invoice: invoice,
           charge: charge,
+          subscription: subscription
         ).current_usage
 
         fee_result.throw_error unless fee_result.success?
