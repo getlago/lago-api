@@ -9,7 +9,7 @@ module Types
       field :wallet, Types::Wallets::Object
 
       field :transaction_type, Types::WalletTransactions::TransactionTypeEnum, null: false
-      field :status, Types::Wallets::StatusEnum, null: false
+      field :status, Types::WalletTransactions::StatusEnum, null: false
       field :amount, String, null: false
       field :credit_amount, String, null: false
 

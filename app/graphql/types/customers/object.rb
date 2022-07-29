@@ -33,12 +33,18 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
+
       field :can_be_deleted, Boolean, null: false do
         description 'Check if customer is deletable'
       end
 
       def can_be_deleted
         object.deletable?
+      end
+
+      def has_active_wallet
+        object.wallets.active.any?
       end
     end
   end
