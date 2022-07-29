@@ -25,6 +25,11 @@ module Types
       def next_plan
         object.next_subscription&.plan
       end
+
+      # TODO: remove after billing time introduction
+      def anniversary_date
+        object.subscription_date
+      end
     end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
+ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -19,9 +19,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
+    t.uuid "record_id"
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
-    t.uuid "record_id"
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
   end
 
@@ -314,7 +314,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "previous_subscription_id"
-    t.date "anniversary_date"
+    t.date "subscription_date"
+    t.integer "billing_time", default: 0, null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
@@ -343,10 +344,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_21_150658) do
     t.integer "status", null: false
     t.string "currency", null: false
     t.string "name"
-    t.decimal "rate_amount", precision: 5, default: "0", null: false
-    t.decimal "credits_balance", precision: 5, default: "0", null: false
-    t.decimal "balance", precision: 5, default: "0", null: false
-    t.decimal "consumed_credits", precision: 5, default: "0", null: false
+    t.string "rate_amount", null: false
+    t.string "credits_balance", default: "0.00", null: false
+    t.string "balance", default: "0.00", null: false
+    t.string "consumed_credits", default: "0.00", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil

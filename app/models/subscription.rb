@@ -18,7 +18,13 @@ class Subscription < ApplicationRecord
     :canceled,
   ].freeze
 
+  BILLING_TIME = %i[
+    calendar
+    anniversary
+  ].freeze
+
   enum status: STATUSES
+  enum billing_time: BILLING_TIME
 
   def mark_as_active!(timestamp = Time.zone.now)
     self.started_at ||= timestamp

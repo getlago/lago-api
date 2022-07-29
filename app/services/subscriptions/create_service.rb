@@ -78,7 +78,7 @@ module Subscriptions
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
-        anniversary_date: Time.zone.now.to_date,
+        subscription_date: Time.zone.now.to_date,
       )
       new_subscription.mark_as_active!
 
@@ -97,7 +97,7 @@ module Subscriptions
         customer: current_customer,
         plan: current_plan,
         previous_subscription_id: current_subscription.id,
-        anniversary_date: current_subscription.anniversary_date,
+        subscription_date: current_subscription.subscription_date,
       )
 
       ActiveRecord::Base.transaction do
@@ -136,7 +136,7 @@ module Subscriptions
           customer: current_customer,
           plan: current_plan,
           previous_subscription_id: current_subscription.id,
-          anniversary_date: current_subscription.anniversary_date,
+          subscription_date: current_subscription.subscription_date,
           status: :pending,
         )
       end

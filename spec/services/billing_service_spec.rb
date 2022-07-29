@@ -15,7 +15,7 @@ RSpec.describe BillingService, type: :service do
         create(
           :subscription,
           plan: plan,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
         )
       end
@@ -49,7 +49,7 @@ RSpec.describe BillingService, type: :service do
         create(
           :subscription,
           plan: plan,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
         )
       end
@@ -83,7 +83,7 @@ RSpec.describe BillingService, type: :service do
         create(
           :subscription,
           plan: plan,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
         )
       end
@@ -129,7 +129,7 @@ RSpec.describe BillingService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
           previous_subscription: previous_subscription,
           status: :pending,
@@ -139,7 +139,7 @@ RSpec.describe BillingService, type: :service do
       let(:previous_subscription) do
         create(
           :subscription,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
         )
       end
