@@ -29,6 +29,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       4,
       code: billable_metric.code,
       customer: customer,
+      subscription: subscription,
       timestamp: Time.zone.now,
       properties: {
         anonymous_id: 'foo_bar',

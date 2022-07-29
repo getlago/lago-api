@@ -28,6 +28,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       :event,
       4,
       code: billable_metric.code,
+      subscription: subscription,
       customer: customer,
       timestamp: Time.zone.now,
     )

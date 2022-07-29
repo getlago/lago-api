@@ -69,6 +69,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       4,
       organization: organization,
       customer: customer,
+      subscription: subscription,
       code: billable_metric.code,
       timestamp: Time.zone.now,
     )

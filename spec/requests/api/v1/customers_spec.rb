@@ -106,6 +106,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         4,
         organization: organization,
         customer: customer,
+        subscription: subscription,
         code: billable_metric.code,
         timestamp: Time.zone.now,
       )
