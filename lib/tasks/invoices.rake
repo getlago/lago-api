@@ -22,4 +22,11 @@ namespace :invoices do
       InvoiceSubscription.create!(invoice_id: invoice.id, subscription_id: subscription_id)
     end
   end
+
+  desc 'Fill missing customer_id'
+  task fill_customer: :environment do
+    Invoice.where(customer_id: nil).find_each do |invoice|
+      invoice.update!(customer_id: invoice.subscriptions&.first&.customer_id)
+    end
+  end
 end
