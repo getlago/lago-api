@@ -82,6 +82,7 @@ RSpec.describe Fees::ChargeService do
           4,
           organization: subscription.organization,
           customer: subscription.customer,
+          subscription: subscription,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
         )
@@ -133,6 +134,7 @@ RSpec.describe Fees::ChargeService do
           :event,
           organization: invoice.organization,
           customer: subscription.customer,
+          subscription: subscription,
           code: billable_metric.code,
           timestamp: Time.zone.parse('10 Apr 2022 00:01:00'),
         )
@@ -280,6 +282,7 @@ RSpec.describe Fees::ChargeService do
           4,
           organization: subscription.organization,
           customer: subscription.customer,
+          subscription: subscription,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
         )
