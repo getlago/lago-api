@@ -5,11 +5,11 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_number
 
-  belongs_to :subscription
-
   has_many :fees
   has_many :credits
   has_many :payments
+  has_many :invoice_subscriptions
+  has_many :subscriptions, through: :invoice_subscriptions
 
   has_one :customer, through: :subscription
   has_one :organization, through: :subscription

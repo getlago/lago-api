@@ -8,8 +8,8 @@ class Subscription < ApplicationRecord
   has_one :organization, through: :customer
   has_many :next_subscriptions, class_name: 'Subscription', foreign_key: :previous_subscription_id
   has_many :events
-
-  has_many :invoices
+  has_many :invoice_subscriptions
+  has_many :invoices, through: :invoice_subscriptions
   has_many :fees
 
   validates :unique_id, presence: true

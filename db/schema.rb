@@ -199,8 +199,16 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
   end
 
-  create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "invoice_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id", null: false
     t.uuid "subscription_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
+    t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
+  end
+
+  create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.date "from_date", null: false
     t.date "to_date", null: false
     t.datetime "created_at", null: false
@@ -218,7 +226,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
     t.string "number", default: "", null: false
     t.integer "sequential_id"
     t.string "file"
-    t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -381,7 +388,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
-  add_foreign_key "invoices", "subscriptions"
+  add_foreign_key "invoice_subscriptions", "invoices"
+  add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "payment_provider_customers", "customers"

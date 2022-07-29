@@ -5,4 +5,21 @@ namespace :invoices do
   task generate_number: :environment do
     Invoice.order(:created_at).find_each(&:save)
   end
+
+  desc 'Populate invoice_subscriptions join table'
+  task handle_subscriptions: :environment do
+    Invoice.order(:created_at).find_each do |invoice|
+      subscription_id = invoice&.subscription_id
+      next unless subscription_id
+
+      invoice_subscription = InvoiceSubscription.find_by(
+        invoice_id: invoice.id,
+        subscription_id: subscription_id
+      )
+
+      next if invoice_subscription
+
+      InvoiceSubscription.create!(invoice_id: invoice.id, subscription_id: subscription_id)
+    end
+  end
 end
