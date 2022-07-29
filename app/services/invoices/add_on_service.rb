@@ -14,8 +14,6 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           customer: subscription.customer,
-          from_date: date,
-          to_date: date,
           issuing_date: date,
           invoice_type: :add_on,
           status: :pending,

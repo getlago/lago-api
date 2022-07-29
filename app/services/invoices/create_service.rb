@@ -15,9 +15,6 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.find_or_create_by!(
           customer: customer,
-          from_date: Time.zone.at(timestamp).to_date,
-          to_date: Time.zone.at(timestamp).to_date,
-          charges_from_date: Time.zone.at(timestamp).to_date,
           issuing_date: (Time.zone.at(timestamp) - 1.day).to_date,
           invoice_type: :subscription,
         )

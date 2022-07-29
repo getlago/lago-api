@@ -3,34 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe Invoice, type: :model do
-  describe 'validate_date_bounds' do
-    let(:invoice) do
-      build(:invoice, from_date: Time.zone.now - 2.days, to_date: Time.zone.now)
-    end
-
-    it 'ensures from_date is before to_date' do
-      expect(invoice).to be_valid
-    end
-
-    context 'when from_date is after to_date' do
-      let(:invoice) do
-        build(:invoice, from_date: Time.zone.now + 2.days, to_date: Time.zone.now)
-      end
-
-      it 'ensures from_date is before to_date' do
-        expect(invoice).not_to be_valid
-      end
-    end
-  end
-
   describe 'sequential_id' do
     let(:customer) { create(:customer) }
 
     let(:invoice) do
       build(
         :invoice,
-        from_date: Time.zone.now - 2.days,
-        to_date: Time.zone.now,
         customer: customer,
       )
     end
@@ -57,12 +35,10 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context 'when invoice alrady exsits' do
+    context 'when invoice alrady exists' do
       before do
         create(
           :invoice,
-          from_date: Time.zone.now - 2.days,
-          to_date: Time.zone.now,
           customer: customer,
           sequential_id: 5,
         )
@@ -82,8 +58,6 @@ RSpec.describe Invoice, type: :model do
       before do
         create(
           :invoice,
-          from_date: Time.zone.now - 2.days,
-          to_date: Time.zone.now,
           sequential_id: 1,
         )
       end
