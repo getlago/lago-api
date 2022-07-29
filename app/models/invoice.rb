@@ -5,15 +5,14 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_number
 
+  belongs_to :customer
+
   has_many :fees
   has_many :credits
   has_many :payments
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
-
-  has_one :customer, through: :subscription
-  has_one :organization, through: :subscription
-  has_one :plan, through: :subscription
+  has_many :plans, through: :subscriptions
 
   has_one_attached :file
 
@@ -58,6 +57,10 @@ class Invoice < ApplicationRecord
 
   def credit_amount_currency
     amount_currency
+  end
+
+  def organization
+    customer&.organization
   end
 
   private

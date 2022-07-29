@@ -6,8 +6,9 @@ RSpec.describe Webhooks::AddOnService do
   subject(:webhook_add_on_service) { described_class.new(invoice) }
 
   let(:organization) { create(:organization, webhook_url: webhook_url) }
+  let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, organization: organization) }
-  let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:invoice) { create(:invoice, customer: customer) }
   let(:webhook_url) { 'http://foo.bar' }
 
   describe '.call' do
@@ -56,7 +57,7 @@ RSpec.describe Webhooks::AddOnService do
       ::V1::InvoiceSerializer.new(
         invoice,
         root_name: 'invoice',
-        includes: %i[customer subscription],
+        includes: %i[customer subscriptions],
       ).serialize.merge(webook_type: 'add_on.created')
     end
 

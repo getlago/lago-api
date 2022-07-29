@@ -7,7 +7,7 @@ RSpec.describe Webhooks::Invoices::GeneratedService do
 
   let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-  let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:invoice) { create(:invoice, customer: customer) }
   let(:organization) { create(:organization, webhook_url: webhook_url) }
   let(:webhook_url) { 'http://foo.bar' }
 

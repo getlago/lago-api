@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Fees::ChargeService do
   subject(:charge_subscription_service) do
-    described_class.new(invoice: invoice, charge: charge)
+    described_class.new(invoice: invoice, charge: charge, subscription: subscription)
   end
 
   let(:subscription) do
@@ -18,7 +18,6 @@ RSpec.describe Fees::ChargeService do
   let(:invoice) do
     create(
       :invoice,
-      subscription: subscription,
       from_date: subscription.started_at,
       to_date: subscription.started_at.end_of_month,
       charges_from_date: subscription.started_at,

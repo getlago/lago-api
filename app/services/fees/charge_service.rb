@@ -2,9 +2,10 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:)
+    def initialize(invoice:, charge:, subscription:)
       @invoice = invoice
       @charge = charge
+      @subscription = subscription
       super(nil)
     end
 
@@ -26,10 +27,11 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge
+    attr_accessor :invoice, :charge, :subscription
 
-    delegate :customer, :plan, :subscription, to: :invoice
+    delegate :customer, to: :invoice
     delegate :billable_metric, to: :charge
+    delegate :plan, to: :subscription
 
     def init_fee
       amount_result = compute_amount

@@ -9,7 +9,7 @@ class Customer < ApplicationRecord
 
   has_many :subscriptions
   has_many :events
-  has_many :invoices, through: :subscriptions
+  has_many :invoices
   has_many :applied_coupons
   has_many :coupons, through: :applied_coupons
   has_many :applied_add_ons

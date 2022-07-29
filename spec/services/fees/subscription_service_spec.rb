@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Fees::SubscriptionService do
-  subject(:fees_subscription_service) { described_class.new(invoice) }
+  subject(:fees_subscription_service) { described_class.new(invoice, subscription) }
 
   let(:plan) do
     create(
@@ -27,7 +27,6 @@ RSpec.describe Fees::SubscriptionService do
 
       create(
         :invoice,
-        subscription: subscription,
         from_date: from_date,
         to_date: from_date.end_of_month,
       )
@@ -84,7 +83,6 @@ RSpec.describe Fees::SubscriptionService do
     let(:invoice) do
       create(
         :invoice,
-        subscription: subscription,
         from_date: subscription.started_at.to_date,
         to_date: subscription.started_at.end_of_month.to_date,
       )
@@ -548,7 +546,6 @@ RSpec.describe Fees::SubscriptionService do
     let(:invoice) do
       create(
         :invoice,
-        subscription: subscription,
         from_date: subscription.started_at.to_date,
         to_date: subscription.started_at.end_of_month.to_date,
         issuing_date: subscription.started_at.end_of_month.to_date + 1.day,
@@ -556,7 +553,7 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     before do
-      other_invoice = create(:invoice, subscription: subscription)
+      other_invoice = create(:invoice)
       create(:fee, subscription: subscription, invoice: other_invoice)
     end
 
@@ -626,7 +623,6 @@ RSpec.describe Fees::SubscriptionService do
     let(:invoice) do
       create(
         :invoice,
-        subscription: subscription,
         from_date: subscription.started_at + 1.month,
         to_date: subscription.started_at + 2.months,
       )
@@ -654,7 +650,6 @@ RSpec.describe Fees::SubscriptionService do
     let(:invoice) do
       create(
         :invoice,
-        subscription: subscription,
         from_date: subscription.started_at.beginning_of_month.to_date,
         to_date: subscription.started_at.to_date + 5.days,
       )
@@ -682,7 +677,6 @@ RSpec.describe Fees::SubscriptionService do
       let(:invoice) do
         create(
           :invoice,
-          subscription: subscription,
           from_date: subscription.started_at.beginning_of_week.to_date,
           to_date: subscription.started_at.to_date + 1.day,
         )
@@ -771,7 +765,6 @@ RSpec.describe Fees::SubscriptionService do
     let(:invoice) do
       create(
         :invoice,
-        subscription: subscription,
         from_date: subscription.started_at,
         to_date: subscription.started_at.to_date.end_of_month,
       )
@@ -822,7 +815,6 @@ RSpec.describe Fees::SubscriptionService do
         let(:invoice) do
           create(
             :invoice,
-            subscription: subscription,
             from_date: subscription.started_at,
             to_date: subscription.started_at,
           )
@@ -842,7 +834,6 @@ RSpec.describe Fees::SubscriptionService do
         let(:invoice) do
           create(
             :invoice,
-            subscription: subscription,
             from_date: subscription.started_at,
             to_date: subscription.started_at,
           )
@@ -865,7 +856,6 @@ RSpec.describe Fees::SubscriptionService do
         let(:invoice) do
           create(
             :invoice,
-            subscription: subscription,
             from_date: subscription.started_at.beginning_of_week.to_date,
             to_date: subscription.started_at.to_date + 1.day,
           )
@@ -941,7 +931,6 @@ RSpec.describe Fees::SubscriptionService do
         let(:invoice) do
           create(
             :invoice,
-            subscription: subscription,
             from_date: subscription.started_at,
             to_date: subscription.started_at,
           )

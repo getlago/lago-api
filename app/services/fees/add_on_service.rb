@@ -2,8 +2,9 @@
 
 module Fees
   class AddOnService < BaseService
-    def initialize(invoice:, applied_add_on:)
+    def initialize(invoice:, applied_add_on:, subscription:)
       @invoice = invoice
+      @subscription = subscription
       @applied_add_on = applied_add_on
       super(nil)
     end
@@ -32,9 +33,10 @@ module Fees
 
     private
 
-    attr_reader :invoice, :applied_add_on
+    attr_reader :invoice, :applied_add_on, :subscription
 
-    delegate :customer, :plan, :subscription, to: :invoice
+    delegate :customer, to: :invoice
+    delegate :plan, to: :subscription
 
     def already_billed?
       existing_fee = invoice.fees.find_by(applied_add_on_id: applied_add_on.id)
