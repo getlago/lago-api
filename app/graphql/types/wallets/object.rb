@@ -14,6 +14,7 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
       field :credits_balance, String, null: false
       field :balance, String, null: false
+      field :consumed_amount, String, null: false
       field :consumed_credits, String, null: false
 
       field :expiration_date, GraphQL::Types::ISO8601Date, null: true
