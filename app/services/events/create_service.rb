@@ -13,7 +13,7 @@ module Events
       result.fail!(code: 'missing_mandatory_param', details: missing_arguments + missing_subscription_arguments)
     end
 
-    def create(organization:, params:, timestamp:, metadata:)
+    def call(organization:, params:, timestamp:, metadata:)
       validate_create(organization, params)
       return result unless result.success?
 

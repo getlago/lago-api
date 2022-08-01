@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Events::CreateService, type: :service do
-  subject(:event_service) { described_class.new }
+  subject(:create_service) { described_class.new }
 
   let(:organization) { create(:organization) }
   let(:billable_metric)  { create(:billable_metric, organization: organization) }
@@ -19,7 +19,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     it 'validates the presence of the mandatory arguments' do
-      result = event_service.validate_params(params: event_arguments)
+      result = create_service.validate_params(params: event_arguments)
 
       expect(result).to be_success
     end
@@ -33,7 +33,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'returns an error' do
-        result = event_service.validate_params(params: event_arguments)
+        result = create_service.validate_params(params: event_arguments)
 
         expect(result).not_to be_success
 
@@ -46,7 +46,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
   end
 
-  describe 'create' do
+  describe 'call' do
     let(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
 
     let(:create_args) do
@@ -64,7 +64,7 @@ RSpec.describe Events::CreateService, type: :service do
 
     context 'when customer has only one active subscription and subscription is not given' do
       it 'creates a new event and assigns subscription' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -97,7 +97,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'creates a new event and assigns customer' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -134,7 +134,7 @@ RSpec.describe Events::CreateService, type: :service do
       before { subscription2 }
 
       it 'creates a new event for correct subscription' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -164,7 +164,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'returns existing event' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -186,7 +186,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -199,7 +199,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -215,7 +215,7 @@ RSpec.describe Events::CreateService, type: :service do
       before { subscription2 }
 
       it 'fails' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -228,7 +228,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -254,7 +254,7 @@ RSpec.describe Events::CreateService, type: :service do
       before { subscription2 }
 
       it 'fails' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -267,7 +267,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -290,7 +290,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -303,7 +303,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -326,7 +326,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -339,7 +339,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -361,7 +361,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -374,7 +374,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.create(
+          create_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -395,7 +395,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'creates a new event' do
-        result = event_service.create(
+        result = create_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,

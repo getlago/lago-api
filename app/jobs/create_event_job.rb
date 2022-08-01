@@ -4,7 +4,7 @@ class CreateEventJob < ApplicationJob
   queue_as :default
 
   def perform(organization, params, timestamp, metadata)
-    result = Events::CreateService.new.create(
+    result = Events::CreateService.new.call(
       organization: organization,
       params: params,
       timestamp: timestamp,
