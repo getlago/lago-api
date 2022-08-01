@@ -259,7 +259,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           it 'returns the termination date' do
-            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+            expect(result).to eq(subscription.terminated_at.to_date.to_s)
+          end
+
+          context 'with next subscription' do
+            let(:next_subscription) do
+              create(:subscription, previous_subscription: subscription)
+            end
+
+            before { next_subscription }
+
+            it 'returns the day before the termination date' do
+              expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
+            end
           end
         end
       end
@@ -291,7 +303,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           it 'returns the termination date' do
-            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+            expect(result).to eq(subscription.terminated_at.to_date.to_s)
+          end
+
+          context 'with next subscription' do
+            let(:next_subscription) do
+              create(:subscription, previous_subscription: subscription)
+            end
+
+            before { next_subscription }
+
+            it 'returns the day before the termination date' do
+              expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
+            end
           end
         end
       end
@@ -324,7 +348,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           it 'returns the termination date' do
-            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+            expect(result).to eq(subscription.terminated_at.to_date.to_s)
+          end
+
+          context 'with next subscription' do
+            let(:next_subscription) do
+              create(:subscription, previous_subscription: subscription)
+            end
+
+            before { next_subscription }
+
+            it 'returns the day before the termination date' do
+              expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
+            end
           end
         end
       end
@@ -358,7 +394,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           it 'returns the termination date' do
-            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+            expect(result).to eq(subscription.terminated_at.to_date.to_s)
+          end
+
+          context 'with next subscription' do
+            let(:next_subscription) do
+              create(:subscription, previous_subscription: subscription)
+            end
+
+            before { next_subscription }
+
+            it 'returns the day before the termination date' do
+              expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
+            end
           end
         end
       end
@@ -416,7 +464,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           it 'returns the termination date' do
-            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+            expect(result).to eq(subscription.terminated_at.to_date.to_s)
+          end
+
+          context 'with next subscription' do
+            let(:next_subscription) do
+              create(:subscription, previous_subscription: subscription)
+            end
+
+            before { next_subscription }
+
+            it 'returns the day before the termination date' do
+              expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
+            end
           end
         end
       end
@@ -464,7 +524,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           it 'returns the termination date' do
-            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+            expect(result).to eq(subscription.terminated_at.to_date.to_s)
+          end
+
+          context 'with next subscription' do
+            let(:next_subscription) do
+              create(:subscription, previous_subscription: subscription)
+            end
+
+            before { next_subscription }
+
+            it 'returns the day before the termination date' do
+              expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
+            end
           end
         end
       end
