@@ -21,8 +21,8 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   let(:timestamp) { DateTime.parse('07 Mar 2022') }
   let(:started_at) { subscription_date }
 
-  describe 'previous_period_from_date' do
-    let(:result) { date_service.previous_period_from_date.to_s }
+  describe 'from_date' do
+    let(:result) { date_service.from_date.to_s }
 
     context 'when billing_time is calendar' do
       let(:billing_time) { :calendar }
@@ -224,5 +224,254 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
       end
     end
+  end
+
+  describe 'to_date' do
+    let(:result) { date_service.to_date.to_s }
+
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+        let(:timestamp) { DateTime.parse('07 Mar 2022') }
+
+        it 'returns the end of the previous week' do
+          expect(result).to eq('2022-03-06')
+        end
+
+        # context 'when date is before the start date' do
+        #   let(:started_at) { DateTime.parse('15 Mar 2022') }
+
+        #   it 'returns the start date' do
+        #     expect(result).to eq(started_at.to_date.to_s)
+        #   end
+        # end
+
+        context 'when subscription is terminated' do
+          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+
+          before do
+            subscription.update!(
+              status: :terminated,
+              terminated_at: DateTime.parse('02 Mar 2022'),
+            )
+          end
+
+          it 'returns the termination date' do
+            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+          end
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+        let(:timestamp) { DateTime.parse('01 Mar 2022') }
+
+        it 'returns the end of the previous month' do
+          expect(result).to eq('2022-02-28')
+        end
+
+        # context 'when date is before the start date' do
+        #   let(:started_at) { DateTime.parse('07 Feb 2022') }
+
+        #   it 'returns the start date' do
+        #     expect(result).to eq(started_at.to_date.to_s)
+        #   end
+        # end
+
+        context 'when subscription is terminated' do
+          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+
+          before do
+            subscription.update!(
+              status: :terminated,
+              terminated_at: DateTime.parse('02 Mar 2022'),
+            )
+          end
+
+          it 'returns the termination date' do
+            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+          end
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+        let(:timestamp) { DateTime.parse('01 Jan 2022') }
+        let(:subscription_date) { DateTime.parse('02 Feb 2020') }
+
+        it 'returns the end of the previous year' do
+          expect(result).to eq('2021-12-31')
+        end
+
+        # context 'when date is before the start date' do
+        #   let(:started_at) { DateTime.parse('07 Feb 2021') }
+
+        #   it 'returns the start date' do
+        #     expect(result).to eq(started_at.to_date.to_s)
+        #   end
+        # end
+
+        context 'when subscription is terminated' do
+          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+
+          before do
+            subscription.update!(
+              status: :terminated,
+              terminated_at: DateTime.parse('02 Mar 2022'),
+            )
+          end
+
+          it 'returns the termination date' do
+            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+          end
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+        let(:timestamp) { DateTime.parse('10 Mar 2022') }
+
+        it 'returns the previous week week day' do
+          expect(result).to eq('2022-03-08')
+        end
+
+        # context 'when date is before the start date' do
+        #   let(:started_at) { DateTime.parse('08 Mar 2022') }
+
+        #   it 'returns the start date' do
+        #     expect(result).to eq(started_at.to_date.to_s)
+        #   end
+        # end
+
+        context 'when subscription is terminated' do
+          before do
+            subscription.update!(
+              status: :terminated,
+              terminated_at: DateTime.parse('02 Mar 2022'),
+            )
+          end
+
+          it 'returns the termination date' do
+            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+          end
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+        let(:timestamp) { DateTime.parse('04 Mar 2022') }
+
+        it 'returns the previous month month day' do
+          expect(result).to eq('2022-03-01')
+        end
+
+        context 'when billing last month of year' do
+          let(:timestamp) { DateTime.parse('04 Jan 2022') }
+
+          it 'returns the previous month month day' do
+            expect(result).to eq('2022-01-01')
+          end
+        end
+
+        context 'when billing subscription day does not extist in the month' do
+          let(:subscription_date) { DateTime.parse('31 Jan 2022') }
+          let(:timestamp) { DateTime.parse('01 Mar 2022') }
+
+          it 'returns the last day of the month' do
+            expect(result).to eq('2022-02-28')
+          end
+        end
+
+        context 'when anniversary date is first day of the month' do
+          let(:subscription_date) { DateTime.parse('01 Jan 2022') }
+          let(:timestamp) { DateTime.parse('02 Mar 2022') }
+
+          it 'returns the last day of the month' do
+            expect(result).to eq('2022-02-28')
+          end
+        end
+
+        # context 'when date is before the start date' do
+        #   let(:started_at) { DateTime.parse('08 Feb 2022') }
+
+        #   it 'returns the start date' do
+        #     expect(result).to eq(started_at.to_date.to_s)
+        #   end
+        # end
+
+        context 'when subscription is terminated' do
+          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+
+          before do
+            subscription.update!(
+              status: :terminated,
+              terminated_at: DateTime.parse('02 Mar 2022'),
+            )
+          end
+
+          it 'returns the termination date' do
+            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+          end
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+        let(:timestamp) { DateTime.parse('03 Feb 2022') }
+
+        it 'returns the previous year day and month' do
+          expect(result).to eq('2022-02-01')
+        end
+
+        context 'when subscription date on 29/02 of a leap year' do
+          let(:subscription_date) { DateTime.parse('29 Feb 2020') }
+          let(:timestamp) { DateTime.parse('01 Mar 2022') }
+
+          it 'returns the previous month last day' do
+            expect(result).to eq('2022-02-28')
+          end
+        end
+
+        context 'when anniversary date is first day of the year' do
+          let(:subscription_date) { DateTime.parse('01 Jan 2021') }
+          let(:timestamp) { DateTime.parse('02 Mar 2022') }
+
+          it 'returns the last day of the year' do
+            expect(result).to eq('2021-12-31')
+          end
+        end
+
+        # context 'when date is before the start date' do
+        #   let(:started_at) { DateTime.parse('02 Sep 2022') }
+
+        #   it 'returns the start date' do
+        #     expect(result).to eq(started_at.to_date.to_s)
+        #   end
+        # end
+
+        context 'when subscription is terminated' do
+          before do
+            subscription.update!(
+              status: :terminated,
+              terminated_at: DateTime.parse('02 Mar 2022'),
+            )
+          end
+
+          it 'returns the termination date' do
+            expect(result).to eq((subscription.terminated_at - 1.day).to_date.to_s)
+          end
+        end
+      end
+    end
+  end
+
+  describe 'previous_period_charges_from_date' do
+
   end
 end
