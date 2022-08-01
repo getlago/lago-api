@@ -5,7 +5,7 @@ module Events
     queue_as :default
 
     def perform(organization, params, timestamp, metadata)
-      result = EventsBatchService.new.batch_create(
+      result = Events::CreateBatchService.new.call(
         organization: organization,
         params: params,
         timestamp: Time.zone.at(timestamp),

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Events::CreateBatchService, type: :service do
-  subject(:event_service) { described_class.new }
+  subject(:create_batch_service) { described_class.new }
 
   let(:organization) { create(:organization) }
   let(:billable_metric)  { create(:billable_metric, organization: organization) }
@@ -19,7 +19,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
     end
 
     it 'validates the presence of the mandatory arguments' do
-      result = event_service.validate_batch_params(params: event_arguments)
+      result = create_batch_service.validate_batch_params(params: event_arguments)
 
       expect(result).to be_success
     end
@@ -32,7 +32,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
 
       it 'returns an error' do
-        result = event_service.validate_batch_params(params: event_arguments)
+        result = create_batch_service.validate_batch_params(params: event_arguments)
 
         expect(result).not_to be_success
 
@@ -46,7 +46,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
     end
   end
 
-  describe 'batch_create' do
+  describe 'call' do
     let(:transaction_id) { SecureRandom.uuid }
     let(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
     let(:subscription2) { create(:active_subscription, customer: customer, organization: organization) }
@@ -69,7 +69,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
     context 'when customer has two active subscription' do
       it 'creates a new event for each subscription' do
-        result = event_service.batch_create(
+        result = create_batch_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -108,7 +108,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       it 'does not duplicate existing event' do
         expect do
-          event_service.batch_create(
+          create_batch_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -130,7 +130,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.batch_create(
+        result = create_batch_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -143,7 +143,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.batch_create(
+          create_batch_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -164,7 +164,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.batch_create(
+        result = create_batch_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -177,7 +177,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.batch_create(
+          create_batch_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -199,7 +199,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.batch_create(
+        result = create_batch_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -212,7 +212,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.batch_create(
+          create_batch_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,
@@ -234,7 +234,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
 
       it 'fails' do
-        result = event_service.batch_create(
+        result = create_batch_service.call(
           organization: organization,
           params: create_args,
           timestamp: timestamp,
@@ -247,7 +247,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          event_service.batch_create(
+          create_batch_service.call(
             organization: organization,
             params: create_args,
             timestamp: timestamp,

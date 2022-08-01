@@ -11,8 +11,8 @@ module Events
       result.fail!(code: 'missing_mandatory_param', details: missing_arguments)
     end
 
-    def batch_create(organization:, params:, timestamp:, metadata:)
-      validate_batch_create(organization, params)
+    def call(organization:, params:, timestamp:, metadata:)
+      validate_create_batch(organization, params)
       return result unless result.success?
 
       events = []
@@ -56,7 +56,7 @@ module Events
 
     private
 
-    def validate_batch_create(organization, params)
+    def validate_create_batch(organization, params)
       return blank_subscription_error(organization, params) if params[:subscription_ids].blank?
       unless current_customer(organization, params[:customer_id], params[:subscription_ids]&.first)
         return invalid_customer_error(organization, params)
