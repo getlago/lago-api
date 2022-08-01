@@ -245,13 +245,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           expect(result).to eq('2022-03-06')
         end
 
-        # context 'when date is before the start date' do
-        #   let(:started_at) { DateTime.parse('15 Mar 2022') }
+        context 'when plan is pay in advance and billed for the first time' do
+          before { plan.update!(pay_in_advance: true) }
 
-        #   it 'returns the start date' do
-        #     expect(result).to eq(started_at.to_date.to_s)
-        #   end
-        # end
+          let(:started_at) { DateTime.parse('15 Jun 2022') }
+
+          it 'returns the start date' do
+            expect(result).to eq(started_at.to_date.to_s)
+          end
+        end
 
         context 'when subscription is terminated' do
           let(:timestamp) { DateTime.parse('07 Mar 2022') }
@@ -289,13 +291,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           expect(result).to eq('2022-02-28')
         end
 
-        # context 'when date is before the start date' do
-        #   let(:started_at) { DateTime.parse('07 Feb 2022') }
+        context 'when plan is pay in advance and billed for the first time' do
+          before { plan.update!(pay_in_advance: true) }
 
-        #   it 'returns the start date' do
-        #     expect(result).to eq(started_at.to_date.to_s)
-        #   end
-        # end
+          let(:started_at) { DateTime.parse('07 Feb 2022') }
+
+          it 'returns the start date' do
+            expect(result).to eq(started_at.to_date.to_s)
+          end
+        end
 
         context 'when subscription is terminated' do
           let(:timestamp) { DateTime.parse('10 Mar 2022') }
@@ -334,13 +338,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           expect(result).to eq('2021-12-31')
         end
 
-        # context 'when date is before the start date' do
-        #   let(:started_at) { DateTime.parse('07 Feb 2021') }
+        context 'when plan is pay in advance and billed for the first time' do
+          before { plan.update!(pay_in_advance: true) }
 
-        #   it 'returns the start date' do
-        #     expect(result).to eq(started_at.to_date.to_s)
-        #   end
-        # end
+          let(:started_at) { DateTime.parse('07 Feb 2021') }
+
+          it 'returns the start date' do
+            expect(result).to eq(started_at.to_date.to_s)
+          end
+        end
 
         context 'when subscription is terminated' do
           let(:timestamp) { DateTime.parse('10 Mar 2022') }
@@ -382,13 +388,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           expect(result).to eq('2022-03-07')
         end
 
-        # context 'when date is before the start date' do
-        #   let(:started_at) { DateTime.parse('08 Mar 2022') }
+        context 'when plan is pay in advance and billed for the first time' do
+          before { plan.update!(pay_in_advance: true) }
 
-        #   it 'returns the start date' do
-        #     expect(result).to eq(started_at.to_date.to_s)
-        #   end
-        # end
+          let(:started_at) { DateTime.parse('08 Mar 2022') }
+
+          it 'returns the start date' do
+            expect(result).to eq(started_at.to_date.to_s)
+          end
+        end
 
         context 'when subscription is terminated' do
           before do
@@ -450,13 +458,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        # context 'when date is before the start date' do
-        #   let(:started_at) { DateTime.parse('08 Feb 2022') }
+        context 'when plan is pay in advance and billed for the first time' do
+          before { plan.update!(pay_in_advance: true) }
 
-        #   it 'returns the start date' do
-        #     expect(result).to eq(started_at.to_date.to_s)
-        #   end
-        # end
+          let(:started_at) { DateTime.parse('08 Feb 2022') }
+
+          it 'returns the start date' do
+            expect(result).to eq(started_at.to_date.to_s)
+          end
+        end
 
         context 'when subscription is terminated' do
           let(:timestamp) { DateTime.parse('10 Mar 2022') }
@@ -512,13 +522,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        # context 'when date is before the start date' do
-        #   let(:started_at) { DateTime.parse('02 Sep 2022') }
+        context 'when plan is pay in advance and billed for the first time' do
+          before { plan.update!(pay_in_advance: true) }
 
-        #   it 'returns the start date' do
-        #     expect(result).to eq(started_at.to_date.to_s)
-        #   end
-        # end
+          let(:started_at) { DateTime.parse('02 Sep 2022') }
+
+          it 'returns the start date' do
+            expect(result).to eq(started_at.to_date.to_s)
+          end
+        end
 
         context 'when subscription is terminated' do
           before do

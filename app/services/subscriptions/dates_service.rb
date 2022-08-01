@@ -52,7 +52,7 @@ module Subscriptions
       if subscription.terminated? && @to_date > subscription.terminated_at
         # NOTE: When subscription is terminated, we cannot generate an invoice for a period after the termination
         @to_date = if %i[pending active].include?(subscription.next_subscription&.status&.to_sym)
-          subscription.terminated_at.to_date - 1.day
+          subscription.terminated_at.to_date - 1.day # TODO: check upgrade / downgrade
         else
           subscription.terminated_at.to_date
         end
@@ -63,7 +63,7 @@ module Subscriptions
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
       #       billed immediatly. An invoice must be generated for it with only the subscription fee.
       #       The invoicing period will be only one day: the subscription day
-      @to_date = subscription.started_at.to_date if @to_date < subscription.started_at
+      @to_date = subscription.started_at.to_date if plan.pay_in_advance? && subscription.fees.subscription_kind.none?
 
       @to_date
     end
