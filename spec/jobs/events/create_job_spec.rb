@@ -5,20 +5,20 @@ require 'rails_helper'
 RSpec.describe Events::CreateJob, type: :job do
   let(:organization) { create(:organization) }
   let(:params) { {} }
-  let(:event_service) { instance_double(EventsService) }
+  let(:event_service) { instance_double(Events::CreateService) }
   let(:result) { BaseService::Result.new }
   let(:timestamp) { Time.zone.now.to_i }
   let(:metadata) { { user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11' } }
 
   it 'calls the event service' do
-    allow(EventsService).to receive(:new).and_return(event_service)
+    allow(Events::CreateService).to receive(:new).and_return(event_service)
     allow(event_service).to receive(:create)
       .with(organization: organization, params: params, timestamp: Time.zone.at(timestamp), metadata: metadata)
       .and_return(result)
 
     described_class.perform_now(organization, params, timestamp, metadata)
 
-    expect(EventsService).to have_received(:new)
+    expect(Events::CreateService).to have_received(:new)
     expect(event_service).to have_received(:create)
   end
 
@@ -28,7 +28,7 @@ RSpec.describe Events::CreateJob, type: :job do
     end
 
     it 'raises an error' do
-      allow(EventsService).to receive(:new).and_return(event_service)
+      allow(Events::CreateService).to receive(:new).and_return(event_service)
       allow(event_service).to receive(:create)
         .with(organization: organization, params: params, timestamp: Time.zone.at(timestamp), metadata: metadata)
         .and_return(result)
@@ -37,7 +37,7 @@ RSpec.describe Events::CreateJob, type: :job do
         described_class.perform_now(organization, params, timestamp, metadata)
       end.to raise_error(BaseService::FailedResult)
 
-      expect(EventsService).to have_received(:new)
+      expect(Events::CreateService).to have_received(:new)
       expect(event_service).to have_received(:create)
     end
   end
