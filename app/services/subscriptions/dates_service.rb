@@ -64,9 +64,9 @@ module Subscriptions
       @to_date
     end
 
-    def previous_period_charges_from_date
+    def charges_from_date
       charges_from_date = if plan.yearly? && plan.bill_charges_monthly
-        (Time.zone.at(timestamp) - 1.month).to_date # TODO: use monthly_from_date
+        monthly_from_date
       else
         from_date
       end

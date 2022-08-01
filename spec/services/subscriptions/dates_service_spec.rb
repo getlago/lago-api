@@ -471,7 +471,85 @@ RSpec.describe Subscriptions::DatesService, type: :service do
     end
   end
 
-  describe 'previous_period_charges_from_date' do
+  describe 'charges_from_date' do
+    let(:result) { date_service.charges_from_date.to_s }
 
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+
+        it 'returns from_date' do
+          expect(result).to eq(date_service.from_date.to_s)
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+        let(:timestamp) { DateTime.parse('01 Mar 2022') }
+
+        it 'returns from_date' do
+          expect(result).to eq(date_service.from_date.to_s)
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+        let(:timestamp) { DateTime.parse('01 Jan 2022') }
+        let(:subscription_date) { DateTime.parse('02 Feb 2020') }
+
+        it 'returns from_date' do
+          expect(result).to eq(date_service.from_date.to_s)
+        end
+
+        context 'when billing charge monthly' do
+          before { plan.update!(bill_charges_monthly: true) }
+
+          it 'returns the begining of the previous month' do
+            expect(result).to eq('2021-12-01')
+          end
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+        let(:timestamp) { DateTime.parse('10 Mar 2022') }
+
+        it 'returns from_date' do
+          expect(result).to eq(date_service.from_date.to_s)
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+        let(:timestamp) { DateTime.parse('03 Mar 2022') }
+
+        it 'returns from_date' do
+          expect(result).to eq(date_service.from_date.to_s)
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+        let(:timestamp) { DateTime.parse('03 Feb 2022') }
+
+        it 'returns from_date' do
+          expect(result).to eq(date_service.from_date.to_s)
+        end
+
+        context 'when billing charge monthly' do
+          before { plan.update!(bill_charges_monthly: true) }
+
+          it 'returns the begining of the previous monthly period' do
+            expect(result).to eq('2022-01-02')
+          end
+        end
+      end
+    end
   end
 end
