@@ -7,7 +7,7 @@ module Charges
         errors = []
         errors << :invalid_amount unless valid_amount?
 
-        return result.fail!(:invalid_properties, errors) if errors.present?
+        return result.fail!(code: :invalid_properties, message: errors) if errors.present?
 
         result
       end

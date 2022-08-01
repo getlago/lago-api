@@ -208,7 +208,7 @@ RSpec.describe Fees::ChargeService do
         )
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
-      let(:error_result) { BaseService::Result.new.fail!('aggregation_failure') }
+      let(:error_result) { BaseService::Result.new.fail!(code: 'aggregation_failure') }
 
       it 'returns an error' do
         allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
@@ -317,7 +317,7 @@ RSpec.describe Fees::ChargeService do
         )
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
-      let(:error_result) { BaseService::Result.new.fail!('aggregation_failure') }
+      let(:error_result) { BaseService::Result.new.fail!(code: 'aggregation_failure') }
 
       it 'returns an error' do
         allow(BillableMetrics::Aggregations::MaxService).to receive(:new)

@@ -29,7 +29,7 @@ module PaymentProviderCustomers
         .joins(:customer)
         .where(customers: { organization_id: organization_id })
         .find_by(provider_customer_id: stripe_customer_id)
-      return result.fail!('not_found') unless stripe_customer
+      return result.fail!(code: 'not_found') unless stripe_customer
 
       stripe_customer.payment_method_id = payment_method_id
       stripe_customer.save!

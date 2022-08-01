@@ -24,7 +24,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
   context 'when result is a failure' do
     let(:result) do
-      BaseService::Result.new.fail!('error')
+      BaseService::Result.new.fail!(code: 'error')
     end
 
     it 'raises an error' do

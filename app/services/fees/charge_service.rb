@@ -33,7 +33,7 @@ module Fees
 
     def init_fee
       amount_result = compute_amount
-      return result.fail!(amount_result.error_code, amount_result.error) unless amount_result.success?
+      return result.fail!(code: amount_result.error_code, message: amount_result.error) unless amount_result.success?
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents

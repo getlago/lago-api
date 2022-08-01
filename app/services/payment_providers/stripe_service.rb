@@ -78,14 +78,14 @@ module PaymentProviders
       result.event = event
       result
     rescue JSON::ParserError
-      result.fail!('webhook_error', 'Invalid payload')
+      result.fail!(code: 'webhook_error', message: 'Invalid payload')
     rescue ::Stripe::SignatureVerificationError
-      result.fail!('webhook_error', 'Invalid signature')
+      result.fail!(code: 'webhook_error', message: 'Invalid signature')
     end
 
     def handle_event(organization:, event_json:)
       event = ::Stripe::Event.construct_from(JSON.parse(event_json))
-      return result.fail!('invalid_stripe_event_type') unless WEBHOOKS_EVENTS.include?(event.type)
+      return result.fail!(code: 'invalid_stripe_event_type') unless WEBHOOKS_EVENTS.include?(event.type)
 
       case event.type
       when 'setup_intent.succeeded'

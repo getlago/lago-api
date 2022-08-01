@@ -4,7 +4,7 @@ module Wallets
   class UpdateService < BaseService
     def update(**args)
       wallet = Wallet.find_by(id: args[:id])
-      return result.fail!('not_found') unless wallet
+      return result.fail!(code: 'not_found') unless wallet
 
       wallet.name = args[:name]
       wallet.expiration_date = args[:expiration_date]

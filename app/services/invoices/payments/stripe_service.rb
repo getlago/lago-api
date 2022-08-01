@@ -42,7 +42,7 @@ module Invoices
 
       def update_status(provider_payment_id:, status:)
         payment = Payment.find_by(provider_payment_id: provider_payment_id)
-        return result.fail!('stripe_payment_not_found') unless payment
+        return result.fail!(code: 'stripe_payment_not_found') unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
@@ -54,7 +54,7 @@ module Invoices
 
         result
       rescue ArgumentError
-        result.fail!('invalid_invoice_status')
+        result.fail!(code: 'invalid_invoice_status')
       end
 
       private

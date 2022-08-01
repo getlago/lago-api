@@ -24,7 +24,7 @@ RSpec.describe Events::CreateJob, type: :job do
 
   context 'when result is a failure' do
     let(:result) do
-      BaseService::Result.new.fail!('Invalid customer id')
+      BaseService::Result.new.fail!(code: 'Invalid customer id')
     end
 
     it 'raises an error' do

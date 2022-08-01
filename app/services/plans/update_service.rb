@@ -4,7 +4,7 @@ module Plans
   class UpdateService < BaseService
     def update(**args)
       plan = result.user.plans.find_by(id: args[:id])
-      return result.fail!('not_found') unless plan
+      return result.fail!(code: 'not_found') unless plan
 
       plan.name = args[:name]
       plan.description = args[:description]
@@ -23,7 +23,7 @@ module Plans
 
       metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
       if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-        return result.fail!('not_found', 'Billable metrics does not exists')
+        return result.fail!(code: 'not_found', message: 'Billable metrics does not exists')
       end
 
       ActiveRecord::Base.transaction do
@@ -40,7 +40,7 @@ module Plans
 
     def update_from_api(organization:, code:, params:)
       plan = organization.plans.find_by(code: code)
-      return result.fail!('not_found', 'plan does not exist') unless plan
+      return result.fail!(code: 'not_found', message: 'plan does not exist') unless plan
 
       plan.name = params[:name] if params.key?(:name)
       plan.description = params[:description] if params.key?(:description)
@@ -58,7 +58,7 @@ module Plans
       unless params[:charges].blank?
         metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.fail!('not_found', 'plan does not exists')
+          return result.fail!(code: 'not_found', message: 'plan does not exists')
         end
       end
 

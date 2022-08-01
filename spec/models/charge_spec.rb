@@ -13,8 +13,8 @@ RSpec.describe Charge, type: :model do
 
     let(:service_response) do
       BaseService::Result.new.fail!(
-        :invalid_properties,
-        [
+        code: :invalid_properties,
+        message: [
           :invalid_amount,
           :invalid_graduated_ranges,
         ],
@@ -66,8 +66,8 @@ RSpec.describe Charge, type: :model do
 
     let(:service_response) do
       BaseService::Result.new.fail!(
-        :invalid_properties,
-        [:invalid_amount],
+        code: :invalid_properties,
+        message: [:invalid_amount],
       )
     end
 
@@ -115,8 +115,8 @@ RSpec.describe Charge, type: :model do
 
     let(:service_response) do
       BaseService::Result.new.fail!(
-        :invalid_properties,
-        [
+        code: :invalid_properties,
+        message: [
           :invalid_amount,
           :invalid_free_units,
           :invalid_package_size,
@@ -168,8 +168,8 @@ RSpec.describe Charge, type: :model do
 
     let(:service_response) do
       BaseService::Result.new.fail!(
-        :invalid_properties,
-        [
+        code: :invalid_properties,
+        message: [
           :invalid_rate,
           :invalid_fixed_amount,
           :invalid_fixed_amount_target,

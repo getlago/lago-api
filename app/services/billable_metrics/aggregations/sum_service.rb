@@ -10,7 +10,7 @@ module BillableMetrics
 
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.fail!('aggregation_failure', e.message)
+        result.fail!(code: 'aggregation_failure', message: e.message)
       end
 
       private
