@@ -2,15 +2,15 @@
 
 module Events
   class CreateService < BaseService
+    ALL_REQUIRED_PARAMS = %i[transaction_id code].freeze
+    ONE_REQUIRED_PARAMS = %i[subscription_id customer_id].freeze
+
     def validate_params(params:)
-      mandatory_arguments = %i[transaction_id code]
-      mandatory_subscription_arguments = %i[subscription_id customer_id]
+      missing_params = ALL_REQUIRED_PARAMS.select { |key| params[key].blank? }
+      missing_params += ONE_REQUIRED_PARAMS if ONE_REQUIRED_PARAMS.all? { |key| params[key].blank? }
+      return result if missing_params.blank?
 
-      missing_arguments = mandatory_arguments.select { |arg| params[arg].blank? }
-      missing_subscription_arguments = mandatory_subscription_arguments.select { |arg| params[arg].blank? }
-      return result if missing_arguments.blank? && missing_subscription_arguments.count <= 1
-
-      result.fail!(code: 'missing_mandatory_param', details: missing_arguments + missing_subscription_arguments)
+      result.fail!(code: 'missing_mandatory_param', details: missing_params)
     end
 
     def call(organization:, params:, timestamp:, metadata:)

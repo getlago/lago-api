@@ -6,10 +6,10 @@ RSpec.describe Events::CreateService, type: :service do
   subject(:create_service) { described_class.new }
 
   let(:organization) { create(:organization) }
-  let(:billable_metric)  { create(:billable_metric, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization: organization) }
   let(:customer) { create(:customer, organization: organization) }
 
-  describe '.validate_params' do
+  describe '#validate_params' do
     let(:event_arguments) do
       {
         transaction_id: SecureRandom.uuid,
@@ -46,7 +46,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
   end
 
-  describe 'call' do
+  describe '#call' do
     let(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
 
     let(:create_args) do

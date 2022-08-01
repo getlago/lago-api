@@ -9,7 +9,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
   let(:billable_metric)  { create(:billable_metric, organization: organization) }
   let(:customer) { create(:customer, organization: organization) }
 
-  describe '.validate_batch_params' do
+  describe '#validate_params' do
     let(:event_arguments) do
       {
         transaction_id: SecureRandom.uuid,
@@ -19,7 +19,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
     end
 
     it 'validates the presence of the mandatory arguments' do
-      result = create_batch_service.validate_batch_params(params: event_arguments)
+      result = create_batch_service.validate_params(params: event_arguments)
 
       expect(result).to be_success
     end
@@ -32,7 +32,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
 
       it 'returns an error' do
-        result = create_batch_service.validate_batch_params(params: event_arguments)
+        result = create_batch_service.validate_params(params: event_arguments)
 
         expect(result).not_to be_success
 
@@ -46,7 +46,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
     end
   end
 
-  describe 'call' do
+  describe '#call' do
     let(:transaction_id) { SecureRandom.uuid }
     let(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
     let(:subscription2) { create(:active_subscription, customer: customer, organization: organization) }

@@ -2,13 +2,13 @@
 
 module Events
   class CreateBatchService < BaseService
-    def validate_batch_params(params:)
-      mandatory_arguments = %i[transaction_id code subscription_ids]
+    ALL_REQUIRED_PARAMS = %i[transaction_id code subscription_ids].freeze
 
-      missing_arguments = mandatory_arguments.select { |arg| params[arg].blank? }
-      return result if missing_arguments.blank?
+    def validate_params(params:)
+      missing_params = ALL_REQUIRED_PARAMS.select { |key| params[key].blank? }
+      return result if missing_params.blank?
 
-      result.fail!(code: 'missing_mandatory_param', details: missing_arguments)
+      result.fail!(code: 'missing_mandatory_param', details: missing_params)
     end
 
     def call(organization:, params:, timestamp:, metadata:)
