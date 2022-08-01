@@ -70,7 +70,7 @@ module Subscriptions
 
     def charges_from_date
       charges_from_date = if plan.yearly? && plan.bill_charges_monthly
-        monthly_from_date
+        monthly_from_date(billing_date - 1.month)
       else
         from_date
       end
@@ -91,7 +91,16 @@ module Subscriptions
     end
 
     def base_date
-      @base_date ||= billing_date - 1.day
+      @base_date ||= case plan.interval.to_sym
+                     when :weekly
+                       billing_date - 1.week
+                     when :monthly
+                       billing_date - 1.month
+                     when :yearly
+                       billing_date - 1.year
+                     else
+                       raise NotImplementedError
+      end
     end
 
     def terminated_pay_in_arrear?
@@ -102,22 +111,22 @@ module Subscriptions
 
     def weekly_from_date
       if terminated_pay_in_arrear?
-        return subscription.anniversary? ? previous_weekly_anniversary_day : base_date.beginning_of_week
+        return subscription.anniversary? ? previous_weekly_anniversary_day(billing_date) : billing_date.beginning_of_week
       end
 
-      subscription.anniversary? ? base_date - 1.week : base_date.beginning_of_week
+      subscription.anniversary? ? previous_weekly_anniversary_day(base_date) : base_date.beginning_of_week
     end
 
     def weekly_to_date
       from_date + 6.days
     end
 
-    def monthly_from_date
+    def monthly_from_date(date = base_date)
       if terminated_pay_in_arrear?
-        return subscription.anniversary? ? previous_monthly_anniversary_day : base_date.beginning_of_month
+        return subscription.anniversary? ? previous_monthly_anniversary_day(billing_date) : billing_date.beginning_of_month
       end
 
-      subscription.anniversary? ? base_date - 1.month : base_date.beginning_of_month
+      subscription.anniversary? ? previous_monthly_anniversary_day(date) : date.beginning_of_month
     end
 
     def monthly_to_date
@@ -137,10 +146,10 @@ module Subscriptions
 
     def yearly_from_date
       if terminated_pay_in_arrear?
-        return subscription.anniversary? ? previous_yearly_anniversary_day : base_date.beginning_of_year
+        return subscription.anniversary? ? previous_yearly_anniversary_day(billing_date) : billing_date.beginning_of_year
       end
 
-      subscription.anniversary? ? base_date - 1.year : base_date.beginning_of_year
+      subscription.anniversary? ? previous_yearly_anniversary_day(base_date) : base_date.beginning_of_year
     end
 
     def yearly_to_date
@@ -153,29 +162,30 @@ module Subscriptions
       build_date(year, month, day)
     end
 
-    def previous_weekly_anniversary_day
-      days_before = (base_date.wday + subscription_date.wday) % 7 + 1
-      base_date - days_before
+    def previous_weekly_anniversary_day(date)
+      weekday_index = Date::DAYNAMES.reverse.index(subscription_date.strftime('%A'))
+      days_before = (date.wday + weekday_index) % 7 + 1
+      date - days_before
     end
 
-    def previous_monthly_anniversary_day
+    def previous_monthly_anniversary_day(date)
       year = nil
       month = nil
       day = subscription_date.day
 
-      if base_date.day <= subscription_date.day
-        year = base_date.month == 1 ? base_date.year - 1 : base_date.year
-        month = base_date.month == 1 ? 12 : base_date.month - 1
+      if date.day <= subscription_date.day
+        year = date.month == 1 ? date.year - 1 : date.year
+        month = date.month == 1 ? 12 : date.month - 1
       else
-        year = base_date.year
-        month = base_date.month
+        year = date.year
+        month = date.month
       end
 
       build_date(year, month, day)
     end
 
-    def previous_yearly_anniversary_day
-      year = base_date.month < subscription_date.month ? base_date.year - 1 : base_date.year
+    def previous_yearly_anniversary_day(date)
+      year = date.month < subscription_date.month ? date.year - 1 : date.year
       month = subscription_date.month
       day = subscription_date.day
 
