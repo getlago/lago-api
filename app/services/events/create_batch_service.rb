@@ -12,7 +12,17 @@ module Events
     end
 
     def call(organization:, params:, timestamp:, metadata:)
-      validate_create_batch(organization, params)
+      customer = organization.subscriptions.find_by(
+        id: params[:subscription_ids]&.first
+      )&.customer
+
+      Events::ValidateCreationService.call(
+        organization: organization,
+        params: params,
+        customer: customer,
+        result: result,
+        batch: true
+      )
       return result unless result.success?
 
       events = []
@@ -29,7 +39,7 @@ module Events
           event = organization.events.new
           event.code = params[:code]
           event.transaction_id = params[:transaction_id]
-          event.customer = current_customer
+          event.customer = customer
           event.subscription_id = id
           event.properties = params[:properties] || {}
           event.metadata = metadata || {}
@@ -43,80 +53,17 @@ module Events
         rescue ActiveRecord::RecordInvalid => e
           result.fail_with_validations!(e.record)
 
-          send_webhook_notice(organization, params)
+          SendWebhookJob.perform_later(
+            :event,
+            { input_params: params, error: result.error, organization_id: organization.id }
+          ) if organization.webhook_url?
 
           return result
         end
       end
 
       result.events = events
-
       result
-    end
-
-    private
-
-    def validate_create_batch(organization, params)
-      return blank_subscription_error(organization, params) if params[:subscription_ids].blank?
-      unless current_customer(organization, params[:customer_id], params[:subscription_ids]&.first)
-        return invalid_customer_error(organization, params)
-      end
-
-      invalid_subscriptions = params[:subscription_ids].select { |arg| !attached_subscriptions.include?(arg) }
-      return invalid_subscription_error(organization, params) if invalid_subscriptions.present?
-      return invalid_code_error(organization, params) unless valid_code?(params[:code], organization)
-    end
-
-    def current_customer(organization = nil, customer_id = nil, subscription_id = nil)
-      return @current_customer if defined? @current_customer
-
-      @current_customer = if subscription_id
-                            organization.subscriptions.find_by(id: subscription_id)&.customer
-                          else
-                            Customer.find_by(customer_id: customer_id, organization_id: organization.id)
-                          end
-    end
-
-    def valid_code?(code, organization)
-      valid_codes = organization.billable_metrics.pluck(:code)
-
-      valid_codes.include? code
-    end
-
-    def send_webhook_notice(organization, params)
-      return unless organization.webhook_url?
-
-      object = {
-        input_params: params,
-        error: result.error,
-        organization_id: organization.id
-      }
-
-      SendWebhookJob.perform_later(:event, object)
-    end
-
-    def attached_subscriptions
-      @attached_subscriptions ||= current_customer&.active_subscriptions&.pluck(:id)
-    end
-
-    def blank_subscription_error(organization, params)
-      result.fail!(code: 'missing_argument', message: 'subscription does not exist or is not given')
-      send_webhook_notice(organization, params)
-    end
-
-    def invalid_subscription_error(organization, params)
-      result.fail!(code: 'invalid_argument', message: 'subscription_id is invalid')
-      send_webhook_notice(organization, params)
-    end
-
-    def invalid_code_error(organization, params)
-      result.fail!(code: 'missing_argument', message: 'code does not exist')
-      send_webhook_notice(organization, params)
-    end
-
-    def invalid_customer_error(organization, params)
-      result.fail!(code: 'missing_argument', message: 'customer cannot be found')
-      send_webhook_notice(organization, params)
     end
   end
 end
