@@ -29,7 +29,7 @@ class BaseService
       !failure
     end
 
-    def fail!(code, message = nil, details = nil)
+    def fail!(code:, message: nil, details: nil)
       @failure = true
       @error_code = code
       @error = message || code
@@ -37,16 +37,16 @@ class BaseService
 
       # Return self to return result immediately in case of failure:
       # ```
-      # return result.fail!('not_found')
+      # return result.fail!(code: 'not_found')
       # ```
       self
     end
 
     def fail_with_validations!(record)
       fail!(
-        'unprocessable_entity',
-        'Validation error on the record',
-        record.errors.messages,
+        code: 'unprocessable_entity',
+        message: 'Validation error on the record',
+        details: record.errors.messages
       )
     end
 

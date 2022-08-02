@@ -57,7 +57,7 @@ RSpec.describe WebhooksController, type: :request do
 
     context 'when failing to handle stripe event' do
       let(:result) do
-        BaseService::Result.new.fail!('webhook_error', 'Invalid payload')
+        BaseService::Result.new.fail!(code: 'webhook_error', message: 'Invalid payload')
       end
 
       it 'returns a bad request' do

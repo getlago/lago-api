@@ -5,7 +5,7 @@ class UsersService < BaseService
     result.user = User.find_by(email: email)&.authenticate(password)
     result.token = generate_token if result.user
 
-    return result.fail!('incorrect_login_or_password') unless result.user
+    return result.fail!(code: 'incorrect_login_or_password') unless result.user
 
     # Note: We're tracking the first membership linked to the user.
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.user.memberships.first.id}")
@@ -17,7 +17,7 @@ class UsersService < BaseService
     result.user = User.find_or_initialize_by(email: email)
 
     if result.user.id
-      result.fail!('user_already_exists')
+      result.fail!(code: 'user_already_exists')
 
       return result
     end
@@ -52,7 +52,7 @@ class UsersService < BaseService
   def generate_token
     JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
   rescue StandardError => e
-    result.fail!('token_encoding_error', e.message)
+    result.fail!(code: 'token_encoding_error', message: e.message)
   end
 
   def payload

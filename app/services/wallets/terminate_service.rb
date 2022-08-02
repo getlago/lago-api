@@ -5,7 +5,7 @@ module Wallets
     def terminate(id)
       wallet = Wallet.find_by(id: id)
 
-      return result.fail!('not_found') unless wallet
+      return result.fail!(code: 'not_found') unless wallet
 
       wallet.mark_as_terminated! if wallet.active?
 

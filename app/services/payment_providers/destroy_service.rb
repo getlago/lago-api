@@ -7,7 +7,7 @@ module PaymentProviders
         id: id,
         organization_id: result.user.organization_ids,
       )
-      return result.fail!('not_found') unless payment_provider
+      return result.fail!(code: 'not_found') unless payment_provider
 
       payment_provider.destroy!
 

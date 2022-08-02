@@ -9,7 +9,7 @@ module Charges
         errors << :invalid_free_units unless valid_free_units?
         errors << :invalid_package_size unless valid_package_size?
 
-        return result.fail!(:invalid_properties, errors) if errors.present?
+        return result.fail!(code: :invalid_properties, message: errors) if errors.present?
 
         result
       end

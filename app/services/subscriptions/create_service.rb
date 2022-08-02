@@ -45,11 +45,11 @@ module Subscriptions
     private
 
     def process_create
-      return result.fail!('missing_argument', 'unable to find customer') unless current_customer
-      return result.fail!('missing_argument', 'plan does not exists') unless current_plan
+      return result.fail!(code: 'missing_argument', message: 'unable to find customer') unless current_customer
+      return result.fail!(code: 'missing_argument', message: 'plan does not exists') unless current_plan
 
       if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
-        return result.fail!('currencies_does_not_match', 'currencies does not match')
+        return result.fail!(code: 'currencies_does_not_match',message: 'currencies does not match')
       end
 
 

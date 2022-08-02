@@ -8,14 +8,14 @@ module Wallets
         organization_id: args[:organization_id],
       )
 
-      return result.fail!('missing_argument', 'unable to find customer') unless current_customer
+      return result.fail!(code: 'missing_argument', message: 'unable to find customer') unless current_customer
 
       if current_customer.wallets.active.any?
-        return result.fail!('wallet_already_exists', 'a wallet already exists for this customer')
+        return result.fail!(code: 'wallet_already_exists', message: 'a wallet already exists for this customer')
       end
 
       unless current_customer.subscriptions.active.any?
-        return result.fail!('no_active_subscription', 'customer does not have any active subscription')
+        return result.fail!(code: 'no_active_subscription', message: 'customer does not have any active subscription')
       end
 
       wallet = current_customer.wallets.create!(

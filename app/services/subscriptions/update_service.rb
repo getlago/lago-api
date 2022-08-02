@@ -4,7 +4,7 @@ module Subscriptions
   class UpdateService < BaseService
     def update(**args)
       subscription = Subscription.find_by(id: args[:id])
-      return result.fail!('not_found') unless subscription
+      return result.fail!(code: 'not_found') unless subscription
 
       subscription.name = args[:name] if args.key?(:name)
 
@@ -18,7 +18,7 @@ module Subscriptions
 
     def update_from_api(organization:, id:, params:)
       subscription = organization.subscriptions.find_by(id: id)
-      return result.fail!('not_found', 'subscription is not found') unless subscription
+      return result.fail!(code: 'not_found', message: 'subscription is not found') unless subscription
 
       subscription.name = params[:name] if params.key?(:name)
 

@@ -4,7 +4,7 @@ module Customers
   class UpdateService < BaseService
     def update(**args)
       customer = result.user.customers.find_by(id: args[:id])
-      return result.fail!('not_found') unless customer
+      return result.fail!(code: 'not_found') unless customer
 
       customer.name = args[:name] if args.key?(:name)
       customer.country = args[:country]&.upcase if args.key?(:country)

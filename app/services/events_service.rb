@@ -9,7 +9,7 @@ class EventsService < BaseService
     missing_subscription_arguments = mandatory_subscription_arguments.select { |arg| params[arg].blank? }
     return result if missing_arguments.blank? && missing_subscription_arguments.count <= 1
 
-    result.fail!('missing_mandatory_param', nil, missing_arguments + missing_subscription_arguments)
+    result.fail!(code: 'missing_mandatory_param', details: missing_arguments + missing_subscription_arguments)
   end
 
   def validate_batch_params(params:)
@@ -18,7 +18,7 @@ class EventsService < BaseService
     missing_arguments = mandatory_arguments.select { |arg| params[arg].blank? }
     return result if missing_arguments.blank?
 
-    result.fail!('missing_mandatory_param', nil, missing_arguments)
+    result.fail!(code: 'missing_mandatory_param', details: missing_arguments)
   end
 
   def create(organization:, params:, timestamp:, metadata:)
@@ -166,22 +166,22 @@ class EventsService < BaseService
   end
 
   def blank_subscription_error(organization, params)
-    result.fail!('missing_argument', 'subscription does not exist or is not given')
+    result.fail!(code: 'missing_argument', message: 'subscription does not exist or is not given')
     send_webhook_notice(organization, params)
   end
 
   def invalid_subscription_error(organization, params)
-    result.fail!('invalid_argument', 'subscription_id is invalid')
+    result.fail!(code: 'invalid_argument', message: 'subscription_id is invalid')
     send_webhook_notice(organization, params)
   end
 
   def invalid_code_error(organization, params)
-    result.fail!('missing_argument', 'code does not exist')
+    result.fail!(code: 'missing_argument', message: 'code does not exist')
     send_webhook_notice(organization, params)
   end
 
   def invalid_customer_error(organization, params)
-    result.fail!('missing_argument', 'customer cannot be found')
+    result.fail!(code: 'missing_argument', message: 'customer cannot be found')
     send_webhook_notice(organization, params)
   end
 end

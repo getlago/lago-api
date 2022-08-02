@@ -9,7 +9,7 @@ module Charges
         errors << :invalid_fixed_amount unless valid_fixed_amount?
         errors << :invalid_fixed_amount_target unless valid_fixed_amount_target?
 
-        return result.fail!(:invalid_properties, errors) if errors.present?
+        return result.fail!(code: :invalid_properties, message: errors) if errors.present?
 
         result
       end

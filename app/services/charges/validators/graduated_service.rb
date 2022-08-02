@@ -8,7 +8,7 @@ module Charges
 
         if ranges.blank?
           errors << :missing_graduated_range
-          return result.fail!(:invalid_properties, errors)
+          return result.fail!(code: :invalid_properties, message: errors)
         end
 
         next_from_value = 0
@@ -19,7 +19,7 @@ module Charges
           next_from_value = (range[:to_value] || 0) + 1
         end
 
-        return result.fail!(:invalid_properties, errors) if errors.present?
+        return result.fail!(code: :invalid_properties, message: errors) if errors.present?
 
         result
       end
