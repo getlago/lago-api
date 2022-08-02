@@ -572,6 +572,29 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
         end
+
+        context 'when subscription is upgraded' do
+          let(:previous_plan) do
+            create(:plan, amount_cents: plan.amount_cents - 1)
+          end
+
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              plan: previous_plan,
+              status: :terminated,
+              terminated_at: started_at,
+            )
+          end
+
+          let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+          before { subscription.update!(previous_subscription: previous_subscription) }
+
+          it 'returns the beginning of the week' do
+            expect(result).to eq('2022-02-28')
+          end
+        end
       end
 
       context 'when interval is monthly' do
@@ -580,6 +603,29 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
+        end
+
+        context 'when subscription is upgraded' do
+          let(:previous_plan) do
+            create(:plan, amount_cents: plan.amount_cents - 1)
+          end
+
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              plan: previous_plan,
+              status: :terminated,
+              terminated_at: started_at,
+            )
+          end
+
+          let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+          before { subscription.update!(previous_subscription: previous_subscription) }
+
+          it 'returns the beginning of the month' do
+            expect(result).to eq('2022-03-01')
+          end
         end
       end
 
@@ -592,11 +638,64 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           expect(result).to eq(date_service.from_date.to_s)
         end
 
+        context 'when subscription is upgraded' do
+          let(:previous_plan) do
+            create(:plan, amount_cents: plan.amount_cents - 1, interval: plan.interval)
+          end
+
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              plan: previous_plan,
+              status: :terminated,
+              terminated_at: started_at,
+            )
+          end
+
+          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+          let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+          before { subscription.update!(previous_subscription: previous_subscription) }
+
+          it 'returns the beginning of the year' do
+            expect(result).to eq('2022-01-01')
+          end
+        end
+
         context 'when billing charge monthly' do
           before { plan.update!(bill_charges_monthly: true) }
 
           it 'returns the begining of the previous month' do
             expect(result).to eq('2021-12-01')
+          end
+
+          context 'when subscription is upgraded' do
+            let(:previous_plan) do
+              create(
+                :plan,
+                amount_cents: plan.amount_cents - 1,
+                interval: plan.interval,
+                bill_charges_monthly: true,
+              )
+            end
+
+            let(:previous_subscription) do
+              create(
+                :subscription,
+                plan: previous_plan,
+                status: :terminated,
+                terminated_at: started_at,
+              )
+            end
+
+            let(:timestamp) { DateTime.parse('07 Mar 2022') }
+            let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+            before { subscription.update!(previous_subscription: previous_subscription) }
+
+            it 'returns the beginning of the month' do
+              expect(result).to eq('2022-03-01')
+            end
           end
         end
       end
@@ -612,6 +711,29 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
         end
+
+        context 'when subscription is upgraded' do
+          let(:previous_plan) do
+            create(:plan, amount_cents: plan.amount_cents - 1)
+          end
+
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              plan: previous_plan,
+              status: :terminated,
+              terminated_at: started_at,
+            )
+          end
+
+          let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+          before { subscription.update!(previous_subscription: previous_subscription) }
+
+          it 'returns the beginning of weekly period' do
+            expect(result).to eq('2022-03-01')
+          end
+        end
       end
 
       context 'when interval is monthly' do
@@ -620,6 +742,29 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
+        end
+
+        context 'when subscription is upgraded' do
+          let(:previous_plan) do
+            create(:plan, amount_cents: plan.amount_cents - 1)
+          end
+
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              plan: previous_plan,
+              status: :terminated,
+              terminated_at: started_at,
+            )
+          end
+
+          let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+          before { subscription.update!(previous_subscription: previous_subscription) }
+
+          it 'returns the beginning of the monthly period' do
+            expect(result).to eq('2022-03-02')
+          end
         end
       end
 
@@ -631,11 +776,64 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           expect(result).to eq(date_service.from_date.to_s)
         end
 
+        context 'when subscription is upgraded' do
+          let(:previous_plan) do
+            create(:plan, amount_cents: plan.amount_cents - 1, interval: plan.interval)
+          end
+
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              plan: previous_plan,
+              status: :terminated,
+              terminated_at: started_at,
+            )
+          end
+
+          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+          let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+          before { subscription.update!(previous_subscription: previous_subscription) }
+
+          it 'returns the beginning of the yearly period' do
+            expect(result).to eq('2022-02-02')
+          end
+        end
+
         context 'when billing charge monthly' do
           before { plan.update!(bill_charges_monthly: true) }
 
           it 'returns the begining of the previous monthly period' do
             expect(result).to eq('2022-01-02')
+          end
+
+          context 'when subscription is upgraded' do
+            let(:previous_plan) do
+              create(
+                :plan,
+                amount_cents: plan.amount_cents - 1,
+                interval: plan.interval,
+                bill_charges_monthly: true,
+              )
+            end
+
+            let(:previous_subscription) do
+              create(
+                :subscription,
+                plan: previous_plan,
+                status: :terminated,
+                terminated_at: started_at,
+              )
+            end
+
+            let(:timestamp) { DateTime.parse('07 Mar 2022') }
+            let(:started_at) { DateTime.parse('03 Mar 2022') }
+
+            before { subscription.update!(previous_subscription: previous_subscription) }
+
+            it 'returns the beginning of the monthly period' do
+              expect(result).to eq('2022-03-02')
+            end
           end
         end
       end

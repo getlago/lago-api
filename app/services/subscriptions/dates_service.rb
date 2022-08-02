@@ -77,6 +77,11 @@ module Subscriptions
 
       charges_from_date = subscription.started_at.to_date if charges_from_date < subscription.started_at
 
+      # NOTE: when upgrading, we bill the fees from the start of the complete period (from previous plan)
+      #       and not only from the start of the current subscription
+      # TODO: This should be chalenged
+      return upgraded_charges_from_date(charges_from_date) if first_period_after_upgrade?
+
       charges_from_date
     end
 
@@ -198,6 +203,49 @@ module Subscriptions
       day = day_count_in_month if day_count_in_month < day
 
       Date.new(year, month, day)
+    end
+
+    def first_period_after_upgrade?
+      return false unless subscription.previous_subscription
+      return false unless subscription.previous_subscription.upgraded?
+
+      subscription.fees.charge_kind.none?
+    end
+
+    def upgraded_charges_from_date(from_date)
+      # TODO: check with previous plan interval, we might have a holl in here...
+      case plan.interval.to_sym
+      when :weekly
+        weekly_upgraded_charges_from_date(from_date)
+      when :monthly
+        monthly_upgraded_charges_from_date(from_date)
+      when :yearly
+        if subscription.previous_subscription.plan.bill_charges_monthly?
+          monthly_upgraded_charges_from_date(from_date)
+        else
+          yearly_upgraded_charges_from_date(from_date)
+        end
+      else
+        raise NotImplementedError
+      end
+    end
+
+    def weekly_upgraded_charges_from_date(from_date)
+      return from_date.beginning_of_week if subscription.calendar?
+
+      previous_weekly_anniversary_day(from_date)
+    end
+
+    def monthly_upgraded_charges_from_date(from_date)
+      return from_date.beginning_of_month if subscription.calendar?
+
+      previous_monthly_anniversary_day(from_date)
+    end
+
+    def yearly_upgraded_charges_from_date(from_date)
+      return from_date.beginning_of_year if subscription.calendar?
+
+      previous_yearly_anniversary_day(from_date)
     end
   end
 end
