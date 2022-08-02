@@ -52,7 +52,7 @@ module Subscriptions
       if subscription.terminated? && @to_date > subscription.terminated_at
         # NOTE: When subscription is terminated, we cannot generate an invoice for a period after the termination
         @to_date = if %i[pending active].include?(subscription.next_subscription&.status&.to_sym)
-          subscription.terminated_at.to_date - 1.day # TODO: check upgrade / downgrade
+          subscription.terminated_at.to_date - 1.day
         else
           subscription.terminated_at.to_date
         end
@@ -224,7 +224,7 @@ module Subscriptions
     end
 
     def upgraded_charges_from_date(from_date)
-      # TODO: check with previous plan interval, we might have a holl in here...
+      # TODO: check with previous plan interval, we might have a rabit hole in here...
       case plan.interval.to_sym
       when :weekly
         weekly_upgraded_charges_from_date(from_date)
