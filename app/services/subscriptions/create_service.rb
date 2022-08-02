@@ -2,7 +2,7 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan
+    attr_reader :current_customer, :current_plan, :current_subscription, :name, :unique_id
 
     def create_from_api(organization:, params:)
       if params[:customer_id]
@@ -16,6 +16,9 @@ module Subscriptions
         organization_id: organization.id,
         code: params[:plan_code]&.strip,
       )
+      @name = params[:name]&.strip
+      @unique_id = params[:unique_id]&.strip
+      @current_subscription = find_current_subscription(params[:subscription_id])
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
@@ -32,6 +35,9 @@ module Subscriptions
         organization_id: args[:organization_id],
         id: args[:plan_id]&.strip,
       )
+      @name = args[:name]&.strip
+      @unique_id = SecureRandom.uuid
+      @current_subscription = find_current_subscription(args[:subscription_id])
 
       process_create
     end
@@ -42,6 +48,11 @@ module Subscriptions
       return result.fail!('missing_argument', 'unable to find customer') unless current_customer
       return result.fail!('missing_argument', 'plan does not exists') unless current_plan
 
+      if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
+        return result.fail!('currencies_does_not_match', 'currencies does not match')
+      end
+
+
       result.subscription = handle_subscription
       track_subscription_created(result.subscription)
       result
@@ -49,15 +60,15 @@ module Subscriptions
       result.fail_with_validations!(e.record)
     end
 
-    def current_subscription
-      @current_subscription ||= current_customer.subscriptions.active.first
+    def find_current_subscription(subscription_id)
+      current_customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
     def handle_subscription
       return upgrade_subscription if upgrade?
       return downgrade_subscription if downgrade?
 
-      current_subscription || create_subscription
+      existing_subscription || create_subscription
     end
 
     def upgrade?
@@ -79,6 +90,8 @@ module Subscriptions
         customer: current_customer,
         plan_id: current_plan.id,
         subscription_date: Time.zone.now.to_date,
+        name: name,
+        unique_id: unique_id
       )
       new_subscription.mark_as_active!
 
@@ -96,6 +109,8 @@ module Subscriptions
       new_subscription = Subscription.new(
         customer: current_customer,
         plan: current_plan,
+        name: name,
+        unique_id: current_subscription.unique_id,
         previous_subscription_id: current_subscription.id,
         subscription_date: current_subscription.subscription_date,
       )
@@ -135,6 +150,8 @@ module Subscriptions
         Subscription.create!(
           customer: current_customer,
           plan: current_plan,
+          name: name,
+          unique_id: current_subscription.unique_id,
           previous_subscription_id: current_subscription.id,
           subscription_date: current_subscription.subscription_date,
           status: :pending,
@@ -174,6 +191,16 @@ module Subscriptions
           organization_id: subscription.organization.id
         }
       )
+    end
+
+    def currency_missmatch?(old_plan, new_plan)
+      return false unless old_plan
+
+      old_plan.amount_currency != new_plan.amount_currency
+    end
+
+    def existing_subscription
+      @existing_subscription ||= Subscription.active.find_by(unique_id: unique_id, customer_id: current_customer.id)
     end
   end
 end

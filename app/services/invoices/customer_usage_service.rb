@@ -2,7 +2,7 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(current_user, customer_id:, organization_id: nil)
+    def initialize(current_user, customer_id:, subscription_id:, organization_id: nil)
       super(current_user)
 
       if organization_id.present?
@@ -14,6 +14,8 @@ module Invoices
       else
         customer(customer_id: customer_id)
       end
+
+      @subscription = find_subscription(subscription_id)
     end
 
     def usage
@@ -49,7 +51,7 @@ module Invoices
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :subscription
 
     delegate :plan, to: :subscription
 
@@ -60,8 +62,8 @@ module Invoices
       )
     end
 
-    def subscription
-      @subscription ||= customer.active_subscription
+    def find_subscription(subscription_id)
+      customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
     def from_date

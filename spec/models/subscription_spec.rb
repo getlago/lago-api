@@ -29,7 +29,9 @@ RSpec.describe Subscription, type: :model do
 
       it { expect(previous_subscription).to be_upgraded }
 
-      context 'when previous plan was more expersive' do
+      it { expect(previous_subscription.next_pending_start_date).to be nil }
+
+      context 'when previous plan was more expensive' do
         let(:previous_plan) do
           create(:plan, amount_cents: plan.amount_cents + 10)
         end
@@ -44,6 +46,14 @@ RSpec.describe Subscription, type: :model do
         end
 
         it { expect(previous_subscription).not_to be_upgraded }
+      end
+
+      context 'when next subscription is pending' do
+        before do
+          subscription.update!(status: :pending)
+        end
+
+        it { expect(previous_subscription.next_pending_start_date).not_to be nil }
       end
     end
   end
@@ -111,6 +121,31 @@ RSpec.describe Subscription, type: :model do
 
       it 'returns nil' do
         expect(subscription.trial_end_date).to be_nil
+      end
+    end
+  end
+
+  describe '.valid_unique_id' do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:plan) { create(:plan) }
+    let(:unique_id) { SecureRandom.uuid }
+    let(:subscription) { create(:active_subscription, plan: plan, customer: customer) }
+    let(:new_subscription) { build(:active_subscription, plan: plan, unique_id: unique_id, customer: customer) }
+
+    before { subscription }
+
+    context 'when unique_id is unique' do
+      it 'does not raise validation error if unique_id is unique' do
+        expect(new_subscription).to be_valid
+      end
+    end
+
+    context 'when unique_id is NOT unique' do
+      let(:unique_id) { subscription.unique_id }
+
+      it 'raises validation error' do
+        expect(new_subscription).not_to be_valid
       end
     end
   end

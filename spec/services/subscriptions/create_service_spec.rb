@@ -10,11 +10,14 @@ RSpec.describe Subscriptions::CreateService, type: :service do
   describe '.create_from_api' do
     let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
     let(:customer) { create(:customer, organization: organization) }
+    let(:unique_id) { SecureRandom.uuid }
 
     let(:params) do
       {
         customer_id: customer.customer_id,
         plan_code: plan.code,
+        name: 'invoice display name',
+        unique_id: unique_id,
       }
     end
 
@@ -37,6 +40,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.plan_id).to eq(plan.id)
         expect(subscription.started_at).to be_present
         expect(subscription.subscription_date).to be_present
+        expect(subscription.name).to eq('invoice display name')
         expect(subscription).to be_active
       end
     end
@@ -66,6 +70,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: SecureRandom.uuid,
           plan_code: plan.code,
+          unique_id: unique_id,
         }
       end
 
@@ -107,6 +112,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: nil,
           plan_code: plan.code,
+          unique_id: unique_id,
         }
       end
 
@@ -126,6 +132,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: customer.customer_id,
           plan_code: 'invalid_plan',
+          unique_id: unique_id,
         }
       end
 
@@ -141,7 +148,16 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     end
 
     context 'when an active subscription already exists' do
-      let!(:subscription) do
+      let(:params) do
+        {
+          customer_id: customer.customer_id,
+          plan_code: plan.code,
+          name: 'invoice display name',
+          subscription_id: subscription.id,
+          unique_id: unique_id,
+        }
+      end
+      let(:subscription) do
         create(
           :subscription,
           customer: customer,
@@ -152,7 +168,47 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         )
       end
 
-      context 'when plan is the same' do
+      before { subscription }
+
+      context 'when new plan has different currency than the old plan' do
+        let(:new_plan) { create(:plan, amount_cents: 200, organization: organization, amount_currency: 'USD') }
+        let(:params) do
+          {
+            customer_id: customer.customer_id,
+            plan_code: new_plan.code,
+            name: 'invoice display name new',
+            unique_id: unique_id,
+          }
+        end
+
+        it 'fails' do
+          result = create_service.create_from_api(
+            organization: organization,
+            params: params,
+            )
+
+          expect(result).not_to be_success
+          expect(result.error).to eq('currencies does not match')
+        end
+      end
+
+      context 'when plan is the same and unique id is different' do
+        it 'returns new subscription' do
+          result = create_service.create_from_api(
+            organization: organization,
+            params: params,
+          )
+
+          expect(result).to be_success
+          expect(result.subscription.id).not_to eq(subscription.id)
+        end
+      end
+
+      context 'when plan is the same and unique id is the same' do
+        before do
+          subscription.update!(unique_id: unique_id)
+        end
+
         it 'returns existing subscription' do
           result = create_service.create_from_api(
             organization: organization,
@@ -171,6 +227,9 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             {
               customer_id: customer.customer_id,
               plan_code: higher_plan.code,
+              name: 'invoice display name new',
+              subscription_id: subscription.id,
+              unique_id: unique_id,
             }
           end
 
@@ -195,6 +254,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result).to be_success
               expect(result.subscription.id).not_to eq(subscription.id)
               expect(result.subscription).to be_active
+              expect(result.subscription.name).to eq('invoice display name new')
               expect(result.subscription.plan.id).to eq(higher_plan.id)
               expect(result.subscription.previous_subscription_id).to eq(subscription.id)
               expect(result.subscription.subscription_date).to eq(subscription.subscription_date)
@@ -262,6 +322,9 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             {
               customer_id: customer.customer_id,
               plan_code: lower_plan.code,
+              name: 'invoice display name new',
+              subscription_id: subscription.id,
+              unique_id: unique_id,
             }
           end
 
@@ -277,6 +340,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               next_subscription = result.subscription.next_subscription
               expect(next_subscription.id).not_to eq(subscription.id)
               expect(next_subscription).to be_pending
+              expect(next_subscription.name).to eq('invoice display name new')
               expect(next_subscription.plan_id).to eq(lower_plan.id)
               expect(next_subscription.subscription_date).to eq(subscription.subscription_date)
               expect(next_subscription.previous_subscription).to eq(subscription)

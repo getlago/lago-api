@@ -61,11 +61,12 @@ Charge.create_with(
     customer_id: "cust_#{i + 1}",
   )
 
-  Subscription.create_with(
+  sub = Subscription.create_with(
     started_at: Time.zone.now - 3.months,
     status: :active,
   ).find_or_create_by!(
     customer: customer,
+    unique_id: SecureRandom.uuid,
     plan: plan,
   )
 
@@ -77,6 +78,7 @@ Charge.create_with(
 
     Event.create!(
       customer: customer,
+      subscription: sub,
       organization: organization,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..12).seconds,
@@ -98,6 +100,7 @@ Charge.create_with(
 
     Event.create!(
       customer: customer,
+      subscription: sub,
       organization: organization,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
@@ -117,6 +120,7 @@ Charge.create_with(
 
     Event.create!(
       customer: customer,
+      subscription: sub,
       organization: organization,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
@@ -173,6 +177,7 @@ organization.customers.find_each do |customer|
 
     Event.create!(
       customer: customer,
+      subscription: customer.active_subscriptions&.first,
       organization: organization,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..24).hours,

@@ -29,6 +29,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       4,
       code: billable_metric.code,
       customer: customer,
+      subscription: subscription,
       timestamp: Time.zone.now,
       properties: {
         total_count: rand(10),
@@ -39,6 +40,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       :event,
       code: billable_metric.code,
       customer: customer,
+      subscription: subscription,
       timestamp: Time.zone.now,
       properties: {
         total_count: 12,
@@ -80,6 +82,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
         :event,
         code: billable_metric.code,
         customer: customer,
+        subscription: subscription,
         timestamp: Time.zone.now,
         properties: {
           total_count: 14.2,
@@ -100,6 +103,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
         :event,
         code: billable_metric.code,
         customer: customer,
+        subscription: subscription,
         timestamp: Time.zone.now,
         properties: {
           total_count: 'foo_bar',
@@ -121,6 +125,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
         :event,
         code: billable_metric.code,
         customer: customer,
+        subscription: subscription,
         timestamp: Time.zone.now,
       )
     end

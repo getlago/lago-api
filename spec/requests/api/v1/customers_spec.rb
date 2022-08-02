@@ -106,13 +106,16 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         4,
         organization: organization,
         customer: customer,
+        subscription: subscription,
         code: billable_metric.code,
         timestamp: Time.zone.now,
       )
     end
 
     it 'returns the usage for the customer' do
-      get_with_token(organization, "/api/v1/customers/#{customer.customer_id}/current_usage")
+      get_with_token(organization,
+        "/api/v1/customers/#{customer.customer_id}/current_usage?subscription_id=#{subscription.id}"
+      )
 
       aggregate_failures do
         expect(response).to have_http_status(:success)

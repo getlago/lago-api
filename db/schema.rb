@@ -171,10 +171,13 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "metadata", default: {}, null: false
+    t.uuid "subscription_id"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
-    t.index ["organization_id", "transaction_id"], name: "index_events_on_organization_id_and_transaction_id", unique: true
     t.index ["organization_id"], name: "index_events_on_organization_id"
+    t.index ["subscription_id", "code"], name: "index_events_on_subscription_id_and_code"
+    t.index ["subscription_id", "transaction_id"], name: "index_events_on_subscription_id_and_transaction_id", unique: true
+    t.index ["subscription_id"], name: "index_events_on_subscription_id"
   end
 
   create_table "fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -316,6 +319,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
     t.uuid "previous_subscription_id"
     t.date "subscription_date"
     t.integer "billing_time", default: 0, null: false
+    t.string "name"
+    t.string "unique_id", null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
@@ -344,10 +349,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
     t.integer "status", null: false
     t.string "currency", null: false
     t.string "name"
-    t.string "rate_amount", null: false
-    t.string "credits_balance", default: "0.00", null: false
-    t.string "balance", default: "0.00", null: false
-    t.string "consumed_credits", default: "0.00", null: false
+    t.decimal "rate_amount", precision: 5, default: "0", null: false
+    t.decimal "credits_balance", precision: 5, default: "0", null: false
+    t.decimal "balance", precision: 5, default: "0", null: false
+    t.decimal "consumed_credits", precision: 5, default: "0", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
@@ -370,6 +375,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_07_28_144707) do
   add_foreign_key "customers", "organizations"
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
+  add_foreign_key "events", "subscriptions"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"

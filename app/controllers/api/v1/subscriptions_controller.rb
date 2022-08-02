@@ -27,7 +27,7 @@ module Api
         result = Subscriptions::TerminateService.new
           .terminate_from_api(
             organization: current_organization,
-            customer_id: params[:customer_id],
+            subscription_id: params[:id]
           )
 
         if result.success?
@@ -38,15 +38,59 @@ module Api
             ),
           )
         else
-          validation_errors(result)
+          render_error_response(result)
         end
+      end
+
+      def update
+        service = Subscriptions::UpdateService.new
+
+        result = service.update_from_api(
+          organization: current_organization,
+          id: params[:id],
+          params: update_params
+        )
+
+        if result.success?
+          render(
+            json: ::V1::SubscriptionSerializer.new(
+              result.subscription,
+              root_name: 'subscription',
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def index
+        customer = Customer.find_by(customer_id: params[:customer_id])
+
+        return not_found_error unless customer
+
+        subscriptions = customer.active_subscriptions
+                                .page(params[:page])
+                                .per(params[:per_page] || PER_PAGE)
+
+        render(
+          json: ::CollectionSerializer.new(
+            subscriptions,
+            ::V1::SubscriptionSerializer,
+            collection_name: 'subscriptions',
+            meta: pagination_metadata(subscriptions),
+          ),
+        )
       end
 
       private
 
       def create_params
         params.require(:subscription)
-          .permit(:customer_id, :plan_code)
+          .permit(:customer_id, :plan_code, :name, :subscription_id, :unique_id)
+      end
+
+      def update_params
+        params.require(:subscription).permit(:name)
       end
     end
   end

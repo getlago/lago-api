@@ -4,12 +4,13 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CustomerUsageService, type: :service do
   subject(:invoice_service) do
-    described_class.new(membership.user, customer_id: customer_id)
+    described_class.new(membership.user, customer_id: customer_id, subscription_id: subscription_id)
   end
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer_id) {}
+  let(:subscription_id) { nil }
 
   describe '.usage' do
     let(:billable_metric) do
@@ -18,6 +19,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
     let(:customer) { create(:customer, organization: organization) }
     let(:customer_id) { customer.id }
+    let(:subscription_id) { subscription&.id }
     let(:subscription) do
       create(
         :subscription,
@@ -34,7 +36,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     end
 
     context 'when billed monthly' do
-      it 'intialize an invoice' do
+      it 'initialize an invoice' do
         result = invoice_service.usage
 
         aggregate_failures do

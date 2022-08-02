@@ -20,8 +20,8 @@ Rails.application.routes.draw do
         get :current_usage
       end
 
-      resources :subscriptions, only: %i[create]
-      delete '/subscriptions', to: 'subscriptions#terminate', as: :terminate
+      resources :subscriptions, only: %i[create update index]
+      delete '/subscriptions/:id', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code
       resources :billable_metrics, param: :code
@@ -33,6 +33,7 @@ Rails.application.routes.draw do
         post :download, on: :member
       end
       resources :plans, param: :code
+      post '/events/batch', to: 'events#batch'
 
       put '/organizations', to: 'organizations#update'
 

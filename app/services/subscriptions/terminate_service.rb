@@ -9,12 +9,9 @@ module Subscriptions
       process_terminate(subscription)
     end
 
-    def terminate_from_api(organization:, customer_id:)
-      customer = organization.customers.find_by(customer_id: customer_id)
-      return result.fail!('not_found') if customer.blank?
-
-      subscription = customer.active_subscription
-      return result.fail!('no_active_subscription') if subscription.blank?
+    def terminate_from_api(organization:, subscription_id:)
+      subscription = organization.subscriptions.find_by(id: subscription_id)
+      return result.fail!('not_found', 'subscription is not found') if subscription.blank?
 
       process_terminate(subscription)
     end
