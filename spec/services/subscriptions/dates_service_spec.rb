@@ -15,7 +15,8 @@ RSpec.describe Subscriptions::DatesService, type: :service do
     )
   end
 
-  let(:plan) { create(:plan, interval: interval, pay_in_advance: false) }
+  let(:plan) { create(:plan, interval: interval, pay_in_advance: pay_in_advance) }
+  let(:pay_in_advance) { false }
 
   let(:subscription_date) { DateTime.parse('02 Feb 2021') }
   let(:billing_date) { DateTime.parse('07 Mar 2022') }
@@ -43,7 +44,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
@@ -51,6 +52,15 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           it 'returns the beginning of the week' do
             expect(result).to eq('2022-03-07')
             expect(Time.zone.parse(result).wday).to eq(1)
+          end
+
+          context 'when plan is pay in advance' do
+            let(:pay_in_advance) { true }
+
+            it 'returns the beginning of the previous week' do
+              expect(result).to eq('2022-02-28')
+              expect(Time.zone.parse(result).wday).to eq(1)
+            end
           end
         end
       end
@@ -71,13 +81,21 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
           it 'returns the beginning of the month' do
             expect(result).to eq('2022-03-01')
+          end
+
+          context 'when plan is pay in advance' do
+            let(:pay_in_advance) { true }
+
+            it 'returns the beginning of the previous month' do
+              expect(result).to eq('2022-02-01')
+            end
           end
         end
       end
@@ -99,13 +117,21 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
           it 'returns the beginning of the year' do
             expect(result).to eq('2022-01-01')
+          end
+
+          context 'when plan is pay in advance' do
+            let(:pay_in_advance) { true }
+
+            it 'returns the beginning of the previous year' do
+              expect(result).to eq('2021-01-01')
+            end
           end
         end
       end
@@ -132,12 +158,21 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           before { subscription.terminated! }
 
           it 'returns the previous week day' do
             expect(result).to eq('2022-03-08')
             expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
+          end
+
+          context 'when plan is pay in advance' do
+            let(:pay_in_advance) { true }
+
+            it 'returns the previous week week day' do
+              expect(result).to eq('2022-03-01')
+              expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
+            end
           end
         end
       end
@@ -158,13 +193,21 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
           it 'returns the previous month day' do
             expect(result).to eq('2022-03-02')
+          end
+
+          context 'when plan is pay in advance' do
+            let(:pay_in_advance) { true }
+
+            it 'returns the previous month month day' do
+              expect(result).to eq('2022-02-02')
+            end
           end
 
           context 'when billing day after last day of billing month' do
@@ -203,11 +246,19 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           before { subscription.terminated! }
 
           it 'returns the previous year day' do
             expect(result).to eq('2022-02-02')
+          end
+
+          context 'when plan is pay in advance' do
+            let(:pay_in_advance) { true }
+
+            it 'returns the previous year day and month' do
+              expect(result).to eq('2021-02-02')
+            end
           end
 
           context 'when subscription date on 29/02 of a leap year' do
@@ -255,7 +306,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('07 Mar 2022') }
 
           before do
@@ -301,7 +352,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before do
@@ -348,7 +399,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before do
@@ -398,7 +449,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           before do
             subscription.update!(
               status: :terminated,
@@ -468,7 +519,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before do
@@ -532,7 +583,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
         end
 
-        context 'when subscription is terminated' do
+        context 'when subscription is just terminated' do
           before do
             subscription.update!(
               status: :terminated,
