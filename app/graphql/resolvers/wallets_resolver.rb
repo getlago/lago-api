@@ -28,7 +28,7 @@ module Resolvers
       wallets = wallets.where(status: status) if status.present?
       wallets = wallets.where(id: ids) if ids.present?
 
-      wallets
+      wallets.order(status: :asc, created_at: :desc)
     rescue ActiveRecord::RecordNotFound
       not_found_error
     end

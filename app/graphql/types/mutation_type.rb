@@ -46,5 +46,7 @@ module Types
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :update_customer_wallet, mutation: Mutations::Wallets::Update
     field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate
+
+    field :create_customer_wallet_transaction, mutation: Mutations::WalletTransactions::Create
   end
 end
