@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::DatesService, type: :service do
-  subject(:date_service) { described_class.new(subscription, timestamp) }
+  subject(:date_service) { described_class.new(subscription, billing_date) }
 
   let(:subscription) do
     create(
@@ -18,7 +18,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   let(:plan) { create(:plan, interval: interval, pay_in_advance: false) }
 
   let(:subscription_date) { DateTime.parse('02 Feb 2021') }
-  let(:timestamp) { DateTime.parse('07 Mar 2022') }
+  let(:billing_date) { DateTime.parse('07 Mar 2022') }
   let(:started_at) { subscription_date }
 
   describe 'from_date' do
@@ -44,7 +44,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
@@ -57,7 +57,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is monthly' do
         let(:interval) { :monthly }
-        let(:timestamp) { DateTime.parse('01 Mar 2022') }
+        let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
         it 'returns the beginning of the previous month' do
           expect(result).to eq('2022-02-01')
@@ -72,7 +72,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
@@ -84,7 +84,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is yearly' do
         let(:interval) { :yearly }
-        let(:timestamp) { DateTime.parse('01 Jan 2022') }
+        let(:billing_date) { DateTime.parse('01 Jan 2022') }
         let(:subscription_date) { DateTime.parse('02 Feb 2020') }
 
         it 'returns the beginning of the previous year' do
@@ -100,7 +100,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
@@ -116,7 +116,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is weekly' do
         let(:interval) { :weekly }
-        let(:timestamp) { DateTime.parse('10 Mar 2022') }
+        let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
         it 'returns the previous week week day' do
           expect(result).to eq('2022-03-01')
@@ -144,7 +144,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is monthly' do
         let(:interval) { :monthly }
-        let(:timestamp) { DateTime.parse('03 Mar 2022') }
+        let(:billing_date) { DateTime.parse('03 Mar 2022') }
 
         it 'returns the previous month month day' do
           expect(result).to eq('2022-02-02')
@@ -159,7 +159,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before { subscription.terminated! }
 
@@ -168,7 +168,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           context 'when billing day after last day of billing month' do
-            let(:timestamp) { DateTime.parse('29 Mar 2022') }
+            let(:billing_date) { DateTime.parse('29 Mar 2022') }
             let(:subscription_date) { DateTime.parse('31 Mar 2021') }
 
             it 'returns the previous month last day' do
@@ -177,7 +177,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           context 'when billing day on first month of the year' do
-            let(:timestamp) { DateTime.parse('28 Jan 2022') }
+            let(:billing_date) { DateTime.parse('28 Jan 2022') }
             let(:subscription_date) { DateTime.parse('29 Mar 2021') }
 
             it 'returns the previous month last day' do
@@ -189,7 +189,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is yearly' do
         let(:interval) { :yearly }
-        let(:timestamp) { DateTime.parse('03 Feb 2022') }
+        let(:billing_date) { DateTime.parse('03 Feb 2022') }
 
         it 'returns the previous year day and month' do
           expect(result).to eq('2021-02-02')
@@ -212,7 +212,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
           context 'when subscription date on 29/02 of a leap year' do
             let(:subscription_date) { DateTime.parse('29 Feb 2020') }
-            let(:timestamp) { DateTime.parse('01 Mar 2022') }
+            let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
             it 'returns the previous month last day' do
               expect(result).to eq('2022-02-28')
@@ -220,7 +220,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
           end
 
           context 'when billing month is before subscription month' do
-            let(:timestamp) { DateTime.parse('03 Jan 2022') }
+            let(:billing_date) { DateTime.parse('03 Jan 2022') }
 
             it 'returns the previous year day' do
               expect(result).to eq('2021-02-02')
@@ -239,7 +239,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is weekly' do
         let(:interval) { :weekly }
-        let(:timestamp) { DateTime.parse('07 Mar 2022') }
+        let(:billing_date) { DateTime.parse('07 Mar 2022') }
 
         it 'returns the end of the previous week' do
           expect(result).to eq('2022-03-06')
@@ -256,7 +256,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+          let(:billing_date) { DateTime.parse('07 Mar 2022') }
 
           before do
             subscription.update!(
@@ -285,7 +285,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is monthly' do
         let(:interval) { :monthly }
-        let(:timestamp) { DateTime.parse('01 Mar 2022') }
+        let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
         it 'returns the end of the previous month' do
           expect(result).to eq('2022-02-28')
@@ -302,7 +302,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before do
             subscription.update!(
@@ -331,7 +331,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is yearly' do
         let(:interval) { :yearly }
-        let(:timestamp) { DateTime.parse('01 Jan 2022') }
+        let(:billing_date) { DateTime.parse('01 Jan 2022') }
         let(:subscription_date) { DateTime.parse('02 Feb 2020') }
 
         it 'returns the end of the previous year' do
@@ -349,7 +349,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before do
             subscription.update!(
@@ -382,7 +382,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is weekly' do
         let(:interval) { :weekly }
-        let(:timestamp) { DateTime.parse('10 Mar 2022') }
+        let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
         it 'returns the previous week week day' do
           expect(result).to eq('2022-03-07')
@@ -426,14 +426,14 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is monthly' do
         let(:interval) { :monthly }
-        let(:timestamp) { DateTime.parse('04 Mar 2022') }
+        let(:billing_date) { DateTime.parse('04 Mar 2022') }
 
         it 'returns the previous month month day' do
           expect(result).to eq('2022-03-01')
         end
 
         context 'when billing last month of year' do
-          let(:timestamp) { DateTime.parse('04 Jan 2022') }
+          let(:billing_date) { DateTime.parse('04 Jan 2022') }
 
           it 'returns the previous month month day' do
             expect(result).to eq('2022-01-01')
@@ -442,7 +442,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
         context 'when billing subscription day does not extist in the month' do
           let(:subscription_date) { DateTime.parse('31 Jan 2022') }
-          let(:timestamp) { DateTime.parse('01 Mar 2022') }
+          let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
           it 'returns the last day of the month' do
             expect(result).to eq('2022-02-28')
@@ -451,7 +451,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
         context 'when anniversary date is first day of the month' do
           let(:subscription_date) { DateTime.parse('01 Jan 2022') }
-          let(:timestamp) { DateTime.parse('02 Mar 2022') }
+          let(:billing_date) { DateTime.parse('02 Mar 2022') }
 
           it 'returns the last day of the month' do
             expect(result).to eq('2022-02-28')
@@ -469,7 +469,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when subscription is terminated' do
-          let(:timestamp) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
           before do
             subscription.update!(
@@ -498,7 +498,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is yearly' do
         let(:interval) { :yearly }
-        let(:timestamp) { DateTime.parse('03 Feb 2022') }
+        let(:billing_date) { DateTime.parse('03 Feb 2022') }
 
         it 'returns the previous year day and month' do
           expect(result).to eq('2022-02-01')
@@ -506,7 +506,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
         context 'when subscription date on 29/02 of a leap year' do
           let(:subscription_date) { DateTime.parse('29 Feb 2020') }
-          let(:timestamp) { DateTime.parse('01 Mar 2022') }
+          let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
           it 'returns the previous month last day' do
             expect(result).to eq('2022-02-28')
@@ -515,7 +515,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
         context 'when anniversary date is first day of the year' do
           let(:subscription_date) { DateTime.parse('01 Jan 2021') }
-          let(:timestamp) { DateTime.parse('02 Mar 2022') }
+          let(:billing_date) { DateTime.parse('02 Mar 2022') }
 
           it 'returns the last day of the year' do
             expect(result).to eq('2021-12-31')
@@ -599,7 +599,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is monthly' do
         let(:interval) { :monthly }
-        let(:timestamp) { DateTime.parse('01 Mar 2022') }
+        let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
@@ -631,7 +631,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is yearly' do
         let(:interval) { :yearly }
-        let(:timestamp) { DateTime.parse('01 Jan 2022') }
+        let(:billing_date) { DateTime.parse('01 Jan 2022') }
         let(:subscription_date) { DateTime.parse('02 Feb 2020') }
 
         it 'returns from_date' do
@@ -652,7 +652,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
             )
           end
 
-          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+          let(:billing_date) { DateTime.parse('07 Mar 2022') }
           let(:started_at) { DateTime.parse('03 Mar 2022') }
 
           before { subscription.update!(previous_subscription: previous_subscription) }
@@ -688,7 +688,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
               )
             end
 
-            let(:timestamp) { DateTime.parse('07 Mar 2022') }
+            let(:billing_date) { DateTime.parse('07 Mar 2022') }
             let(:started_at) { DateTime.parse('03 Mar 2022') }
 
             before { subscription.update!(previous_subscription: previous_subscription) }
@@ -706,7 +706,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is weekly' do
         let(:interval) { :weekly }
-        let(:timestamp) { DateTime.parse('10 Mar 2022') }
+        let(:billing_date) { DateTime.parse('10 Mar 2022') }
 
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
@@ -738,7 +738,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is monthly' do
         let(:interval) { :monthly }
-        let(:timestamp) { DateTime.parse('03 Mar 2022') }
+        let(:billing_date) { DateTime.parse('03 Mar 2022') }
 
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
@@ -770,7 +770,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is yearly' do
         let(:interval) { :yearly }
-        let(:timestamp) { DateTime.parse('03 Feb 2022') }
+        let(:billing_date) { DateTime.parse('03 Feb 2022') }
 
         it 'returns from_date' do
           expect(result).to eq(date_service.from_date.to_s)
@@ -790,7 +790,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
             )
           end
 
-          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+          let(:billing_date) { DateTime.parse('07 Mar 2022') }
           let(:started_at) { DateTime.parse('03 Mar 2022') }
 
           before { subscription.update!(previous_subscription: previous_subscription) }
@@ -826,7 +826,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
               )
             end
 
-            let(:timestamp) { DateTime.parse('07 Mar 2022') }
+            let(:billing_date) { DateTime.parse('07 Mar 2022') }
             let(:started_at) { DateTime.parse('03 Mar 2022') }
 
             before { subscription.update!(previous_subscription: previous_subscription) }
@@ -841,7 +841,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   end
 
   describe 'next_end_of_period' do
-    let(:result) { date_service.next_end_of_period(timestamp.to_date, plan).to_s }
+    let(:result) { date_service.next_end_of_period(billing_date.to_date, plan).to_s }
 
     context 'when billing_time is calendar' do
       let(:billing_time) { :calendar }
@@ -876,17 +876,17 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
       context 'when interval is weekly' do
         let(:interval) { :weekly }
-        let(:timestamp) { DateTime.parse('08 Mar 2022') }
+        let(:billing_date) { DateTime.parse('08 Mar 2022') }
 
         it 'returns the end of the billing week' do
           expect(result).to eq('2022-03-14')
         end
 
         context 'when date is the end of the period' do
-          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+          let(:billing_date) { DateTime.parse('07 Mar 2022') }
 
           it 'returns the date' do
-            expect(result).to eq(timestamp.to_date.to_s)
+            expect(result).to eq(billing_date.to_date.to_s)
           end
         end
       end
@@ -899,16 +899,16 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when end of billing month is in next year' do
-          let(:timestamp) { DateTime.parse('07 Dec 2021') }
+          let(:billing_date) { DateTime.parse('07 Dec 2021') }
 
           it { expect(result).to eq('2022-01-01') }
         end
 
         context 'when date is the end of the period' do
-          let(:timestamp) { DateTime.parse('01 Mar 2022') }
+          let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
           it 'returns the date' do
-            expect(result).to eq(timestamp.to_date.to_s)
+            expect(result).to eq(billing_date.to_date.to_s)
           end
         end
       end
@@ -921,10 +921,10 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         end
 
         context 'when date is the end of the period' do
-          let(:timestamp) { DateTime.parse('01 Feb 2022') }
+          let(:billing_date) { DateTime.parse('01 Feb 2022') }
 
           it 'returns the date' do
-            expect(result).to eq(timestamp.to_date.to_s)
+            expect(result).to eq(billing_date.to_date.to_s)
           end
         end
       end

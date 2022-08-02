@@ -1,16 +1,13 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class DatesService < BaseService
-    def initialize(subscription, timestamp)
+  class DatesService
+    def initialize(subscription, billing_date)
       @subscription = subscription
 
-      # NOTE: timestamp is the billing day
-      #       It should be the end of the billing period + 1 day
+      # NOTE: Billing date should usually be the end of the billing period + 1 day
       #       When subscription is terminated, it is the termination day
-      @timestamp = timestamp
-
-      super(nil)
+      @billing_date = billing_date.to_date
     end
 
     def from_date
@@ -100,13 +97,9 @@ module Subscriptions
 
     private
 
-    attr_accessor :subscription, :timestamp
+    attr_accessor :subscription, :billing_date
 
     delegate :plan, :subscription_date, :calendar?, to: :subscription
-
-    def billing_date
-      @billing_date ||= Time.zone.at(timestamp).to_date
-    end
 
     def base_date
       @base_date ||= case plan.interval.to_sym
