@@ -839,4 +839,95 @@ RSpec.describe Subscriptions::DatesService, type: :service do
       end
     end
   end
+
+  describe 'next_end_of_period' do
+    let(:result) { date_service.next_end_of_period(timestamp.to_date, plan).to_s }
+
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+
+        it 'returns the last day of the week' do
+          expect(result).to eq('2022-03-13')
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+
+        it 'returns the last day of the month' do
+          expect(result).to eq('2022-03-31')
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+
+        it 'returns the last day of the year' do
+          expect(result).to eq('2022-12-31')
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+        let(:timestamp) { DateTime.parse('08 Mar 2022') }
+
+        it 'returns the end of the billing week' do
+          expect(result).to eq('2022-03-14')
+        end
+
+        context 'when date is the end of the period' do
+          let(:timestamp) { DateTime.parse('07 Mar 2022') }
+
+          it 'returns the date' do
+            expect(result).to eq(timestamp.to_date.to_s)
+          end
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+
+        it 'returns the end of the billing month' do
+          expect(result).to eq('2022-04-01')
+        end
+
+        context 'when end of billing month is in next year' do
+          let(:timestamp) { DateTime.parse('07 Dec 2021') }
+
+          it { expect(result).to eq('2022-01-01') }
+        end
+
+        context 'when date is the end of the period' do
+          let(:timestamp) { DateTime.parse('01 Mar 2022') }
+
+          it 'returns the date' do
+            expect(result).to eq(timestamp.to_date.to_s)
+          end
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+
+        it 'returns the end of the billing year' do
+          expect(result).to eq('2023-02-01')
+        end
+
+        context 'when date is the end of the period' do
+          let(:timestamp) { DateTime.parse('01 Feb 2022') }
+
+          it 'returns the date' do
+            expect(result).to eq(timestamp.to_date.to_s)
+          end
+        end
+      end
+    end
+  end
 end

@@ -85,11 +85,24 @@ module Subscriptions
       charges_from_date
     end
 
+    def next_end_of_period(date, plan)
+      case plan.interval.to_sym
+      when :weekly
+        next_end_of_weekly_period(date)
+      when :monthly
+        next_end_of_monthly_period(date)
+      when :yearly
+        next_end_of_yearly_period(date)
+      else
+        raise NotImplementedError
+      end
+    end
+
     private
 
     attr_accessor :subscription, :timestamp
 
-    delegate :plan, :subscription_date, to: :subscription
+    delegate :plan, :subscription_date, :calendar?, to: :subscription
 
     def billing_date
       @billing_date ||= Time.zone.at(timestamp).to_date
@@ -108,6 +121,10 @@ module Subscriptions
       end
     end
 
+    def subscription_day_name
+      subscription_date.strftime('%A').downcase.to_sym
+    end
+
     def terminated_pay_in_arrear?
       # NOTE: In case of termination or upgrade when we are terminating old plan (paying in arrear),
       #       we should take to the beginning of the billing period
@@ -116,10 +133,10 @@ module Subscriptions
 
     def weekly_from_date
       if terminated_pay_in_arrear?
-        return subscription.anniversary? ? previous_weekly_anniversary_day(billing_date) : billing_date.beginning_of_week
+        return subscription.anniversary? ? billing_date.prev_occurring(subscription_day_name) : billing_date.beginning_of_week
       end
 
-      subscription.anniversary? ? previous_weekly_anniversary_day(base_date) : base_date.beginning_of_week
+      subscription.anniversary? ? base_date.prev_occurring(subscription_day_name) : base_date.beginning_of_week
     end
 
     def weekly_to_date
@@ -165,12 +182,6 @@ module Subscriptions
       day = subscription_date.day - 1
 
       build_date(year, month, day)
-    end
-
-    def previous_weekly_anniversary_day(date)
-      weekday_index = Date::DAYNAMES.reverse.index(subscription_date.strftime('%A'))
-      days_before = (date.wday + weekday_index) % 7 + 1
-      date - days_before
     end
 
     def previous_monthly_anniversary_day(date)
@@ -233,7 +244,7 @@ module Subscriptions
     def weekly_upgraded_charges_from_date(from_date)
       return from_date.beginning_of_week if subscription.calendar?
 
-      previous_weekly_anniversary_day(from_date)
+      from_date.prev_occurring(subscription_day_name)
     end
 
     def monthly_upgraded_charges_from_date(from_date)
@@ -246,6 +257,48 @@ module Subscriptions
       return from_date.beginning_of_year if subscription.calendar?
 
       previous_yearly_anniversary_day(from_date)
+    end
+
+    def next_end_of_weekly_period(date)
+      return date.end_of_week if calendar?
+      return date if date.wday == (subscription_date - 1.day).wday
+
+      # NOTE: we need the last day of the period, and not the first of the next one
+      date.next_occurring(subscription_day_name) - 1.day
+    end
+
+    def next_end_of_monthly_period(date)
+      return date.end_of_month if calendar?
+
+      year = date.year
+      month = date.month
+      day = subscription_date.day
+
+      # NOTE: we need the last day of the period, and not the first of the next one
+      result_date = build_date(year, month, day) - 1.day
+      return result_date if result_date >= date
+
+      month += 1
+      if month > 12
+        month = 1
+        year += 1
+      end
+
+      build_date(year, month, day) - 1.day
+    end
+
+    def next_end_of_yearly_period(date)
+      return date.end_of_year if calendar?
+
+      year = date.year
+      month = subscription_date.month
+      day = subscription_date.day
+
+      # NOTE: we need the last day of the period, and not the first of the next one
+      result_date = build_date(year, month, day) - 1.day
+      return result_date if result_date >= date
+
+      build_date(year + 1, month, day) - 1.day
     end
   end
 end
