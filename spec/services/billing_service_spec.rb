@@ -17,7 +17,7 @@ RSpec.describe BillingService, type: :service do
           :subscription,
           customer: customer,
           plan: plan,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
         )
       end
@@ -26,7 +26,7 @@ RSpec.describe BillingService, type: :service do
           :subscription,
           customer: customer,
           plan: plan,
-          anniversary_date: start_date,
+          subscription_date: start_date,
           started_at: Time.zone.now,
         )
       end

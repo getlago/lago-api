@@ -102,7 +102,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           :subscription,
           plan: plan,
           customer: subscription.customer,
-          anniversary_date: (Time.zone.now - 2.years).to_date,
+          subscription_date: (Time.zone.now - 2.years).to_date,
           started_at: Time.zone.now - 2.years,
         )
       end
@@ -186,7 +186,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
           expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
           expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.week).to_date.to_s
-          subscription.anniversary_date
+          subscription.subscription_date
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
