@@ -29,10 +29,22 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       )
     end
     let(:plan) { create(:plan, interval: 'monthly') }
+    let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
+    let(:cache) { Rails.cache }
 
     before do
       subscription
       create(:standard_charge, plan: plan, charge_model: 'standard')
+      allow(Rails).to receive(:cache).and_return(memory_store)
+      Rails.cache.clear
+    end
+
+    it 'uses the Rails cache' do
+      key = "current_usage/#{subscription.id}-#{subscription.created_at.iso8601}/#{subscription.plan.updated_at.iso8601}"
+
+      expect {
+        invoice_service.usage
+      }.to change { cache.exist?(key) }.from(false).to(true)
     end
 
     context 'when billed monthly' do

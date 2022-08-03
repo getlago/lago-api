@@ -7,7 +7,15 @@ module Events
 
     def validate_params(params:)
       missing_params = ALL_REQUIRED_PARAMS.select { |key| params[key].blank? }
-      missing_params += ONE_REQUIRED_PARAMS if ONE_REQUIRED_PARAMS.all? { |key| params[key].blank? }
+      missing_params |= ONE_REQUIRED_PARAMS if ONE_REQUIRED_PARAMS.all? { |key| params[key].blank? }
+
+      # NOTE: In case of multiple subscriptions, we return an error if subscription_id is not given.
+      if params[:customer_id].present? && params[:subscription_id].blank?
+        customer = Customer.find_by(customer_id: params[:customer_id])
+        subscriptions_count = customer ? customer.active_subscriptions.count : 0
+        missing_params |= %i[subscription_id] if subscriptions_count > 1
+      end
+
       return result if missing_params.blank?
 
       result.fail!(code: 'missing_mandatory_param', details: missing_params)

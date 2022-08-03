@@ -161,15 +161,15 @@ module Invoices
     def cache_key
       return @cache_key if @cache_key
 
-      last_events = customer.events.order(created_at: :desc).first(2).pluck(:created_at)
+      last_events = subscription.events.order(created_at: :desc).first(2).pluck(:created_at)
       expire_cache(last_events[1]) if last_events.count > 1
-      last_created_at = last_events.first || customer.created_at
+      last_created_at = last_events.first || subscription.created_at
 
-      @cache_key = "current_usage/#{customer.id}-#{last_created_at.iso8601}/#{plan.updated_at.iso8601}"
+      @cache_key = "current_usage/#{subscription.id}-#{last_created_at.iso8601}/#{plan.updated_at.iso8601}"
     end
 
     def expire_cache(date)
-      Rails.cache.delete("current_usage/#{customer.id}-#{date.iso8601}/#{plan.updated_at.iso8601}")
+      Rails.cache.delete("current_usage/#{subscription.id}-#{date.iso8601}/#{plan.updated_at.iso8601}")
     end
 
     def cache_expiration
