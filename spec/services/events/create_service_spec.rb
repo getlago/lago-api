@@ -10,7 +10,7 @@ RSpec.describe Events::CreateService, type: :service do
   let(:customer) { create(:customer, organization: organization) }
 
   describe '#validate_params' do
-    let(:event_arguments) do
+    let(:params) do
       {
         transaction_id: SecureRandom.uuid,
         customer_id: SecureRandom.uuid,
@@ -19,13 +19,13 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     it 'validates the presence of the mandatory arguments' do
-      result = create_service.validate_params(params: event_arguments)
+      result = create_service.validate_params(params: params)
 
       expect(result).to be_success
     end
 
     context 'with missing or nil arguments' do
-      let(:event_arguments) do
+      let(:params) do
         {
           customer_id: SecureRandom.uuid,
           code: nil,
@@ -33,7 +33,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'returns an error' do
-        result = create_service.validate_params(params: event_arguments)
+        result = create_service.validate_params(params: params)
 
         expect(result).not_to be_success
 
@@ -41,6 +41,53 @@ RSpec.describe Events::CreateService, type: :service do
           expect(result.error_code).to eq('missing_mandatory_param')
           expect(result.error_details).to include(:transaction_id)
           expect(result.error_details).to include(:code)
+        end
+      end
+    end
+
+    context 'when customer_id and subscription_id but multiple subscriptions' do
+      let(:subscription) { create(:subscription, customer: customer) }
+      let(:params) do
+        {
+          transaction_id: SecureRandom.uuid,
+          customer_id: customer.customer_id,
+          subscription_id: subscription.id,
+          code: 'code'
+        }
+      end
+
+      before do
+        create(:subscription, customer: customer)
+      end
+
+      it 'does not return any error' do
+        result = create_service.validate_params(params: params)
+
+        expect(result).to be_success
+      end
+    end
+
+    context 'when only customer_id but multiple subscriptions' do
+      let(:params) do
+        {
+          transaction_id: SecureRandom.uuid,
+          customer_id: customer.customer_id,
+          code: 'code'
+        }
+      end
+
+      before do
+        2.times { create(:subscription, customer: customer) }
+      end
+
+      it 'returns an error' do
+        result = create_service.validate_params(params: params)
+
+        expect(result).not_to be_success
+
+        aggregate_failures do
+          expect(result.error_code).to eq('missing_mandatory_param')
+          expect(result.error_details).to include(:subscription_id)
         end
       end
     end
