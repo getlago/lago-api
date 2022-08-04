@@ -13,6 +13,8 @@ module Fees
     end
 
     def create
+      return result if already_billed?
+
       new_amount_cents = compute_amount
 
       new_fee = Fee.new(
@@ -40,6 +42,14 @@ module Fees
 
     delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
+
+    def already_billed?
+      existing_fee = invoice.fees.subscription_kind.find_by(subscription_id: subscription.id)
+      return false unless existing_fee
+
+      result.fee = existing_fee
+      true
+    end
 
     def compute_amount
       # NOTE: bill for the last time a subscription that was upgraded

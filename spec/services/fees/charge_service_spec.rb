@@ -120,8 +120,8 @@ RSpec.describe Fees::ChargeService do
         )
       end
 
-      it 'creates a new fee' do
-        expect { charge_subscription_service.create }.to change(Fee, :count)
+      it 'does not create a new fee' do
+        expect { charge_subscription_service.create }.not_to change(Fee, :count)
       end
     end
 

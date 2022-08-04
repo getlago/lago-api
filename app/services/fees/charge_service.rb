@@ -11,6 +11,8 @@ module Fees
     end
 
     def create
+      return result if already_billed?
+
       init_fee
       return result unless result.success?
 
@@ -63,6 +65,14 @@ module Fees
       return aggregated_events unless aggregated_events.success?
 
       charge_model.apply(value: aggregated_events.aggregation)
+    end
+
+    def already_billed?
+      existing_fee = invoice.fees.find_by(charge_id: charge.id, subscription_id: subscription.id)
+      return false unless existing_fee
+
+      result.fee = existing_fee
+      true
     end
 
     def aggregator

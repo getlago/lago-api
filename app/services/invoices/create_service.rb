@@ -13,6 +13,7 @@ module Invoices
 
     def create
       ActiveRecord::Base.transaction do
+        # NOTE: potential issue with issuing_date when creation date is equal to termination date.
         invoice = Invoice.create!(
           customer: customer,
           issuing_date: (Time.zone.at(timestamp) - 1.day).to_date,
