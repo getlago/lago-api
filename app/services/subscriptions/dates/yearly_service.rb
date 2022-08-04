@@ -58,16 +58,6 @@ module Subscriptions
 
         build_date(year, month, day)
       end
-
-      def upgraded_charges_from_date(from_date)
-        if subscription.previous_subscription.plan.bill_charges_monthly?
-          monthly_service.upgraded_charges_from_date(from_date)
-        elsif calendar?
-          from_date.beginning_of_year
-        else
-          previous_anniversary_day(from_date)
-        end
-      end
     end
   end
 end

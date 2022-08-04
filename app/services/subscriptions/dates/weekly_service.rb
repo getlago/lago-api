@@ -42,12 +42,6 @@ module Subscriptions
       def subscription_day_name
         @subscription_day_name ||= subscription_date.strftime('%A').downcase.to_sym
       end
-
-      def upgraded_charges_from_date(from_date)
-        return from_date.beginning_of_week if calendar?
-
-        from_date.prev_occurring(subscription_day_name)
-      end
     end
   end
 end

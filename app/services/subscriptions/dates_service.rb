@@ -43,16 +43,7 @@ module Subscriptions
 
       @to_date = compute_to_date
 
-      if subscription.terminated? && @to_date > subscription.terminated_at
-        # NOTE: When subscription is terminated, we cannot generate an invoice for a period after the termination
-        @to_date = if %i[pending active].include?(subscription.next_subscription&.status&.to_sym)
-          subscription.terminated_at.to_date - 1.day # TODO: check with multiple plan, and upgrade
-        else
-          subscription.terminated_at.to_date
-        end
-
-        # TODO: from_date / to_date of invoices should be timestamps so that to_date = subscription.terminated_at
-      end
+      @to_date = subscription.terminated_at.to_date if subscription.terminated? && @to_date > subscription.terminated_at
 
       # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
       #       billed immediatly. An invoice must be generated for it with only the subscription fee.
@@ -63,16 +54,10 @@ module Subscriptions
     end
 
     def charges_from_date
-      charges_from_date = compute_charges_from_date
+      date = compute_charges_from_date
+      date = subscription.started_at.to_date if date < subscription.started_at
 
-      charges_from_date = subscription.started_at.to_date if charges_from_date < subscription.started_at
-
-      # NOTE: when upgrading, we bill the fees from the start of the complete period (from previous plan)
-      #       and not only from the start of the current subscription
-      # TODO: This should be chalenged
-      return upgraded_charges_from_date(charges_from_date) if first_period_after_upgrade?
-
-      charges_from_date
+      date
     end
 
     def next_end_of_period(date)
@@ -101,13 +86,6 @@ module Subscriptions
       day = days_count_in_month if days_count_in_month < day
 
       Date.new(year, month, day)
-    end
-
-    def first_period_after_upgrade?
-      return false unless subscription.previous_subscription
-      return false unless subscription.previous_subscription.upgraded?
-
-      subscription.fees.charge_kind.none?
     end
 
     def compute_from_date

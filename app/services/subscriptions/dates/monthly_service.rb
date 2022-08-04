@@ -11,12 +11,6 @@ module Subscriptions
         subscription.anniversary? ? previous_anniversary_day(date) : date.beginning_of_month
       end
 
-      def upgraded_charges_from_date(from_date)
-        return from_date.beginning_of_month if subscription.calendar?
-
-        previous_anniversary_day(from_date)
-      end
-
       private
 
       def compute_base_date

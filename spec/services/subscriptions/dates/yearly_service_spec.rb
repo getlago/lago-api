@@ -147,18 +147,6 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         it 'returns the termination date' do
           expect(result).to eq(subscription.terminated_at.to_date.to_s)
         end
-
-        context 'with next subscription' do
-          let(:next_subscription) do
-            create(:subscription, previous_subscription: subscription)
-          end
-
-          before { next_subscription }
-
-          it 'returns the day before the termination date' do
-            expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
-          end
-        end
       end
     end
 
@@ -209,18 +197,6 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         it 'returns the termination date' do
           expect(result).to eq(subscription.terminated_at.to_date.to_s)
         end
-
-        context 'with next subscription' do
-          let(:next_subscription) do
-            create(:subscription, previous_subscription: subscription)
-          end
-
-          before { next_subscription }
-
-          it 'returns the day before the termination date' do
-            expect(result).to eq((subscription.terminated_at.to_date - 1.day).to_s)
-          end
-        end
       end
     end
   end
@@ -237,27 +213,11 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         expect(result).to eq(date_service.from_date.to_s)
       end
 
-      context 'when subscription is upgraded' do
-        let(:previous_plan) do
-          create(:plan, amount_cents: plan.amount_cents - 1, interval: plan.interval)
-        end
-
-        let(:previous_subscription) do
-          create(
-            :subscription,
-            plan: previous_plan,
-            status: :terminated,
-            terminated_at: started_at,
-          )
-        end
-
-        let(:billing_date) { DateTime.parse('07 Mar 2022') }
+      context 'when subscription started in the middle of a period' do
         let(:started_at) { DateTime.parse('03 Mar 2022') }
 
-        before { subscription.update!(previous_subscription: previous_subscription) }
-
-        it 'returns the beginning of the year' do
-          expect(result).to eq('2022-01-01')
+        it 'returns the start date' do
+          expect(result).to eq(subscription.started_at.to_date.to_s)
         end
       end
 
@@ -268,32 +228,11 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
           expect(result).to eq('2021-12-01')
         end
 
-        context 'when subscription is upgraded' do
-          let(:previous_plan) do
-            create(
-              :plan,
-              amount_cents: plan.amount_cents - 1,
-              interval: plan.interval,
-              bill_charges_monthly: true,
-            )
-          end
-
-          let(:previous_subscription) do
-            create(
-              :subscription,
-              plan: previous_plan,
-              status: :terminated,
-              terminated_at: started_at,
-            )
-          end
-
-          let(:billing_date) { DateTime.parse('07 Mar 2022') }
+        context 'when subscription started in the middle of a period' do
           let(:started_at) { DateTime.parse('03 Mar 2022') }
 
-          before { subscription.update!(previous_subscription: previous_subscription) }
-
-          it 'returns the beginning of the month' do
-            expect(result).to eq('2022-03-01')
+          it 'returns the start date' do
+            expect(result).to eq(subscription.started_at.to_date.to_s)
           end
         end
       end
@@ -307,27 +246,11 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         expect(result).to eq(date_service.from_date.to_s)
       end
 
-      context 'when subscription is upgraded' do
-        let(:previous_plan) do
-          create(:plan, amount_cents: plan.amount_cents - 1, interval: plan.interval)
-        end
-
-        let(:previous_subscription) do
-          create(
-            :subscription,
-            plan: previous_plan,
-            status: :terminated,
-            terminated_at: started_at,
-          )
-        end
-
-        let(:billing_date) { DateTime.parse('07 Mar 2022') }
+      context 'when subscription started in the middle of a period' do
         let(:started_at) { DateTime.parse('03 Mar 2022') }
 
-        before { subscription.update!(previous_subscription: previous_subscription) }
-
-        it 'returns the beginning of the yearly period' do
-          expect(result).to eq('2022-02-02')
+        it 'returns the start date' do
+          expect(result).to eq(subscription.started_at.to_date.to_s)
         end
       end
 
@@ -338,32 +261,11 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
           expect(result).to eq('2022-01-02')
         end
 
-        context 'when subscription is upgraded' do
-          let(:previous_plan) do
-            create(
-              :plan,
-              amount_cents: plan.amount_cents - 1,
-              interval: plan.interval,
-              bill_charges_monthly: true,
-            )
-          end
-
-          let(:previous_subscription) do
-            create(
-              :subscription,
-              plan: previous_plan,
-              status: :terminated,
-              terminated_at: started_at,
-            )
-          end
-
-          let(:billing_date) { DateTime.parse('07 Mar 2022') }
+        context 'when subscription started in the middle of a period' do
           let(:started_at) { DateTime.parse('03 Mar 2022') }
 
-          before { subscription.update!(previous_subscription: previous_subscription) }
-
-          it 'returns the beginning of the monthly period' do
-            expect(result).to eq('2022-03-02')
+          it 'returns the start date' do
+            expect(result).to eq(subscription.started_at.to_date.to_s)
           end
         end
       end
