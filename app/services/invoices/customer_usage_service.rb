@@ -81,7 +81,7 @@ module Invoices
       end
 
       # NOTE: On first billing period, subscription might start after the computed start of period
-      #       ei: if we bill on beginning of period, and user registered on the 15th, the usage should
+      #       ie: if we bill on beginning of period, and user registered on the 15th, the usage should
       #       start on the 15th (subscription date) and not on the 1st
       @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
 
