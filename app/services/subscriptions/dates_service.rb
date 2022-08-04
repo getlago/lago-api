@@ -25,7 +25,7 @@ module Subscriptions
       end
 
       # NOTE: On first billing period, subscription might start after the computed start of period
-      #       ei: if we bill on beginning of period, and user registered on the 15th, the invoice should
+      #       ie: if we bill on beginning of period, and user registered on the 15th, the invoice should
       #       start on the 15th (subscription date) and not on the 1st
       @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
 
@@ -49,7 +49,7 @@ module Subscriptions
       if subscription.terminated? && @to_date > subscription.terminated_at
         # NOTE: When subscription is terminated, we cannot generate an invoice for a period after the termination
         @to_date = if %i[pending active].include?(subscription.next_subscription&.status&.to_sym)
-          subscription.terminated_at.to_date - 1.day
+          subscription.terminated_at.to_date - 1.day # TODO: check with multiple plan, and upgrade
         else
           subscription.terminated_at.to_date
         end
@@ -115,7 +115,7 @@ module Subscriptions
     end
 
     def subscription_day_name
-      subscription_date.strftime('%A').downcase.to_sym
+      @subscription_day_name ||= subscription_date.strftime('%A').downcase.to_sym
     end
 
     def terminated_pay_in_arrear?
@@ -168,7 +168,7 @@ module Subscriptions
     end
 
     def yearly_to_date
-      return from_date.end_of_year if subscription.calendar? || subscription_date.day == 1
+      return from_date.end_of_year if subscription.calendar? || subscription_date.yday == 1
 
       year = from_date.year + 1
       month = from_date.month
@@ -182,7 +182,7 @@ module Subscriptions
       month = nil
       day = subscription_date.day
 
-      if date.day <= subscription_date.day
+      if date.day <= day
         year = date.month == 1 ? date.year - 1 : date.year
         month = date.month == 1 ? 12 : date.month - 1
       else
@@ -203,8 +203,8 @@ module Subscriptions
 
     # NOTE: Handle leap years and anniversary date > 28
     def build_date(year, month, day)
-      day_count_in_month = Time.days_in_month(month, year)
-      day = day_count_in_month if day_count_in_month < day
+      days_count_in_month = Time.days_in_month(month, year)
+      day = days_count_in_month if days_count_in_month < day
 
       Date.new(year, month, day)
     end
