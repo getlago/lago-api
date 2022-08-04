@@ -15,6 +15,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           status,
           name,
           startedAt,
+          billingTime,
           customer {
             id
           },
@@ -36,6 +37,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           customerId: customer.id,
           planId: plan.id,
           name: 'invoice display name',
+          billingTime: 'anniversary',
         },
       },
     )
@@ -49,6 +51,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
       expect(result_data['startedAt']).to be_present
       expect(result_data['customer']['id']).to eq(customer.id)
       expect(result_data['plan']['id']).to eq(plan.id)
+      expect(result_data['billingTime']).to eq('anniversary')
     end
   end
 
@@ -61,6 +64,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           input: {
             customerId: customer.id,
             planId: plan.id,
+            billingTime: 'anniversary',
           },
         },
       )
@@ -78,6 +82,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           input: {
             customerId: customer.id,
             planId: plan.id,
+            billingTime: 'anniversary',
           },
         },
       )
