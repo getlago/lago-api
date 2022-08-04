@@ -52,7 +52,7 @@ RSpec.describe BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription1, subscription2], current_date.to_i)
+            .with(match_array([subscription1, subscription2]), current_date.to_i)
 
           expect(BillSubscriptionJob).to have_been_enqueued
              .with([subscription3], current_date.to_i)
