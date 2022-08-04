@@ -167,7 +167,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         end
       end
 
-      context 'when billing subscription day does not extist in the month' do
+      context 'when billing subscription day does not exist in the month' do
         let(:subscription_date) { DateTime.parse('31 Jan 2022') }
         let(:billing_date) { DateTime.parse('01 Mar 2022') }
 
