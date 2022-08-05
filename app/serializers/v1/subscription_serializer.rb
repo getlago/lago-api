@@ -11,6 +11,7 @@ module V1
         unique_id: model.unique_id,
         plan_code: model.plan.code,
         status: model.status,
+        billing_time: model.billing_time,
         started_at: model.started_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601,
         canceled_at: model.canceled_at&.iso8601,
