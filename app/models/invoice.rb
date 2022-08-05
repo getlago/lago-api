@@ -22,6 +22,7 @@ class Invoice < ApplicationRecord
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
+  monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :credit_amount_cents, disable_validation: true, allow_nil: true
 
   INVOICE_TYPES = %i[subscription add_on].freeze
@@ -48,6 +49,10 @@ class Invoice < ApplicationRecord
     amount_currency
   end
 
+  def subscription_amount_cents
+    fees.subscription_kind.sum(:amount_cents)
+  end
+
   def credit_amount_cents
     credits.sum(:amount_cents)
   end
@@ -58,6 +63,14 @@ class Invoice < ApplicationRecord
 
   def organization
     customer&.organization
+  end
+
+  def invoice_subscription(subscription_id)
+    invoice_subscriptions.find_by(subscription_id: subscription_id)
+  end
+
+  def subscription_fees(subscription_id)
+    invoice_subscription(subscription_id).fees
   end
 
   private
