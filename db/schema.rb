@@ -193,16 +193,23 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
+    t.jsonb "properties", default: {}, null: false
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
   end
 
-  create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "invoice_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id", null: false
     t.uuid "subscription_id", null: false
-    t.date "from_date", null: false
-    t.date "to_date", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
+    t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
+  end
+
+  create_table "invoices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "issuing_date"
@@ -212,13 +219,13 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
     t.string "vat_amount_currency"
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
-    t.date "charges_from_date"
     t.integer "invoice_type", default: 0, null: false
     t.integer "status", default: 0, null: false
     t.string "number", default: "", null: false
     t.integer "sequential_id"
     t.string "file"
-    t.index ["subscription_id"], name: "index_invoices_on_subscription_id"
+    t.uuid "customer_id"
+    t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -318,9 +325,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
     t.datetime "updated_at", null: false
     t.uuid "previous_subscription_id"
     t.date "subscription_date"
-    t.integer "billing_time", default: 0, null: false
     t.string "name"
     t.string "unique_id", null: false
+    t.integer "billing_time", default: 0, null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
@@ -381,7 +388,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_01_101144) do
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
-  add_foreign_key "invoices", "subscriptions"
+  add_foreign_key "invoice_subscriptions", "invoices"
+  add_foreign_key "invoice_subscriptions", "subscriptions"
+  add_foreign_key "invoices", "customers"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "payment_provider_customers", "customers"

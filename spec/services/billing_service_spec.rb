@@ -10,8 +10,27 @@ RSpec.describe BillingService, type: :service do
 
     context 'when billed weekly' do
       let(:plan) { create(:plan, interval: :weekly) }
+      let(:customer) { create(:customer) }
 
-      let(:subscription) do
+      let(:subscription1) do
+        create(
+          :subscription,
+          customer: customer,
+          plan: plan,
+          subscription_date: start_date,
+          started_at: Time.zone.now,
+        )
+      end
+      let(:subscription2) do
+        create(
+          :subscription,
+          customer: customer,
+          plan: plan,
+          subscription_date: start_date,
+          started_at: Time.zone.now,
+        )
+      end
+      let(:subscription3) do
         create(
           :subscription,
           plan: plan,
@@ -20,7 +39,11 @@ RSpec.describe BillingService, type: :service do
         )
       end
 
-      before { subscription }
+      before do
+        subscription1
+        subscription2
+        subscription3
+      end
 
       it 'enqueue a job on billing day' do
         current_date = DateTime.parse('20 Jun 2022')
@@ -29,7 +52,10 @@ RSpec.describe BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with(subscription, current_date.to_i)
+            .with(match_array([subscription1, subscription2]), current_date.to_i)
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+             .with([subscription3], current_date.to_i)
         end
       end
 
@@ -63,7 +89,7 @@ RSpec.describe BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with(subscription, current_date.to_i)
+            .with([subscription], current_date.to_i)
         end
       end
 
@@ -97,7 +123,7 @@ RSpec.describe BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with(subscription, current_date.to_i)
+            .with([subscription], current_date.to_i)
         end
       end
 
@@ -119,7 +145,7 @@ RSpec.describe BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with(subscription, current_date.to_i)
+              .with([subscription], current_date.to_i)
           end
         end
       end

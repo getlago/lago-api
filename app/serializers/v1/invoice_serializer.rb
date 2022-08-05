@@ -7,9 +7,6 @@ module V1
         lago_id: model.id,
         sequential_id: model.sequential_id,
         number: model.number,
-        from_date: model.from_date.iso8601,
-        to_date: model.to_date.iso8601,
-        charges_from_date: model.to_date.iso8601,
         issuing_date: model.issuing_date.iso8601,
         invoice_type: model.invoice_type,
         status: model.status,
@@ -23,7 +20,7 @@ module V1
       }
 
       payload = payload.merge(customer) if include?(:customer)
-      payload = payload.merge(subscription) if include?(:subscription)
+      payload = payload.merge(subscriptions) if include?(:subscriptions)
       payload = payload.merge(fees) if include?(:fees)
       payload = payload.merge(credits) if include?(:credits)
 
@@ -38,10 +35,9 @@ module V1
       }
     end
 
-    def subscription
-      {
-        subscription: ::V1::SubscriptionSerializer.new(model.subscription).serialize,
-      }
+    def subscriptions
+      ::CollectionSerializer
+        .new(model.subscriptions, ::V1::SubscriptionSerializer, collection_name: 'subscriptions').serialize
     end
 
     def fees

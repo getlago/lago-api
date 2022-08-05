@@ -6,8 +6,9 @@ RSpec.describe Webhooks::InvoicesService do
   subject(:webhook_invoice_service) { described_class.new(invoice) }
 
   let(:organization) { create(:organization, webhook_url: webhook_url) }
+  let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, organization: organization) }
-  let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:invoice) { create(:invoice, customer: customer) }
   let(:webhook_url) { 'http://foo.bar' }
 
   before do

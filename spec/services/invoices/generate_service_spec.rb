@@ -8,14 +8,16 @@ RSpec.describe Invoices::GenerateService, type: :service do
   let(:organization) { create(:organization, name: 'LAGO') }
   let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-  let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:invoice) { create(:invoice, customer: customer) }
   let(:credit) { create(:credit, invoice: invoice) }
   let(:fees) { create_list(:fee, 3, invoice: invoice) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice: invoice, subscription: subscription) }
   let(:response) do
     File.read(Rails.root.join('spec/fixtures/blank.pdf'))
   end
 
   before do
+    invoice_subscription
     stub_request(:post, "#{ENV['LAGO_PDF_URL']}/forms/chromium/convert/html")
       .to_return(body: response, status: 200)
   end

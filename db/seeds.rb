@@ -197,7 +197,7 @@ end
 # NOTE: Generate invoices for the customers
 Subscription.all.find_each do |subscription|
   Invoices::CreateService.new(
-    subscription: subscription,
+    subscriptions: [subscription],
     timestamp: Time.zone.now - 2.months,
   ).create
 end

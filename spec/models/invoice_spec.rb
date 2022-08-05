@@ -3,35 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Invoice, type: :model do
-  describe 'validate_date_bounds' do
-    let(:invoice) do
-      build(:invoice, from_date: Time.zone.now - 2.days, to_date: Time.zone.now)
-    end
-
-    it 'ensures from_date is before to_date' do
-      expect(invoice).to be_valid
-    end
-
-    context 'when from_date is after to_date' do
-      let(:invoice) do
-        build(:invoice, from_date: Time.zone.now + 2.days, to_date: Time.zone.now)
-      end
-
-      it 'ensures from_date is before to_date' do
-        expect(invoice).not_to be_valid
-      end
-    end
-  end
-
   describe 'sequential_id' do
-    let(:subscription) { create(:subscription) }
+    let(:customer) { create(:customer) }
 
     let(:invoice) do
       build(
         :invoice,
-        from_date: Time.zone.now - 2.days,
-        to_date: Time.zone.now,
-        subscription: subscription,
+        customer: customer,
       )
     end
 
@@ -57,13 +35,11 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context 'when invoice alrady exsits' do
+    context 'when invoice alrady exists' do
       before do
         create(
           :invoice,
-          from_date: Time.zone.now - 2.days,
-          to_date: Time.zone.now,
-          subscription: subscription,
+          customer: customer,
           sequential_id: 5,
         )
       end
@@ -82,8 +58,6 @@ RSpec.describe Invoice, type: :model do
       before do
         create(
           :invoice,
-          from_date: Time.zone.now - 2.days,
-          to_date: Time.zone.now,
           sequential_id: 1,
         )
       end
@@ -103,7 +77,7 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
     let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { build(:invoice, subscription: subscription) }
+    let(:invoice) { build(:invoice, customer: customer) }
 
     it 'generates the invoice number' do
       invoice.save
@@ -113,11 +87,11 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe 'charge_amount' do
+  describe '#charge_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
     let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:invoice) { create(:invoice, customer: customer) }
     let(:fees) { create_list(:fee, 3, invoice: invoice) }
 
     it 'returns the charges amount' do
@@ -125,15 +99,54 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe 'credit_amount' do
+  describe '#credit_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
     let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, subscription: subscription) }
+    let(:invoice) { create(:invoice, customer: customer) }
     let(:credit) { create(:credit, invoice: invoice) }
 
     it 'returns the credits amount' do
       expect(invoice.credit_amount.to_s).to eq('0.00')
+    end
+  end
+
+  describe '#subscription_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, customer: customer) }
+    let(:fees) { create_list(:fee, 2, invoice: invoice) }
+
+    it 'returns the subscriptions amount' do
+      create(:fee, invoice: invoice, amount_cents: 200)
+      create(:fee, invoice: invoice, amount_cents: 100)
+      create(:fee, invoice: invoice, charge_id: create(:standard_charge).id)
+
+      expect(invoice.subscription_amount.to_s).to eq('3.00')
+    end
+  end
+
+  describe '#invoice_subscription' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+
+    it 'returns the invoice_subscription for the given subscription id' do
+      invoice = invoice_subscription.invoice
+      subscription = invoice_subscription.subscription
+
+      expect(invoice.invoice_subscription(subscription.id)).to eq(invoice_subscription)
+    end
+  end
+
+  describe '#subscription_fees' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+
+    it 'returns the fees of the corresponding invoice_subscription' do
+      invoice = invoice_subscription.invoice
+      subscription = invoice_subscription.subscription
+      fee = create(:fee, subscription_id: subscription.id, invoice_id: invoice.id)
+
+      expect(invoice.subscription_fees(subscription.id)).to eq([fee])
     end
   end
 end

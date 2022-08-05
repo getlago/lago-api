@@ -33,9 +33,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       aggregate_failures do
         expect(result).to be_success
 
-        expect(result.invoice.to_date).to eq(date)
-        expect(result.invoice.from_date).to eq(date)
-        expect(result.invoice.subscription).to eq(subscription)
+        expect(result.invoice.subscriptions.first).to eq(subscription)
         expect(result.invoice.issuing_date).to eq(date)
         expect(result.invoice.invoice_type).to eq('add_on')
         expect(result.invoice.status).to eq('pending')

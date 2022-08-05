@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Fees::ChargeService do
   subject(:charge_subscription_service) do
-    described_class.new(invoice: invoice, charge: charge)
+    described_class.new(invoice: invoice, charge: charge, subscription: subscription, boundaries: boundaries)
   end
 
   let(:subscription) do
@@ -15,14 +15,16 @@ RSpec.describe Fees::ChargeService do
     )
   end
 
+  let(:boundaries) do
+    {
+      from_date: subscription.started_at.to_date,
+      to_date: subscription.started_at.end_of_month.to_date,
+      charges_from_date: subscription.started_at.to_date,
+    }
+  end
+
   let(:invoice) do
-    create(
-      :invoice,
-      subscription: subscription,
-      from_date: subscription.started_at,
-      to_date: subscription.started_at.end_of_month,
-      charges_from_date: subscription.started_at,
-    )
+    create(:invoice)
   end
 
   let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
@@ -140,12 +142,16 @@ RSpec.describe Fees::ChargeService do
         )
       end
 
+      let(:boundaries) do
+        {
+          from_date: Time.zone.parse('15 Apr 2022 00:01:00').to_date,
+          to_date: Time.zone.parse('30 Apr 2022 00:01:00').to_date,
+          charges_from_date: subscription.started_at.to_date,
+        }
+      end
+
       before do
         subscription.update!(previous_subscription: previous_subscription)
-        invoice.update!(
-          from_date: Time.zone.parse('15 Apr 2022 00:01:00'),
-          to_date: Time.zone.parse('30 Apr 2022 00:01:00'),
-        )
         event
       end
 

@@ -4,11 +4,11 @@ require 'rails_helper'
 
 RSpec.describe Fees::AddOnService do
   subject(:add_on_service) do
-    described_class.new(invoice: invoice, applied_add_on: applied_add_on)
+    described_class.new(invoice: invoice, applied_add_on: applied_add_on, subscription: subscription)
   end
 
   let(:subscription) { create(:subscription) }
-  let(:invoice) { create(:invoice, subscription: subscription) }
+  let(:invoice) { create(:invoice) }
   let(:applied_add_on) { create(:applied_add_on) }
 
   describe '.create' do

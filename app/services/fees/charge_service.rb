@@ -2,9 +2,11 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:)
+    def initialize(invoice:, charge:, subscription:, boundaries:)
       @invoice = invoice
       @charge = charge
+      @subscription = subscription
+      @boundaries = OpenStruct.new(boundaries)
       super(nil)
     end
 
@@ -26,10 +28,11 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge
+    attr_accessor :invoice, :charge, :subscription, :boundaries
 
-    delegate :customer, :plan, :subscription, to: :invoice
+    delegate :customer, to: :invoice
     delegate :billable_metric, to: :charge
+    delegate :plan, to: :subscription
 
     def init_fee
       amount_result = compute_amount
@@ -49,6 +52,7 @@ module Fees
         amount_currency: charge.amount_currency,
         vat_rate: customer.applicable_vat_rate,
         units: amount_result.units,
+        properties: boundaries.to_h
       )
 
       new_fee.compute_vat
@@ -57,14 +61,14 @@ module Fees
     end
 
     def compute_amount
-      aggregated_events = aggregator.aggregate(from_date: charges_from_date, to_date: invoice.to_date)
+      aggregated_events = aggregator.aggregate(from_date: charges_from_date, to_date: boundaries.to_date)
       return aggregated_events unless aggregated_events.success?
 
       charge_model.apply(value: aggregated_events.aggregation)
     end
 
     def already_billed?
-      existing_fee = invoice.fees.find_by(charge_id: charge.id)
+      existing_fee = invoice.fees.find_by(charge_id: charge.id, subscription_id: subscription.id)
       return false unless existing_fee
 
       result.fee = existing_fee
@@ -110,19 +114,19 @@ module Fees
     end
 
     def charges_from_date
-      return invoice.charges_from_date unless subscription.previous_subscription
+      return boundaries.charges_from_date unless subscription.previous_subscription
 
       if subscription.previous_subscription.upgraded?
         date = case plan.interval.to_sym
                when :weekly
-                 invoice.charges_from_date.beginning_of_week
+                 boundaries.charges_from_date.beginning_of_week
                when :monthly
-                 invoice.charges_from_date.beginning_of_month
+                 boundaries.charges_from_date.beginning_of_month
                when :yearly
                  if subscription.previous_subscription.plan.bill_charges_monthly
-                   invoice.charges_from_date.beginning_of_month
+                   boundaries.charges_from_date.beginning_of_month
                  else
-                   invoice.charges_from_date.beginning_of_year
+                   boundaries.charges_from_date.beginning_of_year
                  end
                else
                  raise NotImplementedError
@@ -131,7 +135,7 @@ module Fees
         return date
       end
 
-      invoice.charges_from_date
+      boundaries.charges_from_date
     end
   end
 end

@@ -137,8 +137,6 @@ module Invoices
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,
             invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_from_date: invoice.from_date.iso8601,
-            invoice_to_date: invoice.to_date.iso8601,
             invoice_type: invoice.invoice_type,
           },
         }

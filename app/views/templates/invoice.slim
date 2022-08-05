@@ -7,7 +7,7 @@ html
     link rel='stylesheet' href='https://rsms.me/inter/inter.css'
     title Invoice
   body
-    css: 
+    css:
       h1, h2, p { margin: 0; padding: 0; }
       html { font-family: Inter, sans-serif; }
       h1 { color: #19212e; font-weight: 700; font-size: 24px; line-height: 32px; }
@@ -167,7 +167,7 @@ html
         h1.invoice-title Invoice
         - if organization.logo.present?
           img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
-      
+
       .mb-24.overflow-auto
         .invoice-information-column
           table.invoice-information-table
@@ -177,7 +177,7 @@ html
             tr
               td.body-1 Issue Date
               td.body-2 = issuing_date.strftime('%b %d, %Y')
-      
+
       .mb-24.overflow-auto
         .billing-information-column
           .body-1 From
@@ -216,12 +216,12 @@ html
           .body-2 = customer.state
           .body-2 = ISO3166::Country.new(customer.country)&.common_name
           .body-2 = customer.email
-      
+
       .mb-24
         h2.title-2.mb-8 = total_amount.format
         .body-1
           | Due #{issuing_date.strftime('%b %d, %Y')}
-      
+
       .invoice-resume.mb-24.overflow-auto
         table.invoice-resume-table width="100%"
           tr
@@ -230,13 +230,13 @@ html
                 - if add_on?
                   | Add On - #{fees.first.add_on.name}
                 - elsif subscription?
-                  | Subscription - #{plan.name}
+                  | All Subscription(s)
             - if add_on?
               td.body-1 style="text-align: right;" width="30%"
                 = fees.first&.amount&.format
             - elsif subscription?
               td.body-1 style="text-align: right;" width="30%"
-                = fees.subscription_kind.first&.amount&.format
+                = subscription_amount.format
           - if fees.charge_kind.any?
             tr
               td width="70%"
@@ -261,26 +261,6 @@ html
             td.body-2 Total due
             td.body-1 = total_amount.format
 
-      - if subscription? && fees.charge_kind.any?    
-        h2.invoice-details-title.title-2.mb-24 Details      
-        .body-1 Charges
-        .mb-24.body-3
-          | List of charges used from #{from_date.strftime('%b %d, %Y')} to #{to_date.strftime('%b %d, %Y')}
-        .charge-details.mb-24
-          table.charge-details-table width="100%"
-            - fees.charge_kind.each do |fee|
-              tr
-                td width="70%"
-                  .body-1 = fee.billable_metric.name
-                  .body-3
-                    | Total unit: #{fee.units}
-                td.body-1 width="30%" = fee.amount.format
-          
-          table.total-table width="100%"
-            tr
-              td.body-2 width="70%" Sub total
-              td.body-1 width="30%" = charge_amount.format
-      
       p.body-3.mb-24 = organization.invoice_footer
 
       .powered-by
@@ -301,3 +281,48 @@ html
               path fill="#fff" d="M0 0h9.25v9.263H0z"
             clipPath id="c"
               path fill="#fff" d="M0 0h9.25v9.263H0z"
+
+      - subscriptions.each do |subscription|
+        - if subscription.name.present?
+          h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
+        - else
+          h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
+        .body-1 Subscription
+        .mb-24.body-3
+          | From #{invoice_subscription(subscription.id).from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_date&.strftime('%b %d, %Y')}
+
+        .invoice-resume.mb-24.overflow-auto
+          table.invoice-resume-table width="100%"
+            tr
+              td width="70%"
+                .body-1
+                  | #{subscription.plan.interval.capitalize} subscription - #{subscription.plan.name}
+              td.body-1 style="text-align: right;" width="30%"
+                = subscription_fees(subscription.id).subscription_kind.first&.amount&.format
+          table.total-table width="100%"
+            tr
+              td.body-2 width="70%" Sub total
+              td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format
+
+        - if subscription? && subscription_fees(subscription.id).charge_kind.any?
+          .body-1 Charges
+          .mb-24.body-3
+            | List of charges used from #{invoice_subscription(subscription.id).from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_date&.strftime('%b %d, %Y')}
+          .charge-details.mb-24
+            table.charge-details-table width="100%"
+              - subscription_fees(subscription.id).charge_kind.each do |fee|
+                tr
+                  td width="70%"
+                    .body-1 = fee.billable_metric.name
+                    .body-3
+                      | Total unit: #{fee.units}
+                  td.body-1 width="30%" = fee.amount.format
+
+            table.total-table width="100%"
+              tr
+                td.body-2 width="70%" Sub total
+                td.body-1 width="30%" = invoice_subscription(subscription.id).charge_amount.format
+            table.total-table width="100%"
+              tr
+                td.body-2 width="70%" Total
+                td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format

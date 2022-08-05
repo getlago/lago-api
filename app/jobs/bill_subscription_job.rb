@@ -5,9 +5,9 @@ class BillSubscriptionJob < ApplicationJob
 
   retry_on Sequenced::SequenceError
 
-  def perform(subscription, timestamp)
+  def perform(subscriptions, timestamp)
     result = Invoices::CreateService.new(
-      subscription: subscription,
+      subscriptions: subscriptions,
       timestamp: timestamp,
     ).create
 
