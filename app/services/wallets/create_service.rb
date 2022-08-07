@@ -26,6 +26,12 @@ module Wallets
         status: :active,
       )
 
+      WalletTransactions::CreateJob.perform_later(
+        wallet_id,
+        args[:paid_credits],
+        args[:granted_credits],
+      )
+
       result.wallet = wallet
       result
     rescue ActiveRecord::RecordInvalid => e
