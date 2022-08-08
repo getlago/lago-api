@@ -14,6 +14,11 @@ namespace :events do
     Event.where(subscription_id: nil).find_each do |event|
       subscription = event.customer.active_subscription || event.customer.subscriptions.order(:created_at).last
 
+      unless subscription
+        event.destroy
+        next
+      end
+
       event.update!(subscription_id: subscription.id)
     end
   end
