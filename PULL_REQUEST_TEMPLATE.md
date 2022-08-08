@@ -1,28 +1,18 @@
-## Pull Request template
+## Context
 
-Please, go through these steps before you submit a PR.
+Include relevant motivation and context.
 
-1. Make sure that your PR is not a duplicate.
-2. If not, then make sure that:
+## Description
 
-   a. You have done your changes in a separate branch. Branches MUST have descriptive names that start with either the `fix/` or `feature/` prefixes. Good examples are: `fix/signin-issue` or `feature/issue-templates`.
+Describe your changes in detail.
 
-   b. You have a descriptive commit message with a short title (first line).
+List any dependencies that are required.
 
-   c. You have only one commit (if not, squash them into one commit).
+## Related Task
 
-   d. `npm test` doesn't throw any error. If it does, fix them first and amend your commit (`git commit --amend`).
+Link to a specific card from the public roadmap or the board of issues.
 
-3. **After** these steps, you're ready to open a pull request.
+## How Has This Been Tested?
 
-   a. Give a descriptive title to your PR.
-
-   b. Describe your changes.
-
-   c. Put `closes #XXXX` in your comment to auto-close the issue that your PR fixes (if such).
-
-   d. Add the corresponding labels to your pull request (ex: feature, improvement, bug...)
-
-IMPORTANT: Please review the [CONTRIBUTING.md](../CONTRIBUTING.md) file for detailed contributing guidelines.
-
-**PLEASE REMOVE THIS TEMPLATE BEFORE SUBMITTING**
+Describe how you tested your changes.
+Add screenshots (if appropriate).
