@@ -354,9 +354,9 @@ RSpec.describe Invoices::CreateService, type: :service do
 
         aggregate_failures do
           expect(result.invoice.fees.first.properties['to_date'])
-            .to eq (terminated_at.to_date - 1.day).to_s
+            .to eq(terminated_at.to_date.to_s)
           expect(result.invoice.fees.first.properties['from_date'])
-            .to eq (terminated_at.to_date.beginning_of_month).to_s
+            .to eq(terminated_at.to_date.beginning_of_month.to_s)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
         end
       end
@@ -392,9 +392,9 @@ RSpec.describe Invoices::CreateService, type: :service do
 
         aggregate_failures do
           expect(result.invoice.fees.first.properties['to_date'])
-            .to eq (terminated_at.to_date - 1.day).to_s
+            .to eq(terminated_at.to_date.to_s)
           expect(result.invoice.fees.first.properties['from_date'])
-            .to eq (terminated_at.to_date.beginning_of_month).to_s
+            .to eq(terminated_at.to_date.beginning_of_month.to_s)
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end
