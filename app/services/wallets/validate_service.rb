@@ -17,7 +17,7 @@ module Wallets
 
     private
 
-    attr_reader :result, :args
+    attr_accessor :result, :args
 
     def valid_customer?
       current_customer = Customer.find_by(
@@ -26,17 +26,17 @@ module Wallets
       )
 
       unless current_customer
-        result.fail!(code: 'missing_argument', message: 'unable to find customer')
+        result = result.fail!(code: 'missing_argument', message: 'unable to find customer')
         return false
       end
 
       if current_customer.wallets.active.any?
-        result.fail!(code: 'wallet_already_exists', message: 'a wallet already exists for this customer')
+        result = result.fail!(code: 'wallet_already_exists', message: 'a wallet already exists for this customer')
         return false
       end
 
       unless current_customer.subscriptions.active.any?
-        result.fail!(code: 'no_active_subscription', message: 'customer does not have any active subscription')
+        result = result.fail!(code: 'no_active_subscription', message: 'customer does not have any active subscription')
         return false
       end
 
