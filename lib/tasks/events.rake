@@ -12,7 +12,7 @@ namespace :events do
   desc 'Fill missing subscription_id'
   task fill_subscription: :environment do
     Event.where(subscription_id: nil).find_each do |event|
-      subscription = event.customer.active_subscription || event.customer.subscriptions.order(&:created_at).last
+      subscription = event.customer.active_subscription || event.customer.subscriptions.order(:created_at).last
 
       event.update!(subscription_id: subscription.id)
     end
