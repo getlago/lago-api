@@ -6,35 +6,52 @@ RSpec.describe BillingService, type: :service do
   subject(:billing_service) { described_class.new }
 
   describe '.call' do
-    let(:start_date) { DateTime.parse('20 Feb 2021') }
+    let(:plan) { create(:plan, interval: interval, bill_charges_monthly: bill_charges_monthly) }
+    let(:bill_charges_monthly) { false }
+    let(:subscription_date) { DateTime.parse('20 Feb 2021') }
+    let(:customer) { create(:customer) }
 
-    context 'when billed weekly' do
-      let(:plan) { create(:plan, interval: :weekly) }
-      let(:customer) { create(:customer) }
+    let(:subscription) do
+      create(
+        :subscription,
+        plan: plan,
+        subscription_date: subscription_date,
+        started_at: Time.zone.now,
+        billing_time: billing_time,
+      )
+    end
+
+    before { subscription }
+
+    context 'when billed weekly with calendar billing time' do
+      let(:interval) { :weekly }
+      let(:billing_time) { :calendar }
 
       let(:subscription1) do
         create(
           :subscription,
           customer: customer,
           plan: plan,
-          subscription_date: start_date,
+          subscription_date: subscription_date,
           started_at: Time.zone.now,
         )
       end
+
       let(:subscription2) do
         create(
           :subscription,
           customer: customer,
           plan: plan,
-          subscription_date: start_date,
+          subscription_date: subscription_date,
           started_at: Time.zone.now,
         )
       end
+
       let(:subscription3) do
         create(
           :subscription,
           plan: plan,
-          subscription_date: start_date,
+          subscription_date: subscription_date,
           started_at: Time.zone.now,
         )
       end
@@ -45,7 +62,7 @@ RSpec.describe BillingService, type: :service do
         subscription3
       end
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('20 Jun 2022')
 
         travel_to(current_date) do
@@ -68,21 +85,11 @@ RSpec.describe BillingService, type: :service do
       end
     end
 
-    context 'when billed monthly' do
-      let(:plan) { create(:plan, interval: :monthly) }
+    context 'when billed monthly with calendar billing time' do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
 
-      let(:subscription) do
-        create(
-          :subscription,
-          plan: plan,
-          subscription_date: start_date,
-          started_at: Time.zone.now,
-        )
-      end
-
-      before { subscription }
-
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Feb 2022')
 
         travel_to(current_date) do
@@ -102,21 +109,11 @@ RSpec.describe BillingService, type: :service do
       end
     end
 
-    context 'when billed yearly' do
-      let(:plan) { create(:plan, interval: :yearly) }
+    context 'when billed yearly with calendar billing time' do
+      let(:interval) { :yearly }
+      let(:billing_time) { :calendar }
 
-      let(:subscription) do
-        create(
-          :subscription,
-          plan: plan,
-          subscription_date: start_date,
-          started_at: Time.zone.now,
-        )
-      end
-
-      before { subscription }
-
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Jan 2022')
 
         travel_to(current_date) do
@@ -136,7 +133,7 @@ RSpec.describe BillingService, type: :service do
       end
 
       context 'when charges are billed monthly' do
-        before { plan.update(bill_charges_monthly: true) }
+        let(:bill_charges_monthly) { true }
 
         it 'enqueues a job on billing day' do
           current_date = DateTime.parse('01 Feb 2022')
@@ -151,11 +148,134 @@ RSpec.describe BillingService, type: :service do
       end
     end
 
+    context 'when billed weekly with anniversary billing time' do
+      let(:interval) { :weekly }
+      let(:billing_time) { :anniversary }
+
+      let(:subscription_date) { DateTime.now.prev_occurring(DateTime.now.strftime('%A').downcase.to_sym) }
+
+      let(:current_date) { DateTime.parse('20 Jun 2022').prev_occurring(subscription_date.strftime('%A').downcase.to_sym) }
+
+      it 'enqueues a job on billing day' do
+        travel_to(current_date) do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], current_date.to_i)
+        end
+      end
+
+      it 'does not enqueue a job on other day' do
+        travel_to(current_date + 1.day) do
+          expect { billing_service.call }.not_to have_enqueued_job
+        end
+      end
+    end
+
+    context 'when billed monthly with anniversary billing time' do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_date.next_month }
+
+      it 'enqueues a job on billing day' do
+        travel_to(current_date) do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], current_date.to_i)
+        end
+      end
+
+      it 'does not enqueue a job on other day' do
+        travel_to(current_date + 1.day) do
+          expect { billing_service.call }.not_to have_enqueued_job
+        end
+      end
+
+      context 'when subscription anniversary is on a 31st' do
+        let(:subscription_date) { DateTime.parse('31 Mar 2021') }
+        let(:current_date) { DateTime.parse('28 Feb 2022') }
+
+        it 'enqueues a job if the month count less than 31 days' do
+          travel_to(current_date) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription], current_date.to_i)
+          end
+        end
+      end
+    end
+
+    context 'when billed yearly with anniversary billing time' do
+      let(:interval) { :yearly }
+      let(:billing_time) { :anniversary }
+
+      let(:current_date) { subscription_date.next_year }
+
+      it 'enqueues a job on billing day' do
+        travel_to(current_date) do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], current_date.to_i)
+        end
+      end
+
+      it 'does not enqueue a job on other day' do
+        travel_to(current_date + 1.day) do
+          expect { billing_service.call }.not_to have_enqueued_job
+        end
+      end
+
+      context 'when subscription anniversary is on 29th of february' do
+        let(:subscription_date) { DateTime.parse('29 Feb 2020') }
+        let(:current_date) { DateTime.parse('28 Feb 2022') }
+
+        it 'enqueues a job on 28th of february when year is not a leap year' do
+          travel_to(current_date) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription], current_date.to_i)
+          end
+        end
+      end
+
+      context 'when charges are billed monthly' do
+        let(:bill_charges_monthly) { true }
+        let(:current_date) { subscription_date.next_month }
+
+        it 'enqueues a job on billing day' do
+          travel_to(current_date.next_month) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription], current_date.next_month.to_i)
+          end
+        end
+
+        context 'when subscription anniversary is on a 31st' do
+          let(:subscription_date) { DateTime.parse('31 Mar 2021') }
+          let(:current_date) { DateTime.parse('28 Feb 2022') }
+
+          it 'enqueues a job if the month count less than 31 days' do
+            travel_to(current_date) do
+              billing_service.call
+
+              expect(BillSubscriptionJob).to have_been_enqueued
+                .with([subscription], current_date.to_i)
+            end
+          end
+        end
+      end
+    end
+
     context 'when downgraded' do
       let(:subscription) do
         create(
           :subscription,
-          subscription_date: start_date,
+          subscription_date: subscription_date,
           started_at: Time.zone.now,
           previous_subscription: previous_subscription,
           status: :pending,
@@ -165,14 +285,14 @@ RSpec.describe BillingService, type: :service do
       let(:previous_subscription) do
         create(
           :subscription,
-          subscription_date: start_date,
+          subscription_date: subscription_date,
           started_at: Time.zone.now,
         )
       end
 
       before { subscription }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Feb 2022')
 
         travel_to(current_date) do
