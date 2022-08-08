@@ -60,7 +60,7 @@ RSpec.describe BillingService, type: :service do
       let(:interval) { :weekly }
       let(:billing_time) { :calendar }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('20 Jun 2022')
 
         travel_to(current_date) do
@@ -87,7 +87,7 @@ RSpec.describe BillingService, type: :service do
       let(:interval) { :monthly }
       let(:billing_time) { :calendar }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Feb 2022')
 
         travel_to(current_date) do
@@ -111,7 +111,7 @@ RSpec.describe BillingService, type: :service do
       let(:interval) { :yearly }
       let(:billing_time) { :calendar }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Jan 2022')
 
         travel_to(current_date) do
@@ -154,7 +154,7 @@ RSpec.describe BillingService, type: :service do
 
       let(:current_date) { DateTime.parse('20 Jun 2022').prev_occurring(subscription_date.strftime('%A').downcase.to_sym) }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         travel_to(current_date) do
           billing_service.call
 
@@ -175,7 +175,7 @@ RSpec.describe BillingService, type: :service do
       let(:billing_time) { :anniversary }
       let(:current_date) { subscription_date.next_month }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         travel_to(current_date) do
           billing_service.call
 
@@ -194,7 +194,7 @@ RSpec.describe BillingService, type: :service do
         let(:subscription_date) { DateTime.parse('31 Mar 2021') }
         let(:current_date) { DateTime.parse('28 Feb 2022') }
 
-        it 'enqueue a job if the month count less than 31 days' do
+        it 'enqueues a job if the month count less than 31 days' do
           travel_to(current_date) do
             billing_service.call
 
@@ -211,7 +211,7 @@ RSpec.describe BillingService, type: :service do
 
       let(:current_date) { subscription_date.next_year }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         travel_to(current_date) do
           billing_service.call
 
@@ -230,7 +230,7 @@ RSpec.describe BillingService, type: :service do
         let(:subscription_date) { DateTime.parse('29 Feb 2020') }
         let(:current_date) { DateTime.parse('28 Feb 2022') }
 
-        it 'enqueue a job on 28th of february when year is not a leap year' do
+        it 'enqueues a job on 28th of february when year is not a leap year' do
           travel_to(current_date) do
             billing_service.call
 
@@ -257,7 +257,7 @@ RSpec.describe BillingService, type: :service do
           let(:subscription_date) { DateTime.parse('31 Mar 2021') }
           let(:current_date) { DateTime.parse('28 Feb 2022') }
 
-          it 'enqueue a job if the month count less than 31 days' do
+          it 'enqueues a job if the month count less than 31 days' do
             travel_to(current_date) do
               billing_service.call
 
@@ -290,7 +290,7 @@ RSpec.describe BillingService, type: :service do
 
       before { subscription }
 
-      it 'enqueue a job on billing day' do
+      it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Feb 2022')
 
         travel_to(current_date) do

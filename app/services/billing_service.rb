@@ -28,10 +28,10 @@ class BillingService
   private
 
   def today
-    @today ||= Time.zone.now
+    @today ||= Time.current
   end
 
-  # NOTE: Retrieve list of subscription that should be billed today
+  # NOTE: Retrieve list of subscriptions that should be billed today
   def billable_subscriptions
     sql = []
 
