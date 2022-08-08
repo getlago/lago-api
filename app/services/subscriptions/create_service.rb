@@ -18,7 +18,7 @@ module Subscriptions
       )
       @name = params[:name]&.strip
       @unique_id = params[:unique_id]&.strip
-      @current_subscription = find_current_subscription(params[:subscription_id])
+      @current_subscription = find_current_subscription(subscription_id: params[:subscription_id])
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
@@ -37,7 +37,7 @@ module Subscriptions
       )
       @name = args[:name]&.strip
       @unique_id = SecureRandom.uuid
-      @current_subscription = find_current_subscription(args[:subscription_id])
+      @current_subscription = find_current_subscription(subscription_id: args[:subscription_id])
 
       process_create
     end
@@ -60,15 +60,11 @@ module Subscriptions
       result.fail_with_validations!(e.record)
     end
 
-    def find_current_subscription(subscription_id)
-      current_customer&.active_subscriptions&.find_by(id: subscription_id)
-    end
-
     def handle_subscription
       return upgrade_subscription if upgrade?
       return downgrade_subscription if downgrade?
 
-      existing_subscription || create_subscription
+      current_subscription || create_subscription
     end
 
     def upgrade?
@@ -91,7 +87,7 @@ module Subscriptions
         plan_id: current_plan.id,
         subscription_date: Time.zone.now.to_date,
         name: name,
-        unique_id: unique_id
+        unique_id: unique_id || current_customer.customer_id
       )
       new_subscription.mark_as_active!
 
@@ -199,8 +195,15 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
-    def existing_subscription
-      @existing_subscription ||= Subscription.active.find_by(unique_id: unique_id, customer_id: current_customer.id)
+    def active_subscriptions
+      @active_subscriptions ||= current_customer&.active_subscriptions
+    end
+
+    def find_current_subscription(subscription_id:)
+      return active_subscriptions&.find_by(id: subscription_id) if subscription_id
+      return active_subscriptions&.find_by(unique_id: unique_id) if unique_id
+
+      active_subscriptions&.find_by(unique_id: current_customer.customer_id)
     end
   end
 end

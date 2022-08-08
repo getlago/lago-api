@@ -3,8 +3,8 @@
 namespace :subscriptions do
   desc 'Fill missing unique_id'
   task fill_unique_id: :environment do
-    Subscription.where(unique_id: nil).find_each do |sub|
-      sub.update!(unique_id: SecureRandom.uuid)
+    Subscription.includes(:customer).find_each do |subscription|
+      subscription.update!(unique_id: subscription.customer.customer_id)
     end
   end
 end
