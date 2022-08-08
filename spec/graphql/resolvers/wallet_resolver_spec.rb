@@ -16,7 +16,10 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
+  let(:subscription) { create(:subscription, status: :active, customer: customer, organization: organization) }
   let(:wallet) { create(:wallet, customer: customer) }
+
+  before { subscription }
 
   it 'returns a single wallet' do
     result = execute_graphql(

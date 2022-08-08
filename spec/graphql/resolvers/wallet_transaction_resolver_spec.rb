@@ -15,10 +15,14 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
+  let(:subscription) { create(:subscription, customer: customer, organization: membership.organization) }
   let(:wallet) { create(:wallet, customer: customer) }
   let(:wallet_transaction) { create(:wallet_transaction, wallet: wallet) }
 
-  before { wallet_transaction }
+  before do
+    subscription
+    wallet_transaction
+  end
 
   it 'returns a single wallet transaction' do
     result = execute_graphql(
@@ -29,7 +33,7 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
         walletTransactionId: wallet_transaction.id,
       },
     )
-    
+
     wallet_transaction_response = result['data']['walletTransaction']
 
     aggregate_failures do

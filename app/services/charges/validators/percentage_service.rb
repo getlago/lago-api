@@ -21,13 +21,7 @@ module Charges
       end
 
       def valid_rate?
-        return false unless rate.is_a?(String)
-
-        decimal_amount = BigDecimal(rate)
-
-        decimal_amount.present? && decimal_amount.finite? && decimal_amount.positive?
-      rescue ArgumentError, TypeError
-        false
+        ::Validators::DecimalAmountService.new(rate).valid_positive_amount?
       end
 
       def fixed_amount
@@ -37,15 +31,7 @@ module Charges
       def valid_fixed_amount?
         return true if fixed_amount.nil? && fixed_amount_target.nil?
 
-        return false unless fixed_amount.is_a?(String)
-
-        decimal_amount = BigDecimal(fixed_amount)
-
-        decimal_amount.present? &&
-          decimal_amount.finite? &&
-          (decimal_amount.zero? || decimal_amount.positive?)
-      rescue ArgumentError, TypeError
-        false
+        ::Validators::DecimalAmountService.new(fixed_amount).valid_amount?
       end
 
       def fixed_amount_target
