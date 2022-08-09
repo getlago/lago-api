@@ -28,7 +28,7 @@ module Api
             nil,
             customer_id: params[:customer_id],
             subscription_id: params[:subscription_id],
-            organization_id: current_organization.id
+            organization_id: current_organization.id,
           )
         result = service.usage
 

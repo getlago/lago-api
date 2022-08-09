@@ -7,7 +7,7 @@ module Invoices
 
       if organization_id.present?
         @organization_id = organization_id
-        @customer = Customer.find_by(
+        @customer = Customer.find_by!(
           customer_id: customer_id,
           organization_id: organization_id,
         )
@@ -16,6 +16,8 @@ module Invoices
       end
 
       @subscription = find_subscription(subscription_id)
+    rescue ActiveRecord::RecordNotFound
+      result.fail!(code: 'not_found')
     end
 
     def usage

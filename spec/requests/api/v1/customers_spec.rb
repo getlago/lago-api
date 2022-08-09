@@ -66,7 +66,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
   end
 
-  describe '.current_usage' do
+  describe 'GET /customers/:id/current_usage' do
     let(:customer) { create(:customer, organization: organization) }
     let(:organization) { create(:organization) }
     let(:subscription) do
@@ -139,6 +139,19 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(charge_usage[:units]).to eq('4.0')
         expect(charge_usage[:amount_cents]).to eq(5)
         expect(charge_usage[:amount_currency]).to eq('EUR')
+      end
+    end
+
+    context 'when customer does not belongs to the organization' do
+      let(:customer) { create(:customer) }
+
+      it 'returns not found' do
+        get_with_token(
+          organization,
+          "/api/v1/customers/#{customer.customer_id}/current_usage?subscription_id=#{subscription.id}",
+        )
+
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
