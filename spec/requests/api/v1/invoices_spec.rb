@@ -4,7 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice) }
+  let(:customer) { create(:customer, organization: organization) }
+  let(:invoice) { create(:invoice, customer: customer) }
 
   describe 'UPDATE /invoices' do
     let(:update_params) do
@@ -33,13 +34,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
-  describe 'show' do
-    let(:invoice) { create(:invoice) }
-
+  describe 'GET /invoices/:id' do
     it 'returns a invoice' do
       get_with_token(
         organization,
-        "/api/v1/invoices/#{invoice.id}"
+        "/api/v1/invoices/#{invoice.id}",
       )
 
       expect(response).to have_http_status(:success)
@@ -54,7 +53,20 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          "/api/v1/invoices/555"
+          '/api/v1/invoices/555',
+        )
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when invoices belongs to an other organization' do
+      let(:invoice) { create(:invoice) }
+
+      it 'returns not found' do
+        get_with_token(
+          organization,
+          "/api/v1/invoices/#{invoice.id}",
         )
 
         expect(response).to have_http_status(:not_found)

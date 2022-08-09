@@ -18,7 +18,7 @@ module Api
       end
 
       def show
-        invoice = Invoice.find_by(id: params[:id])
+        invoice = current_organization.invoices.find_by(id: params[:id])
 
         return not_found_error unless invoice
 
@@ -44,7 +44,7 @@ module Api
       end
 
       def download
-        invoice = Invoice.find_by(id: params[:id])
+        invoice = current_organization.invoices.find_by(id: params[:id])
 
         return not_found_error unless invoice
 
