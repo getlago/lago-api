@@ -52,6 +52,11 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       let(:unique_id) { nil }
 
       it 'sets customer_id as unique_id' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
         expect(result.subscription.unique_id).to eq(customer.customer_id)
       end
     end
