@@ -32,6 +32,11 @@ RSpec.describe Wallets::CreateService, type: :service do
         .to change(Wallet, :count).by(1)
     end
 
+    it 'enqueues the WalletTransaction::CreateJob' do
+      expect { create_service.create(**create_args) }
+        .to have_enqueued_job(WalletTransactions::CreateJob)
+    end
+
     context 'with validation error' do
       let(:paid_credits) { '-15.00' }
 
