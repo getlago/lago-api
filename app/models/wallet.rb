@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Wallet < ApplicationRecord
-  before_create :ensure_customer_currency
+  before_create :set_customer_currency
 
   belongs_to :customer
 
@@ -23,7 +23,7 @@ class Wallet < ApplicationRecord
 
   private
 
-  def ensure_customer_currency
-    self.currency = customer.default_currency
+  def set_customer_currency
+    self.currency ||= customer.default_currency
   end
 end
