@@ -2,15 +2,18 @@
 
 require 'rails_helper'
 
-RSpec.describe Wallets::CreateService, type: :service do
+RSpec.describe WalletTransactions::CreateService, type: :service do
   subject(:create_service) { described_class.new(membership.user) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, customer: customer) }
+  let(:wallet) { create(:wallet, customer: customer) }
 
-  before { subscription }
+  before do
+    subscription
+  end
 
   describe '.create' do
     let(:paid_credits) { '1.00' }
@@ -18,18 +21,11 @@ RSpec.describe Wallets::CreateService, type: :service do
     let(:create_args) do
       {
         name: 'New Wallet',
+        wallet_id: wallet.id,
         customer_id: customer.id,
-        organization_id: organization.id,
-        rate_amount: '1.00',
-        expiration_date: '2022-01-01',
         paid_credits: paid_credits,
         granted_credits: granted_credits,
       }
-    end
-
-    it 'creates a wallet' do
-      expect { create_service.create(**create_args) }
-        .to change(Wallet, :count).by(1)
     end
 
     context 'with validation error' do

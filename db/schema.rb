@@ -348,6 +348,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_09_083243) do
     t.datetime "settled_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "invoice_id"
+    t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end
 
@@ -401,6 +403,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_09_083243) do
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
+  add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
 end

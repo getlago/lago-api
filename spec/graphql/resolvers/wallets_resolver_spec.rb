@@ -17,9 +17,11 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
+  let(:subscription) { create(:subscription, customer: customer, organization: organization) }
   let(:wallet) { create(:wallet, organization: organization, customer: customer) }
 
   before do
+    subscription
     wallet
 
     create(:wallet, status: :terminated, customer: customer)
