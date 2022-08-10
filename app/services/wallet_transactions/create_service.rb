@@ -16,6 +16,7 @@ module WalletTransactions
     end
 
     def handle_granted_credits(wallet_id, granted_credits)
+
       # TODO
     end
 

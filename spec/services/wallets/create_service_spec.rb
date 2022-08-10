@@ -7,7 +7,7 @@ RSpec.describe Wallets::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization: organization, customer_id: 'foobar') }
   let(:subscription) { create(:subscription, customer: customer) }
 
   before { subscription }
@@ -18,7 +18,7 @@ RSpec.describe Wallets::CreateService, type: :service do
     let(:create_args) do
       {
         name: 'New Wallet',
-        customer_id: customer.id,
+        customer_id: customer.customer_id,
         organization_id: organization.id,
         rate_amount: '1.00',
         expiration_date: '2022-01-01',
