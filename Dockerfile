@@ -31,6 +31,10 @@ RUN apk add --no-cache \
   postgresql-dev \
   tzdata
 
+ARG SEGMENT_WRITE_KEY
+
+ENV SEGMENT_WRITE_KEY $SEGMENT_WRITE_KEY
+
 COPY --from=build /usr/local/bundle/ /usr/local/bundle
 
 CMD ["./scripts/start.sh"]

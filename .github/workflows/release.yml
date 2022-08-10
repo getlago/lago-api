@@ -25,3 +25,6 @@ jobs:
           context: .
           push: true
           tags: getlago/api:${{ github.event.client_payload.version }}
+          build-args: |
+            SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
+
