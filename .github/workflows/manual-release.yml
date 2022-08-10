@@ -1,7 +1,10 @@
 name: Release
 on:
-  repository_dispatch:
-    types: [release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version
+        required: true
 jobs:
   build-image:
     name: Build Image
@@ -17,14 +20,13 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Add version into docker image
-        run: echo ${{ github.event.client_payload.version }} > LAGO_VERSION
+        run: echo ${{ github.event.inputs.version }} > LAGO_VERSION
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
           push: true
-          tags: getlago/api:${{ github.event.client_payload.version }}
+          tags: getlago/api:${{ github.event.inputs.version }}
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
-
