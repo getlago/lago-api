@@ -9,7 +9,6 @@ module Validators
     def valid_amount?
       return false unless valid_decimal?
 
-      decimal_amount = BigDecimal(amount)
       decimal_amount.zero? || decimal_amount.positive?
     end
 
@@ -21,7 +20,7 @@ module Validators
 
     private
 
-    attr_reader :amount
+    attr_reader :amount, :decimal_amount
 
     def valid_decimal?
       # NOTE: as we want to be the more precise with decimals, we only
@@ -29,7 +28,7 @@ module Validators
       # and use BigDecimal as a source of truth when computing amounts
       return false unless amount.is_a?(String)
 
-      decimal_amount = BigDecimal(amount)
+      @decimal_amount ||= BigDecimal(amount)
 
       decimal_amount.present? &&
         decimal_amount.finite?

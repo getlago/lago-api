@@ -33,14 +33,16 @@ module WalletTransactions
     def valid_wallet?
       current_wallet = Wallet.find_by(
         id: args[:wallet_id],
+        customer_id: args[:customer_id],
       )
 
       return 'wallet_not_found' unless current_wallet
-      return 'wallet_is_terminated' if current_wallet.terminated?
+
+      'wallet_is_terminated' if current_wallet.terminated?
     end
 
     def valid_paid_credits_amount?
-      return 'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
+      'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
     end
 
     def valid_granted_credits_amount?
