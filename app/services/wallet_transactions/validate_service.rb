@@ -37,8 +37,7 @@ module WalletTransactions
       )
 
       return 'wallet_not_found' unless current_wallet
-
-      'wallet_is_terminated' if current_wallet.terminated?
+      return 'wallet_is_terminated' if current_wallet.terminated?
     end
 
     def valid_paid_credits_amount?
