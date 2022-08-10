@@ -37,8 +37,8 @@ module Wallets
       )
 
       return 'customer_not_found' unless current_customer
-      return 'wallet_already_exists' if current_customer.wallets.active.any?
-      return 'no_active_subscription' unless current_customer.subscriptions.active.any?
+      return 'wallet_already_exists' if current_customer.wallets.active.exists?
+      return 'no_active_subscription' unless current_customer.subscriptions.active.exists?
     end
 
     def valid_paid_credits_amount?

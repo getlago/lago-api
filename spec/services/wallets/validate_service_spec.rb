@@ -29,7 +29,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
       expect(validate_service).to be_valid
     end
 
-    context 'when customer does not exists' do
+    context 'when customer does not exist' do
       let(:customer_id) { '123456' }
 
       it 'returns false and result has errors' do
