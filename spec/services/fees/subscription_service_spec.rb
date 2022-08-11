@@ -16,7 +16,7 @@ RSpec.describe Fees::SubscriptionService do
   let(:boundaries) do
     {
       from_date: Time.zone.parse('2022-03-01 00:00').to_date,
-      to_date: Time.zone.parse('2022-03-01 00:00').end_of_month.to_date
+      to_date: Time.zone.parse('2022-03-01 00:00').end_of_month.to_date,
     }
   end
 
@@ -577,20 +577,75 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     context 'when plan has trial period' do
-      before { plan.update(trial_period: trial_duration) }
-
       context 'when trial end during period' do
-        let(:trial_duration) { 3 }
+        before { plan.update(trial_period: 3) }
 
         it 'creates a fee with prorated amount on trial period' do
           result = fees_subscription_service.create
 
           expect(result.fee.amount_cents).to eq(90)
         end
+
+        context 'when plan is pay in advance' do
+          before do
+            plan.update!(
+              pay_in_advance: true,
+              trial_period: trial_period,
+              interval: interval,
+            )
+          end
+
+          context 'when plan is weekly' do
+            let(:boundaries) do
+              {
+                from_date: subscription.started_at.to_date.beginning_of_week,
+                to_date: subscription.started_at.end_of_week.to_date,
+              }
+            end
+
+            let(:interval) { :weekly }
+            let(:trial_period) { 5 }
+
+            it 'creates a fee with prorated amount on trial period' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(57)
+            end
+          end
+
+          context 'when plan is monthly' do
+            let(:interval) { :monthly }
+            let(:trial_period) { 45 }
+
+            it 'creates a fee with prorated amount on trial period' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(50)
+            end
+          end
+
+          context 'when plan is yearly' do
+            let(:boundaries) do
+              {
+                from_date: subscription.started_at.to_date.beginning_of_year,
+                to_date: subscription.started_at.end_of_year.to_date,
+              }
+            end
+
+            let(:interval) { :yearly }
+            let(:trial_period) { 400 }
+
+            it 'creates a fee with prorated amount on trial period' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(90)
+            end
+          end
+        end
       end
 
       context 'when trial end after period' do
-        let(:trial_duration) { 45 }
+        before { plan.update(trial_period: 45) }
 
         it 'creates a fee with 0 amount' do
           result = fees_subscription_service.create
@@ -600,9 +655,7 @@ RSpec.describe Fees::SubscriptionService do
       end
 
       context 'when plan is pay in advance' do
-        let(:trial_duration) { 45 }
-
-        before { plan.update(pay_in_advance: true) }
+        before { plan.update(trial_period: 45, pay_in_advance: true) }
 
         it 'creates a fee with prorated amount on trial period' do
           result = fees_subscription_service.create
