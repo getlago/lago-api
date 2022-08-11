@@ -199,8 +199,18 @@ module Fees
 
       if plan.has_trial?
         if plan.pay_in_advance?
-          from_date = invoice.issuing_date
-          to_date = invoice.issuing_date.end_of_month
+          from_date = boundaries.to_date + 1.day
+
+          case plan.interval.to_sym
+          when :weekly
+            to_date = from_date.end_of_week
+          when :monthly
+            to_date = from_date.end_of_month
+          when :yearly
+            to_date = from_date.end_of_year
+          else
+            raise NotImplementedError
+          end
         end
 
         # NOTE: amount is 0 if trial cover the full period
