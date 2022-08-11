@@ -58,6 +58,19 @@ module PaymentProviderCustomers
       result.fail_with_validations!(e.record)
     end
 
+    def check_payment_method(payment_method_id)
+      payment_method = Stripe::Customer.new(id: stripe_customer.provider_customer_id)
+        .retrieve_payment_method(payment_method_id, {}, { api_key: api_key })
+
+      result.payment_method = payment_method
+      result
+    rescue Stripe::InvalidRequestError
+      # NOTE: The payment method is no longer valid
+      stripe_customer.update!(payment_method_id: nil)
+
+      result.fail!(code: 'invalid_payment_method')
+    end
+
     private
 
     attr_accessor :stripe_customer
