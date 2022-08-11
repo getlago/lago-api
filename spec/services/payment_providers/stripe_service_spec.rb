@@ -106,6 +106,39 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     end
   end
 
+  describe '.register_webhook' do
+    let(:stripe_provider) do
+      create(:stripe_provider, organization: organization)
+    end
+
+    let(:stripe_webhook) do
+      ::Stripe::WebhookEndpoint.construct_from(
+        id: 'we_123456',
+        secret: 'whsec_123456',
+      )
+    end
+
+    before do
+      allow(::Stripe::WebhookEndpoint).to receive(:delete)
+        .with('we_123456', {}, { api_key: 'secret' })
+
+      allow(::Stripe::WebhookEndpoint)
+        .to receive(:create)
+        .and_return(stripe_webhook)
+    end
+
+    it 'registers a webhook on stripe' do
+      result = stripe_service.refresh_webhook(stripe_provider: stripe_provider)
+
+      expect(result).to be_success
+
+      aggregate_failures do
+        expect(result.stripe_provider.webhook_id).to eq('we_123456')
+        expect(result.stripe_provider.webhook_secret).to eq('whsec_123456')
+      end
+    end
+  end
+
   describe '.handle_incoming_webhook' do
     let(:stripe_provider) { create(:stripe_provider, organization: organization) }
     let(:event_result) { Stripe::Event.construct_from(event) }
@@ -224,6 +257,32 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(PaymentProviderCustomers::StripeService).to have_received(:new)
         expect(provider_customer_service).to have_received(:update_payment_method)
+      end
+    end
+
+    context 'when payment method detached event' do
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/payment_method_detached_event.json')
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentProviderCustomers::StripeService).to receive(:new)
+          .and_return(provider_customer_service)
+        allow(provider_customer_service).to receive(:delete_payment_method)
+          .and_return(service_result)
+      end
+
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization: organization,
+          event_json: event,
+        )
+
+        expect(result).to be_success
+
+        expect(PaymentProviderCustomers::StripeService).to have_received(:new)
+        expect(provider_customer_service).to have_received(:delete_payment_method)
       end
     end
 

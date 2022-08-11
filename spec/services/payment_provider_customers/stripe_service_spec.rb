@@ -120,4 +120,102 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
   end
+
+  describe '.delete_payment_method' do
+    let(:payment_method_id) { 'card_12345' }
+
+    let(:stripe_customer) do
+      create(
+        :stripe_customer,
+        customer: customer,
+        provider_customer_id: 'cus_123456',
+        payment_method_id: payment_method_id,
+      )
+    end
+
+    it 'removes the customer payment method' do
+      result = stripe_service.delete_payment_method(
+        organization_id: organization.id,
+        stripe_customer_id: stripe_customer.provider_customer_id,
+        payment_method_id: payment_method_id,
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.stripe_customer.payment_method_id).to be_nil
+      end
+    end
+
+    context 'when customer payment method is not the deleted one' do
+      it 'does not remove the customer payment method' do
+        result = stripe_service.delete_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: stripe_customer.provider_customer_id,
+          payment_method_id: 'other_payment_method_id',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
+        end
+      end
+    end
+  end
+
+  describe '.check_payment_method' do
+    let(:payment_method_id) { 'card_12345' }
+
+    let(:stripe_customer) do
+      create(
+        :stripe_customer,
+        customer: customer,
+        provider_customer_id: 'cus_123456',
+        payment_method_id: payment_method_id,
+      )
+    end
+
+    let(:payment_method) { Stripe::PaymentMethod.new(id: payment_method_id) }
+
+    let(:stripe_api_customer) { instance_double(Stripe::Customer) }
+
+    before do
+      allow(Stripe::Customer).to receive(:new)
+        .and_return(stripe_api_customer)
+    end
+
+    it 'checks for the existance of the payment method' do
+      allow(stripe_api_customer)
+        .to receive(:retrieve_payment_method)
+        .and_return(payment_method)
+
+      result = stripe_service.check_payment_method(payment_method_id)
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.payment_method.id).to eq(payment_method_id)
+
+        expect(Stripe::Customer).to have_received(:new)
+        expect(stripe_api_customer).to have_received(:retrieve_payment_method)
+      end
+    end
+
+    context 'when payment method is not found on stripe' do
+      before do
+        allow(stripe_api_customer)
+          .to receive(:retrieve_payment_method)
+          .and_raise(Stripe::InvalidRequestError.new('error', {}))
+      end
+
+      it 'returns a failed result' do
+        result = stripe_service.check_payment_method(payment_method_id)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+
+          expect(Stripe::Customer).to have_received(:new)
+          expect(stripe_api_customer).to have_received(:retrieve_payment_method)
+        end
+      end
+    end
+  end
 end

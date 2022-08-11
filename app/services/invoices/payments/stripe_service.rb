@@ -90,9 +90,16 @@ module Invoices
       end
 
       def stripe_payment_method
-        payment_method = customer.stripe_customer.payment_method_id
-        return payment_method if payment_method.present?
+        payment_method_id = customer.stripe_customer.payment_method_id
 
+        if payment_method_id
+          # NOTE: Check if payment method still exists
+          customer_service = PaymentProviderCustomers::StripeService.new(customer.stripe_customer)
+          customer_service_result = customer_service.check_payment_method(payment_method_id)
+          return customer_service_result.payment_method.id if customer_service_result.success?
+        end
+
+        # NOTE: Retrieve list of existing payment_methods
         payment_method = Stripe::PaymentMethod.list(
           {
             customer: customer.stripe_customer.provider_customer_id,
@@ -116,7 +123,7 @@ module Invoices
             idempotency_key: invoice.id,
           },
         )
-      rescue Stripe::CardError => e
+      rescue Stripe::CardError, Stripe::InvalidRequestError => e
         deliver_error_webhook(e)
         update_invoice_status(:failed)
 

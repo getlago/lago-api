@@ -7,6 +7,7 @@ module PaymentProviders
       'setup_intent.succeeded',
       'payment_intent.payment_failed',
       'payment_intent.succeeded',
+      'payment_method.detached',
     ].freeze
 
     def create_or_update(**args)
@@ -61,6 +62,11 @@ module PaymentProviders
       result.fail_with_validations!(e.record)
     end
 
+    def refresh_webhook(stripe_provider:)
+      unregister_webhook(stripe_provider, stripe_provider.secret_key)
+      register_webhook(stripe_provider)
+    end
+
     def handle_incoming_webhook(organization_id:, params:, signature:)
       organization = Organization.find_by(id: organization_id)
 
@@ -105,6 +111,15 @@ module PaymentProviders
             provider_payment_id: event.data.object.id,
             status: status,
           )
+      when 'payment_method.detached'
+        result = PaymentProviderCustomers::StripeService
+          .new
+          .delete_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: event.data.object.customer,
+            payment_method_id: event.data.object.id,
+          )
+        result.throw_error || result
       end
     end
 

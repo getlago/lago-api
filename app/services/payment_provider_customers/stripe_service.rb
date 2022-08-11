@@ -42,6 +42,35 @@ module PaymentProviderCustomers
       result.fail_with_validations!(e.record)
     end
 
+    def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
+      stripe_customer = PaymentProviderCustomers::StripeCustomer
+        .joins(:customer)
+        .where(customers: { organization_id: organization_id })
+        .find_by(provider_customer_id: stripe_customer_id)
+      return result.fail!(code: 'not_found') unless stripe_customer
+
+      # NOTE: check if payment_method was the default one
+      stripe_customer.payment_method_id = nil if stripe_customer.payment_method_id == payment_method_id
+
+      result.stripe_customer = stripe_customer
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.fail_with_validations!(e.record)
+    end
+
+    def check_payment_method(payment_method_id)
+      payment_method = Stripe::Customer.new(id: stripe_customer.provider_customer_id)
+        .retrieve_payment_method(payment_method_id, {}, { api_key: api_key })
+
+      result.payment_method = payment_method
+      result
+    rescue Stripe::InvalidRequestError
+      # NOTE: The payment method is no longer valid
+      stripe_customer.update!(payment_method_id: nil)
+
+      result.fail!(code: 'invalid_payment_method')
+    end
+
     private
 
     attr_accessor :stripe_customer

@@ -20,6 +20,13 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
   end
 
   describe '.create' do
+    let(:provider_customer_service){ instance_double(PaymentProviderCustomers::StripeService) }
+    let(:provider_customer_service_result) do
+      BaseService::Result.new.tap do |result|
+        result.payment_method = Stripe::PaymentMethod.new(id: 'pm_123456')
+      end
+    end
+
     before do
       stripe_payment_provider
       stripe_customer
@@ -34,6 +41,11 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           ),
         )
       allow(SegmentTrackJob).to receive(:perform_later)
+
+      allow(PaymentProviderCustomers::StripeService).to receive(:new)
+        .and_return(provider_customer_service)
+      allow(provider_customer_service).to receive(:check_payment_method)
+        .and_return(provider_customer_service_result)
     end
 
     it 'creates a stripe payment and a payment' do
@@ -115,14 +127,18 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
     context 'when customer does not have a provider customer id' do
       let(:stripe_customer) {}
+      let(:create_customer_result) do
+        BaseService::Result.new.tap do |result|
+          result.stripe_customer = PaymentProviderCustomers::StripeCustomer.create!(
+            customer: customer,
+            provider_customer_id: 'cus_123456',
+          )
+        end
+      end
 
       before do
-        allow(Stripe::Customer).to receive(:create)
-          .and_return(
-            Stripe::Customer.construct_from(
-              id: 'cus_123456',
-            ),
-          )
+        allow(provider_customer_service).to receive(:create)
+          .and_return(create_customer_result)
 
         allow(Stripe::PaymentMethod).to receive(:list)
           .and_return(Stripe::ListObject.construct_from(data: []))
@@ -135,7 +151,6 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(customer.stripe_customer.reload).to be_present
         expect(customer.stripe_customer.provider_customer_id).to eq('cus_123456')
 
-        expect(Stripe::Customer).to have_received(:create)
         expect(Stripe::PaymentMethod).to have_received(:list)
         expect(Stripe::PaymentIntent).to have_received(:create)
       end
