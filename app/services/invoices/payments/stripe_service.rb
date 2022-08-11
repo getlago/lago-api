@@ -123,7 +123,7 @@ module Invoices
             idempotency_key: invoice.id,
           },
         )
-      rescue Stripe::CardError => e
+      rescue Stripe::CardError, Stripe::InvalidRequestError => e
         deliver_error_webhook(e)
         update_invoice_status(:failed)
 
