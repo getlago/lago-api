@@ -120,4 +120,45 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
   end
+
+  describe '.delete_payment_method' do
+    let(:payment_method_id) { 'card_12345' }
+
+    let(:stripe_customer) do
+      create(
+        :stripe_customer,
+        customer: customer,
+        provider_customer_id: 'cus_123456',
+        payment_method_id: payment_method_id,
+      )
+    end
+
+    it 'removes the customer payment method' do
+      result = stripe_service.delete_payment_method(
+        organization_id: organization.id,
+        stripe_customer_id: stripe_customer.provider_customer_id,
+        payment_method_id: payment_method_id,
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.stripe_customer.payment_method_id).to be_nil
+      end
+    end
+
+    context 'when customer payment method is not the deleted one' do
+      it 'does not remove the customer payment method' do
+        result = stripe_service.delete_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: stripe_customer.provider_customer_id,
+          payment_method_id: 'other_payment_method_id',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
+        end
+      end
+    end
+  end
 end

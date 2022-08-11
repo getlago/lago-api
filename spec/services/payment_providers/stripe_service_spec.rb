@@ -227,6 +227,32 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
     end
 
+    context 'when payment method detached event' do
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/payment_method_detached_event.json')
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentProviderCustomers::StripeService).to receive(:new)
+          .and_return(provider_customer_service)
+        allow(provider_customer_service).to receive(:delete_payment_method)
+          .and_return(service_result)
+      end
+
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization: organization,
+          event_json: event,
+        )
+
+        expect(result).to be_success
+
+        expect(PaymentProviderCustomers::StripeService).to have_received(:new)
+        expect(provider_customer_service).to have_received(:delete_payment_method)
+      end
+    end
+
     context 'when event does not match an expected event type' do
       let(:event) do
         {
