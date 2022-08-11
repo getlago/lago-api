@@ -198,9 +198,23 @@ module Fees
       to_date = boundaries.to_date
 
       if plan.has_trial?
+        # NOTE: When pay in advance, boundaries are on the previous period
+        #       but subscription duration have to be computed on the comming one.
+        #       To get the number of days to bill, we must
+        #       jump to the end of the billing period
         if plan.pay_in_advance?
-          from_date = invoice.issuing_date
-          to_date = invoice.issuing_date.end_of_month
+          from_date = boundaries.to_date + 1.day
+
+          case plan.interval.to_sym
+          when :weekly
+            to_date = from_date.end_of_week
+          when :monthly
+            to_date = from_date.end_of_month
+          when :yearly
+            to_date = from_date.end_of_year
+          else
+            raise NotImplementedError
+          end
         end
 
         # NOTE: amount is 0 if trial cover the full period
