@@ -62,6 +62,11 @@ module PaymentProviders
       result.fail_with_validations!(e.record)
     end
 
+    def refresh_webhook(stripe_provider:)
+      unregister_webhook(stripe_provider, stripe_provider.secret_key)
+      register_webhook(stripe_provider)
+    end
+
     def handle_incoming_webhook(organization_id:, params:, signature:)
       organization = Organization.find_by(id: organization_id)
 
