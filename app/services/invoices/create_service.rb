@@ -168,6 +168,7 @@ module Invoices
         from_date: date_service.from_date,
         to_date: date_service.to_date,
         charges_from_date: date_service.charges_from_date,
+        timestamp: timestamp,
       }
     end
   end

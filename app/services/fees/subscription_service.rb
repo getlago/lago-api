@@ -2,8 +2,6 @@
 
 module Fees
   class SubscriptionService < BaseService
-    WEEK_DURATION = 7.freeze
-
     def initialize(invoice, subscription, boundaries)
       @invoice = invoice
       @subscription = subscription
@@ -24,7 +22,7 @@ module Fees
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
-        properties: boundaries.to_h
+        properties: boundaries.to_h,
       )
 
       new_fee.compute_vat
@@ -91,18 +89,7 @@ module Fees
       # NOTE: When pay in advance, first invoice has from_date = to_date
       #       To get the number of days to bill, we must
       #       jump to the end of the billing period
-      if plan.pay_in_advance?
-        case plan.interval.to_sym
-        when :weekly
-          to_date = boundaries.to_date.end_of_week
-        when :monthly
-          to_date = boundaries.to_date.end_of_month
-        when :yearly
-          to_date = boundaries.to_date.end_of_year
-        else
-          raise NotImplementedError
-        end
-      end
+      to_date = compute_to_date(subscription, boundaries.to_date) if plan.pay_in_advance?
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
@@ -117,7 +104,7 @@ module Fees
       # NOTE: Number of days of the first period since subscription creation
       days_to_bill = (to_date + 1.day - from_date).to_i
 
-      days_to_bill * single_day_price(plan)
+      days_to_bill * single_day_price(subscription)
     end
 
     # NOTE: When terminating a pay in arrerar subscription, we need to
@@ -144,13 +131,13 @@ module Fees
       # NOTE: number of days between beginning of the period and the termination date
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-      number_of_day_to_bill * single_day_price(plan)
+      number_of_day_to_bill * single_day_price(subscription)
     end
 
     def upgraded_amount
       from_date = boundaries.from_date
-      to_date = compute_to_date(boundaries.to_date, plan)
-      old_to_date = compute_to_date(boundaries.to_date, previous_subscription.plan)
+      to_date = compute_to_date(subscription, boundaries.to_date)
+      old_to_date = compute_to_date(previous_subscription, boundaries.to_date)
 
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
@@ -174,9 +161,9 @@ module Fees
         #       **old_day_price** = (old plan amount_cents / full period duration)
         #       **new_day_price** = (new plan amount_cents / full period duration)
         #       amount_to_bill = nb_day * (new_day_price - old_day_price)
-        old_day_price = single_day_price(previous_subscription.plan)
+        old_day_price = single_day_price(previous_subscription)
 
-        amount = new_number_of_day_to_bill * single_day_price(plan) - old_number_of_day_to_bill * old_day_price
+        amount = new_number_of_day_to_bill * single_day_price(subscription) - old_number_of_day_to_bill * old_day_price
 
         return 0 if amount.negative?
 
@@ -189,7 +176,7 @@ module Fees
         #       **nb_day** = number of days between upgrade and the end of the period
         #       **day_cost** = (plan amount_cents / full period duration)
         #       amount_to_bill = (nb_day * day_cost)
-        new_number_of_day_to_bill * single_day_price(plan)
+        new_number_of_day_to_bill * single_day_price(subscription)
       end
     end
 
@@ -204,17 +191,7 @@ module Fees
         #       jump to the end of the billing period
         if plan.pay_in_advance?
           from_date = boundaries.to_date + 1.day
-
-          case plan.interval.to_sym
-          when :weekly
-            to_date = from_date.end_of_week
-          when :monthly
-            to_date = from_date.end_of_month
-          when :yearly
-            to_date = from_date.end_of_year
-          else
-            raise NotImplementedError
-          end
+          to_date = compute_to_date(subscription, boundaries.to_date)
         end
 
         # NOTE: amount is 0 if trial cover the full period
@@ -227,20 +204,31 @@ module Fees
           from_date = subscription.trial_end_date
           number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-          return number_of_day_to_bill * single_day_price(plan, from_date)
+          return number_of_day_to_bill * single_day_price(subscription, from_date)
         end
       end
 
       plan.amount_cents
     end
 
+    def date_service(subscription)
+      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(boundaries.timestamp).to_date)
+    end
+
     # NOTE: cost of a single day in a period
-    def single_day_price(target_plan, optional_from_date = nil)
+    # def single_day_price(target_subscription, optional_from_date = nil)
+    #   date_service(target_subscription).single_day_price(
+    #     optional_from_date: optional_from_date,
+    #   )
+    # end
+
+    WEEK_DURATION = 7
+    def single_day_price(target_subscription, optional_from_date = nil)
       from_date = optional_from_date || boundaries.from_date
 
       # NOTE: Duration in days of full billed period (without termination)
       #       WARNING: the method only handles beginning of period logic
-      duration = case target_plan.interval.to_sym
+      duration = case target_subscription.plan.interval.to_sym
                  when :weekly
                    WEEK_DURATION
                  when :monthly
@@ -251,24 +239,15 @@ module Fees
                    raise NotImplementedError
       end
 
-      target_plan.amount_cents.fdiv(duration.to_i)
+      target_subscription.plan.amount_cents.fdiv(duration.to_i)
     end
 
-    def compute_to_date(base_date, plan)
+    def compute_to_date(target_subscription, base_date)
       return base_date if plan.pay_in_arrear?
 
-      # NOTE: when plan is pay in advance, the to date should be the
-      # end of the actual period
-      case plan.interval.to_sym
-      when :weekly
-        boundaries.to_date.end_of_week
-      when :monthly
-        boundaries.to_date.end_of_month
-      when :yearly
-        boundaries.to_date.end_of_year
-      else
-        raise NotImplementedError
-      end
+      # NOTE: when plan is pay in advance, the_to date should be the
+      #       end of the actual period
+      date_service(target_subscription).next_end_of_period(base_date)
     end
   end
 end
