@@ -51,7 +51,10 @@ module Customers
         payment_provider_id: customer.organization.stripe_payment_provider&.id,
         params: billing_configuration,
       )
-      create_result.throw_error unless create_result.success?
+      return create_result.throw_error unless create_result.success?
+
+      # NOTE: Create service is modifying an other instance of the provider customer
+      customer.stripe_customer&.reload
     end
   end
 end

@@ -15,7 +15,7 @@ module PaymentProviderCustomers
       )
 
       if (params || {}).key?(:provider_customer_id)
-        provider_customer.provider_customer_id = params[:provider_customer_id]
+        provider_customer.provider_customer_id = params[:provider_customer_id].presence
       end
 
       provider_customer.save!
