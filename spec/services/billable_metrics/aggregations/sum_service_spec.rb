@@ -41,6 +41,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
     expect(result.aggregation).to eq(48)
+    expect(result.options).to eq({ running_total: [12, 24, 36, 48]})
   end
 
   context 'when events are out of bounds' do
@@ -50,6 +51,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.options).to eq({ running_total: [] })
     end
   end
 
@@ -62,6 +64,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.options).to eq({ running_total: [] })
     end
   end
 
