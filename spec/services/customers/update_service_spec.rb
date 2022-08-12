@@ -133,7 +133,6 @@ RSpec.describe Customers::UpdateService, type: :service do
               expect(customer.id).to eq(customer.id)
               expect(customer.payment_provider).to be_nil
 
-              customer.stripe_customer.reload
               expect(customer.stripe_customer).to eq(stripe_customer)
               expect(customer.stripe_customer.provider_customer_id).to be_nil
             end
