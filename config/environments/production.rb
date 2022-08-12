@@ -9,7 +9,11 @@ Rails.application.configure do
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
   config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present?
-    :amazon
+    if ENV['LAGO_AWS_S3_ENDPOINT'].present?
+      :amazon_compatible_endpoint
+    else
+      :amazon
+    end
   else
     :local
   end
