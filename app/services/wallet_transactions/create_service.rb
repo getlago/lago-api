@@ -5,19 +5,42 @@ module WalletTransactions
     def create(**args)
       return result unless valid?(**args)
 
-      handle_paid_credits(args[:wallet_id], args[:paid_credits]) if args[:paid_credits]
-      handle_granted_credits(args[:wallet_id], args[:granted_credits]) if args[:granted_credits]
+      if args[:paid_credits]
+        handle_paid_credits(
+          wallet: result.current_wallet,
+          paid_credits: args[:paid_credits],
+        )
+      end
+
+      if args[:granted_credits]
+        handle_granted_credits(
+          wallet: result.current_wallet,
+          granted_credits: args[:granted_credits],
+        )
+      end
     end
 
     private
 
-    def handle_paid_credits(wallet_id, paid_credits)
+    def handle_paid_credits(wallet:, paid_credits:)
       # TODO
     end
 
-    def handle_granted_credits(wallet_id, granted_credits)
+    def handle_granted_credits(wallet:, granted_credits:)
+      granted_credits_amount = BigDecimal(granted_credits)
 
-      # TODO
+      return if granted_credits_amount.zero?
+
+      WalletTransaction.create!(
+        wallet: wallet,
+        transaction_type: :inbound,
+        amount: wallet.rate_amount * granted_credits_amount,
+        credit_amount: granted_credits_amount,
+        status: :settled,
+        settled_at: Time.zone.now,
+      )
+
+      Wallets::Balance::IncreaseService.new(wallet: wallet, credits_amount: granted_credits_amount).call
     end
 
     def valid?(**args)
