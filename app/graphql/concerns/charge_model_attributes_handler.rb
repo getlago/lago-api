@@ -6,6 +6,7 @@ module ChargeModelAttributesHandler
   #       - Standard model only has one property `amount_cents`
   #       - Graduated model relies on the the list of `GraduatedRange`
   #       - Package model has properties `amount_cents`, `package_size` and `free_units`
+  #       - Percentage model has properties `rate`, `fixed_amount`, `free_units_per_events`, `free_units_per_total_aggregation`
   def prepare_arguments(arguments)
     return arguments if arguments[:charges].blank?
 
@@ -27,6 +28,8 @@ module ChargeModelAttributesHandler
         output[:properties] = {
           rate: output[:rate],
           fixed_amount: output[:fixed_amount],
+          free_units_per_events: output[:free_units_per_events],
+          free_units_per_total_aggregation: output[:free_units_per_total_aggregation],
         }
       end
 
@@ -37,6 +40,8 @@ module ChargeModelAttributesHandler
       output.delete(:package_size)
       output.delete(:rate)
       output.delete(:fixed_amount)
+      output.delete(:free_units_per_events)
+      output.delete(:free_units_per_total_aggregation)
 
       output
     end

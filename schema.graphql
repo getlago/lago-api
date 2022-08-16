@@ -136,6 +136,8 @@ type Charge {
   createdAt: ISO8601DateTime!
   fixedAmount: String
   freeUnits: Int
+  freeUnitsPerEvents: Int
+  freeUnitsPerTotalAggregation: String
   graduatedRanges: [GraduatedRange!]
   id: ID!
   packageSize: Int
@@ -150,6 +152,8 @@ input ChargeInput {
   chargeModel: ChargeModelEnum!
   fixedAmount: String
   freeUnits: Int
+  freeUnitsPerEvents: Int
+  freeUnitsPerTotalAggregation: String
   graduatedRanges: [GraduatedRangeInput!]
   id: ID
   packageSize: Int

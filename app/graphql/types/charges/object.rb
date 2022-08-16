@@ -26,6 +26,8 @@ module Types
       # NOTE: Percentage charge model
       field :rate, String, null: true
       field :fixed_amount, String, null: true
+      field :free_units_per_events, Integer, null: true
+      field :free_units_per_total_aggregation, String, null: true
 
       def amount
         return unless object.standard? || object.package?
@@ -61,6 +63,18 @@ module Types
         return unless object.percentage?
 
         object.properties['fixed_amount']
+      end
+
+      def free_units_per_events
+        return unless object.percentage?
+
+        object.properties['free_units_per_events']
+      end
+
+      def free_units_per_total_aggregation
+        return unless object.percentage?
+
+        object.properties['free_units_per_total_aggregation']
       end
     end
   end

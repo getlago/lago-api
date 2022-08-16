@@ -23,6 +23,8 @@ module Types
       # NOTE: Percentage charge model
       argument :rate, String, required: false
       argument :fixed_amount, String, required: false
+      argument :free_units_per_events, Integer, required: false
+      argument :free_units_per_total_aggregation, String, required: false
     end
   end
 end

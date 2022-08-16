@@ -65,6 +65,8 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               chargeModel: 'percentage',
               rate: '0.25',
               fixedAmount: '2',
+              freeUnitsPerEvents: 5,
+              freeUnitsPerTotalAggregation: '50',
             },
             {
               billableMetricId: billable_metrics.last.id,
