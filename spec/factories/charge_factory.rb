@@ -35,7 +35,7 @@ FactoryBot.define do
       properties do
         {
           rate: '0.0555',
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
     end
