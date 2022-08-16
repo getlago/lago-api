@@ -23,10 +23,7 @@ module Subscriptions
 
         # NOTE: In pay in advance scenario, from_date will be the begining of the new period.
         #       To get the end of the previous one, we just have to take the day before
-
-        # TODO: check with upgrade
-
-        from_date - 1.day
+        from_date - 1.day # TODO: check with upgrade on subscription day
       end
 
       private
