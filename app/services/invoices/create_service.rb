@@ -68,7 +68,8 @@ module Invoices
     end
 
     def create_subscription_fee(invoice, subscription, boundaries)
-      fee_result = Fees::SubscriptionService.new(invoice, subscription, boundaries).create
+      fee_result = Fees::SubscriptionService
+        .new(invoice: invoice, subscription: subscription, boundaries: boundaries).create
       fee_result.throw_error unless fee_result.success?
     end
 
@@ -168,6 +169,7 @@ module Invoices
         from_date: date_service.from_date,
         to_date: date_service.to_date,
         charges_from_date: date_service.charges_from_date,
+        charges_to_date: date_service.charges_to_date,
         timestamp: timestamp,
       }
     end

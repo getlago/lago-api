@@ -3,7 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Fees::SubscriptionService do
-  subject(:fees_subscription_service) { described_class.new(invoice, subscription, boundaries) }
+  subject(:fees_subscription_service) do
+    described_class.new(
+      invoice: invoice,
+      subscription: subscription,
+      boundaries: boundaries,
+    )
+  end
 
   let(:started_at) { Time.zone.parse('2022-01-01 00:01') }
   let(:subscription_date) { started_at }
@@ -20,7 +26,7 @@ RSpec.describe Fees::SubscriptionService do
     {
       from_date: Time.zone.parse('2022-03-01 00:00').to_date,
       to_date: Time.zone.parse('2022-03-01 00:00').end_of_month.to_date,
-      timestamp: Time.zone.parse('2022-03-02 00:00').end_of_month.to_i,
+      timestamp: Time.zone.parse('2022-04-02 00:00').end_of_month.to_i,
     }
   end
 
@@ -187,7 +193,7 @@ RSpec.describe Fees::SubscriptionService do
       end
 
       context 'when subscription start is on any other day' do
-        let(:started_at) { Time.zone.parse('2022-06-20 00:00') }
+        let(:started_at) { Time.zone.parse('2022-06-22 00:00') }
 
         it 'creates a fee' do
           result = fees_subscription_service.create
@@ -314,6 +320,14 @@ RSpec.describe Fees::SubscriptionService do
         end
 
         context 'when plan is pay in advance' do
+          let(:boundaries) do
+            {
+              from_date: subscription.started_at.to_date,
+              to_date: subscription.started_at.end_of_month.to_date,
+              timestamp: (subscription.started_at + 1.day).to_i,
+            }
+          end
+
           before { plan.update(pay_in_advance: true) }
 
           it 'creates a fee' do
@@ -394,6 +408,14 @@ RSpec.describe Fees::SubscriptionService do
         end
 
         context 'when plan is pay in advance' do
+          let(:boundaries) do
+            {
+              from_date: subscription.started_at.to_date,
+              to_date: subscription.started_at.end_of_month.to_date,
+              timestamp: (subscription.started_at + 1.day).to_i,
+            }
+          end
+
           before { plan.update(pay_in_advance: true) }
 
           it 'creates a fee' do
@@ -569,8 +591,8 @@ RSpec.describe Fees::SubscriptionService do
           context 'when plan is weekly' do
             let(:boundaries) do
               {
-                from_date: subscription.started_at.to_date.beginning_of_week,
-                to_date: subscription.started_at.end_of_week.to_date,
+                from_date: subscription.started_at.to_date.end_of_week,
+                to_date: (subscription.started_at.end_of_week + 1.week).to_date,
                 timestamp: (subscription.started_at.end_of_week + 1.day).to_i,
               }
             end
@@ -587,12 +609,20 @@ RSpec.describe Fees::SubscriptionService do
 
           context 'when plan is monthly' do
             let(:interval) { :monthly }
-            let(:trial_period) { 45 }
+            let(:trial_period) { 15 }
+
+            let(:boundaries) do
+              {
+                from_date: subscription.started_at.to_date,
+                to_date: subscription.started_at.end_of_month.to_date,
+                timestamp: (subscription.started_at + 1.day).to_i,
+              }
+            end
 
             it 'creates a fee with prorated amount on trial period' do
               result = fees_subscription_service.create
 
-              expect(result.fee.amount_cents).to eq(50)
+              expect(result.fee.amount_cents).to eq(52)
             end
           end
 
@@ -601,12 +631,12 @@ RSpec.describe Fees::SubscriptionService do
               {
                 from_date: subscription.started_at.to_date.beginning_of_year,
                 to_date: subscription.started_at.end_of_year.to_date,
-                timestamp: (subscription.started_at.end_of_year + 1.day).to_i,
+                timestamp: (subscription.started_at.beginning_of_year + 1.day).to_i,
               }
             end
 
             let(:interval) { :yearly }
-            let(:trial_period) { 400 }
+            let(:trial_period) { 35 }
 
             it 'creates a fee with prorated amount on trial period' do
               result = fees_subscription_service.create
@@ -624,16 +654,6 @@ RSpec.describe Fees::SubscriptionService do
           result = fees_subscription_service.create
 
           expect(result.fee.amount_cents).to eq(0)
-        end
-      end
-
-      context 'when plan is pay in advance' do
-        before { plan.update(trial_period: 45, pay_in_advance: true) }
-
-        it 'creates a fee with prorated amount on trial period' do
-          result = fees_subscription_service.create
-
-          expect(result.fee.amount_cents).to eq(50)
         end
       end
     end
@@ -711,7 +731,7 @@ RSpec.describe Fees::SubscriptionService do
         {
           from_date: subscription.started_at.beginning_of_week.to_date,
           to_date: subscription.started_at.to_date + 1.day,
-          timestamp: (subscription.started_at + 2.day).to_i,
+          timestamp: (subscription.started_at + 2.days).to_i,
         }
       end
 
@@ -806,7 +826,7 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     context 'when previous subscription was payed in advance' do
-      it 'creates a subscription' do
+      it 'creates a subscription fee' do
         result = fees_subscription_service.create
         created_fee = result.fee
 
@@ -823,7 +843,7 @@ RSpec.describe Fees::SubscriptionService do
       context 'when plan has trial period' do
         before { plan.update(trial_period: trial_duration) }
 
-        context 'when trial period end before end of period' do
+        context 'when trial period ends before end of period' do
           let(:trial_duration) { 3 }
 
           it 'creates a fee with prorated amount based on the trial period' do
@@ -850,7 +870,7 @@ RSpec.describe Fees::SubscriptionService do
         let(:boundaries) do
           {
             from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.to_date,
+            to_date: subscription.started_at.end_of_month.to_date,
             timestamp: (subscription.started_at + 1.day).to_i,
           }
         end
@@ -869,8 +889,8 @@ RSpec.describe Fees::SubscriptionService do
         let(:boundaries) do
           {
             from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.to_date,
-            timestamp: (subscription.started_at + 1.day).to_i,
+            to_date: subscription.started_at.end_of_year.to_date,
+            timestamp: subscription.started_at.to_i,
           }
         end
 
@@ -878,7 +898,7 @@ RSpec.describe Fees::SubscriptionService do
           result = fees_subscription_service.create
           created_fee = result.fee
 
-          expect(created_fee.amount_cents).to eq(79_956)
+          expect(created_fee.amount_cents).to eq(79_246)
         end
       end
 
@@ -890,9 +910,9 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.beginning_of_week.to_date,
-            to_date: subscription.started_at.to_date + 1.day,
-            timestamp: (subscription.started_at + 2.day).to_i,
+            from_date: subscription.started_at.to_date,
+            to_date: subscription.started_at.end_of_week.to_date,
+            timestamp: subscription.started_at.to_i,
           }
         end
 
@@ -900,7 +920,7 @@ RSpec.describe Fees::SubscriptionService do
           result = fees_subscription_service.create
           created_fee = result.fee
 
-          expect(created_fee.amount_cents).to eq(99_920)
+          expect(created_fee.amount_cents).to eq(85_646)
         end
       end
 
@@ -966,8 +986,8 @@ RSpec.describe Fees::SubscriptionService do
         let(:boundaries) do
           {
             from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.to_date,
-            timestamp: (subscription.started_at + 1.day).to_i,
+            to_date: subscription.started_at.end_of_month.to_date,
+            timestamp: subscription.started_at.to_i,
           }
         end
 

@@ -408,7 +408,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
       let(:started_at) { Time.zone.today - 3.months }
       let(:terminated_at) { timestamp - 2.days }
-      let(:previous_plan) { create(:plan, amount_cents: 10000, interval: :yearly, pay_in_advance: true) }
+      let(:previous_plan) { create(:plan, amount_cents: 10_000, interval: :yearly, pay_in_advance: true) }
 
       let(:previous_subscription) do
         create(
@@ -438,9 +438,9 @@ RSpec.describe Invoices::CreateService, type: :service do
 
         aggregate_failures do
           expect(result.invoice.fees.first.properties['to_date'])
-            .to eq (subscription.started_at.to_date.to_s).to_s
+            .to eq(subscription.started_at.to_date.end_of_month.to_s)
           expect(result.invoice.fees.first.properties['from_date'])
-            .to eq (subscription.started_at.to_date.to_s).to_s
+            .to eq(subscription.started_at.to_date.to_s)
           expect(result.invoice.total_amount_cents).to eq(0)
           expect(result.invoice.status).to eq('succeeded')
           expect(result.invoice.fees.charge_kind.count).to eq(0)

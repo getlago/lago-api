@@ -2,7 +2,7 @@
 
 module Fees
   class SubscriptionService < BaseService
-    def initialize(invoice, subscription, boundaries)
+    def initialize(invoice:, subscription:, boundaries:)
       @invoice = invoice
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
@@ -72,24 +72,22 @@ module Fees
 
     def should_compute_upgraded_amount?
       return false unless subscription.previous_subscription_id?
-      return false if subscription.invoices.count > 1
+      return false if subscription.invoices.count > 1 # TODO: check is still applies
 
       subscription.previous_subscription.upgraded?
     end
 
     # NOTE: Subscription has already been billed once and is not terminated
+    #        or when it is payed in advance on an anniversary base
     def should_use_full_amount?
+      return true if plan.pay_in_advance? && subscription.anniversary?
+
       subscription.fees.subscription_kind.exists?
     end
 
     def first_subscription_amount
       from_date = boundaries.from_date
       to_date = boundaries.to_date
-
-      # NOTE: When pay in advance, first invoice has from_date = to_date
-      #       To get the number of days to bill, we must
-      #       jump to the end of the billing period
-      to_date = compute_to_date(subscription, boundaries.to_date) if plan.pay_in_advance?
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
@@ -136,11 +134,15 @@ module Fees
 
     def upgraded_amount
       from_date = boundaries.from_date
-      to_date = compute_to_date(subscription, boundaries.to_date)
+      to_date = boundaries.to_date
+
+      # NOTE: to_date for previous plan might be different than to_date
+      #       if plan interval is not the same
       old_to_date = compute_to_date(previous_subscription, boundaries.to_date)
 
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
+
         # NOTE: from_date is the trial end date if it happens during the period
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
           from_date = subscription.trial_end_date
@@ -161,7 +163,8 @@ module Fees
         #       **old_day_price** = (old plan amount_cents / full period duration)
         #       **new_day_price** = (new plan amount_cents / full period duration)
         #       amount_to_bill = nb_day * (new_day_price - old_day_price)
-        old_day_price = single_day_price(previous_subscription)
+        old_from_date = compute_from_date(previous_subscription)
+        old_day_price = single_day_price(previous_subscription, optional_from_date: old_from_date)
 
         amount = new_number_of_day_to_bill * single_day_price(subscription) - old_number_of_day_to_bill * old_day_price
 
@@ -185,15 +188,6 @@ module Fees
       to_date = boundaries.to_date
 
       if plan.has_trial?
-        # NOTE: When pay in advance, boundaries are on the previous period
-        #       but subscription duration have to be computed on the comming one.
-        #       To get the number of days to bill, we must
-        #       jump to the end of the billing period
-        if plan.pay_in_advance?
-          from_date = boundaries.to_date + 1.day
-          to_date = compute_to_date(subscription, boundaries.to_date)
-        end
-
         # NOTE: amount is 0 if trial cover the full period
         return 0 if subscription.trial_end_date >= to_date
 
@@ -204,7 +198,7 @@ module Fees
           from_date = subscription.trial_end_date
           number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-          return number_of_day_to_bill * single_day_price(subscription, from_date)
+          return number_of_day_to_bill * single_day_price(subscription, optional_from_date: from_date)
         end
       end
 
@@ -216,30 +210,10 @@ module Fees
     end
 
     # NOTE: cost of a single day in a period
-    # def single_day_price(target_subscription, optional_from_date = nil)
-    #   date_service(target_subscription).single_day_price(
-    #     optional_from_date: optional_from_date,
-    #   )
-    # end
-
-    WEEK_DURATION = 7
-    def single_day_price(target_subscription, optional_from_date = nil)
-      from_date = optional_from_date || boundaries.from_date
-
-      # NOTE: Duration in days of full billed period (without termination)
-      #       WARNING: the method only handles beginning of period logic
-      duration = case target_subscription.plan.interval.to_sym
-                 when :weekly
-                   WEEK_DURATION
-                 when :monthly
-                   (from_date.end_of_month + 1.day) - from_date.beginning_of_month
-                 when :yearly
-                   (from_date.end_of_year + 1.day) - from_date.beginning_of_year
-                 else
-                   raise NotImplementedError
-      end
-
-      target_subscription.plan.amount_cents.fdiv(duration.to_i)
+    def single_day_price(target_subscription, optional_from_date: nil)
+      date_service(target_subscription).single_day_price(
+        optional_from_date: optional_from_date,
+      )
     end
 
     def compute_to_date(target_subscription, base_date)
@@ -248,6 +222,12 @@ module Fees
       # NOTE: when plan is pay in advance, the_to date should be the
       #       end of the actual period
       date_service(target_subscription).next_end_of_period(base_date)
+    end
+
+    def compute_from_date(target_subscription)
+      date_service(target_subscription).previous_beginning_of_period(
+        use_billing_date: target_subscription.plan.pay_in_advance? && subscription.plan.pay_in_advance?,
+      )
     end
   end
 end
