@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::DatesService, type: :service do
-  subject(:date_service) { described_class.new(subscription, billing_date) }
+  subject(:date_service) { described_class.new(subscription, billing_date, false) }
 
   let(:subscription) do
     create(
@@ -82,6 +82,13 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   describe 'charges_from_date' do
     it 'raises a not implemented error' do
       expect { date_service.charges_from_date }
+        .to raise_error(NotImplementedError)
+    end
+  end
+
+  describe 'charges_to_date' do
+    it 'raises a not implemented error' do
+      expect { date_service.charges_to_date }
         .to raise_error(NotImplementedError)
     end
   end
