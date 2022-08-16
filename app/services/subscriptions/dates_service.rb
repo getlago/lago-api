@@ -67,9 +67,9 @@ module Subscriptions
     end
 
     # NOTE: Retrieve the beginning of the previous period based on the billing date
-    def previous_beginning_of_period(use_billing_date:)
+    def previous_beginning_of_period(current_period: false)
       date = base_date
-      date = billing_date if use_billing_date
+      date = billing_date if current_period
 
       compute_previous_beginning_of_period(date)
     end
@@ -101,6 +101,10 @@ module Subscriptions
       day = days_count_in_month if days_count_in_month < day
 
       Date.new(year, month, day)
+    end
+
+    def compute_base_date
+      raise NotImplementedError
     end
 
     def compute_from_date

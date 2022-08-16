@@ -99,4 +99,11 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         .to raise_error(NotImplementedError)
     end
   end
+
+  describe 'previous_beginning_of_period' do
+    it 'raises a not implemented error' do
+      expect { date_service.previous_beginning_of_period }
+        .to raise_error(NotImplementedError)
+    end
+  end
 end

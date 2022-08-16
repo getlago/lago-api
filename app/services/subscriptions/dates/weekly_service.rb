@@ -50,7 +50,7 @@ module Subscriptions
       def compute_previous_beginning_of_period(date)
         return date.beginning_of_week if calendar?
 
-        previous_anniversary_day(base_date)
+        previous_anniversary_day(date)
       end
 
       def previous_anniversary_day(date)

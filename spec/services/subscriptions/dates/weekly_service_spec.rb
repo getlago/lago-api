@@ -311,6 +311,44 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
     end
   end
 
+  describe 'compute_previous_beginning_of_period' do
+    let(:result) { date_service.previous_beginning_of_period(current_period: current_period).to_s }
+
+    let(:current_period) { false }
+
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      it 'returns the first day of the previous week' do
+        expect(result).to eq('2022-02-28')
+      end
+
+      context 'with current period argument' do
+        let(:current_period) { true }
+
+        it 'returns the first day of the week' do
+          expect(result).to eq('2022-03-07')
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+
+      it 'returns the beginning of the previous period' do
+        expect(result).to eq('2022-02-22')
+      end
+
+      context 'with current period argument' do
+        let(:current_period) { true }
+
+        it 'returns the beginning of the current period' do
+          expect(result).to eq('2022-03-01')
+        end
+      end
+    end
+  end
+
   describe 'single_day_price' do
     let(:billing_time) { :anniversary }
     let(:billing_date) { DateTime.parse('08 Mar 2022') }
