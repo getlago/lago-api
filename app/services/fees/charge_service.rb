@@ -61,7 +61,11 @@ module Fees
     end
 
     def compute_amount
-      aggregated_events = aggregator.aggregate(from_date: charges_from_date, to_date: boundaries.to_date)
+      aggregated_events = aggregator.aggregate(
+        from_date: charges_from_date,
+        to_date: boundaries.to_date,
+        free_units_count: charge.properties.is_a?(Hash) ? charge.properties['free_units_per_events'].to_i : 0,
+      )
       return aggregated_events unless aggregated_events.success?
 
       charge_model.apply(value: aggregated_events.aggregation)

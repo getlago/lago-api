@@ -3,12 +3,12 @@
 module BillableMetrics
   module Aggregations
     class MaxService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_date:, to_date:)
-        max = events_scope(from_date: from_date, to_date: to_date)
+      def aggregate(from_date:, to_date:, free_units_count: 0)
+        events = events_scope(from_date: from_date, to_date: to_date)
           .where("#{sanitized_field_name} IS NOT NULL")
-          .maximum("(#{sanitized_field_name})::numeric")
 
-        result.aggregation = max || 0
+        result.aggregation = events.maximum("(#{sanitized_field_name})::numeric") || 0
+        result.count = events.count
         result
       rescue ActiveRecord::StatementInvalid => e
         result.fail!(code: 'aggregation_failure', message: e.message)

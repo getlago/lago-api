@@ -52,6 +52,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
     expect(result.aggregation).to eq(12)
+    expect(result.count).to eq(5)
   end
 
   context 'when events are out of bounds' do
@@ -61,6 +62,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
     end
   end
 
@@ -73,6 +75,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
     end
   end
 
