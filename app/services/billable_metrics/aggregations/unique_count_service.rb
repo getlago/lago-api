@@ -3,10 +3,12 @@
 module BillableMetrics
   module Aggregations
     class UniqueCountService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_date:, to_date:)
-        result.aggregation = events_scope(from_date: from_date, to_date: to_date)
+      def aggregate(from_date:, to_date:, free_units_count: 0)
+         events = events_scope(from_date: from_date, to_date: to_date)
           .where("#{sanitized_field_name} IS NOT NULL")
-          .count("DISTINCT (#{sanitized_field_name})")
+
+        result.aggregation = events.count("DISTINCT (#{sanitized_field_name})")
+        result.count = events.count
         result
       end
 

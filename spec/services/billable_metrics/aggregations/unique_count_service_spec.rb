@@ -41,6 +41,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
     expect(result.aggregation).to eq(1)
+    expect(result.count).to eq(4)
   end
 
   context 'when events are out of bounds' do
@@ -50,6 +51,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
     end
   end
 
@@ -62,6 +64,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       result = count_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
     end
   end
 end

@@ -3,12 +3,13 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_date:, to_date:)
+      def aggregate(from_date:, to_date:, free_units_count: 0)
         events = events_scope(from_date: from_date, to_date: to_date)
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
-        result.options = { running_total: running_total(events) }
+        result.count = events.count
+        result.options = { running_total: running_total(events, free_units_count) }
         result
       rescue ActiveRecord::StatementInvalid => e
         result.fail!(code: 'aggregation_failure', message: e.message)
@@ -25,11 +26,13 @@ module BillableMetrics
         )
       end
 
-      # NOTES: Return cumulative sum of field_name
-      def running_total(events)
-        total = 0.0
+      # NOTES: Return cumulative sum of field_name based on the number of free units.
+      def running_total(events, free_units_count)
+        return [] if free_units_count.zero?
 
+        total = 0.0
         events.order(created_at: :asc)
+          .limit(free_units_count)
           .pluck(Arel.sql("(#{sanitized_field_name})::numeric"))
           .map { |x| total += x }
       end
