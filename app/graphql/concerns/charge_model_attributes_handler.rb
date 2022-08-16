@@ -27,7 +27,6 @@ module ChargeModelAttributesHandler
         output[:properties] = {
           rate: output[:rate],
           fixed_amount: output[:fixed_amount],
-          fixed_amount_target: output[:fixed_amount_target],
         }
       end
 
@@ -38,7 +37,6 @@ module ChargeModelAttributesHandler
       output.delete(:package_size)
       output.delete(:rate)
       output.delete(:fixed_amount)
-      output.delete(:fixed_amount_target)
 
       output
     end

@@ -15,11 +15,6 @@ class Charge < ApplicationRecord
     percentage
   ].freeze
 
-  FIXED_AMOUNT_TARGETS = %w[
-    all_units
-    each_unit
-  ].freeze
-
   enum charge_model: CHARGE_MODELS
 
   validates :amount_currency, inclusion: { in: currency_list }
