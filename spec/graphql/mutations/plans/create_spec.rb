@@ -64,7 +64,6 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               chargeModel: 'percentage',
               rate: '0.25',
               fixedAmount: '2',
-              fixedAmountTarget: 'all_units',
             },
             {
               billableMetricId: billable_metrics.last.id,

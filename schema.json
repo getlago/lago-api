@@ -1323,20 +1323,6 @@
               ]
             },
             {
-              "name": "fixedAmountTarget",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "FixedAmountTargetEnum",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "freeUnits",
               "description": null,
               "type": {
@@ -1582,18 +1568,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "fixedAmountTarget",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "FixedAmountTargetEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -7969,29 +7943,6 @@
           ],
           "inputFields": null,
           "enumValues": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "FixedAmountTargetEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "all_units",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "each_unit",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
         },
         {
           "kind": "SCALAR",

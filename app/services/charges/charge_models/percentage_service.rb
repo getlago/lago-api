@@ -15,9 +15,7 @@ module Charges
 
       def compute_fixed_amount(value)
         return 0 if value.zero?
-        return 0 if (fixed_amount_target.nil? || fixed_amount.nil?)
-
-        return fixed_amount if fixed_amount_target == 'all_units'
+        return 0 if fixed_amount.nil?
 
         value * fixed_amount
       end
@@ -25,10 +23,6 @@ module Charges
       # NOTE: FE divides percentage rate with 100 and sends to BE
       def rate
         BigDecimal(charge.properties['rate'])
-      end
-
-      def fixed_amount_target
-        charge.properties['fixed_amount_target']
       end
 
       def fixed_amount

@@ -172,7 +172,6 @@ RSpec.describe Charge, type: :model do
         message: [
           :invalid_rate,
           :invalid_fixed_amount,
-          :invalid_fixed_amount_target,
         ],
       )
     end
@@ -188,7 +187,6 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages.keys).to include(:properties)
         expect(charge.errors.messages[:properties]).to include('invalid_rate')
         expect(charge.errors.messages[:properties]).to include('invalid_fixed_amount')
-        expect(charge.errors.messages[:properties]).to include('invalid_fixed_amount_target')
 
         expect(Charges::Validators::PercentageService).to have_received(:new)
           .with(charge: charge)

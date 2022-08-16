@@ -23,7 +23,6 @@ module Types
       # NOTE: Percentage charge model
       argument :rate, String, required: false
       argument :fixed_amount, String, required: false
-      argument :fixed_amount_target, Types::Charges::FixedAmountTargetEnum, required: false
     end
   end
 end
