@@ -3,9 +3,6 @@
 
 version: "3.8"
 
-volumes:
-  lago_api_data:
-
 services:
   db:
     image: postgres:14.0-alpine
@@ -15,9 +12,6 @@ services:
       POSTGRES_DB: lago
       POSTGRES_USER: lago
       POSTGRES_PASSWORD: lago
-      PGDATA: /data/postgres
-    volumes:
-      - lago_postgres_data:/data/postgres
     ports:
       - 5432:5432
   
