@@ -30,6 +30,8 @@ services:
     image: getlago/api:ci
     container_name: lago-api
     restart: unless-stopped
+    depends_on: 
+      - "db"
     environment:
       RAILS_ENV: production
       DATABASE_URL: postgres://lago:lago@db:5432/lago
