@@ -47,7 +47,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             {
               billableMetricId: billable_metrics.first.id,
               amount: '100.00',
-              amountCurrency: 'USD',
+              amountCurrency: 'EUR',
               chargeModel: 'standard',
             },
             {

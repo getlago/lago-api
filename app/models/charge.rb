@@ -22,7 +22,7 @@ class Charge < ApplicationRecord
 
   enum charge_model: CHARGE_MODELS
 
-  validates :amount_currency, inclusion: { in: currency_list }
+  validate :validate_currency
   validate :validate_amount, if: :standard?
   validate :validate_graduated_range, if: :graduated?
   validate :validate_package, if: :package?
@@ -56,5 +56,11 @@ class Charge < ApplicationRecord
     return if validation_result.success?
 
     validation_result.error.each { |error| errors.add(:properties, error) }
+  end
+
+  def validate_currency
+    return if plan.amount_currency == amount_currency
+
+    errors.add(:amount_currency, :plan_has_different_currency)
   end
 end

@@ -23,3 +23,4 @@ en:
         invalid_content_type: invalid_content_type
         invalid_size: invalid_size
         value_already_exists: value_already_exists
+        plan_has_different_currency: plan_has_different_currency

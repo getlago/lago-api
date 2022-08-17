@@ -24,7 +24,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       charges: [
         {
           billable_metric_id: billable_metrics.first.id,
-          amount_currency: 'USD',
+          amount_currency: 'EUR',
           charge_model: 'standard',
           properties: {
             amount: '100',
@@ -87,12 +87,12 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context 'with existing charges' do
-      let!(:existing_charge) do
+      let(:existing_charge) do
         create(
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_currency: 'USD',
+          amount_currency: 'EUR',
           properties: {
             amount: '300',
           },
@@ -112,7 +112,7 @@ RSpec.describe Plans::UpdateService, type: :service do
             {
               id: existing_charge.id,
               billable_metric_id: billable_metrics.first.id,
-              amount_currency: 'USD',
+              amount_currency: 'EUR',
               charge_model: 'standard',
               properties: {
                 amount: '100',
@@ -124,11 +124,13 @@ RSpec.describe Plans::UpdateService, type: :service do
               charge_model: 'standard',
               properties: {
                 amount: '300',
-              }
+              },
             },
           ],
         }
       end
+
+      before { existing_charge }
 
       it 'updates existing charge and creates an other one' do
         expect { plans_service.update(**update_args) }
@@ -137,12 +139,12 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context 'with charge to delete' do
-      let!(:charge) do
+      let(:charge) do
         create(
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_currency: 'USD',
+          amount_currency: 'EUR',
           properties: {
             amount: '300',
           },
@@ -162,6 +164,8 @@ RSpec.describe Plans::UpdateService, type: :service do
         }
       end
 
+      before { charge }
+
       it 'destroys the unattached charge' do
         expect { plans_service.update(**update_args) }
           .to change { plan.charges.count }.by(-1)
@@ -174,7 +178,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_currency: 'USD',
+          amount_currency: 'EUR',
           properties: {
             amount: '300',
           },
@@ -194,7 +198,7 @@ RSpec.describe Plans::UpdateService, type: :service do
             {
               id: existing_charge.id,
               billable_metric_id: billable_metrics.first.id,
-              amount_currency: 'USD',
+              amount_currency: 'EUR',
               charge_model: 'standard',
               properties: {
                 amount: '100',
@@ -206,7 +210,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               charge_model: 'standard',
               properties: {
                 amount: '300',
-              }
+              },
             },
           ],
         }
@@ -233,7 +237,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       result = plans_service.update_from_api(
         organization: organization,
         code: plan.code,
-        params: update_args
+        params: update_args,
       )
 
       aggregate_failures do
@@ -254,10 +258,10 @@ RSpec.describe Plans::UpdateService, type: :service do
         result = plans_service.update_from_api(
           organization: organization,
           code: plan.code,
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -269,7 +273,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         result = plans_service.update_from_api(
           organization: organization,
           code: plan.code,
-          params: update_args
+          params: update_args,
         )
 
         expect(result).not_to be_success
@@ -282,10 +286,10 @@ RSpec.describe Plans::UpdateService, type: :service do
         result = plans_service.update_from_api(
           organization: organization,
           code: 'fake_code12345',
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('not_found')
       end
     end
@@ -297,7 +301,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         result = plans_service.update_from_api(
           organization: organization,
           code: plan.code,
-          params: update_args
+          params: update_args,
         )
 
         plan_result = result.plan
@@ -316,9 +320,9 @@ RSpec.describe Plans::UpdateService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_currency: 'USD',
+          amount_currency: 'EUR',
           properties: {
-            amount: '300'
+            amount: '300',
           },
         )
       end
@@ -335,7 +339,7 @@ RSpec.describe Plans::UpdateService, type: :service do
             {
               id: existing_charge.id,
               billable_metric_id: billable_metrics.first.id,
-              amount_currency: 'USD',
+              amount_currency: 'EUR',
               charge_model: 'standard',
               properties: {
                 amount: '100',
@@ -347,7 +351,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               charge_model: 'standard',
               properties: {
                 amount: '300',
-              }
+              },
             },
           ],
         }
@@ -360,7 +364,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           plans_service.update_from_api(
             organization: organization,
             code: plan.code,
-            params: update_args
+            params: update_args,
           )
         end.to change(Charge, :count).by(1)
       end
@@ -372,7 +376,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metrics.first.id,
-          amount_currency: 'USD',
+          amount_currency: 'EUR',
           properties: {
             amount: '300',
           },
@@ -398,7 +402,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           plans_service.update_from_api(
             organization: organization,
             code: plan.code,
-            params: update_args
+            params: update_args,
           )
         end.to change { plan.charges.count }.by(-1)
       end

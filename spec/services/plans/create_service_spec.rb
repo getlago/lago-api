@@ -24,7 +24,7 @@ RSpec.describe Plans::CreateService, type: :service do
         charges: [
           {
             billable_metric_id: billable_metrics.first.id,
-            amount_currency: 'USD',
+            amount_currency: 'EUR',
             charge_model: 'standard',
             properties: {
               amount: '100',
@@ -85,8 +85,8 @@ RSpec.describe Plans::CreateService, type: :service do
           nb_percentage_charges: 0,
           nb_graduated_charges: 1,
           nb_package_charges: 0,
-          organization_id: plan.organization_id
-        }
+          organization_id: plan.organization_id,
+        },
       )
     end
 
@@ -98,6 +98,38 @@ RSpec.describe Plans::CreateService, type: :service do
 
         expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
+      end
+
+      context 'with different currencies on plan and charges' do
+        let(:create_args) do
+          {
+            name: 'Foobar',
+            organization_id: organization.id,
+            code: 'new_plan',
+            interval: 'monthly',
+            pay_in_advance: false,
+            amount_cents: 200,
+            amount_currency: 'EUR',
+            charges: [
+              {
+                billable_metric_id: billable_metrics.first.id,
+                amount_currency: 'USD',
+                charge_model: 'standard',
+                properties: {
+                  amount: '100',
+                },
+              },
+            ],
+          }
+        end
+
+        it 'returns an error' do
+          result = plans_service.create(**create_args)
+
+          expect(result).not_to be_success
+          expect(result.error_code).to eq('unprocessable_entity')
+          expect(result.error_details[:amount_currency].first).to eq('plan_has_different_currency')
+        end
       end
     end
 
