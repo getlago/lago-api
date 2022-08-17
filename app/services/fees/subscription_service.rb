@@ -23,6 +23,9 @@ module Fees
         amount_cents: new_amount_cents.round,
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
+        fee_type: :subscription,
+        invoiceable_type: 'Subscription',
+        invoiceable_id: subscription.id,
         units: 1,
         properties: boundaries.to_h
       )

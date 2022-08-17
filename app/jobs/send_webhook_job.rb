@@ -17,6 +17,8 @@ class SendWebhookJob < ApplicationJob
       Webhooks::InvoicesService.new(object).call
     when :add_on
       Webhooks::AddOnService.new(object).call
+    when :credit
+      Webhooks::PaidCreditService.new(object).call
     when :event
       Webhooks::EventService.new(object).call
 

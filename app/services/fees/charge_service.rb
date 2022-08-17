@@ -51,6 +51,9 @@ module Fees
         amount_cents: amount_cents,
         amount_currency: charge.amount_currency,
         vat_rate: customer.applicable_vat_rate,
+        fee_type: :charge,
+        invoiceable_type: 'Charge',
+        invoiceable_id: charge.id,
         units: amount_result.units,
         properties: boundaries.to_h
       )
