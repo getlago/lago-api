@@ -72,7 +72,7 @@ module Fees
 
     def should_compute_upgraded_amount?
       return false unless subscription.previous_subscription_id?
-      return false if subscription.invoices.count > 1 # TODO: check is still applies
+      return false if subscription.invoices.count > 1 # TODO: check if it still applies
 
       subscription.previous_subscription.upgraded?
     end
@@ -136,7 +136,7 @@ module Fees
       from_date = boundaries.from_date
       to_date = boundaries.to_date
 
-      # NOTE: to_date for previous plan might be different than to_date
+      # NOTE: to_date for previous plan might be different from to_date
       #       if plan interval is not the same
       old_to_date = compute_to_date(previous_subscription, boundaries.to_date)
 
