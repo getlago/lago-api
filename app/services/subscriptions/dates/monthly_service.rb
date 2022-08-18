@@ -4,11 +4,26 @@ module Subscriptions
   module Dates
     class MonthlyService < Subscriptions::DatesService
       def compute_from_date(date = base_date)
-        if terminated_pay_in_arrear?
+        if plan.pay_in_advance? || terminated_pay_in_arrear?
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_month
         end
 
         subscription.anniversary? ? previous_anniversary_day(date) : date.beginning_of_month
+      end
+
+      def compute_charges_from_date
+        return from_date if plan.pay_in_arrear?
+        return base_date.beginning_of_month if calendar?
+
+        previous_anniversary_day(base_date)
+      end
+
+      def compute_charges_to_date
+        return to_date if plan.pay_in_arrear?
+
+        # NOTE: In pay in advance scenario, from_date will be the begining of the new period.
+        #       To get the end of the previous one, we just have to take the day before
+        from_date - 1.day # TODO: check with upgrade on subscription day
       end
 
       private
@@ -32,10 +47,6 @@ module Subscriptions
         build_date(year, month, day)
       end
 
-      def compute_charges_from_date
-        from_date
-      end
-
       def compute_next_end_of_period(date)
         return date.end_of_month if calendar?
 
@@ -56,6 +67,12 @@ module Subscriptions
         build_date(year, month, day) - 1.day
       end
 
+      def compute_previous_beginning_of_period(date)
+        return date.beginning_of_month if calendar?
+
+        previous_anniversary_day(date)
+      end
+
       def previous_anniversary_day(date)
         year = nil
         month = nil
@@ -70,6 +87,13 @@ module Subscriptions
         end
 
         build_date(year, month, day)
+      end
+
+      def compute_duration(from_date:)
+        return Time.days_in_month(from_date.month, from_date.year) if calendar?
+
+        next_month_date = compute_to_date
+        (next_month_date.to_date + 1.day - from_date.to_date).to_i
       end
     end
   end

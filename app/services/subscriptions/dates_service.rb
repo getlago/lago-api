@@ -2,7 +2,7 @@
 
 module Subscriptions
   class DatesService
-    def self.new_instance(subscription, billing_date)
+    def self.new_instance(subscription, billing_date, current_usage: false)
       klass = case subscription.plan.interval&.to_sym
               when :weekly
                 Subscriptions::Dates::WeeklyService
@@ -14,15 +14,16 @@ module Subscriptions
                 raise NotImplementedError
       end
 
-      klass.new(subscription, billing_date)
+      klass.new(subscription, billing_date, current_usage)
     end
 
-    def initialize(subscription, billing_date)
+    def initialize(subscription, billing_date, current_usage)
       @subscription = subscription
 
       # NOTE: Billing date should usually be the end of the billing period + 1 day
       #       When subscription is terminated, it is the termination day
       @billing_date = billing_date.to_date
+      @current_usage = current_usage
     end
 
     def from_date
@@ -42,13 +43,7 @@ module Subscriptions
       return @to_date if @to_date
 
       @to_date = compute_to_date
-
       @to_date = subscription.terminated_at.to_date if subscription.terminated? && @to_date > subscription.terminated_at
-
-      # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
-      #       billed immediatly. An invoice must be generated for it with only the subscription fee.
-      #       The invoicing period will be only one day: the subscription day
-      @to_date = subscription.started_at.to_date if plan.pay_in_advance? && subscription.fees.subscription_kind.none?
 
       @to_date
     end
@@ -60,18 +55,38 @@ module Subscriptions
       date
     end
 
+    def charges_to_date
+      date = compute_charges_to_date
+      date = subscription.terminated_at.to_date if subscription.terminated? && date > subscription.terminated_at
+
+      date
+    end
+
     def next_end_of_period(date)
       compute_next_end_of_period(date)
     end
 
+    # NOTE: Retrieve the beginning of the previous period based on the billing date
+    def previous_beginning_of_period(current_period: false)
+      date = base_date
+      date = billing_date if current_period
+
+      compute_previous_beginning_of_period(date)
+    end
+
+    def single_day_price(optional_from_date: nil)
+      duration = compute_duration(from_date: optional_from_date || compute_from_date)
+      plan.amount_cents.fdiv(duration.to_i)
+    end
+
     private
 
-    attr_accessor :subscription, :billing_date
+    attr_accessor :subscription, :billing_date, :current_usage
 
     delegate :plan, :subscription_date, :calendar?, to: :subscription
 
     def base_date
-      @base_date ||= compute_base_date
+      @base_date ||= current_usage ? billing_date : compute_base_date
     end
 
     def terminated_pay_in_arrear?
@@ -88,6 +103,10 @@ module Subscriptions
       Date.new(year, month, day)
     end
 
+    def compute_base_date
+      raise NotImplementedError
+    end
+
     def compute_from_date
       raise NotImplementedError
     end
@@ -100,7 +119,19 @@ module Subscriptions
       raise NotImplementedError
     end
 
+    def compute_charges_to_date
+      raise NotImplementedError
+    end
+
     def compute_next_end_of_period(date)
+      raise NotImplementedError
+    end
+
+    def first_month_in_yearly_period?
+      false
+    end
+
+    def compute_duration(from_date:)
       raise NotImplementedError
     end
   end

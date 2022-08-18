@@ -3,6 +3,12 @@
 module Subscriptions
   module Dates
     class YearlyService < Subscriptions::DatesService
+      def first_month_in_yearly_period?
+        return billing_date.month == 1 if calendar?
+
+        monthly_service.compute_from_date(billing_date - 1.month).month == subscription_date.month
+      end
+
       private
 
       def compute_base_date
@@ -10,11 +16,11 @@ module Subscriptions
       end
 
       def monthly_service
-        @monthly_service ||= Subscriptions::Dates::MonthlyService.new(subscription, billing_date)
+        @monthly_service ||= Subscriptions::Dates::MonthlyService.new(subscription, billing_date, current_usage)
       end
 
       def compute_from_date
-        if terminated_pay_in_arrear?
+        if plan.pay_in_advance? || terminated_pay_in_arrear?
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_year
         end
 
@@ -32,9 +38,21 @@ module Subscriptions
       end
 
       def compute_charges_from_date
-        return from_date unless plan.bill_charges_monthly
+        return monthly_service.compute_charges_from_date if plan.bill_charges_monthly
+        return from_date if plan.pay_in_arrear?
+        return base_date.beginning_of_year if calendar?
 
-        monthly_service.compute_from_date(billing_date - 1.month)
+        previous_anniversary_day(base_date)
+      end
+
+      def compute_charges_to_date
+        return to_date if plan.pay_in_arrear?
+
+        # NOTE: In pay in advance scenario, from_date will be the begining of the new period.
+        #       To get the end of the previous one, we just have to take the day before
+        return from_date - 1.day unless plan.bill_charges_monthly
+
+        monthly_service.compute_charges_to_date
       end
 
       def compute_next_end_of_period(date)
@@ -51,12 +69,28 @@ module Subscriptions
         build_date(year + 1, month, day) - 1.day
       end
 
+      def compute_previous_beginning_of_period(date)
+        return date.beginning_of_year if calendar?
+
+        previous_anniversary_day(date)
+      end
+
       def previous_anniversary_day(date)
         year = date.month < subscription_date.month ? date.year - 1 : date.year
         month = subscription_date.month
         day = subscription_date.day
 
         build_date(year, month, day)
+      end
+
+      def compute_duration(from_date:)
+        return Time.days_in_year(from_date.year) if calendar?
+
+        year = from_date.year
+        # NOTE: if after February we must check if next year is a leap year
+        year += 1 if from_date.month > 2
+
+        Time.days_in_year(year)
       end
     end
   end

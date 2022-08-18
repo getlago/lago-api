@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
-  subject(:date_service) { described_class.new(subscription, billing_date) }
+  subject(:date_service) { described_class.new(subscription, billing_date, false) }
 
   let(:subscription) do
     create(
@@ -54,8 +54,8 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
 
-          it 'returns the beginning of the previous week' do
-            expect(result).to eq('2022-02-28')
+          it 'returns the beginning of the current week' do
+            expect(result).to eq('2022-03-07')
             expect(Time.zone.parse(result).wday).to eq(1)
           end
         end
@@ -91,8 +91,8 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
 
-          it 'returns the previous week week day' do
-            expect(result).to eq('2022-03-01')
+          it 'returns the current week week day' do
+            expect(result).to eq('2022-03-08')
             expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
           end
         end
@@ -111,13 +111,12 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         expect(result).to eq('2022-03-06')
       end
 
-      context 'when plan is pay in advance and billed for the first time' do
+      context 'when plan is pay in advance' do
         before { plan.update!(pay_in_advance: true) }
 
-        let(:started_at) { DateTime.parse('15 Jun 2022') }
-
-        it 'returns the start date' do
-          expect(result).to eq(started_at.to_date.to_s)
+        it 'returns the end of the week' do
+          expect(result).to eq('2022-03-13')
+          expect(Time.zone.parse(result).wday).to eq(0)
         end
       end
 
@@ -146,13 +145,11 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         expect(result).to eq('2022-03-07')
       end
 
-      context 'when plan is pay in advance and billed for the first time' do
+      context 'when plan is pay in advance' do
         before { plan.update!(pay_in_advance: true) }
 
-        let(:started_at) { DateTime.parse('08 Mar 2022') }
-
-        it 'returns the start date' do
-          expect(result).to eq(started_at.to_date.to_s)
+        it 'returns the end of the current period' do
+          expect(result).to eq('2022-03-14')
         end
       end
 
@@ -188,6 +185,14 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
           expect(result).to eq(subscription.started_at.to_date.to_s)
         end
       end
+
+      context 'when plan is pay in advance' do
+        let(:pay_in_advance) { true }
+
+        it 'returns the start of the previous period' do
+          expect(result).to eq((date_service.from_date - 1.week).to_s)
+        end
+      end
     end
 
     context 'when billing_time is anniversary' do
@@ -203,6 +208,75 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
         it 'returns the start date' do
           expect(result).to eq(subscription.started_at.to_date.to_s)
+        end
+      end
+
+      context 'when plan is pay in advance' do
+        let(:pay_in_advance) { true }
+
+        it 'returns the start of the previous period' do
+          expect(result).to eq((date_service.from_date - 1.week).to_s)
+        end
+      end
+    end
+  end
+
+  describe 'charges_to_date' do
+    let(:result) { date_service.charges_to_date.to_s }
+
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      it 'returns to_date' do
+        expect(result).to eq(date_service.to_date.to_s)
+      end
+
+      context 'when subscription is terminated in the middle of a period' do
+        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+
+        before do
+          subscription.update!(status: :terminated, terminated_at: terminated_at)
+        end
+
+        it 'returns the terminated date' do
+          expect(result).to eq(subscription.terminated_at.to_date.to_s)
+        end
+      end
+
+      context 'when plan is pay in advance' do
+        let(:pay_in_advance) { true }
+
+        it 'returns the end of the previous period' do
+          expect(result).to eq((date_service.from_date - 1.day).to_s)
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+
+      it 'returns to_date' do
+        expect(result).to eq(date_service.to_date.to_s)
+      end
+
+      context 'when subscription is terminated in the middle of a period' do
+        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+
+        before do
+          subscription.update!(status: :terminated, terminated_at: terminated_at)
+        end
+
+        it 'returns the terminated date' do
+          expect(result).to eq(subscription.terminated_at.to_date.to_s)
+        end
+      end
+
+      context 'when plan is pay in advance' do
+        let(:pay_in_advance) { true }
+
+        it 'returns the end of the previous period' do
+          expect(result).to eq((date_service.from_date - 1.day).to_s)
         end
       end
     end
@@ -234,6 +308,54 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
           expect(result).to eq(billing_date.to_date.to_s)
         end
       end
+    end
+  end
+
+  describe 'compute_previous_beginning_of_period' do
+    let(:result) { date_service.previous_beginning_of_period(current_period: current_period).to_s }
+
+    let(:current_period) { false }
+
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      it 'returns the first day of the previous week' do
+        expect(result).to eq('2022-02-28')
+      end
+
+      context 'with current period argument' do
+        let(:current_period) { true }
+
+        it 'returns the first day of the week' do
+          expect(result).to eq('2022-03-07')
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+
+      it 'returns the beginning of the previous period' do
+        expect(result).to eq('2022-02-22')
+      end
+
+      context 'with current period argument' do
+        let(:current_period) { true }
+
+        it 'returns the beginning of the current period' do
+          expect(result).to eq('2022-03-01')
+        end
+      end
+    end
+  end
+
+  describe 'single_day_price' do
+    let(:billing_time) { :anniversary }
+    let(:billing_date) { DateTime.parse('08 Mar 2022') }
+    let(:result) { date_service.single_day_price }
+
+    it 'returns the price of single day' do
+      expect(result).to eq(plan.amount_cents.fdiv(7))
     end
   end
 end
