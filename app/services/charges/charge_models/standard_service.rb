@@ -5,8 +5,8 @@ module Charges
     class StandardService < Charges::ChargeModels::BaseService
       protected
 
-      def compute_amount(value)
-        (value * BigDecimal(charge.properties['amount']))
+      def compute_amount
+        (aggregation_result.aggregation * BigDecimal(charge.properties['amount']))
       end
     end
   end

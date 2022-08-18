@@ -61,14 +61,14 @@ module Fees
     end
 
     def compute_amount
-      aggregated_events = aggregator.aggregate(
+      aggregation_result = aggregator.aggregate(
         from_date: charges_from_date,
         to_date: boundaries.to_date,
         free_units_count: charge.properties.is_a?(Hash) ? charge.properties['free_units_per_events'].to_i : 0,
       )
-      return aggregated_events unless aggregated_events.success?
+      return aggregation_result unless aggregation_result.success?
 
-      charge_model.apply(value: aggregated_events.aggregation)
+      apply_charge_model_service(aggregation_result)
     end
 
     def already_billed?
@@ -98,7 +98,7 @@ module Fees
       @aggregator = aggregator_service.new(billable_metric: billable_metric, subscription: subscription)
     end
 
-    def charge_model
+    def apply_charge_model_service(aggregation_result)
       return @charge_model if @charge_model
 
       model_service = case charge.charge_model.to_sym
@@ -114,7 +114,7 @@ module Fees
                         raise NotImplementedError
       end
 
-      @charge_model = model_service.new(charge: charge)
+      @charge_model = model_service.apply(charge: charge, aggregation_result: aggregation_result)
     end
 
     def charges_from_date

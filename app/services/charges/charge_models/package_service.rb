@@ -5,9 +5,9 @@ module Charges
     class PackageService < Charges::ChargeModels::BaseService
       protected
 
-      def compute_amount(value)
+      def compute_amount
         # NOTE: exclude free units from the count
-        billed_units = value - free_units
+        billed_units = aggregation_result.aggregation - free_units
         return 0 if billed_units.negative?
 
         # NOTE: Check how many packages (groups of units) are consumed
