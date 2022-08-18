@@ -21,9 +21,8 @@ RSpec.describe Invoices::CreateService, type: :service do
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now.beginning_of_month }
 
-    let(:plan) do
-      create(:plan, interval: 'monthly')
-    end
+    let(:plan) { create(:plan, interval: 'monthly', pay_in_advance: pay_in_advance) }
+    let(:pay_in_advance) { false }
 
     before do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
@@ -92,6 +91,74 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect do
             invoice_service.create
           end.to have_enqueued_job(Invoices::Payments::StripeCreateJob)
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:timestamp) { DateTime.parse('07 Mar 2022') }
+        let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            billing_time: :anniversary,
+          )
+        end
+
+        it 'creates an invoice' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.invoice.fees.first.properties['to_date']).to eq('2022-03-05')
+            expect(result.invoice.fees.first.properties['from_date']).to eq('2022-02-06')
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+            expect(result.invoice.invoice_type).to eq('subscription')
+            expect(result.invoice.status).to eq('pending')
+            expect(result.invoice.fees.subscription_kind.count).to eq(1)
+            expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+            expect(result.invoice.amount_cents).to eq(100)
+            expect(result.invoice.amount_currency).to eq('EUR')
+            expect(result.invoice.vat_amount_cents).to eq(20)
+            expect(result.invoice.vat_amount_currency).to eq('EUR')
+            expect(result.invoice.total_amount_cents).to eq(120)
+            expect(result.invoice.total_amount_currency).to eq('EUR')
+          end
+        end
+
+        context 'when plan is pay in advance' do
+          let(:pay_in_advance) { true }
+
+          it 'creates an invoice' do
+            result = invoice_service.create
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.invoice.fees.first.properties['to_date']).to eq('2022-04-05')
+              expect(result.invoice.fees.first.properties['from_date']).to eq('2022-03-06')
+              expect(result.invoice.subscriptions.first).to eq(subscription)
+              expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+              expect(result.invoice.invoice_type).to eq('subscription')
+              expect(result.invoice.status).to eq('pending')
+              expect(result.invoice.fees.subscription_kind.count).to eq(1)
+              expect(result.invoice.fees.charge_kind.count).to eq(0)
+
+              expect(result.invoice.amount_cents).to eq(100)
+              expect(result.invoice.amount_currency).to eq('EUR')
+              expect(result.invoice.vat_amount_cents).to eq(20)
+              expect(result.invoice.vat_amount_currency).to eq('EUR')
+              expect(result.invoice.total_amount_cents).to eq(120)
+              expect(result.invoice.total_amount_currency).to eq('EUR')
+            end
+          end
         end
       end
     end
@@ -175,7 +242,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_week }
 
       let(:plan) do
-        create(:plan, interval: 'weekly')
+        create(:plan, interval: 'weekly', pay_in_advance: pay_in_advance)
       end
 
       it 'creates an invoice' do
@@ -190,6 +257,56 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:timestamp) { DateTime.parse('07 Mar 2022') }
+        let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            billing_time: :anniversary,
+          )
+        end
+
+        it 'creates an invoice' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.invoice.fees.first.properties['to_date']).to eq('2022-03-05')
+            expect(result.invoice.fees.first.properties['from_date']).to eq('2022-02-27')
+            subscription.subscription_date
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.fees.subscription_kind.count).to eq(1)
+            expect(result.invoice.fees.charge_kind.count).to eq(1)
+          end
+        end
+
+        context 'when plan is pay in advance' do
+          let(:pay_in_advance) { true }
+
+          it 'creates an invoice' do
+            result = invoice_service.create
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.invoice.fees.first.properties['to_date']).to eq('2022-03-12')
+              expect(result.invoice.fees.first.properties['from_date']).to eq('2022-03-06')
+              subscription.subscription_date
+              expect(result.invoice.subscriptions.first).to eq(subscription)
+              expect(result.invoice.fees.subscription_kind.count).to eq(1)
+              expect(result.invoice.fees.charge_kind.count).to eq(0)
+            end
+          end
         end
       end
     end
@@ -230,7 +347,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_year }
 
       let(:plan) do
-        create(:plan, interval: 'yearly')
+        create(:plan, interval: 'yearly', pay_in_advance: pay_in_advance)
       end
 
       it 'creates an invoice' do
@@ -268,6 +385,56 @@ RSpec.describe Invoices::CreateService, type: :service do
               expect(result.invoice.fees.charge_kind.count).to eq(1)
               expect(result.invoice.fees.first.properties['charges_from_date'])
                 .to eq (Time.zone.at(timestamp).to_date - 1.month).to_s
+            end
+          end
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:timestamp) { DateTime.parse('07 Jun 2022') }
+        let(:started_at) { DateTime.parse('06 Jun 2020').to_date }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            billing_time: :anniversary,
+          )
+        end
+
+        it 'creates an invoice' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.invoice.fees.first.properties['to_date']).to eq('2022-06-05')
+            expect(result.invoice.fees.first.properties['from_date']).to eq('2021-06-06')
+            subscription.subscription_date
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.fees.subscription_kind.count).to eq(1)
+            expect(result.invoice.fees.charge_kind.count).to eq(1)
+          end
+        end
+
+        context 'when plan is pay in advance' do
+          let(:pay_in_advance) { true }
+
+          it 'creates an invoice' do
+            result = invoice_service.create
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.invoice.fees.first.properties['to_date']).to eq('2023-06-05')
+              expect(result.invoice.fees.first.properties['from_date']).to eq('2022-06-06')
+              subscription.subscription_date
+              expect(result.invoice.subscriptions.first).to eq(subscription)
+              expect(result.invoice.fees.subscription_kind.count).to eq(1)
+              expect(result.invoice.fees.charge_kind.count).to eq(0)
             end
           end
         end
@@ -358,6 +525,36 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.first.properties['from_date'])
             .to eq(terminated_at.to_date.beginning_of_month.to_s)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:timestamp) { DateTime.parse('07 Mar 2022') }
+        let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            status: :terminated,
+            billing_time: :anniversary,
+            terminated_at: terminated_at,
+          )
+        end
+
+        it 'creates an invoice with subscription fee' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result.invoice.fees.first.properties['to_date'])
+              .to eq(terminated_at.to_date.to_s)
+            expect(result.invoice.fees.first.properties['from_date'])
+              .to eq('2022-03-06')
+            expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          end
         end
       end
     end

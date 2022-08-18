@@ -6,7 +6,7 @@ module Subscriptions
       def first_month_in_yearly_period?
         return billing_date.month == 1 if calendar?
 
-        monthly_service.compute_from_date(billing_date - 1.month).month == subscription_date.month
+        monthly_service.compute_from_date(billing_date).month == subscription_date.month
       end
 
       private
