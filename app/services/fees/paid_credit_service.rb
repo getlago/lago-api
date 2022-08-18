@@ -2,11 +2,10 @@
 
 module Fees
   class PaidCreditService < BaseService
-    def initialize(invoice:, wallet_transaction:, customer:, plan:)
+    def initialize(invoice:, wallet_transaction:, customer:)
       @invoice = invoice
       @customer = customer
       @wallet_transaction = wallet_transaction
-      @plan = plan
       super(nil)
     end
 
@@ -19,7 +18,7 @@ module Fees
         invoiceable_type: 'WalletTransaction',
         invoiceable_id: wallet_transaction.id,
         amount_cents: wallet_transaction.amount,
-        amount_currency: plan.amount_currency,
+        amount_currency: customer.default_currency,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
       )
@@ -35,7 +34,7 @@ module Fees
 
     private
 
-    attr_reader :invoice, :wallet_transaction, :customer, :plan
+    attr_reader :invoice, :wallet_transaction, :customer
 
     def already_billed?
       existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: 'WalletTransaction')

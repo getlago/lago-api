@@ -25,7 +25,7 @@ class Invoice < ApplicationRecord
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :credit_amount_cents, disable_validation: true, allow_nil: true
 
-  INVOICE_TYPES = %i[subscription add_on].freeze
+  INVOICE_TYPES = %i[subscription add_on credit].freeze
   STATUS = %i[pending succeeded failed].freeze
 
   enum invoice_type: INVOICE_TYPES
