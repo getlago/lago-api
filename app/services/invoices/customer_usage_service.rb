@@ -33,7 +33,6 @@ module Invoices
     #       - The cache expiration is at most, the end date of the billing period
     #         + 1 day to handle cache generated on the last billing period
     #       - The cache key includes the customer id and the creation date of the last customer event
-    # TODO: Refresh cache automatically when receiving an new event
     def compute_usage
       Rails.cache.fetch(cache_key, expires_in: cache_expiration.days) do
         @invoice = Invoice.new(
