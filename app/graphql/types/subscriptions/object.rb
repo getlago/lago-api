@@ -15,7 +15,7 @@ module Types
       field :next_pending_start_date, GraphQL::Types::ISO8601Date
 
       field :billing_time, Types::Subscriptions::BillingTimeEnum
-      field :anniversary_date, GraphQL::Types::ISO8601Date
+      field :subscription_date, GraphQL::Types::ISO8601Date
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
@@ -28,11 +28,6 @@ module Types
 
       def next_plan
         object.next_subscription&.plan
-      end
-
-      # TODO: remove after billing time introduction
-      def anniversary_date
-        object.subscription_date
       end
 
       def next_name
