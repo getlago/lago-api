@@ -19,6 +19,7 @@ class Fee < ApplicationRecord
   validates :amount_currency, inclusion: { in: currency_list }
   validates :vat_amount_currency, inclusion: { in: currency_list }
   validates :units, numericality: { greated_than_or_equal_to: 0 }
+  validates :events_count, numericality: { greated_than_or_equal_to: 0 }, allow_nil: true
 
   scope :subscription_kind, -> { where(charge_id: nil, applied_add_on_id: nil) }
   scope :charge_kind, -> { where.not(charge_id: nil) }

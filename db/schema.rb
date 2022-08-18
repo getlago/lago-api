@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_16_120137) do
+ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -194,6 +194,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_16_120137) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
+    t.integer "events_count"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"

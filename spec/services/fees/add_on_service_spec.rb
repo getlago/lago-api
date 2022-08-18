@@ -28,6 +28,7 @@ RSpec.describe Fees::AddOnService do
         expect(created_fee.vat_amount_cents).to eq(40)
         expect(created_fee.vat_rate).to eq(20.0)
         expect(created_fee.units).to eq(1)
+        expect(created_fee.events_count).to be_nil
       end
     end
 
