@@ -14,6 +14,7 @@ module V1
         vat_amount_cents: model.vat_amount_cents,
         vat_amount_currency: model.vat_amount_currency,
         units: model.units,
+        events_count: model.events_count,
       }
     end
   end
