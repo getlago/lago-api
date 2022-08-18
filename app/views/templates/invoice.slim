@@ -315,7 +315,10 @@ html
                   td width="70%"
                     .body-1 = fee.billable_metric.name
                     .body-3
-                      | Total unit: #{fee.units}
+                      - if fee.charge.percentage?
+                        | Total unit: #{fee.events_count} events for #{fee.units}
+                      - else
+                        | Total unit: #{fee.units}
                   td.body-1 width="30%" = fee.amount.format
 
             table.total-table width="100%"

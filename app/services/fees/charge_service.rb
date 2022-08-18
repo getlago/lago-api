@@ -52,7 +52,8 @@ module Fees
         amount_currency: charge.amount_currency,
         vat_rate: customer.applicable_vat_rate,
         units: amount_result.units,
-        properties: boundaries.to_h
+        properties: boundaries.to_h,
+        events_count: amount_result.count,
       )
 
       new_fee.compute_vat
