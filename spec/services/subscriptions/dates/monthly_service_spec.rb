@@ -53,7 +53,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
 
-          it 'returns the beginning of the month month' do
+          it 'returns the beginning of the month' do
             expect(result).to eq('2022-03-01')
           end
         end
@@ -64,7 +64,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       let(:billing_time) { :anniversary }
       let(:billing_date) { DateTime.parse('03 Mar 2022') }
 
-      it 'returns the previous month month day' do
+      it 'returns the day in the previous month day' do
         expect(result).to eq('2022-02-02')
       end
 
@@ -88,7 +88,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
 
-          it 'returns the current month month day' do
+          it 'returns the day in the current month' do
             expect(result).to eq('2022-03-02')
           end
         end
@@ -153,14 +153,14 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       let(:billing_time) { :anniversary }
       let(:billing_date) { DateTime.parse('04 Mar 2022') }
 
-      it 'returns the previous month month day' do
+      it 'returns the day in the previous month' do
         expect(result).to eq('2022-03-01')
       end
 
       context 'when billing last month of year' do
         let(:billing_date) { DateTime.parse('04 Jan 2022') }
 
-        it 'returns the previous month month day' do
+        it 'returns the day in the previous month' do
           expect(result).to eq('2022-01-01')
         end
       end
