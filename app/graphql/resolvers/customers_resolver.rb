@@ -19,7 +19,7 @@ module Resolvers
       customers = current_organization
         .customers
         .page(page)
-        .limit(limit)
+        .per(limit)
 
       customers = customers.where(id: ids) if ids.present?
 
