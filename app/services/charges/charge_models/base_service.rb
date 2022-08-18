@@ -3,20 +3,25 @@
 module Charges
   module ChargeModels
     class BaseService < ::BaseService
-      def initialize(charge:)
-        super(nil)
-        @charge = charge
+      def self.apply(...)
+        new(...).apply
       end
 
-      def apply(value:)
-        result.units = value
-        result.amount = compute_amount(value)
+      def initialize(charge:, aggregation_result:)
+        super(nil)
+        @charge = charge
+        @aggregation_result = aggregation_result
+      end
+
+      def apply
+        result.units = aggregation_result.aggregation
+        result.amount = compute_amount
         result
       end
 
       protected
 
-      attr_accessor :charge
+      attr_accessor :charge, :aggregation_result
 
       def compute_amount(value)
         raise NotImplementedError

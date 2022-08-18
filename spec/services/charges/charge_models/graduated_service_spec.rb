@@ -3,7 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
-  subject(:graduated_service) { described_class.new(charge: charge) }
+  subject(:apply_graduated_service) do
+    described_class.apply(charge: charge, aggregation_result: aggregation_result)
+  end
+
+  before do
+    aggregation_result.aggregation = aggregation
+  end
+
+  let(:aggregation_result) { BaseService::Result.new }
 
   let(:charge) do
     create(
@@ -31,27 +39,51 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
     )
   end
 
-  it 'does not apply the flat amount for 0' do
-    expect(graduated_service.apply(value: 0).amount).to eq(0)
+  context 'when aggregation is 0' do
+    let(:aggregation) { 0 }
+
+    it 'does not apply the flat amount' do
+      expect(apply_graduated_service.amount).to eq(0)
+    end
   end
 
-  it 'applies a unit amount for 1 and the flat rate for 1' do
-    expect(graduated_service.apply(value: 1).amount).to eq(12)
+  context 'when aggregation is 1' do
+    let(:aggregation) { 1 }
+
+    it 'applies a unit amount for 1 and the flat rate for 1' do
+      expect(apply_graduated_service.amount).to eq(12)
+    end
   end
 
-  it 'applies all unit amount for top bound' do
-    expect(graduated_service.apply(value: 10).amount).to eq(102)
+  context 'when aggregation is 10' do
+    let(:aggregation) { 10 }
+
+    it 'applies all unit amount for top bound' do
+      expect(apply_graduated_service.amount).to eq(102)
+    end
   end
 
-  it 'applies next range flat amount for the next step' do
-    expect(graduated_service.apply(value: 11).amount).to eq(110)
+  context 'when aggregation is 11' do
+    let(:aggregation) { 11 }
+
+    it 'applies next range flat amount for the next step' do
+      expect(apply_graduated_service.amount).to eq(110)
+    end
   end
 
-  it 'applies next unit amount for more unit in next step' do
-    expect(graduated_service.apply(value: 12).amount).to eq(115)
+  context 'when aggregation is 12' do
+    let(:aggregation) { 12 }
+
+    it 'applies next unit amount for more unit in next step' do
+      expect(apply_graduated_service.amount).to eq(115)
+    end
   end
 
-  it 'applies last unit amount for more unit in last step' do
-    expect(graduated_service.apply(value: 21).amount).to eq(163)
+  context 'when aggregation is 21' do
+    let(:aggregation) { 21 }
+
+    it 'applies last unit amount for more unit in last step' do
+      expect(apply_graduated_service.amount).to eq(163)
+    end
   end
 end

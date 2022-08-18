@@ -3,7 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe Charges::ChargeModels::StandardService, type: :service do
-  subject(:standard_service) { described_class.new(charge: charge) }
+  subject(:apply_standard_service) do
+    described_class.apply(charge: charge, aggregation_result: aggregation_result)
+  end
+
+  before do
+    aggregation_result.aggregation = aggregation
+  end
+
+  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation) { 10 }
 
   let(:charge) do
     create(
@@ -15,7 +24,7 @@ RSpec.describe Charges::ChargeModels::StandardService, type: :service do
     )
   end
 
-  it 'apply the charge model to the value' do
-    expect(standard_service.apply(value: 10).amount).to eq(5000)
+  it 'applies the charge model to the value' do
+    expect(apply_standard_service.amount).to eq(5000)
   end
 end

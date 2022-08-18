@@ -3,7 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe Charges::ChargeModels::PackageService, type: :service do
-  subject(:package_service) { described_class.new(charge: charge) }
+  subject(:apply_package_service) do
+    described_class.apply(charge: charge, aggregation_result: aggregation_result)
+  end
+
+  before do
+    aggregation_result.aggregation = aggregation
+  end
+
+  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation) { 121 }
 
   let(:charge) do
     create(
@@ -17,20 +26,20 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
   end
 
   it 'applies the package size to the value' do
-    expect(package_service.apply(value: 121).amount).to eq(1300)
+    expect(apply_package_service.amount).to eq(1300)
   end
 
   context 'with free_units' do
     before { charge.properties['free_units'] = 10 }
 
     it 'substracts the free units from the value' do
-      expect(package_service.apply(value: 121).amount).to eq(1200)
+      expect(apply_package_service.amount).to eq(1200)
     end
 
     context 'when free units is higher than the value' do
       before { charge.properties['free_units'] = 200 }
 
-      it { expect(package_service.apply(value: 121).amount).to eq(0) }
+      it { expect(apply_package_service.amount).to eq(0) }
     end
   end
 end
