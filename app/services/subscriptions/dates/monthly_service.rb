@@ -94,7 +94,7 @@ module Subscriptions
       def compute_duration(from_date:)
         return Time.days_in_month(from_date.month, from_date.year) if calendar?
 
-        next_month_date = compute_to_date
+        next_month_date = compute_to_date(from_date)
         (next_month_date.to_date + 1.day - from_date.to_date).to_i
       end
     end

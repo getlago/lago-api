@@ -840,6 +840,51 @@ RSpec.describe Fees::SubscriptionService do
         end
       end
 
+      context 'when subscription is billed on anniversary date' do
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            started_at: started_at,
+            subscription_date: DateTime.parse('2021-03-25'),
+            previous_subscription: previous_subscription,
+            billing_time: :anniversary,
+          )
+        end
+
+        let(:previous_subscription) do
+          create(
+            :subscription,
+            status: :terminated,
+            plan: previous_plan,
+            subscription_date: DateTime.parse('2021-03-25'),
+            billing_time: :anniversary,
+          )
+        end
+
+        let(:boundaries) do
+          {
+            from_date: DateTime.parse('2022-05-09').to_date,
+            to_date: DateTime.parse('2022-05-24').to_date,
+            timestamp: DateTime.parse('2022-05-26').to_i,
+          }
+        end
+
+        it 'creates a subscription fee' do
+          result = fees_subscription_service.create
+          created_fee = result.fee
+
+          aggregate_failures do
+            expect(created_fee.id).not_to be_nil
+            expect(created_fee.invoice_id).to eq(invoice.id)
+            expect(created_fee.amount_cents).to eq(11)
+            expect(created_fee.amount_currency).to eq(plan.amount_currency)
+            expect(created_fee.vat_amount_cents).to eq(3)
+            expect(created_fee.vat_rate).to eq(20.0)
+          end
+        end
+      end
+
       context 'when plan has trial period' do
         before { plan.update(trial_period: trial_duration) }
 
@@ -995,6 +1040,55 @@ RSpec.describe Fees::SubscriptionService do
           result = fees_subscription_service.create
 
           expect(result.fee.amount_cents).to eq(55)
+        end
+      end
+    end
+
+    context 'when both plan are payed in advance and subscription is billed anniversary' do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          started_at: started_at,
+          subscription_date: DateTime.parse('2021-03-25'),
+          previous_subscription: previous_subscription,
+          billing_time: :anniversary,
+        )
+      end
+
+      let(:previous_subscription) do
+        create(
+          :subscription,
+          status: :terminated,
+          plan: previous_plan,
+          subscription_date: DateTime.parse('2021-03-25'),
+          billing_time: :anniversary,
+        )
+      end
+
+      let(:previous_plan) { create(:plan, pay_in_advance: true, amount_cents: 80) }
+
+      let(:boundaries) do
+        {
+          from_date: DateTime.parse('2022-05-08').to_date,
+          to_date: DateTime.parse('2022-05-24').to_date,
+          timestamp: DateTime.parse('2022-05-26').to_i,
+        }
+      end
+
+      before { plan.update!(pay_in_advance: true) }
+
+      it 'creates a subscription fee' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(11)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+          expect(created_fee.vat_amount_cents).to eq(3)
+          expect(created_fee.vat_rate).to eq(20.0)
         end
       end
     end
