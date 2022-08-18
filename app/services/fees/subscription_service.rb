@@ -226,7 +226,7 @@ module Fees
 
     def compute_from_date(target_subscription)
       date_service(target_subscription).previous_beginning_of_period(
-        use_billing_date: target_subscription.plan.pay_in_advance? && subscription.plan.pay_in_advance?,
+        current_period: target_subscription.plan.pay_in_advance? && subscription.plan.pay_in_advance?,
       )
     end
   end
