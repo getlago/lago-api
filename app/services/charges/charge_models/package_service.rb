@@ -7,7 +7,7 @@ module Charges
 
       def compute_amount
         # NOTE: exclude free units from the count
-        billed_units = aggregation_result.aggregation - free_units
+        billed_units = units - free_units
         return 0 if billed_units.negative?
 
         # NOTE: Check how many packages (groups of units) are consumed

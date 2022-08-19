@@ -6,7 +6,7 @@ module Charges
       protected
 
       def compute_amount
-        (aggregation_result.aggregation * BigDecimal(charge.properties['amount']))
+        (units * BigDecimal(charge.properties['amount']))
       end
     end
   end
