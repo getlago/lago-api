@@ -57,6 +57,8 @@ module Subscriptions
       end
 
       def previous_anniversary_day(date)
+        return date if date.wday == subscription_date.wday
+
         date.prev_occurring(subscription_day_name)
       end
 
