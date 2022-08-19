@@ -229,9 +229,13 @@ html
               .body-1
                 - if add_on?
                   | Add On - #{fees.first.add_on.name}
+                - elsif credit?
+                  | Prepaid credit - #{fees.first.invoiceable.wallet.name}
+                  .body-3
+                    | Total credits: #{fees.first.invoiceable.credit_amount} credits
                 - elsif subscription?
                   | All Subscription(s)
-            - if add_on?
+            - if add_on? || credit?
               td.body-1 style="text-align: right;" width="30%"
                 = fees.first&.amount&.format
             - elsif subscription?
