@@ -5,8 +5,6 @@ FactoryBot.define do
     billable_metric
     plan
 
-    amount_currency { 'EUR' }
-
     factory :standard_charge do
       charge_model { 'standard' }
       properties do

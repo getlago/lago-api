@@ -7,7 +7,6 @@ module Types
 
       field :units, GraphQL::Types::Float, null: false
       field :amount_cents, GraphQL::Types::BigInt, null: false
-      field :amount_currency, Types::CurrencyEnum, null: false
 
       field :charge, Types::Charges::Object, null: false
       field :billable_metric, Types::BillableMetrics::Object, null: false

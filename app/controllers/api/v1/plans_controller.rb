@@ -9,7 +9,7 @@ module Api
           **input_params
             .merge(organization_id: current_organization.id)
             .to_h
-            .deep_symbolize_keys
+            .deep_symbolize_keys,
         )
 
         if result.success?
@@ -38,7 +38,7 @@ module Api
         service = Plans::DestroyService.new
         result = service.destroy_from_api(
           organization: current_organization,
-          code: params[:code]
+          code: params[:code],
         )
 
         if result.success?
@@ -50,7 +50,7 @@ module Api
 
       def show
         plan = current_organization.plans.find_by(
-          code: params[:code]
+          code: params[:code],
         )
 
         return not_found_error unless plan
@@ -60,9 +60,9 @@ module Api
 
       def index
         plans = current_organization.plans
-                                    .order(created_at: :desc)
-                                    .page(params[:page])
-                                    .per(params[:per_page] || PER_PAGE)
+          .order(created_at: :desc)
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
@@ -71,7 +71,7 @@ module Api
             collection_name: 'plans',
             meta: pagination_metadata(plans),
             includes: %i[charges],
-          )
+          ),
         )
       end
 
@@ -88,7 +88,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
-          charges: [:id, :billable_metric_id, :amount_currency, :charge_model],
+          charges: [:id, :billable_metric_id, :charge_model],
         ).tap do |permitted_params|
           # NOTE: Charges properties can have 2 differents formats
           # - An array if the charge model need many ranges (ie: graduated)

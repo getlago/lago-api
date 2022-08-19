@@ -18,7 +18,6 @@ class Charge < ApplicationRecord
 
   enum charge_model: CHARGE_MODELS
 
-  validates :amount_currency, inclusion: { in: currency_list }
   validate :validate_amount, if: :standard?
   validate :validate_graduated_range, if: :graduated?
   validate :validate_package, if: :package?

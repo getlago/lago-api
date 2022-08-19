@@ -21,7 +21,6 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             charge { chargeModel }
             units
             amountCents
-            amountCurrency
           }
         }
       }
@@ -82,7 +81,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       query: query,
       variables: {
         customerId: customer.id,
-        subscriptionId: subscription.id
+        subscriptionId: subscription.id,
       },
     )
 

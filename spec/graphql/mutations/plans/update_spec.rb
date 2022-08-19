@@ -48,12 +48,10 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             {
               billableMetricId: billable_metrics.first.id,
               amount: '100',
-              amountCurrency: 'USD',
               chargeModel: 'standard',
             },
             {
               billableMetricId: billable_metrics.second.id,
-              amountCurrency: 'EUR',
               chargeModel: 'package',
               amount: '300',
               freeUnits: 10,
@@ -61,7 +59,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             },
             {
               billableMetricId: billable_metrics.third.id,
-              amountCurrency: 'EUR',
               chargeModel: 'percentage',
               rate: '0.25',
               fixedAmount: '2',
@@ -70,7 +67,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             },
             {
               billableMetricId: billable_metrics.last.id,
-              amountCurrency: 'EUR',
               chargeModel: 'graduated',
               graduatedRanges: [
                 {

@@ -8,7 +8,6 @@ module Types
       argument :id, ID, required: false
       argument :billable_metric_id, ID, required: true
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
-      argument :amount_currency, Types::CurrencyEnum, required: true
 
       # NOTE: Standard and Package charge model
       argument :amount, String, required: false
