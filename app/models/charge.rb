@@ -13,6 +13,7 @@ class Charge < ApplicationRecord
     graduated
     package
     percentage
+    volume
   ].freeze
 
   enum charge_model: CHARGE_MODELS
@@ -22,32 +23,32 @@ class Charge < ApplicationRecord
   validate :validate_graduated_range, if: :graduated?
   validate :validate_package, if: :package?
   validate :validate_percentage, if: :percentage?
+  validate :validate_volume, if: :volume?
 
   private
 
   def validate_amount
-    validation_result = Charges::Validators::StandardService.new(charge: self).validate
-    return if validation_result.success?
-
-    validation_result.error.each { |error| errors.add(:properties, error) }
+    validate_charge_model(Charges::Validators::StandardService)
   end
 
   def validate_graduated_range
-    validation_result = Charges::Validators::GraduatedService.new(charge: self).validate
-    return if validation_result.success?
-
-    validation_result.error.each { |error| errors.add(:properties, error) }
+    validate_charge_model(Charges::Validators::GraduatedService)
   end
 
   def validate_package
-    validation_result = Charges::Validators::PackageService.new(charge: self).validate
-    return if validation_result.success?
-
-    validation_result.error.each { |error| errors.add(:properties, error) }
+    validate_charge_model(Charges::Validators::PackageService)
   end
 
   def validate_percentage
-    validation_result = Charges::Validators::PercentageService.new(charge: self).validate
+    validate_charge_model(Charges::Validators::PercentageService)
+  end
+
+  def validate_volume
+    validate_charge_model(Charges::Validators::VolumeService)
+  end
+
+  def validate_charge_model(validator)
+    validation_result = validator.new(charge: self).validate
     return if validation_result.success?
 
     validation_result.error.each { |error| errors.add(:properties, error) }

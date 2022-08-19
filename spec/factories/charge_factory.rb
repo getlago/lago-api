@@ -39,5 +39,12 @@ FactoryBot.define do
         }
       end
     end
+
+    factory :volume_charge do
+      charge_model { 'volume' }
+      properties do
+        { ranges: [] }
+      end
+    end
   end
 end
