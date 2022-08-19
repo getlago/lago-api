@@ -23,6 +23,8 @@ module Charges
 
       attr_accessor :charge, :aggregation_result
 
+      delegate :units, to: :result
+
       def compute_amount(value)
         raise NotImplementedError
       end
