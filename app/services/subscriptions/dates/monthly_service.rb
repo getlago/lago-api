@@ -80,7 +80,7 @@ module Subscriptions
         month = nil
         day = subscription_date.day
 
-        if date.day <= day
+        if date.day < day
           year = date.month == 1 ? date.year - 1 : date.year
           month = date.month == 1 ? 12 : date.month - 1
         else
