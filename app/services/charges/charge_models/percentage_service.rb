@@ -10,13 +10,13 @@ module Charges
       end
 
       def compute_percentage_amount
-        return 0 if free_units_value > aggregation_result.aggregation
+        return 0 if free_units_value > units
 
-        (aggregation_result.aggregation - free_units_value) * rate.fdiv(100)
+        (units - free_units_value) * rate.fdiv(100)
       end
 
       def compute_fixed_amount
-        return 0 if aggregation_result.aggregation.zero?
+        return 0 if units.zero?
         return 0 if fixed_amount.nil?
 
         (aggregation_result.count - free_units_count) * fixed_amount
