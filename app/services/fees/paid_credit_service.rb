@@ -12,12 +12,16 @@ module Fees
     def create
       return result if already_billed?
 
+      currency = invoice.amount.currency
+      rounded_amount = wallet_transaction.amount.round(currency.exponent)
+      amount_cents = rounded_amount * currency.subunit_to_unit
+
       new_fee = Fee.new(
         invoice: invoice,
         fee_type: :credit,
         invoiceable_type: 'WalletTransaction',
         invoiceable_id: wallet_transaction.id,
-        amount_cents: wallet_transaction.amount,
+        amount_cents: amount_cents,
         amount_currency: customer.default_currency,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
