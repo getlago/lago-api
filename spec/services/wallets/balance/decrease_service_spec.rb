@@ -17,5 +17,11 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
       expect(wallet.reload.balance).to eq('5.5')
       expect(wallet.reload.credits_balance).to eq('5.5')
     end
+
+    it 'updates wallet consumed status' do
+      create_service.call
+
+      expect(wallet.reload.consumed_credits).to eq('4.5')
+    end
   end
 end

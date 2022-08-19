@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_17_095619) do
+ActiveRecord::Schema[7.0].define(version: 2022_08_19_124818) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -80,6 +80,17 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_17_095619) do
     t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true, where: "(status = 0)"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
+  end
+
+  create_table "applied_prepaid_credits", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id"
+    t.uuid "wallet_transaction_id"
+    t.bigint "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_applied_prepaid_credits_on_invoice_id"
+    t.index ["wallet_transaction_id"], name: "index_applied_prepaid_credits_on_wallet_transaction_id"
   end
 
   create_table "billable_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -379,6 +390,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_17_095619) do
   add_foreign_key "add_ons", "organizations"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
+  add_foreign_key "applied_prepaid_credits", "invoices"
+  add_foreign_key "applied_prepaid_credits", "wallet_transactions"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"

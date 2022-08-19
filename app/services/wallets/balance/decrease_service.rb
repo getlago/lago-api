@@ -17,6 +17,8 @@ module Wallets
           balance: BigDecimal(wallet.balance) - amount,
           credits_balance: BigDecimal(wallet.credits_balance) - credits_amount,
           last_balance_sync_at: Time.zone.now,
+          consumed_credits: BigDecimal(wallet.consumed_credits) + credits_amount,
+          last_consumed_credit_at: Time.zone.now
         )
       end
 
