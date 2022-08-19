@@ -10,9 +10,10 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   before do
     aggregation_result.aggregation = aggregation
     aggregation_result.count = 4
-    aggregation_result.options = { running_total: [50, 150, 400] }
+    aggregation_result.options = { running_total: running_total }
   end
 
+  let(:running_total) { [50, 150, 400] }
   let(:aggregation_result) { BaseService::Result.new }
   let(:fixed_amount) { '2.0' }
   let(:aggregation) { 800 }
@@ -43,6 +44,47 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   end
 
   context 'when fixed amount value is 0' do
+    it 'returns expected percentage amount' do
+      expect(apply_percentage_service.amount).to eq(
+        (expected_percentage_amount + expected_fixed_amount)
+      )
+    end
+  end
+
+  context 'when free_units_per_events is nil' do
+    let(:free_units_per_events) { nil }
+    let(:running_total) { [] }
+
+    let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
+    let(:expected_fixed_amount) { (4 - 0) * 2.0 }
+
+    it 'returns expected percentage amount' do
+      expect(apply_percentage_service.amount).to eq(
+        (expected_percentage_amount + expected_fixed_amount)
+      )
+    end
+  end
+
+  context 'when free_units_per_total_aggregation is nil' do
+    let(:free_units_per_total_aggregation) { nil }
+    let(:expected_percentage_amount) { (800 - 400) * (1.3 / 100) }
+    let(:expected_fixed_amount) { (4 - 3) * 2.0 }
+
+    it 'returns expected percentage amount' do
+      expect(apply_percentage_service.amount).to eq(
+        (expected_percentage_amount + expected_fixed_amount)
+      )
+    end
+  end
+
+  context 'when free units are not set' do
+    let(:free_units_per_total_aggregation) { nil }
+    let(:free_units_per_events) { nil }
+    let(:running_total) { [] }
+
+    let(:expected_percentage_amount) { 800 * (1.3 / 100) }
+    let(:expected_fixed_amount) { 4 * 2.0 }
+
     it 'returns expected percentage amount' do
       expect(apply_percentage_service.amount).to eq(
         (expected_percentage_amount + expected_fixed_amount)
