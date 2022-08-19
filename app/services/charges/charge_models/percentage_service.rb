@@ -23,19 +23,22 @@ module Charges
       end
 
       def free_units_value
+        return last_running_total if free_units_per_total_aggregation.zero?
+        return free_units_per_total_aggregation if last_running_total.zero?
         return last_running_total unless last_running_total > free_units_per_total_aggregation
 
-        free_units_per_total_aggregation.to_i
+        free_units_per_total_aggregation
       end
 
       def free_units_count
+        return free_units_per_events if free_units_per_total_aggregation.zero?
         return free_units_per_events unless last_running_total > free_units_per_total_aggregation
 
         aggregation_result.options[:running_total].count { |e| e < free_units_per_total_aggregation }
       end
 
       def last_running_total
-        @last_running_total ||= aggregation_result.options[:running_total].last
+        @last_running_total ||= aggregation_result.options[:running_total].last || 0
       end
 
       def free_units_per_total_aggregation
