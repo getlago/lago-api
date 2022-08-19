@@ -62,7 +62,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('03 Mar 2022') }
+      let(:billing_date) { DateTime.parse('02 Mar 2022') }
 
       it 'returns the day in the previous month day' do
         expect(result).to eq('2022-02-02')
@@ -151,7 +151,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('04 Mar 2022') }
+      let(:billing_date) { DateTime.parse('02 Mar 2022') }
 
       it 'returns the day in the previous month' do
         expect(result).to eq('2022-03-01')
@@ -239,7 +239,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('03 Mar 2022') }
+      let(:billing_date) { DateTime.parse('02 Mar 2022') }
 
       it 'returns from_date' do
         expect(result).to eq(date_service.from_date.to_s)
@@ -297,7 +297,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+      let(:billing_date) { DateTime.parse('02 Mar 2022') }
 
       it 'returns to_date' do
         expect(result).to eq(date_service.to_date.to_s)
@@ -359,7 +359,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'compute_previous_beginning_of_period' do
+  describe 'previous_beginning_of_period' do
     let(:result) { date_service.previous_beginning_of_period(current_period: current_period).to_s }
 
     let(:current_period) { false }

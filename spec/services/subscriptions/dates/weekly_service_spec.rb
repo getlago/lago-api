@@ -64,7 +64,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+      let(:billing_date) { DateTime.parse('09 Mar 2022') }
 
       it 'returns the previous week week day' do
         expect(result).to eq('2022-03-01')
@@ -139,7 +139,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+      let(:billing_date) { DateTime.parse('09 Mar 2022') }
 
       it 'returns the previous week week day' do
         expect(result).to eq('2022-03-07')
@@ -197,7 +197,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+      let(:billing_date) { DateTime.parse('09 Mar 2022') }
 
       it 'returns from_date' do
         expect(result).to eq(date_service.from_date.to_s)
@@ -254,7 +254,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+      let(:billing_date) { DateTime.parse('09 Mar 2022') }
 
       it 'returns to_date' do
         expect(result).to eq(date_service.to_date.to_s)
