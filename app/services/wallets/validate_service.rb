@@ -28,7 +28,7 @@ module Wallets
 
     private
 
-    attr_reader :result, :args
+    attr_accessor :result, :args
 
     def valid_customer?
       current_customer = Customer.find_by(
