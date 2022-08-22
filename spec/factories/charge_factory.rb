@@ -43,7 +43,12 @@ FactoryBot.define do
     factory :volume_charge do
       charge_model { 'volume' }
       properties do
-        { ranges: [] }
+        {
+          ranges: [
+            { from_value: 0, to_value: 100, per_unit_amount: 2 },
+            { from_value: 120, to_value: nil, per_unit_amount: 1 },
+          ],
+        }
       end
     end
   end

@@ -61,7 +61,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: nil, flat_amount: '0' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_amount) }
+      it { expect(volume_service.validate.error).to include(:invalid_per_unit_amount) }
     end
 
     context 'with invalid range per unit amount cents' do
@@ -69,7 +69,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: 'foo', flat_amount: '0' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_amount) }
+      it { expect(volume_service.validate.error).to include(:invalid_per_unit_amount) }
     end
 
     context 'with negative range per unit amount cents' do
@@ -77,7 +77,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '-2', flat_amount: 0 }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_amount) }
+      it { expect(volume_service.validate.error).to include(:invalid_per_unit_amount) }
     end
 
     context 'with no range flat amount cents' do
@@ -85,7 +85,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: nil }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_amount) }
+      it { expect(volume_service.validate.error).to include(:invalid_flat_amount) }
     end
 
     context 'with invalid range flat amount cents' do
@@ -93,7 +93,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: 'foo' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_amount) }
+      it { expect(volume_service.validate.error).to include(:invalid_flat_amount) }
     end
 
     context 'with negative range flat amount cents' do
@@ -101,7 +101,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '-2' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_amount) }
+      it { expect(volume_service.validate.error).to include(:invalid_flat_amount) }
     end
 
     context 'with applicable ranges' do

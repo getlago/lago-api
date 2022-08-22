@@ -13,7 +13,8 @@ module Charges
 
         next_from_value = 0
         ranges.each_with_index do |range, index|
-          errors << :invalid_amount unless valid_amounts?(range)
+          errors << :invalid_per_unit_amount unless valid_amount?(range[:per_unit_amount])
+          errors << :invalid_flat_amount unless valid_amount?(range[:flat_amount])
           errors << :invalid_ranges unless valid_bounds?(range, index, next_from_value)
 
           next_from_value = (range[:to_value] || 0) + 1
@@ -30,9 +31,8 @@ module Charges
         charge.properties['ranges']&.map(&:with_indifferent_access)
       end
 
-      def valid_amounts?(range)
-        ::Validators::DecimalAmountService.new(range[:per_unit_amount]).valid_amount? &&
-          ::Validators::DecimalAmountService.new(range[:flat_amount]).valid_amount?
+      def valid_amount?(amount)
+        ::Validators::DecimalAmountService.new(amount).valid_amount?
       end
 
       def valid_bounds?(range, index, next_from_value)
