@@ -1208,6 +1208,29 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "BillingTimeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "calendar",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "anniversary",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "SCALAR",
           "name": "Boolean",
           "description": "Represents `true` or `false` values.",
@@ -5126,6 +5149,22 @@
                 "kind": "SCALAR",
                 "name": "ID",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingTime",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "BillingTimeEnum",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -12021,11 +12060,11 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "anniversaryDate",
+              "name": "billingTime",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
+                "kind": "ENUM",
+                "name": "BillingTimeEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -12210,6 +12249,20 @@
               "type": {
                 "kind": "ENUM",
                 "name": "StatusTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "subscriptionDate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
                 "ofType": null
               },
               "isDeprecated": false,

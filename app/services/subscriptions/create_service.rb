@@ -38,8 +38,10 @@ module Subscriptions
         id: args[:plan_id]&.strip,
       )
 
+      # NOTE: prepare subscription attributes
       @name = args[:name]&.strip
       @unique_id = SecureRandom.uuid
+      @billing_time = args[:billing_time]
       @current_subscription = find_current_subscription(subscription_id: args[:subscription_id])
 
       process_create

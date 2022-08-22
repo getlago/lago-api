@@ -13,6 +13,7 @@ module Mutations
       argument :plan_id, ID, required: true
       argument :name, String, required: false
       argument :subscription_id, ID, required: false
+      argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
 
       type Types::Subscriptions::Object
 
