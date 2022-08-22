@@ -19,7 +19,6 @@ module Types
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
-      field :pending_start_date, GraphQL::Types::ISO8601Date
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -32,6 +31,14 @@ module Types
 
       def next_name
         object.next_subscription&.name
+      end
+
+      def next_pending_start_date
+        return unless object.next_subscription
+        return unless object.next_subscription.pending?
+
+        ::Subscriptions::DatesService.new_instance(object, Time.zone.today)
+          .next_end_of_period(Time.zone.today) + 1.day
       end
     end
   end

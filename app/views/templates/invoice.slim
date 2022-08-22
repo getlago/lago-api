@@ -307,7 +307,7 @@ html
         - if subscription? && subscription_fees(subscription.id).charge_kind.any?
           .body-1 Charges
           .mb-24.body-3
-            | List of charges used from #{invoice_subscription(subscription.id).from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_date&.strftime('%b %d, %Y')}
+            | List of charges used from #{invoice_subscription(subscription.id).charges_from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).charges_to_date&.strftime('%b %d, %Y')}
           .charge-details.mb-24
             table.charge-details-table width="100%"
               - subscription_fees(subscription.id).charge_kind.each do |fee|

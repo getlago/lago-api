@@ -13,10 +13,9 @@ module Invoices
 
     def create
       ActiveRecord::Base.transaction do
-        # NOTE: potential issue with issuing_date when creation date is equal to termination date.
         invoice = Invoice.create!(
           customer: customer,
-          issuing_date: (Time.zone.at(timestamp) - 1.day).to_date,
+          issuing_date: Time.zone.at(timestamp).to_date,
           invoice_type: :subscription,
         )
 
@@ -54,65 +53,8 @@ module Invoices
 
     attr_accessor :subscriptions, :timestamp, :customer, :currency
 
-    def from_date(subscription)
-      return @from_date if @from_date.present?
-
-      @from_date = case subscription.plan.interval.to_sym
-                   when :weekly
-                     (Time.zone.at(timestamp) - 1.week).to_date
-                   when :monthly
-                     (Time.zone.at(timestamp) - 1.month).to_date
-                   when :yearly
-                     (Time.zone.at(timestamp) - 1.year).to_date
-                   else
-                     raise NotImplementedError
-                   end
-
-      # NOTE: In case of termination or upgrade when we are terminating old plan(paying in arrear),
-      # we should move to the beginning of the billing period
-      if subscription.terminated? && subscription.plan.pay_in_arrear? && !subscription.downgraded?
-        @from_date = compute_termination_from_date(subscription)
-      end
-
-      # NOTE: On first billing period, subscription might start after the computed start of period
-      #       ei: if we bill on beginning of period, and user registered on the 15th, the invoice should
-      #       start on the 15th (subscription date) and not on the 1st
-      @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
-
-      @from_date
-    end
-
-    def charges_from_date(subscription)
-      return @charges_from_date if @charges_from_date.present?
-
-      @charges_from_date = if subscription.plan.yearly? && subscription.plan.bill_charges_monthly
-        (Time.zone.at(timestamp) - 1.month).to_date
-      else
-        from_date(subscription)
-      end
-
-      @charges_from_date = subscription.started_at.to_date if @charges_from_date < subscription.started_at
-
-      @charges_from_date
-    end
-
-    def to_date(subscription)
-      return @to_date if @to_date.present?
-
-      @to_date = (Time.zone.at(timestamp) - 1.day).to_date
-
-      if subscription.terminated? && @to_date > subscription.terminated_at
-        # NOTE: When subscription is terminated, we cannot generate an invoice for a period after the termination
-        # TODO: from_date / to_date of invoices should be timestamps so that to_date = subscription.terminated_at
-        @to_date = subscription.terminated_at.to_date - 1.day
-      end
-
-      # NOTE: When price plan is configured as `pay_in_advance`, subscription creation will be
-      #       billed immediatly. An invoice must be generated for it with only the subscription fee.
-      #       The invoicing period will be only one day: the subscription day
-      @to_date = subscription.started_at.to_date if @to_date < subscription.started_at
-
-      @to_date
+    def date_service(subscription)
+      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(timestamp).to_date)
     end
 
     def compute_amounts(invoice)
@@ -125,7 +67,8 @@ module Invoices
     end
 
     def create_subscription_fee(invoice, subscription, boundaries)
-      fee_result = Fees::SubscriptionService.new(invoice, subscription, boundaries).create
+      fee_result = Fees::SubscriptionService
+        .new(invoice: invoice, subscription: subscription, boundaries: boundaries).create
       fee_result.throw_error unless fee_result.success?
     end
 
@@ -152,9 +95,10 @@ module Invoices
       # NOTE: we do not want to create a subscription fee for plans with bill_charges_monthly activated
       # But we want to keep the subscription charge when it has to proceed
       # Cases when we want to charge a subscription:
-      #   - Plan is pay in advance, we're at the beginning of the period (month 1) or subscription has never been billed
-      #   - Plan is pay in arrear and we're at the beginning of the period (month 1)
-      Time.zone.at(timestamp).to_date.month == 1 || (subscription.plan.pay_in_advance && !subscription.already_billed?)
+      # - Plan is pay in advance, we're at the beginning of the period or subscription has never been billed
+      # - Plan is pay in arrear and we're at the beginning of the period
+      date_service(subscription).first_month_in_yearly_period? ||
+        subscription.plan.pay_in_advance && !subscription.already_billed?
     end
 
     def should_create_charge_fees?(invoice, subscription)
@@ -198,19 +142,6 @@ module Invoices
       invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
     end
 
-    def compute_termination_from_date(subscription)
-      case subscription.plan.interval.to_sym
-      when :weekly
-        Time.zone.at(timestamp).to_date.beginning_of_week
-      when :monthly
-        Time.zone.at(timestamp).to_date.beginning_of_month
-      when :yearly
-        Time.zone.at(timestamp).to_date.beginning_of_year
-      else
-        raise NotImplementedError
-      end
-    end
-
     def create_payment(invoice)
       case customer.payment_provider&.to_sym
       when :stripe
@@ -225,16 +156,20 @@ module Invoices
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
+          invoice_type: invoice.invoice_type,
+        },
       )
     end
 
     def calculate_boundaries(subscription)
+      date_service = date_service(subscription)
+
       {
-        from_date: from_date(subscription),
-        to_date: to_date(subscription),
-        charges_from_date: charges_from_date(subscription)
+        from_date: date_service.from_date,
+        to_date: date_service.to_date,
+        charges_from_date: date_service.charges_from_date,
+        charges_to_date: date_service.charges_to_date,
+        timestamp: timestamp,
       }
     end
   end

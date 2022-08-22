@@ -63,8 +63,8 @@ module Fees
 
     def compute_amount
       aggregation_result = aggregator.aggregate(
-        from_date: charges_from_date,
-        to_date: boundaries.to_date,
+        from_date: boundaries.charges_from_date,
+        to_date: boundaries.charges_to_date,
         free_units_count: charge.properties.is_a?(Hash) ? charge.properties['free_units_per_events'].to_i : 0,
       )
       return aggregation_result unless aggregation_result.success?
@@ -116,31 +116,6 @@ module Fees
       end
 
       @charge_model = model_service.apply(charge: charge, aggregation_result: aggregation_result)
-    end
-
-    def charges_from_date
-      return boundaries.charges_from_date unless subscription.previous_subscription
-
-      if subscription.previous_subscription.upgraded?
-        date = case plan.interval.to_sym
-               when :weekly
-                 boundaries.charges_from_date.beginning_of_week
-               when :monthly
-                 boundaries.charges_from_date.beginning_of_month
-               when :yearly
-                 if subscription.previous_subscription.plan.bill_charges_monthly
-                   boundaries.charges_from_date.beginning_of_month
-                 else
-                   boundaries.charges_from_date.beginning_of_year
-                 end
-               else
-                 raise NotImplementedError
-        end
-
-        return date
-      end
-
-      boundaries.charges_from_date
     end
   end
 end

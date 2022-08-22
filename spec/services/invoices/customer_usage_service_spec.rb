@@ -83,6 +83,111 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
           end
         end
       end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:current_date) { DateTime.parse('2022-06-22') }
+        let(:started_at) { DateTime.parse('2022-03-07') }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            customer: customer,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            billing_time: :anniversary,
+          )
+        end
+
+        it 'initialize an invoice' do
+          travel_to(current_date) do
+            result = invoice_service.usage
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.usage.id).to be_nil
+              expect(result.usage.from_date.to_date.to_s).to eq('2022-06-07')
+              expect(result.usage.to_date.to_date.to_s).to eq('2022-07-06')
+              expect(result.usage.issuing_date).to eq('2022-07-06')
+              expect(result.usage.fees.size).to eq(1)
+
+              expect(result.usage.amount_cents).to eq(0)
+              expect(result.usage.amount_currency).to eq('EUR')
+              expect(result.usage.vat_amount_cents).to eq(0)
+              expect(result.usage.vat_amount_currency).to eq('EUR')
+              expect(result.usage.total_amount_cents).to eq(0)
+              expect(result.usage.total_amount_currency).to eq('EUR')
+            end
+          end
+        end
+      end
+    end
+
+    context 'when billed weekly' do
+      let(:plan) { create(:plan, interval: 'weekly') }
+
+      it 'intialize an invoice' do
+        result = invoice_service.usage
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.usage.id).to be_nil
+          expect(result.usage.from_date).to eq(Time.zone.today.beginning_of_week.iso8601)
+          expect(result.usage.to_date).to eq(Time.zone.today.end_of_week.iso8601)
+          expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_week.iso8601)
+          expect(result.usage.fees.size).to eq(1)
+
+          expect(result.usage.amount_cents).to eq(0)
+          expect(result.usage.amount_currency).to eq('EUR')
+          expect(result.usage.vat_amount_cents).to eq(0)
+          expect(result.usage.vat_amount_currency).to eq('EUR')
+          expect(result.usage.total_amount_cents).to eq(0)
+          expect(result.usage.total_amount_currency).to eq('EUR')
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:current_date) { DateTime.parse('2022-06-22') }
+        let(:started_at) { DateTime.parse('2022-03-07') }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            customer: customer,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            billing_time: :anniversary,
+          )
+        end
+
+        it 'initialize an invoice' do
+          travel_to(current_date) do
+            result = invoice_service.usage
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.usage.id).to be_nil
+              expect(result.usage.from_date.to_date.to_s).to eq('2022-06-20')
+              expect(result.usage.to_date.to_date.to_s).to eq('2022-06-26')
+              expect(result.usage.issuing_date).to eq('2022-06-26')
+              expect(result.usage.fees.size).to eq(1)
+
+              expect(result.usage.amount_cents).to eq(0)
+              expect(result.usage.amount_currency).to eq('EUR')
+              expect(result.usage.vat_amount_cents).to eq(0)
+              expect(result.usage.vat_amount_currency).to eq('EUR')
+              expect(result.usage.total_amount_cents).to eq(0)
+              expect(result.usage.total_amount_currency).to eq('EUR')
+            end
+          end
+        end
+      end
     end
 
     context 'when billed yearly' do
@@ -106,6 +211,46 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
           expect(result.usage.vat_amount_currency).to eq('EUR')
           expect(result.usage.total_amount_cents).to eq(0)
           expect(result.usage.total_amount_currency).to eq('EUR')
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:current_date) { DateTime.parse('2022-06-22') }
+        let(:started_at) { DateTime.parse('2021-03-07') }
+        let(:subscription_date) { started_at }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            customer: customer,
+            subscription_date: subscription_date,
+            started_at: started_at,
+            billing_time: :anniversary,
+          )
+        end
+
+        it 'initialize an invoice' do
+          travel_to(current_date) do
+            result = invoice_service.usage
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.usage.id).to be_nil
+              expect(result.usage.from_date.to_date.to_s).to eq('2022-03-07')
+              expect(result.usage.to_date.to_date.to_s).to eq('2023-03-06')
+              expect(result.usage.issuing_date).to eq('2023-03-06')
+              expect(result.usage.fees.size).to eq(1)
+
+              expect(result.usage.amount_cents).to eq(0)
+              expect(result.usage.amount_currency).to eq('EUR')
+              expect(result.usage.vat_amount_cents).to eq(0)
+              expect(result.usage.vat_amount_currency).to eq('EUR')
+              expect(result.usage.total_amount_cents).to eq(0)
+              expect(result.usage.total_amount_currency).to eq('EUR')
+            end
+          end
         end
       end
     end

@@ -95,6 +95,10 @@ module Subscriptions
       subscription.terminated? && plan.pay_in_arrear? && !subscription.downgraded?
     end
 
+    def terminated?
+      subscription.terminated? && !subscription.next_subscription
+    end
+
     # NOTE: Handle leap years and anniversary date > 28
     def build_date(year, month, day)
       days_count_in_month = Time.days_in_month(month, year)

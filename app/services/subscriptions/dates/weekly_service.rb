@@ -19,24 +19,27 @@ module Subscriptions
         subscription.anniversary? ? previous_anniversary_day(base_date) : base_date.beginning_of_week
       end
 
-      def compute_to_date
+      def compute_to_date(from_date = compute_from_date)
         return from_date.end_of_week if calendar?
 
         from_date + 6.days
       end
 
       def compute_charges_from_date
-        return from_date if plan.pay_in_arrear?
+        # NOTE: when subscription is terminated, we must bill on the current period
+        if terminated?
+          return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_week
+        end
 
-        from_date - 1.week
+        return compute_from_date if plan.pay_in_arrear?
+
+        compute_from_date - 1.week
       end
 
       def compute_charges_to_date
-        return to_date if plan.pay_in_arrear?
+        return compute_charges_from_date.end_of_week if calendar?
 
-        # NOTE: In pay in advance scenario, from_date will be the begining of the new period.
-        #       To get the end of the previous one, we just have to take the day before
-        from_date - 1.day
+        compute_charges_from_date + 6.days
       end
 
       def compute_next_end_of_period(date)
@@ -54,6 +57,8 @@ module Subscriptions
       end
 
       def previous_anniversary_day(date)
+        return date if date.wday == subscription_date.wday
+
         date.prev_occurring(subscription_day_name)
       end
 

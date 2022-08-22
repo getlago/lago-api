@@ -63,7 +63,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('03 Feb 2022') }
+      let(:billing_date) { DateTime.parse('02 Feb 2022') }
 
       it 'returns the previous year day and month' do
         expect(result).to eq('2021-02-02')
@@ -94,7 +94,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
         context 'when subscription date on 29/02 of a leap year' do
           let(:subscription_date) { DateTime.parse('29 Feb 2020') }
-          let(:billing_date) { DateTime.parse('01 Mar 2022') }
+          let(:billing_date) { DateTime.parse('28 Mar 2022') }
 
           it 'returns the previous month last day' do
             expect(result).to eq('2022-02-28')
@@ -150,7 +150,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('03 Feb 2022') }
+      let(:billing_date) { DateTime.parse('02 Feb 2022') }
 
       it 'returns the previous year day and month' do
         expect(result).to eq('2022-02-01')
@@ -245,7 +245,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('03 Feb 2022') }
+      let(:billing_date) { DateTime.parse('02 Feb 2022') }
 
       it 'returns from_date' do
         expect(result).to eq(date_service.from_date.to_s)
@@ -317,6 +317,8 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
       end
 
       context 'when billing charge monthly' do
+        let(:billing_date) { DateTime.parse('01 Jan 2022') }
+
         before { plan.update!(bill_charges_monthly: true) }
 
         it 'returns to_date' do
@@ -325,6 +327,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
         context 'when subscription terminated in the middle of a period' do
           let(:terminated_at) { DateTime.parse('10 Mar 2022') }
+          let(:billing_date) { DateTime.parse('07 Mar 2022') }
 
           before do
             subscription.update!(status: :terminated, terminated_at: terminated_at)
@@ -338,6 +341,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
           let(:subscription_date) { DateTime.parse('02 Feb 2020') }
+          let(:billing_date) { DateTime.parse('07 Mar 2022') }
 
           it 'returns the end of the current period' do
             expect(result).to eq('2022-02-28')
@@ -348,7 +352,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_date) { DateTime.parse('10 Mar 2022') }
+      let(:billing_date) { DateTime.parse('02 Feb 2022') }
 
       it 'returns to_date' do
         expect(result).to eq(date_service.to_date.to_s)

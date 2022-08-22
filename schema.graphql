@@ -2663,10 +2663,8 @@ scalar ISO8601DateTime
 type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
-  chargesFromDate: ISO8601Date
   createdAt: ISO8601DateTime!
   fileUrl: String
-  fromDate: ISO8601Date!
   id: ID!
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
@@ -2675,7 +2673,6 @@ type Invoice {
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
   subscription: Subscription
-  toDate: ISO8601Date!
   totalAmountCents: Int!
   totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
@@ -3400,7 +3397,6 @@ type Subscription {
   nextName: String
   nextPendingStartDate: ISO8601Date
   nextPlan: Plan
-  pendingStartDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
   status: StatusTypeEnum

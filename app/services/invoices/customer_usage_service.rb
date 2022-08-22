@@ -33,12 +33,11 @@ module Invoices
     #       - The cache expiration is at most, the end date of the billing period
     #         + 1 day to handle cache generated on the last billing period
     #       - The cache key includes the customer id and the creation date of the last customer event
-    # TODO: Refresh cache automatically when receiving an new event
     def compute_usage
       Rails.cache.fetch(cache_key, expires_in: cache_expiration.days) do
         @invoice = Invoice.new(
           customer: subscription.customer,
-          issuing_date: issuing_date,
+          issuing_date: boundaries[:issuing_date],
         )
 
         add_charge_fee
@@ -65,73 +64,6 @@ module Invoices
       customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
-    def from_date
-      return @from_date if @from_date.present?
-
-      @from_date = case subscription.plan.interval.to_sym
-                   when :weekly
-                     Time.zone.today.beginning_of_week
-                   when :monthly
-                     Time.zone.today.beginning_of_month
-                   when :yearly
-                     Time.zone.today.beginning_of_year
-                   else
-                     raise NotImplementedError
-      end
-
-      # NOTE: On first billing period, subscription might start after the computed start of period
-      #       ie: if we bill on beginning of period, and user registered on the 15th, the usage should
-      #       start on the 15th (subscription date) and not on the 1st
-      @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
-
-      @from_date
-    end
-
-    def charges_from_date
-      return @charges_from_date if @charges_from_date.present?
-
-      @charges_from_date = if subscription.plan.yearly? && subscription.plan.bill_charges_monthly
-        Time.zone.today.beginning_of_month
-      else
-        from_date
-      end
-
-      @charges_from_date = subscription.started_at.to_date if @charges_from_date < subscription.started_at
-
-      @charges_from_date
-    end
-
-    def to_date
-      return @to_date if @to_date.present?
-
-      @to_date = case subscription.plan.interval.to_sym
-                 when :weekly
-                   Time.zone.today.end_of_week
-                 when :monthly
-                   Time.zone.today.end_of_month
-                 when :yearly
-                   if subscription.plan.bill_charges_monthly
-                     Time.zone.today.end_of_month
-                   else
-                     Time.zone.today.end_of_year
-                   end
-                 else
-                   raise NotImplementedError
-      end
-
-      @to_date
-    end
-
-    def issuing_date
-      return @issuing_date if @issuing_date.present?
-
-      # NOTE: When price plan is configured as `pay_in_advance`, we issue the invoice for the first day of
-      #       the period, it's on the last day otherwise
-      @issuing_date = to_date
-      @issuing_date = to_date + 1.day if subscription.plan.pay_in_advance?
-      @issuing_date
-    end
-
     def add_charge_fee
       query = subscription.plan.charges.joins(:billable_metric)
         .order(Arel.sql('lower(unaccent(billable_metrics.name)) ASC'))
@@ -141,7 +73,7 @@ module Invoices
           invoice: invoice,
           charge: charge,
           subscription: subscription,
-          boundaries: boundaries
+          boundaries: boundaries,
         ).current_usage
 
         fee_result.throw_error unless fee_result.success?
@@ -151,10 +83,20 @@ module Invoices
     end
 
     def boundaries
+      return @boundaries if @boundaries.present?
+
+      date_service = Subscriptions::DatesService.new_instance(
+        subscription,
+        Time.zone.now.to_date,
+        current_usage: true,
+      )
+
       {
-        from_date: from_date,
-        to_date: to_date,
-        charges_from_date: charges_from_date
+        from_date: date_service.from_date,
+        to_date: date_service.to_date,
+        charges_from_date: date_service.charges_from_date,
+        charges_to_date: date_service.charges_to_date,
+        issuing_date: date_service.next_end_of_period(Time.zone.now),
       }
     end
 
@@ -182,14 +124,14 @@ module Invoices
     end
 
     def cache_expiration
-      expiration = (to_date - Time.zone.today).to_i + 1
+      expiration = (boundaries[:charges_to_date] - Time.zone.today).to_i + 1
       expiration > 4 ? 4 : expiration
     end
 
     def format_usage
       {
-        from_date: charges_from_date.iso8601,
-        to_date: to_date.iso8601,
+        from_date: boundaries[:charges_from_date].iso8601,
+        to_date: boundaries[:charges_to_date].iso8601,
         issuing_date: invoice.issuing_date.iso8601,
         amount_cents: invoice.amount_cents,
         amount_currency: invoice.amount_currency,

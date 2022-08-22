@@ -20,6 +20,7 @@ RSpec.describe Fees::ChargeService do
       from_date: subscription.started_at.to_date,
       to_date: subscription.started_at.end_of_month.to_date,
       charges_from_date: subscription.started_at.to_date,
+      charges_to_date: subscription.started_at.end_of_month.to_date,
     }
   end
 
@@ -148,6 +149,7 @@ RSpec.describe Fees::ChargeService do
           from_date: Time.zone.parse('15 Apr 2022 00:01:00').to_date,
           to_date: Time.zone.parse('30 Apr 2022 00:01:00').to_date,
           charges_from_date: subscription.started_at.to_date,
+          charges_to_date: Time.zone.parse('30 Apr 2022 00:01:00').to_date,
         }
       end
 

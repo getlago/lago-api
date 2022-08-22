@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class InvoiceSubscription < ApplicationRecord
   belongs_to :invoice
   belongs_to :subscription
@@ -10,7 +12,7 @@ class InvoiceSubscription < ApplicationRecord
   def fees
     @fees ||= Fee.where(
       subscription_id: subscription.id,
-      invoice_id: invoice.id
+      invoice_id: invoice.id,
     )
   end
 
@@ -26,6 +28,18 @@ class InvoiceSubscription < ApplicationRecord
     fees.first.properties['to_date']&.to_date
   end
 
+  def charges_from_date
+    return if fees.empty?
+
+    fees.first.properties['charges_from_date']&.to_date
+  end
+
+  def charges_to_date
+    return if fees.empty?
+
+    fees.first.properties['charges_to_date']&.to_date
+  end
+
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end
@@ -37,4 +51,11 @@ class InvoiceSubscription < ApplicationRecord
   def total_amount_cents
     charge_amount_cents + subscription_amount_cents
   end
+
+  def total_amount_currency
+    subscription.plan.amount_currency
+  end
+
+  alias charge_amount_currency total_amount_currency
+  alias subscription_amount_currency total_amount_currency
 end

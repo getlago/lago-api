@@ -67,36 +67,8 @@ class Subscription < ApplicationRecord
     next_subscriptions.not_canceled.order(created_at: :desc).first
   end
 
-  def pending_start_date
-    return unless pending?
-
-    (created_at.end_of_month + 1.day).to_date
-  end
-
-  def next_pending_start_date
-    following_subscription = next_subscription
-
-    return unless following_subscription
-    return unless following_subscription.pending?
-
-    last_interval_date
-  end
-
   def already_billed?
     fees.subscription_kind.any?
-  end
-
-  def last_interval_date
-    case plan.interval.to_sym
-    when :weekly
-      (created_at.end_of_week + 1.day).to_date
-    when :monthly
-      (created_at.end_of_month + 1.day).to_date
-    when :yearly
-      (created_at.end_of_year + 1.day).to_date
-    else
-      raise NotImplementedError
-    end
   end
 
   def validate_unique_id
