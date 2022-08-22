@@ -10,8 +10,8 @@ module Wallets
     def valid?
       errors = []
       errors << valid_customer?
-      errors << valid_paid_credits_amount?
-      errors << valid_granted_credits_amount?
+      errors << valid_paid_credits_amount? if args[:paid_credits]
+      errors << valid_granted_credits_amount? if args[:granted_credits]
       errors = errors.compact
 
       unless errors.empty?
@@ -42,7 +42,7 @@ module Wallets
     end
 
     def valid_paid_credits_amount?
-      return 'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
+      'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
     end
 
     def valid_granted_credits_amount?
