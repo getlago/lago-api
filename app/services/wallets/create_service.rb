@@ -17,7 +17,6 @@ module Wallets
 
       WalletTransactions::CreateJob.perform_later(
         organization_id: args[:organization_id],
-        customer_id: args[:customer_id],
         wallet_id: wallet.id,
         paid_credits: args[:paid_credits],
         granted_credits: args[:granted_credits],
