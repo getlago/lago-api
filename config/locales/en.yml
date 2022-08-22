@@ -14,7 +14,10 @@ en:
         greater_than: value_is_out_of_range
         missing_graduated_range: missing_graduated_range
         invalid_amount: invalid_amount
+        invalid_flat_amount: invalid_flat_amount
+        invalid_per_unit_amount: invalid_per_unit_amount
         invalid_graduated_ranges: invalid_graduated_ranges
+        invalid_ranges: invalid_ranges
         invalid_free_units: invalid_free_units
         invalid_package_size: invalid_package_size
         invalid_rate: invalid_rate

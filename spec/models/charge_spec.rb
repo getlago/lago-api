@@ -214,4 +214,57 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '.validate_volume' do
+    subject(:charge) do
+      build(:volume_charge, properties: charge_properties)
+    end
+
+    let(:charge_properties) { { ranges: [{ 'foo' => 'bar' }] } }
+    let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
+
+    let(:service_response) do
+      BaseService::Result.new.fail!(
+        code: :invalid_properties,
+        message: [
+          :invalid_amount,
+          :invalid_ranges,
+        ],
+      )
+    end
+
+    it 'delegates to a validation service' do
+      allow(Charges::Validators::VolumeService).to receive(:new)
+        .and_return(validation_service)
+      allow(validation_service).to receive(:validate)
+        .and_return(service_response)
+
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include('invalid_amount')
+        expect(charge.errors.messages[:properties]).to include('invalid_ranges')
+
+        expect(Charges::Validators::VolumeService).to have_received(:new)
+          .with(charge: charge)
+        expect(validation_service).to have_received(:validate)
+      end
+    end
+
+    context 'when charge model is not volume' do
+      subject(:charge) { build(:standard_charge) }
+
+      it 'does not apply the validation' do
+        allow(Charges::Validators::VolumeService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:validate)
+          .and_return(service_response)
+
+        charge.valid?
+
+        expect(Charges::Validators::VolumeService).not_to have_received(:new)
+        expect(validation_service).not_to have_received(:validate)
+      end
+    end
+  end
 end
