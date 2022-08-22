@@ -13,7 +13,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         customer_id: customer.customer_id,
         plan_code: plan.code,
         name: 'subscription name',
-        unique_id: SecureRandom.uuid
+        unique_id: SecureRandom.uuid,
+        billing_time: 'anniversary',
       }
     end
 
@@ -31,6 +32,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(result[:status]).to eq('active')
       expect(result[:name]).to eq('subscription name')
       expect(result[:started_at]).to be_present
+      expect(result[:billing_time]).to eq('anniversary')
     end
 
     context 'with invalid params' do

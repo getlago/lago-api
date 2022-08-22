@@ -2,7 +2,7 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan, :current_subscription, :name, :unique_id
+    attr_reader :current_customer, :current_plan, :current_subscription, :name, :unique_id, :billing_time
 
     def create_from_api(organization:, params:)
       if params[:customer_id]
@@ -12,12 +12,14 @@ module Subscriptions
         )
       end
 
+      # NOTE: prepare subscription attributes
       @current_plan = Plan.find_by(
         organization_id: organization.id,
         code: params[:plan_code]&.strip,
       )
       @name = params[:name]&.strip
       @unique_id = params[:unique_id]&.strip
+      @billing_time = params[:billing_time]
       @current_subscription = find_current_subscription(subscription_id: params[:subscription_id])
 
       process_create
@@ -35,6 +37,7 @@ module Subscriptions
         organization_id: args[:organization_id],
         id: args[:plan_id]&.strip,
       )
+
       @name = args[:name]&.strip
       @unique_id = SecureRandom.uuid
       @current_subscription = find_current_subscription(subscription_id: args[:subscription_id])
@@ -52,12 +55,17 @@ module Subscriptions
         return result.fail!(code: 'currencies_does_not_match',message: 'currencies does not match')
       end
 
-
       result.subscription = handle_subscription
       track_subscription_created(result.subscription)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
+    rescue ArgumentError
+      result.fail!(
+        code: 'unprocessable_entity',
+        message: 'Validation error on the record',
+        details: { billing_time: ['value_is_invalid'] },
+      )
     end
 
     def handle_subscription
@@ -87,7 +95,8 @@ module Subscriptions
         plan_id: current_plan.id,
         subscription_date: Time.zone.now.to_date,
         name: name,
-        unique_id: unique_id || current_customer.customer_id
+        unique_id: unique_id || current_customer.customer_id,
+        billing_time: billing_time || :calendar,
       )
       new_subscription.mark_as_active!
 
@@ -109,6 +118,7 @@ module Subscriptions
         unique_id: current_subscription.unique_id,
         previous_subscription_id: current_subscription.id,
         subscription_date: current_subscription.subscription_date,
+        billing_time: current_subscription.billing_time,
       )
 
       ActiveRecord::Base.transaction do
@@ -151,6 +161,7 @@ module Subscriptions
           previous_subscription_id: current_subscription.id,
           subscription_date: current_subscription.subscription_date,
           status: :pending,
+          billing_time: current_subscription.billing_time,
         )
       end
 
@@ -184,8 +195,9 @@ module Subscriptions
           plan_code: subscription.plan.code,
           plan_name: subscription.plan.name,
           subscription_type: subscription_type,
-          organization_id: subscription.organization.id
-        }
+          organization_id: subscription.organization.id,
+          billing_time: subscription.billing_time,
+        },
       )
     end
 

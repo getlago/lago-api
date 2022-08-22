@@ -18,6 +18,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         plan_code: plan.code,
         name: 'invoice display name',
         unique_id: unique_id,
+        billing_time: 'anniversary',
       }
     end
 
@@ -43,6 +44,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.name).to eq('invoice display name')
         expect(subscription).to be_active
         expect(subscription.unique_id).to be_present
+        expect(subscription).to be_anniversary
       end
     end
 
@@ -56,6 +58,30 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         )
 
         expect(result.subscription.unique_id).to eq(customer.customer_id)
+      end
+    end
+
+    context 'when billing_time is not provided' do
+      let(:params) do
+        {
+          customer_id: customer.customer_id,
+          plan_code: plan.code,
+          name: 'invoice display name',
+          unique_id: unique_id,
+        }
+      end
+
+      it 'creates a calendar subscription' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.subscription).to be_calendar
+        end
       end
     end
 
@@ -74,8 +100,9 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_code: subscription.plan.code,
           plan_name: subscription.plan.name,
           subscription_type: 'create',
-          organization_id: subscription.organization.id
-        }
+          organization_id: subscription.organization.id,
+          billing_time: 'anniversary',
+        },
       )
     end
 
@@ -158,6 +185,31 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         expect(result).not_to be_success
         expect(result.error).to eq('plan does not exists')
+      end
+    end
+
+    context 'when billing_time is invalid' do
+      let(:params) do
+        {
+          customer_id: customer.id,
+          plan_code: plan.code,
+          unique_id: unique_id,
+          billing_time: :foo,
+        }
+      end
+
+      it 'fails' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to eq('Validation error on the record')
+          expect(result.error_code).to eq('unprocessable_entity')
+          expect(result.error_details.keys).to eq([:billing_time])
+        end
       end
     end
 
@@ -476,8 +528,9 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_code: subscription.plan.code,
           plan_name: subscription.plan.name,
           subscription_type: 'create',
-          organization_id: subscription.organization.id
-        }
+          organization_id: subscription.organization.id,
+          billing_time: 'calendar',
+        },
       )
     end
 
