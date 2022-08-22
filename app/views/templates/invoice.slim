@@ -258,9 +258,10 @@ html
           tr
             td.body-2 width="70%" Sub total
             td.body-1 width="30%" = subtotal_before_prepaid_credits.format
-          tr
-            td.body-2 width="70%" Prepaid credits
-            td.body-1 width="30%" = applied_prepaid_credit_amount.format
+          - if subscription?
+            tr
+              td.body-2 width="70%" Prepaid credits
+              td.body-1 width="30%" = applied_prepaid_credit_amount.format
           tr
             td.body-2 Tax
             td.body-1 = vat_amount.format
