@@ -531,7 +531,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_name: subscription.plan.name,
           subscription_type: 'create',
           organization_id: subscription.organization.id,
-          billing_time: 'calendar',
+          billing_time: 'anniversary',
         },
       )
     end
