@@ -53,6 +53,10 @@ class Invoice < ApplicationRecord
     fees.subscription_kind.sum(:amount_cents)
   end
 
+  def subscription_amount_currency
+    amount_currency
+  end
+
   def credit_amount_cents
     credits.sum(:amount_cents)
   end

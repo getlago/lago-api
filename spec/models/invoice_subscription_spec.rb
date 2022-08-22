@@ -55,6 +55,44 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
+  describe '#charges_from_date' do
+    it 'returns first fee charges_from_date' do
+      create(
+        :fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        properties: { charges_from_date: '2022-01-01' },
+      )
+
+      expect(invoice_subscription.charges_from_date).to eq(Date.parse('2022-01-01'))
+    end
+
+    context 'when fees are empty' do
+      it 'returns nil' do
+        expect(invoice_subscription.charges_from_date).to be_nil
+      end
+    end
+  end
+
+  describe '#charges_to_date' do
+    it 'returns first fee charges_to_date' do
+      create(
+        :fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        properties: { charges_to_date: '2022-01-31' },
+      )
+
+      expect(invoice_subscription.charges_to_date).to eq(Date.parse('2022-01-31'))
+    end
+
+    context 'when fees are empty' do
+      it 'returns nil' do
+        expect(invoice_subscription.charges_to_date).to be_nil
+      end
+    end
+  end
+
   describe '#charge_amount_cents' do
     it 'returns the sum of the related charge fees' do
       charge = create(:standard_charge)
@@ -133,6 +171,24 @@ RSpec.describe InvoiceSubscription, type: :model do
       )
 
       expect(invoice_subscription.total_amount_cents).to eq(350)
+    end
+  end
+
+  describe '#total_amount_currency' do
+    it 'returns the currency of the total amount' do
+      expect(invoice_subscription.total_amount_currency).to eq(subscription.plan.amount_currency)
+    end
+  end
+
+  describe '#charge_amount_currency' do
+    it 'returns the currency of the charge amount' do
+      expect(invoice_subscription.charge_amount_currency).to eq(subscription.plan.amount_currency)
+    end
+  end
+
+  describe '#subscription_amount_currency' do
+    it 'returns the currency of the subscription amount' do
+      expect(invoice_subscription.subscription_amount_currency).to eq(subscription.plan.amount_currency)
     end
   end
 end
