@@ -37,7 +37,7 @@ module Types
         return unless object.next_subscription
         return unless object.next_subscription.pending?
 
-        Subscriptions::DatesService.new_instance(object, Time.zone.today)
+        ::Subscriptions::DatesService.new_instance(object, Time.zone.today)
           .next_end_of_period(Time.zone.today)
       end
     end
