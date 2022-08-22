@@ -18,9 +18,6 @@ module Types
       field :status, Types::Invoices::StatusTypeEnum, null: false
       field :file_url, String, null: true
 
-      field :from_date, GraphQL::Types::ISO8601Date, null: false
-      field :to_date, GraphQL::Types::ISO8601Date, null: false
-      field :charges_from_date, GraphQL::Types::ISO8601Date, null: true
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

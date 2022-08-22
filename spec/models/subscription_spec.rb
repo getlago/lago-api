@@ -29,8 +29,6 @@ RSpec.describe Subscription, type: :model do
 
       it { expect(previous_subscription).to be_upgraded }
 
-      it { expect(previous_subscription.next_pending_start_date).to be nil }
-
       context 'when previous plan was more expensive' do
         let(:previous_plan) do
           create(:plan, amount_cents: plan.amount_cents + 10)
@@ -46,14 +44,6 @@ RSpec.describe Subscription, type: :model do
         end
 
         it { expect(previous_subscription).not_to be_upgraded }
-      end
-
-      context 'when next subscription is pending' do
-        before do
-          subscription.update!(status: :pending)
-        end
-
-        it { expect(previous_subscription.next_pending_start_date).not_to be nil }
       end
     end
   end
