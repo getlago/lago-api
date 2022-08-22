@@ -23,17 +23,9 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
-# Ignore master key for decrypting credentials and more.
-/config/master.key
-
 .env
 .byebug_history
 .irb_history
-
-# Ignore credential keys
-/config/credentials/staging.key
-/config/credentials/development.key
-/config/credentials/test.key
 
 # Ignore Simplecov coverage status
 /coverage/*
