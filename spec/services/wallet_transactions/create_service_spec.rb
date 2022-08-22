@@ -22,7 +22,8 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       {
         name: 'New Wallet',
         wallet_id: wallet.id,
-        customer_id: customer.id,
+        customer_id: customer.customer_id,
+        organization_id: organization.id,
         paid_credits: paid_credits,
         granted_credits: granted_credits,
       }

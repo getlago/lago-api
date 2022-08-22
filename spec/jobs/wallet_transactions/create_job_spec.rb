@@ -13,6 +13,8 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
     allow(wallet_transaction_create_service).to receive(:create)
 
     described_class.perform_now(
+      organization_id: '123456',
+      customer_id: '123456',
       wallet_id: '123456',
       paid_credits: '1.00',
       granted_credits: '1.00',

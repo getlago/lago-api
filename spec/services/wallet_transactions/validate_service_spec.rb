@@ -17,7 +17,8 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
   let(:args) do
     {
       wallet_id: wallet_id,
-      customer_id: customer.id,
+      customer_id: customer.customer_id,
+      organization_id: organization.id,
       paid_credits: paid_credits,
       granted_credits: granted_credits,
     }

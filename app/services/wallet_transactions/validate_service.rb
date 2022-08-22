@@ -31,9 +31,14 @@ module WalletTransactions
     attr_accessor :result, :args
 
     def valid_wallet?
+      current_customer = Customer.find_by(
+        customer_id: args[:customer_id],
+        organization_id: args[:organization_id],
+      )
+
       current_wallet = Wallet.find_by(
         id: args[:wallet_id],
-        customer_id: args[:customer_id],
+        customer_id: current_customer.id,
       )
 
       return 'wallet_not_found' unless current_wallet

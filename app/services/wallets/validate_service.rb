@@ -31,14 +31,14 @@ module Wallets
     attr_accessor :result, :args
 
     def valid_customer?
-      current_customer = Customer.find_by(
-        id: args[:customer_id],
+      result.current_customer = Customer.find_by(
+        customer_id: args[:customer_id],
         organization_id: args[:organization_id],
       )
 
-      return 'customer_not_found' unless current_customer
-      return 'wallet_already_exists' if current_customer.wallets.active.exists?
-      return 'no_active_subscription' unless current_customer.subscriptions.active.exists?
+      return 'customer_not_found' unless result.current_customer
+      return 'wallet_already_exists' if result.current_customer.wallets.active.exists?
+      return 'no_active_subscription' unless result.current_customer.subscriptions.active.exists?
     end
 
     def valid_paid_credits_amount?
