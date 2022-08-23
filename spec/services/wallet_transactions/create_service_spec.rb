@@ -9,7 +9,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer, balance: '10.00', credits_balance: '10.00') }
+  let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
 
   before do
     subscription
@@ -40,8 +40,8 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     it 'updates wallet balance only with granted credits' do
       create_service.create(**create_args)
 
-      expect(wallet.reload.balance).to eq('25.0')
-      expect(wallet.reload.credits_balance).to eq('25.0')
+      expect(wallet.reload.balance).to eq(25.0)
+      expect(wallet.reload.credits_balance).to eq(25.0)
     end
 
     context 'with validation error' do

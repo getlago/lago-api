@@ -70,9 +70,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
     context 'when customer has active wallet and invoice type is credit' do
       let(:subscription) { create(:subscription, customer: customer) }
-      let(:wallet) { create(:wallet, customer: customer, balance: '10.00', credits_balance: '10.00') }
+      let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
       let(:wallet_transaction) do
-        create(:wallet_transaction, wallet: wallet, amount: '15.00', credit_amount: '15.00', status: 'pending')
+        create(:wallet_transaction, wallet: wallet, amount: 15.0, credit_amount: 15.0, status: 'pending')
       end
       let(:fee) do
         create(:fee,
@@ -94,7 +94,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         stripe_service.create
 
         aggregate_failures do
-          expect(wallet.reload.credits_balance).to eq('25.0')
+          expect(wallet.reload.credits_balance).to eq(25.0)
           expect(wallet_transaction.reload.status).to eq('settled')
         end
       end

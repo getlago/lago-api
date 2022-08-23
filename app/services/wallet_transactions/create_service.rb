@@ -31,7 +31,7 @@ module WalletTransactions
       wallet_transaction = WalletTransaction.create!(
         wallet: wallet,
         transaction_type: :inbound,
-        amount: BigDecimal(wallet.rate_amount) * paid_credits_amount,
+        amount: wallet.rate_amount * paid_credits_amount,
         credit_amount: paid_credits_amount,
         status: :pending
       )
