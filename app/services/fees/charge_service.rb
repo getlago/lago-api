@@ -49,7 +49,7 @@ module Fees
         subscription: subscription,
         charge: charge,
         amount_cents: amount_cents,
-        amount_currency: charge.amount_currency,
+        amount_currency: currency,
         vat_rate: customer.applicable_vat_rate,
         units: amount_result.units,
         properties: boundaries.to_h,

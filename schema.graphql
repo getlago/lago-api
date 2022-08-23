@@ -135,7 +135,6 @@ enum BillingTimeEnum {
 
 type Charge {
   amount: String
-  amountCurrency: CurrencyEnum
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
@@ -152,7 +151,6 @@ type Charge {
 
 input ChargeInput {
   amount: String
-  amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   fixedAmount: String
@@ -175,7 +173,6 @@ enum ChargeModelEnum {
 
 type ChargeUsage {
   amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
   billableMetric: BillableMetric!
   charge: Charge!
   units: Float!

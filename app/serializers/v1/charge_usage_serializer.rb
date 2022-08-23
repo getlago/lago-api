@@ -16,7 +16,7 @@ module V1
           name: model.billable_metric.name,
           code: model.billable_metric.code,
           aggregation_type: model.billable_metric.aggregation_type,
-        }
+        },
       }
     end
   end

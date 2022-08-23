@@ -24,7 +24,6 @@ RSpec.describe Plans::CreateService, type: :service do
         charges: [
           {
             billable_metric_id: billable_metrics.first.id,
-            amount_currency: 'USD',
             charge_model: 'standard',
             properties: {
               amount: '100',
@@ -32,7 +31,6 @@ RSpec.describe Plans::CreateService, type: :service do
           },
           {
             billable_metric_id: billable_metrics.last.id,
-            amount_currency: 'EUR',
             charge_model: 'graduated',
             properties: [
               {
@@ -85,8 +83,8 @@ RSpec.describe Plans::CreateService, type: :service do
           nb_percentage_charges: 0,
           nb_graduated_charges: 1,
           nb_package_charges: 0,
-          organization_id: plan.organization_id
-        }
+          organization_id: plan.organization_id,
+        },
       )
     end
 
