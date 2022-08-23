@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
+ActiveRecord::Schema[7.0].define(version: 2022_08_23_135203) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -19,9 +19,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
-    t.uuid "record_id"
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
+    t.uuid "record_id"
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
   end
 
@@ -326,9 +326,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
     t.datetime "updated_at", null: false
     t.uuid "previous_subscription_id"
     t.date "subscription_date"
-    t.integer "billing_time", default: 0, null: false
     t.string "name"
     t.string "unique_id", null: false
+    t.integer "billing_time", default: 0, null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
@@ -344,8 +344,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
     t.uuid "wallet_id", null: false
     t.integer "transaction_type", null: false
     t.integer "status", null: false
-    t.decimal "amount", precision: 5, default: "0", null: false
-    t.decimal "credit_amount", precision: 5, default: "0", null: false
+    t.decimal "amount", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "credit_amount", precision: 30, scale: 5, default: "0.0", null: false
     t.datetime "settled_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -359,17 +359,17 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
     t.integer "status", null: false
     t.string "currency", null: false
     t.string "name"
-    t.string "rate_amount", null: false
-    t.string "credits_balance", default: "0.00", null: false
-    t.string "balance", default: "0.00", null: false
-    t.string "consumed_credits", default: "0.00", null: false
+    t.decimal "rate_amount", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "credits_balance", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "balance", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "consumed_credits", precision: 30, scale: 5, default: "0.0", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
     t.datetime "terminated_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.decimal "consumed_amount", precision: 5, default: "0"
+    t.decimal "consumed_amount", precision: 30, scale: 5, default: "0.0"
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
