@@ -49,18 +49,20 @@ module WalletTransactions
 
       return if granted_credits_amount.zero?
 
-      wallet_transaction = WalletTransaction.create!(
-        wallet: wallet,
-        transaction_type: :inbound,
-        amount: BigDecimal(wallet.rate_amount) * granted_credits_amount,
-        credit_amount: granted_credits_amount,
-        status: :settled,
-        settled_at: Time.zone.now,
-      )
+      ActiveRecord::Base.transaction do
+        wallet_transaction = WalletTransaction.create!(
+          wallet: wallet,
+          transaction_type: :inbound,
+          amount: wallet.rate_amount * granted_credits_amount,
+          credit_amount: granted_credits_amount,
+          status: :settled,
+          settled_at: Time.current,
+        )
 
-      Wallets::Balance::IncreaseService.new(wallet: wallet, credits_amount: granted_credits_amount).call
+        Wallets::Balance::IncreaseService.new(wallet: wallet, credits_amount: granted_credits_amount).call
 
-      wallet_transaction
+        wallet_transaction
+      end
     end
 
     def valid?(**args)
