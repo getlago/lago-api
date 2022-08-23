@@ -6,7 +6,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer, balance: '10.00', credits_balance: '10.00') }
+  let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
 
   let(:mutation) do
     <<-GQL
