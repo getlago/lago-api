@@ -78,7 +78,7 @@ class Invoice < ApplicationRecord
   def subtotal_before_prepaid_credits
     return amount unless applied_prepaid_credits.exists?
 
-    amount - applied_prepaid_credit_amount
+    amount + applied_prepaid_credit_amount
   end
 
   def organization
