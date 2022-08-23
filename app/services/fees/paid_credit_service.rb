@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 module Fees
-  class AddOnService < BaseService
-    def initialize(invoice:, applied_add_on:, subscription:)
+  class PaidCreditService < BaseService
+    def initialize(invoice:, wallet_transaction:, customer:, plan:)
       @invoice = invoice
-      @subscription = subscription
-      @applied_add_on = applied_add_on
+      @customer = customer
+      @wallet_transaction = wallet_transaction
+      @plan = plan
       super(nil)
     end
 
@@ -14,13 +15,11 @@ module Fees
 
       new_fee = Fee.new(
         invoice: invoice,
-        subscription: subscription,
-        applied_add_on: applied_add_on,
-        amount_cents: applied_add_on.amount_cents,
+        fee_type: :credit,
+        invoiceable_type: 'WalletTransaction',
+        invoiceable_id: wallet_transaction.id,
+        amount_cents: wallet_transaction.amount,
         amount_currency: plan.amount_currency,
-        fee_type: :add_on,
-        invoiceable_type: 'AppliedAddOn',
-        invoiceable_id: applied_add_on.id,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
       )
@@ -36,13 +35,10 @@ module Fees
 
     private
 
-    attr_reader :invoice, :applied_add_on, :subscription
-
-    delegate :customer, to: :invoice
-    delegate :plan, to: :subscription
+    attr_reader :invoice, :wallet_transaction, :customer, :plan
 
     def already_billed?
-      existing_fee = invoice.fees.find_by(applied_add_on_id: applied_add_on.id)
+      existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: 'WalletTransaction')
       return false unless existing_fee
 
       result.fee = existing_fee

@@ -34,6 +34,7 @@ module Invoices
         payment.save!
 
         update_invoice_status(payment.status)
+        update_wallet(payment.status)
         track_payment_status_changed(payment.invoice)
 
         result.payment = payment
@@ -153,6 +154,17 @@ module Invoices
         return unless Invoice::STATUS.include?(status&.to_sym)
 
         invoice.update!(status: status)
+      end
+
+      def update_wallet(status)
+        return unless status == 'succeeded'
+        return unless invoice.invoice_type == 'credit'
+
+        wallet_transaction = invoice.fees.find_by(fee_type: 'credit').invoiceable
+        wallet_transaction.update!(status: :settled, settled_at: Time.zone.now)
+
+        Wallets::Balance::IncreaseService
+          .new(wallet: wallet_transaction.wallet, credits_amount: wallet_transaction.credit_amount).call
       end
 
       def deliver_error_webhook(stripe_error)

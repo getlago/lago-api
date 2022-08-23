@@ -195,9 +195,13 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
     t.integer "events_count"
+    t.integer "fee_type", null: false
+    t.string "invoiceable_type"
+    t.uuid "invoiceable_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
+    t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
   end
 
@@ -349,8 +353,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
     t.datetime "settled_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "invoice_id"
-    t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end
 
@@ -404,7 +406,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_141616) do
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
-  add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
 end
