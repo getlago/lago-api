@@ -8,8 +8,8 @@ Rails.application.configure do
   config.consider_all_requests_local = false
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
-  config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present?
-    if ENV['LAGO_AWS_S3_ENDPOINT'].present?
+  config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present? && ENV['LAGO_USE_AWS_S3'] == 'true'
+    if ENV['LAGO_AWS_S3_ENDPOINT'].present? && !ENV['LAGO_AWS_S3_ENDPOINT'].empty?
       :amazon_compatible_endpoint
     else
       :amazon
@@ -25,7 +25,7 @@ Rails.application.configure do
   config.active_support.report_deprecations = false
   config.log_formatter = ::Logger::Formatter.new
 
-  if ENV['RAILS_LOG_TO_STDOUT'].present?
+  if ENV['RAILS_LOG_TO_STDOUT'].present? && ENV['RAILS_LOG_TO_STDOUT'] == 'true'
     logger           = ActiveSupport::Logger.new($stdout)
     logger.formatter = config.log_formatter
     config.logger    = ActiveSupport::TaggedLogging.new(logger)
