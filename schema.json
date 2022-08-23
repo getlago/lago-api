@@ -8599,6 +8599,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "credit",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -9079,7 +9085,7 @@
               "description": "Creates a new Customer Wallet Transaction",
               "type": {
                 "kind": "OBJECT",
-                "name": "WalletTransaction",
+                "name": "WalletTransactionCollection",
                 "ofType": null
               },
               "isDeprecated": false,

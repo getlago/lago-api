@@ -2688,6 +2688,7 @@ enum InvoiceStatusTypeEnum {
 
 enum InvoiceTypeEnum {
   add_on
+  credit
   subscription
 }
 
@@ -2811,7 +2812,7 @@ type Mutation {
     Parameters for CreateCustomerWalletTransaction
     """
     input: CreateCustomerWalletTransactionInput!
-  ): WalletTransaction
+  ): WalletTransactionCollection
 
   """
   Creates a new Plan

@@ -35,7 +35,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         .and_return(
           Stripe::PaymentIntent.construct_from(
             id: 'ch_123456',
-            status: 'pending',
+            status: 'succeeded',
             amount: invoice.total_amount_cents,
             currency: invoice.total_amount_currency,
           ),
@@ -54,7 +54,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       expect(result).to be_success
 
       aggregate_failures do
-        expect(result.invoice).to be_pending
+        expect(result.invoice).to be_succeeded
 
         expect(result.payment.id).to be_present
         expect(result.payment.invoice).to eq(invoice)
@@ -62,10 +62,42 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result.payment.payment_provider_customer).to eq(stripe_customer)
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.total_amount_currency)
-        expect(result.payment.status).to eq('pending')
+        expect(result.payment.status).to eq('succeeded')
       end
 
       expect(Stripe::PaymentIntent).to have_received(:create)
+    end
+
+    context 'when customer has active wallet and invoice type is credit' do
+      let(:subscription) { create(:subscription, customer: customer) }
+      let(:wallet) { create(:wallet, customer: customer, balance: '10.00', credits_balance: '10.00') }
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet: wallet, amount: '15.00', credit_amount: '15.00', status: 'pending')
+      end
+      let(:fee) do
+        create(:fee,
+          fee_type: 'credit',
+          invoiceable_type: 'WalletTransaction',
+          invoiceable_id: wallet_transaction.id,
+          invoice: invoice
+        )
+      end
+
+      before do
+        wallet_transaction
+        fee
+        subscription
+        invoice.update(invoice_type: 'credit')
+      end
+
+      it 'updates wallet balance and update wallet_transaction status' do
+        stripe_service.create
+
+        aggregate_failures do
+          expect(wallet.reload.credits_balance).to eq('25.0')
+          expect(wallet_transaction.reload.status).to eq('settled')
+        end
+      end
     end
 
     it 'calls SegmentTrackJob' do

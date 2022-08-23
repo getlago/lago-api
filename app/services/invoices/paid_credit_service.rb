@@ -24,7 +24,7 @@ module Invoices
         compute_amounts(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-        invoice.total_amount_currency = plan.amount_currency
+        invoice.total_amount_currency = currency
         invoice.save!
 
         track_invoice_created(invoice)
@@ -43,22 +43,22 @@ module Invoices
 
     attr_accessor :customer, :date, :wallet_transaction
 
-    def plan
-      @plan ||= customer.active_subscription&.plan
+    def currency
+      @currency ||= customer.default_currency
     end
 
     def compute_amounts(invoice)
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
-      invoice.amount_currency = plan.amount_currency
+      invoice.amount_currency = currency
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-      invoice.vat_amount_currency = plan.amount_currency
+      invoice.vat_amount_currency = currency
     end
 
     def create_credit_fee(invoice)
       fee_result = Fees::PaidCreditService
-        .new(invoice: invoice, wallet_transaction: wallet_transaction, customer: customer, plan: plan).create
+        .new(invoice: invoice, wallet_transaction: wallet_transaction, customer: customer).create
 
       raise fee_result.throw_error unless fee_result.success?
     end

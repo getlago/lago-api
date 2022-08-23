@@ -51,6 +51,7 @@ module Invoices
 
         payment.update!(status: status)
         payment.invoice.update!(status: status)
+        update_wallet(status)
         track_payment_status_changed(payment.invoice)
 
         result
@@ -160,7 +161,11 @@ module Invoices
         return unless status == 'succeeded'
         return unless invoice.invoice_type == 'credit'
 
-        wallet_transaction = invoice.fees.find_by(fee_type: 'credit').invoiceable
+        wallet_transaction = invoice.fees.find_by(fee_type: 'credit')&.invoiceable
+
+        return unless wallet_transaction
+        return if wallet_transaction.status == 'settled'
+
         wallet_transaction.update!(status: :settled, settled_at: Time.zone.now)
 
         Wallets::Balance::IncreaseService
