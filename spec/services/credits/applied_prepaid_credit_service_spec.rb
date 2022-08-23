@@ -43,8 +43,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       result = credit_service.create
       wallet = result.prepaid_credit.wallet_transaction.wallet
 
-      expect(wallet.balance).to eq('9.0')
-      expect(wallet.credits_balance).to eq('9.0')
+      expect(wallet.balance).to eq(9.0)
+      expect(wallet.credits_balance).to eq(9.0)
     end
 
     context 'when wallet credits are less than invoice amount' do
@@ -72,8 +72,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
         result = credit_service.create
         wallet = result.prepaid_credit.wallet_transaction.wallet
 
-        expect(wallet.balance).to eq('0.0')
-        expect(wallet.credits_balance).to eq('0.0')
+        expect(wallet.balance).to eq(0.0)
+        expect(wallet.credits_balance).to eq(0.0)
       end
     end
   end

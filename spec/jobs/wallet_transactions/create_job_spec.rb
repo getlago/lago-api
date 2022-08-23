@@ -19,6 +19,11 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
       granted_credits: '1.00',
     )
 
-    expect(wallet_transaction_create_service).to have_received(:create)
+    expect(wallet_transaction_create_service).to have_received(:create).with(
+      organization_id: '123456',
+      wallet_id: '123456',
+      paid_credits: '1.00',
+      granted_credits: '1.00',
+    )
   end
 end

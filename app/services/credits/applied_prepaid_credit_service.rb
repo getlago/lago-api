@@ -14,7 +14,7 @@ module Credits
 
       amount_cents = compute_amount
       amount = compute_amount_from_cents(amount_cents)
-      credit_amount = amount.fdiv(BigDecimal(wallet.rate_amount))
+      credit_amount = amount.fdiv(wallet.rate_amount)
 
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransaction.create!(
@@ -23,7 +23,7 @@ module Credits
           amount: amount,
           credit_amount: credit_amount,
           status: :settled,
-          settled_at: Time.zone.now,
+          settled_at: Time.current,
         )
 
         new_credit = AppliedPrepaidCredit.create!(

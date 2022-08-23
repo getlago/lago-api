@@ -11,14 +11,15 @@ module Wallets
       end
 
       def call
-        amount = BigDecimal(wallet.rate_amount) * credits_amount
+        amount = wallet.rate_amount * credits_amount
 
         wallet.update!(
-          balance: BigDecimal(wallet.balance) - amount,
-          credits_balance: BigDecimal(wallet.credits_balance) - credits_amount,
+          balance: wallet.balance - amount,
+          credits_balance: wallet.credits_balance - credits_amount,
           last_balance_sync_at: Time.zone.now,
-          consumed_credits: BigDecimal(wallet.consumed_credits) + credits_amount,
-          last_consumed_credit_at: Time.zone.now
+          consumed_credits: wallet.consumed_credits + credits_amount,
+          consumed_amount: wallet.consumed_amount + amount,
+          last_consumed_credit_at: Time.current
         )
       end
 

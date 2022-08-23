@@ -742,7 +742,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       it 'updates wallet balance' do
         invoice_service.create
 
-        expect(wallet.reload.balance).to eq('0.0')
+        expect(wallet.reload.balance).to eq(0.0)
       end
     end
   end
