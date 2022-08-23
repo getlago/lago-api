@@ -137,11 +137,9 @@ module Invoices
     end
 
     def should_create_applied_prepaid_credit?
-      return false unless wallet
-      return false unless wallet.active?
-      return false unless BigDecimal(wallet.balance) > 0
+      return false unless wallet&.active?
 
-      true
+      wallet.balance > 0
     end
 
     def create_credit(invoice)
