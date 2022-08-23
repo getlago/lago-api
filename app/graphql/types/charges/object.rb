@@ -28,6 +28,9 @@ module Types
       field :free_units_per_events, Integer, null: true
       field :free_units_per_total_aggregation, String, null: true
 
+      # NOTE: Volume charge model
+      field :volume_ranges, [Types::Charges::VolumeRange], null: true
+
       def amount
         return unless object.standard? || object.package?
 
@@ -74,6 +77,12 @@ module Types
         return unless object.percentage?
 
         object.properties['free_units_per_total_aggregation']
+      end
+
+      def volume_ranges
+        return unless object.volume?
+
+        object.properties['ranges']
       end
     end
   end

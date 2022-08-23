@@ -147,6 +147,7 @@ type Charge {
   packageSize: Int
   rate: String
   updatedAt: ISO8601DateTime!
+  volumeRanges: [VolumeRange!]
 }
 
 input ChargeInput {
@@ -161,6 +162,7 @@ input ChargeInput {
   id: ID
   packageSize: Int
   rate: String
+  volumeRanges: [VolumeRangeInput!]
 }
 
 enum ChargeModelEnum {
@@ -3616,6 +3618,20 @@ type User {
   id: ID!
   organizations: [Organization!]
   updatedAt: ISO8601DateTime!
+}
+
+type VolumeRange {
+  flatAmount: String!
+  fromValue: Int!
+  perUnitAmount: String!
+  toValue: Int
+}
+
+input VolumeRangeInput {
+  flatAmount: String!
+  fromValue: Int!
+  perUnitAmount: String!
+  toValue: Int
 }
 
 type Wallet {
