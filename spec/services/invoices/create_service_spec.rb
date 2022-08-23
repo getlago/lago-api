@@ -724,7 +724,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
           expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
-          expect(result.invoice.issuing_date.to_date).to eq(timestamp - 1.day)
+          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
