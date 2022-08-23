@@ -2,8 +2,8 @@
 
 module Invoices
   class PaidCreditService < BaseService
-    def initialize(customer:, wallet_transaction:, date:)
-      @customer = customer
+    def initialize(wallet_transaction:, date:)
+      @customer = wallet_transaction.wallet.customer
       @wallet_transaction = wallet_transaction
       @date = date
 

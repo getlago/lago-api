@@ -37,7 +37,6 @@ module WalletTransactions
       )
 
       BillPaidCreditJob.perform_later(
-        result.current_customer,
         wallet_transaction,
         Time.zone.now.to_date
       )

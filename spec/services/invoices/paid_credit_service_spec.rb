@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
-    described_class.new(customer: customer, wallet_transaction: wallet_transaction, date: date)
+    described_class.new(wallet_transaction: wallet_transaction, date: date)
   end
   let(:date) { Time.zone.now.to_date }
 

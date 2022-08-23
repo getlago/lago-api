@@ -5,9 +5,8 @@ class BillPaidCreditJob < ApplicationJob
 
   retry_on Sequenced::SequenceError
 
-  def perform(customer, wallet_transaction, date)
+  def perform(wallet_transaction, date)
     result = Invoices::PaidCreditService.new(
-      customer: customer,
       wallet_transaction: wallet_transaction,
       date: date,
     ).create
