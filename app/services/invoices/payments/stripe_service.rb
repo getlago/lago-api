@@ -158,8 +158,8 @@ module Invoices
       end
 
       def update_wallet(status)
-        return unless status == 'succeeded'
         return unless invoice.invoice_type == 'credit'
+        return unless status == 'succeeded'
 
         wallet_transaction = invoice.fees.find_by(fee_type: 'credit')&.invoiceable
 

@@ -20,19 +20,12 @@ module Mutations
 
         result = ::WalletTransactions::CreateService.new.create(
           organization_id: current_organization.id,
-          customer_id: customer(args[:wallet_id])&.customer_id,
           wallet_id: args[:wallet_id],
           paid_credits: args[:paid_credits],
           granted_credits: args[:granted_credits],
         )
 
         result.success? ? result.wallet_transactions : result_error(result)
-      end
-
-      private
-
-      def customer(wallet_id)
-        Wallet.find_by(id: wallet_id)&.customer
       end
     end
   end

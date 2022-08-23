@@ -17,9 +17,9 @@ class Fee < ApplicationRecord
   monetize :amount_cents
   monetize :vat_amount_cents
 
-  TYPE = %i[charge add_on subscription credit].freeze
+  FEE_TYPES = %i[charge add_on subscription credit].freeze
 
-  enum fee_type: TYPE
+  enum fee_type: FEE_TYPES
 
   validates :amount_currency, inclusion: { in: currency_list }
   validates :vat_amount_currency, inclusion: { in: currency_list }
