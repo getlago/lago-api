@@ -45,6 +45,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     expect(result.options).to eq({ running_total: [12, 24]})
   end
 
+  context 'without free_units_count' do
+    it 'includes all the events in running total' do
+      result = sum_service.aggregate(from_date: from_date, to_date: to_date)
+
+      expect(result.options).to eq({ running_total: [12, 24, 36, 48]})
+    end
+  end
+
   context 'when events are out of bounds' do
     let(:to_date) { Time.zone.now - 2.days }
 
