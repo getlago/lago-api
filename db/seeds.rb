@@ -66,7 +66,7 @@ Charge.create_with(
     status: :active,
   ).find_or_create_by!(
     customer: customer,
-    unique_id: SecureRandom.uuid,
+    external_id: SecureRandom.uuid,
     plan: plan,
   )
 

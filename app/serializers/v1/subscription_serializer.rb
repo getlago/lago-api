@@ -5,10 +5,10 @@ module V1
     def serialize
       {
         lago_id: model.id,
+        external_id: model.external_id,
         lago_customer_id: model.customer_id,
         customer_id: model.customer.customer_id,
         name: model.name,
-        unique_id: model.unique_id,
         plan_code: model.plan.code,
         status: model.status,
         billing_time: model.billing_time,

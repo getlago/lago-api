@@ -12,7 +12,7 @@ module V1
         timestamp: model.timestamp.iso8601,
         properties: model.properties,
         lago_subscription_id: model.subscription_id,
-        subscription_unique_id: model.subscription&.unique_id,
+        external_subscription_id: model.subscription&.external_id,
         created_at: model.created_at.iso8601
       }
     end

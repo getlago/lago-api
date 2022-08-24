@@ -2,7 +2,7 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan, :current_subscription, :name, :unique_id, :billing_time
+    attr_reader :current_customer, :current_plan, :current_subscription, :name, :external_id, :billing_time
 
     def create_from_api(organization:, params:)
       if params[:customer_id]
@@ -18,7 +18,7 @@ module Subscriptions
         code: params[:plan_code]&.strip,
       )
       @name = params[:name]&.strip
-      @unique_id = params[:unique_id]&.strip
+      @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
       @current_subscription = find_current_subscription(subscription_id: params[:subscription_id])
 
@@ -40,7 +40,7 @@ module Subscriptions
 
       # NOTE: prepare subscription attributes
       @name = args[:name]&.strip
-      @unique_id = SecureRandom.uuid
+      @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
       @current_subscription = find_current_subscription(subscription_id: args[:subscription_id])
 
@@ -97,7 +97,7 @@ module Subscriptions
         plan_id: current_plan.id,
         subscription_date: Time.zone.now.to_date,
         name: name,
-        unique_id: unique_id || current_customer.customer_id,
+        external_id: external_id || current_customer.customer_id,
         billing_time: billing_time || :calendar,
       )
       new_subscription.mark_as_active!
@@ -117,7 +117,7 @@ module Subscriptions
         customer: current_customer,
         plan: current_plan,
         name: name,
-        unique_id: current_subscription.unique_id,
+        external_id: current_subscription.external_id,
         previous_subscription_id: current_subscription.id,
         subscription_date: current_subscription.subscription_date,
         billing_time: current_subscription.billing_time,
@@ -159,7 +159,7 @@ module Subscriptions
           customer: current_customer,
           plan: current_plan,
           name: name,
-          unique_id: current_subscription.unique_id,
+          external_id: current_subscription.external_id,
           previous_subscription_id: current_subscription.id,
           subscription_date: current_subscription.subscription_date,
           status: :pending,
@@ -215,9 +215,9 @@ module Subscriptions
 
     def find_current_subscription(subscription_id:)
       return active_subscriptions&.find_by(id: subscription_id) if subscription_id
-      return active_subscriptions&.find_by(unique_id: unique_id) if unique_id
+      return active_subscriptions&.find_by(external_id: external_id) if external_id
 
-      active_subscriptions&.find_by(unique_id: current_customer.customer_id)
+      active_subscriptions&.find_by(external_id: current_customer.customer_id)
     end
   end
 end

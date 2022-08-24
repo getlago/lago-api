@@ -13,7 +13,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         customer_id: customer.customer_id,
         plan_code: plan.code,
         name: 'subscription name',
-        unique_id: SecureRandom.uuid,
+        external_id: SecureRandom.uuid,
         billing_time: 'anniversary',
       }
     end
