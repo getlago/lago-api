@@ -28,12 +28,11 @@ module BillableMetrics
 
       # NOTES: Return cumulative sum of field_name based on the number of free units.
       def running_total(events, free_units_count)
-        return [] if free_units_count.zero?
-
         total = 0.0
-        events.order(created_at: :asc)
-          .limit(free_units_count)
-          .pluck(Arel.sql("(#{sanitized_field_name})::numeric"))
+        events = events.order(created_at: :asc)
+        events = events.limit(free_units_count) unless free_units_count.zero?
+
+        events.pluck(Arel.sql("(#{sanitized_field_name})::numeric"))
           .map { |x| total += x }
       end
     end
