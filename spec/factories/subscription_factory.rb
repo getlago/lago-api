@@ -5,7 +5,7 @@ FactoryBot.define do
     customer
     plan
     status { :active }
-    unique_id { SecureRandom.uuid }
+    external_id { SecureRandom.uuid }
 
     factory :active_subscription do
       status { :active }

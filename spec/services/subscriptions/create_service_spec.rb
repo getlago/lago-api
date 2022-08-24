@@ -10,14 +10,14 @@ RSpec.describe Subscriptions::CreateService, type: :service do
   describe '.create_from_api' do
     let(:plan) { create(:plan, amount_cents: 100, organization: organization) }
     let(:customer) { create(:customer, organization: organization) }
-    let(:unique_id) { SecureRandom.uuid }
+    let(:external_id) { SecureRandom.uuid }
 
     let(:params) do
       {
         customer_id: customer.customer_id,
         plan_code: plan.code,
         name: 'invoice display name',
-        unique_id: unique_id,
+        external_id: external_id,
         billing_time: 'anniversary',
       }
     end
@@ -43,21 +43,21 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.subscription_date).to be_present
         expect(subscription.name).to eq('invoice display name')
         expect(subscription).to be_active
-        expect(subscription.unique_id).to be_present
+        expect(subscription.external_id).to be_present
         expect(subscription).to be_anniversary
       end
     end
 
-    context 'when unique_id is not given' do
-      let(:unique_id) { nil }
+    context 'when external_id is not given' do
+      let(:external_id) { nil }
 
-      it 'sets customer_id as unique_id' do
+      it 'sets customer_id as external_id' do
         result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
 
-        expect(result.subscription.unique_id).to eq(customer.customer_id)
+        expect(result.subscription.external_id).to eq(customer.customer_id)
       end
     end
 
@@ -67,7 +67,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           customer_id: customer.customer_id,
           plan_code: plan.code,
           name: 'invoice display name',
-          unique_id: unique_id,
+          external_id: external_id,
         }
       end
 
@@ -111,7 +111,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: SecureRandom.uuid,
           plan_code: plan.code,
-          unique_id: unique_id,
+          external_id: external_id,
         }
       end
 
@@ -153,7 +153,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: nil,
           plan_code: plan.code,
-          unique_id: unique_id,
+          external_id: external_id,
         }
       end
 
@@ -173,7 +173,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: customer.customer_id,
           plan_code: 'invalid_plan',
-          unique_id: unique_id,
+          external_id: external_id,
         }
       end
 
@@ -193,7 +193,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         {
           customer_id: customer.id,
           plan_code: plan.code,
-          unique_id: unique_id,
+          external_id: external_id,
           billing_time: :foo,
         }
       end
@@ -220,7 +220,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_code: plan.code,
           name: 'invoice display name',
           subscription_id: subscription.id,
-          unique_id: unique_id,
+          external_id: external_id,
         }
       end
       let(:subscription) do
@@ -248,18 +248,18 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
       end
 
-      context 'when unique_id is given but not subscription_id' do
+      context 'when external_id is given but not subscription_id' do
         let(:params) do
           {
             customer_id: customer.customer_id,
             plan_code: plan.code,
             name: 'invoice display name',
-            unique_id: unique_id,
+            external_id: external_id,
           }
         end
 
         it 'returns existing subscription' do
-          subscription.update!(unique_id: unique_id)
+          subscription.update!(external_id: external_id)
 
           result = create_service.create_from_api(
             organization: organization,
@@ -271,7 +271,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
       end
 
-      context 'when subscription_id and unique_id are not given' do
+      context 'when subscription_id and external_id are not given' do
         let(:params) do
           {
             customer_id: customer.customer_id,
@@ -281,7 +281,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
 
         it 'returns existing subscription' do
-          subscription.update!(unique_id: customer.customer_id)
+          subscription.update!(external_id: customer.customer_id)
 
           result = create_service.create_from_api(
             organization: organization,
@@ -300,7 +300,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             customer_id: customer.customer_id,
             plan_code: new_plan.code,
             name: 'invoice display name new',
-            unique_id: unique_id,
+            external_id: external_id,
           }
         end
 
@@ -324,7 +324,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               plan_code: higher_plan.code,
               name: 'invoice display name new',
               subscription_id: subscription.id,
-              unique_id: unique_id,
+              external_id: external_id,
             }
           end
 
@@ -419,7 +419,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               plan_code: lower_plan.code,
               name: 'invoice display name new',
               subscription_id: subscription.id,
-              unique_id: unique_id,
+              external_id: external_id,
             }
           end
 

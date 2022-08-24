@@ -12,8 +12,8 @@ class Subscription < ApplicationRecord
   has_many :invoices, through: :invoice_subscriptions
   has_many :fees
 
-  validates :unique_id, presence: true
-  validate :validate_unique_id, on: :create
+  validates :external_id, presence: true
+  validate :validate_external_id, on: :create
 
   STATUSES = [
     :pending,
@@ -71,10 +71,10 @@ class Subscription < ApplicationRecord
     fees.subscription_kind.any?
   end
 
-  def validate_unique_id
+  def validate_external_id
     return unless active?
 
-    used_ids = customer&.active_subscriptions&.pluck(:unique_id)
-    errors.add(:unique_id, :value_already_exists) if used_ids&.include?(unique_id)
+    used_ids = customer&.active_subscriptions&.pluck(:external_id)
+    errors.add(:external_id, :value_already_exists) if used_ids&.include?(external_id)
   end
 end

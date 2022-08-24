@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscription, type: :model do
-  describe '.upgraded?' do
+  describe '#upgraded?' do
     let(:previous_subscription) { nil }
     let(:plan) { create(:plan) }
 
@@ -48,7 +48,7 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe '.downgraded?' do
+  describe '#downgraded?' do
     let(:previous_subscription) { nil }
     let(:plan) { create(:plan, amount_cents: 100) }
 
@@ -93,7 +93,7 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe '.trial_end_date' do
+  describe '#trial_end_date' do
     let(:plan) { create(:plan, trial_period: 3) }
     let(:subscription) { create(:active_subscription, plan: plan) }
 
@@ -115,24 +115,24 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe '.valid_unique_id' do
+  describe '#valid_external_id' do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization: organization) }
     let(:plan) { create(:plan) }
-    let(:unique_id) { SecureRandom.uuid }
+    let(:external_id) { SecureRandom.uuid }
     let(:subscription) { create(:active_subscription, plan: plan, customer: customer) }
-    let(:new_subscription) { build(:active_subscription, plan: plan, unique_id: unique_id, customer: customer) }
+    let(:new_subscription) { build(:active_subscription, plan: plan, external_id: external_id, customer: customer) }
 
     before { subscription }
 
-    context 'when unique_id is unique' do
-      it 'does not raise validation error if unique_id is unique' do
+    context 'when external_id is unique' do
+      it 'does not raise validation error if external_id is unique' do
         expect(new_subscription).to be_valid
       end
     end
 
-    context 'when unique_id is NOT unique' do
-      let(:unique_id) { subscription.unique_id }
+    context 'when external_id is NOT unique' do
+      let(:external_id) { subscription.external_id }
 
       it 'raises validation error' do
         expect(new_subscription).not_to be_valid
