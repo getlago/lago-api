@@ -53,10 +53,8 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
 
   context 'when free_units_per_events is nil' do
     let(:free_units_per_events) { nil }
-    let(:running_total) { [] }
-
     let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
-    let(:expected_fixed_amount) { (4 - 0) * 2.0 }
+    let(:expected_fixed_amount) { (4 - 2) * 2.0 }
 
     it 'returns expected percentage amount' do
       expect(apply_percentage_service.amount).to eq(

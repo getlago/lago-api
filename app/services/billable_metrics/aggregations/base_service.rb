@@ -9,7 +9,7 @@ module BillableMetrics
         @subscription = subscription
       end
 
-      def aggregate(from_date:, to_date:, free_units_count: 0)
+      def aggregate(from_date:, to_date:, options: {})
         raise NotImplementedError
       end
 
