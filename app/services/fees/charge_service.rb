@@ -111,6 +111,8 @@ module Fees
                         Charges::ChargeModels::PackageService
                       when :percentage
                         Charges::ChargeModels::PercentageService
+                      when :volume
+                        Charges::ChargeModels::VolumeService
                       else
                         raise NotImplementedError
       end

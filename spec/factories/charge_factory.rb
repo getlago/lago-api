@@ -43,8 +43,8 @@ FactoryBot.define do
       properties do
         {
           ranges: [
-            { from_value: 0, to_value: 100, per_unit_amount: 2 },
-            { from_value: 120, to_value: nil, per_unit_amount: 1 },
+            { from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1' },
+            { from_value: 101, to_value: nil, per_unit_amount: '1', flat_amount: '0' },
           ],
         }
       end
