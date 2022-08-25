@@ -21,6 +21,9 @@ module Wallets
           consumed_amount: wallet.consumed_amount + amount,
           last_consumed_credit_at: Time.current
         )
+
+        result.wallet = wallet
+        result
       end
 
       private

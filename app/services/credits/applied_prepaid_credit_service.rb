@@ -60,7 +60,7 @@ module Credits
     end
 
     def balance_cents
-      balance = BigDecimal(wallet.balance)
+      balance = wallet.balance
       currency = invoice.amount.currency
       rounded_amount = balance.round(currency.exponent)
 
