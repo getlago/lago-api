@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 describe SegmentIdentifyJob, job: true do
@@ -19,7 +21,8 @@ describe SegmentIdentifyJob, job: true do
           traits: {
             created_at: membership.created_at,
             hosting_type: 'self',
-            version: Utils::VersionService.new.version.version.number
+            version: Utils::VersionService.new.version.version.number,
+            organization_name: membership.organization.name,
           }
         )
 
