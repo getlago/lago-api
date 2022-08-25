@@ -10,6 +10,9 @@ module WalletTransactions
 
     def call
       wallet_transaction.update!(status: :settled, settled_at: Time.current)
+
+      result.wallet_transaction = wallet_transaction
+      result
     end
 
     private
