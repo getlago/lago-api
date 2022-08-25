@@ -8,6 +8,7 @@ module Api
         result = service.create(
           **input_params
             .merge(organization_id: current_organization.id)
+            .merge(customer: customer)
             .to_h
             .symbolize_keys
         )
@@ -78,7 +79,6 @@ module Api
 
       def input_params
         params.require(:wallet).permit(
-          :customer_id,
           :rate_amount,
           :name,
           :paid_credits,
@@ -87,11 +87,19 @@ module Api
         )
       end
 
+      def customer_params
+        params.require(:wallet).permit(:customer_id)
+      end
+
       def update_params
         params.require(:wallet).permit(
           :name,
           :expiration_date
         )
+      end
+
+      def customer
+        Customer.find_by(customer_id: customer_params[:customer_id], organization_id: current_organization.id)
       end
 
       def render_wallet(wallet)
