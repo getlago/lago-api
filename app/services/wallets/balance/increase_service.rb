@@ -18,6 +18,9 @@ module Wallets
           credits_balance: wallet.credits_balance + credits_amount,
           last_balance_sync_at: Time.current,
         )
+
+        result.wallet = wallet
+        result
       end
 
       private

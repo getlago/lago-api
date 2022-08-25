@@ -735,7 +735,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_cents).to eq(84)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
-          expect(result.invoice.applied_prepaid_credits.count).to eq(1)
+          expect(result.invoice.wallet_transactions.count).to eq(1)
         end
       end
 

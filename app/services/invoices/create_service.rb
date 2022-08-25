@@ -161,7 +161,7 @@ module Invoices
 
       # NOTE: Since credit impact the invoice amount we need to recompute the amount
       #       and the VAT amount
-      invoice.amount_cents = invoice.amount_cents - prepaid_credit_result.prepaid_credit.amount_cents
+      invoice.amount_cents = invoice.amount_cents - prepaid_credit_result.prepaid_credit_amount_cents
       invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
     end
 
