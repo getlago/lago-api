@@ -65,11 +65,20 @@ module Fees
       aggregation_result = aggregator.aggregate(
         from_date: boundaries.charges_from_date,
         to_date: boundaries.charges_to_date,
-        free_units_count: charge.properties.is_a?(Hash) ? charge.properties['free_units_per_events'].to_i : 0,
+        options: options,
       )
       return aggregation_result unless aggregation_result.success?
 
       apply_charge_model_service(aggregation_result)
+    end
+
+    def options
+      return {} unless charge.properties.is_a?(Hash)
+
+      {
+        free_units_per_events: charge.properties['free_units_per_events'].to_i,
+        free_units_per_total_aggregation: BigDecimal(charge.properties['free_units_per_total_aggregation'] || 0),
+      }
     end
 
     def already_billed?

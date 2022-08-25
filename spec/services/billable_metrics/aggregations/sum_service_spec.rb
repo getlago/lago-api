@@ -22,6 +22,9 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
   let(:from_date) { Time.zone.today - 1.month }
   let(:to_date) { Time.zone.today }
+  let(:options) do
+    { free_units_per_events: 2, free_units_per_total_aggregation: 30 }
+  end
 
   before do
     create_list(
@@ -38,18 +41,52 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   end
 
   it 'aggregates the events' do
-    result = sum_service.aggregate(from_date: from_date, to_date: to_date, free_units_count: 2)
+    result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
 
     expect(result.aggregation).to eq(48)
     expect(result.count).to eq(4)
     expect(result.options).to eq({ running_total: [12, 24]})
   end
 
-  context 'without free_units_count' do
-    it 'includes all the events in running total' do
-      result = sum_service.aggregate(from_date: from_date, to_date: to_date)
+  context 'when options are not present' do
+    let(:options) { {} }
 
-      expect(result.options).to eq({ running_total: [12, 24, 36, 48]})
+    it 'returns an empty running total array' do
+      result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
+      expect(result.options).to eq({ running_total: []})
+    end
+  end
+
+  context 'when option values are nil' do
+    let(:options) do
+      { free_units_per_events: nil, free_units_per_total_aggregation: nil }
+    end
+
+    it 'returns an empty running total array' do
+      result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
+      expect(result.options).to eq({ running_total: []})
+    end
+  end
+
+  context 'when free_units_per_events is nil' do
+    let(:options) do
+      { free_units_per_events: nil, free_units_per_total_aggregation: 30 }
+    end
+
+    it 'returns running total based on per total aggregation' do
+      result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
+      expect(result.options).to eq({ running_total: [12, 24, 36]})
+    end
+  end
+
+  context 'when free_units_per_total_aggregation is nil' do
+    let(:options) do
+      { free_units_per_events: 2, free_units_per_total_aggregation: nil }
+    end
+
+    it 'returns running total based on per events' do
+      result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
+      expect(result.options).to eq({ running_total: [12, 24]})
     end
   end
 
