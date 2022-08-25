@@ -50,9 +50,9 @@ module Invoices
     def compute_amounts(invoice)
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
-      invoice.amount_cents = fee_amounts.sum(&:amount_cents)
+      invoice.amount_cents = fee_amounts.sum(:amount_cents)
       invoice.amount_currency = currency
-      invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
+      invoice.vat_amount_cents = fee_amounts.sum(:vat_amount_cents)
       invoice.vat_amount_currency = currency
     end
 
