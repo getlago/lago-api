@@ -24,6 +24,9 @@ module Types
       argument :fixed_amount, String, required: false
       argument :free_units_per_events, Integer, required: false
       argument :free_units_per_total_aggregation, String, required: false
+
+      # NOTE: Volume charge model
+      argument :volume_ranges, [Types::Charges::VolumeRangeInput], required: false
     end
   end
 end
