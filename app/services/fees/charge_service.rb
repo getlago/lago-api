@@ -53,7 +53,7 @@ module Fees
         vat_rate: customer.applicable_vat_rate,
         fee_type: :charge,
         invoiceable_type: 'Charge',
-        invoiceable_id: charge.id,
+        invoiceable: charge,
         units: amount_result.units,
         properties: boundaries.to_h,
         events_count: amount_result.count,

@@ -5,10 +5,10 @@ class BillPaidCreditJob < ApplicationJob
 
   retry_on Sequenced::SequenceError
 
-  def perform(wallet_transaction, date)
+  def perform(wallet_transaction, timestamp)
     result = Invoices::PaidCreditService.new(
       wallet_transaction: wallet_transaction,
-      date: date,
+      timestamp: timestamp,
     ).create
 
     raise result.throw_error unless result.success?

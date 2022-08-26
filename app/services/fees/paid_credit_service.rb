@@ -20,7 +20,7 @@ module Fees
         invoice: invoice,
         fee_type: :credit,
         invoiceable_type: 'WalletTransaction',
-        invoiceable_id: wallet_transaction.id,
+        invoiceable: wallet_transaction,
         amount_cents: amount_cents,
         amount_currency: customer.default_currency,
         vat_rate: customer.applicable_vat_rate,

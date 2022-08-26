@@ -2,10 +2,10 @@
 
 module Invoices
   class PaidCreditService < BaseService
-    def initialize(wallet_transaction:, date:)
+    def initialize(wallet_transaction:, timestamp:)
       @customer = wallet_transaction.wallet.customer
       @wallet_transaction = wallet_transaction
-      @date = date
+      @timestamp = timestamp
 
       super(nil)
     end
@@ -14,7 +14,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           customer: customer,
-          issuing_date: date,
+          issuing_date: Time.zone.at(timestamp).to_date,
           invoice_type: :credit,
           status: :pending,
         )
@@ -41,7 +41,7 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :date, :wallet_transaction
+    attr_accessor :customer, :timestamp, :wallet_transaction
 
     def currency
       @currency ||= customer.default_currency
