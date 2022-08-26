@@ -31,10 +31,7 @@ module Wallets
     attr_accessor :result, :args
 
     def valid_customer?
-      result.current_customer = Customer.find_by(
-        customer_id: args[:customer_id],
-        organization_id: args[:organization_id],
-      )
+      result.current_customer = args[:customer]
 
       return 'customer_not_found' unless result.current_customer
       return 'wallet_already_exists' if result.current_customer.wallets.active.exists?

@@ -33,6 +33,9 @@ Rails.application.routes.draw do
         post :download, on: :member
       end
       resources :plans, param: :code
+      resources :wallet_transactions, only: :create
+      resources :wallets, only: %i[create update show index]
+      delete '/wallets/:id', to: 'wallets#terminate'
       post '/events/batch', to: 'events#batch'
 
       put '/organizations', to: 'organizations#update'
