@@ -22,7 +22,7 @@ RSpec.describe ::V1::PaymentProviders::InvoicePaymentErrorSerializer do
     aggregate_failures do
       expect(result['data']['lago_invoice_id']).to eq(invoice.id)
       expect(result['data']['lago_customer_id']).to eq(invoice.customer.id)
-      expect(result['data']['customer_id']).to eq(invoice.customer.customer_id)
+      expect(result['data']['external_customer_id']).to eq(invoice.customer.external_id)
       expect(result['data']['provider_customer_id']).to eq(options[:provider_customer_id])
       expect(result['data']['payment_provider']).to eq(invoice.customer.payment_provider)
       expect(result['data']['provider_error']).to eq(options[:provider_error])

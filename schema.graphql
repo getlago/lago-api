@@ -1594,8 +1594,8 @@ input CreateCustomerInput {
   """
   clientMutationId: String
   country: CountryCode
-  customerId: String!
   email: String
+  externalId: String!
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -2377,8 +2377,8 @@ type Customer {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
-  customerId: String!
   email: String
+  externalId: String!
 
   """
   Define if a customer has an active wallet
@@ -2425,8 +2425,8 @@ type CustomerDetails {
   country: CountryCode
   createdAt: ISO8601DateTime!
   currency: CurrencyEnum
-  customerId: String!
   email: String
+  externalId: String!
 
   """
   Define if a customer has an active wallet
@@ -2620,7 +2620,7 @@ type Event {
   apiClient: String
   billableMetricName: String
   code: String!
-  customerId: String!
+  externalCustomerId: String!
   id: ID!
   ipAddress: String
   matchBillableMetric: Boolean!
@@ -3516,8 +3516,8 @@ input UpdateCustomerInput {
   """
   clientMutationId: String
   country: CountryCode
-  customerId: String!
   email: String
+  externalId: String!
   id: ID!
   legalName: String
   legalNumber: String

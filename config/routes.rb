@@ -16,12 +16,12 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :customers, only: %i[create] do
+      resources :customers, param: :external_id, only: %i[create] do
         get :current_usage
       end
 
-      resources :subscriptions, only: %i[create update index]
-      delete '/subscriptions/:id', to: 'subscriptions#terminate', as: :terminate
+      resources :subscriptions, only: %i[create update index], param: :external_id
+      delete '/subscriptions/:external_id', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code
       resources :billable_metrics, param: :code

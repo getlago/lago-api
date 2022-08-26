@@ -10,7 +10,7 @@ module Mutations
       description 'Creates a new customer'
 
       argument :name, String, required: true
-      argument :customer_id, String, required: true
+      argument :external_id, String, required: true
       argument :country, Types::CountryCodeEnum, required: false
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false

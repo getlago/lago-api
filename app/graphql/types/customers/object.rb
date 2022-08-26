@@ -7,7 +7,7 @@ module Types
 
       field :id, ID, null: false
 
-      field :customer_id, String, null: false
+      field :external_id, String, null: false
       field :name, String
       field :sequential_id, String, null: false
       field :slug, String, null: false

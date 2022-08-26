@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def create_or_update(customer_class:, payment_provider_id:, params:, async: true)
       provider_customer = customer_class.find_or_initialize_by(
-        customer_id: customer.id,
+        customer_id: customer.id, # TODO: Why?
         payment_provider_id: payment_provider_id,
       )
 

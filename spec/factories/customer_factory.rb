@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :customer do
     organization
     name { Faker::TvShows::SiliconValley.character }
-    customer_id { SecureRandom.uuid }
+    external_id { SecureRandom.uuid }
     country { Faker::Address.country_code }
     address_line1 { Faker::Address.street_address }
     address_line2 { Faker::Address.secondary_address }

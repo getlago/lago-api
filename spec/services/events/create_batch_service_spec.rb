@@ -6,14 +6,14 @@ RSpec.describe Events::CreateBatchService, type: :service do
   subject(:create_batch_service) { described_class.new }
 
   let(:organization) { create(:organization) }
-  let(:billable_metric)  { create(:billable_metric, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization: organization) }
   let(:customer) { create(:customer, organization: organization) }
 
   describe '#validate_params' do
     let(:event_arguments) do
       {
         transaction_id: SecureRandom.uuid,
-        subscription_ids: %w[id1 id2],
+        external_subscription_ids: %w[id1 id2],
         code: 'foo',
       }
     end
@@ -40,7 +40,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
           expect(result.error_code).to eq('missing_mandatory_param')
           expect(result.error_details).to include(:transaction_id)
           expect(result.error_details).to include(:code)
-          expect(result.error_details).to include(:subscription_ids)
+          expect(result.error_details).to include(:external_subscription_ids)
         end
       end
     end
@@ -53,7 +53,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
     let(:create_args) do
       {
-        subscription_ids: [subscription.id, subscription2.id],
+        external_subscription_ids: [subscription.external_id, subscription2.external_id],
         code: billable_metric.code,
         transaction_id: transaction_id,
         properties: { foo: 'bar' },

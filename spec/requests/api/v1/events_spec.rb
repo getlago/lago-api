@@ -13,7 +13,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         event: {
           code: 'event_code',
           transaction_id: SecureRandom.uuid,
-          customer_id: SecureRandom.uuid,
+          external_customer_id: SecureRandom.uuid,
           timestamp: Time.zone.now.to_i,
           properties: {
             foo: 'bar',
@@ -30,7 +30,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/events',
-          event: { customer_id: SecureRandom.uuid },
+          event: { external_customer_id: SecureRandom.uuid },
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -48,8 +48,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
         event: {
           code: 'event_code',
           transaction_id: SecureRandom.uuid,
-          customer_id: SecureRandom.uuid,
-          subscription_ids: %w[id1 id2],
+          external_customer_id: SecureRandom.uuid,
+          external_subscription_ids: %w[id1 id2],
           timestamp: Time.zone.now.to_i,
           properties: {
             foo: 'bar',
@@ -69,7 +69,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           event: {
             code: 'event_code',
             transaction_id: SecureRandom.uuid,
-            customer_id: SecureRandom.uuid,
+            external_customer_id: SecureRandom.uuid,
             timestamp: Time.zone.now.to_i,
             properties: {
               foo: 'bar',

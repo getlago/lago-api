@@ -2,7 +2,7 @@
 
 module Events
   class CreateBatchService < BaseService
-    ALL_REQUIRED_PARAMS = %i[transaction_id code subscription_ids].freeze
+    ALL_REQUIRED_PARAMS = %i[transaction_id code external_subscription_ids].freeze
 
     def validate_params(params:)
       missing_params = ALL_REQUIRED_PARAMS.select { |key| params[key].blank? }
@@ -13,7 +13,7 @@ module Events
 
     def call(organization:, params:, timestamp:, metadata:)
       customer = organization.subscriptions.find_by(
-        id: params[:subscription_ids]&.first
+        external_id: params[:external_subscription_ids]&.first
       )&.customer
 
       Events::ValidateCreationService.call(
@@ -27,8 +27,9 @@ module Events
 
       events = []
       ActiveRecord::Base.transaction do
-        params[:subscription_ids].each do |id|
-          event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: id)
+        params[:external_subscription_ids].each do |id|
+          subscription = Subscription.find_by(external_id: id)
+          event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
 
           if event
             events << event
@@ -40,7 +41,7 @@ module Events
           event.code = params[:code]
           event.transaction_id = params[:transaction_id]
           event.customer = customer
-          event.subscription_id = id
+          event.subscription_id = subscription.id
           event.properties = params[:properties] || {}
           event.metadata = metadata || {}
 

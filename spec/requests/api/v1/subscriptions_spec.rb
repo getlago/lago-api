@@ -10,7 +10,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   describe 'create' do
     let(:params) do
       {
-        customer_id: customer.customer_id,
+        external_customer_id: customer.external_id,
         plan_code: plan.code,
         name: 'subscription name',
         external_id: SecureRandom.uuid,
@@ -26,7 +26,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       result = JSON.parse(response.body, symbolize_names: true)[:subscription]
 
       expect(result[:lago_id]).to be_present
-      expect(result[:customer_id]).to eq(customer.customer_id)
+      expect(result[:external_customer_id]).to eq(customer.external_id)
       expect(result[:lago_customer_id]).to eq(customer.id)
       expect(result[:plan_code]).to eq(plan.code)
       expect(result[:status]).to eq('active')
@@ -56,7 +56,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before { subscription }
 
     it 'terminates a subscription' do
-      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.id}")
+      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
 
       expect(response).to have_http_status(:success)
 
@@ -83,7 +83,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before { subscription }
 
     it 'updates a subscription' do
-      put_with_token(organization, "/api/v1/subscriptions/#{subscription.id}", { subscription: update_params })
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", { subscription: update_params })
 
       expect(response).to have_http_status(:success)
 
@@ -108,7 +108,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before { subscription1 }
 
     it 'returns subscriptions' do
-      get_with_token(organization, "/api/v1/subscriptions?customer_id=#{customer.customer_id}")
+      get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}")
 
       expect(response).to have_http_status(:success)
 
@@ -125,7 +125,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       before { subscription2 }
 
       it 'returns subscriptions with correct meta data' do
-        get_with_token(organization, "/api/v1/subscriptions?customer_id=#{customer.customer_id}&page=1&per_page=1")
+        get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}&page=1&per_page=1")
 
         expect(response).to have_http_status(:success)
 
@@ -142,7 +142,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
     context 'with invalid customer' do
       it 'returns not_found error' do
-        get_with_token(organization, '/api/v1/subscriptions?customer_id=invalid')
+        get_with_token(organization, '/api/v1/subscriptions?external_customer_id=invalid')
 
         expect(response).to have_http_status(:not_found)
       end

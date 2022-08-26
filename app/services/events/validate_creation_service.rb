@@ -23,10 +23,10 @@ module Events
     attr_reader :organization, :params, :result, :customer, :batch
 
     def validate_create_batch
-      return blank_subscription_error if params[:subscription_ids].blank?
+      return blank_subscription_error if params[:external_subscription_ids].blank?
       return invalid_customer_error unless customer
 
-      invalid_subscriptions = params[:subscription_ids].select { |arg| !customer_subscription_ids.include?(arg) }
+      invalid_subscriptions = params[:external_subscription_ids].select { |arg| !customer_external_subscription_ids.include?(arg) }
       return invalid_subscription_error if invalid_subscriptions.present?
       return invalid_code_error unless valid_code?
     end
@@ -34,20 +34,20 @@ module Events
     def validate_create
       return invalid_customer_error unless customer
 
-      if customer_subscription_ids.count > 1
-        return blank_subscription_error if params[:subscription_id].blank?
+      if customer_external_subscription_ids.count > 1
+        return blank_subscription_error if params[:external_subscription_id].blank?
         return invalid_subscription_error unless valid_subscription_id?
-      elsif params[:subscription_id]
+      elsif params[:external_subscription_id]
         return invalid_subscription_error unless valid_subscription_id?
       else
-        return blank_subscription_error if customer_subscription_ids.blank?
+        return blank_subscription_error if customer_external_subscription_ids.blank?
       end
 
       return invalid_code_error unless valid_code?
     end
 
     def valid_subscription_id?
-      customer_subscription_ids.include?(params[:subscription_id])
+      customer_external_subscription_ids.include?(params[:external_subscription_id])
     end
 
     def valid_code?
@@ -66,8 +66,8 @@ module Events
       SendWebhookJob.perform_later(:event, object)
     end
 
-    def customer_subscription_ids
-      @customer_subscription_ids ||= customer&.active_subscriptions&.pluck(:id)
+    def customer_external_subscription_ids
+      @customer_external_subscription_ids ||= customer&.active_subscriptions&.pluck(:external_id)
     end
 
     def blank_subscription_error
@@ -76,7 +76,7 @@ module Events
     end
 
     def invalid_subscription_error
-      result.fail!(code: 'invalid_argument', message: 'subscription_id is invalid')
+      result.fail!(code: 'invalid_argument', message: 'external_subscription_id is invalid')
       send_webhook_notice
     end
 

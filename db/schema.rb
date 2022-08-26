@@ -136,7 +136,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_05_142834) do
   end
 
   create_table "customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "customer_id", null: false
+    t.string "external_id", null: false
     t.string "name"
     t.uuid "organization_id", null: false
     t.datetime "created_at", null: false
@@ -157,7 +157,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_05_142834) do
     t.string "payment_provider"
     t.string "slug"
     t.bigint "sequential_id"
-    t.index ["customer_id"], name: "index_customers_on_customer_id"
+    t.index ["external_id"], name: "index_customers_on_external_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
   end
 

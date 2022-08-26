@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        customer_id: model.customer_id,
+        external_id: model.external_id,
         name: model.name,
         sequential_id: model.sequential_id,
         slug: model.slug,

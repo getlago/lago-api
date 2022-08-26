@@ -12,7 +12,7 @@ RSpec.describe Customers::CreateService, type: :service do
   describe 'create_from_api' do
     let(:create_args) do
       {
-        customer_id: SecureRandom.uuid,
+        external_id: SecureRandom.uuid,
         name: 'Foo Bar',
       }
     end
@@ -32,7 +32,7 @@ RSpec.describe Customers::CreateService, type: :service do
       customer = result.customer
       expect(customer.id).to be_present
       expect(customer.organization_id).to eq(organization.id)
-      expect(customer.customer_id).to eq(create_args[:customer_id])
+      expect(customer.external_id).to eq(create_args[:external_id])
       expect(customer.name).to eq(create_args[:name])
     end
 
@@ -59,7 +59,7 @@ RSpec.describe Customers::CreateService, type: :service do
         create(
           :customer,
           organization: organization,
-          customer_id: create_args[:customer_id],
+          external_id: create_args[:external_id],
           email: 'foo@bar.com',
         )
       end
@@ -74,7 +74,7 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(result).to be_success
           expect(result.customer).to eq(customer)
           expect(result.customer.name).to eq(create_args[:name])
-          expect(result.customer.customer_id).to eq(create_args[:customer_id])
+          expect(result.customer.external_id).to eq(create_args[:external_id])
 
           # NOTE: It should not erase exsting properties
           expect(result.customer.country).to eq(customer.country)
@@ -113,7 +113,7 @@ RSpec.describe Customers::CreateService, type: :service do
     context 'with stripe configuration' do
       let(:create_args) do
         {
-          customer_id: SecureRandom.uuid,
+          external_id: SecureRandom.uuid,
           name: 'Foo Bar',
           billing_configuration: {
             payment_provider: 'stripe',
@@ -147,7 +147,7 @@ RSpec.describe Customers::CreateService, type: :service do
     context 'with unknown payment provider' do
       let(:create_args) do
         {
-          customer_id: SecureRandom.uuid,
+          external_id: SecureRandom.uuid,
           name: 'Foo Bar',
           billing_configuration: {
             payment_provider: 'foo',
@@ -202,7 +202,7 @@ RSpec.describe Customers::CreateService, type: :service do
           create(
             :customer,
             organization: organization,
-            customer_id: create_args[:customer_id],
+            external_id: create_args[:external_id],
             email: 'foo@bar.com',
           )
         end
@@ -229,7 +229,7 @@ RSpec.describe Customers::CreateService, type: :service do
   describe 'create' do
     let(:create_args) do
       {
-        customer_id: SecureRandom.uuid,
+        external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         organization_id: organization.id,
       }
@@ -248,7 +248,7 @@ RSpec.describe Customers::CreateService, type: :service do
         customer = result.customer
         expect(customer.id).to be_present
         expect(customer.organization_id).to eq(organization.id)
-        expect(customer.customer_id).to eq(create_args[:customer_id])
+        expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
       end
     end
@@ -270,7 +270,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     context 'when customer already exists' do
       let(:customer) do
-        create(:customer, organization: organization, customer_id: create_args[:customer_id])
+        create(:customer, organization: organization, external_id: create_args[:external_id])
       end
 
       before { customer }
@@ -321,7 +321,7 @@ RSpec.describe Customers::CreateService, type: :service do
       context 'with provider customer id' do
         let(:create_args) do
           {
-            customer_id: SecureRandom.uuid,
+            external_id: SecureRandom.uuid,
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',

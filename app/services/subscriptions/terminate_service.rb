@@ -9,8 +9,8 @@ module Subscriptions
       process_terminate(subscription)
     end
 
-    def terminate_from_api(organization:, subscription_id:)
-      subscription = organization.subscriptions.find_by(id: subscription_id)
+    def terminate_from_api(organization:, external_id:)
+      subscription = organization.subscriptions.find_by(external_id: external_id)
       return result.fail!(code: 'not_found', message: 'subscription is not found') if subscription.blank?
 
       process_terminate(subscription)

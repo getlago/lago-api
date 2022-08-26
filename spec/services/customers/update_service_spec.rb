@@ -13,13 +13,13 @@ RSpec.describe Customers::UpdateService, type: :service do
     let(:user) { membership.user }
 
     let(:customer) { create(:customer, organization: organization) }
-    let(:customer_id) { SecureRandom.uuid }
+    let(:external_id) { SecureRandom.uuid }
 
     let(:update_args) do
       {
         id: customer.id,
         name: 'Updated customer name',
-        customer_id: customer_id,
+        external_id: external_id,
       }
     end
 
@@ -33,7 +33,7 @@ RSpec.describe Customers::UpdateService, type: :service do
     end
 
     context 'with validation error' do
-      let(:customer_id) { nil }
+      let(:external_id) { nil }
 
       it 'returns an error' do
         result = customers_service.update(**update_args)
@@ -54,7 +54,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         updated_customer = result.customer
         aggregate_failures do
           expect(updated_customer.name).to eq('Updated customer name')
-          expect(updated_customer.customer_id).to eq(customer.customer_id)
+          expect(updated_customer.external_id).to eq(customer.external_id)
         end
       end
     end
@@ -64,7 +64,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         {
           id: customer.id,
           name: 'Updated customer name',
-          customer_id: customer_id,
+          external_id: external_id,
           payment_provider: 'stripe',
         }
       end
@@ -85,7 +85,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:update_args) do
           {
             id: customer.id,
-            customer_id: SecureRandom.uuid,
+            external_id: SecureRandom.uuid,
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
@@ -111,7 +111,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           let(:update_args) do
             {
               id: customer.id,
-              customer_id: SecureRandom.uuid,
+              external_id: SecureRandom.uuid,
               name: 'Foo Bar',
               organization_id: organization.id,
               payment_provider: nil,

@@ -7,7 +7,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:organization) { create(:organization) }
     let(:create_params) do
       {
-        customer_id: SecureRandom.uuid,
+        external_id: SecureRandom.uuid,
         name: 'Foo Bar'
       }
     end
@@ -19,7 +19,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       result = JSON.parse(response.body, symbolize_names: true)[:customer]
       expect(result[:lago_id]).to be_present
-      expect(result[:customer_id]).to eq(create_params[:customer_id])
+      expect(result[:external_id]).to eq(create_params[:external_id])
       expect(result[:name]).to eq(create_params[:name])
       expect(result[:created_at]).to be_present
     end
@@ -27,7 +27,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     context 'with billing configuration' do
       let(:create_params) do
         {
-          customer_id: SecureRandom.uuid,
+          external_id: SecureRandom.uuid,
           name: 'Foo Bar',
           billing_configuration: {
             payment_provider: 'stripe',
@@ -43,7 +43,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
         result = JSON.parse(response.body, symbolize_names: true)[:customer]
         expect(result[:lago_id]).to be_present
-        expect(result[:customer_id]).to eq(create_params[:customer_id])
+        expect(result[:external_id]).to eq(create_params[:external_id])
 
         expect(result[:billing_configuration]).to be_present
         expect(result[:billing_configuration][:payment_provider]).to eq('stripe')
@@ -114,7 +114,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
     it 'returns the usage for the customer' do
       get_with_token(organization,
-        "/api/v1/customers/#{customer.customer_id}/current_usage?subscription_id=#{subscription.id}"
+        "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}"
       )
 
       aggregate_failures do
@@ -148,7 +148,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          "/api/v1/customers/#{customer.customer_id}/current_usage?subscription_id=#{subscription.id}",
+          "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}",
         )
 
         expect(response).to have_http_status(:not_found)

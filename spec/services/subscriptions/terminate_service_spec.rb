@@ -66,7 +66,7 @@ RSpec.describe Subscriptions::TerminateService do
     it 'terminates a subscription' do
       result = terminate_service.terminate_from_api(
         organization: organization,
-        subscription_id: subscription.id
+        external_id: subscription.external_id
       )
 
       aggregate_failures do
@@ -78,7 +78,10 @@ RSpec.describe Subscriptions::TerminateService do
 
     it 'enqueues a BillSubscriptionJob' do
       expect do
-        terminate_service.terminate(subscription.id)
+        terminate_service.terminate_from_api(
+          organization: organization,
+          external_id: subscription.external_id
+        )
       end.to have_enqueued_job(BillSubscriptionJob)
     end
 
@@ -86,7 +89,7 @@ RSpec.describe Subscriptions::TerminateService do
       it 'returns an error' do
         result = terminate_service.terminate_from_api(
           organization: organization,
-          subscription_id: subscription.id + '123'
+          external_id: subscription.external_id + '123'
         )
 
         expect(result.error_code).to eq('not_found')

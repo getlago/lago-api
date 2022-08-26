@@ -4519,7 +4519,7 @@
               "deprecationReason": null
             },
             {
-              "name": "customerId",
+              "name": "externalId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -6169,7 +6169,21 @@
               ]
             },
             {
-              "name": "customerId",
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "externalId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -6179,20 +6193,6 @@
                   "name": "String",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "email",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -6705,7 +6705,21 @@
               ]
             },
             {
-              "name": "customerId",
+              "name": "email",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "externalId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -6715,20 +6729,6 @@
                   "name": "String",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "email",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -7827,7 +7827,7 @@
               ]
             },
             {
-              "name": "customerId",
+              "name": "externalCustomerId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -12829,7 +12829,7 @@
               "deprecationReason": null
             },
             {
-              "name": "customerId",
+              "name": "externalId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

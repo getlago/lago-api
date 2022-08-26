@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     <<~GQL
       query($customerId: ID!) {
         customer(id: $customerId) {
-          id customerId name currency
+          id externalId name currency
           invoices { id invoiceType status }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }

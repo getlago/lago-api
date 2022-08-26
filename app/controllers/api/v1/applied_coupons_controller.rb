@@ -26,7 +26,7 @@ module Api
 
       def create_params
         params.require(:applied_coupon).permit(
-          :customer_id,
+          :external_customer_id,
           :coupon_code,
           :amount_cents,
           :amount_currency,

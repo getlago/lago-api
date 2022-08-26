@@ -13,7 +13,7 @@ RSpec.describe Events::CreateService, type: :service do
     let(:params) do
       {
         transaction_id: SecureRandom.uuid,
-        customer_id: SecureRandom.uuid,
+        external_customer_id: SecureRandom.uuid,
         code: 'foo',
       }
     end
@@ -27,7 +27,7 @@ RSpec.describe Events::CreateService, type: :service do
     context 'with missing or nil arguments' do
       let(:params) do
         {
-          customer_id: SecureRandom.uuid,
+          external_customer_id: SecureRandom.uuid,
           code: nil,
         }
       end
@@ -45,13 +45,13 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'when customer_id and subscription_id but multiple subscriptions' do
+    context 'when external_customer_id and subscription_id but multiple subscriptions' do
       let(:subscription) { create(:subscription, customer: customer) }
       let(:params) do
         {
           transaction_id: SecureRandom.uuid,
-          customer_id: customer.customer_id,
-          subscription_id: subscription.id,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           code: 'code'
         }
       end
@@ -67,11 +67,11 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'when only customer_id but multiple subscriptions' do
+    context 'when only external_customer_id but multiple subscriptions' do
       let(:params) do
         {
           transaction_id: SecureRandom.uuid,
-          customer_id: customer.customer_id,
+          external_customer_id: customer.external_id,
           code: 'code'
         }
       end
@@ -87,7 +87,7 @@ RSpec.describe Events::CreateService, type: :service do
 
         aggregate_failures do
           expect(result.error_code).to eq('missing_mandatory_param')
-          expect(result.error_details).to include(:subscription_id)
+          expect(result.error_details).to include(:external_subscription_id)
         end
       end
     end
@@ -98,7 +98,7 @@ RSpec.describe Events::CreateService, type: :service do
 
     let(:create_args) do
       {
-        customer_id: customer.customer_id,
+        external_customer_id: customer.external_id,
         code: billable_metric.code,
         transaction_id: SecureRandom.uuid,
         properties: { foo: 'bar' },
@@ -137,7 +137,7 @@ RSpec.describe Events::CreateService, type: :service do
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          subscription_id: subscription.id,
+          external_subscription_id: subscription.external_id,
           properties: { foo: 'bar' },
           timestamp: Time.zone.now.to_i,
         }
@@ -172,7 +172,7 @@ RSpec.describe Events::CreateService, type: :service do
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          subscription_id: subscription2.id,
+          external_subscription_id: subscription2.external_id,
           properties: { foo: 'bar' },
           timestamp: Time.zone.now.to_i,
         }
@@ -200,10 +200,11 @@ RSpec.describe Events::CreateService, type: :service do
 
     context 'when event already exists' do
       let(:existing_event) do
-        create(:event,
-               organization: organization,
-               transaction_id: create_args[:transaction_id],
-               subscription_id: subscription.id
+        create(
+          :event,
+          organization: organization,
+          transaction_id: create_args[:transaction_id],
+          subscription_id: subscription.id
         )
       end
 
@@ -224,7 +225,7 @@ RSpec.describe Events::CreateService, type: :service do
     context 'when properties are empty' do
       let(:create_args) do
         {
-          customer_id: customer.customer_id,
+          external_customer_id: customer.external_id,
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           timestamp: Time.zone.now.to_i,
