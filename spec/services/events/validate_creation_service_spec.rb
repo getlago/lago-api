@@ -18,16 +18,16 @@ RSpec.describe Events::ValidateCreationService, type: :service do
   let(:customer) { create(:customer, organization: organization) }
   let(:billable_metric) { create(:billable_metric, organization: organization) }
   let(:params) do
-    { customer_id: customer.customer_id, code: billable_metric.code }
+    { external_customer_id: customer.external_id, code: billable_metric.code }
   end
 
   describe '.call' do
     let!(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
 
-    context "when batch is false" do
+    context 'when batch is false' do
       let(:batch) { false }
 
-      context 'when customer has only one active subscription and subscription_id is not given' do
+      context 'when customer has only one active subscription and external_subscription_id is not given' do
         it 'does not return any validation errors' do
           expect(validate_event).to be_nil
           expect(result).to be_success
@@ -36,7 +36,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       context 'when customer has only one active subscription and customer is not given' do
         let(:params) do
-          { code: billable_metric.code, subscription_id: subscription.id }
+          { code: billable_metric.code, external_subscription_id: subscription.external_id }
         end
 
         it 'does not return any validation errors' do
@@ -49,7 +49,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         before { create(:active_subscription, customer: customer, organization: organization) }
 
         let(:params) do
-          { code: billable_metric.code, subscription_id: subscription.id }
+          { code: billable_metric.code, external_subscription_id: subscription.external_id }
         end
 
         it 'does not return any validation errors' do
@@ -84,7 +84,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when there are two active subscriptions but subscription_id is not given' do
+      context 'when there are two active subscriptions but external_subscription_id is not given' do
         before do
           create(:active_subscription, customer: customer, organization: organization)
         end
@@ -101,12 +101,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when there are two active subscriptions but subscription_id is invalid' do
+      context 'when there are two active subscriptions but external_subscription_id is invalid' do
         let(:params) do
           {
             code: billable_metric.code,
-            subscription_id: SecureRandom.uuid,
-            customer_id: customer.customer_id
+            external_subscription_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id
           }
         end
 
@@ -118,7 +118,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           validate_event
 
           expect(result).not_to be_success
-          expect(result.error).to eq('subscription_id is invalid')
+          expect(result.error).to eq('external_subscription_id is invalid')
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -128,7 +128,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       context 'when code does not exist' do
         let(:params) do
-          { customer_id: customer.customer_id, code: 'event_code' }
+          { external_customer_id: customer.external_id, code: 'event_code' }
         end
 
         it 'returns code does not exist error' do
@@ -144,12 +144,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
     end
 
-    context "when batch is true" do
+    context 'when batch is true' do
       let(:batch) { true }
 
       context 'when everything is passing' do
         let(:params) do
-          { subscription_ids: [subscription.id], code: billable_metric.code }
+          { external_subscription_ids: [subscription.external_id], code: billable_metric.code }
         end
 
         it 'does not return any validation errors' do
@@ -158,9 +158,9 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when subscription_ids is blank' do
+      context 'when external_subscription_ids is blank' do
         let(:params) do
-          { subscription_ids: [] }
+          { external_subscription_ids: [] }
         end
 
         it 'returns subscription is not given error' do
@@ -177,7 +177,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       context 'when customer is not given' do
         let(:params) do
-          { code: billable_metric.code, subscription_ids: [SecureRandom.uuid] }
+          { code: billable_metric.code, external_subscription_ids: [SecureRandom.uuid] }
         end
 
         let(:validate_event) do
@@ -206,8 +206,8 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         let(:params) do
           {
             code: billable_metric.code,
-            subscription_ids: [SecureRandom.uuid],
-            customer_id: customer.customer_id
+            external_subscription_ids: [SecureRandom.uuid],
+            external_customer_id: customer.external_id
           }
         end
 
@@ -219,7 +219,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           validate_event
 
           expect(result).not_to be_success
-          expect(result.error).to eq('subscription_id is invalid')
+          expect(result.error).to eq('external_subscription_id is invalid')
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -231,8 +231,8 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         let(:params) do
           {
             code: 'event_code',
-            subscription_ids: [subscription.id],
-            customer_id: customer.customer_id
+            external_subscription_ids: [subscription.external_id],
+            external_customer_id: customer.external_id
           }
         end
 

@@ -21,7 +21,7 @@ module AppliedCoupons
 
     def create_from_api(organization:, args:)
       @customer = Customer.find_by(
-        customer_id: args[:customer_id],
+        external_id: args[:external_customer_id],
         organization_id: organization.id,
       )
 

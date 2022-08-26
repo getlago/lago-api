@@ -10,7 +10,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
           collection {
             id,
             code,
-            customerId,
+            externalCustomerId,
             transactionId,
             timestamp,
             receivedAt,
@@ -58,7 +58,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       expect(events_response['collection'].count).to eq(organization.events.count)
       expect(events_response['collection'].first['id']).to eq(event.id)
       expect(events_response['collection'].first['code']).to eq(event.code)
-      expect(events_response['collection'].first['customerId']).to eq(event.customer.customer_id)
+      expect(events_response['collection'].first['externalCustomerId']).to eq(event.customer.external_id)
       expect(events_response['collection'].first['transactionId']).to eq(event.transaction_id)
       expect(events_response['collection'].first['timestamp']).to eq(event.timestamp.iso8601)
       expect(events_response['collection'].first['receivedAt']).to eq(event.created_at.iso8601)

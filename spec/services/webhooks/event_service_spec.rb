@@ -10,7 +10,7 @@ RSpec.describe Webhooks::EventService do
   let(:object) do
     {
       input_params: {
-        customer_id: 'customer',
+        external_customer_id: 'customer',
         transaction_id: SecureRandom.uuid,
         code: 'code'
       },

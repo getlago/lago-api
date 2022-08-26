@@ -113,7 +113,7 @@ module PaymentProviderCustomers
         name: customer.name,
         metadata: {
           lago_customer_id: customer.id,
-          customer_id: customer.customer_id,
+          customer_id: customer.external_id,
         },
         phone: customer.phone,
       }

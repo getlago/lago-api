@@ -26,7 +26,7 @@ module Api
 
       def create_params
         params.require(:applied_add_on).permit(
-          :customer_id,
+          :external_customer_id,
           :add_on_code,
           :amount_cents,
           :amount_currency,

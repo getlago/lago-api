@@ -54,10 +54,10 @@ module Api
           .require(:event)
           .permit(
             :transaction_id,
-            :customer_id,
+            :external_customer_id,
             :code,
             :timestamp,
-            :subscription_id,
+            :external_subscription_id,
             properties: {},
           )
       end
@@ -67,10 +67,10 @@ module Api
           .require(:event)
           .permit(
             :transaction_id,
-            :customer_id,
+            :external_customer_id,
             :code,
             :timestamp,
-            subscription_ids: [],
+            external_subscription_ids: [],
             properties: {},
           )
       end

@@ -3,7 +3,7 @@
 module Customers
   class CreateService < BaseService
     def create_from_api(organization:, params:)
-      customer = organization.customers.find_or_initialize_by(customer_id: params[:customer_id])
+      customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
 
       customer.name = params[:name] if params.key?(:name)
       customer.country = params[:country]&.upcase if params.key?(:country)
@@ -35,7 +35,7 @@ module Customers
     def create(**args)
       customer = Customer.create!(
         organization_id: args[:organization_id],
-        customer_id: args[:customer_id],
+        external_id: args[:external_id],
         name: args[:name],
         country: args[:country]&.upcase,
         address_line1: args[:address_line1],

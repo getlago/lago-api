@@ -9,11 +9,11 @@ RSpec.describe Customer, type: :model do
     subject(:customer) do
       described_class.new(
         organization: organization,
-        customer_id: customer_id,
+        external_id: external_id,
       )
     end
 
-    let(:customer_id) { SecureRandom.uuid }
+    let(:external_id) { SecureRandom.uuid }
 
     it 'validates the country' do
       expect(customer).to be_valid

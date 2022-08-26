@@ -13,7 +13,7 @@ RSpec.describe Mutations::Customers::UpdateVatRate, type: :graphql do
         updateCustomerVatRate(input: $input) {
           id,
           name,
-          customerId,
+          externalId,
           vatRate
         }
       }

@@ -14,7 +14,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
     let(:params) do
       {
-        customer_id: customer.customer_id,
+        external_customer_id: customer.external_id,
         plan_code: plan.code,
         name: 'invoice display name',
         external_id: external_id,
@@ -48,43 +48,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
-    context 'when external_id is not given' do
-      let(:external_id) { nil }
-
-      it 'sets customer_id as external_id' do
-        result = create_service.create_from_api(
-          organization: organization,
-          params: params,
-        )
-
-        expect(result.subscription.external_id).to eq(customer.customer_id)
-      end
-    end
-
-    context 'when billing_time is not provided' do
-      let(:params) do
-        {
-          customer_id: customer.customer_id,
-          plan_code: plan.code,
-          name: 'invoice display name',
-          external_id: external_id,
-        }
-      end
-
-      it 'creates a calendar subscription' do
-        result = create_service.create_from_api(
-          organization: organization,
-          params: params,
-        )
-
-        aggregate_failures do
-          expect(result).to be_success
-
-          expect(result.subscription).to be_calendar
-        end
-      end
-    end
-
     it 'calls SegmentTrackJob' do
       subscription = create_service.create_from_api(
         organization: organization,
@@ -106,10 +69,47 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       )
     end
 
+    context 'when external_id is not given' do
+      let(:external_id) { nil }
+
+      it 'sets customer_id as external_id' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        expect(result.subscription.external_id).to eq(customer.external_id)
+      end
+    end
+
+    context 'when billing_time is not provided' do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code: plan.code,
+          name: 'invoice display name',
+          external_id: external_id,
+        }
+      end
+
+      it 'creates a calendar subscription' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.subscription).to be_calendar
+        end
+      end
+    end
+
     context 'when customer does not exists' do
       let(:params) do
         {
-          customer_id: SecureRandom.uuid,
+          external_customer_id: SecureRandom.uuid,
           plan_code: plan.code,
           external_id: external_id,
         }
@@ -126,7 +126,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         subscription = result.subscription
 
         aggregate_failures do
-          expect(subscription.customer.customer_id).to eq(params[:customer_id])
+          expect(subscription.customer.external_id).to eq(params[:external_customer_id])
           expect(subscription.plan_id).to eq(plan.id)
           expect(subscription.started_at).to be_present
           expect(subscription.subscription_date).to be_present
@@ -148,10 +148,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
-    context 'when customer id is missing' do
+    context 'when external customer id is missing' do
       let(:params) do
         {
-          customer_id: nil,
+          external_customer_id: nil,
           plan_code: plan.code,
           external_id: external_id,
         }
@@ -168,10 +168,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
-    context 'when plan doest not exists' do
+    context 'when plan does not exists' do
       let(:params) do
         {
-          customer_id: customer.customer_id,
+          external_customer_id: customer.external_id,
           plan_code: 'invalid_plan',
           external_id: external_id,
         }
@@ -191,7 +191,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     context 'when billing_time is invalid' do
       let(:params) do
         {
-          customer_id: customer.id,
+          external_customer_id: customer.id,
           plan_code: plan.code,
           external_id: external_id,
           billing_time: :foo,
@@ -216,10 +216,9 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     context 'when an active subscription already exists' do
       let(:params) do
         {
-          customer_id: customer.customer_id,
+          external_customer_id: customer.external_id,
           plan_code: plan.code,
           name: 'invoice display name',
-          subscription_id: subscription.id,
           external_id: external_id,
         }
       end
@@ -236,22 +235,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
       before { subscription }
 
-      context 'when subscription_id is given' do
-        it 'returns existing subscription' do
-          result = create_service.create_from_api(
-            organization: organization,
-            params: params,
-          )
-
-          expect(result).to be_success
-          expect(result.subscription.id).to eq(subscription.id)
-        end
-      end
-
-      context 'when external_id is given but not subscription_id' do
+      context 'when external_id is given' do
         let(:params) do
           {
-            customer_id: customer.customer_id,
+            external_customer_id: customer.external_id,
             plan_code: plan.code,
             name: 'invoice display name',
             external_id: external_id,
@@ -271,17 +258,17 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
       end
 
-      context 'when subscription_id and external_id are not given' do
+      context 'when external_id is not given' do
         let(:params) do
           {
-            customer_id: customer.customer_id,
+            external_customer_id: customer.external_id,
             plan_code: plan.code,
             name: 'invoice display name',
           }
         end
 
         it 'returns existing subscription' do
-          subscription.update!(external_id: customer.customer_id)
+          subscription.update!(external_id: customer.external_id)
 
           result = create_service.create_from_api(
             organization: organization,
@@ -297,7 +284,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         let(:new_plan) { create(:plan, amount_cents: 200, organization: organization, amount_currency: 'USD') }
         let(:params) do
           {
-            customer_id: customer.customer_id,
+            external_customer_id: customer.external_id,
             plan_code: new_plan.code,
             name: 'invoice display name new',
             external_id: external_id,
@@ -320,11 +307,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           let(:higher_plan) { create(:plan, amount_cents: 200, organization: organization) }
           let(:params) do
             {
-              customer_id: customer.customer_id,
+              external_customer_id: customer.external_id,
               plan_code: higher_plan.code,
               name: 'invoice display name new',
-              subscription_id: subscription.id,
-              external_id: external_id,
+              external_id: subscription.external_id,
             }
           end
 
@@ -333,6 +319,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               organization: organization,
               params: params,
             )
+
 
             old_subscription = Subscription.find(subscription.id)
 
@@ -415,11 +402,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
           let(:params) do
             {
-              customer_id: customer.customer_id,
+              external_customer_id: customer.external_id,
               plan_code: lower_plan.code,
               name: 'invoice display name new',
-              subscription_id: subscription.id,
-              external_id: external_id,
+              external_id: subscription.external_id,
             }
           end
 

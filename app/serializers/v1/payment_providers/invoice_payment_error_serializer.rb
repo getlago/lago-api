@@ -9,7 +9,7 @@ module V1
         {
           lago_invoice_id: invoice.id,
           lago_customer_id: invoice.customer.id,
-          customer_id: invoice.customer.customer_id,
+          external_customer_id: invoice.customer.external_id,
           provider_customer_id: options[:provider_customer_id],
           payment_provider: invoice.customer.payment_provider,
           provider_error: options[:provider_error],

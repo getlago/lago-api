@@ -61,7 +61,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     it 'updates the subscription' do
       result = update_service.update_from_api(
         organization: organization,
-        id: subscription.id,
+        external_id: subscription.external_id,
         params: update_args
       )
 
@@ -72,11 +72,11 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context 'with invalid id' do
+    context 'with invalid external_id' do
       it 'returns an error' do
         result = update_service.update_from_api(
           organization: organization,
-          id: subscription.id + '123',
+          external_id: subscription.external_id + '123',
           params: update_args
         )
 

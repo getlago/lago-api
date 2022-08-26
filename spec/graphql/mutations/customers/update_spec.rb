@@ -14,7 +14,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
         updateCustomer(input: $input) {
           id,
           name,
-          customerId
+          externalId
           paymentProvider
           stripeCustomer { id, providerCustomerId }
         }
@@ -24,7 +24,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
 
   it 'updates a customer' do
     stripe_provider
-    customer_id = SecureRandom.uuid
+    external_id = SecureRandom.uuid
 
     result = execute_graphql(
       current_user: membership.user,
@@ -33,7 +33,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
         input: {
           id: customer.id,
           name: 'Updated customer',
-          customerId: customer_id,
+          externalId: external_id,
           paymentProvider: 'stripe',
           stripeCustomer: {
             providerCustomerId: 'cu_12345',
@@ -47,7 +47,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated customer')
-      expect(result_data['customerId']).to eq(customer_id)
+      expect(result_data['externalId']).to eq(external_id)
       expect(result_data['paymentProvider']).to eq('stripe')
       expect(result_data['stripeCustomer']['id']).to be_present
       expect(result_data['stripeCustomer']['providerCustomerId']).to eq('cu_12345')
@@ -62,7 +62,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           input: {
             id: customer.id,
             name: 'Updated customer',
-            customerId: SecureRandom.uuid,
+            externalId: SecureRandom.uuid,
           },
         },
       )

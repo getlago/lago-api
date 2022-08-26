@@ -58,7 +58,7 @@ Charge.create_with(
     legal_number: Faker::Company.duns_number,
   ).find_or_create_by!(
     organization: organization,
-    customer_id: "cust_#{i + 1}",
+    external_id: "cust_#{i + 1}",
   )
 
   sub = Subscription.create_with(

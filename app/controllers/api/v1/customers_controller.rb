@@ -26,8 +26,8 @@ module Api
         service = Invoices::CustomerUsageService
           .new(
             nil,
-            customer_id: params[:customer_id],
-            subscription_id: params[:subscription_id],
+            customer_id: params[:customer_external_id],
+            subscription_id: params[:external_subscription_id],
             organization_id: current_organization.id,
           )
         result = service.usage
@@ -49,7 +49,7 @@ module Api
 
       def create_params
         params.require(:customer).permit(
-          :customer_id,
+          :external_id,
           :name,
           :country,
           :address_line1,

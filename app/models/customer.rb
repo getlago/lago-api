@@ -27,7 +27,7 @@ class Customer < ApplicationRecord
 
   sequenced scope: ->(customer) { customer.organization.customers }
 
-  validates :customer_id, presence: true, uniqueness: { scope: :organization_id }
+  validates :external_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true

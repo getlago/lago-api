@@ -2,20 +2,19 @@
 
 module Invoices
   class CustomerUsageService < BaseService
+    # NOTE: customer_id can reference the lago id or the external id of the customer
+    # NOTE: subscription_id can reference the lago id or the external id of the subscription
     def initialize(current_user, customer_id:, subscription_id:, organization_id: nil)
       super(current_user)
 
       if organization_id.present?
         @organization_id = organization_id
-        @customer = Customer.find_by!(
-          customer_id: customer_id,
-          organization_id: organization_id,
-        )
+        @customer = Customer.find_by!(external_id: customer_id, organization_id: organization_id)
+        @subscription = @customer&.active_subscriptions&.find_by(external_id: subscription_id)
       else
         customer(customer_id: customer_id)
+        @subscription = @customer&.active_subscriptions&.find_by(id: subscription_id)
       end
-
-      @subscription = find_subscription(subscription_id)
     rescue ActiveRecord::RecordNotFound
       result.fail!(code: 'not_found')
     end
@@ -58,10 +57,6 @@ module Invoices
         id: customer_id,
         organization_id: result.user.organization_ids,
       )
-    end
-
-    def find_subscription(subscription_id)
-      customer&.active_subscriptions&.find_by(id: subscription_id)
     end
 
     def add_charge_fee

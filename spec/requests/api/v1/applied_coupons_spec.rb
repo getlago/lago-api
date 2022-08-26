@@ -14,7 +14,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
     let(:params) do
       {
-        customer_id: customer.customer_id,
+        external_customer_id: customer.external_id,
         coupon_code: coupon.code,
       }
     end
@@ -33,8 +33,8 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       aggregate_failures do
         expect(result[:lago_id]).to be_present
         expect(result[:lago_coupon_id]).to eq(coupon.id)
-        expect(result[:customer_id]).to eq(customer.customer_id)
         expect(result[:lago_customer_id]).to eq(customer.id)
+        expect(result[:external_customer_id]).to eq(customer.external_id)
         expect(result[:amount_cents]).to eq(coupon.amount_cents)
         expect(result[:amount_currency]).to eq(coupon.amount_currency)
         expect(result[:expiration_date]).to be_nil

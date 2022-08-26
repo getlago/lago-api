@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
     <<~GQL
       query {
         customers(limit: 5) {
-          collection { id customerId name }
+          collection { id externalId name }
           metadata { currentPage, totalCount }
         }
       }

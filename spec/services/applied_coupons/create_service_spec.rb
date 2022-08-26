@@ -135,12 +135,12 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
   describe 'create_from_api' do
     let(:coupon_code) { coupon&.code }
-    let(:external_customer_id) { customer&.customer_id }
+    let(:external_customer_id) { customer&.external_id }
 
     let(:create_args) do
       {
         coupon_code: coupon_code,
-        customer_id: external_customer_id,
+        external_customer_id: external_customer_id,
         amount_cents: amount_cents,
         amount_currency: amount_currency,
       }
@@ -198,7 +198,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
     context 'when customer is not found' do
       let(:customer) { nil }
-      let(:customer_id) { 'foo' }
+      let(:external_customer_id) { 'foo' }
 
       it { expect(create_result).not_to be_success }
       it { expect(create_result.error_code).to eq('missing_argument') }

@@ -27,7 +27,7 @@ module Api
         result = Subscriptions::TerminateService.new
           .terminate_from_api(
             organization: current_organization,
-            subscription_id: params[:id]
+            external_id: params[:external_id]
           )
 
         if result.success?
@@ -47,7 +47,7 @@ module Api
 
         result = service.update_from_api(
           organization: current_organization,
-          id: params[:id],
+          external_id: params[:external_id],
           params: update_params
         )
 
@@ -64,7 +64,7 @@ module Api
       end
 
       def index
-        customer = current_organization.customers.find_by(customer_id: params[:customer_id])
+        customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
 
         return not_found_error unless customer
 
@@ -86,7 +86,7 @@ module Api
 
       def create_params
         params.require(:subscription)
-          .permit(:customer_id, :plan_code, :name, :subscription_id, :external_id, :billing_time)
+          .permit(:external_customer_id, :plan_code, :name, :subscription_id, :external_id, :billing_time)
       end
 
       def update_params

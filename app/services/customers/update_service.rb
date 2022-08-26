@@ -22,9 +22,9 @@ module Customers
       customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
       customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
 
-      # NOTE: Customer_id is not editable if customer is attached to subscriptions
-      if !customer.attached_to_subscriptions? && args.key?(:customer_id)
-        customer.customer_id = args[:customer_id]
+      # NOTE: external_id is not editable if customer is attached to subscriptions
+      if !customer.attached_to_subscriptions? && args.key?(:external_id)
+        customer.external_id = args[:external_id]
       end
 
       customer.save!

@@ -7,7 +7,7 @@ module V1
         lago_id: model.id,
         external_id: model.external_id,
         lago_customer_id: model.customer_id,
-        customer_id: model.customer.customer_id,
+        external_customer_id: model.customer.external_id,
         name: model.name,
         plan_code: model.plan.code,
         status: model.status,
