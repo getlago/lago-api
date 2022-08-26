@@ -18,7 +18,7 @@ RSpec.describe Wallets::CreateService, type: :service do
     let(:create_args) do
       {
         name: 'New Wallet',
-        customer_id: customer.customer_id,
+        customer: customer,
         organization_id: organization.id,
         rate_amount: '1.00',
         expiration_date: '2022-01-01',

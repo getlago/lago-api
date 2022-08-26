@@ -15,7 +15,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
   let(:granted_credits) { '0.00' }
   let(:args) do
     {
-      customer_id: customer_id,
+      customer: customer,
       organization_id: organization.id,
       paid_credits: paid_credits,
       granted_credits: granted_credits,
@@ -30,7 +30,14 @@ RSpec.describe Wallets::ValidateService, type: :service do
     end
 
     context 'when customer does not exist' do
-      let(:customer_id) { '123456' }
+      let(:args) do
+        {
+          customer: nil,
+          organization_id: organization.id,
+          paid_credits: paid_credits,
+          granted_credits: granted_credits,
+        }
+      end
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid

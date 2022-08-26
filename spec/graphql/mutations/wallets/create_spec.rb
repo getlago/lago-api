@@ -31,7 +31,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          customerId: customer.customer_id,
+          customerId: customer.id,
           name: 'First Wallet',
           rateAmount: '1',
           paidCredits: '0.00',
