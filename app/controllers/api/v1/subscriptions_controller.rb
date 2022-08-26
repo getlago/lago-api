@@ -64,7 +64,7 @@ module Api
       end
 
       def index
-        customer = Customer.find_by(customer_id: params[:customer_id])
+        customer = current_organization.customers.find_by(customer_id: params[:customer_id])
 
         return not_found_error unless customer
 
