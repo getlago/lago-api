@@ -30,8 +30,9 @@ module Resolvers
 
       wallet_transactions = current_wallet
         .wallet_transactions
+        .order(created_at: :desc)
         .page(page)
-        .limit(limit)
+        .per(limit)
 
       wallet_transactions = wallet_transactions.where(transaction_type: transaction_type) if transaction_type.present?
       wallet_transactions = wallet_transactions.where(status: status) if status.present?

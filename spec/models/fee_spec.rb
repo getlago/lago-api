@@ -5,24 +5,6 @@ require 'rails_helper'
 RSpec.describe Fee, type: :model do
   subject(:fee_model) { described_class }
 
-  describe '.subscription_fee?' do
-    it 'checks non presence of charge and add-on' do
-      expect(fee_model.new.subscription_fee?).to be_truthy
-    end
-  end
-
-  describe '.charge_fee?' do
-    it 'checks presence of charge' do
-      expect(fee_model.new(charge_id: SecureRandom.uuid).charge_fee?).to be_truthy
-    end
-  end
-
-  describe '.add_on_fee?' do
-    it 'checks presence of the add-on' do
-      expect(fee_model.new(applied_add_on_id: SecureRandom.uuid).add_on_fee?).to be_truthy
-    end
-  end
-
   describe '.compute_vat' do
     it 'computes the vat' do
       fee = fee_model.new(amount_cents: 100, amount_currency: 'EUR', vat_rate: 20.0)
@@ -36,32 +18,13 @@ RSpec.describe Fee, type: :model do
     end
   end
 
-  describe '.item_type' do
-    context 'when it is a subscription fee' do
-      it 'returns subscription' do
-        expect(fee_model.new.item_type).to eq('subscription')
-      end
-    end
-
-    context 'when it is a charge fee' do
-      it 'returns charge' do
-        expect(fee_model.new(charge_id: SecureRandom.uuid).item_type).to eq('charge')
-      end
-    end
-
-    context 'when it is a add-on fee' do
-      it 'returns add_on' do
-        expect(fee_model.new(applied_add_on_id: SecureRandom.uuid).item_type).to eq('add_on')
-      end
-    end
-  end
-
   describe '.item_code' do
     context 'when it is a subscription fee' do
       let(:subscription) { create(:subscription) }
 
       it 'returns related subscription code' do
-        expect(fee_model.new(subscription: subscription).item_code).to eq(subscription.plan.code)
+        expect(fee_model.new(subscription: subscription, fee_type: 'subscription').item_code)
+          .to eq(subscription.plan.code)
       end
     end
 
@@ -69,7 +32,8 @@ RSpec.describe Fee, type: :model do
       let(:charge) { create(:standard_charge) }
 
       it 'returns related billable metric code' do
-        expect(fee_model.new(charge: charge).item_code).to eq(charge.billable_metric.code)
+        expect(fee_model.new(charge: charge, fee_type: 'charge').item_code)
+          .to eq(charge.billable_metric.code)
       end
     end
 
@@ -77,7 +41,14 @@ RSpec.describe Fee, type: :model do
       let(:applied_add_on) { create(:applied_add_on) }
 
       it 'returns add on code' do
-        expect(fee_model.new(applied_add_on: applied_add_on).item_code).to eq(applied_add_on.add_on.code)
+        expect(fee_model.new(applied_add_on: applied_add_on, fee_type: 'add_on').item_code)
+          .to eq(applied_add_on.add_on.code)
+      end
+    end
+
+    context 'when it is a credit fee' do
+      it 'returns add on code' do
+        expect(fee_model.new(fee_type: 'credit').item_code).to eq('credit')
       end
     end
   end
@@ -87,7 +58,8 @@ RSpec.describe Fee, type: :model do
       let(:subscription) { create(:subscription) }
 
       it 'returns related subscription name' do
-        expect(fee_model.new(subscription: subscription).item_name).to eq(subscription.plan.name)
+        expect(fee_model.new(subscription: subscription, fee_type: 'subscription').item_name)
+          .to eq(subscription.plan.name)
       end
     end
 
@@ -95,7 +67,8 @@ RSpec.describe Fee, type: :model do
       let(:charge) { create(:standard_charge) }
 
       it 'returns related billable metric name' do
-        expect(fee_model.new(charge: charge).item_name).to eq(charge.billable_metric.name)
+        expect(fee_model.new(charge: charge, fee_type: 'charge').item_name)
+          .to eq(charge.billable_metric.name)
       end
     end
 
@@ -103,7 +76,14 @@ RSpec.describe Fee, type: :model do
       let(:applied_add_on) { create(:applied_add_on) }
 
       it 'returns add on name' do
-        expect(fee_model.new(applied_add_on: applied_add_on).item_name).to eq(applied_add_on.add_on.name)
+        expect(fee_model.new(applied_add_on: applied_add_on, fee_type: 'add_on').item_name)
+          .to eq(applied_add_on.add_on.name)
+      end
+    end
+
+    context 'when it is a credit fee' do
+      it 'returns add on name' do
+        expect(fee_model.new(fee_type: 'credit').item_name).to eq('credit')
       end
     end
   end

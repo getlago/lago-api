@@ -5,25 +5,43 @@ module WalletTransactions
     def create(**args)
       return result unless valid?(**args)
 
+      wallet_transactions = []
+
       if args[:paid_credits]
-        handle_paid_credits(
-          wallet: result.current_wallet,
-          paid_credits: args[:paid_credits],
-        )
+        transaction = handle_paid_credits(wallet: result.current_wallet, paid_credits: args[:paid_credits])
+        wallet_transactions << transaction
       end
 
       if args[:granted_credits]
-        handle_granted_credits(
-          wallet: result.current_wallet,
-          granted_credits: args[:granted_credits],
-        )
+        transaction = handle_granted_credits(wallet: result.current_wallet, granted_credits: args[:granted_credits])
+        wallet_transactions << transaction
       end
+
+      result.wallet_transactions = wallet_transactions
+      result
     end
 
     private
 
     def handle_paid_credits(wallet:, paid_credits:)
-      # TODO
+      paid_credits_amount = BigDecimal(paid_credits)
+
+      return if paid_credits_amount.zero?
+
+      wallet_transaction = WalletTransaction.create!(
+        wallet: wallet,
+        transaction_type: :inbound,
+        amount: wallet.rate_amount * paid_credits_amount,
+        credit_amount: paid_credits_amount,
+        status: :pending
+      )
+
+      BillPaidCreditJob.perform_later(
+        wallet_transaction,
+        Time.current.to_i
+      )
+
+      wallet_transaction
     end
 
     def handle_granted_credits(wallet:, granted_credits:)
@@ -32,7 +50,7 @@ module WalletTransactions
       return if granted_credits_amount.zero?
 
       ActiveRecord::Base.transaction do
-        WalletTransaction.create!(
+        wallet_transaction = WalletTransaction.create!(
           wallet: wallet,
           transaction_type: :inbound,
           amount: wallet.rate_amount * granted_credits_amount,
@@ -42,6 +60,8 @@ module WalletTransactions
         )
 
         Wallets::Balance::IncreaseService.new(wallet: wallet, credits_amount: granted_credits_amount).call
+
+        wallet_transaction
       end
     end
 

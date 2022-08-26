@@ -2,19 +2,17 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Wallets::Create, type: :graphql do
+RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer: customer) }
+  let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
 
   let(:mutation) do
     <<-GQL
-      mutation($input: CreateCustomerWalletInput!) {
-        createCustomerWallet(input: $input) {
-          id,
-          name,
-          rateAmount,
-          status
+      mutation($input: CreateCustomerWalletTransactionInput!) {
+        createCustomerWalletTransaction(input: $input) {
+          collection { id, status }
         }
       }
     GQL
@@ -22,30 +20,29 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
 
   before do
     subscription
+    wallet
   end
 
-  it 'create a wallet' do
+  it 'create a wallet transaction' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
       query: mutation,
       variables: {
         input: {
-          customerId: customer.id,
-          name: 'First Wallet',
-          rateAmount: '1',
-          paidCredits: '0.00',
-          grantedCredits: '0.00',
-          expirationDate: (Time.zone.now + 1.year).to_date,
+          walletId: wallet.id,
+          paidCredits: '5.00',
+          grantedCredits: '5.00'
         },
       },
     )
 
-    result_data = result['data']['createCustomerWallet']
+    result_data = result['data']['createCustomerWalletTransaction']
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['name']).to eq('First Wallet')
+      expect(result_data['collection'].count).to eq(2)
+      expect(result_data['collection'].first['status']).to eq('pending')
+      expect(result_data['collection'].last['status']).to eq('settled')
     end
   end
 
@@ -56,12 +53,9 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            customerId: customer.id,
-            name: 'First Wallet',
-            rateAmount: '1',
-            paidCredits: '0.00',
-            grantedCredits: '0.00',
-            expirationDate: (Time.zone.now + 1.year).to_date,
+            walletId: wallet.id,
+            paidCredits: '5.00',
+            grantedCredits: '5.00'
           },
         },
       )
@@ -77,12 +71,9 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            customerId: customer.id,
-            name: 'First Wallet',
-            rateAmount: '1',
-            paidCredits: '0.00',
-            grantedCredits: '0.00',
-            expirationDate: (Time.zone.now + 1.year).to_date,
+            walletId: wallet.id,
+            paidCredits: '5.00',
+            grantedCredits: '5.00'
           },
         },
       )

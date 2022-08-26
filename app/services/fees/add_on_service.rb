@@ -18,6 +18,9 @@ module Fees
         applied_add_on: applied_add_on,
         amount_cents: applied_add_on.amount_cents,
         amount_currency: plan.amount_currency,
+        fee_type: :add_on,
+        invoiceable_type: 'AppliedAddOn',
+        invoiceable: applied_add_on,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
       )

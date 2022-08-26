@@ -6,7 +6,8 @@ class Fee < ApplicationRecord
   belongs_to :invoice
   belongs_to :charge, optional: true
   belongs_to :applied_add_on, optional: true
-  belongs_to :subscription
+  belongs_to :subscription, optional: true
+  belongs_to :invoiceable, polymorphic: true
 
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
@@ -16,48 +17,35 @@ class Fee < ApplicationRecord
   monetize :amount_cents
   monetize :vat_amount_cents
 
+  FEE_TYPES = %i[charge add_on subscription credit].freeze
+
+  enum fee_type: FEE_TYPES
+
   validates :amount_currency, inclusion: { in: currency_list }
   validates :vat_amount_currency, inclusion: { in: currency_list }
   validates :units, numericality: { greated_than_or_equal_to: 0 }
   validates :events_count, numericality: { greated_than_or_equal_to: 0 }, allow_nil: true
 
-  scope :subscription_kind, -> { where(charge_id: nil, applied_add_on_id: nil) }
-  scope :charge_kind, -> { where.not(charge_id: nil) }
-
-  def subscription_fee?
-    charge_id.blank? && applied_add_on_id.blank?
-  end
-
-  def charge_fee?
-    charge_id.present?
-  end
-
-  def add_on_fee?
-    applied_add_on_id.present?
-  end
+  scope :subscription_kind, -> { where(fee_type: :subscription) }
+  scope :charge_kind, -> { where(fee_type: :charge) }
 
   def compute_vat
     self.vat_amount_cents = (amount_cents * vat_rate).fdiv(100).ceil
     self.vat_amount_currency = amount_currency
   end
 
-  def item_type
-    return 'charge' if charge_fee?
-    return 'add_on' if add_on_fee?
-
-    'subscription'
-  end
-
   def item_code
-    return billable_metric.code if charge_fee?
-    return add_on.code if add_on_fee?
+    return billable_metric.code if charge?
+    return add_on.code if add_on?
+    return fee_type if credit?
 
     subscription.plan.code
   end
 
   def item_name
-    return billable_metric.name if charge_fee?
-    return add_on.name if add_on_fee?
+    return billable_metric.name if charge?
+    return add_on.name if add_on?
+    return fee_type if credit?
 
     subscription.plan.name
   end
