@@ -21,12 +21,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
           {
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
-            amount_currency: 'EUR',
             properties: {
-              amount: '0.22'
-            }
-          }
-        ]
+              amount: '0.22',
+            },
+          },
+        ],
       }
     end
 
@@ -58,7 +57,6 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               billable_metric_id: billable_metric.id,
               charge_model: 'graduated',
-              amount_currency: 'EUR',
               properties: [
                 {
                   to_value: 1,
@@ -77,12 +75,12 @@ RSpec.describe Api::V1::PlansController, type: :request do
           ],
         }
       end
-    
+
       it 'creates a plan' do
         post_with_token(organization, '/api/v1/plans', { plan: create_params })
-    
+
         expect(response).to have_http_status(:success)
-    
+
         result = JSON.parse(response.body, symbolize_names: true)[:plan]
         expect(result[:lago_id]).to be_present
         expect(result[:code]).to eq(create_params[:code])
@@ -110,19 +108,19 @@ RSpec.describe Api::V1::PlansController, type: :request do
           {
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
-            amount_currency: 'EUR',
             properties: {
-              amount: '0.22'
-            }
-          }
-        ]
+              amount: '0.22',
+            },
+          },
+        ],
       }
     end
 
     it 'updates a plan' do
-      put_with_token(organization,
-                     "/api/v1/plans/#{plan.code}",
-                     { plan: update_params }
+      put_with_token(
+        organization,
+        "/api/v1/plans/#{plan.code}",
+        { plan: update_params },
       )
 
       expect(response).to have_http_status(:success)
@@ -148,9 +146,10 @@ RSpec.describe Api::V1::PlansController, type: :request do
       before { plan2 }
 
       it 'returns unprocessable_entity error' do
-        put_with_token(organization,
-                       "/api/v1/plans/#{plan.code}",
-                       { plan: update_params }
+        put_with_token(
+          organization,
+          "/api/v1/plans/#{plan.code}",
+          { plan: update_params },
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -164,7 +163,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     it 'returns a plan' do
       get_with_token(
         organization,
-        "/api/v1/plans/#{plan.code}"
+        "/api/v1/plans/#{plan.code}",
       )
 
       expect(response).to have_http_status(:success)
@@ -179,7 +178,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          "/api/v1/plans/555"
+          "/api/v1/plans/555",
         )
 
         expect(response).to have_http_status(:not_found)

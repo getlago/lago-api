@@ -8,7 +8,6 @@ module Types
       argument :id, ID, required: false
       argument :billable_metric_id, ID, required: true
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
-      argument :amount_currency, Types::CurrencyEnum, required: true
 
       # NOTE: Standard and Package charge model
       argument :amount, String, required: false
@@ -25,6 +24,9 @@ module Types
       argument :fixed_amount, String, required: false
       argument :free_units_per_events, Integer, required: false
       argument :free_units_per_total_aggregation, String, required: false
+
+      # NOTE: Volume charge model
+      argument :volume_ranges, [Types::Charges::VolumeRangeInput], required: false
     end
   end
 end

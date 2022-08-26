@@ -14,7 +14,6 @@ RSpec.describe ::V1::ChargeSerializer do
       expect(result['charge']['lago_id']).to eq(charge.id)
       expect(result['charge']['lago_billable_metric_id']).to eq(charge.billable_metric_id)
       expect(result['charge']['created_at']).to eq(charge.created_at.iso8601)
-      expect(result['charge']['amount_currency']).to eq(charge.amount_currency)
       expect(result['charge']['charge_model']).to eq(charge.charge_model)
       expect(result['charge']['properties']).to eq(charge.properties)
     end

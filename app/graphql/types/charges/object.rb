@@ -8,7 +8,6 @@ module Types
       field :id, ID, null: false
       field :billable_metric, Types::BillableMetrics::Object, null: false
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
-      field :amount_currency, Types::CurrencyEnum, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -28,6 +27,9 @@ module Types
       field :fixed_amount, String, null: true
       field :free_units_per_events, Integer, null: true
       field :free_units_per_total_aggregation, String, null: true
+
+      # NOTE: Volume charge model
+      field :volume_ranges, [Types::Charges::VolumeRange], null: true
 
       def amount
         return unless object.standard? || object.package?
@@ -75,6 +77,12 @@ module Types
         return unless object.percentage?
 
         object.properties['free_units_per_total_aggregation']
+      end
+
+      def volume_ranges
+        return unless object.volume?
+
+        object.properties['ranges']
       end
     end
   end

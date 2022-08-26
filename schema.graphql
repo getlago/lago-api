@@ -135,7 +135,6 @@ enum BillingTimeEnum {
 
 type Charge {
   amount: String
-  amountCurrency: CurrencyEnum
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
@@ -148,11 +147,11 @@ type Charge {
   packageSize: Int
   rate: String
   updatedAt: ISO8601DateTime!
+  volumeRanges: [VolumeRange!]
 }
 
 input ChargeInput {
   amount: String
-  amountCurrency: CurrencyEnum!
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   fixedAmount: String
@@ -163,6 +162,7 @@ input ChargeInput {
   id: ID
   packageSize: Int
   rate: String
+  volumeRanges: [VolumeRangeInput!]
 }
 
 enum ChargeModelEnum {
@@ -175,7 +175,6 @@ enum ChargeModelEnum {
 
 type ChargeUsage {
   amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
   billableMetric: BillableMetric!
   charge: Charge!
   units: Float!
@@ -3620,6 +3619,20 @@ type User {
   id: ID!
   organizations: [Organization!]
   updatedAt: ISO8601DateTime!
+}
+
+type VolumeRange {
+  flatAmount: String!
+  fromValue: Int!
+  perUnitAmount: String!
+  toValue: Int
+}
+
+input VolumeRangeInput {
+  flatAmount: String!
+  fromValue: Int!
+  perUnitAmount: String!
+  toValue: Int
 }
 
 type Wallet {

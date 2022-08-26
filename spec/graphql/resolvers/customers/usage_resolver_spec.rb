@@ -21,7 +21,6 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             charge { chargeModel }
             units
             amountCents
-            amountCurrency
           }
         }
       }
@@ -82,7 +81,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       query: query,
       variables: {
         customerId: customer.id,
-        subscriptionId: subscription.id
+        subscriptionId: subscription.id,
       },
     )
 
@@ -106,7 +105,6 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(charge_usage['charge']['chargeModel']).to eq('graduated')
       expect(charge_usage['units']).to eq(4.0)
       expect(charge_usage['amountCents']).to eq('5')
-      expect(charge_usage['amountCurrency']).to eq('EUR')
     end
   end
 end

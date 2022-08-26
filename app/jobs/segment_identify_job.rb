@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SegmentIdentifyJob < ApplicationJob
   queue_as :default
 
@@ -6,8 +8,13 @@ class SegmentIdentifyJob < ApplicationJob
     return if membership_id.nil? || membership_id == 'membership/unidentifiable'
 
     membership = Membership.find(membership_id.sub(/\Amembership\//, ''))
-    traits = { created_at: membership.created_at, hosting_type: hosting_type, version: version }
-    traits.merge!(email: membership.user.email) if hosting_type == 'cloud'
+    traits = {
+      created_at: membership.created_at,
+      hosting_type: hosting_type,
+      version: version,
+      organization_name: membership.organization.name,
+    }
+    traits[:email] = membership.user.email if hosting_type == 'cloud'
 
     SEGMENT_CLIENT.identify(user_id: membership_id, traits: traits)
   end
