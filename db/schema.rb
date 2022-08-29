@@ -302,6 +302,19 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_31_113537) do
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
   end
 
+  create_table "persisted_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.string "external_subscription_id", null: false
+    t.string "external_id", null: false
+    t.datetime "added_at", null: false
+    t.datetime "removed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "external_subscription_id"], name: "index_search_persisted_metrics"
+    t.index ["customer_id"], name: "index_persisted_metrics_on_customer_id"
+    t.index ["external_id"], name: "index_persisted_metrics_on_external_id"
+  end
+
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "name", null: false
@@ -405,6 +418,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_31_113537) do
   add_foreign_key "payment_providers", "organizations"
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
+  add_foreign_key "persisted_metrics", "customers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
