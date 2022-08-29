@@ -9,6 +9,7 @@ module Types
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
       field :applied_coupons, [Types::AppliedCoupons::Object], null: true
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
+      field :currency, Types::CurrencyEnum, null: true
 
       def invoices
         object.invoices.order(created_at: :desc)
@@ -20,6 +21,10 @@ module Types
 
       def applied_add_ons
         object.applied_add_ons.order(created_at: :desc)
+      end
+
+      def currency
+        object.default_currency
       end
     end
   end
