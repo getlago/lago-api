@@ -41,6 +41,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           ),
         )
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(PrepaidCreditJob).to receive(:perform_later)
 
       allow(PaymentProviderCustomers::StripeService).to receive(:new)
         .and_return(provider_customer_service)
@@ -68,7 +69,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
-    context 'when customer has active wallet and invoice type is credit' do
+    context 'when invoice type is credit and new status is succeeded' do
       let(:subscription) { create(:subscription, customer: customer) }
       let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
       let(:wallet_transaction) do
@@ -90,13 +91,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         invoice.update(invoice_type: 'credit')
       end
 
-      it 'updates wallet balance and update wallet_transaction status' do
+      it 'calls PrepaidCreditJob' do
         stripe_service.create
 
-        aggregate_failures do
-          expect(wallet.reload.credits_balance).to eq(25.0)
-          expect(wallet_transaction.reload.status).to eq('settled')
-        end
+        expect(PrepaidCreditJob).to have_received(:perform_later).with(invoice)
       end
     end
 
