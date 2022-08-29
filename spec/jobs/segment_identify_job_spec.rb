@@ -42,14 +42,6 @@ describe SegmentIdentifyJob, job: true do
 
         subject.perform_now(membership_id: membership_id)
       end
-
-      it 'includes the email of the membership' do
-        expect(SEGMENT_CLIENT).to receive(:identify).with(
-          hash_including(traits: hash_including(email: membership.user.email))
-        )
-
-        subject.perform_now(membership_id: membership_id)
-      end
     end
 
     context 'when membership is nil' do
