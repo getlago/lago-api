@@ -106,4 +106,11 @@ RSpec.describe Subscriptions::DatesService, type: :service do
         .to raise_error(NotImplementedError)
     end
   end
+
+  describe 'duration_in_days' do
+    it 'raises a not implemented error' do
+      expect { date_service.duration_in_days }
+        .to raise_error(NotImplementedError)
+    end
+  end
 end

@@ -358,4 +358,14 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       expect(result).to eq(plan.amount_cents.fdiv(7))
     end
   end
+
+  describe 'duration_in_days' do
+    let(:billing_time) { :anniversary }
+    let(:billing_date) { DateTime.parse('08 Mar 2022') }
+    let(:result) { date_service.duration_in_days }
+
+    it 'returns the duration of the period' do
+      expect(result).to eq(7)
+    end
+  end
 end
