@@ -17,7 +17,7 @@ module WalletTransactions
         wallet_transactions << transaction
       end
 
-      result.wallet_transactions = wallet_transactions
+      result.wallet_transactions = wallet_transactions.compact
       result
     end
 

@@ -35,6 +35,13 @@ html
         font-size: 9px;
         line-height: 16px;
       }
+      .prepaid-amount {
+        font-size: 10px;
+        font-family: Inter;
+        color: #008559;
+        font-weight: 600;
+        line-height: 16px;
+      }
 
       .mb-8 {
         margin-bottom: 8px;
@@ -230,7 +237,7 @@ html
                 - if add_on?
                   | Add On - #{fees.first.add_on.name}
                 - elsif credit?
-                  | Prepaid credit - #{fees.first.invoiceable.wallet.name}
+                  | Prepaid credits - #{fees.first.invoiceable.wallet.name}
                   .body-3
                     | Total credits: #{fees.first.invoiceable.credit_amount} credits
                 - elsif subscription?
@@ -261,7 +268,7 @@ html
           - if subscription?
             tr
               td.body-2 width="70%" Prepaid credits
-              td.body-1 width="30%" = wallet_transaction_amount.format
+              td.prepaid-amount width="30%" = wallet_transaction_amount.format
           tr
             td.body-2 Tax
             td.body-1 = vat_amount.format
