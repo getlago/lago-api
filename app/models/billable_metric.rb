@@ -16,6 +16,7 @@ class BillableMetric < ApplicationRecord
     sum_agg
     max_agg
     unique_count_agg
+    recurring_count_agg
   ].freeze
 
   enum billable_period: BILLABLE_PERIODS
