@@ -13,8 +13,8 @@ class SegmentIdentifyJob < ApplicationJob
       hosting_type: hosting_type,
       version: version,
       organization_name: membership.organization.name,
+      email: membership.user.email,
     }
-    traits[:email] = membership.user.email if hosting_type == 'cloud'
 
     SEGMENT_CLIENT.identify(user_id: membership_id, traits: traits)
   end
