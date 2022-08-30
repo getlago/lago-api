@@ -93,7 +93,7 @@ module Api
           # NOTE: Charges properties can have 2 differents formats
           # - An array if the charge model need many ranges (ie: graduated)
           # - A hash if other cases (ie: standard)
-          permitted_params[:charges].each_with_index do |permitted_charge, idx|
+          (permitted_params[:charges] || []).each_with_index do |permitted_charge, idx|
             permitted_charge[:properties] = if params[:plan][:charges][idx][:properties].is_a?(Array)
               params[:plan][:charges][idx][:properties].map(&:permit!)
             else

@@ -23,6 +23,7 @@ describe SegmentIdentifyJob, job: true do
             hosting_type: 'self',
             version: Utils::VersionService.new.version.version.number,
             organization_name: membership.organization.name,
+            email: membership.user.email,
           }
         )
 
@@ -37,14 +38,6 @@ describe SegmentIdentifyJob, job: true do
       it 'includes hosting type equal to cloud' do
         expect(SEGMENT_CLIENT).to receive(:identify).with(
           hash_including(traits: hash_including(hosting_type: 'cloud'))
-        )
-
-        subject.perform_now(membership_id: membership_id)
-      end
-
-      it 'includes the email of the membership' do
-        expect(SEGMENT_CLIENT).to receive(:identify).with(
-          hash_including(traits: hash_including(email: membership.user.email))
         )
 
         subject.perform_now(membership_id: membership_id)
