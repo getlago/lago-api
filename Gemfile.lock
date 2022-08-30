@@ -57,6 +57,9 @@ GEM
     activejob (7.0.3.1)
       activesupport (= 7.0.3.1)
       globalid (>= 0.3.6)
+    activejob-traceable (0.3.5)
+      activejob
+      activesupport
     activemodel (7.0.3.1)
       activesupport (= 7.0.3.1)
     activerecord (7.0.3.1)
@@ -330,6 +333,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  activejob-traceable
   analytics-ruby (~> 2.4.0)
   aws-sdk-s3
   bcrypt
