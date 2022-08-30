@@ -15,7 +15,6 @@ jobs:
           ruby-version: 3.0.1
           bundler-cache: true
       - name: Install Gems
-        run: |
-          bundle install pronto pronto-flay pronto-rubocop
+        run: bundle install pronto pronto-flay pronto-rubocop
       - name: Run Pronto
         run: bundle exec pronto run --exit-code -c origin/${{ github.base_ref }}
