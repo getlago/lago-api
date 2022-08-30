@@ -17,7 +17,7 @@ RSpec.describe Invoices::UpdateService do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(PrepaidCreditJob).to receive(:perform_later)
+      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
     it 'updates the invoice' do
@@ -72,13 +72,13 @@ RSpec.describe Invoices::UpdateService do
         invoice.update(invoice_type: 'credit')
       end
 
-      it 'calls PrepaidCreditJob' do
+      it 'calls Invoices::PrepaidCreditJob' do
         invoice_service.update_from_api(
           invoice_id: invoice_id,
           params: update_args,
         )
 
-        expect(PrepaidCreditJob).to have_received(:perform_later).with(invoice)
+        expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
       end
     end
 

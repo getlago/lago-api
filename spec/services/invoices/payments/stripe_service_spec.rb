@@ -41,7 +41,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           ),
         )
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(PrepaidCreditJob).to receive(:perform_later)
+      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
 
       allow(PaymentProviderCustomers::StripeService).to receive(:new)
         .and_return(provider_customer_service)
@@ -91,10 +91,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         invoice.update(invoice_type: 'credit')
       end
 
-      it 'calls PrepaidCreditJob' do
+      it 'calls Invoices::PrepaidCreditJob' do
         stripe_service.create
 
-        expect(PrepaidCreditJob).to have_received(:perform_later).with(invoice)
+        expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
       end
     end
 

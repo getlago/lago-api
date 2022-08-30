@@ -161,7 +161,7 @@ module Invoices
         return unless invoice.invoice_type == 'credit'
         return unless status == 'succeeded'
 
-        PrepaidCreditJob.perform_later(invoice)
+        Invoices::PrepaidCreditJob.perform_later(invoice)
       end
 
       def deliver_error_webhook(stripe_error)
