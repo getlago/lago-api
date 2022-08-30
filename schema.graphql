@@ -2423,6 +2423,7 @@ type CustomerDetails {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  currency: CurrencyEnum
   customerId: String!
   email: String
 

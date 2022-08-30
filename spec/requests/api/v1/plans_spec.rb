@@ -89,6 +89,34 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(result[:charges].first[:lago_id]).to be_present
       end
     end
+
+    context 'without charges' do
+      let(:create_params) do
+        {
+          name: 'P1',
+          code: 'plan_code',
+          interval: 'weekly',
+          description: 'description',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          trial_period: 1,
+          pay_in_advance: false,
+        }
+      end
+
+      it 'creates a plan' do
+        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+
+        expect(response).to have_http_status(:success)
+
+        result = JSON.parse(response.body, symbolize_names: true)[:plan]
+        expect(result[:lago_id]).to be_present
+        expect(result[:code]).to eq(create_params[:code])
+        expect(result[:name]).to eq(create_params[:name])
+        expect(result[:created_at]).to be_present
+        expect(result[:charges].count).to eq(0)
+      end
+    end
   end
 
   describe 'update' do

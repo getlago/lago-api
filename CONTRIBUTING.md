@@ -38,7 +38,7 @@ This project and everyone participating in it is governed by the [Code of Conduc
 ## I don't want to read this whole thing I just have a question!!!
 
 - [Lago Discussions](https://community.getlago.com/)
-- [Lago official documentation](https://doc.getlago.com/docs/guide/intro)
+- [Lago official documentation](https://doc.getlago.com)
 - [Lago feature request](https://community.getlago.com/c/feature-requests/11)
 
 ## What should I know before I get started?
@@ -117,7 +117,7 @@ Before creating enhancement suggestions, please check [this list](#before-submit
 
 #### Before Submitting An Enhancement Suggestion
 
-- **Check the [documentation](https://doc.getlago.com/docs/guide/intro)** you might discover that the enhancement is already available. Most importantly, check if you're using [the latest version of Lago](https://github.com/getlago/lago/releases).
+- **Check the [documentation](https://doc.getlago.com)** you might discover that the enhancement is already available. Most importantly, check if you're using [the latest version of Lago](https://github.com/getlago/lago/releases).
 - **Determine [which element the enhancement should be suggested in](#lago-and-packages).**
 - **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3Agetlago)** to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 
