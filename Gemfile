@@ -5,6 +5,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '3.0.1'
 
+gem 'activejob-traceable'
 gem 'analytics-ruby', '~> 2.4.0', require: 'segment/analytics'
 gem 'bcrypt'
 gem 'bootsnap', require: false
