@@ -1,10 +1,10 @@
-name: Run Lint
+name: Pronto
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
   run-lint:
-    name: Run Lint
+    name: Pronto
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -14,9 +14,5 @@ jobs:
         with:
           ruby-version: 3.0.1
           bundler-cache: true
-      - name: Install Rubocop
-        run: |
-          gem install rubocop -v 1.35.0
-      - name: Run Rubocop
-        run: |
-          bundle exec rubocop
+      - name: Run Pronto
+        run: bundle exec pronto run --exit-code -c origin/${{ github.base_ref }}
