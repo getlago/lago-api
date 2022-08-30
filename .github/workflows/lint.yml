@@ -1,0 +1,22 @@
+name: Run Lint
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  run-lint:
+    name: Run Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Ruby and gems
+        uses: ruby/setup-ruby@8f312efe1262fb463d906e9bf040319394c18d3e # v1.92
+        with:
+          ruby-version: 3.0.1
+          bundler-cache: true
+      - name: Install Rubocop
+        run: |
+          gem install rubocop -v 1.35.0
+      - name: Run Rubocop
+        run: |
+          bundle exec rubocop
