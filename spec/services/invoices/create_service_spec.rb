@@ -744,6 +744,25 @@ RSpec.describe Invoices::CreateService, type: :service do
 
         expect(wallet.reload.balance).to eq(0.0)
       end
+
+      context 'when invoice amount in cents is zero' do
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            customer: subscription.customer,
+            amount_cents: 100,
+            amount_currency: plan.amount_currency,
+          )
+        end
+
+        before { applied_coupon }
+
+        it 'does not create any wallet transactions' do
+          result = invoice_service.create
+
+          expect(result.invoice.wallet_transactions.exists?).to be(false)
+        end
+      end
     end
   end
 end

@@ -29,7 +29,7 @@ module Invoices
         compute_amounts(invoice)
 
         create_credit(invoice) if should_create_credit?
-        create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?
+        create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.total_amount_currency = currency
@@ -136,8 +136,9 @@ module Invoices
       applied_coupon.amount_currency == currency
     end
 
-    def should_create_applied_prepaid_credit?
+    def should_create_applied_prepaid_credit?(invoice)
       return false unless wallet&.active?
+      return false unless invoice.amount_cents&.positive?
 
       wallet.balance > 0
     end
