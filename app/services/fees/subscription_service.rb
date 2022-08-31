@@ -198,8 +198,7 @@ module Fees
         #       for this case, we should not apply the full period amount
         #       but the prorata between the trial end date end the invoice to_date
         if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          from_date = subscription.trial_end_date
-          number_of_day_to_bill = (to_date + 1.day - from_date).to_i
+          number_of_day_to_bill = (to_date + 1.day - subscription.trial_end_date).to_i
 
           return number_of_day_to_bill * single_day_price(subscription, optional_from_date: from_date)
         end

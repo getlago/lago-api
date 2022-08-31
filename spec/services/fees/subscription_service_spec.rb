@@ -452,6 +452,50 @@ RSpec.describe Fees::SubscriptionService do
           end
         end
       end
+
+      context 'when subscription is based on anniversary date' do
+        let(:started_at) { Time.zone.parse('2022-08-31 00:01') }
+
+        let(:plan) do
+          create(
+            :plan,
+            amount_cents: 3000,
+            amount_currency: 'EUR',
+          )
+        end
+
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            started_at: started_at,
+            subscription_date: DateTime.parse('2022-08-31'),
+            billing_time: :anniversary,
+          )
+        end
+
+        let(:boundaries) do
+          {
+            from_date: Time.zone.parse('2022-08-31 00:00').to_date,
+            to_date: Time.zone.parse('2022-09-30 00:00').to_date,
+            timestamp: Time.zone.parse('2022-04-02 00:00').end_of_month.to_i,
+          }
+        end
+
+        context 'when subscription is pay in advance' do
+          before { plan.update(pay_in_advance: true) }
+
+          context 'when plan has a trial period' do
+            before { plan.update(trial_period: 15) }
+
+            it 'creates a fee with prorated amount based on trial' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(1548)
+            end
+          end
+        end
+      end
     end
 
     context 'when plan is yearly' do
