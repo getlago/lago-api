@@ -12,7 +12,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   describe 'create' do
     let(:create_params) do
       {
-        external_customer_id: customer.customer_id,
+        external_customer_id: customer.external_id,
         rate_amount: '1',
         name: 'Wallet1',
         paid_credits: '10',
@@ -135,7 +135,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     before { wallet }
 
     it 'returns wallets' do
-      get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.customer_id}")
+      get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.external_id}")
 
       expect(response).to have_http_status(:success)
 
@@ -152,7 +152,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       before { wallet2 }
 
       it 'returns wallets with correct meta data' do
-        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.customer_id}&page=1&per_page=1")
+        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.external_id}&page=1&per_page=1")
 
         expect(response).to have_http_status(:success)
 
