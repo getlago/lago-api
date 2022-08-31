@@ -57,7 +57,7 @@ module Api
       end
 
       def index
-        customer = Customer.find_by(customer_id: params[:customer_id])
+        customer = Customer.find_by(customer_id: params[:external_customer_id])
 
         return not_found_error unless customer
 
@@ -88,7 +88,7 @@ module Api
       end
 
       def customer_params
-        params.require(:wallet).permit(:customer_id)
+        params.require(:wallet).permit(:external_customer_id)
       end
 
       def update_params
@@ -99,7 +99,7 @@ module Api
       end
 
       def customer
-        Customer.find_by(customer_id: customer_params[:customer_id], organization_id: current_organization.id)
+        Customer.find_by(customer_id: customer_params[:external_customer_id], organization_id: current_organization.id)
       end
 
       def render_wallet(wallet)
