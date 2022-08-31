@@ -29,6 +29,7 @@ module Invoices
         compute_amounts(invoice)
 
         create_credit(invoice) if should_create_credit?
+        create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.total_amount_currency = currency
@@ -123,10 +124,23 @@ module Invoices
       @applied_coupon = customer.applied_coupons.active.first
     end
 
+    def wallet
+      return @wallet if @wallet
+
+      @wallet = customer.wallets.active.first
+    end
+
     def should_create_credit?
       return false if applied_coupon.nil?
 
       applied_coupon.amount_currency == currency
+    end
+
+    def should_create_applied_prepaid_credit?(invoice)
+      return false unless wallet&.active?
+      return false unless invoice.amount_cents&.positive?
+
+      wallet.balance > 0
     end
 
     def create_credit(invoice)
@@ -139,6 +153,16 @@ module Invoices
       # NOTE: Since credit impact the invoice amount we need to recompute the amount
       #       and the VAT amount
       invoice.amount_cents = invoice.amount_cents - credit_result.credit.amount_cents
+      invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
+    end
+
+    def create_applied_prepaid_credit(invoice)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.new(invoice: invoice, wallet: wallet).create
+      prepaid_credit_result.throw_error unless prepaid_credit_result.success?
+
+      # NOTE: Since credit impact the invoice amount we need to recompute the amount
+      #       and the VAT amount
+      invoice.amount_cents = invoice.amount_cents - prepaid_credit_result.prepaid_credit_amount_cents
       invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
     end
 

@@ -704,5 +704,65 @@ RSpec.describe Invoices::CreateService, type: :service do
         end
       end
     end
+
+    context 'with applied prepaid credits' do
+      let(:timestamp) { Time.zone.now.beginning_of_month }
+      let(:wallet) { create(:wallet, customer: subscription.customer, balance: '0.30', credits_balance: '0.30') }
+
+      let(:plan) do
+        create(:plan, interval: 'monthly')
+      end
+
+      before { wallet }
+
+      it 'creates an invoice' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
+          expect(result.invoice.subscriptions.first).to eq(subscription)
+          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+          expect(result.invoice.amount_cents).to eq(70)
+          expect(result.invoice.amount_currency).to eq('EUR')
+          expect(result.invoice.vat_amount_cents).to eq(14)
+          expect(result.invoice.vat_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(84)
+          expect(result.invoice.total_amount_currency).to eq('EUR')
+
+          expect(result.invoice.wallet_transactions.count).to eq(1)
+        end
+      end
+
+      it 'updates wallet balance' do
+        invoice_service.create
+
+        expect(wallet.reload.balance).to eq(0.0)
+      end
+
+      context 'when invoice amount in cents is zero' do
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            customer: subscription.customer,
+            amount_cents: 100,
+            amount_currency: plan.amount_currency,
+          )
+        end
+
+        before { applied_coupon }
+
+        it 'does not create any wallet transactions' do
+          result = invoice_service.create
+
+          expect(result.invoice.wallet_transactions.exists?).to be(false)
+        end
+      end
+    end
   end
 end

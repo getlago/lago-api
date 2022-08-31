@@ -6,8 +6,8 @@ module Wallets
       wallet = Wallet.find_by(id: args[:id])
       return result.fail!(code: 'not_found') unless wallet
 
-      wallet.name = args[:name]
-      wallet.expiration_date = args[:expiration_date]
+      wallet.name = args[:name] if args.key?(:name)
+      wallet.expiration_date = args[:expiration_date] if args.key?(:expiration_date)
 
       wallet.save!
 

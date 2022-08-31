@@ -17,6 +17,7 @@ RSpec.describe Invoices::UpdateService do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
     it 'updates the invoice' do
@@ -47,6 +48,38 @@ RSpec.describe Invoices::UpdateService do
           payment_status: invoice.status
         }
       )
+    end
+
+    context 'when invoice type is credit and new status is succeeded' do
+      let(:subscription) { create(:subscription, customer: invoice.customer) }
+      let(:wallet) { create(:wallet, customer: invoice.customer, balance: 10.0, credits_balance: 10.0) }
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet: wallet, amount: 15.0, credit_amount: 15.0, status: 'pending')
+      end
+      let(:fee) do
+        create(:fee,
+          fee_type: 'credit',
+          invoiceable_type: 'WalletTransaction',
+          invoiceable_id: wallet_transaction.id,
+          invoice: invoice
+        )
+      end
+
+      before do
+        wallet_transaction
+        fee
+        subscription
+        invoice.update(invoice_type: 'credit')
+      end
+
+      it 'calls Invoices::PrepaidCreditJob' do
+        invoice_service.update_from_api(
+          invoice_id: invoice_id,
+          params: update_args,
+        )
+
+        expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
+      end
     end
 
     context 'when invoice does not exist' do

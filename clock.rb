@@ -23,4 +23,8 @@ module Clockwork
   every(1.day, 'schedule:terminate_coupons', at: '5:00') do
     Clock::TerminateCouponsJob.perform_later
   end
+
+  every(1.day, 'schedule:terminate_wallets', at: '4:00') do
+    Clock::TerminateWalletsJob.perform_later
+  end
 end

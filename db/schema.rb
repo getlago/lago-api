@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_18_151052) do
+ActiveRecord::Schema[7.0].define(version: 2022_08_25_051923) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -195,9 +195,13 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_151052) do
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
     t.integer "events_count"
+    t.integer "fee_type", null: false
+    t.string "invoiceable_type"
+    t.uuid "invoiceable_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
+    t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
   end
 
@@ -344,8 +348,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_151052) do
     t.uuid "wallet_id", null: false
     t.integer "transaction_type", null: false
     t.integer "status", null: false
-    t.decimal "amount", precision: 5, default: "0", null: false
-    t.decimal "credit_amount", precision: 5, default: "0", null: false
+    t.decimal "amount", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "credit_amount", precision: 30, scale: 5, default: "0.0", null: false
     t.datetime "settled_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -359,17 +363,17 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_18_151052) do
     t.integer "status", null: false
     t.string "currency", null: false
     t.string "name"
-    t.decimal "rate_amount", precision: 5, default: "0", null: false
-    t.decimal "credits_balance", precision: 5, default: "0", null: false
-    t.decimal "balance", precision: 5, default: "0", null: false
-    t.decimal "consumed_credits", precision: 5, default: "0", null: false
+    t.decimal "rate_amount", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "credits_balance", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "balance", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "consumed_credits", precision: 30, scale: 5, default: "0.0", null: false
     t.datetime "expiration_date", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
     t.datetime "terminated_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.decimal "consumed_amount", precision: 5, default: "0"
+    t.decimal "consumed_amount", precision: 30, scale: 5, default: "0.0"
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 

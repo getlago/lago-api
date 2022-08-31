@@ -13,12 +13,19 @@ module Mutations
       argument :paid_credits, String, required: true
       argument :granted_credits, String, required: true
 
-      type Types::WalletTransactions::Object
+      type Types::WalletTransactions::Object.collection_type
 
       def resolve(**args)
         validate_organization!
 
-        # TODO
+        result = ::WalletTransactions::CreateService.new.create(
+          organization_id: current_organization.id,
+          wallet_id: args[:wallet_id],
+          paid_credits: args[:paid_credits],
+          granted_credits: args[:granted_credits],
+        )
+
+        result.success? ? result.wallet_transactions : result_error(result)
       end
     end
   end

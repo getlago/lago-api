@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         item: {
-          type: model.item_type,
+          type: model.fee_type,
           code: model.item_code,
           name: model.item_name,
         },

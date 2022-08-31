@@ -35,6 +35,13 @@ html
         font-size: 9px;
         line-height: 16px;
       }
+      .prepaid-amount {
+        font-size: 10px;
+        font-family: Inter;
+        color: #008559;
+        font-weight: 600;
+        line-height: 16px;
+      }
 
       .mb-8 {
         margin-bottom: 8px;
@@ -229,9 +236,13 @@ html
               .body-1
                 - if add_on?
                   | Add On - #{fees.first.add_on.name}
+                - elsif credit?
+                  | Prepaid credits - #{fees.first.invoiceable.wallet.name}
+                  .body-3
+                    | Total credits: #{fees.first.invoiceable.credit_amount} credits
                 - elsif subscription?
                   | All Subscription(s)
-            - if add_on?
+            - if add_on? || credit?
               td.body-1 style="text-align: right;" width="30%"
                 = fees.first&.amount&.format
             - elsif subscription?
@@ -253,7 +264,11 @@ html
         table.total-table width="100%"
           tr
             td.body-2 width="70%" Sub total
-            td.body-1 width="30%" = amount.format
+            td.body-1 width="30%" = subtotal_before_prepaid_credits.format
+          - if subscription? && wallet_transactions.exists?
+            tr
+              td.body-2 width="70%" Prepaid credits
+              td.prepaid-amount width="30%" = wallet_transaction_amount.format
           tr
             td.body-2 Tax
             td.body-1 = vat_amount.format

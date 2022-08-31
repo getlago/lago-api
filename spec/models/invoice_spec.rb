@@ -111,6 +111,44 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#wallet_transaction_amount' do
+    let(:customer) { create(:customer) }
+    let(:invoice) { create(:invoice, customer: customer) }
+    let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
+    let(:wallet_transaction) do
+      create(:wallet_transaction, invoice: invoice, wallet: wallet, amount: 1, credit_amount: 1)
+    end
+
+    before { wallet_transaction }
+
+    it 'returns the wallet transaction amount' do
+      expect(invoice.wallet_transaction_amount.to_s).to eq('1.00')
+    end
+  end
+
+  describe '#subtotal_before_prepaid_credits' do
+    let(:customer) { create(:customer) }
+    let(:invoice) { create(:invoice, customer: customer, amount_cents: 555) }
+    let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
+    let(:wallet_transaction) do
+      create(:wallet_transaction, invoice: invoice, wallet: wallet, amount: 1, credit_amount: 1)
+    end
+
+    before { wallet_transaction }
+
+    it 'returns the subtotal before prepaid credits' do
+      expect(invoice.subtotal_before_prepaid_credits.to_s).to eq('6.55')
+    end
+
+    context 'when there is no prepaid credits' do
+      let(:wallet_transaction) { create(:wallet_transaction, wallet: wallet, amount: 1, credit_amount: 1) }
+
+      it 'returns the invoice amount' do
+        expect(invoice.subtotal_before_prepaid_credits.to_s).to eq('5.55')
+      end
+    end
+  end
+
   describe '#subscription_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }
@@ -121,7 +159,7 @@ RSpec.describe Invoice, type: :model do
     it 'returns the subscriptions amount' do
       create(:fee, invoice: invoice, amount_cents: 200)
       create(:fee, invoice: invoice, amount_cents: 100)
-      create(:fee, invoice: invoice, charge_id: create(:standard_charge).id)
+      create(:fee, invoice: invoice, charge_id: create(:standard_charge).id, fee_type: 'charge')
 
       expect(invoice.subscription_amount.to_s).to eq('3.00')
     end

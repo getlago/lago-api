@@ -10,8 +10,8 @@ module Wallets
     def valid?
       errors = []
       errors << valid_customer?
-      errors << valid_paid_credits_amount?
-      errors << valid_granted_credits_amount?
+      errors << valid_paid_credits_amount? if args[:paid_credits]
+      errors << valid_granted_credits_amount? if args[:granted_credits]
       errors = errors.compact
 
       unless errors.empty?
@@ -31,18 +31,15 @@ module Wallets
     attr_accessor :result, :args
 
     def valid_customer?
-      current_customer = Customer.find_by(
-        id: args[:customer_id],
-        organization_id: args[:organization_id],
-      )
+      result.current_customer = args[:customer]
 
-      return 'customer_not_found' unless current_customer
-      return 'wallet_already_exists' if current_customer.wallets.active.exists?
-      return 'no_active_subscription' unless current_customer.subscriptions.active.exists?
+      return 'customer_not_found' unless result.current_customer
+      return 'wallet_already_exists' if result.current_customer.wallets.active.exists?
+      return 'no_active_subscription' unless result.current_customer.subscriptions.active.exists?
     end
 
     def valid_paid_credits_amount?
-      return 'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
+      'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
     end
 
     def valid_granted_credits_amount?

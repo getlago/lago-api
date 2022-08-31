@@ -34,6 +34,7 @@ module Invoices
         payment.save!
 
         update_invoice_status(payment.status)
+        handle_prepaid_credits(payment.status)
         track_payment_status_changed(payment.invoice)
 
         result.payment = payment
@@ -50,6 +51,7 @@ module Invoices
 
         payment.update!(status: status)
         payment.invoice.update!(status: status)
+        handle_prepaid_credits(status)
         track_payment_status_changed(payment.invoice)
 
         result
@@ -153,6 +155,13 @@ module Invoices
         return unless Invoice::STATUS.include?(status&.to_sym)
 
         invoice.update!(status: status)
+      end
+
+      def handle_prepaid_credits(status)
+        return unless invoice.invoice_type == 'credit'
+        return unless status == 'succeeded'
+
+        Invoices::PrepaidCreditJob.perform_later(invoice)
       end
 
       def deliver_error_webhook(stripe_error)
