@@ -101,7 +101,6 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: charge,
-        fee_type: 'charge',
         amount_cents: 100
       )
 
@@ -110,7 +109,6 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: charge,
-        fee_type: 'charge',
         amount_cents: 200
       )
 
@@ -139,7 +137,6 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: create(:standard_charge),
-        fee_type: 'charge',
         amount_cents: 200
       )
 
@@ -162,7 +159,6 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: charge,
-        fee_type: 'charge',
         amount_cents: 200
       )
 
@@ -171,7 +167,6 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: charge,
-        fee_type: 'charge',
         amount_cents: 100
       )
 

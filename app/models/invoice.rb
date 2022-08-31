@@ -9,7 +9,6 @@ class Invoice < ApplicationRecord
 
   has_many :fees
   has_many :credits
-  has_many :wallet_transactions
   has_many :payments
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
@@ -25,9 +24,8 @@ class Invoice < ApplicationRecord
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :credit_amount_cents, disable_validation: true, allow_nil: true
-  monetize :wallet_transaction_amount_cents, disable_validation: true, allow_nil: true
 
-  INVOICE_TYPES = %i[subscription add_on credit].freeze
+  INVOICE_TYPES = %i[subscription add_on].freeze
   STATUS = %i[pending succeeded failed].freeze
 
   enum invoice_type: INVOICE_TYPES
@@ -65,25 +63,6 @@ class Invoice < ApplicationRecord
 
   def credit_amount_currency
     amount_currency
-  end
-
-  def wallet_transaction_amount_cents
-    transaction_amount = wallet_transactions.sum(:amount)
-
-    currency = amount.currency
-    rounded_amount = transaction_amount.round(currency.exponent)
-
-    rounded_amount * currency.subunit_to_unit
-  end
-
-  def wallet_transaction_amount_currency
-    amount_currency
-  end
-
-  def subtotal_before_prepaid_credits
-    return amount unless wallet_transactions.exists?
-
-    amount + wallet_transaction_amount
   end
 
   def organization

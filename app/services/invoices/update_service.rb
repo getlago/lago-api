@@ -10,8 +10,6 @@ class Invoices::UpdateService < BaseService
     invoice.status = params[:status] if params.key?(:status)
     invoice.save!
 
-    handle_prepaid_credits(invoice, params[:status])
-
     result.invoice = invoice
     track_payment_status_changed(invoice)
     result
@@ -35,12 +33,5 @@ class Invoices::UpdateService < BaseService
         payment_status: invoice.status
       }
     )
-  end
-
-  def handle_prepaid_credits(invoice, status)
-    return unless invoice.invoice_type == 'credit'
-    return unless status == 'succeeded'
-
-    Invoices::PrepaidCreditJob.perform_later(invoice)
   end
 end

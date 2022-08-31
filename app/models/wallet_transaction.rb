@@ -2,7 +2,6 @@
 
 class WalletTransaction < ApplicationRecord
   belongs_to :wallet
-  belongs_to :invoice, optional: true
 
   STATUSES = [
     :pending,

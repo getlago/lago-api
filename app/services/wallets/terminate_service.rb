@@ -16,7 +16,7 @@ module Wallets
     end
 
     def terminate_all_expired
-      Wallet.active.expired.find_each(&:mark_as_terminated!)
+      # TODO
     end
   end
 end

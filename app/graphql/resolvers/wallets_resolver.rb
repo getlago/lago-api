@@ -23,7 +23,7 @@ module Resolvers
       wallets = current_customer
         .wallets
         .page(page)
-        .per(limit)
+        .limit(limit)
 
       wallets = wallets.where(status: status) if status.present?
       wallets = wallets.where(id: ids) if ids.present?

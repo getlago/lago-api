@@ -12,7 +12,7 @@ module ExecutionErrorResponder
       code: code,
     }
 
-    if code == 'unprocessable_entity' && payload[:details].is_a?(Hash)
+    if code == 'unprocessable_entity'
       payload[:details] = details&.transform_keys do |key|
         key.to_s.camelize(:lower)
       end

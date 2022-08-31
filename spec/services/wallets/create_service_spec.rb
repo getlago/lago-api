@@ -7,7 +7,7 @@ RSpec.describe Wallets::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization, customer_id: 'foobar') }
+  let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, customer: customer) }
 
   before { subscription }
@@ -18,7 +18,7 @@ RSpec.describe Wallets::CreateService, type: :service do
     let(:create_args) do
       {
         name: 'New Wallet',
-        customer: customer,
+        customer_id: customer.id,
         organization_id: organization.id,
         rate_amount: '1.00',
         expiration_date: '2022-01-01',
@@ -30,11 +30,6 @@ RSpec.describe Wallets::CreateService, type: :service do
     it 'creates a wallet' do
       expect { create_service.create(**create_args) }
         .to change(Wallet, :count).by(1)
-    end
-
-    it 'enqueues the WalletTransaction::CreateJob' do
-      expect { create_service.create(**create_args) }
-        .to have_enqueued_job(WalletTransactions::CreateJob)
     end
 
     context 'with validation error' do

@@ -10,8 +10,8 @@ module WalletTransactions
     def valid?
       errors = []
       errors << valid_wallet?
-      errors << valid_paid_credits_amount? if args[:paid_credits]
-      errors << valid_granted_credits_amount? if args[:granted_credits]
+      errors << valid_paid_credits_amount?
+      errors << valid_granted_credits_amount?
       errors = errors.compact
 
       unless errors.empty?
@@ -31,12 +31,14 @@ module WalletTransactions
     attr_accessor :result, :args
 
     def valid_wallet?
-      organization = Organization.find_by(id: args[:organization_id])
+      current_wallet = Wallet.find_by(
+        id: args[:wallet_id],
+        customer_id: args[:customer_id],
+      )
 
-      result.current_wallet = organization.wallets.find_by(id: args[:wallet_id])
+      return 'wallet_not_found' unless current_wallet
 
-      return 'wallet_not_found' unless result.current_wallet
-      return 'wallet_is_terminated' if result.current_wallet.terminated?
+      'wallet_is_terminated' if current_wallet.terminated?
     end
 
     def valid_paid_credits_amount?
