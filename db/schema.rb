@@ -349,6 +349,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_05_142834) do
     t.string "external_id", null: false
     t.integer "billing_time", default: 0, null: false
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
+    t.index ["external_id"], name: "index_subscriptions_on_external_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
 
