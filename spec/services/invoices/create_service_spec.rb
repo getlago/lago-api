@@ -559,44 +559,6 @@ RSpec.describe Invoices::CreateService, type: :service do
       end
     end
 
-    context 'when subscription is terminated and upgraded' do
-      let(:plan) do
-        create(:plan, interval: 'monthly', pay_in_advance: false)
-      end
-
-      let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
-      let(:started_at) { Time.zone.today - 3.months }
-      let(:terminated_at) { timestamp - 2.days }
-      let(:subscription) do
-        create(
-          :subscription,
-          plan: plan,
-          subscription_date: started_at.to_date,
-          started_at: started_at,
-          status: :terminated,
-          terminated_at: terminated_at,
-        )
-      end
-      let(:next_plan) { create(:plan, amount_cents: plan.amount_cents + 20) }
-      let(:next_subscription) do
-        create(:subscription, plan: next_plan, previous_subscription: subscription)
-      end
-
-      before { next_subscription }
-
-      it 'creates an invoice without charge fee' do
-        result = invoice_service.create
-
-        aggregate_failures do
-          expect(result.invoice.fees.first.properties['to_date'])
-            .to eq(terminated_at.to_date.to_s)
-          expect(result.invoice.fees.first.properties['from_date'])
-            .to eq(terminated_at.to_date.beginning_of_month.to_s)
-          expect(result.invoice.fees.charge_kind.count).to eq(0)
-        end
-      end
-    end
-
     context 'when subscription is pay in advance and is an upgrade' do
       let(:plan) do
         create(:plan, interval: :monthly, pay_in_advance: true, amount_cents: 1000)
