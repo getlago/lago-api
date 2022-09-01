@@ -93,14 +93,50 @@ RSpec.describe Events::CreateBatchService, type: :service do
           expect(events.last.transaction_id).to eq(transaction_id)
         end
       end
+
+      context 'when event matches a recurring billable metric' do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization: customer.organization,
+            aggregation_type: 'recurring_count_agg',
+            field_name: 'item_id',
+          )
+        end
+
+        let(:create_args) do
+          {
+            external_subscription_ids: [subscription.external_id, subscription2.external_id],
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            properties: {
+              billable_metric.field_name => 'ext_12345',
+              'operation_type' => 'add',
+            },
+            timestamp: Time.zone.now.to_i,
+          }
+        end
+
+        it 'creates a persisted metric' do
+          expect do
+            create_batch_service.call(
+              organization: organization,
+              params: create_args,
+              timestamp: timestamp,
+              metadata: {},
+            )
+          end.to change(PersistedEvent, :count).by(2)
+        end
+      end
     end
 
     context 'when event for one subscription already exists' do
       let(:existing_event) do
-        create(:event,
-               organization: organization,
-               transaction_id: create_args[:transaction_id],
-               subscription_id: subscription.id
+        create(
+          :event,
+          organization: organization,
+          transaction_id: create_args[:transaction_id],
+          subscription_id: subscription.id,
         )
       end
 

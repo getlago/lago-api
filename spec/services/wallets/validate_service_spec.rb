@@ -10,7 +10,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, customer: customer) }
-  let(:customer_id) { customer.customer_id }
+  let(:customer_id) { customer.external_id }
   let(:paid_credits) { '1.00' }
   let(:granted_credits) { '0.00' }
   let(:args) do

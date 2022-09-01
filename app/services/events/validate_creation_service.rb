@@ -26,9 +26,24 @@ module Events
       return blank_subscription_error if params[:external_subscription_ids].blank?
       return invalid_customer_error unless customer
 
-      invalid_subscriptions = params[:external_subscription_ids].select { |arg| !customer_external_subscription_ids.include?(arg) }
+      invalid_subscriptions = params[:external_subscription_ids].select do |arg|
+        !customer_external_subscription_ids.include?(arg)
+      end
       return invalid_subscription_error if invalid_subscriptions.present?
       return invalid_code_error unless valid_code?
+
+      invalid_persisted_events = params[:external_subscription_ids]
+        .map { |external_id| organization.subscriptions.find_by(external_id: external_id) }
+        .map { |subscription| [subscription.external_id, persisted_event_validation(subscription)] }
+        .reject { |errors| errors.last.blank? }
+
+      if invalid_persisted_events.present?
+        return invalid_persisted_event_error(
+          invalid_persisted_events.map { |errors| "Subscription #{errors.first}: #{errors.last}" }.join(','),
+        )
+      end
+
+      nil
     end
 
     def validate_create
@@ -39,11 +54,16 @@ module Events
         return invalid_subscription_error unless valid_subscription_id?
       elsif params[:external_subscription_id]
         return invalid_subscription_error unless valid_subscription_id?
-      else
-        return blank_subscription_error if customer_external_subscription_ids.blank?
+      elsif customer_external_subscription_ids.blank?
+        return blank_subscription_error
       end
 
       return invalid_code_error unless valid_code?
+
+      invalid_persisted_event = persisted_event_validation(
+        customer.active_subscriptions.first || organization.subscriptions.find_by(id: params[:subscription_id]),
+      )
+      return invalid_persisted_event_error(invalid_persisted_event) if invalid_persisted_event.present?
     end
 
     def valid_subscription_id?
@@ -51,7 +71,7 @@ module Events
     end
 
     def valid_code?
-      organization.billable_metrics.pluck(:code).include?(params[:code])
+      billable_metric.present?
     end
 
     def send_webhook_notice
@@ -60,7 +80,7 @@ module Events
       object = {
         input_params: params,
         error: result.error,
-        organization_id: organization.id
+        organization_id: organization.id,
       }
 
       SendWebhookJob.perform_later(:event, object)
@@ -88,6 +108,25 @@ module Events
     def invalid_customer_error
       result.fail!(code: 'missing_argument', message: 'customer cannot be found')
       send_webhook_notice
+    end
+
+    def invalid_persisted_event_error(message)
+      result.fail!(code: 'invalid_recurring_resource', message: message)
+      send_webhook_notice
+    end
+
+    def billable_metric
+      @billable_metric ||= organization.billable_metrics.find_by(code: params[:code])
+    end
+
+    def persisted_event_validation(subscription)
+      return unless billable_metric.recurring_count_agg?
+
+      PersistedEvents::ValidateCreationService.call(
+        subscription: subscription,
+        billable_metric: billable_metric,
+        params: params,
+      )
     end
   end
 end

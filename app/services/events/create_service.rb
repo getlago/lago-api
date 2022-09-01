@@ -32,43 +32,62 @@ module Events
         organization: organization,
         params: params,
         customer: customer,
-        result: result
+        result: result,
       )
-
       return result unless result.success?
 
       subscription = Subscription.find_by(external_id: params[:external_subscription_id]) || customer&.active_subscriptions&.first
-      event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
 
-      if event
+      ActiveRecord::Base.transaction do
+        event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
+
+        if event
+          result.event = event
+          return result
+        end
+
+        event = organization.events.new
+        event.code = params[:code]
+        event.transaction_id = params[:transaction_id]
+        event.customer = customer
+        event.subscription_id = subscription.id
+        event.properties = params[:properties] || {}
+        event.metadata = metadata || {}
+
+        event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
+        event.timestamp ||= timestamp
+
+        event.save!
+
         result.event = event
-        return result
+        handle_persisted_event if should_handle_persisted_event?
       end
 
-      event = organization.events.new
-      event.code = params[:code]
-      event.transaction_id = params[:transaction_id]
-      event.customer = customer
-      event.subscription_id = subscription.id
-      event.properties = params[:properties] || {}
-      event.metadata = metadata || {}
-
-      event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
-      event.timestamp ||= timestamp
-
-      event.save!
-
-      result.event = event
       result
     rescue ActiveRecord::RecordInvalid => e
       result.fail_with_validations!(e.record)
 
-      SendWebhookJob.perform_later(
-        :event,
-        { input_params: params, error: result.error, organization_id: organization.id }
-      ) if organization.webhook_url?
+      if organization.webhook_url?
+        SendWebhookJob.perform_later(
+          :event,
+          { input_params: params, error: result.error, organization_id: organization.id },
+        )
+      end
 
       result
+    end
+
+    def persisted_event_service
+      @persisted_event_service ||= PersistedEvents::CreateOrUpdateService.new(result.event)
+    end
+
+    def should_handle_persisted_event?
+      persisted_event_service.matching_billable_metric?
+    end
+
+    def handle_persisted_event
+      service_result = persisted_event_service.call
+      service_result.throw_error unless service_result.success?
     end
   end
 end
