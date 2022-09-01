@@ -103,10 +103,6 @@ module Invoices
     end
 
     def should_create_charge_fees?(invoice, subscription)
-      # NOTE: When a subscription is upgraded, the charges will be billed at the end of the period
-      #       using the new subscription
-      return false if subscription.terminated? && subscription.upgraded?
-
       # NOTE: Charges should not be billed in advance when we are just upgrading to a new
       #       pay_in_advance subscription
       return false if subscription.plan.pay_in_advance? && subscription.invoices.where.not(id: invoice.id).count.zero?
