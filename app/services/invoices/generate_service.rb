@@ -15,7 +15,7 @@ module Invoices
 
       return result.fail!(code: 'not_found') if invoice.blank?
 
-      generate_pdf(invoice) #if invoice.file.blank?
+      generate_pdf(invoice) if invoice.file.blank?
 
       result.invoice = invoice
 
