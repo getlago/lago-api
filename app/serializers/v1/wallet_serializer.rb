@@ -6,6 +6,7 @@ module V1
       {
         lago_id: model.id,
         lago_customer_id: model.customer_id,
+        external_customer_id: model.customer.customer_id,
         status: model.status,
         currency: model.currency,
         name: model.name,
