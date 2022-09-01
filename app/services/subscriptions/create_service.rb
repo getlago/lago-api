@@ -20,7 +20,7 @@ module Subscriptions
       @name = params[:name]&.strip
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
-      @current_subscription = find_current_subscription
+      @current_subscription = active_subscriptions&.find_by(external_id: external_id)
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
@@ -42,7 +42,8 @@ module Subscriptions
       @name = args[:name]&.strip
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
-      @current_subscription = find_current_subscription(subscription_id: args[:subscription_id])
+      @current_subscription = active_subscriptions&.find_by(id: args[:subscription_id])
+
       process_create
     end
 
@@ -96,7 +97,7 @@ module Subscriptions
         plan_id: current_plan.id,
         subscription_date: Time.zone.now.to_date,
         name: name,
-        external_id: external_id || current_customer.external_id,
+        external_id: external_id,
         billing_time: billing_time || :calendar,
       )
       new_subscription.mark_as_active!
@@ -210,13 +211,6 @@ module Subscriptions
 
     def active_subscriptions
       @active_subscriptions ||= current_customer&.active_subscriptions
-    end
-
-    def find_current_subscription(subscription_id: nil)
-      return active_subscriptions&.find_by(id: subscription_id) if subscription_id
-      return active_subscriptions&.find_by(external_id: external_id) if external_id
-
-      active_subscriptions&.find_by(external_id: current_customer.external_id)
     end
   end
 end

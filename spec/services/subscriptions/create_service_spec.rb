@@ -43,7 +43,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.subscription_date).to be_present
         expect(subscription.name).to eq('invoice display name')
         expect(subscription).to be_active
-        expect(subscription.external_id).to be_present
+        expect(subscription.external_id).to eq(external_id)
         expect(subscription).to be_anniversary
       end
     end
@@ -72,13 +72,14 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     context 'when external_id is not given' do
       let(:external_id) { nil }
 
-      it 'sets customer_id as external_id' do
+      it 'returns an error' do
         result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
 
-        expect(result.subscription.external_id).to eq(customer.external_id)
+        expect(result).not_to be_success
+        expect(result.error_details[:external_id]).to eq(['value_is_mandatory'])
       end
     end
 
@@ -247,28 +248,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         it 'returns existing subscription' do
           subscription.update!(external_id: external_id)
-
-          result = create_service.create_from_api(
-            organization: organization,
-            params: params,
-          )
-
-          expect(result).to be_success
-          expect(result.subscription.id).to eq(subscription.id)
-        end
-      end
-
-      context 'when external_id is not given' do
-        let(:params) do
-          {
-            external_customer_id: customer.external_id,
-            plan_code: plan.code,
-            name: 'invoice display name',
-          }
-        end
-
-        it 'returns existing subscription' do
-          subscription.update!(external_id: customer.external_id)
 
           result = create_service.create_from_api(
             organization: organization,

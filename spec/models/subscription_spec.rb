@@ -120,8 +120,22 @@ RSpec.describe Subscription, type: :model do
     let(:customer) { create(:customer, organization: organization) }
     let(:plan) { create(:plan) }
     let(:external_id) { SecureRandom.uuid }
-    let(:subscription) { create(:active_subscription, plan: plan, customer: customer) }
-    let(:new_subscription) { build(:active_subscription, plan: plan, external_id: external_id, customer: customer) }
+    let(:subscription) do
+      create(
+        :active_subscription,
+        plan: plan,
+        customer: create(:customer, organization: organization)
+      )
+    end
+
+    let(:new_subscription) do
+      build(
+        :active_subscription,
+        plan: plan,
+        external_id: external_id,
+        customer: create(:customer, organization: organization)
+      )
+    end
 
     before { subscription }
 
