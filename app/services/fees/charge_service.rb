@@ -104,6 +104,8 @@ module Fees
                              BillableMetrics::Aggregations::SumService
                            when :unique_count_agg
                              BillableMetrics::Aggregations::UniqueCountService
+                           when :recurring_count_agg
+                             BillableMetrics::Aggregations::RecurringCountService
                            else
                              raise NotImplementedError
       end
