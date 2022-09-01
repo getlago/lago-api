@@ -26,6 +26,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       result = JSON.parse(response.body, symbolize_names: true)[:subscription]
 
       expect(result[:lago_id]).to be_present
+      expect(result[:external_id]).to be_present
       expect(result[:external_customer_id]).to eq(customer.external_id)
       expect(result[:lago_customer_id]).to eq(customer.id)
       expect(result[:plan_code]).to eq(plan.code)

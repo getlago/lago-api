@@ -74,7 +74,8 @@ class Subscription < ApplicationRecord
   def validate_external_id
     return unless active?
 
-    used_ids = customer&.active_subscriptions&.pluck(:external_id)
+    # NOTE: We want unique external id per organization.
+    used_ids = organization.subscriptions.active.pluck(:external_id)
     errors.add(:external_id, :value_already_exists) if used_ids&.include?(external_id)
   end
 end
