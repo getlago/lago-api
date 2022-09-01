@@ -29,6 +29,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       result = JSON.parse(response.body, symbolize_names: true)[:wallet]
       expect(result[:lago_id]).to be_present
       expect(result[:name]).to eq(create_params[:name])
+      expect(result[:external_customer_id]).to eq(customer.customer_id)
     end
   end
 
