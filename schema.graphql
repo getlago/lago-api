@@ -2621,13 +2621,13 @@ type Event {
   billableMetricName: String
   code: String!
   externalCustomerId: String!
+  externalSubscriptionId: String!
   id: ID!
   ipAddress: String
   matchBillableMetric: Boolean!
   matchCustomField: Boolean!
   payload: JSON!
   receivedAt: ISO8601DateTime!
-  subscriptionId: String!
   timestamp: ISO8601DateTime
   transactionId: String
 }
@@ -3394,6 +3394,7 @@ type Subscription {
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
   customer: Customer!
+  externalId: String!
   id: ID!
   name: String
   nextName: String
