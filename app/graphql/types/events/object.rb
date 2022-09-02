@@ -7,7 +7,7 @@ module Types
       field :code, String, null: false
 
       field :external_customer_id, String, null: false
-      field :subscription_id, String, null: false
+      field :external_subscription_id, String, null: false
       field :transaction_id, String, null: true
 
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
@@ -29,12 +29,16 @@ module Types
         object.customer.external_id
       end
 
+      def external_subscription_id
+        object.subscription.external_id
+      end
+
       def payload
         {
           event: {
             transaction_id: object.transaction_id,
             external_customer_id: object.customer.external_id,
-            subscription_id: object.subscription_id,
+            external_subscription_id: object.subscription.external_id,
             code: object.code,
             timestamp: object.timestamp.to_i,
             properties: object.properties || {},
