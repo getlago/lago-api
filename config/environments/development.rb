@@ -26,7 +26,7 @@ Rails.application.configure do
   end
 
   config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present? && ENV['LAGO_USE_AWS_S3'] == 'true'
-    if ENV['LAGO_AWS_S3_ENDPOINT'].present? && !ENV['LAGO_AWS_S3_ENDPOINT'].empty?
+    if ENV['LAGO_AWS_S3_ENDPOINT'].present?
       :amazon_compatible_endpoint
     else
       :amazon
