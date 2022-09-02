@@ -98,6 +98,22 @@ class Invoice < ApplicationRecord
     invoice_subscription(subscription_id).fees
   end
 
+  def recurring_fees(subscription_id)
+    subscription_fees(subscription_id).joins(charge: :billable_metric)
+      .merge(BillableMetric.recurring_count_agg)
+  end
+
+  def recurring_breakdown(fee)
+    result = BillableMetrics::Aggregations::RecurringCountService.new(
+      billable_metric: fee.charge.billable_metric,
+      subscription: fee.subscription,
+    ).breakdown(
+      from_date: Date.parse(fee.properties['charges_from_date']),
+      to_date: Date.parse(fee.properties['charges_to_date']),
+    )
+    result.breakdown
+  end
+
   private
 
   def ensure_number
