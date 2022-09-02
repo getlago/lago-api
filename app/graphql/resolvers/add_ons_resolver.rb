@@ -20,7 +20,7 @@ module Resolvers
         .add_ons
         .order(created_at: :desc)
         .page(page)
-        .limit(limit)
+        .per(limit)
 
       add_ons = add_ons.where(id: ids) if ids.present?
 

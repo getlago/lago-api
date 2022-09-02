@@ -21,7 +21,7 @@ module Resolvers
         .coupons
         .order_by_status_and_expiration
         .page(page)
-        .limit(limit)
+        .per(limit)
 
       coupons = coupons.where(status: status) if status.present?
       coupons = coupons.where(id: ids) if ids.present?
