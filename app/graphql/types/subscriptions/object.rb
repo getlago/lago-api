@@ -6,6 +6,7 @@ module Types
       graphql_name 'Subscription'
 
       field :id, ID, null: false
+      field :external_id, String, null: false
       field :customer, Types::Customers::Object, null: false
       field :plan, Types::Plans::Object, null: false
 
