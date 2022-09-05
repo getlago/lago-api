@@ -61,7 +61,7 @@ module Api
       end
 
       def show
-        customer = current_organization.customers.find_by(customer_id: params[:customer_id])
+        customer = current_organization.customers.find_by(external_id: params[:external_id])
 
         return not_found_error unless customer
 

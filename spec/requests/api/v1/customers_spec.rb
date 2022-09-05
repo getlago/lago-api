@@ -189,7 +189,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     it 'returns the customer' do
       get_with_token(
         organization,
-        "/api/v1/customers/#{customer.customer_id}",
+        "/api/v1/customers/#{customer.external_id}",
       )
 
       parsed_response = JSON.parse(response.body, symbolize_names: true)
@@ -199,7 +199,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context 'with not existing customer_id' do
+    context 'with not existing external_id' do
       it 'returns a not found error' do
         get_with_token(
           organization,
