@@ -45,6 +45,34 @@ module Api
         end
       end
 
+      def index
+        customers = current_organization.customers
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
+
+        render(
+          json: ::CollectionSerializer.new(
+            customers,
+            ::V1::CustomerSerializer,
+            collection_name: 'customers',
+            meta: pagination_metadata(customers),
+          ),
+        )
+      end
+
+      def show
+        customer = current_organization.customers.find_by(external_id: params[:external_id])
+
+        return not_found_error unless customer
+
+        render(
+          json: ::V1::CustomerSerializer.new(
+            customer,
+            root_name: 'customer',
+          ),
+        )
+      end
+
       private
 
       def create_params

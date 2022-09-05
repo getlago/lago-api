@@ -54,7 +54,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     context 'with invalid params' do
       let(:create_params) do
         {
-          name: 'Foo Bar'
+          name: 'Foo Bar',
         }
       end
 
@@ -66,7 +66,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
   end
 
-  describe 'GET /customers/:id/current_usage' do
+  describe 'GET /customers/:customer_id/current_usage' do
     let(:customer) { create(:customer, organization: organization) }
     let(:organization) { create(:organization) }
     let(:subscription) do
@@ -113,8 +113,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
 
     it 'returns the usage for the customer' do
-      get_with_token(organization,
-        "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}"
+      get_with_token(
+        organization,
+        "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}",
       )
 
       aggregate_failures do
@@ -149,6 +150,60 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         get_with_token(
           organization,
           "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}",
+        )
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe 'GET /customers' do
+    let(:organization) { create(:organization) }
+
+    before do
+      create_list(:customer, 2, organization: organization)
+    end
+
+    it 'returns all customers from organization' do
+      get_with_token(
+        organization,
+        '/api/v1/customers',
+      )
+
+      parsed_response = JSON.parse(response.body, symbolize_names: true)
+      aggregate_failures do
+        expect(response).to have_http_status(:ok)
+        expect(parsed_response[:meta][:total_count]).to eq(2)
+      end
+    end
+  end
+
+  describe 'GET /customers/:customer_id' do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization: organization) }
+
+    before do
+      customer
+    end
+
+    it 'returns the customer' do
+      get_with_token(
+        organization,
+        "/api/v1/customers/#{customer.external_id}",
+      )
+
+      parsed_response = JSON.parse(response.body, symbolize_names: true)
+      aggregate_failures do
+        expect(response).to have_http_status(:ok)
+        expect(parsed_response[:customer][:lago_id]).to eq(customer.id)
+      end
+    end
+
+    context 'with not existing external_id' do
+      it 'returns a not found error' do
+        get_with_token(
+          organization,
+          '/api/v1/customers/foobar',
         )
 
         expect(response).to have_http_status(:not_found)
