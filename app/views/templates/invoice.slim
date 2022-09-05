@@ -451,7 +451,7 @@ html
             clipPath id="c"
               path fill="#fff" d="M0 0h9.25v9.263H0z"
 
-      - if invoice.subscription?
+      - if subscription?
         - subscriptions.each do |subscription|
           - if subscription.name.present?
             h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
