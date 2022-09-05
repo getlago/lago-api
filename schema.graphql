@@ -2726,6 +2726,16 @@ type Membership {
   userId: Int!
 }
 
+type MembershipCollection {
+  collection: [Membership!]!
+  metadata: CollectionMetadata!
+}
+
+enum MembershipStatus {
+  active
+  revoked
+}
+
 type Mutation {
   """
   Add or update Stripe API keys to the organization
@@ -3268,6 +3278,11 @@ type Query {
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
+
+  """
+  Query memberships of an organization
+  """
+  memberships(limit: Int, page: Int): MembershipCollection!
 
   """
   Query a single plan of an organization
