@@ -52,6 +52,7 @@ module BillableMetrics
 
       def base_scope
         PersistedEvent
+          .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.unique_id)
       end

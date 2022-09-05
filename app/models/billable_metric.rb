@@ -5,6 +5,7 @@ class BillableMetric < ApplicationRecord
 
   has_many :charges, dependent: :destroy
   has_many :plans, through: :charges
+  has_many :persisted_events
 
   BILLABLE_PERIODS = %i[
     one_shot
