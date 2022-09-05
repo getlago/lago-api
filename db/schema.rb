@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_08_31_113537) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_05_095529) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -302,7 +302,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_31_113537) do
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
   end
 
-  create_table "persisted_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "persisted_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.string "external_subscription_id", null: false
     t.string "external_id", null: false
@@ -310,9 +310,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_31_113537) do
     t.datetime "removed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customer_id", "external_subscription_id"], name: "index_search_persisted_metrics"
-    t.index ["customer_id"], name: "index_persisted_metrics_on_customer_id"
-    t.index ["external_id"], name: "index_persisted_metrics_on_external_id"
+    t.index ["customer_id", "external_subscription_id"], name: "index_search_persisted_events"
+    t.index ["customer_id"], name: "index_persisted_events_on_customer_id"
+    t.index ["external_id"], name: "index_persisted_events_on_external_id"
   end
 
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -418,7 +418,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_08_31_113537) do
   add_foreign_key "payment_providers", "organizations"
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
-  add_foreign_key "persisted_metrics", "customers"
+  add_foreign_key "persisted_events", "customers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"

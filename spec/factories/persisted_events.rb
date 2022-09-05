@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :persisted_metric do
+  factory :persisted_event do
     customer
 
     external_id { SecureRandom.uuid }
