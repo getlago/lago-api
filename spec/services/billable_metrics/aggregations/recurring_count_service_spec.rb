@@ -43,7 +43,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       customer: customer,
       added_at: added_at,
       removed_at: removed_at,
-      external_subscription_id: subscription.unique_id,
+      external_subscription_id: subscription.external_id,
       billable_metric: billable_metric,
     )
   end

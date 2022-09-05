@@ -54,7 +54,7 @@ module BillableMetrics
         PersistedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
-          .where(external_subscription_id: subscription.unique_id)
+          .where(external_subscription_id: subscription.external_id)
       end
 
       # NOTE: Full period duration to take upgrade, terminate
