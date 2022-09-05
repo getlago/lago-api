@@ -2719,7 +2719,9 @@ type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
   organizationId: Int!
+  revokedAt: ISO8601DateTime!
   role: String
+  status: MembershipStatus!
   updatedAt: ISO8601DateTime!
   userId: Int!
 }
