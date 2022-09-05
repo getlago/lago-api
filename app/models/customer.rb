@@ -19,7 +19,7 @@ class Customer < ApplicationRecord
   has_many :payment_provider_customers,
            class_name: 'PaymentProviderCustomers::BaseCustomer',
            dependent: :destroy
-  has_many :persisted_metrics
+  has_many :persisted_events
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
 

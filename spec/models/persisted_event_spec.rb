@@ -2,6 +2,5 @@
 
 require 'rails_helper'
 
-RSpec.describe PersistedMetric, type: :model do
-
+RSpec.describe PersistedEvent, type: :model do
 end

@@ -29,21 +29,21 @@ module BillableMetrics
           # NOTE: Added during the period
           added
             .select(
-              "SUM(('#{to_date}'::date - DATE(persisted_metrics.added_at) + 1)::numeric / #{period_duration})::numeric",
+              "SUM(('#{to_date}'::date - DATE(persisted_events.added_at) + 1)::numeric / #{period_duration})::numeric",
             )
             .to_sql,
 
           # NOTE: removed during the period
           removed
             .select(
-              "SUM((DATE(persisted_metrics.removed_at) - '#{from_date}'::date + 1)::numeric / #{period_duration})::numeric",
+              "SUM((DATE(persisted_events.removed_at) - '#{from_date}'::date + 1)::numeric / #{period_duration})::numeric",
             )
             .to_sql,
 
           # # NOTE: Added and then removed during the period
           added_and_removed
             .select(
-              "SUM((DATE(persisted_metrics.removed_at) - DATE(persisted_metrics.added_at) + 1)::numeric / #{period_duration})::numeric",
+              "SUM((DATE(persisted_events.removed_at) - DATE(persisted_events.added_at) + 1)::numeric / #{period_duration})::numeric",
             ).to_sql,
         ]
 
@@ -51,7 +51,7 @@ module BillableMetrics
       end
 
       def base_scope
-        PersistedMetric
+        PersistedEvent
           .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.unique_id)
       end
@@ -72,30 +72,30 @@ module BillableMetrics
 
       def persisted
         base_scope
-          .where('DATE(persisted_metrics.added_at) < ?', from_date)
-          .where('persisted_metrics.removed_at IS NULL OR DATE(persisted_metrics.removed_at) > ?', to_date)
+          .where('DATE(persisted_events.added_at) < ?', from_date)
+          .where('persisted_events.removed_at IS NULL OR DATE(persisted_events.removed_at) > ?', to_date)
       end
 
       def added
         base_scope
-          .where('DATE(persisted_metrics.added_at) >= ?', from_date)
-          .where('DATE(persisted_metrics.added_at) <= ?', to_date)
-          .where('persisted_metrics.removed_at IS NULL OR DATE(persisted_metrics.removed_at) > ?', to_date)
+          .where('DATE(persisted_events.added_at) >= ?', from_date)
+          .where('DATE(persisted_events.added_at) <= ?', to_date)
+          .where('persisted_events.removed_at IS NULL OR DATE(persisted_events.removed_at) > ?', to_date)
       end
 
       def removed
         base_scope
-          .where('DATE(persisted_metrics.added_at) < ?', from_date)
-          .where('DATE(persisted_metrics.removed_at) >= ?', from_date)
-          .where('DATE(persisted_metrics.removed_at) <= ?', to_date)
+          .where('DATE(persisted_events.added_at) < ?', from_date)
+          .where('DATE(persisted_events.removed_at) >= ?', from_date)
+          .where('DATE(persisted_events.removed_at) <= ?', to_date)
       end
 
       def added_and_removed
         base_scope
-          .where('DATE(persisted_metrics.added_at) >= ?', from_date)
-          .where('DATE(persisted_metrics.added_at) <= ?', to_date)
-          .where('DATE(persisted_metrics.removed_at) >= ?', from_date)
-          .where('DATE(persisted_metrics.removed_at) <= ?', to_date)
+          .where('DATE(persisted_events.added_at) >= ?', from_date)
+          .where('DATE(persisted_events.added_at) <= ?', to_date)
+          .where('DATE(persisted_events.removed_at) >= ?', from_date)
+          .where('DATE(persisted_events.removed_at) <= ?', to_date)
       end
     end
   end

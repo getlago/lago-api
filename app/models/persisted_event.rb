@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class PersistedMetric < ApplicationRecord
+class PersistedEvent < ApplicationRecord
   belongs_to :customer
 
   validates :external_id, presence: true

@@ -37,9 +37,9 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
   let(:added_at) { from_date - 1.month }
   let(:removed_at) { nil }
-  let(:persisted_metric) do
+  let(:persisted_event) do
     create(
-      :persisted_metric,
+      :persisted_event,
       customer: customer,
       added_at: added_at,
       removed_at: removed_at,
@@ -47,7 +47,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
     )
   end
 
-  before { persisted_metric }
+  before { persisted_event }
 
   context 'with persisted metric on full period' do
     it 'returns the number of persisted metric' do
