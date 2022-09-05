@@ -483,4 +483,42 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
       end
     end
   end
+
+  describe 'duration_in_days' do
+    let(:result) { date_service.duration_in_days }
+
+    context 'when billing_time is calendar' do
+      let(:billing_time) { :calendar }
+
+      it 'returns the year duration' do
+        expect(result).to eq(365)
+      end
+
+      context 'when on a leap year' do
+        let(:subscription_date) { DateTime.parse('28 Feb 2019') }
+        let(:billing_date) { DateTime.parse('01 Jan 2021') }
+
+        it 'returns the year duration' do
+          expect(result).to eq(366)
+        end
+      end
+    end
+
+    context 'when billing_time is anniversary' do
+      let(:billing_time) { :anniversary }
+
+      it 'returns the year duration' do
+        expect(result).to eq(365)
+      end
+
+      context 'when on a leap year' do
+        let(:subscription_date) { DateTime.parse('02 Feb 2019') }
+        let(:billing_date) { DateTime.parse('08 Mar 2021') }
+
+        it 'returns the year duration' do
+          expect(result).to eq(366)
+        end
+      end
+    end
+  end
 end

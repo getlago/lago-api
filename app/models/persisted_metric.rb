@@ -5,4 +5,5 @@ class PersistedMetric < ApplicationRecord
 
   validates :external_id, presence: true
   validates :added_at, presence: true
+  validates :external_subscription_id, presence: true
 end

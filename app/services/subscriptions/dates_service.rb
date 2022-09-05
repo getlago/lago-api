@@ -79,6 +79,10 @@ module Subscriptions
       plan.amount_cents.fdiv(duration.to_i)
     end
 
+    def duration_in_days
+      compute_duration(from_date: compute_from_date)
+    end
+
     private
 
     attr_accessor :subscription, :billing_date, :current_usage
