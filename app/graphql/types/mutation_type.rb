@@ -48,5 +48,7 @@ module Types
     field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate
 
     field :create_customer_wallet_transaction, mutation: Mutations::WalletTransactions::Create
+
+    field :revoke_membership, mutation: Mutations::Memberships::Revoke
   end
 end
