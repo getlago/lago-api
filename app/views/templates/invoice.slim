@@ -451,50 +451,51 @@ html
             clipPath id="c"
               path fill="#fff" d="M0 0h9.25v9.263H0z"
 
-      - subscriptions.each do |subscription|
-        - if subscription.name.present?
-          h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
-        - else
-          h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
-        .body-1 Subscription
-        .mb-24.body-3
-          | From #{invoice_subscription(subscription.id).from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_date&.strftime('%b %d, %Y')}
-
-        .invoice-resume.mb-24.overflow-auto
-          table.invoice-resume-table width="100%"
-            tr
-              td width="70%"
-                .body-1
-                  | #{subscription.plan.interval.capitalize} subscription - #{subscription.plan.name}
-              td.body-1 style="text-align: right;" width="30%"
-                = subscription_fees(subscription.id).subscription_kind.first&.amount&.format
-          table.total-table width="100%"
-            tr
-              td.body-2 width="70%" Sub total
-              td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format
-
-        - if subscription? && subscription_fees(subscription.id).charge_kind.any?
-          .body-1 Charges
+      - if subscription?
+        - subscriptions.each do |subscription|
+          - if subscription.name.present?
+            h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
+          - else
+            h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
+          .body-1 Subscription
           .mb-24.body-3
-            | List of charges used from #{invoice_subscription(subscription.id).charges_from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).charges_to_date&.strftime('%b %d, %Y')}
-          .charge-details.mb-24
-            table.charge-details-table width="100%"
-              - subscription_fees(subscription.id).charge_kind.each do |fee|
-                tr
-                  td width="70%"
-                    .body-1 = fee.billable_metric.name
-                    .body-3
-                      - if fee.charge.percentage?
-                        | Total unit: #{fee.events_count} events for #{fee.units}
-                      - else
-                        | Total unit: #{fee.units}
-                  td.body-1 width="30%" = fee.amount.format
+            | From #{invoice_subscription(subscription.id).from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_date&.strftime('%b %d, %Y')}
 
+          .invoice-resume.mb-24.overflow-auto
+            table.invoice-resume-table width="100%"
+              tr
+                td width="70%"
+                  .body-1
+                    | #{subscription.plan.interval.capitalize} subscription - #{subscription.plan.name}
+                td.body-1 style="text-align: right;" width="30%"
+                  = subscription_fees(subscription.id).subscription_kind.first&.amount&.format
             table.total-table width="100%"
               tr
                 td.body-2 width="70%" Sub total
-                td.body-1 width="30%" = invoice_subscription(subscription.id).charge_amount.format
-            table.total-table width="100%"
-              tr
-                td.body-2 width="70%" Total
-                td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format
+                td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format
+
+          - if subscription? && subscription_fees(subscription.id).charge_kind.any?
+            .body-1 Charges
+            .mb-24.body-3
+              | List of charges used from #{invoice_subscription(subscription.id).charges_from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).charges_to_date&.strftime('%b %d, %Y')}
+            .charge-details.mb-24
+              table.charge-details-table width="100%"
+                - subscription_fees(subscription.id).charge_kind.each do |fee|
+                  tr
+                    td width="70%"
+                      .body-1 = fee.billable_metric.name
+                      .body-3
+                        - if fee.charge.percentage?
+                          | Total unit: #{fee.events_count} events for #{fee.units}
+                        - else
+                          | Total unit: #{fee.units}
+                    td.body-1 width="30%" = fee.amount.format
+
+              table.total-table width="100%"
+                tr
+                  td.body-2 width="70%" Sub total
+                  td.body-1 width="30%" = invoice_subscription(subscription.id).charge_amount.format
+              table.total-table width="100%"
+                tr
+                  td.body-2 width="70%" Total
+                  td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format
