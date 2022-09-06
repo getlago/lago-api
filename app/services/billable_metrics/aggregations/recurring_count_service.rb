@@ -74,7 +74,7 @@ module BillableMetrics
       #       or start on non-anniversary day into account
       def period_duration
         @period_duration ||= Subscriptions::DatesService.new_instance(subscription, to_date + 1.day)
-          .duration_in_days
+          .charges_duration_in_days
       end
 
       # NOTE: when subscription is terminated or upgraded,

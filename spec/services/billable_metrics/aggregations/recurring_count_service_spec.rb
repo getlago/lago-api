@@ -110,6 +110,16 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           expect(result.aggregation).to eq(8.fdiv(31).ceil(5))
         end
       end
+
+      context 'when plan is pay in advance' do
+        before do
+          subscription.plan.update!(pay_in_advance: true)
+        end
+
+        it 'returns the number of persisted metric' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
     end
 
     context 'with persisted metrics added in the period' do
