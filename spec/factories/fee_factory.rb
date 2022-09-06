@@ -17,4 +17,20 @@ FactoryBot.define do
     vat_amount_cents { 2 }
     vat_amount_currency { 'EUR' }
   end
+
+  factory :charge_fee, parent: :fee do
+    invoice
+    charge
+    fee_type { 'charge' }
+
+    invoiceable_type { 'Charge' }
+    invoiceable_id { charge.id }
+
+    properties do
+      {
+        'charges_from_date' => Date.parse('2022-08-01'),
+        'charges_to_date' => Date.parse('2022-08-30'),
+      }
+    end
+  end
 end

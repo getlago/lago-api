@@ -309,6 +309,20 @@ html
         text-align: right;
       }
 
+      .breakdown-details table {
+        border-collapse: collapse;
+      }
+      .breakdown-details-table tr td {
+        padding-bottom: 12px;
+      }
+      .breakdown-details-table tr td:last-child {
+        text-align: right;
+      }
+      .breakdown-details-table tr:last-child td {
+        border-bottom: 1px solid #d9dee7;
+        padding-bottom: 24px;
+      }
+
       .powered-by {
         width: 100%;
         text-align: right;
@@ -321,6 +335,15 @@ html
         height: 11px;
         vertical-align: middle;
         margin-top: 2px;
+      }
+      .alert {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 16px;
+        gap: 16px;
+        background: #F3F4F6;
+        border-radius: 12px;
       }
 
     .wrapper
@@ -485,7 +508,9 @@ html
                     td width="70%"
                       .body-1 = fee.billable_metric.name
                       .body-3
-                        - if fee.charge.percentage?
+                        - if fee.charge.billable_metric.recurring_count_agg?
+                          | See breakdown for total unit
+                        - elsif fee.charge.percentage?
                           | Total unit: #{fee.events_count} events for #{fee.units}
                         - else
                           | Total unit: #{fee.units}
@@ -499,3 +524,27 @@ html
                 tr
                   td.body-2 width="70%" Total
                   td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format
+
+            - recurring_fees(subscription.id).each do |fee|
+              - if subscription.name.present?
+                h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
+              - else
+                h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
+
+              .body-1.mb-24 Breackdown of #{fee.item_name}
+              .breakdown-details.mb-24
+                table.breakdown-details-table width="100%"
+                  - recurring_breakdown(fee).each do |breakdown|
+                    tr
+                      td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
+                      td.body-1 width="65%"
+                        - if breakdown.action.to_sym == :add
+                          | +#{breakdown.count} #{fee.item_name}
+                        - elsif breakdown.action.to_sym == :remove
+                          | -#{breakdown.count} #{fee.item_name}
+                        - else
+                          | +/-#{breakdown.count} #{fee.item_name}
+                      td.body-3 width="20%"
+                        | #{breakdown.duration} of #{breakdown.total_duration} days
+              .alert.body-3
+                | For example, if a unit is added with 15 days left in your monthly plan, we multiply the price by 15/31 (days remaining divided by the total number of days in your plan) to calculate the prorated price. Same logic when removing a unit used during 10 days, we multiply the price by 10/31.

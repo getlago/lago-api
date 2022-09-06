@@ -435,8 +435,8 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'duration_in_days' do
-    let(:result) { date_service.duration_in_days }
+  describe 'charges_duration_in_days' do
+    let(:result) { date_service.charges_duration_in_days }
 
     context 'when billing_time is calendar' do
       let(:billing_time) { :calendar }

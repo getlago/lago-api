@@ -94,6 +94,12 @@ module Subscriptions
 
         Time.days_in_year(year)
       end
+
+      def compute_charges_duration(from_date:)
+        return monthly_service.compute_charges_duration(from_date: from_date) if plan.bill_charges_monthly
+
+        compute_duration(from_date: from_date)
+      end
     end
   end
 end

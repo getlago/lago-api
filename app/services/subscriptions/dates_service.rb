@@ -11,7 +11,7 @@ module Subscriptions
               when :yearly
                 Subscriptions::Dates::YearlyService
               else
-                raise NotImplementedError
+                raise(NotImplementedError)
       end
 
       klass.new(subscription, billing_date, current_usage)
@@ -79,8 +79,8 @@ module Subscriptions
       plan.amount_cents.fdiv(duration.to_i)
     end
 
-    def duration_in_days
-      compute_duration(from_date: compute_from_date)
+    def charges_duration_in_days
+      compute_charges_duration(from_date: compute_charges_from_date)
     end
 
     private
@@ -112,27 +112,27 @@ module Subscriptions
     end
 
     def compute_base_date
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
 
     def compute_from_date
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
 
     def compute_to_date
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
 
     def compute_charges_from_date
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
 
     def compute_charges_to_date
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
 
     def compute_next_end_of_period(date)
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
 
     def first_month_in_yearly_period?
@@ -140,7 +140,7 @@ module Subscriptions
     end
 
     def compute_duration(from_date:)
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
   end
 end

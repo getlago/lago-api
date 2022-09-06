@@ -187,4 +187,30 @@ RSpec.describe Invoice, type: :model do
       expect(invoice.subscription_fees(subscription.id)).to eq([fee])
     end
   end
+
+  describe '#recurring_fees' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
+    let(:fee) { create(:charge_fee, subscription: subscription, invoice: invoice, charge: charge) }
+
+    it 'returns the fees of the corresponding invoice_subscription' do
+      expect(invoice.recurring_fees(subscription.id)).to eq([fee])
+    end
+  end
+
+  describe '#recurring_breakdown' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
+    let(:fee) { create(:charge_fee, subscription: subscription, invoice: invoice, charge: charge) }
+
+    it 'returns the fees of the corresponding invoice_subscription' do
+      expect(invoice.recurring_breakdown(fee)).to eq([])
+    end
+  end
 end

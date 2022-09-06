@@ -32,8 +32,9 @@ module Subscriptions
         end
 
         return compute_from_date if plan.pay_in_arrear?
+        return base_date.beginning_of_week if calendar?
 
-        compute_from_date - 1.week
+        previous_anniversary_day(base_date)
       end
 
       def compute_charges_to_date
@@ -69,6 +70,8 @@ module Subscriptions
       def compute_duration(*)
         WEEK_DURATION
       end
+
+      alias compute_charges_duration compute_duration
     end
   end
 end
