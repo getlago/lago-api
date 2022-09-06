@@ -178,7 +178,7 @@ module BillableMetrics
         added_and_removed_list.map do |aggregation|
           OpenStruct.new(
             date: aggregation.first.to_date,
-            action: 'add',
+            action: 'add_and_removed',
             count: aggregation.last,
             duration: (aggregation.second.to_date + 1.day - aggregation.first.to_date).to_i,
             total_duration: period_duration,

@@ -540,8 +540,10 @@ html
                       td.body-1 width="65%"
                         - if breakdown.action.to_sym == :add
                           | +#{breakdown.count} #{fee.item_name}
-                        - else
+                        - elsif breakdown.action.to_sym == :remove
                           | -#{breakdown.count} #{fee.item_name}
+                        - else
+                          | +/-#{breakdown.count} #{fee.item_name}
                       td.body-3 width="20%"
                         | #{breakdown.duration} of #{breakdown.total_duration} days
               .alert.body-3
