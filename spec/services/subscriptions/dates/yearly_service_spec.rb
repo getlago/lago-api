@@ -502,6 +502,14 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
           expect(result).to eq(366)
         end
       end
+
+      context 'when billing charge monthly' do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        it 'returns the month duration' do
+          expect(result).to eq(28)
+        end
+      end
     end
 
     context 'when billing_time is anniversary' do
@@ -517,6 +525,14 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
         it 'returns the year duration' do
           expect(result).to eq(366)
+        end
+      end
+
+      context 'when billing charge monthly' do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        it 'returns the month duration' do
+          expect(result).to eq(28)
         end
       end
     end

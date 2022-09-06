@@ -80,7 +80,7 @@ module Subscriptions
     end
 
     def charges_duration_in_days
-      compute_duration(from_date: compute_charges_from_date)
+      compute_charges_duration(from_date: compute_charges_from_date)
     end
 
     private

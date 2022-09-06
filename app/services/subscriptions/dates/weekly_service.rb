@@ -70,6 +70,8 @@ module Subscriptions
       def compute_duration(*)
         WEEK_DURATION
       end
+
+      alias compute_charges_duration compute_duration
     end
   end
 end
