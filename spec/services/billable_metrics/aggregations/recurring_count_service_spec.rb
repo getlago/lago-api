@@ -351,7 +351,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
           item = result.first
           expect(item.date.to_s).to eq(added_at.to_s)
-          expect(item.action).to eq('add')
+          expect(item.action).to eq('add_and_removed')
           expect(item.count).to eq(1)
           expect(item.duration).to eq(29)
           expect(item.total_duration).to eq(31)
@@ -368,7 +368,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
             item = result.first
             expect(item.date.to_s).to eq(added_at.to_s)
-            expect(item.action).to eq('add')
+            expect(item.action).to eq('add_and_removed')
             expect(item.count).to eq(1)
             expect(item.duration).to eq(1)
             expect(item.total_duration).to eq(31)
