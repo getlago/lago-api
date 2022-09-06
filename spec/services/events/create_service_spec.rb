@@ -52,7 +52,7 @@ RSpec.describe Events::CreateService, type: :service do
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
-          code: 'code'
+          code: 'code',
         }
       end
 
@@ -72,12 +72,12 @@ RSpec.describe Events::CreateService, type: :service do
         {
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          code: 'code'
+          code: 'code',
         }
       end
 
       before do
-        2.times { create(:subscription, customer: customer) }
+        create_list(:subscription, 2, customer: customer)
       end
 
       it 'returns an error' do
@@ -204,7 +204,7 @@ RSpec.describe Events::CreateService, type: :service do
           :event,
           organization: organization,
           transaction_id: create_args[:transaction_id],
-          subscription_id: subscription.id
+          subscription_id: subscription.id,
         )
       end
 
@@ -252,6 +252,42 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.timestamp).to be_a(Time)
           expect(event.properties).to eq({})
         end
+      end
+    end
+
+    context 'when event matches a recurring billable metric' do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization: customer.organization,
+          aggregation_type: 'recurring_count_agg',
+          field_name: 'item_id',
+        )
+      end
+
+      let(:create_args) do
+        {
+          customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          properties: {
+            billable_metric.field_name => 'ext_12345',
+            'operation_type' => 'add',
+          },
+          timestamp: Time.zone.now.to_i,
+        }
+      end
+
+      it 'creates a persisted metric' do
+        expect do
+          create_service.call(
+            organization: organization,
+            params: create_args,
+            timestamp: timestamp,
+            metadata: {},
+          )
+        end.to change(PersistedEvent, :count).by(1)
       end
     end
   end

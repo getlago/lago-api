@@ -13,7 +13,7 @@ module Events
 
     def call(organization:, params:, timestamp:, metadata:)
       customer = organization.subscriptions.find_by(
-        external_id: params[:external_subscription_ids]&.first
+        external_id: params[:external_subscription_ids]&.first,
       )&.customer
 
       Events::ValidateCreationService.call(
@@ -21,7 +21,7 @@ module Events
         params: params,
         customer: customer,
         result: result,
-        batch: true
+        batch: true,
       )
       return result unless result.success?
 
@@ -49,15 +49,18 @@ module Events
           event.timestamp ||= timestamp
 
           event.save!
+          handle_persisted_event(event)
 
           events << event
         rescue ActiveRecord::RecordInvalid => e
           result.fail_with_validations!(e.record)
 
-          SendWebhookJob.perform_later(
-            :event,
-            { input_params: params, error: result.error, organization_id: organization.id }
-          ) if organization.webhook_url?
+          if organization.webhook_url?
+            SendWebhookJob.perform_later(
+              :event,
+              { input_params: params, error: result.error, organization_id: organization.id },
+            )
+          end
 
           return result
         end
@@ -65,6 +68,14 @@ module Events
 
       result.events = events
       result
+    end
+
+    def handle_persisted_event(event)
+      persisted_service = PersistedEvents::CreateOrUpdateService.new(event)
+      return unless persisted_service.matching_billable_metric?
+
+      service_result = persisted_service.call
+      service_result.throw_error unless service_result.success?
     end
   end
 end

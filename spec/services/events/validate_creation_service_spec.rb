@@ -9,7 +9,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       params: params,
       result: result,
       customer: customer,
-      batch: batch
+      batch: batch,
     )
   end
 
@@ -68,7 +68,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             organization: organization,
             params: params,
             result: result,
-            customer: nil
+            customer: nil,
           )
         end
 
@@ -106,7 +106,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           {
             code: billable_metric.code,
             external_subscription_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id
+            external_customer_id: customer.external_id,
           }
         end
 
@@ -140,6 +140,51 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
         it 'enqueues a SendWebhookJob' do
           expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context 'when event belongs to a recurring persisted event' do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization: organization,
+            aggregation_type: 'recurring_count_agg',
+            field_name: 'item_id',
+          )
+        end
+
+        let(:params) do
+          {
+            customer_id: customer.external_id,
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => 'ext_1234',
+              'operation_type' => operation_type,
+            },
+          }
+        end
+
+        let(:operation_type) { 'add' }
+
+        it 'returns no error' do
+          validate_event
+
+          expect(result).to be_success
+        end
+
+        context 'when params are invalid' do
+          let(:operation_type) { 'invalid' }
+
+          it 'returns invalid recurring resource error' do
+            validate_event
+
+            expect(result).not_to be_success
+            expect(result.error).to eq('invalid_operation_type')
+          end
+
+          it 'enqueues a SendWebhookJob' do
+            expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+          end
         end
       end
     end
@@ -186,7 +231,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             params: params,
             result: result,
             customer: nil,
-            batch: batch
+            batch: batch,
           )
         end
 
@@ -207,7 +252,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           {
             code: billable_metric.code,
             external_subscription_ids: [SecureRandom.uuid],
-            external_customer_id: customer.external_id
+            external_customer_id: customer.external_id,
           }
         end
 
@@ -232,7 +277,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           {
             code: 'event_code',
             external_subscription_ids: [subscription.external_id],
-            external_customer_id: customer.external_id
+            external_customer_id: customer.external_id,
           }
         end
 
@@ -245,6 +290,51 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
         it 'enqueues a SendWebhookJob' do
           expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context 'when event belongs to a recurring persisted metric' do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization: organization,
+            aggregation_type: 'recurring_count_agg',
+            field_name: 'item_id',
+          )
+        end
+
+        let(:params) do
+          {
+            external_subscription_ids: [subscription.external_id],
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => 'ext_1234',
+              'operation_type' => operation_type,
+            },
+          }
+        end
+
+        let(:operation_type) { 'add' }
+
+        it 'returns no error' do
+          validate_event
+
+          expect(result).to be_success
+        end
+
+        context 'when params are invalid' do
+          let(:operation_type) { 'invalid' }
+
+          it 'returns invalid recurring resource error' do
+            validate_event
+
+            expect(result).not_to be_success
+            expect(result.error).to eq("Subscription #{subscription.external_id}: invalid_operation_type")
+          end
+
+          it 'enqueues a SendWebhookJob' do
+            expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+          end
         end
       end
     end
