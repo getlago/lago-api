@@ -2661,6 +2661,28 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
 
+type Invite {
+  acceptedAt: ISO8601DateTime!
+  email: String!
+  id: ID!
+  membership: Membership!
+  organization: Organization!
+  revokedAt: ISO8601DateTime!
+  status: InviteStatusTypeEnum!
+  token: String!
+}
+
+type InviteCollection {
+  collection: [Invite!]!
+  metadata: CollectionMetadata!
+}
+
+enum InviteStatusTypeEnum {
+  accepted
+  pending
+  revoked
+}
+
 type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!

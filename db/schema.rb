@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_06_065059) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_06_130714) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -203,6 +203,21 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_06_065059) do
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
+  end
+
+  create_table "invites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "membership_id"
+    t.string "email", null: false
+    t.string "token", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "accepted_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["membership_id"], name: "index_invites_on_membership_id"
+    t.index ["organization_id"], name: "index_invites_on_organization_id"
+    t.index ["token"], name: "index_invites_on_token", unique: true
   end
 
   create_table "invoice_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -413,6 +428,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_06_065059) do
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
+  add_foreign_key "invites", "memberships"
+  add_foreign_key "invites", "organizations"
   add_foreign_key "invoice_subscriptions", "invoices"
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
