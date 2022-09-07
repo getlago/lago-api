@@ -3342,6 +3342,15 @@ type Query {
   """
   events(limit: Int, page: Int): EventCollection
 
+  """
+  Query a single Invite
+  """
+  invite(
+    """
+    Uniq token of the Invite
+    """
+    token: String!
+  ): Invite
 
   """
   Query pending invites of an organization

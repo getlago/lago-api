@@ -11828,6 +11828,35 @@
               ]
             },
             {
+              "name": "invite",
+              "description": "Query a single Invite",
+              "type": {
+                "kind": "OBJECT",
+                "name": "Invite",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "token",
+                  "description": "Uniq token of the Invite",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "invites",
               "description": "Query pending invites of an organization",
               "type": {
