@@ -49,7 +49,7 @@ module Api
       end
 
       def show
-        plan = current_organization.plans.find_by(
+        plan = current_organization.plans.default.find_by(
           code: params[:code],
         )
 
@@ -59,7 +59,7 @@ module Api
       end
 
       def index
-        plans = current_organization.plans
+        plans = current_organization.plans.default
           .order(created_at: :desc)
           .page(params[:page])
           .per(params[:per_page] || PER_PAGE)

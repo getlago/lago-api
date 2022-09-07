@@ -3,7 +3,7 @@
 module Plans
   class UpdateService < BaseService
     def update(**args)
-      plan = result.user.plans.find_by(id: args[:id])
+      plan = result.user.plans.default.find_by(id: args[:id])
       return result.fail!(code: 'not_found') unless plan
 
       plan.name = args[:name]
@@ -39,7 +39,7 @@ module Plans
     end
 
     def update_from_api(organization:, code:, params:)
-      plan = organization.plans.find_by(code: code)
+      plan = organization.plans.default.find_by(code: code)
       return result.fail!(code: 'not_found', message: 'plan does not exist') unless plan
 
       plan.name = params[:name] if params.key?(:name)

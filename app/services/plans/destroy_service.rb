@@ -3,7 +3,7 @@
 module Plans
   class DestroyService < BaseService
     def destroy(id)
-      plan = result.user.plans.find_by(id: id)
+      plan = result.user.plans.default.find_by(id: id)
       return result.fail!(code: 'not_found') unless plan
 
       unless plan.deletable?
@@ -20,7 +20,7 @@ module Plans
     end
 
     def destroy_from_api(organization:, code:)
-      plan = organization.plans.find_by(code: code)
+      plan = organization.plans.default.find_by(code: code)
       return result.fail!(code: 'not_found', message: 'plan does not exist') unless plan
 
       unless plan.deletable?
