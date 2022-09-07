@@ -27,5 +27,6 @@ module Types
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
     field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
+    field :invites, resolver: Resolvers::InvitesResolver
   end
 end

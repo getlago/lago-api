@@ -3342,6 +3342,12 @@ type Query {
   """
   events(limit: Int, page: Int): EventCollection
 
+
+  """
+  Query pending invites of an organization
+  """
+  invites(limit: Int, page: Int): InviteCollection!
+
   """
   Query memberships of an organization
   """
