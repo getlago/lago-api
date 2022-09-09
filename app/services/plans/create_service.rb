@@ -3,6 +3,8 @@
 module Plans
   class CreateService < BaseService
     def create(**args)
+      return result unless valid?(**args)
+
       plan = Plan.new(
         organization_id: args[:organization_id],
         name: args[:name],
@@ -46,6 +48,10 @@ module Plans
         charge_model: args[:charge_model]&.to_sym,
         properties: args[:properties] || {},
       )
+    end
+
+    def valid?(**args)
+      Plans::ValidateService.new(result, **args).valid?
     end
 
     def track_plan_created(plan)
