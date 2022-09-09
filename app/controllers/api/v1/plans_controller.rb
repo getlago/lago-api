@@ -53,7 +53,7 @@ module Api
           code: params[:code],
         )
 
-        return not_found_error unless plan
+        return not_found_error(message: 'plan_not_found') unless plan
 
         render_plan(plan)
       end

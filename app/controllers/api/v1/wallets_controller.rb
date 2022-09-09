@@ -10,7 +10,7 @@ module Api
             .merge(organization_id: current_organization.id)
             .merge(customer: customer)
             .to_h
-            .symbolize_keys
+            .symbolize_keys,
         )
 
         if result.success?
@@ -25,7 +25,7 @@ module Api
         result = service.update(
           **update_params.merge(id: params[:id])
             .to_h
-            .symbolize_keys
+            .symbolize_keys,
         )
 
         if result.success?
@@ -48,10 +48,10 @@ module Api
 
       def show
         wallet = current_organization.wallets.find_by(
-          id: params[:id]
+          id: params[:id],
         )
 
-        return not_found_error unless wallet
+        return not_found_error(message: 'wallet_not_found') unless wallet
 
         render_wallet(wallet)
       end
@@ -59,11 +59,11 @@ module Api
       def index
         customer = Customer.find_by(external_id: params[:external_customer_id])
 
-        return not_found_error unless customer
+        return not_found_error(message: 'customer_not_found') unless customer
 
         wallets = customer.wallets
-                          .page(params[:page])
-                          .per(params[:per_page] || PER_PAGE)
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
@@ -94,7 +94,7 @@ module Api
       def update_params
         params.require(:wallet).permit(
           :name,
-          :expiration_date
+          :expiration_date,
         )
       end
 

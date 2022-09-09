@@ -9,7 +9,7 @@ module Api
           **input_params
             .merge(organization_id: current_organization.id)
             .to_h
-            .symbolize_keys
+            .symbolize_keys,
         )
 
         if result.success?
@@ -38,7 +38,7 @@ module Api
         service = AddOns::DestroyService.new
         result = service.destroy_from_api(
           organization: current_organization,
-          code: params[:code]
+          code: params[:code],
         )
 
         if result.success?
@@ -50,27 +50,27 @@ module Api
 
       def show
         add_on = current_organization.add_ons.find_by(
-          code: params[:code]
+          code: params[:code],
         )
 
-        return not_found_error unless add_on
+        return not_found_error(message: 'add_on_not_found') unless add_on
 
         render_add_on(add_on)
       end
 
       def index
         add_ons = current_organization.add_ons
-                                      .order(created_at: :desc)
-                                      .page(params[:page])
-                                      .per(params[:per_page] || PER_PAGE)
+          .order(created_at: :desc)
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
             add_ons,
             ::V1::AddOnSerializer,
             collection_name: 'add_ons',
-            meta: pagination_metadata(add_ons)
-          )
+            meta: pagination_metadata(add_ons),
+          ),
         )
       end
 
