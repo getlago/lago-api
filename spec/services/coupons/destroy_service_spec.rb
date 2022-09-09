@@ -36,7 +36,7 @@ RSpec.describe Coupons::DestroyService, type: :service do
         result = destroy_service.destroy(coupon.id)
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('forbidden')
+        expect(result.error.code).to eq('attached_to_an_active_customer')
       end
     end
   end
@@ -69,7 +69,7 @@ RSpec.describe Coupons::DestroyService, type: :service do
         result = destroy_service.destroy_from_api(organization: organization, code: coupon.code)
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('forbidden')
+        expect(result.error.code).to eq('attached_to_an_active_customer')
       end
     end
   end

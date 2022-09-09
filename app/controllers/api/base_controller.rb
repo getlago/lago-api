@@ -45,23 +45,23 @@ module Api
       )
     end
 
-    def forbidden_error(error_result)
+    def method_not_allowed_error(code:)
       render(
         json: {
-          status: 403,
-          error: 'Forbidden',
-          message: error_result.error,
-          error_details: error_result.error_details,
+          status: 405,
+          error: 'Method Not Allowed',
+          code: code,
         },
-        status: :forbidden,
+        status: :method_not_allowed,
       )
     end
 
     def render_error_response(error_result)
-      if error_result.error.is_a?(BaseService::NotFoundFailure)
+      case error_result.error
+      when BaseService::NotFoundFailure
         not_found_error(resource: error_result.error.resource)
-      elsif error_result.error_code == 'forbidden'
-        forbidden_error(error_result)
+      when BaseService::MethodNotAllowedFailure
+        method_not_allowed_error(code: error_result.error.code)
       else
         validation_errors(error_result)
       end

@@ -5,13 +5,7 @@ module Customers
     def destroy(id:)
       customer = result.user.customers.find_by(id: id)
       return result.not_found_failure!(resource: 'customer') unless customer
-
-      unless customer.deletable?
-        return result.fail!(
-          code: 'forbidden',
-          message: 'Customer is attached to an active subscription',
-        )
-      end
+      return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless customer.deletable?
 
       customer.destroy!
 
