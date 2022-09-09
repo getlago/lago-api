@@ -9,7 +9,7 @@ module Api
           **input_params
             .merge(organization_id: current_organization.id)
             .to_h
-            .symbolize_keys
+            .symbolize_keys,
         )
 
         if result.success?
@@ -48,7 +48,7 @@ module Api
         service = BillableMetrics::DestroyService.new
         result = service.destroy_from_api(
           organization: current_organization,
-          code: params[:code]
+          code: params[:code],
         )
 
         if result.success?
@@ -65,32 +65,32 @@ module Api
 
       def show
         metric = current_organization.billable_metrics.find_by(
-          code: params[:code]
+          code: params[:code],
         )
 
-        return not_found_error unless metric
+        return not_found_error(message: 'billable_metric_not_found') unless metric
 
         render(
           json: ::V1::BillableMetricSerializer.new(
             metric,
             root_name: 'billable_metric',
-          )
+          ),
         )
       end
 
       def index
         metrics = current_organization.billable_metrics
-                                      .order(created_at: :desc)
-                                      .page(params[:page])
-                                      .per(params[:per_page] || PER_PAGE)
+          .order(created_at: :desc)
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
             metrics,
             ::V1::BillableMetricSerializer,
             collection_name: 'billable_metrics',
-            meta: pagination_metadata(metrics)
-          )
+            meta: pagination_metadata(metrics),
+          ),
         )
       end
 

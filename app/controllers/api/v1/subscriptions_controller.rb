@@ -27,7 +27,7 @@ module Api
         result = Subscriptions::TerminateService.new
           .terminate_from_api(
             organization: current_organization,
-            external_id: params[:external_id]
+            external_id: params[:external_id],
           )
 
         if result.success?
@@ -48,7 +48,7 @@ module Api
         result = service.update_from_api(
           organization: current_organization,
           external_id: params[:external_id],
-          params: update_params
+          params: update_params,
         )
 
         if result.success?
@@ -66,11 +66,11 @@ module Api
       def index
         customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
 
-        return not_found_error unless customer
+        return not_found_error(message: 'customer_not_found') unless customer
 
         subscriptions = customer.active_subscriptions
-                                .page(params[:page])
-                                .per(params[:per_page] || PER_PAGE)
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
