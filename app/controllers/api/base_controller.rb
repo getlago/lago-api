@@ -45,16 +45,6 @@ module Api
       )
     end
 
-    def not_found_error
-      render(
-        json: {
-          status: 404,
-          error: 'Not Found',
-        },
-        status: :not_found
-      )
-    end
-
     def forbidden_error(error_result)
       render(
         json: {
@@ -63,7 +53,7 @@ module Api
           message: error_result.error,
           error_details: error_result.error_details,
         },
-        status: :forbidden
+        status: :forbidden,
       )
     end
 

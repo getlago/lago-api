@@ -5,9 +5,7 @@ require 'sidekiq/web'
 Rails.application.routes.draw do
   mount Sidekiq::Web => '/sidekiq' if ENV['LAGO_SIDEKIQ_WEB']
 
-  if Rails.env.development?
-    mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql'
-  end
+  mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
 
   post '/graphql', to: 'graphql#execute'
 
@@ -49,4 +47,6 @@ Rails.application.routes.draw do
   resources :webhooks, only: [] do
     post 'stripe/:organization_id', to: 'webhooks#stripe', on: :collection, as: :stripe
   end
+
+  match '*unmatched' => 'application#not_found', via: %i[get post put delete patch]
 end
