@@ -20,7 +20,7 @@ module Plans
       if args[:charges].present?
         metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.fail!(code: 'not_found', message: 'Billable metrics does not exists')
+          return result.not_found_failure!(code: 'billable_metrics_not_found')
         end
       end
 

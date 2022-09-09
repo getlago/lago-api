@@ -16,7 +16,7 @@ module Resolvers
 
       Wallet.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(code: 'wallet_not_found')
     end
   end
 end

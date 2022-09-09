@@ -15,6 +15,16 @@ class BaseService
     end
   end
 
+  class NotFoundFailure < StandardError
+    attr_reader :code
+
+    def initialize(code:)
+      @code = code
+
+      super(code)
+    end
+  end
+
   class Result < OpenStruct
     attr_reader :error, :error_code, :error_details
 
@@ -46,14 +56,25 @@ class BaseService
       fail!(
         code: 'unprocessable_entity',
         message: 'Validation error on the record',
-        details: record.errors.messages
+        details: record.errors.messages,
       )
+    end
+
+    def fail_with_error!(error)
+      @failure = true
+      @error = error
+
+      self
+    end
+
+    def not_found_failure!(code:)
+      fail_with_error!(NotFoundFailure.new(code: code))
     end
 
     def throw_error
       return if success?
 
-      raise FailedResult, self
+      raise(FailedResult, self)
     end
 
     private

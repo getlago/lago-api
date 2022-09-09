@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.plans.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(code: 'plan_not_found')
     end
   end
 end

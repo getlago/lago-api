@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.add_ons.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(code: 'add_on_not_found')
     end
   end
 end
