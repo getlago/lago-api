@@ -14,7 +14,7 @@ module Resolvers
     def resolve(id: nil)
       validate_organization!
 
-      current_organization.plans.default.find(id)
+      current_organization.plans.base.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error
     end

@@ -274,6 +274,22 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(records.first[:code]).to eq(plan.code)
     end
 
+    context 'when some of the plans are overridden' do
+      let(:plan2) { create(:plan, organization: organization) }
+      let(:plan) { create(:plan, organization: organization, overridden_plan: plan2) }
+
+      it 'returns only base plans' do
+        get_with_token(organization, '/api/v1/plans')
+
+        expect(response).to have_http_status(:success)
+
+        records = JSON.parse(response.body, symbolize_names: true)[:plans]
+
+        expect(records.count).to eq(1)
+        expect(records.first[:lago_id]).to eq(plan2.id)
+      end
+    end
+
     context 'with pagination' do
       let(:plan2) { create(:plan, organization: organization) }
 
