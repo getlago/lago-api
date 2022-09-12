@@ -2676,8 +2676,8 @@ type Invite {
   acceptedAt: ISO8601DateTime!
   email: String!
   id: ID!
-  membership: Membership!
   organization: Organization!
+  recipient: Membership!
   revokedAt: ISO8601DateTime!
   status: InviteStatusTypeEnum!
   token: String!

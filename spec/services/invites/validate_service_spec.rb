@@ -22,7 +22,7 @@ RSpec.describe Invites::ValidateService, type: :service do
     end
 
     context 'when invite already exists' do
-      before { create(:invite, email: user.email, membership: membership, organization: organization) }
+      before { create(:invite, email: user.email, recipient: membership, organization: organization) }
 
       let(:args) do
         {

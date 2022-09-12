@@ -8360,14 +8360,14 @@
               ]
             },
             {
-              "name": "membership",
+              "name": "organization",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "Membership",
+                  "name": "Organization",
                   "ofType": null
                 }
               },
@@ -8378,14 +8378,14 @@
               ]
             },
             {
-              "name": "organization",
+              "name": "recipient",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "Organization",
+                  "name": "Membership",
                   "ofType": null
                 }
               },

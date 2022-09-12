@@ -63,7 +63,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
   end
 
   it 'returns an error if invite already exists' do
-    create(:invite, email: email, membership: membership, organization: membership.organization)
+    create(:invite, email: email, recipient: membership, organization: membership.organization)
 
     result = execute_graphql(
       current_user: membership.user,

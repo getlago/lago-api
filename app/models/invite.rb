@@ -2,7 +2,7 @@
 
 class Invite < ApplicationRecord
   belongs_to :organization
-  belongs_to :membership, optional: true
+  belongs_to :recipient, class_name: 'Membership', foreign_key: :membership_id, optional: true
 
   INVITE_STATUS = %i[
     pending
