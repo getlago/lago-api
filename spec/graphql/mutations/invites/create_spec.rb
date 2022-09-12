@@ -76,8 +76,9 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       },
     )
 
-    expect(result['errors'].first['extensions']['code']).to eq('invite_already_exists')
     expect(result['errors'].first['extensions']['status']).to eq(422)
+    expect(result['errors'].first['extensions']['code']).to eq('unprocessable_entity')
+    expect(result['errors'].first['extensions']['details']['invite']).to eq(['invite_already_exists'])
   end
 
   it 'returns an error if email already attached to a user of the organization' do
@@ -92,7 +93,8 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       },
     )
 
-    expect(result['errors'].first['extensions']['code']).to eq('email_already_used')
     expect(result['errors'].first['extensions']['status']).to eq(422)
+    expect(result['errors'].first['extensions']['code']).to eq('unprocessable_entity')
+    expect(result['errors'].first['extensions']['details']['email']).to eq(['email_already_used'])
   end
 end
