@@ -24,6 +24,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
 
       it 'returns the revoked invite' do
         result = execute_graphql(
+          current_organization: organization,
           current_user: user,
           query: mutation,
           variables: {
@@ -43,8 +44,8 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
       let(:invite) { create(:invite, organization: organization, status: :accepted) }
 
       it 'returns an error' do
-
         result = execute_graphql(
+          current_organization: organization,
           current_user: user,
           query: mutation,
           variables: {

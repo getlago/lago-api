@@ -13,8 +13,10 @@ module Mutations
 
       type Types::Invites::Object
 
-      def resolve(id:)
-        result = ::Invites::RevokeService.new(context[:current_user]).call(id)
+      def resolve(**args)
+        result = ::Invites::RevokeService
+          .new(context[:current_user])
+          .call(**args.merge(current_organization: current_organization))
 
         result.success? ? result.invite : result_error(result)
       end
