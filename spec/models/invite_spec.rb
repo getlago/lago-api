@@ -15,6 +15,18 @@ RSpec.describe Invite, type: :model do
     end
   end
 
+  describe '#mark_as_accepted' do
+    let(:invite) { create(:invite) }
+
+    it 'accepts the invite with a Time' do
+      freeze_time do
+        expect { invite.mark_as_accepted! }
+          .to change { invite.reload.status }.from('pending').to('accepted')
+          .and change(invite, :accepted_at).from(nil).to(Time.current)
+      end
+    end
+  end
+
   describe 'Invite email' do
     let(:invite) { build(:invite) }
 

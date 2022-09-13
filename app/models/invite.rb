@@ -19,4 +19,9 @@ class Invite < ApplicationRecord
     self.revoked_at ||= timestamp
     revoked!
   end
+
+  def mark_as_accepted!(timestamp = Time.current)
+    self.accepted_at ||= timestamp
+    accepted!
+  end
 end
