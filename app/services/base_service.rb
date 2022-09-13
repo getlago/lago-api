@@ -9,13 +9,14 @@ class BaseService
     private
 
     def format_message(result)
+      return result if result.is_a?(String)
       return result.error unless result.error_details
 
       "#{result.error}: #{[result.error_details].flatten.join(', ')}"
     end
   end
 
-  class NotFoundFailure < StandardError
+  class NotFoundFailure < FailedResult
     attr_reader :code
 
     def initialize(code:)
@@ -73,6 +74,8 @@ class BaseService
 
     def throw_error
       return if success?
+
+      raise(error) if error.is_a?(FailedResult)
 
       raise(FailedResult, self)
     end
