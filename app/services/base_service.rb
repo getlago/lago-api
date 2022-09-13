@@ -30,6 +30,16 @@ class BaseService
     end
   end
 
+  class MethodNotAllowedFailure < FailedResult
+    attr_reader :code
+
+    def initialize(code:)
+      @code = code
+
+      super(code)
+    end
+  end
+
   class Result < OpenStruct
     attr_reader :error, :error_code, :error_details
 
@@ -74,6 +84,10 @@ class BaseService
 
     def not_found_failure!(resource:)
       fail_with_error!(NotFoundFailure.new(resource: resource))
+    end
+
+    def not_allowed_failure!(code:)
+      fail_with_error!(MethodNotAllowedFailure.new(code: code))
     end
 
     def throw_error
