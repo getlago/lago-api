@@ -41,6 +41,12 @@ module Types
       def can_be_deleted
         object.deletable?
       end
+
+      def code
+        return object.overridden_plan.code if object.overridden_plan_id
+
+        object.code
+      end
     end
   end
 end
