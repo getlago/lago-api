@@ -21,17 +21,17 @@ module ExecutionErrorResponder
     GraphQL::ExecutionError.new(error, extensions: payload)
   end
 
-  def not_found_error(code:)
+  def not_found_error(resource:)
     execution_error(
       error: 'Resource not found',
       status: 404,
-      code: code,
+      code: "#{resource}_not_found",
     )
   end
 
   def result_error(service_result)
     if service_result.error.is_a?(BaseService::NotFoundFailure)
-      return not_found_error(code: service_result.error.error_code)
+      return not_found_error(resource: service_result.error.resource)
     end
 
     execution_error(

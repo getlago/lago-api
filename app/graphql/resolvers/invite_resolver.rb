@@ -14,7 +14,7 @@ module Resolvers
         status: 'pending',
       )
 
-      return not_found_error unless invite
+      return not_found_error(resource: 'invite') unless invite
 
       invite
     end

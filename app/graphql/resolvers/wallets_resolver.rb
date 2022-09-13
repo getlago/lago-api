@@ -30,7 +30,7 @@ module Resolvers
 
       wallets.order(status: :asc, created_at: :desc)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(code: 'customer_not_found')
+      not_found_error(resource: 'customer')
     end
   end
 end
