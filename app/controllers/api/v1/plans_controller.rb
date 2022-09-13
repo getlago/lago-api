@@ -15,7 +15,7 @@ module Api
         if result.success?
           render_plan(result.plan)
         else
-          validation_errors(result)
+          render_error_response(result)
         end
       end
 
