@@ -12,7 +12,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         code: 'BM1_code',
         description: 'description',
         aggregation_type: 'sum_agg',
-        field_name: 'amount_sum'
+        field_name: 'amount_sum',
       }
     end
 
@@ -38,14 +38,15 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         code: code,
         description: 'description',
         aggregation_type: 'sum_agg',
-        field_name: 'amount_sum'
+        field_name: 'amount_sum',
       }
     end
 
     it 'updates a billable_metric' do
-      put_with_token(organization,
-                     "/api/v1/billable_metrics/#{billable_metric.code}",
-                     { billable_metric: update_params }
+      put_with_token(
+        organization,
+        "/api/v1/billable_metrics/#{billable_metric.code}",
+        { billable_metric: update_params },
       )
 
       expect(response).to have_http_status(:success)
@@ -71,9 +72,10 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       before { billable_metric2 }
 
       it 'returns unprocessable_entity error' do
-        put_with_token(organization,
-                       "/api/v1/billable_metrics/#{billable_metric.code}",
-                       { billable_metric: update_params }
+        put_with_token(
+          organization,
+          "/api/v1/billable_metrics/#{billable_metric.code}",
+          { billable_metric: update_params },
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -87,7 +89,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     it 'returns a billable metric' do
       get_with_token(
         organization,
-        "/api/v1/billable_metrics/#{billable_metric.code}"
+        "/api/v1/billable_metrics/#{billable_metric.code}",
       )
 
       expect(response).to have_http_status(:success)
@@ -102,7 +104,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          "/api/v1/billable_metrics/555"
+          '/api/v1/billable_metrics/555',
         )
 
         expect(response).to have_http_status(:not_found)
@@ -152,7 +154,14 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       it 'returns forbidden error' do
         delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
-        expect(response).to have_http_status(:forbidden)
+        aggregate_failures do
+          expect(response).to have_http_status(:method_not_allowed)
+
+          result = JSON.parse(response.body, symbolize_names: true)
+          expect(result[:status]).to eq(405)
+          expect(result[:error]).to eq('Method Not Allowed')
+          expect(result[:code]).to eq('attached_to_an_active_subscription')
+        end
       end
     end
   end

@@ -13,7 +13,7 @@ RSpec.describe Memberships::RevokeService, type: :service do
         result = revoke_service.call(membership.id)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('Cannot revoke own membership')
+        expect(result.error.code).to eq('cannot_revoke_own_membership')
       end
     end
 
@@ -22,7 +22,7 @@ RSpec.describe Memberships::RevokeService, type: :service do
         result = revoke_service.call(nil)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('membership_not_found')
+        expect(result.error.error_code).to eq('membership_not_found')
       end
     end
 

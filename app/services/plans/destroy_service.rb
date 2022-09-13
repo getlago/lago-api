@@ -3,15 +3,9 @@
 module Plans
   class DestroyService < BaseService
     def destroy(id)
-      plan = result.user.plans.default.find_by(id: id)
-      return result.fail!(code: 'not_found') unless plan
-
-      unless plan.deletable?
-        return result.fail!(
-          code: 'forbidden',
-          message: 'Plan is attached to active subscriptions',
-        )
-      end
+      plan = result.user.plans.base.find_by(id: id)
+      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless plan.deletable?
 
       plan.destroy!
 
@@ -20,15 +14,9 @@ module Plans
     end
 
     def destroy_from_api(organization:, code:)
-      plan = organization.plans.default.find_by(code: code)
-      return result.fail!(code: 'not_found', message: 'plan does not exist') unless plan
-
-      unless plan.deletable?
-        return result.fail!(
-          code: 'forbidden',
-          message: 'plan is attached to an active subscriptions',
-          )
-      end
+      plan = organization.plans.base.find_by(code: code)
+      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless plan.deletable?
 
       plan.destroy!
 

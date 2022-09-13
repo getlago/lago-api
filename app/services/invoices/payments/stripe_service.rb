@@ -43,7 +43,7 @@ module Invoices
 
       def update_status(provider_payment_id:, status:)
         payment = Payment.find_by(provider_payment_id: provider_payment_id)
-        return result.fail!(code: 'stripe_payment_not_found') unless payment
+        return result.not_found_failure!(resource: 'stripe_payment') unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
@@ -185,8 +185,8 @@ module Invoices
           properties: {
             organization_id: invoice.organization.id,
             invoice_id: invoice.id,
-            payment_status: invoice.status
-          }
+            payment_status: invoice.status,
+          },
         )
       end
     end

@@ -15,7 +15,7 @@ module Api
         if result.success?
           render_plan(result.plan)
         else
-          validation_errors(result)
+          render_error_response(result)
         end
       end
 
@@ -49,17 +49,17 @@ module Api
       end
 
       def show
-        plan = current_organization.plans.default.find_by(
+        plan = current_organization.plans.base.find_by(
           code: params[:code],
         )
 
-        return not_found_error unless plan
+        return not_found_error(resource: 'plan') unless plan
 
         render_plan(plan)
       end
 
       def index
-        plans = current_organization.plans.default
+        plans = current_organization.plans.base
           .order(created_at: :desc)
           .page(params[:page])
           .per(params[:per_page] || PER_PAGE)

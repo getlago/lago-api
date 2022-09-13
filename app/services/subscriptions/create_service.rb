@@ -24,7 +24,7 @@ module Subscriptions
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def create(**args)
@@ -54,14 +54,14 @@ module Subscriptions
       return result.fail!(code: 'missing_argument', message: 'plan does not exists') unless current_plan
 
       if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
-        return result.fail!(code: 'currencies_does_not_match',message: 'currencies does not match')
+        return result.fail!(code: 'currencies_does_not_match', message: 'currencies does not match')
       end
 
       result.subscription = handle_subscription
       track_subscription_created(result.subscription)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     rescue ArgumentError
       result.fail!(
         code: 'unprocessable_entity',

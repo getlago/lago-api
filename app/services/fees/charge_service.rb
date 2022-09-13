@@ -19,7 +19,7 @@ module Fees
       result.fee.save!
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def current_usage
@@ -107,7 +107,7 @@ module Fees
                            when :recurring_count_agg
                              BillableMetrics::Aggregations::RecurringCountService
                            else
-                             raise NotImplementedError
+                             raise(NotImplementedError)
       end
 
       @aggregator = aggregator_service.new(billable_metric: billable_metric, subscription: subscription)
@@ -128,7 +128,7 @@ module Fees
                       when :volume
                         Charges::ChargeModels::VolumeService
                       else
-                        raise NotImplementedError
+                        raise(NotImplementedError)
       end
 
       @charge_model = model_service.apply(charge: charge, aggregation_result: aggregation_result)

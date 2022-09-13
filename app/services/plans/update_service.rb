@@ -3,8 +3,8 @@
 module Plans
   class UpdateService < BaseService
     def update(**args)
-      plan = result.user.plans.default.find_by(id: args[:id])
-      return result.fail!(code: 'not_found') unless plan
+      plan = result.user.plans.base.find_by(id: args[:id])
+      return result.not_found_failure!(resource: 'plan') unless plan
 
       plan.name = args[:name]
       plan.description = args[:description]
@@ -23,7 +23,7 @@ module Plans
 
       metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
       if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-        return result.fail!(code: 'not_found', message: 'Billable metrics does not exists')
+        return result.not_found_failure!(resource: 'billable_metrics')
       end
 
       ActiveRecord::Base.transaction do
@@ -35,12 +35,12 @@ module Plans
       result.plan = plan
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def update_from_api(organization:, code:, params:)
-      plan = organization.plans.default.find_by(code: code)
-      return result.fail!(code: 'not_found', message: 'plan does not exist') unless plan
+      plan = organization.plans.base.find_by(code: code)
+      return result.not_found_failure!(resource: 'plan') unless plan
 
       plan.name = params[:name] if params.key?(:name)
       plan.description = params[:description] if params.key?(:description)
@@ -55,10 +55,10 @@ module Plans
         plan.bill_charges_monthly = params[:interval]&.to_sym == :yearly ? params[:bill_charges_monthly] || false : nil
       end
 
-      unless params[:charges].blank?
+      if params[:charges].present?
         metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.fail!(code: 'not_found', message: 'plan does not exists')
+          return result.not_found_failure!(resource: 'plan')
         end
       end
 
@@ -71,7 +71,7 @@ module Plans
       result.plan = plan
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private

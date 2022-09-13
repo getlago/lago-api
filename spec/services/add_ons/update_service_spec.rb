@@ -20,7 +20,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
         code: 'code',
         description: 'desc',
         amount_cents: 100,
-        amount_currency: 'EUR'
+        amount_currency: 'EUR',
       }
     end
 
@@ -44,15 +44,18 @@ RSpec.describe AddOns::UpdateService, type: :service do
           name: nil,
           code: 'code',
           amount_cents: 100,
-          amount_currency: 'EUR'
+          amount_currency: 'EUR',
         }
       end
 
       it 'returns an error' do
         result = update_service.update(**update_args)
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
       end
     end
   end
@@ -66,7 +69,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
         code: 'code',
         description: 'desc',
         amount_cents: 100,
-        amount_currency: 'EUR'
+        amount_currency: 'EUR',
       }
     end
 
@@ -74,7 +77,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
       result = subject.update_from_api(
         organization: organization,
         code: add_on.code,
-        params: update_args
+        params: update_args,
       )
 
       aggregate_failures do
@@ -95,11 +98,14 @@ RSpec.describe AddOns::UpdateService, type: :service do
         result = subject.update_from_api(
           organization: organization,
           code: add_on.code,
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
       end
     end
 
@@ -108,11 +114,11 @@ RSpec.describe AddOns::UpdateService, type: :service do
         result = subject.update_from_api(
           organization: organization,
           code: 'fake_code12345',
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq('add_on_not_found')
       end
     end
   end

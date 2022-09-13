@@ -42,9 +42,9 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     it 'uses the Rails cache' do
       key = "current_usage/#{subscription.id}-#{subscription.created_at.iso8601}/#{subscription.plan.updated_at.iso8601}"
 
-      expect {
+      expect do
         invoice_service.usage
-      }.to change { cache.exist?(key) }.from(false).to(true)
+      end.to change { cache.exist?(key) }.from(false).to(true)
     end
 
     context 'when billed monthly' do
@@ -262,7 +262,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         result = invoice_service.usage
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result.error.error_code).to eq('customer_not_found')
       end
     end
 

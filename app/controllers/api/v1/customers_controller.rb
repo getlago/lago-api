@@ -18,7 +18,7 @@ module Api
             ),
           )
         else
-          validation_errors(result)
+          render_error_response(result)
         end
       end
 
@@ -63,7 +63,7 @@ module Api
       def show
         customer = current_organization.customers.find_by(external_id: params[:external_id])
 
-        return not_found_error unless customer
+        return not_found_error(resource: 'customer') unless customer
 
         render(
           json: ::V1::CustomerSerializer.new(

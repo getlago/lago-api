@@ -17,7 +17,7 @@ module Coupons
       track_coupon_created(result.coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private
@@ -29,8 +29,8 @@ module Coupons
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,
-          organization_id: coupon.organization_id
-        }
+          organization_id: coupon.organization_id,
+        },
       )
     end
   end

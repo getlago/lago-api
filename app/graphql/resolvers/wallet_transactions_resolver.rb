@@ -40,7 +40,7 @@ module Resolvers
 
       wallet_transactions
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(resource: 'wallet')
     end
   end
 end

@@ -12,8 +12,7 @@ module Invoices
 
     def generate(invoice_id:)
       invoice = Invoice.find_by(id: invoice_id)
-
-      return result.fail!(code: 'not_found') if invoice.blank?
+      return result.not_found_failure!(resource: 'invoice') if invoice.blank?
 
       generate_pdf(invoice) if invoice.file.blank?
 

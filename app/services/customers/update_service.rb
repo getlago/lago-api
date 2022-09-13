@@ -4,7 +4,7 @@ module Customers
   class UpdateService < BaseService
     def update(**args)
       customer = result.user.customers.find_by(id: args[:id])
-      return result.fail!(code: 'not_found') unless customer
+      return result.not_found_failure!(resource: 'customer') unless customer
 
       customer.name = args[:name] if args.key?(:name)
       customer.country = args[:country]&.upcase if args.key?(:country)
@@ -23,9 +23,7 @@ module Customers
       customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
 
       # NOTE: external_id is not editable if customer is attached to subscriptions
-      if !customer.attached_to_subscriptions? && args.key?(:external_id)
-        customer.external_id = args[:external_id]
-      end
+      customer.external_id = args[:external_id] if !customer.attached_to_subscriptions? && args.key?(:external_id)
 
       customer.save!
 
@@ -35,7 +33,7 @@ module Customers
       result.customer = customer
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private

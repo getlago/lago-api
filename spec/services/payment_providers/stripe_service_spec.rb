@@ -70,8 +70,12 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key: nil,
         )
 
-        expect(result).not_to be_success
-        expect(result.error).to eq('Validation error on the record')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:secret_key]).to eq(['value_is_mandatory'])
+          expect(result.error.messages[:create_customers]).to eq(['value_is_invalid'])
+        end
       end
     end
   end
@@ -187,7 +191,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'returns an error' do
         allow(::Stripe::Webhook).to receive(:construct_event)
           .and_raise(::Stripe::SignatureVerificationError.new(
-            'error', 'signature', http_body: event.to_json,
+            'error', 'signature', http_body: event.to_json
           ))
 
         result = stripe_service.handle_incoming_webhook(

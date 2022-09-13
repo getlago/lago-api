@@ -4,7 +4,7 @@ module Coupons
   class UpdateService < BaseService
     def update(**args)
       coupon = result.user.coupons.find_by(id: args[:id])
-      return result.fail!(code: 'not_found') unless coupon
+      return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.name = args[:name]
 
@@ -21,12 +21,12 @@ module Coupons
       result.coupon = coupon
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def update_from_api(organization:, code:, params:)
       coupon = organization.coupons.find_by(code: code)
-      return result.fail!(code: 'not_found', message: 'coupon does not exist') unless coupon
+      return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.name = params[:name] if params.key?(:name)
 
@@ -43,7 +43,7 @@ module Coupons
       result.coupon = coupon
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
   end
 end

@@ -3,7 +3,7 @@ module Pagination
 
   private
 
-  PER_PAGE = 10.freeze
+  PER_PAGE = 100
 
   def pagination_metadata(records)
     if records.present?

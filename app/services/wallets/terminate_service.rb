@@ -4,15 +4,14 @@ module Wallets
   class TerminateService < BaseService
     def terminate(id)
       wallet = Wallet.find_by(id: id)
-
-      return result.fail!(code: 'not_found') unless wallet
+      return result.not_found_failure!(resource: 'wallet') unless wallet
 
       wallet.mark_as_terminated! if wallet.active?
 
       result.wallet = wallet
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def terminate_all_expired

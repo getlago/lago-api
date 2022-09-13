@@ -33,7 +33,7 @@ RSpec.describe Customers::DestroyService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error).to eq('not_found')
+        expect(result.error.error_code).to eq('customer_not_found')
       end
     end
 
@@ -48,7 +48,7 @@ RSpec.describe Customers::DestroyService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('forbidden')
+        expect(result.error.code).to eq('attached_to_an_active_subscription')
       end
     end
   end
