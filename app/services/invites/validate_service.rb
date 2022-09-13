@@ -9,8 +9,8 @@ module Invites
 
     def valid?
       errors = {}
-      errors = errors.merge(valid_invite?) if valid_invite?
-      errors = errors.merge(valid_user?) if valid_user?
+      errors = errors.merge({ 'invite': ['invite_already_exists'] } ) if invalid_invite?
+      errors = errors.merge({ 'email': ['email_already_used'] }) if invalid_user?
 
       unless errors.empty?
         result.fail!(
@@ -28,17 +28,14 @@ module Invites
 
     attr_accessor :result, :args
 
-    def valid_invite?
-      result.current_organization = args[:current_organization]
-
-      { 'invite': ['invite_already_exists'] } if args[:current_organization].invites.pending.exists?(email: args[:email])
+    def invalid_invite?
+      args[:current_organization].invites.pending.exists?(email: args[:email])
     end
 
-    def valid_user?
-      existing_membership = Membership.joins(:user).active.where(
+    def invalid_user?
+      Membership.joins(:user).active.where(
         'organization_id = ? AND users.email = ?', args[:current_organization].id, args[:email]
-      )
-      { 'email': ['email_already_used'] } if existing_membership.present?
+      ).exists?
     end
   end
 end
