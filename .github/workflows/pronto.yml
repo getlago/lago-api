@@ -13,6 +13,6 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
       - name: Setup pronto
-        run: gem install pronto pronto-rubocop
+        run: gem install pronto pronto-rubocop rubocop rubocop-rspec rubocop-performance rubocop-rails rubocop-thread_safety
       - name: Run Pronto
         run: PRONTO_PULL_REQUEST_ID="${{ github.event.pull_request.number }}" PRONTO_GITHUB_ACCESS_TOKEN="${{ secrets.GH_TOKEN }}" pronto run -f github_status github_pr -c origin/${{ github.base_ref }}
