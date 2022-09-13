@@ -2751,12 +2751,12 @@ input LoginUserInput {
 type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
-  organizationId: Int!
+  organization: Organization!
   revokedAt: ISO8601DateTime!
   role: String
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
-  userId: Int!
+  user: User!
 }
 
 type MembershipCollection {

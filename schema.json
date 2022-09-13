@@ -9064,14 +9064,14 @@
               ]
             },
             {
-              "name": "organizationId",
+              "name": "organization",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Int",
+                  "kind": "OBJECT",
+                  "name": "Organization",
                   "ofType": null
                 }
               },
@@ -9150,14 +9150,14 @@
               ]
             },
             {
-              "name": "userId",
+              "name": "user",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Int",
+                  "kind": "OBJECT",
+                  "name": "User",
                   "ofType": null
                 }
               },
