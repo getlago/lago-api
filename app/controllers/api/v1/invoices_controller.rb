@@ -13,14 +13,14 @@ module Api
         if result.success?
           render_invoice(result.invoice)
         else
-          validation_errors(result)
+          render_error_response(result)
         end
       end
 
       def show
         invoice = current_organization.invoices.find_by(id: params[:id])
 
-        return not_found_error unless invoice
+        return not_found_error(resource: 'invoice') unless invoice
 
         render_invoice(invoice)
       end
@@ -30,8 +30,8 @@ module Api
         invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
         invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
         invoices = invoices.order(created_at: :desc)
-                           .page(params[:page])
-                           .per(params[:per_page] || PER_PAGE)
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
 
         render(
           json: ::CollectionSerializer.new(
@@ -46,7 +46,7 @@ module Api
       def download
         invoice = current_organization.invoices.find_by(id: params[:id])
 
-        return not_found_error unless invoice
+        return not_found_error(resource: 'invoice') unless invoice
 
         if invoice.file.present?
           return render(
@@ -79,11 +79,11 @@ module Api
       end
 
       def date_from_criteria
-        {issuing_date: Date.strptime(params[:issuing_date_from])..}
+        { issuing_date: Date.strptime(params[:issuing_date_from]).. }
       end
 
       def date_to_criteria
-        {issuing_date: ..Date.strptime(params[:issuing_date_to])}
+        { issuing_date: ..Date.strptime(params[:issuing_date_to]) }
       end
     end
   end

@@ -4,7 +4,7 @@ module Wallets
   class UpdateService < BaseService
     def update(**args)
       wallet = Wallet.find_by(id: args[:id])
-      return result.fail!(code: 'not_found') unless wallet
+      return result.not_found_failure!(resource: 'wallet') unless wallet
 
       wallet.name = args[:name] if args.key?(:name)
       wallet.expiration_date = args[:expiration_date] if args.key?(:expiration_date)
@@ -14,7 +14,7 @@ module Wallets
       result.wallet = wallet
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
   end
 end

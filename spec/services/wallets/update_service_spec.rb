@@ -49,7 +49,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         result = update_service.update(**update_args)
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result.error.error_code).to eq('wallet_not_found')
       end
     end
   end

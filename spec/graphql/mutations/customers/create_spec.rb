@@ -91,4 +91,31 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect_forbidden_error(result)
     end
   end
+
+  context 'with validation errors' do
+    it 'returns an error with validation messages' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: mutation,
+        variables: {
+          input: {
+            name: 'John Doe',
+            externalId: 'john_doe_2',
+            city: 'London',
+            country: 'GB',
+            vatRate: -12,
+          },
+        },
+      )
+
+      aggregate_failures do
+        expect(result['errors']).to be_present
+
+        error = result['errors'].map(&:deep_symbolize_keys).first
+        expect(error[:extensions][:code]).to eq('unprocessable_entity')
+        expect(error[:extensions][:details][:vatRate]).to be_present
+      end
+    end
+  end
 end

@@ -16,11 +16,11 @@ module Invoices
         @subscription = @customer&.active_subscriptions&.find_by(id: subscription_id)
       end
     rescue ActiveRecord::RecordNotFound
-      result.fail!(code: 'not_found')
+      result.not_found_failure!(resource: 'customer')
     end
 
     def usage
-      return result.fail!(code: 'not_found') unless @customer
+      return result.not_found_failure!(resource: 'customer') unless @customer
       return result.fail!(code: 'no_active_subscription') if subscription.blank?
 
       result.usage = JSON.parse(compute_usage, object_class: OpenStruct)

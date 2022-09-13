@@ -18,23 +18,23 @@ RSpec.describe PaymentProviders::DestroyService, type: :service do
         .to change(PaymentProviders::BaseProvider, :count).by(-1)
     end
 
-    context 'when coupon is not found' do
+    context 'when payment provider is not found' do
       it 'returns an error' do
         result = destroy_service.destroy(id: nil)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('not_found')
+        expect(result.error.error_code).to eq('payment_provider_not_found')
       end
     end
 
-    context 'when coupon is not attached to the organization' do
+    context 'when payment provider is not attached to the organization' do
       let(:payment_provider) { create(:stripe_provider) }
 
       it 'returns an error' do
         result = destroy_service.destroy(id: payment_provider.id)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('not_found')
+        expect(result.error.error_code).to eq('payment_provider_not_found')
       end
     end
   end

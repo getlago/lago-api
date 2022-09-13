@@ -39,8 +39,8 @@ RSpec.describe Coupons::CreateService, type: :service do
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,
-          organization_id: coupon.organization_id
-        }
+          organization_id: coupon.organization_id,
+        },
       )
     end
 
@@ -56,8 +56,11 @@ RSpec.describe Coupons::CreateService, type: :service do
       it 'returns an error' do
         result = create_service.create(**create_args)
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:code]).to eq(['value_already_exist'])
+        end
       end
     end
   end

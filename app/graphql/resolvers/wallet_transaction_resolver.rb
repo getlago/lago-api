@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.wallet_transactions.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(resource: 'wallet_transaction')
     end
   end
 end

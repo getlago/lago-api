@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.billable_metrics.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(resource: 'billable_metric')
     end
   end
 end

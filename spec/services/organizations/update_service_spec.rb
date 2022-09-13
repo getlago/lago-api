@@ -95,8 +95,11 @@ RSpec.describe Organizations::UpdateService do
       it 'returns an error' do
         result = subject.update_from_api(params: update_args)
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:country]).to eq(['not_a_valid_country_code'])
+        end
       end
     end
   end

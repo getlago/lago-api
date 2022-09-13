@@ -15,7 +15,7 @@ module Api
         if result.success?
           render_plan(result.plan)
         else
-          validation_errors(result)
+          render_error_response(result)
         end
       end
 
@@ -53,7 +53,7 @@ module Api
           code: params[:code],
         )
 
-        return not_found_error unless plan
+        return not_found_error(resource: 'plan') unless plan
 
         render_plan(plan)
       end

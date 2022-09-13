@@ -79,7 +79,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error_details[:external_id]).to eq(['value_is_mandatory'])
+        expect(result.error.messages[:external_id]).to eq(['value_is_mandatory'])
       end
     end
 
@@ -274,7 +274,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           result = create_service.create_from_api(
             organization: organization,
             params: params,
-            )
+          )
 
           expect(result).not_to be_success
           expect(result.error).to eq('currencies does not match')
@@ -298,7 +298,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               organization: organization,
               params: params,
             )
-
 
             old_subscription = Subscription.find(subscription.id)
 

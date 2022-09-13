@@ -49,6 +49,8 @@ module Types
 
     field :create_customer_wallet_transaction, mutation: Mutations::WalletTransactions::Create
 
+    field :create_invite, mutation: Mutations::Invites::Create
+    field :revoke_invite, mutation: Mutations::Invites::Revoke
     field :revoke_membership, mutation: Mutations::Memberships::Revoke
   end
 end

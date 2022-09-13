@@ -206,7 +206,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          "/api/v1/plans/555",
+          '/api/v1/plans/555',
         )
 
         expect(response).to have_http_status(:not_found)
@@ -252,7 +252,14 @@ RSpec.describe Api::V1::PlansController, type: :request do
       it 'returns forbidden error' do
         delete_with_token(organization, "/api/v1/plans/#{plan.code}")
 
-        expect(response).to have_http_status(:forbidden)
+        aggregate_failures do
+          expect(response).to have_http_status(:method_not_allowed)
+
+          result = JSON.parse(response.body, symbolize_names: true)
+          expect(result[:status]).to eq(405)
+          expect(result[:error]).to eq('Method Not Allowed')
+          expect(result[:code]).to eq('attached_to_an_active_subscription')
+        end
       end
     end
   end

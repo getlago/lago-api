@@ -16,7 +16,7 @@ module BillableMetrics
       track_billable_metric_created(metric)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private
@@ -31,8 +31,8 @@ module BillableMetrics
           description: metric.description,
           aggregation_type: metric.aggregation_type,
           aggregation_property: metric.field_name,
-          organization_id: metric.organization_id
-        }
+          organization_id: metric.organization_id,
+        },
       )
     end
   end
