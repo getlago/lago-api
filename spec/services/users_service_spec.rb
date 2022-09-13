@@ -28,6 +28,24 @@ RSpec.describe UsersService, type: :service do
         }
       )
     end
+
+    it 'creates an organization, user and membership' do
+      result = subject.register('email', 'password', 'organization_name')
+      expect(result.user).to be_present
+      expect(result.membership).to be_present
+      expect(result.organization).to be_present
+      expect(result.token).to be_present
+    end
+  end
+
+  describe 'register_from_invite' do
+    it 'creates an organization, user and membership' do
+      result = subject.register('email', 'password', 'organization_name')
+      expect(result.user).to be_present
+      expect(result.membership).to be_present
+      expect(result.organization).to be_present
+      expect(result.token).to be_present
+    end
   end
 
   describe 'login' do

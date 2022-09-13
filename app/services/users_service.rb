@@ -34,6 +34,24 @@ class UsersService < BaseService
     result
   end
 
+  def register_from_invite(email, password, organization_id)
+    result.user = User.find_or_initialize_by(email: email)
+
+    if result.user.id
+      result.fail!(code: 'user_already_exists')
+
+      return result
+    end
+
+    ActiveRecord::Base.transaction do
+      result.organization = Organization.find(organization_id)
+      result.token = generate_token
+      create_user_and_membership(result, result.organization, password)
+    end
+
+    result
+  end
+
   def new_token(user)
     result.user = user
     result.token = generate_token
@@ -54,7 +72,7 @@ class UsersService < BaseService
 
     result
   rescue ActiveRecord::RecordInvalid => e
-    result.fail_with_validations!(e.record)
+    result.record_validation_failure!(record: e.record)
   end
 
   def generate_token
