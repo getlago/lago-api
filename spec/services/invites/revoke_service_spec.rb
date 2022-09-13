@@ -22,7 +22,7 @@ RSpec.describe Invites::RevokeService, type: :service do
         result = revoke_service.call(**revoke_args)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('invite_not_found')
+        expect(result.error.error_code).to eq('invite_not_found')
       end
     end
 
@@ -39,7 +39,7 @@ RSpec.describe Invites::RevokeService, type: :service do
         result = revoke_service.call(**revoke_args)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('invite_not_found')
+        expect(result.error.error_code).to eq('invite_not_found')
       end
     end
 
@@ -56,7 +56,7 @@ RSpec.describe Invites::RevokeService, type: :service do
         result = revoke_service.call(**revoke_args)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('invite_not_found')
+        expect(result.error.error_code).to eq('invite_not_found')
       end
     end
 

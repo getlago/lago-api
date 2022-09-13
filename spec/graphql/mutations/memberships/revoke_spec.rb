@@ -43,7 +43,10 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
       },
     )
 
-    expect(result['errors'].first['message']).to eq('Cannot revoke own membership')
-    expect(result['errors'].first['extensions']['status']).to eq(422)
+    aggregate_failures do
+      expect(result['errors'].first['message']).to eq('Method Not Allowed')
+      expect(result['errors'].first['extensions']['code']).to eq('cannot_revoke_own_membership')
+      expect(result['errors'].first['extensions']['status']).to eq(405)
+    end
   end
 end

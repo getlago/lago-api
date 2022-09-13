@@ -4,14 +4,8 @@ module Memberships
   class RevokeService < BaseService
     def call(id)
       membership = Membership.find_by(id: id)
-      return result.fail!(code: 'membership_not_found') unless membership
-
-      if result.user.id == membership.user.id
-        return result.fail!(
-          code: 'unprocessable_entity',
-          message: 'Cannot revoke own membership',
-        )
-      end
+      return result.not_found_failure!(resource: 'membership') unless membership
+      return result.not_allowed_failure!(code: 'cannot_revoke_own_membership') if result.user.id == membership.user.id
 
       membership.mark_as_revoked!
 

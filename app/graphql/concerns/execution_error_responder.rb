@@ -31,14 +31,14 @@ module ExecutionErrorResponder
 
   def not_allowed_error(code:)
     execution_error(
-      message: 'Method Not Allowed',
+      error: 'Method Not Allowed',
       status: 405,
       code: code,
     )
   end
 
   def result_error(service_result)
-    case service_result.error.class
+    case service_result.error
     when BaseService::NotFoundFailure
       return not_found_error(resource: service_result.error.resource)
     when BaseService::MethodNotAllowedFailure
