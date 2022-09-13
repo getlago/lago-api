@@ -24,15 +24,8 @@ class UsersService < BaseService
 
     ActiveRecord::Base.transaction do
       result.organization = Organization.create!(name: organization_name)
-      result.user.password = password
-      result.user.save!
       result.token = generate_token
-
-      result.membership = Membership.create!(
-        user: result.user,
-        organization: result.organization,
-        role: :admin
-      )
+      create_user_and_membership(result, result.organization, password)
     end
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
@@ -48,6 +41,21 @@ class UsersService < BaseService
   end
 
   private
+
+  def create_user_and_membership(result, organization, password)
+    result.user.password = password
+    result.user.save!
+
+    result.membership = Membership.create!(
+      user: result.user,
+      organization: organization,
+      role: :admin,
+    )
+
+    result
+  rescue ActiveRecord::RecordInvalid => e
+    result.fail_with_validations!(e.record)
+  end
 
   def generate_token
     JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
