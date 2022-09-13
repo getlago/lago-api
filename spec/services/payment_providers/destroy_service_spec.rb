@@ -23,7 +23,7 @@ RSpec.describe PaymentProviders::DestroyService, type: :service do
         result = destroy_service.destroy(id: nil)
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('payment_provider_not_found')
+        expect(result.error.error_code).to eq('payment_provider_not_found')
       end
     end
 
@@ -34,7 +34,7 @@ RSpec.describe PaymentProviders::DestroyService, type: :service do
         result = destroy_service.destroy(id: payment_provider.id)
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('payment_provider_not_found')
+        expect(result.error.error_code).to eq('payment_provider_not_found')
       end
     end
   end

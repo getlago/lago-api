@@ -262,7 +262,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         result = invoice_service.usage
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('customer_not_found')
+        expect(result.error.error_code).to eq('customer_not_found')
       end
     end
 

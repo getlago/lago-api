@@ -60,7 +60,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         result = subject.update(**update_args)
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('billable_metric_not_found')
+        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
   end
@@ -120,7 +120,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('billable_metric_not_found')
+        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
   end

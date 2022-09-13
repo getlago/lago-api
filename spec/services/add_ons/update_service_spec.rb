@@ -112,7 +112,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('add_on_not_found')
+        expect(result.error.error_code).to eq('add_on_not_found')
       end
     end
   end

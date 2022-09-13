@@ -80,7 +80,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         result = plans_service.update(**update_args)
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('billable_metrics_not_found')
+        expect(result.error.error_code).to eq('billable_metrics_not_found')
       end
     end
 
@@ -267,7 +267,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('plan_not_found')
+        expect(result.error.error_code).to eq('plan_not_found')
       end
     end
 
@@ -280,7 +280,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('plan_not_found')
+        expect(result.error.error_code).to eq('plan_not_found')
       end
     end
 

@@ -93,7 +93,7 @@ RSpec.describe Invoices::UpdateService do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('invoice_not_found')
+        expect(result.error.error_code).to eq('invoice_not_found')
       end
     end
 

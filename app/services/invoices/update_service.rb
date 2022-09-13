@@ -4,7 +4,7 @@ class Invoices::UpdateService < BaseService
   def update_from_api(invoice_id:, params:)
     invoice = Invoice.find_by(id: invoice_id)
 
-    return result.not_found_failure!(code: 'invoice_not_found') if invoice.blank?
+    return result.not_found_failure!(resource: 'invoice') if invoice.blank?
     return result.fail!(code: 'invalid_status') unless valid_status?(params[:status])
 
     invoice.status = params[:status] if params.key?(:status)

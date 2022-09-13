@@ -34,7 +34,7 @@ RSpec.describe Invoices::GenerateService, type: :service do
         result = invoice_generate_service.generate(invoice_id: '123456')
 
         expect(result.success).to be_falsey
-        expect(result.error.code).to eq('invoice_not_found')
+        expect(result.error.error_code).to eq('invoice_not_found')
       end
     end
 

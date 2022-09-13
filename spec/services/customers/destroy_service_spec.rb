@@ -33,7 +33,7 @@ RSpec.describe Customers::DestroyService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('customer_not_found')
+        expect(result.error.error_code).to eq('customer_not_found')
       end
     end
 

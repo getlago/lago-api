@@ -30,7 +30,9 @@ module ExecutionErrorResponder
   end
 
   def result_error(service_result)
-    return not_found_error(code: service_result.error.code) if service_result.error.is_a?(BaseService::NotFoundFailure)
+    if service_result.error.is_a?(BaseService::NotFoundFailure)
+      return not_found_error(code: service_result.error.error_code)
+    end
 
     execution_error(
       code: service_result.error_code,

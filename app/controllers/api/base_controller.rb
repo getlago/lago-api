@@ -59,7 +59,7 @@ module Api
 
     def render_error_response(error_result)
       if error_result.error.is_a?(BaseService::NotFoundFailure)
-        not_found_error(code: error_result.error.code)
+        not_found_error(code: error_result.error.error_code)
       elsif error_result.error_code == 'forbidden'
         forbidden_error(error_result)
       else

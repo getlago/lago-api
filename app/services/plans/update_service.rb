@@ -4,7 +4,7 @@ module Plans
   class UpdateService < BaseService
     def update(**args)
       plan = result.user.plans.find_by(id: args[:id])
-      return result.not_found_failure!(code: 'plan_not_found') unless plan
+      return result.not_found_failure!(resource: 'plan') unless plan
 
       plan.name = args[:name]
       plan.description = args[:description]
@@ -23,7 +23,7 @@ module Plans
 
       metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
       if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-        return result.not_found_failure!(code: 'billable_metrics_not_found')
+        return result.not_found_failure!(resource: 'billable_metrics')
       end
 
       ActiveRecord::Base.transaction do
@@ -40,7 +40,7 @@ module Plans
 
     def update_from_api(organization:, code:, params:)
       plan = organization.plans.find_by(code: code)
-      return result.not_found_failure!(code: 'plan_not_found') unless plan
+      return result.not_found_failure!(resource: 'plan') unless plan
 
       plan.name = params[:name] if params.key?(:name)
       plan.description = params[:description] if params.key?(:description)
@@ -58,7 +58,7 @@ module Plans
       if params[:charges].present?
         metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(code: 'plan_not_found')
+          return result.not_found_failure!(resource: 'plan')
         end
       end
 

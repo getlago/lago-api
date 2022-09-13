@@ -40,7 +40,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         result = update_service.update(**update_args)
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('subscription_not_found')
+        expect(result.error.error_code).to eq('subscription_not_found')
       end
     end
   end
@@ -80,7 +80,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         )
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('subscription_not_found')
+        expect(result.error.error_code).to eq('subscription_not_found')
       end
     end
   end

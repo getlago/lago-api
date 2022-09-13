@@ -17,12 +17,16 @@ class BaseService
   end
 
   class NotFoundFailure < FailedResult
-    attr_reader :code
+    attr_reader :resource
 
-    def initialize(code:)
-      @code = code
+    def initialize(resource:)
+      @resource = resource
 
-      super(code)
+      super(error_code)
+    end
+
+    def error_code
+      "#{resource}_not_found"
     end
   end
 
@@ -68,8 +72,8 @@ class BaseService
       self
     end
 
-    def not_found_failure!(code:)
-      fail_with_error!(NotFoundFailure.new(code: code))
+    def not_found_failure!(resource:)
+      fail_with_error!(NotFoundFailure.new(resource: resource))
     end
 
     def throw_error

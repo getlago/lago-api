@@ -30,7 +30,7 @@ RSpec.describe Subscriptions::TerminateService do
       it 'returns an error' do
         result = terminate_service.terminate(subscription.id)
 
-        expect(result.error.code).to eq('subscription_not_found')
+        expect(result.error.error_code).to eq('subscription_not_found')
       end
     end
 
@@ -92,7 +92,7 @@ RSpec.describe Subscriptions::TerminateService do
           external_id: subscription.external_id + '123',
         )
 
-        expect(result.error.code).to eq('subscription_not_found')
+        expect(result.error.error_code).to eq('subscription_not_found')
       end
     end
   end
