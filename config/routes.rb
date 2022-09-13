@@ -48,5 +48,9 @@ Rails.application.routes.draw do
     post 'stripe/:organization_id', to: 'webhooks#stripe', on: :collection, as: :stripe
   end
 
-  match '*unmatched' => 'application#not_found', via: %i[get post put delete patch]
+  match '*unmatched' => 'application#not_found',
+        via: %i[get post put delete patch],
+        constraints: lambda { |req|
+          req.path.exclude?('rails/active_storage')
+        }
 end
