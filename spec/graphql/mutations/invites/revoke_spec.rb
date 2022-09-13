@@ -18,7 +18,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
     GQL
   end
 
-  describe 'Invite revoke mutation' do 
+  describe 'Invite revoke mutation' do
     context 'with an existing invite' do
       let(:invite) { create(:invite, organization: organization) }
 
@@ -53,7 +53,10 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
           },
         )
 
-        expect(result['errors'].first['message']).to eq('invite_not_found')
+        aggregate_failures do
+          expect(result['errors'].first['message']).to eq('Resource not found')
+          expect(result['errors'].first['extensions']['code']).to eq('invite_not_found')
+        end
       end
     end
   end
