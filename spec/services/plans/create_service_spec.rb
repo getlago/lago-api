@@ -106,7 +106,7 @@ RSpec.describe Plans::CreateService, type: :service do
         result = plans_service.create(**create_args)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('Billable metrics does not exists')
+        expect(result.error.error_code).to eq('billable_metrics_not_found')
       end
     end
   end

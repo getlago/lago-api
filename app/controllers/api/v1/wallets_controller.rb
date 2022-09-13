@@ -51,7 +51,7 @@ module Api
           id: params[:id],
         )
 
-        return not_found_error(message: 'wallet_not_found') unless wallet
+        return not_found_error(resource: 'wallet') unless wallet
 
         render_wallet(wallet)
       end
@@ -59,7 +59,7 @@ module Api
       def index
         customer = Customer.find_by(external_id: params[:external_customer_id])
 
-        return not_found_error(message: 'customer_not_found') unless customer
+        return not_found_error(resource: 'customer') unless customer
 
         wallets = customer.wallets
           .page(params[:page])

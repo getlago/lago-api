@@ -53,7 +53,7 @@ module Api
           code: params[:code],
         )
 
-        return not_found_error(message: 'add_on_not_found') unless add_on
+        return not_found_error(resource: 'add_on') unless add_on
 
         render_add_on(add_on)
       end

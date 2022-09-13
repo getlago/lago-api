@@ -9,9 +9,24 @@ class BaseService
     private
 
     def format_message(result)
+      return result if result.is_a?(String)
       return result.error unless result.error_details
 
       "#{result.error}: #{[result.error_details].flatten.join(', ')}"
+    end
+  end
+
+  class NotFoundFailure < FailedResult
+    attr_reader :resource
+
+    def initialize(resource:)
+      @resource = resource
+
+      super(error_code)
+    end
+
+    def error_code
+      "#{resource}_not_found"
     end
   end
 
@@ -46,14 +61,27 @@ class BaseService
       fail!(
         code: 'unprocessable_entity',
         message: 'Validation error on the record',
-        details: record.errors.messages
+        details: record.errors.messages,
       )
+    end
+
+    def fail_with_error!(error)
+      @failure = true
+      @error = error
+
+      self
+    end
+
+    def not_found_failure!(resource:)
+      fail_with_error!(NotFoundFailure.new(resource: resource))
     end
 
     def throw_error
       return if success?
 
-      raise FailedResult, self
+      raise(error) if error.is_a?(FailedResult)
+
+      raise(FailedResult, self)
     end
 
     private

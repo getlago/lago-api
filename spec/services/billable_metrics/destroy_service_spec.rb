@@ -23,7 +23,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
         result = destroy_service.destroy(nil)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('not_found')
+        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
 
@@ -58,7 +58,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
         result = destroy_service.destroy_from_api(organization: organization, code: 'invalid12345')
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
 

@@ -53,7 +53,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       it 'returns an error' do
         result = update_service.update(**update_args)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -69,7 +69,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         amount_cents: 123,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_duration: 15
+        expiration_duration: 15,
       }
     end
 
@@ -77,7 +77,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       result = subject.update_from_api(
         organization: organization,
         code: coupon.code,
-        params: update_args
+        params: update_args,
       )
 
       aggregate_failures do
@@ -98,10 +98,10 @@ RSpec.describe Coupons::UpdateService, type: :service do
         result = subject.update_from_api(
           organization: organization,
           code: coupon.code,
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -111,11 +111,11 @@ RSpec.describe Coupons::UpdateService, type: :service do
         result = subject.update_from_api(
           organization: organization,
           code: 'fake_code12345',
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq('coupon_not_found')
       end
     end
   end

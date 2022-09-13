@@ -28,7 +28,7 @@ RSpec.describe ApplicationController, type: :request do
         json = JSON.parse(response.body)
         expect(json['status']).to eq(404)
         expect(json['error']).to eq('Not Found')
-        expect(json['message']).to eq('Resource not found')
+        expect(json['code']).to eq('resource_not_found')
       end
     end
   end

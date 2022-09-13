@@ -20,7 +20,7 @@ module Plans
       if args[:charges].present?
         metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.fail!(code: 'not_found', message: 'Billable metrics does not exists')
+          return result.not_found_failure!(resource: 'billable_metrics')
         end
       end
 
@@ -66,8 +66,8 @@ module Plans
           nb_percentage_charges: count_by_charge_model['percentage'] || 0,
           nb_graduated_charges: count_by_charge_model['graduated'] || 0,
           nb_package_charges: count_by_charge_model['package'] || 0,
-          organization_id: plan.organization_id
-        }
+          organization_id: plan.organization_id,
+        },
       )
     end
   end

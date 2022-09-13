@@ -4,7 +4,7 @@ module AddOns
   class UpdateService < BaseService
     def update(**args)
       add_on = result.user.add_ons.find_by(id: args[:id])
-      return result.fail!(code: 'not_found') unless add_on
+      return result.not_found_failure!(resource: 'add_on') unless add_on
 
       add_on.name = args[:name]
       add_on.code = args[:code]
@@ -22,7 +22,7 @@ module AddOns
 
     def update_from_api(organization:, code:, params:)
       add_on = organization.add_ons.find_by(code: code)
-      return result.fail!(code: 'not_found', message: 'add-on does not exist') unless add_on
+      return result.not_found_failure!(resource: 'add_on') unless add_on
 
       add_on.name = params[:name] if params.key?(:name)
       add_on.code = params[:code] if params.key?(:code)

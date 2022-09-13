@@ -20,7 +20,7 @@ module Api
       def show
         invoice = current_organization.invoices.find_by(id: params[:id])
 
-        return not_found_error(message: 'invoice_not_found') unless invoice
+        return not_found_error(resource: 'invoice') unless invoice
 
         render_invoice(invoice)
       end
@@ -46,7 +46,7 @@ module Api
       def download
         invoice = current_organization.invoices.find_by(id: params[:id])
 
-        return not_found_error(message: 'invoice_not_found') unless invoice
+        return not_found_error(resource: 'invoice') unless invoice
 
         if invoice.file.present?
           return render(

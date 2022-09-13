@@ -68,7 +68,7 @@ module Api
           code: params[:code],
         )
 
-        return not_found_error(message: 'billable_metric_not_found') unless metric
+        return not_found_error(resource: 'billable_metric') unless metric
 
         render(
           json: ::V1::BillableMetricSerializer.new(

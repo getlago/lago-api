@@ -53,7 +53,7 @@ module Api
           code: params[:code],
         )
 
-        return not_found_error(message: 'coupon_not_found') unless coupon
+        return not_found_error(resource: 'coupon') unless coupon
 
         render_coupon(coupon)
       end

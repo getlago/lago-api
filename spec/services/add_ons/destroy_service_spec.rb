@@ -1,4 +1,3 @@
-
 # frozen_string_literal: true
 
 require 'rails_helper'
@@ -24,7 +23,7 @@ RSpec.describe AddOns::DestroyService, type: :service do
         result = destroy_service.destroy(nil)
 
         expect(result).not_to be_success
-        expect(result.error).to eq('not_found')
+        expect(result.error.error_code).to eq('add_on_not_found')
       end
     end
   end
@@ -44,7 +43,7 @@ RSpec.describe AddOns::DestroyService, type: :service do
         result = destroy_service.destroy_from_api(organization: organization, code: 'invalid12345')
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result.error.error_code).to eq('add_on_not_found')
       end
     end
   end

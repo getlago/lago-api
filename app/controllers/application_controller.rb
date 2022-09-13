@@ -20,6 +20,6 @@ class ApplicationController < ActionController::API
   end
 
   def not_found
-    not_found_error(message: 'Resource not found')
+    not_found_error(resource: 'resource')
   end
 end

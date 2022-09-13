@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.coupons.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error
+      not_found_error(resource: 'coupon')
     end
   end
 end

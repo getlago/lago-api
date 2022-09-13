@@ -4,14 +4,14 @@ module Subscriptions
   class TerminateService < BaseService
     def terminate(subscription_id)
       subscription = Subscription.find_by(id: subscription_id)
-      return result.fail!(code: 'not_found') if subscription.blank?
+      return result.not_found_failure!(resource: 'subscription') if subscription.blank?
 
       process_terminate(subscription)
     end
 
     def terminate_from_api(organization:, external_id:)
       subscription = organization.subscriptions.find_by(external_id: external_id)
-      return result.fail!(code: 'not_found', message: 'subscription is not found') if subscription.blank?
+      return result.not_found_failure!(resource: 'subscription') if subscription.blank?
 
       process_terminate(subscription)
     end

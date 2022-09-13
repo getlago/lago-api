@@ -4,7 +4,7 @@ module Coupons
   class DestroyService < BaseService
     def destroy(id)
       coupon = result.user.coupons.find_by(id: id)
-      return result.fail!(code: 'not_found') unless coupon
+      return result.not_found_failure!(resource: 'coupon') unless coupon
 
       unless coupon.deletable?
         return result.fail!(
@@ -21,7 +21,7 @@ module Coupons
 
     def destroy_from_api(organization:, code:)
       coupon = organization.coupons.find_by(code: code)
-      return result.fail!(code: 'not_found', message: 'coupon does not exist') unless coupon
+      return result.not_found_failure!(resource: 'coupon') unless coupon
 
       unless coupon.deletable?
         return result.fail!(
@@ -38,7 +38,7 @@ module Coupons
 
     def terminate(id)
       coupon = result.user.coupons.find_by(id: id)
-      return result.fail!(code: 'not_found') unless coupon
+      return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.mark_as_terminated! unless coupon.terminated?
 

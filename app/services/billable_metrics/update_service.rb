@@ -4,7 +4,7 @@ module BillableMetrics
   class UpdateService < BaseService
     def update(**args)
       metric = result.user.billable_metrics.find_by(id: args[:id])
-      return result.fail!(code: 'not_found') unless metric
+      return result.not_found_failure!(resource: 'billable_metric') unless metric
 
       metric.name = args[:name]
       metric.description = args[:description] if args[:description]
@@ -27,7 +27,7 @@ module BillableMetrics
 
     def update_from_api(organization:, code:, params:)
       metric = organization.billable_metrics.find_by(code: code)
-      return result.fail!(code: 'not_found', message: 'billable metric does not exist') unless metric
+      return result.not_found_failure!(resource: 'billable_metric') unless metric
 
       metric.name = params[:name] if params.key?(:name)
       metric.description = params[:description] if params.key?(:description)

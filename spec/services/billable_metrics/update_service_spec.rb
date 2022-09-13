@@ -16,7 +16,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         name: 'New Metric',
         code: 'new_metric',
         description: 'New metric description',
-        aggregation_type: 'count_agg'
+        aggregation_type: 'count_agg',
       }
     end
 
@@ -41,14 +41,14 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
           name: nil,
           code: 'new_metric',
           description: 'New metric description',
-          aggregation_type: 'count_agg'
+          aggregation_type: 'count_agg',
         }
       end
 
       it 'returns an error' do
         result = subject.update(**update_args)
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -59,8 +59,8 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       it 'returns an error' do
         result = subject.update(**update_args)
 
-        expect(result).to_not be_success
-        expect(result.error).to eq('not_found')
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
   end
@@ -74,7 +74,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         code: 'new_metric',
         description: 'New metric description',
         aggregation_type: 'count_agg',
-        field_name: 'amount_sum'
+        field_name: 'amount_sum',
       }
     end
 
@@ -82,7 +82,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       result = subject.update_from_api(
         organization: organization,
         code: billable_metric.code,
-        params: update_args
+        params: update_args,
       )
 
       aggregate_failures do
@@ -103,10 +103,10 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         result = subject.update_from_api(
           organization: organization,
           code: billable_metric.code,
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
+        expect(result).not_to be_success
         expect(result.error_code).to eq('unprocessable_entity')
       end
     end
@@ -116,11 +116,11 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         result = subject.update_from_api(
           organization: organization,
           code: 'fake_code12345',
-          params: update_args
+          params: update_args,
         )
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('not_found')
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
   end

@@ -4,7 +4,7 @@ module Customers
   class DestroyService < BaseService
     def destroy(id:)
       customer = result.user.customers.find_by(id: id)
-      return result.fail!(code: 'not_found') unless customer
+      return result.not_found_failure!(resource: 'customer') unless customer
 
       unless customer.deletable?
         return result.fail!(

@@ -37,7 +37,7 @@ module Api
           transaction_id: params[:id],
         )
 
-        return not_found_error(message: 'event_not_found') unless event
+        return not_found_error(resource: 'event') unless event
 
         render(
           json: ::V1::EventSerializer.new(

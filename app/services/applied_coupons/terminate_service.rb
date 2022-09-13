@@ -8,7 +8,7 @@ module AppliedCoupons
         .where(organizations: { id: result.user.organization_ids })
         .find_by(id: id)
 
-      return result.fail!(code: 'not_found') unless applied_coupon
+      return result.not_found_failure!(resource: 'applied_coupon') unless applied_coupon
 
       applied_coupon.mark_as_terminated! unless applied_coupon.terminated?
 

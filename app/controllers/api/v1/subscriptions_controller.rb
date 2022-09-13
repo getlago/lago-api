@@ -66,7 +66,7 @@ module Api
       def index
         customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
 
-        return not_found_error(message: 'customer_not_found') unless customer
+        return not_found_error(resource: 'customer') unless customer
 
         subscriptions = customer.active_subscriptions
           .page(params[:page])
