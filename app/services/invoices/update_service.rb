@@ -16,7 +16,7 @@ class Invoices::UpdateService < BaseService
     track_payment_status_changed(invoice)
     result
   rescue ActiveRecord::RecordInvalid => e
-    result.fail_with_validations!(e.record)
+    result.record_validation_failure!(record: e.record)
   end
 
   private

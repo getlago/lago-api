@@ -29,7 +29,7 @@ module Customers
       track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def create(**args)
@@ -60,7 +60,7 @@ module Customers
       track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private
@@ -117,8 +117,8 @@ module Customers
           customer_id: customer.id,
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id
-        }
+          organization_id: customer.organization_id,
+        },
       )
     end
   end

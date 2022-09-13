@@ -19,7 +19,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         code: 'new_metric',
         description: 'New metric description',
         organization_id: organization.id,
-        aggregation_type: 'count_agg'
+        aggregation_type: 'count_agg',
       }
     end
 
@@ -40,8 +40,8 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           description: metric.description,
           aggregation_type: metric.aggregation_type,
           aggregation_property: metric.field_name,
-          organization_id: metric.organization_id
-        }
+          organization_id: metric.organization_id,
+        },
       )
     end
 
@@ -50,15 +50,18 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         create(
           :billable_metric,
           code: create_args[:code],
-          organization: membership.organization
+          organization: membership.organization,
         )
       end
 
       it 'returns an error' do
         result = create_service.create(**create_args)
 
-        expect(result).to_not be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:code]).to eq(['value_already_exist'])
+        end
       end
     end
   end

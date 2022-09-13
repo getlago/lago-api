@@ -5,7 +5,7 @@ module Api
     class EventsController < Api::BaseController
       def create
         validate_result = Events::CreateService.new.validate_params(params: create_params)
-        return validation_errors(validate_result) unless validate_result.success?
+        return render_error_response(validate_result) unless validate_result.success?
 
         Events::CreateJob.perform_later(
           current_organization,
@@ -19,7 +19,7 @@ module Api
 
       def batch
         validate_result = Events::CreateBatchService.new.validate_params(params: batch_params)
-        return validation_errors(validate_result) unless validate_result.success?
+        return render_error_response(validate_result) unless validate_result.success?
 
         Events::CreateBatchJob.perform_later(
           current_organization,

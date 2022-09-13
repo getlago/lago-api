@@ -61,14 +61,14 @@ module AppliedAddOns
       BillAddOnJob.perform_later(
         active_subscription,
         applied_add_on,
-        Time.zone.now.to_date
+        Time.zone.now.to_date,
       )
 
       result.applied_add_on = applied_add_on
       track_applied_add_on_created(result.applied_add_on)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def active_subscription?
@@ -90,8 +90,8 @@ module AppliedAddOns
         properties: {
           customer_id: applied_add_on.customer.id,
           addon_code: applied_add_on.add_on.code,
-          addon_name: applied_add_on.add_on.name
-        }
+          addon_name: applied_add_on.add_on.name,
+        },
       )
     end
   end

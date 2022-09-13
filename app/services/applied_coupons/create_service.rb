@@ -63,7 +63,7 @@ module AppliedCoupons
       track_applied_coupon_created(result.applied_coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def active_subscription?
@@ -86,8 +86,8 @@ module AppliedCoupons
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,
           coupon_name: applied_coupon.coupon.name,
-          organization_id: applied_coupon.coupon.organization_id
-        }
+          organization_id: applied_coupon.coupon.organization_id,
+        },
       )
     end
   end

@@ -33,13 +33,13 @@ module Api
       )
     end
 
-    def validation_errors(error_result)
+    def validation_errors(errors:)
       render(
         json: {
           status: 422,
           error: 'Unprocessable entity',
-          message: error_result.error,
-          error_details: error_result.error_details,
+          code: 'validation_errors',
+          error_details: errors,
         },
         status: :unprocessable_entity,
       )
@@ -62,8 +62,11 @@ module Api
         not_found_error(resource: error_result.error.resource)
       when BaseService::MethodNotAllowedFailure
         method_not_allowed_error(code: error_result.error.code)
+      when BaseService::ValidationFailure
+        validation_errors(errors: error_result.error.messages)
       else
-        validation_errors(error_result)
+        # TODO: remove after all service error migration
+        validation_errors(errors: error_result.error_details)
       end
     end
 

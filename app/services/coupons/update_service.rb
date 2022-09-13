@@ -21,7 +21,7 @@ module Coupons
       result.coupon = coupon
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def update_from_api(organization:, code:, params:)
@@ -43,7 +43,7 @@ module Coupons
       result.coupon = coupon
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
   end
 end

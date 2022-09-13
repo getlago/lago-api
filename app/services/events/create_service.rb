@@ -65,7 +65,7 @@ module Events
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
 
       if organization.webhook_url?
         SendWebhookJob.perform_later(

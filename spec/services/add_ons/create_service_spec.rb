@@ -16,7 +16,7 @@ RSpec.describe AddOns::CreateService, type: :service do
         description: 'This is description',
         organization_id: organization.id,
         amount_cents: 100,
-        amount_currency: 'EUR'
+        amount_currency: 'EUR',
       }
     end
 
@@ -38,8 +38,8 @@ RSpec.describe AddOns::CreateService, type: :service do
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,
-          organization_id: add_on.organization_id
-        }
+          organization_id: add_on.organization_id,
+        },
       )
     end
 
@@ -55,8 +55,11 @@ RSpec.describe AddOns::CreateService, type: :service do
       it 'returns an error' do
         result = create_service.create(**create_args)
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:code]).to eq(['value_already_exist'])
+        end
       end
     end
   end
