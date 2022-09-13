@@ -137,5 +137,19 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(records.first[:lago_id]).to eq(invoice3.id)
       end
     end
+
+    context 'with customer_id params' do
+      it 'returns invoices of the customer' do
+        second_customer = create(:customer, organization: organization)
+        invoice = create(:invoice, customer: second_customer)
+
+        get_with_token(organization, "/api/v1/invoices?customer_id=#{second_customer.id}")
+
+        expect(response).to have_http_status(:success)
+        records = JSON.parse(response.body, symbolize_names: true)[:invoices]
+        expect(records.count).to eq(1)
+        expect(records.first[:lago_id]).to eq(invoice.id)
+      end
+    end
   end
 end
