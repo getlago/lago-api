@@ -40,6 +40,22 @@ class BaseService
     end
   end
 
+  class ValidationFailure < FailedResult
+    attr_reader :messages
+
+    def initialize(messages:)
+      @messages = messages
+
+      super(format_messages)
+    end
+
+    private
+
+    def format_messages
+      "Validation errors: #{[messages].flatten.join(', ')}"
+    end
+  end
+
   class Result < OpenStruct
     attr_reader :error, :error_code, :error_details
 
@@ -67,14 +83,6 @@ class BaseService
       self
     end
 
-    def fail_with_validations!(record)
-      fail!(
-        code: 'unprocessable_entity',
-        message: 'Validation error on the record',
-        details: record.errors.messages,
-      )
-    end
-
     def fail_with_error!(error)
       @failure = true
       @error = error
@@ -88,6 +96,10 @@ class BaseService
 
     def not_allowed_failure!(code:)
       fail_with_error!(MethodNotAllowedFailure.new(code: code))
+    end
+
+    def record_validation_failure!(record:)
+      fail_with_error!(ValidationFailure.new(messages: record.errors.messages))
     end
 
     def throw_error

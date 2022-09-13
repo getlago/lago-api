@@ -16,7 +16,7 @@ module AddOns
       track_add_on_created(result.add_on)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private
@@ -28,8 +28,8 @@ module AddOns
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,
-          organization_id: add_on.organization_id
-        }
+          organization_id: add_on.organization_id,
+        },
       )
     end
   end

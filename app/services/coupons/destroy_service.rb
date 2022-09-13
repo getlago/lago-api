@@ -33,7 +33,7 @@ module Coupons
       result.coupon = coupon
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
   end
 end

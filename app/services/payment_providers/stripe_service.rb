@@ -37,7 +37,7 @@ module PaymentProviders
       result.stripe_provider = stripe_provider
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def register_webhook(stripe_provider)
@@ -59,7 +59,7 @@ module PaymentProviders
       result.stripe_provider = stripe_provider
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def refresh_webhook(stripe_provider:)

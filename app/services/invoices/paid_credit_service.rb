@@ -36,7 +36,7 @@ module Invoices
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     private
@@ -60,7 +60,7 @@ module Invoices
       fee_result = Fees::PaidCreditService
         .new(invoice: invoice, wallet_transaction: wallet_transaction, customer: customer).create
 
-      raise fee_result.throw_error unless fee_result.success?
+      raise(fee_result.throw_error) unless fee_result.success?
     end
 
     def should_deliver_webhook?
@@ -81,8 +81,8 @@ module Invoices
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
+          invoice_type: invoice.invoice_type,
+        },
       )
     end
   end

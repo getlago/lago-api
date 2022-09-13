@@ -25,8 +25,11 @@ RSpec.describe Invites::CreateService, type: :service do
       it 'returns an error' do
         result = create_service.call(current_organization: organization)
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:email]).to eq(['invalid_email_format'])
+        end
       end
     end
 

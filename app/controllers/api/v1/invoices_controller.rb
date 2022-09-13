@@ -13,7 +13,7 @@ module Api
         if result.success?
           render_invoice(result.invoice)
         else
-          validation_errors(result)
+          render_error_response(result)
         end
       end
 

@@ -37,18 +37,29 @@ module ExecutionErrorResponder
     )
   end
 
+  def validation_error(messages:)
+    execution_error(
+      error: 'Unprocessable Entity',
+      status: 422,
+      code: 'unprocessable_entity',
+      details: messages,
+    )
+  end
+
   def result_error(service_result)
     case service_result.error
     when BaseService::NotFoundFailure
-      return not_found_error(resource: service_result.error.resource)
+      not_found_error(resource: service_result.error.resource)
     when BaseService::MethodNotAllowedFailure
-      return not_allowed_error(code: service_result.error.code)
+      not_allowed_error(code: service_result.error.code)
+    when BaseService::ValidationFailure
+      validation_error(messages: service_result.error.messages)
+    else
+      execution_error(
+        code: service_result.error_code,
+        error: service_result.error,
+        details: service_result.error_details,
+      )
     end
-
-    execution_error(
-      code: service_result.error_code,
-      error: service_result.error,
-      details: service_result.error_details,
-    )
   end
 end

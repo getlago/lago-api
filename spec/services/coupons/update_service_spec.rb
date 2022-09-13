@@ -53,8 +53,11 @@ RSpec.describe Coupons::UpdateService, type: :service do
       it 'returns an error' do
         result = update_service.update(**update_args)
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
       end
     end
   end
@@ -101,8 +104,11 @@ RSpec.describe Coupons::UpdateService, type: :service do
           params: update_args,
         )
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
       end
     end
 

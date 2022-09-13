@@ -15,7 +15,7 @@ module AppliedCoupons
       result.applied_coupon = applied_coupon
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
   end
 end

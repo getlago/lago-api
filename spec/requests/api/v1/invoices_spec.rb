@@ -10,7 +10,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   describe 'UPDATE /invoices' do
     let(:update_params) do
       {
-        status: 'succeeded'
+        status: 'succeeded',
       }
     end
 
@@ -29,7 +29,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       it 'returns an unprocessable entity error' do
         put_with_token(organization, '/api/v1/invoices/555', { invoice: update_params })
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
@@ -76,7 +76,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'index' do
     let(:invoice) { create(:invoice, customer: customer) }
-    let(:customer) {  create(:customer, organization: organization) }
+    let(:customer) { create(:customer, organization: organization) }
 
     before { invoice }
 
@@ -126,7 +126,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       it 'returns invoices with correct issuing date' do
         get_with_token(
           organization,
-          "/api/v1/invoices?issuing_date_from=#{2.days.ago.to_date}&issuing_date_to=#{Date.tomorrow.to_date}"
+          "/api/v1/invoices?issuing_date_from=#{2.days.ago.to_date}&issuing_date_to=#{Date.tomorrow.to_date}",
         )
 
         expect(response).to have_http_status(:success)

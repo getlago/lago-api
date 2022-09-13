@@ -39,7 +39,7 @@ module PaymentProviderCustomers
       result.stripe_customer = stripe_customer
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
@@ -55,7 +55,7 @@ module PaymentProviderCustomers
       result.stripe_customer = stripe_customer
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.fail_with_validations!(e.record)
+      result.record_validation_failure!(record: e.record)
     end
 
     def check_payment_method(payment_method_id)
