@@ -85,8 +85,8 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error_code).to eq('unprocessable_entity')
-          expect(result.error).to eq('Validation error on the record')
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
         end
       end
     end
