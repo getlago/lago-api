@@ -23,7 +23,7 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = ::Subscriptions::OverrideService
+        result = ::Subscriptions::CreateWithOverriddenPlanService
           .new(context[:current_user])
           .call(plan_args: prepare_plan_params(args), subscription_args: prepare_subscription_params(args))
 

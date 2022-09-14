@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class OverrideService < BaseService
+  class CreateWithOverriddenPlanService < BaseService
     def call(plan_args:, subscription_args:)
       ActiveRecord::Base.transaction do
         plan_result = ::Plans::CreateService.new.create(**plan_args)
