@@ -92,7 +92,7 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
     end
 
     context 'when customer does not exists' do
-      let(:customer_id) { customer.id + 'invalid' }
+      let(:customer_id) { "#{customer.id}-invalid" }
 
       it 'fails' do
         result = override_service.call(plan_args: plan_params, subscription_args: subscription_params)

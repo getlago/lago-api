@@ -9,7 +9,7 @@ module Subscriptions
         return plan_result unless plan_result.success?
 
         subscription_result = ::Subscriptions::CreateService.new.create(
-          **subscription_args.merge(plan_id: plan_result.plan.id)
+          **subscription_args.merge(plan_id: plan_result.plan.id),
         )
 
         return subscription_result unless subscription_result.success?
