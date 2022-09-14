@@ -14,35 +14,42 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
     let(:plan_name) { plan.name }
     let(:customer_id) { customer.id }
     let(:billing_time) { :anniversary }
-    let(:params) do
+
+    let(:plan_params) do
+      {
+        name: plan_name,
+        code: "#{plan.code}-123456",
+        interval: plan.interval,
+        overridden_plan_id: plan.id,
+        pay_in_advance: plan.pay_in_advance,
+        organization_id: organization.id,
+        amount_cents: 299,
+        amount_currency: plan.amount_currency,
+        charges: [
+          {
+            billable_metric_id: billable_metric.id,
+            charge_model: 'standard',
+            properties: {
+              amount: '100',
+            },
+          },
+        ],
+      }
+    end
+
+    let(:subscription_params) do
       {
         customer_id: customer_id,
-        overridden_plan_id: plan.id,
         name: 'subscription display name',
         organization_id: organization.id,
         billing_time: billing_time,
-        plan: {
-          name: plan_name,
-          code: plan.code,
-          interval: plan.interval,
-          pay_in_advance: plan.pay_in_advance,
-          amount_cents: 299,
-          amount_currency: plan.amount_currency,
-          charges: [
-            {
-              billable_metric_id: billable_metric.id,
-              charge_model: 'standard',
-              amount: '100'
-            }
-          ],
-        }
       }
     end
 
     before { plan }
 
     it 'creates a subscription' do
-      result = override_service.call(**params)
+      result = override_service.call(plan_args: plan_params, subscription_args: subscription_params)
 
       expect(result).to be_success
 
@@ -59,11 +66,13 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
     end
 
     it 'creates a new plan' do
-      expect { override_service.call(**params) }.to change(Plan, :count).by(1)
+      expect do
+        override_service.call(plan_args: plan_params, subscription_args: subscription_params)
+      end.to change(Plan, :count).by(1)
     end
 
     it 'creates a new plan that is correctly linked to overridden_plan' do
-      result = override_service.call(**params)
+      result = override_service.call(plan_args: plan_params, subscription_args: subscription_params)
 
       expect(result.subscription.plan.overridden_plan_id).to eq(plan.id)
     end
@@ -72,12 +81,12 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
       let(:plan_name) { nil }
 
       it 'fails' do
-        result = override_service.call(**params)
+        result = override_service.call(plan_args: plan_params, subscription_args: subscription_params)
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error_code).to eq('unprocessable_entity')
-          expect(result.error).to eq('Validation error happened while overriding plan')
+          expect(result.error).to eq('Validation error on the record')
         end
       end
     end
@@ -86,12 +95,12 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
       let(:customer_id) { customer.id + 'invalid' }
 
       it 'fails' do
-        result = override_service.call(**params)
+        result = override_service.call(plan_args: plan_params, subscription_args: subscription_params)
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error_code).to eq('not_found')
-          expect(result.error).to eq('Some resources have not been found while creating subscription')
+          expect(result.error_code).to eq('missing_argument')
+          expect(result.error).to eq('unable to find customer')
         end
       end
     end
@@ -100,11 +109,11 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
       let(:billing_time) { :foo }
 
       it 'fails' do
-        result = override_service.call(**params)
+        result = override_service.call(plan_args: plan_params, subscription_args: subscription_params)
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to eq('Validation error on the record while creating subscription')
+          expect(result.error).to eq('Validation error on the record')
           expect(result.error_code).to eq('unprocessable_entity')
           expect(result.error_details.keys).to eq([:billing_time])
         end

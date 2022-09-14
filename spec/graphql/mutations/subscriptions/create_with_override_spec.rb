@@ -8,6 +8,9 @@ RSpec.describe Mutations::Subscriptions::CreateWithOverride, type: :graphql do
   let(:plan) { create(:plan, organization: organization) }
   let(:customer) { create(:customer, organization: organization) }
   let(:billable_metric) { create(:billable_metric, organization: organization) }
+  let(:current_user) { membership.user }
+  let(:current_organization) { organization }
+
   let(:mutation) do
     <<~GQL
       mutation($input: CreateSubscriptionWithOverrideInput!) {
@@ -27,6 +30,7 @@ RSpec.describe Mutations::Subscriptions::CreateWithOverride, type: :graphql do
       }
     GQL
   end
+
   let(:execute_request) do
     execute_graphql(
       current_user: current_user,
@@ -50,15 +54,13 @@ RSpec.describe Mutations::Subscriptions::CreateWithOverride, type: :graphql do
                 billableMetricId: billable_metric.id,
                 amount: '100.00',
                 chargeModel: 'standard',
-              }
+              },
             ],
           },
         },
       },
     )
   end
-  let(:current_user) { membership.user }
-  let(:current_organization) { organization }
 
   before { plan }
 

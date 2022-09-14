@@ -5,6 +5,7 @@ module Mutations
     class CreateWithOverride < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
+      include ChargeModelAttributesHandler
 
       graphql_name 'CreateSubscriptionWithOverride'
       description 'Create a new Subscription from parent plan'
@@ -24,15 +25,25 @@ module Mutations
 
         result = ::Subscriptions::OverrideService
           .new(context[:current_user])
-          .call(**prepare_params(args))
+          .call(plan_args: prepare_plan_params(args), subscription_args: prepare_subscription_params(args))
 
         result.success? ? result.subscription : result_error(result)
       end
 
       private
 
-      def prepare_params(args)
-        args[:plan] = args[:plan].to_h
+      def prepare_plan_params(args)
+        params = args[:plan].to_h
+        params[:code] = "#{params[:code]}-#{SecureRandom.uuid}"
+
+        prepare_arguments(**params)
+          .merge(overridden_plan_id: args[:overridden_plan_id])
+          .merge(organization_id: current_organization.id)
+      end
+
+      def prepare_subscription_params(args)
+        args.delete(:plan)
+        args.delete(:overridden_plan_id)
 
         args.merge(organization_id: current_organization.id)
       end
