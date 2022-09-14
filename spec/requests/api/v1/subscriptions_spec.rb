@@ -36,6 +36,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(result[:billing_time]).to eq('anniversary')
       expect(result[:previous_plan_code]).to be_nil
       expect(result[:next_plan_code]).to be_nil
+      expect(result[:previous_external_id]).to be_nil
+      expect(result[:next_external_id]).to be_nil
     end
 
     context 'with invalid params' do
@@ -121,30 +123,45 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(records.first[:lago_id]).to eq(subscription1.id)
     end
 
-    context 'with next and previous plans' do
-      it 'returns plans code' do
-        previous_subscription = create(
+    context 'with next and previous subscriptions' do
+      let(:previous_subscription) do
+        create(
           :subscription,
           customer: customer,
           plan: create(:plan, organization: organization),
           status: :terminated,
         )
+      end
 
-        next_subscription = create(
+      let(:next_subscription) do
+        create(
           :subscription,
           customer: customer,
           plan: create(:plan, organization: organization),
           status: :pending,
         )
+      end
 
+      before do
         subscription1.update!(previous_subscription: previous_subscription, next_subscriptions: [next_subscription])
+      end
 
+      it 'returns next and previous plan code' do
         get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}")
 
-        expect(response).to have_http_status(:success)
         subscription = JSON.parse(response.body, symbolize_names: true)[:subscriptions].first
+
         expect(subscription[:previous_plan_code]).to eq(previous_subscription.plan.code)
         expect(subscription[:next_plan_code]).to eq(next_subscription.plan.code)
+      end
+
+      it 'returns next and previous external ids' do
+        get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}")
+
+        subscription = JSON.parse(response.body, symbolize_names: true)[:subscriptions].first
+
+        expect(subscription[:previous_external_id]).to eq(previous_subscription.external_id)
+        expect(subscription[:next_external_id]).to eq(next_subscription.external_id)
       end
     end
 
