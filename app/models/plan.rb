@@ -26,7 +26,7 @@ class Plan < ApplicationRecord
   validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :amount_currency, inclusion: { in: currency_list }
 
-  scope :default, -> { where(overridden_plan_id: nil) }
+  scope :base, -> { where(overridden_plan_id: nil) }
 
   def pay_in_arrear?
     !pay_in_advance

@@ -18,7 +18,7 @@ module Resolvers
 
       plans = current_organization
         .plans
-        .default
+        .base
         .page(page)
         .per(limit)
 
