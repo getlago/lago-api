@@ -17,6 +17,8 @@ module V1
         terminated_at: model.terminated_at&.iso8601,
         canceled_at: model.canceled_at&.iso8601,
         created_at: model.created_at.iso8601,
+        previous_plan_code: model.previous_subscription&.plan&.code,
+        next_plan_code: model.next_subscription&.plan&.code,
       }
     end
   end
