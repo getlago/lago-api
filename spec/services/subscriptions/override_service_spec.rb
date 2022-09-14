@@ -162,7 +162,7 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
       result = override_service.call_from_api(
         organization: organization,
         plan_args: plan_params,
-        subscription_args: subscription_params
+        subscription_args: subscription_params,
       )
 
       expect(result).to be_success
@@ -184,7 +184,7 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
         override_service.call_from_api(
           organization: organization,
           plan_args: plan_params,
-          subscription_args: subscription_params
+          subscription_args: subscription_params,
         )
       end.to change(Plan, :count).by(1)
     end
@@ -193,7 +193,7 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
       result = override_service.call_from_api(
         organization: organization,
         plan_args: plan_params,
-        subscription_args: subscription_params
+        subscription_args: subscription_params,
       )
 
       expect(result.subscription.plan.overridden_plan_id).to eq(plan.id)
@@ -206,7 +206,7 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
         result = override_service.call_from_api(
           organization: organization,
           plan_args: plan_params,
-          subscription_args: subscription_params
+          subscription_args: subscription_params,
         )
 
         aggregate_failures do
@@ -224,7 +224,7 @@ RSpec.describe Subscriptions::OverrideService, type: :service do
         result = override_service.call_from_api(
           organization: organization,
           plan_args: plan_params,
-          subscription_args: subscription_params
+          subscription_args: subscription_params,
         )
 
         aggregate_failures do

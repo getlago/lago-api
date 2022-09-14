@@ -32,7 +32,7 @@ module Api
         result = override_service.call_from_api(
           organization: current_organization,
           plan_args: plan_params,
-          subscription_args: create_with_override_subscription_params
+          subscription_args: create_with_override_subscription_params,
         )
 
         if result.success?

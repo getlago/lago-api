@@ -35,9 +35,7 @@ module Plans
     attr_reader :organization, :plan_code
 
     def overridden_plan
-      @overridden_plan ||= begin
-        organization.plans.find_by(code: plan_code)
-      end
+      @overridden_plan ||= organization.plans.find_by(code: plan_code)
     end
   end
 end

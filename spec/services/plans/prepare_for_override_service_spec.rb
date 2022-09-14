@@ -22,8 +22,8 @@ RSpec.describe Plans::PrepareForOverrideService, type: :service do
           properties: {
             amount: '0.22',
           },
-        }
-      ]
+        },
+      ],
     }
   end
 
@@ -46,8 +46,8 @@ RSpec.describe Plans::PrepareForOverrideService, type: :service do
           properties: {
             amount: '0.22',
           },
-        }
-      ]
+        },
+      ],
     }
   end
 

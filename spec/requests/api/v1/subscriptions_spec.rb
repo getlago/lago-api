@@ -98,7 +98,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
               ],
             },
           ],
-        }
+        },
       }
     end
 
@@ -107,7 +107,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     it 'returns a success' do
       post_with_token(organization, '/api/v1/subscriptions/override', { subscription: params })
 
-      expect(response).to have_http_status(200)
+      expect(response).to have_http_status(:ok)
 
       result = JSON.parse(response.body, symbolize_names: true)[:subscription]
 
@@ -138,14 +138,14 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           billing_time: 'anniversary',
           plan: {
             amount_currency: 'EUR',
-          }
+          },
         }
       end
 
       it 'returns an unprocessable_entity error' do
         post_with_token(organization, '/api/v1/subscriptions/override', { subscription: params })
 
-        expect(response).to have_http_status(422)
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
