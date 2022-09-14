@@ -34,6 +34,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(result[:name]).to eq('subscription name')
       expect(result[:started_at]).to be_present
       expect(result[:billing_time]).to eq('anniversary')
+      expect(result[:previous_plan_code]).to be_nil
+      expect(result[:next_plan_code]).to be_nil
     end
 
     context 'with invalid params' do
@@ -117,6 +119,33 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
       expect(records.count).to eq(1)
       expect(records.first[:lago_id]).to eq(subscription1.id)
+    end
+
+    context 'with next and previous plans' do
+      it 'returns plans code' do
+        previous_subscription = create(
+          :subscription,
+          customer: customer,
+          plan: create(:plan, organization: organization),
+          status: :terminated,
+        )
+
+        next_subscription = create(
+          :subscription,
+          customer: customer,
+          plan: create(:plan, organization: organization),
+          status: :pending,
+        )
+
+        subscription1.update!(previous_subscription: previous_subscription, next_subscriptions: [next_subscription])
+
+        get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}")
+
+        expect(response).to have_http_status(:success)
+        subscription = JSON.parse(response.body, symbolize_names: true)[:subscriptions].first
+        expect(subscription[:previous_plan_code]).to eq(previous_subscription.plan.code)
+        expect(subscription[:next_plan_code]).to eq(next_subscription.plan.code)
+      end
     end
 
     context 'with pagination' do
