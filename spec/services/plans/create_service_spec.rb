@@ -62,6 +62,7 @@ RSpec.describe Plans::CreateService, type: :service do
       plan = Plan.order(:created_at).last
 
       expect(plan.charges.count).to eq(2)
+      expect(plan.overridden_plan_id).to eq(nil)
     end
 
     it 'calls SegmentTrackJob' do

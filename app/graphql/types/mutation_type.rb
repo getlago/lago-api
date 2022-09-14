@@ -22,6 +22,7 @@ module Types
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
     field :update_subscription, mutation: Mutations::Subscriptions::Update
+    field :create_subscription_with_override, mutation: Mutations::Subscriptions::CreateWithOverride
     field :terminate_subscription, mutation: Mutations::Subscriptions::Terminate
 
     field :create_coupon, mutation: Mutations::Coupons::Create

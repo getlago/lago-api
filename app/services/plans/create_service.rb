@@ -8,6 +8,7 @@ module Plans
         name: args[:name],
         code: args[:code],
         description: args[:description],
+        overridden_plan_id: args[:overridden_plan_id],
         interval: args[:interval].to_sym,
         pay_in_advance: args[:pay_in_advance],
         amount_cents: args[:amount_cents],
