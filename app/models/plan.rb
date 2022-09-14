@@ -4,11 +4,13 @@ class Plan < ApplicationRecord
   include Currencies
 
   belongs_to :organization
+  belongs_to :overridden_plan, class_name: 'Plan', optional: true
 
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
+  has_many :extended_plans, class_name: 'Plan', foreign_key: :overridden_plan_id
 
   INTERVALS = %i[
     weekly
@@ -23,6 +25,8 @@ class Plan < ApplicationRecord
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :amount_currency, inclusion: { in: currency_list }
+
+  scope :default, -> { where(overridden_plan_id: nil) }
 
   def pay_in_arrear?
     !pay_in_advance
