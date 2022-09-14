@@ -19,6 +19,8 @@ module V1
         created_at: model.created_at.iso8601,
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
+        previous_external_id: model.previous_subscription&.external_id,
+        next_external_id: model.next_subscription&.external_id,
       }
     end
   end
