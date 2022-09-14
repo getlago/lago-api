@@ -22,10 +22,11 @@ class UsersService < BaseService
       return result
     end
 
-    result.organization = Organization.create!(name: organization_name)
-    result.token = generate_token
+    ActiveRecord::Base.transaction do
+      result.organization = Organization.create!(name: organization_name)
 
-    create_user_and_membership(result, password)
+      create_user_and_membership(result, password)
+    end
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
     track_organization_registered(result.organization, result.membership)
@@ -38,10 +39,11 @@ class UsersService < BaseService
 
     return result.fail!(code: 'user_already_exists') if result.user.id
 
-    result.organization = Organization.find(organization_id)
-    result.token = generate_token
+    ActiveRecord::Base.transaction do
+      result.organization = Organization.find(organization_id)
 
-    create_user_and_membership(result, password)
+      create_user_and_membership(result, password)
+    end
 
     result
   end
@@ -58,6 +60,8 @@ class UsersService < BaseService
     ActiveRecord::Base.transaction do
       result.user.password = password
       result.user.save!
+
+      result.token = generate_token
 
       result.membership = Membership.create!(
         user: result.user,
