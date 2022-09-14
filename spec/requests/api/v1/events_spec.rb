@@ -94,21 +94,19 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
       expect(response).to have_http_status(:ok)
 
-      api_event = JSON.parse(response.body)['event']
-
-      %w[code transaction_id].each do |property|
-        expect(api_event[property]).to eq event.attributes[property]
+      %i[code transaction_id].each do |property|
+        expect(json[:event][property]).to eq event.attributes[property.to_s]
       end
 
-      expect(api_event['lago_subscription_id']).to eq event.subscription_id
-      expect(api_event['lago_customer_id']).to eq event.customer_id
+      expect(json[:event][:lago_subscription_id]).to eq event.subscription_id
+      expect(json[:event][:lago_customer_id]).to eq event.customer_id
     end
 
     context 'with a non-existing transaction_id' do
       it 'returns not found' do
         get_with_token(
           organization,
-          '/api/v1/events/' + SecureRandom.uuid
+          "/api/v1/events/#{SecureRandom.uuid}",
         )
 
         expect(response).to have_http_status(:not_found)

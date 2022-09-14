@@ -21,12 +21,10 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       post_with_token(organization, '/api/v1/coupons', { coupon: create_params })
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:coupon]
-      expect(result[:lago_id]).to be_present
-      expect(result[:code]).to eq(create_params[:code])
-      expect(result[:name]).to eq(create_params[:name])
-      expect(result[:created_at]).to be_present
+      expect(json[:coupon][:lago_id]).to be_present
+      expect(json[:coupon][:code]).to eq(create_params[:code])
+      expect(json[:coupon][:name]).to eq(create_params[:name])
+      expect(json[:coupon][:created_at]).to be_present
     end
   end
 
@@ -52,11 +50,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:coupon]
-
-      expect(result[:lago_id]).to eq(coupon.id)
-      expect(result[:code]).to eq(update_params[:code])
+      expect(json[:coupon][:lago_id]).to eq(coupon.id)
+      expect(json[:coupon][:code]).to eq(update_params[:code])
     end
 
     context 'when coupon does not exist' do
@@ -95,11 +90,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:coupon]
-
-      expect(result[:lago_id]).to eq(coupon.id)
-      expect(result[:code]).to eq(coupon.code)
+      expect(json[:coupon][:lago_id]).to eq(coupon.id)
+      expect(json[:coupon][:code]).to eq(coupon.code)
     end
 
     context 'when coupon does not exist' do
@@ -128,11 +120,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       delete_with_token(organization, "/api/v1/coupons/#{coupon.code}")
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:coupon]
-
-      expect(result[:lago_id]).to eq(coupon.id)
-      expect(result[:code]).to eq(coupon.code)
+      expect(json[:coupon][:lago_id]).to eq(coupon.id)
+      expect(json[:coupon][:code]).to eq(coupon.code)
     end
 
     context 'when coupon does not exist' do
@@ -153,11 +142,9 @@ RSpec.describe Api::V1::CouponsController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:method_not_allowed)
-
-          result = JSON.parse(response.body, symbolize_names: true)
-          expect(result[:status]).to eq(405)
-          expect(result[:error]).to eq('Method Not Allowed')
-          expect(result[:code]).to eq('attached_to_an_active_customer')
+          expect(json[:status]).to eq(405)
+          expect(json[:error]).to eq('Method Not Allowed')
+          expect(json[:code]).to eq('attached_to_an_active_customer')
         end
       end
     end
@@ -172,12 +159,9 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       get_with_token(organization, '/api/v1/coupons')
 
       expect(response).to have_http_status(:success)
-
-      records = JSON.parse(response.body, symbolize_names: true)[:coupons]
-
-      expect(records.count).to eq(1)
-      expect(records.first[:lago_id]).to eq(coupon.id)
-      expect(records.first[:code]).to eq(coupon.code)
+      expect(json[:coupons].count).to eq(1)
+      expect(json[:coupons].first[:lago_id]).to eq(coupon.id)
+      expect(json[:coupons].first[:code]).to eq(coupon.code)
     end
 
     context 'with pagination' do
@@ -189,15 +173,12 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         get_with_token(organization, '/api/v1/coupons?page=1&per_page=1')
 
         expect(response).to have_http_status(:success)
-
-        response_body = JSON.parse(response.body, symbolize_names: true)
-
-        expect(response_body[:coupons].count).to eq(1)
-        expect(response_body[:meta][:current_page]).to eq(1)
-        expect(response_body[:meta][:next_page]).to eq(2)
-        expect(response_body[:meta][:prev_page]).to eq(nil)
-        expect(response_body[:meta][:total_pages]).to eq(2)
-        expect(response_body[:meta][:total_count]).to eq(2)
+        expect(json[:coupons].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
   end

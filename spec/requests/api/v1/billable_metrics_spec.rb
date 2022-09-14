@@ -20,12 +20,10 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: create_params })
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:billable_metric]
-      expect(result[:lago_id]).to be_present
-      expect(result[:code]).to eq(create_params[:code])
-      expect(result[:name]).to eq(create_params[:name])
-      expect(result[:created_at]).to be_present
+      expect(json[:billable_metric][:lago_id]).to be_present
+      expect(json[:billable_metric][:code]).to eq(create_params[:code])
+      expect(json[:billable_metric][:name]).to eq(create_params[:name])
+      expect(json[:billable_metric][:created_at]).to be_present
     end
   end
 
@@ -50,11 +48,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:billable_metric]
-
-      expect(result[:lago_id]).to eq(billable_metric.id)
-      expect(result[:code]).to eq(update_params[:code])
+      expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
+      expect(json[:billable_metric][:code]).to eq(update_params[:code])
     end
 
     context 'when billable metric does not exist' do
@@ -93,11 +88,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:billable_metric]
-
-      expect(result[:lago_id]).to eq(billable_metric.id)
-      expect(result[:code]).to eq(billable_metric.code)
+      expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
+      expect(json[:billable_metric][:code]).to eq(billable_metric.code)
     end
 
     context 'when billable metric does not exist' do
@@ -126,11 +118,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:billable_metric]
-
-      expect(result[:lago_id]).to eq(billable_metric.id)
-      expect(result[:code]).to eq(billable_metric.code)
+      expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
+      expect(json[:billable_metric][:code]).to eq(billable_metric.code)
     end
 
     context 'when billable metric does not exist' do
@@ -156,11 +145,9 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:method_not_allowed)
-
-          result = JSON.parse(response.body, symbolize_names: true)
-          expect(result[:status]).to eq(405)
-          expect(result[:error]).to eq('Method Not Allowed')
-          expect(result[:code]).to eq('attached_to_an_active_subscription')
+          expect(json[:status]).to eq(405)
+          expect(json[:error]).to eq('Method Not Allowed')
+          expect(json[:code]).to eq('attached_to_an_active_subscription')
         end
       end
     end
@@ -175,12 +162,9 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       get_with_token(organization, '/api/v1/billable_metrics')
 
       expect(response).to have_http_status(:success)
-
-      records = JSON.parse(response.body, symbolize_names: true)[:billable_metrics]
-
-      expect(records.count).to eq(1)
-      expect(records.first[:lago_id]).to eq(billable_metric.id)
-      expect(records.first[:code]).to eq(billable_metric.code)
+      expect(json[:billable_metrics].count).to eq(1)
+      expect(json[:billable_metrics].first[:lago_id]).to eq(billable_metric.id)
+      expect(json[:billable_metrics].first[:code]).to eq(billable_metric.code)
     end
 
     context 'with pagination' do
@@ -192,15 +176,12 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         get_with_token(organization, '/api/v1/billable_metrics?page=1&per_page=1')
 
         expect(response).to have_http_status(:success)
-
-        response_body = JSON.parse(response.body, symbolize_names: true)
-
-        expect(response_body[:billable_metrics].count).to eq(1)
-        expect(response_body[:meta][:current_page]).to eq(1)
-        expect(response_body[:meta][:next_page]).to eq(2)
-        expect(response_body[:meta][:prev_page]).to eq(nil)
-        expect(response_body[:meta][:total_pages]).to eq(2)
-        expect(response_body[:meta][:total_count]).to eq(2)
+        expect(json[:billable_metrics].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
   end

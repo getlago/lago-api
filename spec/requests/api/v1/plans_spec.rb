@@ -34,12 +34,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      result = JSON.parse(response.body, symbolize_names: true)[:plan]
-      expect(result[:lago_id]).to be_present
-      expect(result[:code]).to eq(create_params[:code])
-      expect(result[:name]).to eq(create_params[:name])
-      expect(result[:created_at]).to be_present
-      expect(result[:charges].first[:lago_id]).to be_present
+      expect(json[:plan][:lago_id]).to be_present
+      expect(json[:plan][:code]).to eq(create_params[:code])
+      expect(json[:plan][:name]).to eq(create_params[:name])
+      expect(json[:plan][:created_at]).to be_present
+      expect(json[:plan][:charges].first[:lago_id]).to be_present
     end
 
     context 'with graduated charges' do
@@ -81,12 +80,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        result = JSON.parse(response.body, symbolize_names: true)[:plan]
-        expect(result[:lago_id]).to be_present
-        expect(result[:code]).to eq(create_params[:code])
-        expect(result[:name]).to eq(create_params[:name])
-        expect(result[:created_at]).to be_present
-        expect(result[:charges].first[:lago_id]).to be_present
+        expect(json[:plan][:lago_id]).to be_present
+        expect(json[:plan][:code]).to eq(create_params[:code])
+        expect(json[:plan][:name]).to eq(create_params[:name])
+        expect(json[:plan][:created_at]).to be_present
+        expect(json[:plan][:charges].first[:lago_id]).to be_present
       end
     end
 
@@ -109,12 +107,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        result = JSON.parse(response.body, symbolize_names: true)[:plan]
-        expect(result[:lago_id]).to be_present
-        expect(result[:code]).to eq(create_params[:code])
-        expect(result[:name]).to eq(create_params[:name])
-        expect(result[:created_at]).to be_present
-        expect(result[:charges].count).to eq(0)
+        expect(json[:plan][:lago_id]).to be_present
+        expect(json[:plan][:code]).to eq(create_params[:code])
+        expect(json[:plan][:name]).to eq(create_params[:name])
+        expect(json[:plan][:created_at]).to be_present
+        expect(json[:plan][:charges].count).to eq(0)
       end
     end
   end
@@ -152,11 +149,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:plan]
-
-      expect(result[:lago_id]).to eq(plan.id)
-      expect(result[:code]).to eq(update_params[:code])
+      expect(json[:plan][:lago_id]).to eq(plan.id)
+      expect(json[:plan][:code]).to eq(update_params[:code])
     end
 
     context 'when plan does not exist' do
@@ -195,11 +189,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:plan]
-
-      expect(result[:lago_id]).to eq(plan.id)
-      expect(result[:code]).to eq(plan.code)
+      expect(json[:plan][:lago_id]).to eq(plan.id)
+      expect(json[:plan][:code]).to eq(plan.code)
     end
 
     context 'when plan does not exist' do
@@ -228,11 +219,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
       delete_with_token(organization, "/api/v1/plans/#{plan.code}")
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:plan]
-
-      expect(result[:lago_id]).to eq(plan.id)
-      expect(result[:code]).to eq(plan.code)
+      expect(json[:plan][:lago_id]).to eq(plan.id)
+      expect(json[:plan][:code]).to eq(plan.code)
     end
 
     context 'when plan does not exist' do
@@ -255,10 +243,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
         aggregate_failures do
           expect(response).to have_http_status(:method_not_allowed)
 
-          result = JSON.parse(response.body, symbolize_names: true)
-          expect(result[:status]).to eq(405)
-          expect(result[:error]).to eq('Method Not Allowed')
-          expect(result[:code]).to eq('attached_to_an_active_subscription')
+          expect(json[:status]).to eq(405)
+          expect(json[:error]).to eq('Method Not Allowed')
+          expect(json[:code]).to eq('attached_to_an_active_subscription')
         end
       end
     end
@@ -274,11 +261,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      records = JSON.parse(response.body, symbolize_names: true)[:plans]
-
-      expect(records.count).to eq(1)
-      expect(records.first[:lago_id]).to eq(plan.id)
-      expect(records.first[:code]).to eq(plan.code)
+      expect(json[:plans].count).to eq(1)
+      expect(json[:plans].first[:lago_id]).to eq(plan.id)
+      expect(json[:plans].first[:code]).to eq(plan.code)
     end
 
     context 'with pagination' do
@@ -291,14 +276,12 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        response_body = JSON.parse(response.body, symbolize_names: true)
-
-        expect(response_body[:plans].count).to eq(1)
-        expect(response_body[:meta][:current_page]).to eq(1)
-        expect(response_body[:meta][:next_page]).to eq(2)
-        expect(response_body[:meta][:prev_page]).to eq(nil)
-        expect(response_body[:meta][:total_pages]).to eq(2)
-        expect(response_body[:meta][:total_count]).to eq(2)
+        expect(json[:plans].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
   end
