@@ -44,7 +44,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         result = create_service.create(**create_args)
 
         expect(result).not_to be_success
-        expect(result.error_details.first).to eq('invalid_paid_credits')
+        expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
       end
     end
   end

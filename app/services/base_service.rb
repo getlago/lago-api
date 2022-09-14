@@ -99,7 +99,11 @@ class BaseService
     end
 
     def record_validation_failure!(record:)
-      fail_with_error!(ValidationFailure.new(messages: record.errors.messages))
+      validation_failure!(errors: record.errors.messages)
+    end
+
+    def validation_failure!(errors:)
+      fail_with_error!(ValidationFailure.new(messages: errors))
     end
 
     def throw_error

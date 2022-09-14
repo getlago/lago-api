@@ -38,8 +38,11 @@ RSpec.describe Invites::CreateService, type: :service do
         create(:invite, organization: create_args[:current_organization], email: create_args[:email])
         result = create_service.call(**create_args)
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:invite])
+        end
       end
     end
 
@@ -51,8 +54,11 @@ RSpec.describe Invites::CreateService, type: :service do
 
         result = create_service.call(**create_args)
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('unprocessable_entity')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:email])
+        end
       end
     end
   end
