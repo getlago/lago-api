@@ -115,7 +115,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(result[:external_id]).to be_present
       expect(result[:external_customer_id]).to eq(customer.external_id)
       expect(result[:lago_customer_id]).to eq(customer.id)
-      expect(result[:plan_code]).not_to eq(plan.code)
+      expect(result[:plan_code]).to eq(plan.code)
       expect(result[:status]).to eq('active')
       expect(result[:name]).to eq('subscription name')
       expect(result[:started_at]).to be_present

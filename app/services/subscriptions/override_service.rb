@@ -27,7 +27,7 @@ module Subscriptions
 
         subscription_result = ::Subscriptions::CreateService.new.create_from_api(
           organization: organization,
-          params: subscription_args.merge(plan_code: plan_result.plan.code)
+          params: subscription_args.merge(plan_code: plan_result.plan.code),
         )
         return subscription_result unless subscription_result.success?
 
