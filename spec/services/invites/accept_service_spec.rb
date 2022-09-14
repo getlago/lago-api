@@ -30,7 +30,7 @@ RSpec.describe Invites::AcceptService, type: :service do
       end
     end
 
-    it 'return user, membership and organization' do
+    it 'sets user, membership and organization' do
       result = accept_service.call(**accept_args)
 
       expect(result.user).to be_present
@@ -94,6 +94,19 @@ RSpec.describe Invites::AcceptService, type: :service do
 
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq('invite_not_found')
+        end
+      end
+
+      context 'when invite is accepted with the email of an existing user' do
+        it 'returns an error' do
+          result = accept_service.call(
+            email: membership.user.email,
+            password: accept_args[:password],
+            token: accept_args[:token],
+          )
+
+          expect(result).not_to be_success
+          expect(result.error).to eq('user_already_exists')
         end
       end
     end

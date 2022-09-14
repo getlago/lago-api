@@ -13,7 +13,7 @@ module Invites
           invite.organization_id,
         )
 
-        invite.recipient = result.membership || Membership.find_by(user_id: result.user.id)
+        invite.recipient = result.membership
 
         invite.mark_as_accepted!
 

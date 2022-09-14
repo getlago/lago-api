@@ -22,11 +22,10 @@ class UsersService < BaseService
       return result
     end
 
-    ActiveRecord::Base.transaction do
-      result.organization = Organization.create!(name: organization_name)
-      result.token = generate_token
-      create_user_and_membership(result, result.organization, password)
-    end
+    result.organization = Organization.create!(name: organization_name)
+    result.token = generate_token
+
+    create_user_and_membership(result, password)
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
     track_organization_registered(result.organization, result.membership)
@@ -37,17 +36,12 @@ class UsersService < BaseService
   def register_from_invite(email, password, organization_id)
     result.user = User.find_or_initialize_by(email: email)
 
-    if result.user.id
-      result.fail!(code: 'user_already_exists')
+    return result.fail!(code: 'user_already_exists') if result.user.id
 
-      return result
-    end
+    result.organization = Organization.find(organization_id)
+    result.token = generate_token
 
-    ActiveRecord::Base.transaction do
-      result.organization = Organization.find(organization_id)
-      result.token = generate_token
-      create_user_and_membership(result, result.organization, password)
-    end
+    create_user_and_membership(result, password)
 
     result
   end
@@ -60,17 +54,18 @@ class UsersService < BaseService
 
   private
 
-  def create_user_and_membership(result, organization, password)
-    result.user.password = password
-    result.user.save!
+  def create_user_and_membership(result, password)
+    ActiveRecord::Base.transaction do
+      result.user.password = password
+      result.user.save!
 
-    result.membership = Membership.create!(
-      user: result.user,
-      organization: organization,
-      role: :admin,
-    )
+      result.membership = Membership.create!(
+        user: result.user,
+        organization: result.organization,
+      )
 
-    result
+      result
+    end
   rescue ActiveRecord::RecordInvalid => e
     result.record_validation_failure!(record: e.record)
   end
