@@ -14,7 +14,22 @@ FactoryBot.define do
 
     factory :graduated_charge do
       charge_model { 'graduated' }
-      properties { [] }
+      properties do
+        [
+          {
+            to_value: 1,
+            from_value: 0,
+            flat_amount: '0',
+            per_unit_amount: '0',
+          },
+          {
+            to_value: nil,
+            from_value: 2,
+            flat_amount: '0',
+            per_unit_amount: '3200',
+          },
+        ]
+      end
     end
 
     factory :package_charge do

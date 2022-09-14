@@ -51,6 +51,105 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
   end
 
+  describe 'create_with_override' do
+    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:standard_charge) { create(:standard_charge, billable_metric: billable_metric) }
+    let(:graduated_charge) { create(:graduated_charge, billable_metric: billable_metric) }
+
+    let(:plan) do
+      create(:plan, organization: organization, charges: [standard_charge, graduated_charge])
+    end
+
+    let(:params) do
+      {
+        external_customer_id: customer.external_id,
+        name: 'subscription name',
+        overridden_plan_code: plan.code,
+        external_id: SecureRandom.uuid,
+        billing_time: 'anniversary',
+        plan: {
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          trial_period: 1,
+          charges: [
+            {
+              id: standard_charge.id,
+              charge_model: 'standard',
+              properties: {
+                amount: '0.22',
+              },
+            },
+            {
+              id: graduated_charge.id,
+              charge_model: 'graduated',
+              properties: [
+                {
+                  to_value: 1,
+                  from_value: 0,
+                  flat_amount: '0',
+                  per_unit_amount: '0',
+                },
+                {
+                  to_value: nil,
+                  from_value: 2,
+                  flat_amount: '0',
+                  per_unit_amount: '3200',
+                },
+              ],
+            },
+          ],
+        }
+      }
+    end
+
+    before { plan }
+
+    it 'returns a success' do
+      post_with_token(organization, '/api/v1/subscriptions/override', { subscription: params })
+
+      expect(response).to have_http_status(200)
+
+      result = JSON.parse(response.body, symbolize_names: true)[:subscription]
+
+      expect(result[:lago_id]).to be_present
+      expect(result[:external_id]).to be_present
+      expect(result[:external_customer_id]).to eq(customer.external_id)
+      expect(result[:lago_customer_id]).to eq(customer.id)
+      expect(result[:plan_code]).not_to eq(plan.code)
+      expect(result[:status]).to eq('active')
+      expect(result[:name]).to eq('subscription name')
+      expect(result[:started_at]).to be_present
+      expect(result[:billing_time]).to eq('anniversary')
+    end
+
+    it 'creates a new plan' do
+      expect do
+        post_with_token(organization, '/api/v1/subscriptions/override', { subscription: params })
+      end.to change(Plan, :count).by(1)
+    end
+
+    context 'with invalid params' do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          name: 'subscription name',
+          overridden_plan_code: plan.code,
+          external_id: SecureRandom.uuid,
+          billing_time: 'anniversary',
+          plan: {
+            amount_currency: 'EUR',
+          }
+        }
+      end
+
+      it 'returns an unprocessable_entity error' do
+        post_with_token(organization, '/api/v1/subscriptions/override', { subscription: params })
+
+        expect(response).to have_http_status(422)
+      end
+    end
+  end
+
   describe 'delete /subscriptions/:id' do
     let(:subscription) { create(:subscription, customer: customer, plan: plan) }
 

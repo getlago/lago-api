@@ -20,6 +20,7 @@ Rails.application.routes.draw do
 
       resources :subscriptions, only: %i[create update index], param: :external_id
       delete '/subscriptions/:external_id', to: 'subscriptions#terminate', as: :terminate
+      post '/subscriptions/override', to: 'subscriptions#create_with_override'
 
       resources :add_ons, param: :code
       resources :billable_metrics, param: :code

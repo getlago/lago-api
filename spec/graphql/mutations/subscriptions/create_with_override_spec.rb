@@ -5,7 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::Subscriptions::CreateWithOverride, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization: organization) }
+  let(:standard_charge) { create(:standard_charge) }
+  let(:plan) { create(:plan, organization: organization, charges: [standard_charge]) }
   let(:customer) { create(:customer, organization: organization) }
   let(:billable_metric) { create(:billable_metric, organization: organization) }
   let(:current_user) { membership.user }

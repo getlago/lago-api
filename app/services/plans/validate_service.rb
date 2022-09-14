@@ -10,6 +10,7 @@ module Plans
     def valid?
       errors = []
       errors << 'overridden_plan_not_found' if invalid_overridden_plan?
+      errors << 'incorrect_charge_number' if invalid_charge_number?
       errors = errors.compact
 
       unless errors.empty?
@@ -31,7 +32,19 @@ module Plans
     def invalid_overridden_plan?
       return false unless args[:overridden_plan_id]
 
-      Plan.find_by(id: args[:overridden_plan_id], organization_id: args[:organization_id]).blank?
+      overridden_plan.blank?
+    end
+
+    def invalid_charge_number?
+      return false unless args[:overridden_plan_id]
+      return args[:charges].present? unless overridden_plan
+      return overridden_plan.charges.count.positive? if args[:charges].nil?
+
+      args[:charges].count != overridden_plan.charges.count
+    end
+
+    def overridden_plan
+      @overridden_plan ||= Plan.find_by(id: args[:overridden_plan_id], organization_id: args[:organization_id])
     end
   end
 end

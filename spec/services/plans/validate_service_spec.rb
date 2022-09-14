@@ -37,5 +37,15 @@ RSpec.describe Plans::ValidateService, type: :service do
         expect(result.error_details.first).to eq('overridden_plan_not_found')
       end
     end
+
+    context 'with invalid charge number' do
+      let(:standard_charge) { create(:standard_charge) }
+      let(:plan) { create(:plan, organization: organization, charges: [standard_charge]) }
+
+      it 'returns false and result has errors' do
+        expect(validate_service).not_to be_valid
+        expect(result.error_details.first).to eq('incorrect_charge_number')
+      end
+    end
   end
 end
