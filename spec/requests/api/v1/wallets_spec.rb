@@ -17,7 +17,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         name: 'Wallet1',
         paid_credits: '10',
         granted_credits: '10',
-        expiration_date: '2022-06-06'
+        expiration_date: '2022-06-06',
       }
     end
 
@@ -26,10 +26,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      result = JSON.parse(response.body, symbolize_names: true)[:wallet]
-      expect(result[:lago_id]).to be_present
-      expect(result[:name]).to eq(create_params[:name])
-      expect(result[:external_customer_id]).to eq(customer.external_id)
+      expect(json[:wallet][:lago_id]).to be_present
+      expect(json[:wallet][:name]).to eq(create_params[:name])
+      expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
     end
   end
 
@@ -38,24 +37,22 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     let(:update_params) do
       {
         name: 'wallet1',
-        expiration_date: '2022-07-07'
+        expiration_date: '2022-07-07',
       }
     end
 
     before { wallet }
 
     it 'updates a wallet' do
-      put_with_token(organization,
+      put_with_token(
+        organization,
         "/api/v1/wallets/#{wallet.id}",
-        { wallet: update_params }
+        { wallet: update_params },
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:wallet]
-
-      expect(result[:lago_id]).to eq(wallet.id)
-      expect(result[:name]).to eq(update_params[:name])
+      expect(json[:wallet][:lago_id]).to eq(wallet.id)
+      expect(json[:wallet][:name]).to eq(update_params[:name])
     end
 
     context 'when wallet does not exist' do
@@ -75,23 +72,17 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     it 'returns a wallet' do
       get_with_token(
         organization,
-        "/api/v1/wallets/#{wallet.id}"
+        "/api/v1/wallets/#{wallet.id}",
       )
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:wallet]
-
-      expect(result[:lago_id]).to eq(wallet.id)
-      expect(result[:name]).to eq(wallet.name)
+      expect(json[:wallet][:lago_id]).to eq(wallet.id)
+      expect(json[:wallet][:name]).to eq(wallet.name)
     end
 
     context 'when wallet does not exist' do
       it 'returns not found' do
-        get_with_token(
-          organization,
-          "/api/v1/wallets/555"
-        )
+        get_with_token(organization, '/api/v1/wallets/555')
 
         expect(response).to have_http_status(:not_found)
       end
@@ -113,11 +104,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       delete_with_token(organization, "/api/v1/wallets/#{wallet.id}")
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:wallet]
-
-      expect(result[:lago_id]).to eq(wallet.id)
-      expect(result[:name]).to eq(wallet.name)
+      expect(json[:wallet][:lago_id]).to eq(wallet.id)
+      expect(json[:wallet][:name]).to eq(wallet.name)
     end
 
     context 'when wallet does not exist' do
@@ -138,12 +126,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.external_id}")
 
       expect(response).to have_http_status(:success)
-
-      records = JSON.parse(response.body, symbolize_names: true)[:wallets]
-
-      expect(records.count).to eq(1)
-      expect(records.first[:lago_id]).to eq(wallet.id)
-      expect(records.first[:name]).to eq(wallet.name)
+      expect(json[:wallets].count).to eq(1)
+      expect(json[:wallets].first[:lago_id]).to eq(wallet.id)
+      expect(json[:wallets].first[:name]).to eq(wallet.name)
     end
 
     context 'with pagination' do
@@ -156,14 +141,12 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        response_body = JSON.parse(response.body, symbolize_names: true)
-
-        expect(response_body[:wallets].count).to eq(1)
-        expect(response_body[:meta][:current_page]).to eq(1)
-        expect(response_body[:meta][:next_page]).to eq(2)
-        expect(response_body[:meta][:prev_page]).to eq(nil)
-        expect(response_body[:meta][:total_pages]).to eq(2)
-        expect(response_body[:meta][:total_count]).to eq(2)
+        expect(json[:wallets].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
   end

@@ -24,19 +24,18 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
     end
 
     it 'updates an organization' do
-      put_with_token(organization,
-                     '/api/v1/organizations',
-                     { organization: update_params }
+      put_with_token(
+        organization,
+        '/api/v1/organizations',
+        { organization: update_params },
       )
 
       expect(response).to have_http_status(:success)
 
-      result = JSON.parse(response.body, symbolize_names: true)[:organization]
-
-      expect(result[:name]).to eq(organization.name)
-      expect(result[:webhook_url]).to eq(update_params[:webhook_url])
-      expect(result[:vat_rate]).to eq(update_params[:vat_rate])
-      expect(result[:invoice_footer]).to eq(update_params[:invoice_footer])
+      expect(json[:organization][:name]).to eq(organization.name)
+      expect(json[:organization][:webhook_url]).to eq(update_params[:webhook_url])
+      expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
+      expect(json[:organization][:invoice_footer]).to eq(update_params[:invoice_footer])
     end
   end
 end

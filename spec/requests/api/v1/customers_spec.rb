@@ -8,7 +8,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:create_params) do
       {
         external_id: SecureRandom.uuid,
-        name: 'Foo Bar'
+        name: 'Foo Bar',
       }
     end
 
@@ -16,12 +16,10 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       post_with_token(organization, '/api/v1/customers', { customer: create_params })
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:customer]
-      expect(result[:lago_id]).to be_present
-      expect(result[:external_id]).to eq(create_params[:external_id])
-      expect(result[:name]).to eq(create_params[:name])
-      expect(result[:created_at]).to be_present
+      expect(json[:customer][:lago_id]).to be_present
+      expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+      expect(json[:customer][:name]).to eq(create_params[:name])
+      expect(json[:customer][:created_at]).to be_present
     end
 
     context 'with billing configuration' do
@@ -41,21 +39,18 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        result = JSON.parse(response.body, symbolize_names: true)[:customer]
-        expect(result[:lago_id]).to be_present
-        expect(result[:external_id]).to eq(create_params[:external_id])
+        expect(json[:customer][:lago_id]).to be_present
+        expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
-        expect(result[:billing_configuration]).to be_present
-        expect(result[:billing_configuration][:payment_provider]).to eq('stripe')
-        expect(result[:billing_configuration][:provider_customer_id]).to eq('stripe_id')
+        expect(json[:customer][:billing_configuration]).to be_present
+        expect(json[:customer][:billing_configuration][:payment_provider]).to eq('stripe')
+        expect(json[:customer][:billing_configuration][:provider_customer_id]).to eq('stripe_id')
       end
     end
 
     context 'with invalid params' do
       let(:create_params) do
-        {
-          name: 'Foo Bar',
-        }
+        { name: 'Foo Bar' }
       end
 
       it 'returns an unprocessable_entity' do
@@ -121,18 +116,17 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        usage_response = JSON.parse(response.body, symbolize_names: true)[:customer_usage]
-        expect(usage_response[:from_date]).to eq(Time.zone.today.beginning_of_month.iso8601)
-        expect(usage_response[:to_date]).to eq(Time.zone.today.end_of_month.iso8601)
-        expect(usage_response[:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
-        expect(usage_response[:amount_cents]).to eq(5)
-        expect(usage_response[:amount_currency]).to eq('EUR')
-        expect(usage_response[:total_amount_cents]).to eq(6)
-        expect(usage_response[:total_amount_currency]).to eq('EUR')
-        expect(usage_response[:vat_amount_cents]).to eq(1)
-        expect(usage_response[:vat_amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:from_date]).to eq(Time.zone.today.beginning_of_month.iso8601)
+        expect(json[:customer_usage][:to_date]).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(json[:customer_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(json[:customer_usage][:amount_cents]).to eq(5)
+        expect(json[:customer_usage][:amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:total_amount_cents]).to eq(6)
+        expect(json[:customer_usage][:total_amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:vat_amount_cents]).to eq(1)
+        expect(json[:customer_usage][:vat_amount_currency]).to eq('EUR')
 
-        charge_usage = usage_response[:charges_usage].first
+        charge_usage = json[:customer_usage][:charges_usage].first
         expect(charge_usage[:billable_metric][:name]).to eq(billable_metric.name)
         expect(charge_usage[:billable_metric][:code]).to eq(billable_metric.code)
         expect(charge_usage[:billable_metric][:aggregation_type]).to eq('count_agg')
@@ -165,15 +159,11 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
 
     it 'returns all customers from organization' do
-      get_with_token(
-        organization,
-        '/api/v1/customers',
-      )
+      get_with_token(organization, '/api/v1/customers')
 
-      parsed_response = JSON.parse(response.body, symbolize_names: true)
       aggregate_failures do
         expect(response).to have_http_status(:ok)
-        expect(parsed_response[:meta][:total_count]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
   end
@@ -192,19 +182,15 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         "/api/v1/customers/#{customer.external_id}",
       )
 
-      parsed_response = JSON.parse(response.body, symbolize_names: true)
       aggregate_failures do
         expect(response).to have_http_status(:ok)
-        expect(parsed_response[:customer][:lago_id]).to eq(customer.id)
+        expect(json[:customer][:lago_id]).to eq(customer.id)
       end
     end
 
     context 'with not existing external_id' do
       it 'returns a not found error' do
-        get_with_token(
-          organization,
-          '/api/v1/customers/foobar',
-        )
+        get_with_token(organization, '/api/v1/customers/foobar')
 
         expect(response).to have_http_status(:not_found)
       end

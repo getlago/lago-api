@@ -10,7 +10,6 @@ RSpec.describe Api::V1::WebhooksController, type: :request do
       get_with_token(organization, '/api/v1/webhooks/public_key')
 
       expect(response).to have_http_status(:success)
-
       expect(response.body).to eq(Base64.encode64(RsaPublicKey.to_s))
     end
   end

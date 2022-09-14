@@ -9,11 +9,9 @@ RSpec.describe ApplicationController, type: :request do
 
       aggregate_failures do
         expect(response.status).to be(200)
-
-        json = JSON.parse(response.body)
-        expect(json['message']).to eq('Success')
-        expect(json['version']).to be_present
-        expect(json['github_url']).to be_present
+        expect(json[:message]).to eq('Success')
+        expect(json[:version]).to be_present
+        expect(json[:github_url]).to be_present
       end
     end
   end
@@ -24,11 +22,9 @@ RSpec.describe ApplicationController, type: :request do
 
       aggregate_failures do
         expect(response.status).to be(404)
-
-        json = JSON.parse(response.body)
-        expect(json['status']).to eq(404)
-        expect(json['error']).to eq('Not Found')
-        expect(json['code']).to eq('resource_not_found')
+        expect(json[:status]).to eq(404)
+        expect(json[:error]).to eq('Not Found')
+        expect(json[:code]).to eq('resource_not_found')
       end
     end
   end

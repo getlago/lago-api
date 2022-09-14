@@ -28,24 +28,20 @@ RSpec.describe Api::V1::AppliedAddOnsController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      result = JSON.parse(response.body, symbolize_names: true)[:applied_add_on]
-
       aggregate_failures do
-        expect(result[:lago_id]).to be_present
-        expect(result[:lago_add_on_id]).to eq(add_on.id)
-        expect(result[:lago_customer_id]).to eq(customer.id)
-        expect(result[:external_customer_id]).to eq(customer.external_id)
-        expect(result[:amount_cents]).to eq(add_on.amount_cents)
-        expect(result[:amount_currency]).to eq(add_on.amount_currency)
-        expect(result[:created_at]).to be_present
+        expect(json[:applied_add_on][:lago_id]).to be_present
+        expect(json[:applied_add_on][:lago_add_on_id]).to eq(add_on.id)
+        expect(json[:applied_add_on][:lago_customer_id]).to eq(customer.id)
+        expect(json[:applied_add_on][:external_customer_id]).to eq(customer.external_id)
+        expect(json[:applied_add_on][:amount_cents]).to eq(add_on.amount_cents)
+        expect(json[:applied_add_on][:amount_currency]).to eq(add_on.amount_currency)
+        expect(json[:applied_add_on][:created_at]).to be_present
       end
     end
 
     context 'with invalid params' do
       let(:params) do
-        {
-          name: 'Foo Bar',
-        }
+        { name: 'Foo Bar' }
       end
 
       it 'returns an unprocessable_entity' do

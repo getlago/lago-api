@@ -9,20 +9,15 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'UPDATE /invoices' do
     let(:update_params) do
-      {
-        status: 'succeeded',
-      }
+      { status: 'succeeded' }
     end
 
     it 'updates an invoice' do
       put_with_token(organization, "/api/v1/invoices/#{invoice.id}", { invoice: update_params })
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:invoice]
-
-      expect(result[:lago_id]).to eq(invoice.id)
-      expect(result[:status]).to eq('succeeded')
+      expect(json[:invoice][:lago_id]).to eq(invoice.id)
+      expect(json[:invoice][:status]).to eq('succeeded')
     end
 
     context 'when invoice does not exist' do
@@ -36,25 +31,16 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'GET /invoices/:id' do
     it 'returns a invoice' do
-      get_with_token(
-        organization,
-        "/api/v1/invoices/#{invoice.id}",
-      )
+      get_with_token(organization, "/api/v1/invoices/#{invoice.id}")
 
       expect(response).to have_http_status(:success)
-
-      result = JSON.parse(response.body, symbolize_names: true)[:invoice]
-
-      expect(result[:lago_id]).to eq(invoice.id)
-      expect(result[:status]).to eq(invoice.status)
+      expect(json[:invoice][:lago_id]).to eq(invoice.id)
+      expect(json[:invoice][:status]).to eq(invoice.status)
     end
 
     context 'when invoice does not exist' do
       it 'returns not found' do
-        get_with_token(
-          organization,
-          '/api/v1/invoices/555',
-        )
+        get_with_token(organization, '/api/v1/invoices/555')
 
         expect(response).to have_http_status(:not_found)
       end
@@ -64,10 +50,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       let(:invoice) { create(:invoice) }
 
       it 'returns not found' do
-        get_with_token(
-          organization,
-          "/api/v1/invoices/#{invoice.id}",
-        )
+        get_with_token(organization, "/api/v1/invoices/#{invoice.id}")
 
         expect(response).to have_http_status(:not_found)
       end
@@ -84,12 +67,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       get_with_token(organization, '/api/v1/invoices')
 
       expect(response).to have_http_status(:success)
-
-      records = JSON.parse(response.body, symbolize_names: true)[:invoices]
-
-      expect(records.count).to eq(1)
-      expect(records.first[:lago_id]).to eq(invoice.id)
-      expect(records.first[:status]).to eq(invoice.status)
+      expect(json[:invoices].count).to eq(1)
+      expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
+      expect(json[:invoices].first[:status]).to eq(invoice.status)
     end
 
     context 'with pagination' do
@@ -102,14 +82,12 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        response_body = JSON.parse(response.body, symbolize_names: true)
-
-        expect(response_body[:invoices].count).to eq(1)
-        expect(response_body[:meta][:current_page]).to eq(1)
-        expect(response_body[:meta][:next_page]).to eq(2)
-        expect(response_body[:meta][:prev_page]).to eq(nil)
-        expect(response_body[:meta][:total_pages]).to eq(2)
-        expect(response_body[:meta][:total_count]).to eq(2)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
 
@@ -130,11 +108,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         )
 
         expect(response).to have_http_status(:success)
-
-        records = JSON.parse(response.body, symbolize_names: true)[:invoices]
-
-        expect(records.count).to eq(1)
-        expect(records.first[:lago_id]).to eq(invoice3.id)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice3.id)
       end
     end
 
@@ -146,9 +121,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         get_with_token(organization, "/api/v1/invoices?customer_id=#{second_customer.id}")
 
         expect(response).to have_http_status(:success)
-        records = JSON.parse(response.body, symbolize_names: true)[:invoices]
-        expect(records.count).to eq(1)
-        expect(records.first[:lago_id]).to eq(invoice.id)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
       end
     end
   end

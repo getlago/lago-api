@@ -21,6 +21,12 @@ module ApiHelper
     delete(path, params: params.to_json, headers: headers)
   end
 
+  def json
+    return response.body unless response.media_type.include?('json')
+
+    JSON.parse(response.body, symbolize_names: true)
+  end
+
   private
 
   def set_headers(organization, headers)
