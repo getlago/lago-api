@@ -4,26 +4,37 @@ module Customers
   class CreateService < BaseService
     def create_from_api(organization:, params:)
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
+      new_customer = customer.new_record?
 
-      customer.name = params[:name] if params.key?(:name)
-      customer.country = params[:country]&.upcase if params.key?(:country)
-      customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
-      customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
-      customer.state = params[:state] if params.key?(:state)
-      customer.zipcode = params[:zipcode] if params.key?(:zipcode)
-      customer.email = params[:email] if params.key?(:email)
-      customer.city = params[:city] if params.key?(:city)
-      customer.url = params[:url] if params.key?(:url)
-      customer.phone = params[:phone] if params.key?(:phone)
-      customer.logo_url = params[:logo_url] if params.key?(:logo_url)
-      customer.legal_name = params[:legal_name] if params.key?(:legal_name)
-      customer.legal_number = params[:legal_number] if params.key?(:legal_number)
-      customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
+      ActiveRecord::Base.transaction do
+        customer.name = params[:name] if params.key?(:name)
+        customer.country = params[:country]&.upcase if params.key?(:country)
+        customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
+        customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
+        customer.state = params[:state] if params.key?(:state)
+        customer.zipcode = params[:zipcode] if params.key?(:zipcode)
+        customer.email = params[:email] if params.key?(:email)
+        customer.city = params[:city] if params.key?(:city)
+        customer.url = params[:url] if params.key?(:url)
+        customer.phone = params[:phone] if params.key?(:phone)
+        customer.logo_url = params[:logo_url] if params.key?(:logo_url)
+        customer.legal_name = params[:legal_name] if params.key?(:legal_name)
+        customer.legal_number = params[:legal_number] if params.key?(:legal_number)
+        customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
 
-      customer.save!
+        if params.key?(:currency)
+          currency_result = Customers::UpdateService.new(nil).update_currency(
+            customer: customer,
+            currency: params[:currency],
+          )
+          return currency_result unless currency_result.success?
+        end
+
+        customer.save!
+      end
 
       # NOTE: handle configuration for configured payment providers
-      handle_api_billing_configuration(customer, params)
+      handle_api_billing_configuration(customer, params, new_customer)
 
       result.customer = customer
       track_customer_created(customer)
@@ -83,9 +94,9 @@ module Customers
       create_result.throw_error unless create_result.success?
     end
 
-    def handle_api_billing_configuration(customer, params)
+    def handle_api_billing_configuration(customer, params, new_customer)
       unless params.key?(:billing_configuration)
-        create_billing_configuration(customer) if customer.id_previously_changed?
+        create_billing_configuration(customer) if new_customer
         return
       end
 

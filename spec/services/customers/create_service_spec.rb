@@ -14,6 +14,7 @@ RSpec.describe Customers::CreateService, type: :service do
       {
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
+        currency: 'EUR',
       }
     end
 
@@ -34,6 +35,7 @@ RSpec.describe Customers::CreateService, type: :service do
       expect(customer.organization_id).to eq(organization.id)
       expect(customer.external_id).to eq(create_args[:external_id])
       expect(customer.name).to eq(create_args[:name])
+      expect(customer.currency).to eq(create_args[:currency])
     end
 
     it 'calls SegmentTrackJob' do
@@ -89,6 +91,32 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(result.customer.logo_url).to eq(customer.logo_url)
           expect(result.customer.legal_name).to eq(customer.legal_name)
           expect(result.customer.legal_number).to eq(customer.legal_number)
+        end
+      end
+
+      context 'when attached to a subscription' do
+        let(:create_args) do
+          {
+            external_id: SecureRandom.uuid,
+            name: 'Foo Bar',
+            currency: 'CAD',
+          }
+        end
+
+        before { create(:subscription, customer: customer) }
+
+        it 'fails is we change the subscription' do
+          result = customers_service.create_from_api(
+            organization: organization,
+            params: create_args,
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:currency)
+            expect(result.error.messages[:currency]).to include('currencies_does_not_match')
+          end
         end
       end
     end
