@@ -44,23 +44,17 @@ module Customers
     end
 
     def update_currency(customer:, currency:)
-      # TODO: remove default_currency check after currency migration
-
       result.customer = customer
-      customer_cuurency = (customer.currency || customer.default_currency)
 
-      if customer_cuurency.present? && customer_cuurency != currency
+      # TODO: remove default currency check after migration to customer currency
+      if !editable_currency? && customer.default_currency != currency
         return result.single_validation_failure!(
           field: :currency,
           error_code: 'currencies_does_not_match',
         )
       end
 
-      if customer_cuurency.nil?
-        customer.update!(currency: currency)
-        return result
-      end
-
+      customer.update!(currency: currency)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -83,6 +77,13 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.stripe_customer&.reload
+    end
+
+    def editable_currency?
+      !result.customer.active_subscription &&
+        result.customer.applied_add_ons.none? &&
+        result.customer.applied_coupons.none? &&
+        result.customer.wallets.none?
     end
   end
 end
