@@ -34,8 +34,16 @@ module Types
         object.charges.count
       end
 
+      # How many times plan was applied to customers
       def customer_count
-        object.subscriptions.active.count
+        base_count = object.subscriptions.active.count
+
+        extended_plan_ids = object.extended_plans.pluck(:id)
+        return base_count if extended_plan_ids.empty?
+
+        extended_count = Subscription.active.where(plan_id: extended_plan_ids).count
+
+        base_count + extended_count
       end
 
       def can_be_deleted

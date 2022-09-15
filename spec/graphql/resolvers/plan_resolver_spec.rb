@@ -7,7 +7,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
     <<~GQL
       query($planId: ID!) {
         plan(id: $planId) {
-          id, name
+          id, name, customerCount
         }
       }
     GQL
@@ -15,8 +15,20 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:subscription1) { create(:subscription, plan: plan) }
+  let(:subscription2) { create(:subscription, plan: extended_plan) }
+
+  let(:extended_plan) do
+    create(:plan, organization: organization, overridden_plan: plan)
+  end
+
   let(:plan) do
     create(:plan, organization: organization)
+  end
+
+  before do
+    subscription1
+    subscription2
   end
 
   it 'returns a single plan' do
@@ -33,6 +45,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
 
     aggregate_failures do
       expect(plan_response['id']).to eq(plan.id)
+      expect(plan_response['customerCount']).to eq(2)
     end
   end
 

@@ -103,7 +103,7 @@ module Subscriptions
       new_subscription.mark_as_active!
 
       if current_plan.pay_in_advance?
-        BillSubscriptionJob.perform_later(
+        BillSubscriptionJob.set(wait_until: 2.seconds).perform_later(
           [new_subscription],
           Time.zone.now.to_i,
         )
@@ -133,14 +133,14 @@ module Subscriptions
       end
 
       if current_subscription.plan.pay_in_arrear?
-        BillSubscriptionJob.perform_later(
+        BillSubscriptionJob.set(wait_until: 2.seconds).perform_later(
           [current_subscription],
           Time.zone.now.to_i,
         )
       end
 
       if current_plan.pay_in_advance?
-        BillSubscriptionJob.perform_later(
+        BillSubscriptionJob.set(wait_until: 2.seconds).perform_later(
           [new_subscription],
           Time.zone.now.to_i,
         )
