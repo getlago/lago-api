@@ -120,7 +120,10 @@ module Invoices
 
     def cache_expiration
       expiration = (boundaries[:charges_to_date] - Time.zone.today).to_i + 1
-      expiration > 4 ? 4 : expiration
+      return 1 if expiration < 1
+      return 4 if expiration > 4
+
+      expiration
     end
 
     def format_usage
