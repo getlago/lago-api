@@ -27,7 +27,9 @@ module Api
 
       def index
         invoices = current_organization.invoices
-        invoices = invoices.where(customer_id: params[:customer_id]) if params[:customer_id]
+        if params[:external_customer_id]
+          invoices = invoices.joins(:customer).where(customers: { external_id: params[:external_customer_id] })
+        end
         invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
         invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
         invoices = invoices.order(created_at: :desc)
