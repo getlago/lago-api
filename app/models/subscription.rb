@@ -78,4 +78,12 @@ class Subscription < ApplicationRecord
     used_ids = organization.subscriptions.active.pluck(:external_id)
     errors.add(:external_id, :value_already_exists) if used_ids&.include?(external_id)
   end
+
+  def downgrade_plan_date
+    return unless next_subscription
+    return unless next_subscription.pending?
+
+    ::Subscriptions::DatesService.new_instance(self, Time.zone.today)
+      .next_end_of_period(Time.zone.today) + 1.day
+  end
 end

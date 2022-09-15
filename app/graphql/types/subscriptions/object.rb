@@ -35,11 +35,7 @@ module Types
       end
 
       def next_pending_start_date
-        return unless object.next_subscription
-        return unless object.next_subscription.pending?
-
-        ::Subscriptions::DatesService.new_instance(object, Time.zone.today)
-          .next_end_of_period(Time.zone.today) + 1.day
+        object.downgrade_plan_date
       end
     end
   end

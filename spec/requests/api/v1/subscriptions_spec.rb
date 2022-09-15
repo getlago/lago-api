@@ -34,8 +34,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:billing_time]).to eq('anniversary')
       expect(json[:subscription][:previous_plan_code]).to be_nil
       expect(json[:subscription][:next_plan_code]).to be_nil
-      expect(json[:subscription][:previous_external_id]).to be_nil
-      expect(json[:subscription][:next_external_id]).to be_nil
+      expect(json[:subscription][:downgrade_plan_date]).to be_nil
     end
 
     context 'with invalid params' do
@@ -141,12 +140,15 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(subscription[:next_plan_code]).to eq(next_subscription.plan.code)
       end
 
-      it 'returns next and previous external ids' do
-        get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}")
+      it 'returns the downgrade plan date' do
+        current_date = DateTime.parse('20 Jun 2022')
 
-        subscription = json[:subscriptions].first
-        expect(subscription[:previous_external_id]).to eq(previous_subscription.external_id)
-        expect(subscription[:next_external_id]).to eq(next_subscription.external_id)
+        travel_to(current_date) do
+          get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}")
+
+          subscription = json[:subscriptions].first
+          expect(subscription[:downgrade_plan_date]).to eq('2022-07-01')
+        end
       end
     end
 
