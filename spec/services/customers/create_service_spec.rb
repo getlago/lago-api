@@ -49,8 +49,8 @@ RSpec.describe Customers::CreateService, type: :service do
           customer_id: customer.id,
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id
-        }
+          organization_id: customer.organization_id,
+        },
       )
     end
 
@@ -232,6 +232,7 @@ RSpec.describe Customers::CreateService, type: :service do
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         organization_id: organization.id,
+        currency: 'EUR',
       }
     end
 
@@ -250,6 +251,7 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.organization_id).to eq(organization.id)
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
+        expect(customer.currency).to eq('EUR')
       end
     end
 
@@ -263,8 +265,8 @@ RSpec.describe Customers::CreateService, type: :service do
           customer_id: customer.id,
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id
-        }
+          organization_id: customer.organization_id,
+        },
       )
     end
 

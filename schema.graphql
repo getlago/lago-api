@@ -1611,6 +1611,7 @@ input CreateCustomerInput {
   """
   clientMutationId: String
   country: CountryCode
+  currency: CurrencyEnum
   email: String
   externalId: String!
   legalName: String
@@ -2405,6 +2406,7 @@ type Customer {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  currency: CurrencyEnum
   email: String
   externalId: String!
 
@@ -3661,6 +3663,7 @@ input UpdateCustomerInput {
   """
   clientMutationId: String
   country: CountryCode
+  currency: CurrencyEnum
   email: String
   externalId: String!
   id: ID!

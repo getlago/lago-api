@@ -16,6 +16,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           name,
           externalId
           paymentProvider
+          currency
           stripeCustomer { id, providerCustomerId }
         }
       }
@@ -35,6 +36,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           name: 'Updated customer',
           externalId: external_id,
           paymentProvider: 'stripe',
+          currency: 'EUR',
           stripeCustomer: {
             providerCustomerId: 'cu_12345',
           },
@@ -49,6 +51,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['name']).to eq('Updated customer')
       expect(result_data['externalId']).to eq(external_id)
       expect(result_data['paymentProvider']).to eq('stripe')
+      expect(result_data['currency']).to eq('EUR')
       expect(result_data['stripeCustomer']['id']).to be_present
       expect(result_data['stripeCustomer']['providerCustomerId']).to eq('cu_12345')
     end
