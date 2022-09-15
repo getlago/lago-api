@@ -2,6 +2,7 @@
 
 class Customer < ApplicationRecord
   include Sequenced
+  include Currencies
 
   before_save :ensure_slug
 
@@ -31,6 +32,7 @@ class Customer < ApplicationRecord
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
+  validates :currency, inclusion: { in: currency_list }, allow_nil: true
 
   def attached_to_subscriptions?
     subscriptions.exists?
