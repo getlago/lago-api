@@ -113,12 +113,12 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context 'with customer_id params' do
+    context 'with external_customer_id params' do
       it 'returns invoices of the customer' do
         second_customer = create(:customer, organization: organization)
         invoice = create(:invoice, customer: second_customer)
 
-        get_with_token(organization, "/api/v1/invoices?customer_id=#{second_customer.id}")
+        get_with_token(organization, "/api/v1/invoices?external_customer_id=#{second_customer.external_id}")
 
         expect(response).to have_http_status(:success)
         expect(json[:invoices].count).to eq(1)
