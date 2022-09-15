@@ -63,11 +63,7 @@ module Subscriptions
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
-      result.fail!(
-        code: 'unprocessable_entity',
-        message: 'Validation error on the record',
-        details: { billing_time: ['value_is_invalid'] },
-      )
+      result.validation_failure!(errors: { billing_time: ['value_is_invalid'] })
     end
 
     def handle_subscription

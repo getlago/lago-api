@@ -1,23 +1,13 @@
 # frozen_string_literal: true
 
 module Invites
-  class ValidateService
-    def initialize(result, **args)
-      @result = result
-      @args = args
-    end
-
+  class ValidateService < BaseValidator
     def valid?
-      errors = {}
-      errors = errors.merge({ 'invite': ['invite_already_exists'] } ) if invalid_invite?
-      errors = errors.merge({ 'email': ['email_already_used'] }) if invalid_user?
+      valid_invite?
+      valid_user?
 
-      unless errors.empty?
-        result.fail!(
-          code: 'unprocessable_entity',
-          message: 'Validation error on the record',
-          details: errors,
-        )
+      if errors?
+        result.validation_failure!(errors: errors)
         return false
       end
 
@@ -26,16 +16,20 @@ module Invites
 
     private
 
-    attr_accessor :result, :args
+    def valid_invite?
+      return true unless args[:current_organization].invites.pending.exists?(email: args[:email])
 
-    def invalid_invite?
-      args[:current_organization].invites.pending.exists?(email: args[:email])
+      add_error(field: :invite, error_code: 'invite_already_exists')
     end
 
-    def invalid_user?
-      Membership.joins(:user).active.where(
-        'organization_id = ? AND users.email = ?', args[:current_organization].id, args[:email]
-      ).exists?
+    def valid_user?
+      return true unless Membership.joins(:user)
+        .where(organization_id: args[:current_organization].id)
+        .where(users: { email: args[:email] })
+        .active
+        .exists?
+
+      add_error(field: :email, error_code: 'email_already_used')
     end
   end
 end

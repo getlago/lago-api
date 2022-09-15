@@ -1,25 +1,14 @@
 # frozen_string_literal: true
 
 module WalletTransactions
-  class ValidateService
-    def initialize(result, **args)
-      @result = result
-      @args = args
-    end
-
+  class ValidateService < BaseValidator
     def valid?
-      errors = []
-      errors << valid_wallet?
-      errors << valid_paid_credits_amount? if args[:paid_credits]
-      errors << valid_granted_credits_amount? if args[:granted_credits]
-      errors = errors.compact
+      valid_wallet?
+      valid_paid_credits_amount? if args[:paid_credits]
+      valid_granted_credits_amount? if args[:granted_credits]
 
-      unless errors.empty?
-        result.fail!(
-          code: 'unprocessable_entity',
-          message: 'Validation error on the record',
-          details: errors,
-        )
+      if errors?
+        result.validation_failure!(errors: errors)
         return false
       end
 
@@ -28,25 +17,27 @@ module WalletTransactions
 
     private
 
-    attr_accessor :result, :args
-
     def valid_wallet?
       organization = Organization.find_by(id: args[:organization_id])
 
       result.current_wallet = organization.wallets.find_by(id: args[:wallet_id])
 
-      return 'wallet_not_found' unless result.current_wallet
-      return 'wallet_is_terminated' if result.current_wallet.terminated?
+      return add_error(field: :wallet_id, error_code: 'wallet_not_found') unless result.current_wallet
+      return add_error(field: :wallet_id, error_code: 'wallet_is_terminated') if result.current_wallet.terminated?
+
+      true
     end
 
     def valid_paid_credits_amount?
-      'invalid_paid_credits' unless ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
+      return true if ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
+
+      add_error(field: :paid_credits, error_code: 'invalid_paid_credits')
     end
 
     def valid_granted_credits_amount?
-      unless ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
-        'invalid_granted_credits'
-      end
+      return true if ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
+
+      add_error(field: :granted_credits, error_code: 'invalid_granted_credits')
     end
   end
 end

@@ -207,9 +207,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to eq('Validation error on the record')
-          expect(result.error_code).to eq('unprocessable_entity')
-          expect(result.error_details.keys).to eq([:billing_time])
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:billing_time])
         end
       end
     end
@@ -553,9 +552,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to eq('Validation error on the record')
-          expect(result.error_code).to eq('unprocessable_entity')
-          expect(result.error_details.keys).to eq([:billing_time])
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:billing_time])
         end
       end
     end

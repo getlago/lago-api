@@ -33,7 +33,7 @@ RSpec.describe Invites::ValidateService, type: :service do
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
-        expect(result.error_details[:invite]).to eq(['invite_already_exists'])
+        expect(result.error.messages[:invite]).to eq(['invite_already_exists'])
       end
     end
 
@@ -47,7 +47,7 @@ RSpec.describe Invites::ValidateService, type: :service do
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
-        expect(result.error_details[:email]).to eq(['email_already_used'])
+        expect(result.error.messages[:email]).to eq(['email_already_used'])
       end
     end
   end
