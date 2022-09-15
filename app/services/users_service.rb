@@ -24,19 +24,26 @@ class UsersService < BaseService
 
     ActiveRecord::Base.transaction do
       result.organization = Organization.create!(name: organization_name)
-      result.user.password = password
-      result.user.save!
-      result.token = generate_token
 
-      result.membership = Membership.create!(
-        user: result.user,
-        organization: result.organization,
-        role: :admin
-      )
+      create_user_and_membership(result, password)
     end
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
     track_organization_registered(result.organization, result.membership)
+
+    result
+  end
+
+  def register_from_invite(email, password, organization_id)
+    result.user = User.find_or_initialize_by(email: email)
+
+    return result.fail!(code: 'user_already_exists') if result.user.id
+
+    ActiveRecord::Base.transaction do
+      result.organization = Organization.find(organization_id)
+
+      create_user_and_membership(result, password)
+    end
 
     result
   end
@@ -48,6 +55,24 @@ class UsersService < BaseService
   end
 
   private
+
+  def create_user_and_membership(result, password)
+    ActiveRecord::Base.transaction do
+      result.user.password = password
+      result.user.save!
+
+      result.token = generate_token
+
+      result.membership = Membership.create!(
+        user: result.user,
+        organization: result.organization,
+      )
+
+      result
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    result.record_validation_failure!(record: e.record)
+  end
 
   def generate_token
     JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
