@@ -84,17 +84,25 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       let(:customer) { nil }
       let(:customer_id) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('unable_to_find_customer') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('customer_not_found')
+        end
+      end
     end
 
     context 'when add-on is not found' do
       let(:add_on_id) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('add_on_does_not_exist') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('add_on_not_found')
+        end
+      end
     end
 
     context 'when customer does not have a subscription' do
@@ -158,8 +166,8 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
         properties: {
           customer_id: applied_add_on.customer.id,
           addon_code: applied_add_on.add_on.code,
-          addon_name: applied_add_on.add_on.name
-        }
+          addon_name: applied_add_on.add_on.name,
+        },
       )
     end
 
@@ -182,17 +190,25 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       let(:customer) { nil }
       let(:external_customer_id) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('unable_to_find_customer') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('customer_not_found')
+        end
+      end
     end
 
     context 'when add-on is not found' do
       let(:add_on_code) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('add_on_does_not_exist') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('add_on_not_found')
+        end
+      end
     end
 
     context 'when customer does not have a subscription' do

@@ -41,8 +41,8 @@ module AppliedCoupons
     attr_reader :customer, :coupon
 
     def check_preconditions(amount_currency:)
-      return result.fail!(code: 'missing_argument', message: 'unable_to_find_customer') if customer.blank?
-      return result.fail!(code: 'missing_argument', message: 'coupon_does_not_exist') if coupon.blank?
+      return result.not_found_failure!(resource: 'customer') unless customer
+      return result.not_found_failure!(resource: 'coupon') unless coupon
       return result.fail!(code: 'no_active_subscription') unless active_subscription?
       return result.fail!(code: 'coupon_already_applied') if coupon_already_applied?
       return result.fail!(code: 'currencies_does_not_match') unless applicable_currency?(amount_currency)

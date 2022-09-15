@@ -81,25 +81,37 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       let(:customer) { nil }
       let(:customer_id) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('unable_to_find_customer') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('customer_not_found')
+        end
+      end
     end
 
     context 'when coupon is not found' do
       let(:coupon_id) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon_does_not_exist') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('coupon_not_found')
+        end
+      end
     end
 
     context 'when coupon is inactive' do
       before { coupon.terminated! }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon_does_not_exist') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('coupon_not_found')
+        end
+      end
     end
 
     context 'when customer does not have a subscription' do
@@ -176,8 +188,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,
           coupon_name: applied_coupon.coupon.name,
-          organization_id: applied_coupon.coupon.organization_id
-        }
+          organization_id: applied_coupon.coupon.organization_id,
+        },
       )
     end
 
@@ -200,25 +212,37 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       let(:customer) { nil }
       let(:external_customer_id) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('unable_to_find_customer') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('customer_not_found')
+        end
+      end
     end
 
     context 'when coupon is not found' do
       let(:coupon_code) { 'foo' }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon_does_not_exist') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('coupon_not_found')
+        end
+      end
     end
 
     context 'when coupon is inactive' do
       before { coupon.terminated! }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error_code).to eq('missing_argument') }
-      it { expect(create_result.error).to eq('coupon_does_not_exist') }
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(create_result.error.message).to eq('coupon_not_found')
+        end
+      end
     end
 
     context 'when customer does not have a subscription' do

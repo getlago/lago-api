@@ -49,7 +49,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       it 'returns an unprocessable_entity' do
         post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
