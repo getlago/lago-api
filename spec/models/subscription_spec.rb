@@ -153,4 +153,30 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#downgrade_plan_date' do
+    let(:subscription) { create(:subscription) }
+
+    context 'without next subscription' do
+      it 'returns nil' do
+        expect(subscription.downgrade_plan_date).to be_nil
+      end
+    end
+
+    context 'without pending next subscription' do
+      it 'returns nil' do
+        create(:subscription, previous_subscription: subscription, status: :active)
+        expect(subscription.downgrade_plan_date).to be_nil
+      end
+    end
+
+    it 'returns the date when the plan will be downgraded' do
+      current_date = DateTime.parse('20 Jun 2022')
+      create(:subscription, previous_subscription: subscription, status: :pending)
+
+      travel_to(current_date) do
+        expect(subscription.downgrade_plan_date).to eq(Date.parse('1 Jul 2022'))
+      end
+    end
+  end
 end
