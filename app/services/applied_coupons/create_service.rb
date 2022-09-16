@@ -40,30 +40,32 @@ module AppliedCoupons
 
     attr_reader :customer, :coupon
 
-    def check_preconditions(amount_currency:)
+    def check_preconditions
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'coupon') unless coupon
-      return result.fail!(code: 'no_active_subscription') unless active_subscription?
-
-      if coupon_already_applied?
-        return result.single_validation_failure!(
-          field: 'coupon',
-          error_code: 'coupon_already_applied',
-        )
-      end
-      return result.fail!(code: 'currencies_does_not_match') unless applicable_currency?(amount_currency)
+      return result.fail!(code: 'coupon_already_applied') if coupon_already_applied?
     end
 
     def process_creation(amount_cents:, amount_currency:)
-      check_preconditions(amount_currency: amount_currency)
+      check_preconditions
       return result if result.error
 
-      applied_coupon = AppliedCoupon.create!(
+      applied_coupon = AppliedCoupon.new(
         customer: customer,
         coupon: coupon,
         amount_cents: amount_cents,
         amount_currency: amount_currency,
       )
+
+      ActiveRecord::Base.transaction do
+        currency_result = Customers::UpdateService.new(nil).update_currency(
+          customer: customer,
+          currency: amount_currency,
+        )
+        return currency_result unless currency_result.success?
+
+        applied_coupon.save!
+      end
 
       result.applied_coupon = applied_coupon
       track_applied_coupon_created(result.applied_coupon)
@@ -72,16 +74,8 @@ module AppliedCoupons
       result.record_validation_failure!(record: e.record)
     end
 
-    def active_subscription?
-      customer.active_subscription.present?
-    end
-
     def coupon_already_applied?
       customer.applied_coupons.active.exists?
-    end
-
-    def applicable_currency?(currency)
-      customer.active_subscription.plan.amount_currency == currency
     end
 
     def track_applied_coupon_created(applied_coupon)

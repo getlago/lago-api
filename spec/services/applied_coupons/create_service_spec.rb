@@ -17,8 +17,10 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
   let(:amount_cents) { nil }
   let(:amount_currency) { nil }
 
+  let(:create_subscription) { customer.present? }
+
   before do
-    create(:active_subscription, customer_id: customer_id) if customer
+    create(:active_subscription, customer_id: customer_id) if create_subscription
   end
 
   describe 'create' do
@@ -72,8 +74,14 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       context 'when currency does not match' do
         let(:amount_currency) { 'NOK' }
 
-        it { expect(create_result).not_to be_success }
-        it { expect(create_result.error).to eq('currencies_does_not_match') }
+        it 'fails' do
+          aggregate_failures do
+            expect(create_result).not_to be_success
+            expect(create_result.error).to be_a(BaseService::ValidationFailure)
+            expect(create_result.error.messages.keys).to include(:currency)
+            expect(create_result.error.messages[:currency]).to include('currencies_does_not_match')
+          end
+        end
       end
     end
 
@@ -114,13 +122,6 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       end
     end
 
-    context 'when customer does not have a subscription' do
-      before { customer.active_subscription.terminated! }
-
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('no_active_subscription') }
-    end
-
     context 'when coupon is already applied to the customer' do
       before { create(:applied_coupon, customer: customer, coupon: coupon) }
 
@@ -152,8 +153,14 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     context 'when currency of coupon does not match customer currency' do
       let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('currencies_does_not_match') }
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:currency)
+          expect(create_result.error.messages[:currency]).to include('currencies_does_not_match')
+        end
+      end
     end
   end
 
@@ -215,8 +222,14 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       context 'when currency does not match' do
         let(:amount_currency) { 'NOK' }
 
-        it { expect(create_result).not_to be_success }
-        it { expect(create_result.error).to eq('currencies_does_not_match') }
+        it 'fails' do
+          aggregate_failures do
+            expect(create_result).not_to be_success
+            expect(create_result.error).to be_a(BaseService::ValidationFailure)
+            expect(create_result.error.messages.keys).to include(:currency)
+            expect(create_result.error.messages[:currency]).to include('currencies_does_not_match')
+          end
+        end
       end
     end
 
@@ -257,13 +270,6 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       end
     end
 
-    context 'when customer does not have a subscription' do
-      before { customer.active_subscription.terminated! }
-
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('no_active_subscription') }
-    end
-
     context 'when coupon is already applied to the customer' do
       before { create(:applied_coupon, customer: customer, coupon: coupon) }
 
@@ -280,8 +286,25 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     context 'when currency of coupon does not match customer currency' do
       let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('currencies_does_not_match') }
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:currency)
+          expect(create_result.error.messages[:currency]).to include('currencies_does_not_match')
+        end
+      end
+    end
+
+    context 'when customer does not have a currency' do
+      let(:create_subscription) { false }
+      let(:amount_currency) { 'NOK' }
+
+      it 'assigns the coupon currency to the customer' do
+        create_result
+
+        expect(customer.reload.currency).to eq(amount_currency)
+      end
     end
   end
 end
