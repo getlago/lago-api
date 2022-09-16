@@ -5,13 +5,12 @@ class BillAddOnJob < ApplicationJob
 
   retry_on Sequenced::SequenceError
 
-  def perform(subscription, applied_add_on, date)
+  def perform(applied_add_on, date)
     result = Invoices::AddOnService.new(
-      subscription: subscription,
       applied_add_on: applied_add_on,
       date: date,
     ).create
 
-    raise result.throw_error unless result.success?
+    raise(result.throw_error) unless result.success?
   end
 end

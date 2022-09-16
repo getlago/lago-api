@@ -4,26 +4,14 @@ require 'rails_helper'
 
 RSpec.describe Invoices::AddOnService, type: :service do
   subject(:invoice_service) do
-    described_class.new(subscription: subscription, applied_add_on: applied_add_on, date: date)
+    described_class.new(applied_add_on: applied_add_on, date: date)
   end
+
   let(:date) { Time.zone.now.to_date }
   let(:applied_add_on) { create(:applied_add_on) }
 
   describe 'create' do
-    let(:plan) { create(:plan, interval: 'monthly') }
-    let(:subscription) do
-      create(
-        :subscription,
-        plan: plan,
-        subscription_date: (Time.zone.now - 2.years).to_date,
-        started_at: Time.zone.now - 2.years,
-      )
-    end
-
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-
     before do
-      create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
       allow(SegmentTrackJob).to receive(:perform_later)
     end
 
@@ -33,7 +21,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       aggregate_failures do
         expect(result).to be_success
 
-        expect(result.invoice.subscriptions.first).to eq(subscription)
+        expect(result.invoice.subscriptions.first).to be_nil
         expect(result.invoice.issuing_date).to eq(date)
         expect(result.invoice.invoice_type).to eq('add_on')
         expect(result.invoice.status).to eq('pending')
@@ -62,13 +50,13 @@ RSpec.describe Invoices::AddOnService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
+          invoice_type: invoice.invoice_type,
+        },
       )
     end
 
     context 'when organization does not have a webhook url' do
-      before { subscription.organization.update!(webhook_url: nil) }
+      before { applied_add_on.customer.organization.update!(webhook_url: nil) }
 
       it 'does not enqueues a SendWebhookJob' do
         expect do
@@ -78,7 +66,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
     end
 
     context 'when customer payment_provider is stripe' do
-      before { subscription.customer.update!(payment_provider: 'stripe') }
+      before { applied_add_on.customer.update!(payment_provider: 'stripe') }
 
       it 'enqueu a job to create a payment' do
         expect do
