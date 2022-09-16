@@ -60,6 +60,26 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect(updated_customer.external_id).to eq(customer.external_id)
         end
       end
+
+      context 'when updating the currency' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            currency: 'CAD',
+          }
+        end
+
+        it 'fails' do
+          result = customers_service.update(**update_args)
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:currency)
+            expect(result.error.messages[:currency]).to include('currencies_does_not_match')
+          end
+        end
+      end
     end
 
     context 'when updating payment provider' do

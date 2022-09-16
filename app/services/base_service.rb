@@ -106,6 +106,10 @@ class BaseService
       fail_with_error!(ValidationFailure.new(messages: errors))
     end
 
+    def single_validation_failure!(field:, error_code:)
+      validation_failure!(errors: { field.to_sym => [error_code] })
+    end
+
     def throw_error
       return if success?
 

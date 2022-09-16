@@ -51,6 +51,7 @@ module Customers
         legal_number: args[:legal_number],
         vat_rate: args[:vat_rate],
         payment_provider: args[:payment_provider],
+        currency: args[:currency],
       )
 
       # NOTE: handle configuration for configured payment providers

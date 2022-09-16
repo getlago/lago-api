@@ -57,7 +57,7 @@ class Customer < ApplicationRecord
   end
 
   def default_currency
-    active_subscription&.plan&.amount_currency
+    currency || active_subscription&.plan&.amount_currency
   end
 
   private
