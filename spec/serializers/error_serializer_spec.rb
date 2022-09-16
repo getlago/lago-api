@@ -9,22 +9,23 @@ RSpec.describe ErrorSerializer do
       input_params: {
         customer_id: 'customer',
         transaction_id: transaction_id,
-        code: 'code'
+        code: 'code',
       },
-      error: 'Code does not exist',
-      organization_id: 'testtest'
+      error: 'Event not found',
+      status: 404,
+      organization_id: 'testtest',
     }
   end
   let(:json_response_hash) do
     {
       'event_error' => {
-        'status' => 422,
-        'error' => 'Unprocessable entity',
-        'message' => 'Code does not exist',
+        'status' => 404,
+        'error' => 'Not found',
+        'message' => 'Event not found',
         'input_params' => {
           'customer_id' => 'customer',
           'transaction_id' => transaction_id,
-          'code' => 'code'
+          'code' => 'code',
         }
       }
     }
