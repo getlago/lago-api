@@ -5,7 +5,6 @@ require 'rails_helper'
 RSpec.describe Mutations::Wallets::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
 
   let(:mutation) do
     <<-GQL
@@ -14,14 +13,11 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           id,
           name,
           rateAmount,
-          status
+          status,
+          currency
         }
       }
     GQL
-  end
-
-  before do
-    subscription
   end
 
   it 'create a wallet' do
@@ -37,6 +33,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           paidCredits: '0.00',
           grantedCredits: '0.00',
           expirationDate: (Time.zone.now + 1.year).to_date,
+          currency: 'EUR',
         },
       },
     )
@@ -62,6 +59,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             paidCredits: '0.00',
             grantedCredits: '0.00',
             expirationDate: (Time.zone.now + 1.year).to_date,
+            currency: 'EUR',
           },
         },
       )
@@ -83,6 +81,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             paidCredits: '0.00',
             grantedCredits: '0.00',
             expirationDate: (Time.zone.now + 1.year).to_date,
+            currency: 'EUR',
           },
         },
       )

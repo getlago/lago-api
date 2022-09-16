@@ -1635,6 +1635,7 @@ input CreateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  currency: CurrencyEnum!
   customerId: ID!
   expirationDate: ISO8601Date
   grantedCredits: String!

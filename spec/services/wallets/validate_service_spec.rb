@@ -45,15 +45,6 @@ RSpec.describe Wallets::ValidateService, type: :service do
       end
     end
 
-    context 'when customer has no active subscription' do
-      before { subscription.mark_as_terminated! }
-
-      it 'returns false and result has errors' do
-        expect(validate_service).not_to be_valid
-        expect(result.error.messages[:customer]).to eq(['no_active_subscription'])
-      end
-    end
-
     context 'when customer already has a wallet' do
       before { create(:wallet, customer: customer) }
 

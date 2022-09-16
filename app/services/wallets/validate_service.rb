@@ -29,10 +29,6 @@ module Wallets
         )
       end
 
-      unless result.current_customer.subscriptions.active.exists?
-        return add_error(field: :customer, error_code: 'no_active_subscription')
-      end
-
       true
     end
 
