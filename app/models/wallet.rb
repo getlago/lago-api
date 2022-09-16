@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Wallet < ApplicationRecord
-  before_create :set_customer_currency
-
   belongs_to :customer
 
   has_one :organization, through: :customer
@@ -21,11 +19,5 @@ class Wallet < ApplicationRecord
     terminated!
   end
 
-  scope :expired, -> { where('wallets.expiration_date < ?', Time.current.beginning_of_day,) }
-
-  private
-
-  def set_customer_currency
-    self.currency ||= customer.default_currency
-  end
+  scope :expired, -> { where('wallets.expiration_date < ?', Time.current.beginning_of_day) }
 end
