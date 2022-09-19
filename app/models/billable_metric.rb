@@ -7,11 +7,6 @@ class BillableMetric < ApplicationRecord
   has_many :plans, through: :charges
   has_many :persisted_events
 
-  BILLABLE_PERIODS = %i[
-    one_shot
-    recurring
-  ].freeze
-
   AGGREGATION_TYPES = %i[
     count_agg
     sum_agg
@@ -20,12 +15,12 @@ class BillableMetric < ApplicationRecord
     recurring_count_agg
   ].freeze
 
-  enum billable_period: BILLABLE_PERIODS
   enum aggregation_type: AGGREGATION_TYPES
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :field_name, presence: true, if: :should_have_field_name?
+  validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.map(&:to_s) }
 
   def attached_to_subscriptions?
     plans.joins(:subscriptions).exists?
@@ -33,6 +28,10 @@ class BillableMetric < ApplicationRecord
 
   def deletable?
     !attached_to_subscriptions?
+  end
+
+  def aggregation_type=(value)
+    AGGREGATION_TYPES.include?(value&.to_sym) ? super : nil
   end
 
   private
