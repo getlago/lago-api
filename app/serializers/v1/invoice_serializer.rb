@@ -45,7 +45,7 @@ module V1
     end
 
     def credits
-      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credit').serialize
+      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credits').serialize
     end
   end
 end

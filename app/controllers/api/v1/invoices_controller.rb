@@ -76,7 +76,7 @@ module Api
           json: ::V1::InvoiceSerializer.new(
             invoice,
             root_name: 'invoice',
-            includes: %i[customer subscriptions fees],
+            includes: %i[customer subscriptions fees credits],
           ),
         )
       end
