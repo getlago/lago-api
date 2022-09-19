@@ -22,7 +22,7 @@ module Fees
         invoiceable_type: 'WalletTransaction',
         invoiceable: wallet_transaction,
         amount_cents: amount_cents,
-        amount_currency: customer.default_currency,
+        amount_currency: wallet_transaction.wallet.currency,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
       )

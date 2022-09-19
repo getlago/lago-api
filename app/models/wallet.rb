@@ -21,11 +21,11 @@ class Wallet < ApplicationRecord
     terminated!
   end
 
-  scope :expired, -> { where('wallets.expiration_date < ?', Time.current.beginning_of_day,) }
+  scope :expired, -> { where('wallets.expiration_date < ?', Time.current.beginning_of_day) }
 
   private
 
   def set_customer_currency
-    self.currency ||= customer.default_currency
+    self.currency ||= customer.currency
   end
 end

@@ -46,8 +46,7 @@ module Customers
     def update_currency(customer:, currency:)
       result.customer = customer
 
-      # TODO: remove default currency check after migration to customer currency
-      if !editable_currency? && customer.default_currency != currency
+      if !editable_currency? && customer.currency != currency
         return result.single_validation_failure!(
           field: :currency,
           error_code: 'currencies_does_not_match',

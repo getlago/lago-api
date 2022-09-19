@@ -7,7 +7,7 @@ RSpec.describe Wallets::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization, external_id: 'foobar') }
+  let(:customer) { create(:customer, organization: organization, external_id: 'foobar', currency: 'EUR') }
   let(:subscription) { create(:subscription, customer: customer) }
 
   before { subscription }
