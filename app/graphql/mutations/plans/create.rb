@@ -19,6 +19,7 @@ module Mutations
       argument :trial_period, Float, required: false
       argument :description, String, required: false
       argument :bill_charges_monthly, Boolean, required: false
+      argument :parent_id, ID, required: false
 
       argument :charges, [Types::Charges::Input]
 

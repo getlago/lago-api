@@ -1684,6 +1684,7 @@ input CreatePlanInput {
   description: String
   interval: PlanInterval!
   name: String!
+  parentId: ID
   payInAdvance: Boolean!
   trialPeriod: Float
 }
@@ -3209,6 +3210,7 @@ type Plan {
   interval: PlanInterval!
   name: String!
   organization: Organization
+  parentId: ID
   payInAdvance: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
@@ -3246,6 +3248,7 @@ type PlanDetails {
   interval: PlanInterval!
   name: String!
   organization: Organization
+  parentId: ID
   payInAdvance: Boolean!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!

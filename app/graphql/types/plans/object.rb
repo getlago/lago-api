@@ -17,6 +17,7 @@ module Types
       field :trial_period, Float
       field :description, String
       field :bill_charges_monthly, Boolean
+      field :parent_id, ID, null: true
 
       field :charges, [Types::Charges::Object]
 

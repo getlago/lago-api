@@ -4,11 +4,13 @@ class Plan < ApplicationRecord
   include Currencies
 
   belongs_to :organization
+  belongs_to :parent, class_name: 'Plan', optional: true
 
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
+  has_many :children, class_name: 'Plan', foreign_key: :parent_id
 
   INTERVALS = %i[
     weekly
