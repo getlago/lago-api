@@ -16,7 +16,6 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       :billable_metric,
       organization: organization,
       aggregation_type: 'count_agg',
-      billable_period: 'one_shot',
     )
   end
 
