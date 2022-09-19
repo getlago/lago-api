@@ -39,15 +39,15 @@ RSpec.describe Api::V1::AppliedAddOnsController, type: :request do
       end
     end
 
-    context 'with invalid params' do
+    context 'with invalid name' do
       let(:params) do
         { name: 'Foo Bar' }
       end
 
-      it 'returns an unprocessable_entity' do
+      it 'returns an not_found error' do
         post_with_token(organization, '/api/v1/applied_add_ons', { applied_add_on: params })
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

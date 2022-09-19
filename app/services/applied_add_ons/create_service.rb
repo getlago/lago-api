@@ -41,8 +41,8 @@ module AppliedAddOns
     attr_reader :customer, :add_on
 
     def check_preconditions(amount_currency:)
-      return result.fail!(code: 'missing_argument', message: 'unable_to_find_customer') if customer.blank?
-      return result.fail!(code: 'missing_argument', message: 'add_on_does_not_exist') if add_on.blank?
+      return result.not_found_failure!(resource: 'customer') unless customer
+      return result.not_found_failure!(resource: 'add_on') unless add_on
       return result.fail!(code: 'no_active_subscription') unless active_subscription?
       return result.fail!(code: 'currencies_does_not_match') unless applicable_currency?(amount_currency)
     end

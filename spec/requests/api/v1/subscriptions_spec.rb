@@ -37,15 +37,15 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:downgrade_plan_date]).to be_nil
     end
 
-    context 'with invalid params' do
+    context 'with invalid plan code' do
       let(:params) do
         { plan_code: plan.code }
       end
 
-      it 'returns an unprocessable_entity error' do
+      it 'returns a not_found error' do
         post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

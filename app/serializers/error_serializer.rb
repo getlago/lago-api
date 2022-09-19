@@ -3,10 +3,10 @@
 class ErrorSerializer < ModelSerializer
   def serialize
     {
-      status: 422,
-      error: 'Unprocessable entity',
-      message: model.error,
-      input_params: model.input_params
+      status: model.status,
+      error: (model.status == 404) ? 'Not found' : 'Unprocessable entity',
+      message: model.error.to_s,
+      input_params: model.input_params,
     }
   end
 end

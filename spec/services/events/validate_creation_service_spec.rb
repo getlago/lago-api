@@ -72,11 +72,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           )
         end
 
-        it 'returns customer cannot be found error' do
+        it 'returns a customer_not_found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('customer cannot be found')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('customer_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -89,11 +92,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           create(:active_subscription, customer: customer, organization: organization)
         end
 
-        it 'returns subscription is not given error' do
+        it 'returns a subscription_not_found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('subscription does not exist or is not given')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('subscription_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -131,11 +137,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           { external_customer_id: customer.external_id, code: 'event_code' }
         end
 
-        it 'returns code does not exist error' do
+        it 'returns an event_not_found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('code does not exist')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('billable_metric_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -208,11 +217,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           { external_subscription_ids: [] }
         end
 
-        it 'returns subscription is not given error' do
+        it 'returns a subscription_not_found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('subscription does not exist or is not given')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('subscription_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -235,11 +247,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           )
         end
 
-        it 'returns customer cannot be found error' do
+        it 'returns a customer_not_found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('customer cannot be found')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('customer_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -281,11 +296,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           }
         end
 
-        it 'returns code does not exist error' do
+        it 'returns an event_not_found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('code does not exist')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('billable_metric_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do

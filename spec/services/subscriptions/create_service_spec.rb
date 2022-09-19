@@ -158,14 +158,17 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         }
       end
 
-      it 'fails' do
+      it 'returns a customer_not_found error' do
         result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
 
-        expect(result).not_to be_success
-        expect(result.error).to eq('unable to find customer')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('customer_not_found')
+        end
       end
     end
 
@@ -178,14 +181,17 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         }
       end
 
-      it 'fails' do
+      it 'returns a plan_not_found error' do
         result = create_service.create_from_api(
           organization: organization,
           params: params,
         )
 
-        expect(result).not_to be_success
-        expect(result.error).to eq('plan does not exists')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('plan_not_found')
+        end
       end
     end
 
@@ -508,12 +514,13 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         }
       end
 
-      it 'fails' do
+      it 'returns a customer_not_found error' do
         result = create_service.create(**params)
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to eq('unable to find customer')
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('customer_not_found')
         end
       end
     end
@@ -527,12 +534,13 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         }
       end
 
-      it 'fails' do
+      it 'returns a plan_not_found error' do
         result = create_service.create(**params)
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to eq('plan does not exists')
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('plan_not_found')
         end
       end
     end

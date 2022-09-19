@@ -77,9 +77,12 @@ module Events
     def send_webhook_notice
       return unless organization.webhook_url?
 
+      status = result.error.is_a?(BaseService::NotFoundFailure) ? 404 : 422
+
       object = {
         input_params: params,
-        error: result.error,
+        error: result.error.to_s,
+        status: status,
         organization_id: organization.id,
       }
 
@@ -91,7 +94,7 @@ module Events
     end
 
     def blank_subscription_error
-      result.fail!(code: 'missing_argument', message: 'subscription does not exist or is not given')
+      result.not_found_failure!(resource: 'subscription')
       send_webhook_notice
     end
 
@@ -101,12 +104,12 @@ module Events
     end
 
     def invalid_code_error
-      result.fail!(code: 'missing_argument', message: 'code does not exist')
+      result.not_found_failure!(resource: 'billable_metric')
       send_webhook_notice
     end
 
     def invalid_customer_error
-      result.fail!(code: 'missing_argument', message: 'customer cannot be found')
+      result.not_found_failure!(resource: 'customer')
       send_webhook_notice
     end
 
