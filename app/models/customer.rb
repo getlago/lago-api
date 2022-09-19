@@ -56,10 +56,6 @@ class Customer < ApplicationRecord
     organization.vat_rate || 0
   end
 
-  def default_currency
-    currency || active_subscription&.plan&.amount_currency
-  end
-
   private
 
   def ensure_slug

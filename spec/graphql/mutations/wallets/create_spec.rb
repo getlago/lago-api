@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Mutations::Wallets::Create, type: :graphql do
   let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization) }
+  let(:customer) { create(:customer, organization: membership.organization, currency: 'EUR') }
 
   let(:mutation) do
     <<-GQL
