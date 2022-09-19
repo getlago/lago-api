@@ -104,7 +104,7 @@ module Events
     end
 
     def invalid_code_error
-      result.not_found_failure!(resource: 'event')
+      result.not_found_failure!(resource: 'billable_metric')
       send_webhook_notice
     end
 

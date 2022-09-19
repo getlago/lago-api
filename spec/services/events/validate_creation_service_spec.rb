@@ -143,7 +143,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq('event_not_found')
+            expect(result.error.message).to eq('billable_metric_not_found')
           end
         end
 
@@ -302,7 +302,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq('event_not_found')
+            expect(result.error.message).to eq('billable_metric_not_found')
           end
         end
 
