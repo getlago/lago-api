@@ -53,9 +53,12 @@ module Subscriptions
       return result.not_found_failure!(resource: 'customer') unless current_customer
       return result.not_found_failure!(resource: 'plan') unless current_plan
 
-      if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
-        return result.fail!(code: 'currencies_does_not_match', message: 'currencies does not match')
-      end
+      # TODO: db transaction ??
+      currency_result = Customers::UpdateService.new(nil).update_currency(
+        customer: current_customer,
+        currency: current_plan.amount_currency,
+      )
+      return currency_result unless currency_result.success?
 
       result.subscription = handle_subscription
       track_subscription_created(result.subscription)
