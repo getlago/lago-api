@@ -33,9 +33,15 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     it 'returns a invoice' do
       get_with_token(organization, "/api/v1/invoices/#{invoice.id}")
 
-      expect(response).to have_http_status(:success)
-      expect(json[:invoice][:lago_id]).to eq(invoice.id)
-      expect(json[:invoice][:status]).to eq(invoice.status)
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        expect(json[:invoice][:status]).to eq(invoice.status)
+        expect(json[:invoice][:customer]).not_to be_nil
+        expect(json[:invoice][:subscriptions]).not_to be_nil
+        expect(json[:invoice][:fees]).not_to be_nil
+        expect(json[:invoice][:credits]).not_to be_nil
+      end
     end
 
     context 'when invoice does not exist' do
