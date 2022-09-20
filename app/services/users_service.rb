@@ -5,7 +5,7 @@ class UsersService < BaseService
     result.user = User.find_by(email: email)&.authenticate(password)
 
     return result.fail!(code: 'incorrect_login_or_password') unless result.user
-    return result.fail!(code: 'incorrect_login_or_password') unless result.user.memberships.first.active?
+    return result.fail!(code: 'incorrect_login_or_password') unless result.user.memberships.active.any?
 
     result.token = generate_token if result.user
 
