@@ -57,8 +57,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,
           coupon_name: applied_coupon.coupon.name,
-          organization_id: applied_coupon.coupon.organization_id
-        }
+          organization_id: applied_coupon.coupon.organization_id,
+        },
       )
     end
 
@@ -124,8 +124,14 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     context 'when coupon is already applied to the customer' do
       before { create(:applied_coupon, customer: customer, coupon: coupon) }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('coupon_already_applied') }
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:coupon)
+          expect(create_result.error.messages[:coupon]).to include('coupon_already_applied')
+        end
+      end
     end
 
     context 'when an other coupon is already applied to the customer' do
@@ -133,8 +139,14 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
       before { create(:applied_coupon, customer: customer, coupon: other_coupon) }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('coupon_already_applied') }
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:coupon)
+          expect(create_result.error.messages[:coupon]).to include('coupon_already_applied')
+        end
+      end
     end
 
     context 'when currency of coupon does not match customer currency' do
@@ -255,8 +267,14 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     context 'when coupon is already applied to the customer' do
       before { create(:applied_coupon, customer: customer, coupon: coupon) }
 
-      it { expect(create_result).not_to be_success }
-      it { expect(create_result.error).to eq('coupon_already_applied') }
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:coupon)
+          expect(create_result.error.messages[:coupon]).to include('coupon_already_applied')
+        end
+      end
     end
 
     context 'when currency of coupon does not match customer currency' do

@@ -269,11 +269,14 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     context 'when no_active_subscription' do
       let(:subscription) { nil }
 
-      it 'returns an error' do
+      it 'fails' do
         result = invoice_service.usage
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('no_active_subscription')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq('no_active_subscription')
+        end
       end
     end
   end
