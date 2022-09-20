@@ -3549,6 +3549,7 @@ type Subscription {
   nextName: String
   nextPendingStartDate: ISO8601Date
   nextPlan: Plan
+  periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
   status: StatusTypeEnum

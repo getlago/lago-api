@@ -13026,6 +13026,20 @@
               ]
             },
             {
+              "name": "periodEndDate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "plan",
               "description": null,
               "type": {

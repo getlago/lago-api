@@ -14,6 +14,7 @@ module Types
       field :name, String, null: true
       field :next_name, String, null: true
       field :next_pending_start_date, GraphQL::Types::ISO8601Date
+      field :period_end_date, GraphQL::Types::ISO8601Date
 
       field :billing_time, Types::Subscriptions::BillingTimeEnum
       field :subscription_date, GraphQL::Types::ISO8601Date
@@ -36,6 +37,11 @@ module Types
 
       def next_pending_start_date
         object.downgrade_plan_date
+      end
+
+      def period_end_date
+        ::Subscriptions::DatesService.new_instance(object, Time.zone.today)
+          .next_end_of_period(Time.zone.today)
       end
     end
   end
