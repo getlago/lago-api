@@ -68,7 +68,7 @@ module PaymentProviderCustomers
       # NOTE: The payment method is no longer valid
       stripe_customer.update!(payment_method_id: nil)
 
-      result.fail!(code: 'invalid_payment_method')
+      result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
     end
 
     private

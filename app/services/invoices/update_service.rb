@@ -5,7 +5,7 @@ class Invoices::UpdateService < BaseService
     invoice = Invoice.find_by(id: invoice_id)
 
     return result.not_found_failure!(resource: 'invoice') if invoice.blank?
-    return result.fail!(code: 'invalid_status') unless valid_status?(params[:status])
+    return result.single_validation_failure!(field: :status, error_code: 'value_is_invalid') unless valid_status?(params[:status])
 
     invoice.status = params[:status] if params.key?(:status)
     invoice.save!
