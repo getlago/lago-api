@@ -39,8 +39,6 @@ class UsersService < BaseService
   def register_from_invite(email, password, organization_id)
     result.user = User.find_or_initialize_by(email: email)
 
-    return result.fail!(code: 'user_already_exists') if result.user.id
-
     ActiveRecord::Base.transaction do
       result.organization = Organization.find(organization_id)
 
