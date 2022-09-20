@@ -77,6 +77,8 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       context 'when currency does not match' do
         let(:amount_currency) { 'NOK' }
 
+        before { customer.update!(currency: 'EUR') }
+
         it 'fails' do
           aggregate_failures do
             expect(create_result).not_to be_success
@@ -115,6 +117,8 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
 
     context 'when currency of an add-on does not match customer currency' do
       let(:add_on) { create(:add_on, organization: organization, amount_currency: 'NOK') }
+
+      before { customer.update!(currency: 'EUR') }
 
       it 'fails' do
         aggregate_failures do
@@ -199,6 +203,8 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       context 'when currency does not match' do
         let(:amount_currency) { 'NOK' }
 
+        before { customer.update!(currency: 'EUR') }
+
         it 'fails' do
           aggregate_failures do
             expect(create_result).not_to be_success
@@ -237,6 +243,8 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
 
     context 'when currency of add-on does not match customer currency' do
       let(:add_on) { create(:add_on, organization: organization, amount_currency: 'NOK') }
+
+      before { customer.update!(currency: 'EUR') }
 
       it 'fails' do
         aggregate_failures do

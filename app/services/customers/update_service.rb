@@ -46,7 +46,7 @@ module Customers
     def update_currency(customer:, currency:)
       result.customer = customer
 
-      if !editable_currency? && customer.currency != currency
+      if !editable_currency? && customer.currency.present? && customer.currency != currency
         return result.single_validation_failure!(
           field: :currency,
           error_code: 'currencies_does_not_match',

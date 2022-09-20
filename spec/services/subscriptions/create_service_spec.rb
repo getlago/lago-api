@@ -275,6 +275,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           }
         end
 
+        before { customer.update!(currency: plan.amount_currency) }
+
         it 'fails' do
           result = create_service.create_from_api(
             organization: organization,

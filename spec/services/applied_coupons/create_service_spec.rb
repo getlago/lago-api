@@ -74,6 +74,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       context 'when currency does not match' do
         let(:amount_currency) { 'NOK' }
 
+        before { customer.update!(currency: 'EUR') }
+
         it 'fails' do
           aggregate_failures do
             expect(create_result).not_to be_success
@@ -153,6 +155,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     context 'when currency of coupon does not match customer currency' do
       let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
 
+      before { customer.update!(currency: 'EUR') }
+
       it 'fails' do
         aggregate_failures do
           expect(create_result).not_to be_success
@@ -222,6 +226,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       context 'when currency does not match' do
         let(:amount_currency) { 'NOK' }
 
+        before { customer.update!(currency: 'EUR') }
+
         it 'fails' do
           aggregate_failures do
             expect(create_result).not_to be_success
@@ -285,6 +291,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
     context 'when currency of coupon does not match customer currency' do
       let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
+
+      before { customer.update!(currency: 'EUR') }
 
       it 'fails' do
         aggregate_failures do
