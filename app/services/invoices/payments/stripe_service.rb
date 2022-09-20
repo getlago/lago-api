@@ -56,7 +56,7 @@ module Invoices
 
         result
       rescue ArgumentError
-        result.fail!(code: 'invalid_invoice_status')
+        result.single_validation_failure!(field: :status, error_code: 'value_is_invalid')
       end
 
       private

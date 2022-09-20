@@ -110,8 +110,12 @@ RSpec.describe Invoices::UpdateService do
           params: update_args,
         )
 
-        expect(result).not_to be_success
-        expect(result.error).to eq('invalid_status')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:status)
+          expect(result.error.messages[:status]).to include('value_is_invalid')
+        end
       end
     end
 
@@ -124,8 +128,12 @@ RSpec.describe Invoices::UpdateService do
           params: update_args,
         )
 
-        expect(result).not_to be_success
-        expect(result.error).to eq('invalid_status')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:status)
+          expect(result.error.messages[:status]).to include('value_is_invalid')
+        end
       end
     end
 
