@@ -23,6 +23,7 @@ module V1
         logo_url: model.logo_url,
         legal_name: model.legal_name,
         legal_number: model.legal_number,
+        currency: model.currency,
         billing_configuration: billing_configuration,
       }
     end

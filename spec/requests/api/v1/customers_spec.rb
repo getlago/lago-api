@@ -9,6 +9,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       {
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
+        currency: 'EUR',
       }
     end
 
@@ -20,6 +21,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customer][:external_id]).to eq(create_params[:external_id])
       expect(json[:customer][:name]).to eq(create_params[:name])
       expect(json[:customer][:created_at]).to be_present
+      expect(json[:customer][:currency]).to eq(create_params[:currency])
     end
 
     context 'with billing configuration' do
@@ -50,7 +52,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
     context 'with invalid params' do
       let(:create_params) do
-        { name: 'Foo Bar' }
+        { name: 'Foo Bar', currency: 'invalid' }
       end
 
       it 'returns an unprocessable_entity' do
