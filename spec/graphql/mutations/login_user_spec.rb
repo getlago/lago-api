@@ -3,6 +3,8 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::LoginUser, type: :graphql do
+  let(:membership) { create(:membership) }
+  let(:user) { membership.user }
   let(:mutation) do
     <<~GQL
       mutation($input: LoginUserInput!) {
@@ -18,9 +20,6 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
   end
 
   it 'returns token and user' do
-    user = create(:user)
-    create(:membership, user: user)
-
     result = execute_graphql(
       query: mutation,
       variables: {
@@ -41,8 +40,6 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
 
   context 'with bad credentials' do
     it 'returns an error' do
-      user = create(:user)
-
       result = execute_graphql(
         query: mutation,
         variables: {
@@ -51,6 +48,26 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
             password: 'badpassword'
           }
         }
+      )
+
+      aggregate_failures do
+        expect(result['errors'].first['message']).to eq('incorrect_login_or_password')
+      end
+    end
+  end
+
+  context 'with revoked membership' do
+    let(:revoked_membership) { create(:membership, status: :revoked) }
+
+    it 'returns an error' do
+      result = execute_graphql(
+        query: mutation,
+        variables: {
+          input: {
+            email: revoked_membership.user.email,
+            password: 'ILoveLago',
+          },
+        },
       )
 
       aggregate_failures do
