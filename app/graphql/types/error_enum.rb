@@ -21,5 +21,8 @@ module Types
     value 'no_active_subscription', 'Customer does not have an active subscription.'
     value 'currencies_does_not_match', 'Currency from customer subscription differs from the provided one.'
     value 'coupon_already_applied', 'Coupon is already applied to the customer'
+
+    # Invite related erorrs
+    value 'invite_not_found', 'Invite does not exists'
   end
 end
