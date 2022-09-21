@@ -221,11 +221,7 @@ module Fees
     def compute_old_to_date(old_subscription, base_date)
       return base_date if plan.pay_in_arrear?
 
-      old_base_date = if old_subscription.anniversary?
-        date_service(old_subscription).to_date
-      else
-        base_date
-      end
+      old_base_date = date_service(old_subscription).to_date
 
       # NOTE: when plan is pay in advance, the_to date should be the
       #       end of the actual period
