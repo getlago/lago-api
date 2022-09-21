@@ -30,6 +30,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
         input: {
           name: 'Super Coupon',
           code: 'free-beer',
+          couponType: 'fixed_amount',
           amountCents: 5000,
           amountCurrency: 'EUR',
           expiration: 'time_limit',
@@ -61,6 +62,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           input: {
             name: 'Super Coupon',
             code: 'free-beer',
+            couponType: 'fixed_amount',
             amountCents: 5000,
             amountCurrency: 'EUR',
             expiration: 'time_limit',
@@ -82,6 +84,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           input: {
             name: 'Super Coupon',
             code: 'free-beer',
+            couponType: 'fixed_amount',
             amountCents: 5000,
             amountCurrency: 'EUR',
             expiration: 'time_limit',

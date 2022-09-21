@@ -16,6 +16,7 @@ module AppliedCoupons
       process_creation(
         amount_cents: args[:amount_cents] || coupon&.amount_cents,
         amount_currency: args[:amount_currency] || coupon&.amount_currency,
+        percentage_rate: args[:percentage_rate] || coupon&.percentage_rate,
       )
     end
 
@@ -33,6 +34,7 @@ module AppliedCoupons
       process_creation(
         amount_cents: args[:amount_cents] || coupon&.amount_cents,
         amount_currency: args[:amount_currency] || coupon&.amount_currency,
+        percentage_rate: args[:percentage_rate] || coupon&.percentage_rate,
       )
     end
 
@@ -48,7 +50,7 @@ module AppliedCoupons
       return result.fail!(code: 'currencies_does_not_match') unless applicable_currency?(amount_currency)
     end
 
-    def process_creation(amount_cents:, amount_currency:)
+    def process_creation(amount_cents:, amount_currency:, percentage_rate:)
       check_preconditions(amount_currency: amount_currency)
       return result if result.error
 
@@ -57,6 +59,7 @@ module AppliedCoupons
         coupon: coupon,
         amount_cents: amount_cents,
         amount_currency: amount_currency,
+        percentage_rate: percentage_rate,
       )
 
       result.applied_coupon = applied_coupon

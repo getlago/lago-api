@@ -30,6 +30,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
         input: {
           id: coupon.id,
           name: 'New name',
+          couponType: 'fixed_amount',
           code: 'new_code',
           amountCents: 123,
           amountCurrency: 'USD',
@@ -61,6 +62,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
             id: coupon.id,
             name: 'New name',
             code: 'new_code',
+            couponType: 'fixed_amount',
             amountCents: 123,
             amountCurrency: 'USD',
             expiration: 'time_limit',

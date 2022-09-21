@@ -97,5 +97,31 @@ RSpec.describe Credits::AppliedCouponService do
         expect(applied_coupon.reload).to be_terminated
       end
     end
+
+    context 'when coupon is percentage' do
+      let(:coupon) { create(:coupon, coupon_type: 'percentage') }
+
+      let(:applied_coupon) do
+        create(:applied_coupon, coupon: coupon, percentage_rate: '20.00')
+      end
+
+      it 'creates a credit' do
+        result = credit_service.create
+
+        expect(result).to be_success
+
+        expect(result.credit.amount_cents).to eq(25)
+        expect(result.credit.amount_currency).to eq('EUR')
+        expect(result.credit.invoice).to eq(invoice)
+        expect(result.credit.applied_coupon).to eq(applied_coupon)
+      end
+
+      it 'terminates the applied coupon' do
+        result = credit_service.create
+
+        expect(result).to be_success
+        expect(applied_coupon.reload).to be_terminated
+      end
+    end
   end
 end
