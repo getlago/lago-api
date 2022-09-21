@@ -36,6 +36,7 @@ jobs:
         with:
           context: .
           file: Dockerfile.arm64
+          push: true
           platforms: 
             - linux/arm64
           tags: getlago/api-arm64v8:${{ github.event.client_payload.version }}
