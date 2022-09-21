@@ -141,7 +141,7 @@ module Fees
 
       # NOTE: to_date for previous plan might be different from to_date
       #       if plan interval is not the same
-      old_to_date = compute_old_to_date(previous_subscription)
+      old_to_date = compute_old_to_date(previous_subscription, to_date)
 
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
@@ -218,26 +218,24 @@ module Fees
       )
     end
 
-    def compute_to_date(target_subscription, base_date)
+    def compute_old_to_date(old_subscription, base_date)
       return base_date if plan.pay_in_arrear?
+
+      old_base_date = if old_subscription.anniversary?
+        date_service(old_subscription).to_date
+      else
+        base_date
+      end
 
       # NOTE: when plan is pay in advance, the_to date should be the
       #       end of the actual period
-      date_service(target_subscription).next_end_of_period(base_date)
+      date_service(old_subscription).next_end_of_period(old_base_date)
     end
 
     def compute_from_date(target_subscription)
       date_service(target_subscription).previous_beginning_of_period(
         current_period: target_subscription.plan.pay_in_advance? && subscription.plan.pay_in_advance?,
       )
-    end
-
-    def compute_old_to_date(old_subscription)
-      old_date_service = date_service(old_subscription)
-
-      return old_date_service.to_date if plan.pay_in_arrear?
-
-      date_service(old_subscription).next_end_of_period(old_date_service.to_date)
     end
   end
 end
