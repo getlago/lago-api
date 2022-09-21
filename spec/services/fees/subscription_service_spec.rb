@@ -1104,6 +1104,7 @@ RSpec.describe Fees::SubscriptionService do
         create(
           :subscription,
           status: :terminated,
+          terminated_at: DateTime.parse('2022-05-08'),
           plan: previous_plan,
           subscription_date: DateTime.parse('2021-03-25'),
           billing_time: :anniversary,
