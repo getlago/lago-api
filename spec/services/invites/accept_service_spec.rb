@@ -7,7 +7,7 @@ RSpec.describe Invites::AcceptService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invite) { create(:invite, organization: organization) }
+  let(:invite) { create(:invite, organization: organization, email: membership.user.email) }
   let(:accept_args) do
     {
       email: invite.email,
@@ -37,6 +37,28 @@ RSpec.describe Invites::AcceptService, type: :service do
       expect(result.membership).to be_present
       expect(result.organization).to be_present
       expect(result.token).to be_present
+    end
+
+    context 'when user have already been invited then revoked' do
+      let(:revoked_membership) { create(:membership, organization: organization, status: :revoked) }
+      let(:accepted_invite) do
+        create(:invite, organization: organization, email: revoked_membership.user.email, status: :accepted)
+      end
+      let(:new_invite) { create(:invite, organization: organization, email: revoked_membership.user.email) }
+
+      it 'sets user, membership and organization' do
+        result = accept_service.call(
+          email: revoked_membership.user.email,
+          password: accept_args[:password],
+          token: new_invite[:token],
+        )
+
+        expect(result).to be_success
+        expect(result.user).to be_present
+        expect(result.membership).to be_present
+        expect(result.organization).to be_present
+        expect(result.token).to be_present
+      end
     end
 
     context 'when invite is already accepted' do
@@ -94,19 +116,6 @@ RSpec.describe Invites::AcceptService, type: :service do
 
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq('invite_not_found')
-        end
-      end
-
-      context 'when invite is accepted with the email of an existing user' do
-        it 'returns an error' do
-          result = accept_service.call(
-            email: membership.user.email,
-            password: accept_args[:password],
-            token: accept_args[:token],
-          )
-
-          expect(result).not_to be_success
-          expect(result.error).to eq('user_already_exists')
         end
       end
     end
