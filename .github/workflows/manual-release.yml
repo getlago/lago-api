@@ -28,14 +28,14 @@ jobs:
       - name: Add version into docker image
         run: echo ${{ github.event.inputs.version }} > LAGO_VERSION
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          push: true
-          tags: getlago/api:${{ github.event.inputs.version }}
-          build-args: |
-            SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
+      # - name: Build and push Docker image
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     context: .
+      #     push: true
+      #     tags: getlago/api:${{ github.event.inputs.version }}
+      #     build-args: |
+      #       SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
       
       - name: Build and Push ARM64 Docker Image
         uses: docker/build-push-action@v3
