@@ -2,15 +2,17 @@
 
 class AddCouponTypeAndPercentageRateToCoupons < ActiveRecord::Migration[7.0]
   def change
-    add_column :coupons, :coupon_type, :integer, null: false, default: 0
-    add_column :coupons, :percentage_rate, :decimal, precision: 10, scale: 5
-    change_column_null :coupons, :amount_cents, true
-    change_column_null :coupons, :amount_currency, true
+    change_table :coupons, bulk: true do |t|
+      t.integer :coupon_type, null: false, default: 0
+      t.decimal :percentage_rate, precision: 10, scale: 5
+      t.change :amount_cents, :bigint, null: true
+      t.change :amount_currency, :string, null: true
+    end
 
-    add_column :applied_coupons, :percentage_rate, :decimal, precision: 10, scale: 5
-    change_column_null :applied_coupons, :amount_cents, true
-    change_column_null :applied_coupons, :amount_currency, true
+    change_table :applied_coupons, bulk: true do |t|
+      t.decimal :percentage_rate, precision: 10, scale: 5
+      t.change :amount_cents, :integer, null: true
+      t.change :amount_currency, :string, null: true
+    end
   end
 end
-
-

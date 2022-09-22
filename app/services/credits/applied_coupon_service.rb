@@ -21,9 +21,7 @@ module Credits
         amount_currency: applied_coupon.amount_currency,
       )
 
-      if applied_coupon.coupon.percentage? || credit_amount >= remaining_amount
-        applied_coupon.mark_as_terminated!
-      end
+      applied_coupon.mark_as_terminated! if applied_coupon.coupon.percentage? || credit_amount >= remaining_amount
 
       result.credit = new_credit
       result
@@ -43,9 +41,9 @@ module Credits
 
     def compute_amount
       if applied_coupon.coupon.percentage?
-        discounted_value = invoice.amount_cents * (applied_coupon.percentage_rate.fdiv(100))
+        discounted_value = invoice.amount_cents * applied_coupon.percentage_rate.fdiv(100)
 
-        return discounted_value >= invoice.amount_cents ? invoice.amount_cents : discounted_value.round
+        return (discounted_value >= invoice.amount_cents) ? invoice.amount_cents : discounted_value.round
       end
 
       return invoice.amount_cents if remaining_amount > invoice.amount_cents
