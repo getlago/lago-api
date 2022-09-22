@@ -56,6 +56,13 @@ class Customer < ApplicationRecord
     organization.vat_rate || 0
   end
 
+  def editable_currency?
+    active_subscriptions.none? &&
+      applied_add_ons.none? &&
+      applied_coupons.none? &&
+      wallets.none?
+  end
+
   private
 
   def ensure_slug

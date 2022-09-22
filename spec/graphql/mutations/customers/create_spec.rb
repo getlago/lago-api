@@ -19,6 +19,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           paymentProvider
           stripeCustomer { id, providerCustomerId }
           currency
+          canEditCurrency
         }
       }
     GQL

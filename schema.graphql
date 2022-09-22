@@ -2405,6 +2405,11 @@ type Customer {
   Check if customer is deletable
   """
   canBeDeleted: Boolean!
+
+  """
+  Check if customer is deletable
+  """
+  canEditCurrency: Boolean!
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
@@ -2453,6 +2458,11 @@ type CustomerDetails {
   Check if customer is deletable
   """
   canBeDeleted: Boolean!
+
+  """
+  Check if customer is deletable
+  """
+  canEditCurrency: Boolean!
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!

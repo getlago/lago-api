@@ -46,7 +46,7 @@ module Customers
     def update_currency(customer:, currency:)
       result.customer = customer
 
-      if !editable_currency? && customer.currency.present? && customer.currency != currency
+      if !customer.editable_currency? && customer.currency.present? && customer.currency != currency
         return result.single_validation_failure!(
           field: :currency,
           error_code: 'currencies_does_not_match',
@@ -76,13 +76,6 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.stripe_customer&.reload
-    end
-
-    def editable_currency?
-      !result.customer.active_subscription &&
-        result.customer.applied_add_ons.none? &&
-        result.customer.applied_coupons.none? &&
-        result.customer.wallets.none?
     end
   end
 end

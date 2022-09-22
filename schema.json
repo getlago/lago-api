@@ -6273,6 +6273,24 @@
               ]
             },
             {
+              "name": "canEditCurrency",
+              "description": "Check if customer is deletable",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "city",
               "description": null,
               "type": {
@@ -6792,6 +6810,24 @@
             },
             {
               "name": "canBeDeleted",
+              "description": "Check if customer is deletable",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "canEditCurrency",
               "description": "Check if customer is deletable",
               "type": {
                 "kind": "NON_NULL",
