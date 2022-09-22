@@ -8,29 +8,46 @@ RSpec.describe Charges::Validators::StandardService, type: :service do
   let(:charge) { build(:standard_charge, properties: properties) }
   let(:properties) { {} }
 
-  describe '.validate' do
-    it 'ensure the presence of an amount' do
-      result = standard_service.validate
-
-      expect(result.error).to include(:invalid_amount)
+  describe '.valid?' do
+    it 'is invalid' do
+      aggregate_failures do
+        expect(standard_service).not_to be_valid
+        expect(standard_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(standard_service.result.error.messages.keys).to include(:amount)
+        expect(standard_service.result.error.messages[:amount]).to include('invalid_amount')
+      end
     end
 
     context 'when amount is not an integer' do
       let(:properties) { { amount: 'Foo' } }
 
-      it { expect(standard_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(standard_service).not_to be_valid
+          expect(standard_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(standard_service.result.error.messages.keys).to include(:amount)
+          expect(standard_service.result.error.messages[:amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'when amount is negative' do
       let(:properties) { { amount: '-12' } }
 
-      it { expect(standard_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(standard_service).not_to be_valid
+          expect(standard_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(standard_service.result.error.messages.keys).to include(:amount)
+          expect(standard_service.result.error.messages[:amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with an applicable amount' do
       let(:properties) { { amount: '12' } }
 
-      it { expect(standard_service.validate).to be_success }
+      it { expect(standard_service).to be_valid }
     end
   end
 end

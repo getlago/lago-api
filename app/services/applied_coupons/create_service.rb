@@ -44,7 +44,13 @@ module AppliedCoupons
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'coupon') unless coupon
       return result.fail!(code: 'no_active_subscription') unless active_subscription?
-      return result.fail!(code: 'coupon_already_applied') if coupon_already_applied?
+
+      if coupon_already_applied?
+        return result.single_validation_failure!(
+          field: 'coupon',
+          error_code: 'coupon_already_applied',
+        )
+      end
       return result.fail!(code: 'currencies_does_not_match') unless applicable_currency?(amount_currency)
     end
 

@@ -21,7 +21,7 @@ module Invoices
 
     def usage
       return result.not_found_failure!(resource: 'customer') unless @customer
-      return result.fail!(code: 'no_active_subscription') if subscription.blank?
+      return result.not_allowed_failure!(code: 'no_active_subscription') if subscription.blank?
 
       result.usage = JSON.parse(compute_usage, object_class: OpenStruct)
       result
