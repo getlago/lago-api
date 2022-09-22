@@ -14,7 +14,7 @@ module Mutations
       argument :coupon_type, Types::Coupons::CouponTypeEnum, required: true
       argument :amount_cents, Integer, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false
-      argument :percentage_rate, String, required: false
+      argument :percentage_rate, Float, required: false
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
       argument :expiration_duration, Integer, required: false

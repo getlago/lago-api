@@ -102,7 +102,7 @@ RSpec.describe Credits::AppliedCouponService do
       let(:coupon) { create(:coupon, coupon_type: 'percentage') }
 
       let(:applied_coupon) do
-        create(:applied_coupon, coupon: coupon, percentage_rate: '20.00')
+        create(:applied_coupon, coupon: coupon, percentage_rate: 20.00)
       end
 
       it 'creates a credit' do

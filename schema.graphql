@@ -1474,7 +1474,7 @@ type Coupon {
   id: ID!
   name: String!
   organization: Organization
-  percentageRate: String
+  percentageRate: Float
   status: CouponStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
@@ -1507,7 +1507,7 @@ type CouponDetails {
   id: ID!
   name: String!
   organization: Organization
-  percentageRate: String
+  percentageRate: Float
   status: CouponStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
@@ -1572,7 +1572,7 @@ input CreateAppliedCouponInput {
   clientMutationId: String
   couponId: ID!
   customerId: ID!
-  percentageRate: String
+  percentageRate: Float
 }
 
 """
@@ -1607,7 +1607,7 @@ input CreateCouponInput {
   expiration: CouponExpiration!
   expirationDuration: Int
   name: String!
-  percentageRate: String
+  percentageRate: Float
 }
 
 """
@@ -3665,7 +3665,7 @@ input UpdateCouponInput {
   expirationDuration: Int
   id: String!
   name: String!
-  percentageRate: String
+  percentageRate: Float
 }
 
 """
