@@ -141,7 +141,7 @@ module Fees
 
       # NOTE: to_date for previous plan might be different from to_date
       #       if plan interval is not the same
-      old_to_date = compute_old_to_date(previous_subscription, boundaries.timestamp)
+      old_to_date = compute_old_to_date(previous_subscription, Time.zone.at(boundaries.timestamp).to_date)
 
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
