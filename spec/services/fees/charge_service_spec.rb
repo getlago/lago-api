@@ -217,7 +217,9 @@ RSpec.describe Fees::ChargeService do
         )
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
-      let(:error_result) { BaseService::Result.new.fail!(code: 'aggregation_failure') }
+      let(:error_result) do
+        BaseService::Result.new.service_failure!(code: 'aggregation_failure', message: 'Test message')
+      end
 
       it 'returns an error' do
         allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
@@ -228,7 +230,9 @@ RSpec.describe Fees::ChargeService do
         result = charge_subscription_service.create
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('aggregation_failure')
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq('aggregation_failure')
+        expect(result.error.error_message).to eq('Test message')
 
         expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
         expect(aggregator_service).to have_received(:aggregate)
@@ -326,7 +330,9 @@ RSpec.describe Fees::ChargeService do
         )
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
-      let(:error_result) { BaseService::Result.new.fail!(code: 'aggregation_failure') }
+      let(:error_result) do
+        BaseService::Result.new.service_failure!(code: 'aggregation_failure', message: 'Test message')
+      end
 
       it 'returns an error' do
         allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
@@ -337,7 +343,9 @@ RSpec.describe Fees::ChargeService do
         result = charge_subscription_service.current_usage
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq('aggregation_failure')
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq('aggregation_failure')
+        expect(result.error.error_message).to eq('Test message')
 
         expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
         expect(aggregator_service).to have_received(:aggregate)

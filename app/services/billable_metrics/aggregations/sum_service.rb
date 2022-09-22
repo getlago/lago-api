@@ -12,7 +12,7 @@ module BillableMetrics
         result.options = { running_total: running_total(events, options) }
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.fail!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
       private
