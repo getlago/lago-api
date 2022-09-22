@@ -18,8 +18,14 @@ class Coupon < ApplicationRecord
     :time_limit,
   ].freeze
 
+  COUPON_TYPES = [
+    :fixed_amount,
+    :percentage,
+  ].freeze
+
   enum status: STATUSES
   enum expiration: EXPIRATION_TYPES
+  enum coupon_type: COUPON_TYPES
 
   monetize :amount_cents
 

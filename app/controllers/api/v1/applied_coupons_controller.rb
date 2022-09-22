@@ -30,6 +30,7 @@ module Api
           :coupon_code,
           :amount_cents,
           :amount_currency,
+          :percentage_rate,
         )
       end
     end
