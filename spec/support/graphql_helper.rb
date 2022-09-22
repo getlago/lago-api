@@ -47,4 +47,11 @@ module GraphQLHelper
       message: :forbidden,
     )
   end
+
+  def expect_unprocessable_entity(result)
+    expect_graphql_error(
+      result: result,
+      message: :unprocessable_entity,
+    )
+  end
 end

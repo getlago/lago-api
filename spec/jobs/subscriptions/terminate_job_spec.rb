@@ -23,7 +23,7 @@ RSpec.describe Subscriptions::TerminateJob, type: :job do
 
   context 'when result is a failure' do
     let(:result) do
-      BaseService::Result.new.fail!(code: 'error')
+      BaseService::Result.new.not_found_failure!(resource: 'subscription')
     end
 
     it 'raises an error' do

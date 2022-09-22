@@ -32,9 +32,9 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
         input: {
           email: 'foo@bar.com',
           password: 'ILoveLago',
-          organizationName: 'FooBar'
-        }
-      }
+          organizationName: 'FooBar',
+        },
+      },
     )
 
     aggregate_failures do
@@ -55,16 +55,15 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
           input: {
             email: user.email,
             password: 'ILoveLago',
-            organizationName: 'FooBar'
-          }
-        }
+            organizationName: 'FooBar',
+          },
+        },
       )
 
       aggregate_failures do
-        expect_graphql_error(
-          result: result,
-          message: :user_already_exists
-        )
+        expect_unprocessable_entity(result)
+        expect(result['errors'].first.dig('extensions', 'details').keys).to include('email')
+        expect(result['errors'].first.dig('extensions', 'details', 'email')).to include('user_already_exists')
       end
     end
   end

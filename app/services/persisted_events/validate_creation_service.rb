@@ -1,62 +1,67 @@
 # frozen_string_literal: true
 
 module PersistedEvents
-  class ValidateCreationService
-    def self.call(...)
-      new(...).call
-    end
-
-    def initialize(subscription:, billable_metric:, params:)
+  class ValidateCreationService < BaseValidator
+    def initialize(result:, subscription:, billable_metric:, args:)
       @subscription = subscription
       @billable_metric = billable_metric
-      @params = params&.with_indifferent_access
+
+      super(result, **args.with_indifferent_access)
     end
 
-    def call
-      return 'invalid_operation_type' unless valid_operation_type?
-      return 'recurring_resource_already_added' unless valid_addition?
-      return 'recurring_resource_not_found' unless valid_removal?
+    def valid?
+      validate_operation_type
+      validate_addition
+      validate_removal
 
-      nil
+      errors.blank?
     end
+
+    attr_accessor :errors
 
     private
 
-    attr_accessor :subscription, :billable_metric, :params
+    attr_accessor :subscription, :billable_metric
 
     delegate :customer, to: :subscription
 
     def operation_type
-      @operation_type ||= params.dig('properties', 'operation_type')&.to_sym
+      @operation_type ||= args.dig('properties', 'operation_type')&.to_sym
     end
 
     def external_id
-      @external_id ||= params.dig('properties', billable_metric.field_name)
+      @external_id ||= args.dig('properties', billable_metric.field_name)
     end
 
-    def valid_operation_type?
-      %i[add remove].include?(operation_type)
+    def validate_operation_type
+      return if %i[add remove].include?(operation_type)
+
+      add_error(field: :operation_type, error_code: 'invalid_operation_type')
     end
 
-    def valid_addition?
-      return true unless operation_type == :add
+    def validate_addition
+      return unless operation_type == :add
 
       # NOTE: Ensure no active persisted metric exists with the same external id
-      PersistedEvent.where(
+      return if PersistedEvent.where(
         customer_id: customer.id,
         external_id: external_id,
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).none?
+
+      add_error(field: billable_metric.field_name, error_code: 'recurring_resource_already_added')
     end
 
-    def valid_removal?
-      return true unless operation_type == :remove
+    def validate_removal
+      return unless operation_type == :remove
 
-      PersistedEvent.where(
+      return if PersistedEvent.where(
         customer_id: customer.id,
         external_id: external_id,
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).exists?
+
+      add_error(field: billable_metric.field_name, error_code: 'recurring_resource_not_found')
     end
   end
 end

@@ -25,9 +25,9 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
       variables: {
         input: {
           email: user.email,
-          password: 'ILoveLago'
-        }
-      }
+          password: 'ILoveLago',
+        },
+      },
     )
 
     result_data = result['data']['loginUser']
@@ -45,13 +45,15 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
         variables: {
           input: {
             email: user.email,
-            password: 'badpassword'
-          }
-        }
+            password: 'badpassword',
+          },
+        },
       )
 
       aggregate_failures do
-        expect(result['errors'].first['message']).to eq('incorrect_login_or_password')
+        expect_unprocessable_entity(result)
+        expect(result['errors'].first.dig('extensions', 'details').keys).to include('base')
+        expect(result['errors'].first.dig('extensions', 'details', 'base')).to include('incorrect_login_or_password')
       end
     end
   end
@@ -71,7 +73,9 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
       )
 
       aggregate_failures do
-        expect(result['errors'].first['message']).to eq('incorrect_login_or_password')
+        expect_unprocessable_entity(result)
+        expect(result['errors'].first.dig('extensions', 'details').keys).to include('base')
+        expect(result['errors'].first.dig('extensions', 'details', 'base')).to include('incorrect_login_or_password')
       end
     end
   end

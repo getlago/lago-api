@@ -120,11 +120,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           create(:active_subscription, customer: customer, organization: organization)
         end
 
-        it 'returns subscription is invalid error' do
+        it 'returns a not found error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('external_subscription_id is invalid')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('subscription_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -187,8 +190,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           it 'returns invalid recurring resource error' do
             validate_event
 
-            expect(result).not_to be_success
-            expect(result.error).to eq('invalid_operation_type')
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages.keys).to include(:operation_type)
+              expect(result.error.messages[:operation_type]).to eq(['invalid_operation_type'])
+            end
           end
 
           it 'enqueues a SendWebhookJob' do
@@ -278,8 +285,11 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         it 'returns subscription is invalid error' do
           validate_event
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('external_subscription_id is invalid')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('subscription_not_found')
+          end
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -346,8 +356,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           it 'returns invalid recurring resource error' do
             validate_event
 
-            expect(result).not_to be_success
-            expect(result.error).to eq("Subscription #{subscription.external_id}: invalid_operation_type")
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+
+              subscription_field = "subscription[#{subscription.external_id}]_operation_type".to_sym
+              expect(result.error.messages.keys).to include(subscription_field)
+              expect(result.error.messages[subscription_field]).to eq(['invalid_operation_type'])
+            end
           end
 
           it 'enqueues a SendWebhookJob' do

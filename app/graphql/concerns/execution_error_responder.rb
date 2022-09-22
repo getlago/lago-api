@@ -56,9 +56,9 @@ module ExecutionErrorResponder
       validation_error(messages: service_result.error.messages)
     else
       execution_error(
-        code: service_result.error_code,
-        error: service_result.error,
-        details: service_result.error_details,
+        error: 'Internal error',
+        status: 500,
+        code: service_result.error.code,
       )
     end
   end
