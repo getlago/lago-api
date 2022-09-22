@@ -56,6 +56,17 @@ class BaseService
     end
   end
 
+  class ServiceFailure < FailedResult
+    attr_reader :code, :error_message
+
+    def initialize(code:, error_message:)
+      @code = code
+      @error_message = error_message
+
+      super("#{code}: #{error_message}")
+    end
+  end
+
   class Result < OpenStruct
     attr_reader :error, :error_code, :error_details
 
@@ -108,6 +119,10 @@ class BaseService
 
     def single_validation_failure!(error_code:, field: :base)
       validation_failure!(errors: { field.to_sym => [error_code] })
+    end
+
+    def service_failure!(code:, message:)
+      fail_with_error!(ServiceFailure.new(code: code, error_message: message))
     end
 
     def throw_error

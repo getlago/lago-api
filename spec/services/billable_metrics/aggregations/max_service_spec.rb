@@ -117,8 +117,12 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     it 'returns a failed result' do
       result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
-      expect(result).not_to be_success
-      expect(result.error_code).to eq('aggregation_failure')
+      aggregate_failures do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq('aggregation_failure')
+        expect(result.error.error_message).to be_present
+      end
     end
   end
 

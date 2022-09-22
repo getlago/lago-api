@@ -52,12 +52,12 @@ RSpec.describe WebhooksController, type: :request do
       expect(response).to have_http_status(:success)
 
       expect(PaymentProviders::StripeService).to have_received(:new)
-      expect(stripe_service). to have_received(:handle_incoming_webhook)
+      expect(stripe_service).to have_received(:handle_incoming_webhook)
     end
 
     context 'when failing to handle stripe event' do
       let(:result) do
-        BaseService::Result.new.fail!(code: 'webhook_error', message: 'Invalid payload')
+        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
       end
 
       it 'returns a bad request' do

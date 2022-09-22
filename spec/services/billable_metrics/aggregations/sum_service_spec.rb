@@ -45,7 +45,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     expect(result.aggregation).to eq(48)
     expect(result.count).to eq(4)
-    expect(result.options).to eq({ running_total: [12, 24]})
+    expect(result.options).to eq({ running_total: [12, 24] })
   end
 
   context 'when options are not present' do
@@ -53,7 +53,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     it 'returns an empty running total array' do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
-      expect(result.options).to eq({ running_total: []})
+      expect(result.options).to eq({ running_total: [] })
     end
   end
 
@@ -64,7 +64,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     it 'returns an empty running total array' do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
-      expect(result.options).to eq({ running_total: []})
+      expect(result.options).to eq({ running_total: [] })
     end
   end
 
@@ -75,7 +75,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     it 'returns running total based on per total aggregation' do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
-      expect(result.options).to eq({ running_total: [12, 24, 36]})
+      expect(result.options).to eq({ running_total: [12, 24, 36] })
     end
   end
 
@@ -86,7 +86,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     it 'returns running total based on per events' do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
-      expect(result.options).to eq({ running_total: [12, 24]})
+      expect(result.options).to eq({ running_total: [12, 24] })
     end
   end
 
@@ -154,8 +154,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     it 'returns a failed result' do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
-      expect(result).not_to be_success
-      expect(result.error_code).to eq('aggregation_failure')
+      aggregate_failures do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq('aggregation_failure')
+        expect(result.error.error_message).to be_present
+      end
     end
   end
 end
