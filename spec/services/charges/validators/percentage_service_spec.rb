@@ -119,7 +119,8 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
           expect(percentage_service).not_to be_valid
           expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
           expect(percentage_service.result.error.messages.keys).to include(:free_units_per_events)
-          expect(percentage_service.result.error.messages[:free_units_per_events]).to include('invalid_free_units_per_events')
+          expect(percentage_service.result.error.messages[:free_units_per_events])
+            .to include('invalid_free_units_per_events')
         end
       end
     end
@@ -137,7 +138,8 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
           expect(percentage_service).not_to be_valid
           expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
           expect(percentage_service.result.error.messages.keys).to include(:free_units_per_events)
-          expect(percentage_service.result.error.messages[:free_units_per_events]).to include('invalid_free_units_per_events')
+          expect(percentage_service.result.error.messages[:free_units_per_events])
+            .to include('invalid_free_units_per_events')
         end
       end
     end

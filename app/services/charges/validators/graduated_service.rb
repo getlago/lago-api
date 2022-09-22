@@ -33,9 +33,9 @@ module Charges
           add_error(field: :per_unit_amount, error_code: 'invalid_amount')
         end
 
-        unless ::Validators::DecimalAmountService.new(range[:flat_amount]).valid_amount?
-          add_error(field: :flat_amount, error_code: 'invalid_amount')
-        end
+        return if ::Validators::DecimalAmountService.new(range[:flat_amount]).valid_amount?
+
+        add_error(field: :flat_amount, error_code: 'invalid_amount')
       end
 
       def valid_bounds?(range, index, next_from_value)
