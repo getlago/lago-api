@@ -12,19 +12,20 @@ RSpec.describe Charge, type: :model do
     let(:validation_service) { instance_double(Charges::Validators::GraduatedService) }
 
     let(:service_response) do
-      BaseService::Result.new.fail!(
-        code: :invalid_properties,
-        message: [
-          :invalid_amount,
-          :invalid_graduated_ranges,
-        ],
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          amount: ['invalid_amount'],
+          ranges: ['invalid_graduated_ranges'],
+        },
       )
     end
 
     it 'delegates to a validation service' do
       allow(Charges::Validators::GraduatedService).to receive(:new)
         .and_return(validation_service)
-      allow(validation_service).to receive(:validate)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
         .and_return(service_response)
 
       aggregate_failures do
@@ -35,7 +36,8 @@ RSpec.describe Charge, type: :model do
 
         expect(Charges::Validators::GraduatedService).to have_received(:new)
           .with(charge: charge)
-        expect(validation_service).to have_received(:validate)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -45,13 +47,16 @@ RSpec.describe Charge, type: :model do
       it 'does not apply the validation' do
         allow(Charges::Validators::GraduatedService).to receive(:new)
           .and_return(validation_service)
-        allow(validation_service).to receive(:validate)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
           .and_return(service_response)
 
         charge.valid?
 
         expect(Charges::Validators::GraduatedService).not_to have_received(:new)
-        expect(validation_service).not_to have_received(:validate)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
       end
     end
   end
@@ -65,16 +70,19 @@ RSpec.describe Charge, type: :model do
     let(:validation_service) { instance_double(Charges::Validators::StandardService) }
 
     let(:service_response) do
-      BaseService::Result.new.fail!(
-        code: :invalid_properties,
-        message: [:invalid_amount],
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          amount: ['invalid_amount'],
+        },
       )
     end
 
     it 'delegates to a validation service' do
       allow(Charges::Validators::StandardService).to receive(:new)
         .and_return(validation_service)
-      allow(validation_service).to receive(:validate)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
         .and_return(service_response)
 
       aggregate_failures do
@@ -84,7 +92,8 @@ RSpec.describe Charge, type: :model do
 
         expect(Charges::Validators::StandardService).to have_received(:new)
           .with(charge: charge)
-        expect(validation_service).to have_received(:validate)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -94,13 +103,16 @@ RSpec.describe Charge, type: :model do
       it 'does not apply the validation' do
         allow(Charges::Validators::StandardService).to receive(:new)
           .and_return(validation_service)
-        allow(validation_service).to receive(:validate)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
           .and_return(service_response)
 
         charge.valid?
 
         expect(Charges::Validators::StandardService).not_to have_received(:new)
-        expect(validation_service).not_to have_received(:validate)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
       end
     end
   end
@@ -114,20 +126,21 @@ RSpec.describe Charge, type: :model do
     let(:validation_service) { instance_double(Charges::Validators::PackageService) }
 
     let(:service_response) do
-      BaseService::Result.new.fail!(
-        code: :invalid_properties,
-        message: [
-          :invalid_amount,
-          :invalid_free_units,
-          :invalid_package_size,
-        ],
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          amount: ['invalid_amount'],
+          free_units: ['invalid_free_units'],
+          package_size: ['invalid_package_size'],
+        },
       )
     end
 
     it 'delegates to a validation service' do
       allow(Charges::Validators::PackageService).to receive(:new)
         .and_return(validation_service)
-      allow(validation_service).to receive(:validate)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
         .and_return(service_response)
 
       aggregate_failures do
@@ -139,7 +152,8 @@ RSpec.describe Charge, type: :model do
 
         expect(Charges::Validators::PackageService).to have_received(:new)
           .with(charge: charge)
-        expect(validation_service).to have_received(:validate)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -149,13 +163,16 @@ RSpec.describe Charge, type: :model do
       it 'does not apply the validation' do
         allow(Charges::Validators::PackageService).to receive(:new)
           .and_return(validation_service)
-        allow(validation_service).to receive(:validate)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
           .and_return(service_response)
 
         charge.valid?
 
         expect(Charges::Validators::PackageService).not_to have_received(:new)
-        expect(validation_service).not_to have_received(:validate)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
       end
     end
   end
@@ -167,21 +184,22 @@ RSpec.describe Charge, type: :model do
     let(:validation_service) { instance_double(Charges::Validators::PercentageService) }
 
     let(:service_response) do
-      BaseService::Result.new.fail!(
-        code: :invalid_properties,
-        message: [
-          :invalid_rate,
-          :invalid_fixed_amount,
-          :invalid_free_units_per_events,
-          :invalid_free_units_per_total_aggregation,
-        ],
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          amount: ['invalid_fixed_amount'],
+          free_units_per_events: ['invalid_free_units_per_events'],
+          free_units_per_total_aggregation: ['invalid_free_units_per_total_aggregation'],
+          rate: ['invalid_rate'],
+        },
       )
     end
 
     it 'delegates to a validation service' do
       allow(Charges::Validators::PercentageService).to receive(:new)
         .and_return(validation_service)
-      allow(validation_service).to receive(:validate)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
         .and_return(service_response)
 
       aggregate_failures do
@@ -194,7 +212,8 @@ RSpec.describe Charge, type: :model do
 
         expect(Charges::Validators::PercentageService).to have_received(:new)
           .with(charge: charge)
-        expect(validation_service).to have_received(:validate)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -204,13 +223,15 @@ RSpec.describe Charge, type: :model do
       it 'does not apply the validation' do
         allow(Charges::Validators::PercentageService).to receive(:new)
           .and_return(validation_service)
-        allow(validation_service).to receive(:validate)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
           .and_return(service_response)
-
         charge.valid?
 
         expect(Charges::Validators::PercentageService).not_to have_received(:new)
-        expect(validation_service).not_to have_received(:validate)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
       end
     end
   end
@@ -224,19 +245,20 @@ RSpec.describe Charge, type: :model do
     let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
 
     let(:service_response) do
-      BaseService::Result.new.fail!(
-        code: :invalid_properties,
-        message: [
-          :invalid_amount,
-          :invalid_ranges,
-        ],
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          amount: ['invalid_amount'],
+          ranges: ['invalid_ranges'],
+        },
       )
     end
 
     it 'delegates to a validation service' do
       allow(Charges::Validators::VolumeService).to receive(:new)
         .and_return(validation_service)
-      allow(validation_service).to receive(:validate)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
         .and_return(service_response)
 
       aggregate_failures do
@@ -247,7 +269,8 @@ RSpec.describe Charge, type: :model do
 
         expect(Charges::Validators::VolumeService).to have_received(:new)
           .with(charge: charge)
-        expect(validation_service).to have_received(:validate)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -257,13 +280,16 @@ RSpec.describe Charge, type: :model do
       it 'does not apply the validation' do
         allow(Charges::Validators::VolumeService).to receive(:new)
           .and_return(validation_service)
-        allow(validation_service).to receive(:validate)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
           .and_return(service_response)
 
         charge.valid?
 
         expect(Charges::Validators::VolumeService).not_to have_received(:new)
-        expect(validation_service).not_to have_received(:validate)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
       end
     end
   end

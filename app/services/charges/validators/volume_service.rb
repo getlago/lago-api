@@ -3,26 +3,20 @@
 module Charges
   module Validators
     class VolumeService < Charges::Validators::BaseService
-      def validate
-        errors = []
-
+      def valid?
         if ranges.blank?
-          errors << :missing_ranges
-          return result.fail!(code: :invalid_properties, message: errors)
+          add_error(field: :ranges, error_code: 'missing_ranges')
+        else
+          next_from_value = 0
+          ranges.each_with_index do |range, index|
+            validate_amounts(range)
+            add_error(field: :ranges, error_code: 'invalid_ranges') unless valid_bounds?(range, index, next_from_value)
+
+            next_from_value = (range[:to_value] || 0) + 1
+          end
         end
 
-        next_from_value = 0
-        ranges.each_with_index do |range, index|
-          errors << :invalid_per_unit_amount unless valid_amount?(range[:per_unit_amount])
-          errors << :invalid_flat_amount unless valid_amount?(range[:flat_amount])
-          errors << :invalid_ranges unless valid_bounds?(range, index, next_from_value)
-
-          next_from_value = (range[:to_value] || 0) + 1
-        end
-
-        return result.fail!(code: :invalid_properties, message: errors) if errors.present?
-
-        result
+        super
       end
 
       private
@@ -31,8 +25,14 @@ module Charges
         charge.properties['ranges']&.map(&:with_indifferent_access)
       end
 
-      def valid_amount?(amount)
-        ::Validators::DecimalAmountService.new(amount).valid_amount?
+      def validate_amounts(range)
+        unless ::Validators::DecimalAmountService.new(range[:per_unit_amount]).valid_amount?
+          add_error(field: :per_unit_amount, error_code: 'invalid_amount')
+        end
+
+        return if ::Validators::DecimalAmountService.new(range[:flat_amount]).valid_amount?
+
+        add_error(field: :flat_amount, error_code: 'invalid_amount')
       end
 
       def valid_bounds?(range, index, next_from_value)

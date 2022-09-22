@@ -15,8 +15,8 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
     }
   end
 
-  describe 'validate' do
-    it { expect(package_service.validate).to be_success }
+  describe '.valid?' do
+    it { expect(package_service).to be_valid }
 
     context 'without amount' do
       let(:package_properties) do
@@ -26,7 +26,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:amount)
+          expect(package_service.result.error.messages[:amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'when amount is not numeric' do
@@ -38,7 +45,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:amount)
+          expect(package_service.result.error.messages[:amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with negative amount' do
@@ -50,7 +64,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:amount)
+          expect(package_service.result.error.messages[:amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'without package size' do
@@ -61,7 +82,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_package_size) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:package_size)
+          expect(package_service.result.error.messages[:package_size]).to include('invalid_package_size')
+        end
+      end
     end
 
     context 'when package size is not numeric' do
@@ -73,7 +101,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_package_size) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:package_size)
+          expect(package_service.result.error.messages[:package_size]).to include('invalid_package_size')
+        end
+      end
     end
 
     context 'with negative package size' do
@@ -85,7 +120,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_package_size) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:package_size)
+          expect(package_service.result.error.messages[:package_size]).to include('invalid_package_size')
+        end
+      end
     end
 
     context 'with zero package size' do
@@ -97,7 +139,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_package_size) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:package_size)
+          expect(package_service.result.error.messages[:package_size]).to include('invalid_package_size')
+        end
+      end
     end
 
     context 'without free units size' do
@@ -108,7 +157,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_free_units) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:free_units)
+          expect(package_service.result.error.messages[:free_units]).to include('invalid_free_units')
+        end
+      end
     end
 
     context 'when free units are not numeric' do
@@ -120,7 +176,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_free_units) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:free_units)
+          expect(package_service.result.error.messages[:free_units]).to include('invalid_free_units')
+        end
+      end
     end
 
     context 'with negative free units' do
@@ -132,7 +195,14 @@ RSpec.describe Charges::Validators::PackageService, type: :service do
         }
       end
 
-      it { expect(package_service.validate.error).to include(:invalid_free_units) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(package_service).not_to be_valid
+          expect(package_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(package_service.result.error.messages.keys).to include(:free_units)
+          expect(package_service.result.error.messages[:free_units]).to include('invalid_free_units')
+        end
+      end
     end
   end
 end

@@ -3,13 +3,10 @@
 module Charges
   module Validators
     class StandardService < Charges::Validators::BaseService
-      def validate
-        errors = []
-        errors << :invalid_amount unless valid_amount?
+      def valid?
+        validate_amount
 
-        return result.fail!(code: :invalid_properties, message: errors) if errors.present?
-
-        result
+        super
       end
 
       private
@@ -18,8 +15,10 @@ module Charges
         properties['amount']
       end
 
-      def valid_amount?
-        ::Validators::DecimalAmountService.new(amount).valid_amount?
+      def validate_amount
+        return if ::Validators::DecimalAmountService.new(amount).valid_amount?
+
+        add_error(field: :amount, error_code: 'invalid_amount')
       end
     end
   end
