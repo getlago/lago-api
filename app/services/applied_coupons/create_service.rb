@@ -43,7 +43,12 @@ module AppliedCoupons
     def check_preconditions
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'coupon') unless coupon
-      return result.fail!(code: 'coupon_already_applied') if coupon_already_applied?
+      return unless coupon_already_applied?
+
+      result.single_validation_failure!(
+        field: 'coupon',
+        error_code: 'coupon_already_applied',
+      )
     end
 
     def process_creation(amount_cents:, amount_currency:)
