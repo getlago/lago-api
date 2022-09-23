@@ -308,6 +308,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       let(:create_subscription) { false }
       let(:amount_currency) { 'NOK' }
 
+      before { customer.update!(currency: nil) }
+
       it 'assigns the coupon currency to the customer' do
         create_result
 

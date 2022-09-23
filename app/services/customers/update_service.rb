@@ -8,7 +8,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if args.key?(:currency)
-          update_currency(customer: customer, currency: args[:currency])
+          update_currency(customer: customer, currency: args[:currency], customer_update: true)
           return result unless result.success?
         end
 
@@ -43,10 +43,19 @@ module Customers
       result.record_validation_failure!(record: e.record)
     end
 
-    def update_currency(customer:, currency:)
-      result.customer = customer
+    def update_currency(customer:, currency:, customer_update: false)
+      return result if customer.currency == currency
 
-      if !customer.editable_currency? && customer.currency.present? && customer.currency != currency
+      if customer_update
+        # NOTE: direct update of the customer currency
+        unless customer.editable_currency?
+          return result.single_validation_failure!(
+            field: :currency,
+            error_code: 'currencies_does_not_match',
+          )
+        end
+      elsif customer.currency.present? || !customer.editable_currency?
+        # NOTE: Assign currency from another resource
         return result.single_validation_failure!(
           field: :currency,
           error_code: 'currencies_does_not_match',

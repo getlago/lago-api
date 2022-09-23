@@ -26,6 +26,7 @@ module Customers
           currency_result = Customers::UpdateService.new(nil).update_currency(
             customer: customer,
             currency: params[:currency],
+            customer_update: true,
           )
           return currency_result unless currency_result.success?
         end

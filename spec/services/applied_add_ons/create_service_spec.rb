@@ -134,6 +134,8 @@ RSpec.describe AppliedAddOns::CreateService, type: :service do
       let(:create_subscription) { false }
       let(:amount_currency) { 'NOK' }
 
+      before { customer.update!(currency: nil) }
+
       it 'assigns the add on currency to the customer' do
         create_result
 
