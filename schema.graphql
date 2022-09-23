@@ -97,7 +97,10 @@ type AppliedCoupon {
   amountCurrency: CurrencyEnum!
   coupon: Coupon!
   createdAt: ISO8601DateTime!
+  frequency: CouponFrequency!
+  frequencyDuration: Int
   id: ID!
+  percentageRate: Float
   terminatedAt: ISO8601DateTime!
 }
 
@@ -1471,6 +1474,8 @@ type Coupon {
   expiration: CouponExpiration!
   expirationDate: ISO8601Date
   expirationDuration: Int
+  frequency: CouponFrequency!
+  frequencyDuration: Int
   id: ID!
   name: String!
   organization: Organization
@@ -1504,6 +1509,8 @@ type CouponDetails {
   expiration: CouponExpiration!
   expirationDate: ISO8601Date
   expirationDuration: Int
+  frequency: CouponFrequency!
+  frequencyDuration: Int
   id: ID!
   name: String!
   organization: Organization
@@ -1516,6 +1523,11 @@ type CouponDetails {
 enum CouponExpiration {
   no_expiration
   time_limit
+}
+
+enum CouponFrequency {
+  once
+  recurring
 }
 
 enum CouponStatusEnum {
@@ -1572,6 +1584,8 @@ input CreateAppliedCouponInput {
   clientMutationId: String
   couponId: ID!
   customerId: ID!
+  frequency: CouponFrequency
+  frequencyDuration: Int
   percentageRate: Float
 }
 
@@ -1606,6 +1620,8 @@ input CreateCouponInput {
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
   expirationDuration: Int
+  frequency: CouponFrequency!
+  frequencyDuration: Int
   name: String!
   percentageRate: Float
 }
@@ -3663,6 +3679,8 @@ input UpdateCouponInput {
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
   expirationDuration: Int
+  frequency: CouponFrequency!
+  frequencyDuration: Int
   id: String!
   name: String!
   percentageRate: Float

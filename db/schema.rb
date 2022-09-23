@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_21_095507) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_22_105251) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -78,6 +78,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_21_095507) do
     t.datetime "updated_at", null: false
     t.datetime "terminated_at", precision: nil
     t.decimal "percentage_rate", precision: 10, scale: 5
+    t.integer "frequency", default: 0, null: false
+    t.integer "frequency_duration"
     t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true, where: "(status = 0)"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
@@ -123,6 +125,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_21_095507) do
     t.datetime "updated_at", null: false
     t.integer "coupon_type", default: 0, null: false
     t.decimal "percentage_rate", precision: 10, scale: 5
+    t.integer "frequency", default: 0, null: false
+    t.integer "frequency_duration"
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end

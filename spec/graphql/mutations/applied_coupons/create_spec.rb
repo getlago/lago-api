@@ -35,6 +35,7 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
         input: {
           couponId: coupon.id,
           customerId: customer.id,
+          frequency: 'once',
           amountCents: 123,
           amountCurrency: 'EUR',
         },
