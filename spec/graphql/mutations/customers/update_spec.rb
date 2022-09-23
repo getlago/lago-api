@@ -17,7 +17,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           externalId
           paymentProvider
           currency
-          canEditCurrency
+          canEditAttributes
           stripeCustomer { id, providerCustomerId }
         }
       }

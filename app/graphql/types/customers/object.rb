@@ -41,8 +41,8 @@ module Types
         description 'Check if customer is deletable'
       end
 
-      field :can_edit_currency, Boolean, null: false do
-        description 'Check if customer is deletable'
+      field :can_edit_attributes, Boolean, null: false do
+        description 'Check if customer attributes are editable'
       end
 
       def can_be_deleted
@@ -57,8 +57,8 @@ module Types
         object.active_subscriptions.count
       end
 
-      def can_edit_currency
-        object.editable_currency?
+      def can_edit_attributes
+        object.editable?
       end
     end
   end

@@ -29,7 +29,7 @@ module Customers
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
 
         # NOTE: external_id is not editable if customer is attached to subscriptions
-        customer.external_id = args[:external_id] if !customer.attached_to_subscriptions? && args.key?(:external_id)
+        customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 
         customer.save!
       end
@@ -48,13 +48,13 @@ module Customers
 
       if customer_update
         # NOTE: direct update of the customer currency
-        unless customer.editable_currency?
+        unless customer.editable?
           return result.single_validation_failure!(
             field: :currency,
             error_code: 'currencies_does_not_match',
           )
         end
-      elsif customer.currency.present? || !customer.editable_currency?
+      elsif customer.currency.present? || !customer.editable?
         # NOTE: Assign currency from another resource
         return result.single_validation_failure!(
           field: :currency,

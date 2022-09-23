@@ -6273,8 +6273,8 @@
               ]
             },
             {
-              "name": "canEditCurrency",
-              "description": "Check if customer is deletable",
+              "name": "canEditAttributes",
+              "description": "Check if customer attributes are editable",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -6827,8 +6827,8 @@
               ]
             },
             {
-              "name": "canEditCurrency",
-              "description": "Check if customer is deletable",
+              "name": "canEditAttributes",
+              "description": "Check if customer attributes are editable",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
