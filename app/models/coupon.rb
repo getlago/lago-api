@@ -53,7 +53,7 @@ class Coupon < ApplicationRecord
     )
   }
 
-  scope :expired, -> { where('coupons.expiration_date < ?', Time.current.beginning_of_day,) }
+  scope :expired, -> { where('coupons.expiration_date < ?', Time.current.beginning_of_day) }
 
   def attached_to_customers?
     applied_coupons.exists?
