@@ -10,8 +10,10 @@ module Coupons
 
       unless coupon.attached_to_customers?
         coupon.code = args[:code]
+        coupon.coupon_type = args[:coupon_type]
         coupon.amount_cents = args[:amount_cents]
         coupon.amount_currency = args[:amount_currency]
+        coupon.percentage_rate = args[:percentage_rate]
         coupon.expiration = args[:expiration]&.to_sym
         coupon.expiration_duration = args[:expiration_duration]
       end
@@ -32,8 +34,10 @@ module Coupons
 
       unless coupon.attached_to_customers?
         coupon.code = params[:code] if params.key?(:code)
+        coupon.coupon_type = params[:coupon_type] if params.key?(:coupon_type)
         coupon.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         coupon.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
+        coupon.percentage_rate = params[:percentage_rate] if params.key?(:percentage_rate)
         coupon.expiration = params[:expiration] if params.key?(:expiration)
         coupon.expiration_duration = params[:expiration_duration] if params.key?(:expiration_duration)
       end

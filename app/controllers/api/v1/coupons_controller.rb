@@ -80,8 +80,10 @@ module Api
         params.require(:coupon).permit(
           :name,
           :code,
+          :coupon_type,
           :amount_cents,
           :amount_currency,
+          :percentage_rate,
           :expiration,
           :expiration_duration,
         )

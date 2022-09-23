@@ -17,6 +17,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       {
         id: coupon.id,
         name: 'new name',
+        coupon_type: 'fixed_amount',
         amount_cents: 100,
         amount_currency: 'EUR',
         expiration: 'time_limit',
@@ -43,6 +44,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         {
           id: coupon.id,
           name: nil,
+          coupon_type: 'fixed_amount',
           amount_cents: 100,
           amount_currency: 'EUR',
           expiration: 'time_limit',
@@ -69,6 +71,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       {
         name: name,
         code: 'coupon1_code',
+        coupon_type: 'fixed_amount',
         amount_cents: 123,
         amount_currency: 'EUR',
         expiration: 'time_limit',

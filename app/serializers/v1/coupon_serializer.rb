@@ -7,8 +7,10 @@ module V1
         lago_id: model.id,
         name: model.name,
         code: model.code,
+        coupon_type: model.coupon_type,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
+        percentage_rate: model.percentage_rate,
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
         expiration_duration: model.expiration_duration

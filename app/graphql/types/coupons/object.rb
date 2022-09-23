@@ -11,8 +11,10 @@ module Types
       field :name, String, null: false
       field :code, String, null: true
       field :status, Types::Coupons::StatusEnum, null: false
-      field :amount_cents, Integer, null: false
-      field :amount_currency, Types::CurrencyEnum, null: false
+      field :coupon_type, Types::Coupons::CouponTypeEnum, null: false
+      field :amount_cents, Integer, null: true
+      field :amount_currency, Types::CurrencyEnum, null: true
+      field :percentage_rate, Float, null: true
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
       field :expiration_duration, Integer, null: true
