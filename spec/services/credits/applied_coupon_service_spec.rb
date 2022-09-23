@@ -150,7 +150,7 @@ RSpec.describe Credits::AppliedCouponService do
         expect(applied_coupon.reload).not_to be_terminated
       end
 
-      context 'and coupon amount is higher than invoice amount' do
+      context 'when coupon amount is higher than invoice amount' do
         let(:amount_cents) { 10 }
 
         it 'limits the credit amount to the invoice amount' do
@@ -171,7 +171,7 @@ RSpec.describe Credits::AppliedCouponService do
           coupon: coupon,
           frequency: 'recurring',
           frequency_duration: 3,
-          percentage_rate: 20.00
+          percentage_rate: 20.00,
         )
       end
 
@@ -194,14 +194,14 @@ RSpec.describe Credits::AppliedCouponService do
         expect(applied_coupon.reload).not_to be_terminated
       end
 
-      context 'and frequency duration becomes zero' do
+      context 'when frequency duration becomes zero' do
         let(:applied_coupon) do
           create(
             :applied_coupon,
             coupon: coupon,
             frequency: 'recurring',
             frequency_duration: 1,
-            percentage_rate: 20.00
+            percentage_rate: 20.00,
           )
         end
 

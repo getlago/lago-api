@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddFrequencyAndFrequencyDurationToCoupons < ActiveRecord::Migration[7.0]
   def change
     change_table :coupons, bulk: true do |t|
