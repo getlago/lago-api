@@ -87,7 +87,7 @@ module Api
           :frequency,
           :frequency_duration,
           :expiration,
-          :expiration_duration,
+          :expiration_date,
         )
       end
 

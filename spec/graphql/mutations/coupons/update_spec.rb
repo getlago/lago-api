@@ -16,7 +16,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
           amountCents,
           amountCurrency,
           expiration,
-          expirationDuration
+          expirationDate
         }
       }
     GQL
@@ -36,7 +36,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
           amountCents: 123,
           amountCurrency: 'USD',
           expiration: 'time_limit',
-          expirationDuration: 33,
+          expirationDate: (Time.current + 33.days).to_date,
         },
       },
     )
@@ -50,7 +50,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
       expect(result_data['amountCents']).to eq(123)
       expect(result_data['amountCurrency']).to eq('USD')
       expect(result_data['expiration']).to eq('time_limit')
-      expect(result_data['expirationDuration']).to eq(33)
+      expect(result_data['expirationDate']).to eq (Time.current + 33.days).to_date.to_s
     end
   end
 
@@ -68,7 +68,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
             amountCents: 123,
             amountCurrency: 'USD',
             expiration: 'time_limit',
-            expirationDuration: 33,
+            expirationDate: (Time.current + 33.days).to_date,
           },
         },
       )

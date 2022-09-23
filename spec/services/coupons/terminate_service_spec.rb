@@ -40,7 +40,7 @@ RSpec.describe Coupons::TerminateService, type: :service do
         organization: organization,
         status: 'active',
         expiration: 'time_limit',
-        expiration_duration: rand(1..30),
+        expiration_date: (Time.current - 30.days).to_date,
         created_at: Time.zone.now - 40.days,
       )
     end
@@ -52,7 +52,7 @@ RSpec.describe Coupons::TerminateService, type: :service do
         organization: organization,
         status: 'active',
         expiration: 'time_limit',
-        expiration_duration: rand(1..30),
+        expiration_date: (Time.current + 15.days).to_date,
         created_at: Time.zone.now,
       )
     end

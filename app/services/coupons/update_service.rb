@@ -7,6 +7,8 @@ module Coupons
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.name = args[:name]
+      coupon.expiration = args[:expiration]&.to_sym
+      coupon.expiration_date = args[:expiration_date]
 
       unless coupon.attached_to_customers?
         coupon.code = args[:code]
@@ -16,8 +18,6 @@ module Coupons
         coupon.percentage_rate = args[:percentage_rate]
         coupon.frequency = args[:frequency]
         coupon.frequency_duration = args[:frequency_duration]
-        coupon.expiration = args[:expiration]&.to_sym
-        coupon.expiration_duration = args[:expiration_duration]
       end
 
       coupon.save!
@@ -33,6 +33,8 @@ module Coupons
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.name = params[:name] if params.key?(:name)
+      coupon.expiration = params[:expiration] if params.key?(:expiration)
+      coupon.expiration_date = params[:expiration_date] if params.key?(:expiration_date)
 
       unless coupon.attached_to_customers?
         coupon.code = params[:code] if params.key?(:code)
@@ -42,8 +44,6 @@ module Coupons
         coupon.percentage_rate = params[:percentage_rate] if params.key?(:percentage_rate)
         coupon.frequency = params[:frequency] if params.key?(:frequency)
         coupon.frequency_duration = params[:frequency_duration] if params.key?(:frequency_duration)
-        coupon.expiration = params[:expiration] if params.key?(:expiration)
-        coupon.expiration_duration = params[:expiration_duration] if params.key?(:expiration_duration)
       end
 
       coupon.save!

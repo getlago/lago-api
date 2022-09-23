@@ -19,7 +19,7 @@ module Mutations
       argument :frequency_duration, Integer, required: false
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
-      argument :expiration_duration, Integer, required: false
+      argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Coupons::Object
 
