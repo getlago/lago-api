@@ -4,7 +4,7 @@ class UsersService < BaseService
   def login(email, password)
     result.user = User.find_by(email: email)&.authenticate(password)
 
-    unless result.user&.memberships&.active&.any?
+    unless result.user.present? && result.user.memberships&.active&.any?
       return result.single_validation_failure!(error_code: 'incorrect_login_or_password')
     end
 
