@@ -15,6 +15,8 @@ module Types
       field :amount_cents, Integer, null: true
       field :amount_currency, Types::CurrencyEnum, null: true
       field :percentage_rate, Float, null: true
+      field :frequency, Types::Coupons::FrequencyEnum, null: false
+      field :frequency_duration, Integer, null: true
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
       field :expiration_duration, Integer, null: true

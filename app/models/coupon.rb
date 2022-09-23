@@ -23,9 +23,15 @@ class Coupon < ApplicationRecord
     :percentage,
   ].freeze
 
+  FREQUENCIES = [
+    :once,
+    :recurring,
+  ].freeze
+
   enum status: STATUSES
   enum expiration: EXPIRATION_TYPES
   enum coupon_type: COUPON_TYPES
+  enum frequency: FREQUENCIES
 
   monetize :amount_cents
 

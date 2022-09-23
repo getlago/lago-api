@@ -11,6 +11,8 @@ module V1
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         percentage_rate: model.percentage_rate,
+        frequency: model.frequency,
+        frequency_duration: model.frequency_duration,
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
         expiration_duration: model.expiration_duration

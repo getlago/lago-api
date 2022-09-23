@@ -15,6 +15,8 @@ module Mutations
       argument :amount_cents, Integer, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false
       argument :percentage_rate, Float, required: false
+      argument :frequency, Types::Coupons::FrequencyEnum, required: true
+      argument :frequency_duration, Integer, required: false
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
       argument :expiration_duration, Integer, required: false

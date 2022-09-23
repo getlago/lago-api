@@ -14,6 +14,8 @@ module Coupons
         coupon.amount_cents = args[:amount_cents]
         coupon.amount_currency = args[:amount_currency]
         coupon.percentage_rate = args[:percentage_rate]
+        coupon.frequency = args[:frequency]
+        coupon.frequency_duration = args[:frequency_duration]
         coupon.expiration = args[:expiration]&.to_sym
         coupon.expiration_duration = args[:expiration_duration]
       end
@@ -38,6 +40,8 @@ module Coupons
         coupon.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         coupon.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
         coupon.percentage_rate = params[:percentage_rate] if params.key?(:percentage_rate)
+        coupon.frequency = params[:frequency] if params.key?(:frequency)
+        coupon.frequency_duration = params[:frequency_duration] if params.key?(:frequency_duration)
         coupon.expiration = params[:expiration] if params.key?(:expiration)
         coupon.expiration_duration = params[:expiration_duration] if params.key?(:expiration_duration)
       end
