@@ -47,7 +47,7 @@ module Credits
         return (discounted_value >= invoice.amount_cents) ? invoice.amount_cents : discounted_value.round
       end
 
-       applied_coupon.recurring? ? calculate_recurring_amount : calculate_one_time_coupon_amount
+      applied_coupon.recurring? ? calculate_recurring_amount : calculate_one_time_coupon_amount
     end
 
     def remaining_amount
