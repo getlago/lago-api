@@ -22,7 +22,11 @@ module Credits
       )
 
       applied_coupon.frequency_duration -= 1 if applied_coupon.recurring?
-      should_terminate_applied_coupon?(credit_amount) ? applied_coupon.mark_as_terminated! : save_frequency_duration
+      if should_terminate_applied_coupon?(credit_amount)
+        applied_coupon.mark_as_terminated!
+      elsif applied_coupon.recurring?
+        applied_coupon.save!
+      end
 
       result.credit = new_credit
       result
@@ -47,7 +51,15 @@ module Credits
         return (discounted_value >= invoice.amount_cents) ? invoice.amount_cents : discounted_value.round
       end
 
-      applied_coupon.recurring? ? calculate_recurring_amount : calculate_one_time_coupon_amount
+      if applied_coupon.recurring?
+        return invoice.amount_cents if applied_coupon.amount_cents > invoice.amount_cents
+
+        applied_coupon.amount_cents
+      else
+        return invoice.amount_cents if remaining_amount > invoice.amount_cents
+
+        remaining_amount
+      end
     end
 
     def remaining_amount
@@ -63,24 +75,6 @@ module Credits
       else
         applied_coupon.frequency_duration <= 0
       end
-    end
-
-    def save_frequency_duration
-      return if applied_coupon.once?
-
-      applied_coupon.save!
-    end
-
-    def calculate_recurring_amount
-      return invoice.amount_cents if applied_coupon.amount_cents > invoice.amount_cents
-
-      applied_coupon.amount_cents
-    end
-
-    def calculate_one_time_coupon_amount
-      return invoice.amount_cents if remaining_amount > invoice.amount_cents
-
-      remaining_amount
     end
   end
 end
