@@ -11,8 +11,10 @@ module Coupons
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         percentage_rate: args[:percentage_rate],
+        frequency: args[:frequency],
+        frequency_duration: args[:frequency_duration],
         expiration: args[:expiration]&.to_sym,
-        expiration_duration: args[:expiration_duration],
+        expiration_date: args[:expiration_date],
       )
 
       result.coupon = coupon

@@ -84,8 +84,10 @@ module Api
           :amount_cents,
           :amount_currency,
           :percentage_rate,
+          :frequency,
+          :frequency_duration,
           :expiration,
-          :expiration_duration,
+          :expiration_date,
         )
       end
 

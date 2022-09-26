@@ -13,7 +13,13 @@ class AppliedCoupon < ApplicationRecord
     :terminated,
   ].freeze
 
+  FREQUENCIES = [
+    :once,
+    :recurring,
+  ].freeze
+
   enum status: STATUSES
+  enum frequency: FREQUENCIES
 
   monetize :amount_cents
 

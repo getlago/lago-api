@@ -8,5 +8,6 @@ FactoryBot.define do
     expiration { 'no_expiration' }
     amount_cents { 200 }
     amount_currency { 'EUR' }
+    frequency { 'once' }
   end
 end

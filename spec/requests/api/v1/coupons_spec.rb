@@ -11,10 +11,11 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         name: 'coupon1',
         code: 'coupon1_code',
         coupon_type: 'fixed_amount',
+        frequency: 'once',
         amount_cents: 123,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_duration: 15,
+        expiration_date: (Time.current + 15.days).to_date,
       }
     end
 
@@ -37,10 +38,11 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         name: 'coupon1',
         code: code,
         coupon_type: 'fixed_amount',
+        frequency: 'once',
         amount_cents: 123,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_duration: 15,
+        expiration_date: (Time.current + 15.days).to_date,
       }
     end
 

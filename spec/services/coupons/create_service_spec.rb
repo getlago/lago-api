@@ -15,10 +15,11 @@ RSpec.describe Coupons::CreateService, type: :service do
         code: 'free-beer',
         organization_id: organization.id,
         coupon_type: 'fixed_amount',
+        frequency: 'once',
         amount_cents: 100,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_duration: 3,
+        expiration_date: (Time.current + 3.days).to_date,
       }
     end
 
