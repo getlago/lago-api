@@ -1473,7 +1473,6 @@ type Coupon {
   customerCount: Int!
   expiration: CouponExpiration!
   expirationDate: ISO8601Date
-  expirationDuration: Int
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
@@ -1508,7 +1507,6 @@ type CouponDetails {
   customerCount: Int!
   expiration: CouponExpiration!
   expirationDate: ISO8601Date
-  expirationDuration: Int
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
@@ -1619,7 +1617,7 @@ input CreateCouponInput {
   code: String
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
-  expirationDuration: Int
+  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   name: String!
@@ -3678,7 +3676,7 @@ input UpdateCouponInput {
   code: String
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
-  expirationDuration: Int
+  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: String!

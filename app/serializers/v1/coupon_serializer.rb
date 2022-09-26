@@ -15,7 +15,7 @@ module V1
         frequency_duration: model.frequency_duration,
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
-        expiration_duration: model.expiration_duration
+        expiration_date: model.expiration_date&.iso8601,
       }
     end
   end

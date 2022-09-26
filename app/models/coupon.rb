@@ -41,26 +41,19 @@ class Coupon < ApplicationRecord
   validates :amount_cents, numericality: { greater_than: 0 }
   validates :amount_currency, inclusion: { in: currency_list }
 
-  validates :expiration_duration, numericality: { greater_than: 0 }, if: :time_limit?
-
   scope :order_by_status_and_expiration, lambda {
     order(
       Arel.sql(
         [
           'coupons.status ASC',
           'coupons.expiration ASC',
-          'coupons.created_at + make_interval(days => COALESCE(coupons.expiration_duration, 0)) ASC',
+          'coupons.expiration_date ASC',
         ].join(', '),
       ),
     )
   }
 
-  scope :expired, lambda {
-    where(
-      '(coupons.created_at + make_interval(days => coupons.expiration_duration)) < ?',
-      Time.zone.now.beginning_of_day,
-    )
-  }
+  scope :expired, -> { where('coupons.expiration_date < ?', Time.current.beginning_of_day) }
 
   def attached_to_customers?
     applied_coupons.exists?
@@ -73,11 +66,5 @@ class Coupon < ApplicationRecord
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
-  end
-
-  def expiration_date
-    return unless expiration_duration
-
-    created_at.to_date + expiration_duration.days
   end
 end

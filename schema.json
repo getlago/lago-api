@@ -3659,20 +3659,6 @@
               ]
             },
             {
-              "name": "expirationDuration",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "frequency",
               "description": null,
               "type": {
@@ -4026,20 +4012,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "expirationDuration",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -4827,11 +4799,11 @@
               "deprecationReason": null
             },
             {
-              "name": "expirationDuration",
+              "name": "expirationDate",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Int",
+                "name": "ISO8601Date",
                 "ofType": null
               },
               "defaultValue": null,
@@ -13970,11 +13942,11 @@
               "deprecationReason": null
             },
             {
-              "name": "expirationDuration",
+              "name": "expirationDate",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Int",
+                "name": "ISO8601Date",
                 "ofType": null
               },
               "defaultValue": null,

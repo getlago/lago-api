@@ -19,7 +19,6 @@ module Types
       field :frequency_duration, Integer, null: true
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
-      field :expiration_duration, Integer, null: true
       field :expiration_date, GraphQL::Types::ISO8601Date, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
