@@ -74,7 +74,7 @@ module AppliedCoupons
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer: customer,
-          currency: amount_currency,
+          currency: applied_coupon_attributes[:amount_currency],
         )
         return currency_result unless currency_result.success?
 
