@@ -9,7 +9,9 @@ class WebhooksController < ApplicationController
     )
 
     unless result.success?
-      return head(:bad_request) if result.error_code == 'webhook_error'
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
+        return head(:bad_request)
+      end
 
       result.throw_error
     end

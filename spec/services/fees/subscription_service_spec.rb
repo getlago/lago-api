@@ -900,6 +900,7 @@ RSpec.describe Fees::SubscriptionService do
           create(
             :subscription,
             status: :terminated,
+            terminated_at: DateTime.parse('2022-05-09'),
             plan: previous_plan,
             subscription_date: DateTime.parse('2021-03-25'),
             billing_time: :anniversary,
@@ -954,7 +955,10 @@ RSpec.describe Fees::SubscriptionService do
       end
 
       context 'when new plan is pay in advance' do
-        before { plan.update(pay_in_advance: true) }
+        before do
+          plan.update(pay_in_advance: true)
+          subscription.previous_subscription.update(terminated_at: subscription.started_at)
+        end
 
         let(:boundaries) do
           {
@@ -973,7 +977,10 @@ RSpec.describe Fees::SubscriptionService do
       end
 
       context 'when new plan is yearly and pay in advance' do
-        before { plan.update(interval: :yearly, pay_in_advance: true, amount_cents: 100_000) }
+        before do
+          plan.update(interval: :yearly, pay_in_advance: true, amount_cents: 100_000)
+          subscription.previous_subscription.update(terminated_at: subscription.started_at)
+        end
 
         let(:boundaries) do
           {
@@ -987,7 +994,7 @@ RSpec.describe Fees::SubscriptionService do
           result = fees_subscription_service.create
           created_fee = result.fee
 
-          expect(created_fee.amount_cents).to eq(79_246)
+          expect(created_fee.amount_cents).to eq(79_956)
         end
       end
 
@@ -995,6 +1002,7 @@ RSpec.describe Fees::SubscriptionService do
         before do
           plan.update(interval: :weekly, pay_in_advance: true, amount_cents: 100_000)
           previous_plan.update(interval: :weekly)
+          subscription.previous_subscription.update(terminated_at: subscription.started_at)
         end
 
         let(:boundaries) do
@@ -1017,6 +1025,7 @@ RSpec.describe Fees::SubscriptionService do
         before do
           plan.update(interval: :monthly, pay_in_advance: true, amount_cents: 1_000)
           previous_plan.update(interval: :yearly, amount_cents: 10_000)
+          subscription.previous_subscription.update(terminated_at: subscription.started_at)
         end
 
         it 'creates a subscription fee with amount zero' do
@@ -1070,7 +1079,10 @@ RSpec.describe Fees::SubscriptionService do
       end
 
       context 'when new plan is pay in advance' do
-        before { plan.update(pay_in_advance: true) }
+        before do
+          plan.update(pay_in_advance: true)
+          subscription.previous_subscription.update(terminated_at: subscription.started_at)
+        end
 
         let(:boundaries) do
           {
@@ -1104,6 +1116,7 @@ RSpec.describe Fees::SubscriptionService do
         create(
           :subscription,
           status: :terminated,
+          terminated_at: DateTime.parse('2022-05-08'),
           plan: previous_plan,
           subscription_date: DateTime.parse('2021-03-25'),
           billing_time: :anniversary,

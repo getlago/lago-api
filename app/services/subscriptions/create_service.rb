@@ -53,11 +53,16 @@ module Subscriptions
       return result.not_found_failure!(resource: 'customer') unless current_customer
       return result.not_found_failure!(resource: 'plan') unless current_plan
 
-      if currency_missmatch?(current_customer&.active_subscription&.plan, current_plan)
-        return result.fail!(code: 'currencies_does_not_match', message: 'currencies does not match')
+      ActiveRecord::Base.transaction do
+        currency_result = Customers::UpdateService.new(nil).update_currency(
+          customer: current_customer,
+          currency: current_plan.amount_currency,
+        )
+        return currency_result unless currency_result.success?
+
+        result.subscription = handle_subscription
       end
 
-      result.subscription = handle_subscription
       track_subscription_created(result.subscription)
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -99,10 +104,14 @@ module Subscriptions
       new_subscription.mark_as_active!
 
       if current_plan.pay_in_advance?
-        BillSubscriptionJob.perform_later(
-          [new_subscription],
-          Time.zone.now.to_i,
-        )
+        # NOTE: Since job is laucnhed from inside a db transaction
+        #       we must wait for it to be commited before processing the job
+        BillSubscriptionJob
+          .set(wait: 2.seconds)
+          .perform_later(
+            [new_subscription],
+            Time.zone.now.to_i,
+          )
       end
 
       new_subscription
@@ -119,49 +128,53 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
       )
 
-      ActiveRecord::Base.transaction do
-        cancel_pending_subscription if pending_subscription?
+      cancel_pending_subscription if pending_subscription?
 
-        # NOTE: When upgrading, the new subscription becomes active immediatly
-        #       The previous one must be terminated
-        current_subscription.mark_as_terminated!
-        new_subscription.mark_as_active!
-      end
+      # NOTE: When upgrading, the new subscription becomes active immediatly
+      #       The previous one must be terminated
+      current_subscription.mark_as_terminated!
+      new_subscription.mark_as_active!
 
       if current_subscription.plan.pay_in_arrear?
-        BillSubscriptionJob.perform_later(
-          [current_subscription],
-          Time.zone.now.to_i,
-        )
+        # NOTE: Since job is laucnhed from inside a db transaction
+        #       we must wait for it to be commited before processing the job
+        BillSubscriptionJob
+          .set(wait: 2.seconds)
+          .perform_later(
+            [current_subscription],
+            Time.zone.now.to_i,
+          )
       end
 
       if current_plan.pay_in_advance?
-        BillSubscriptionJob.perform_later(
-          [new_subscription],
-          Time.zone.now.to_i,
-        )
+        # NOTE: Since job is laucnhed from inside a db transaction
+        #       we must wait for it to be commited before processing the job
+        BillSubscriptionJob
+          .set(wait: 2.seconds)
+          .perform_later(
+            [new_subscription],
+            Time.zone.now.to_i,
+          )
       end
 
       new_subscription
     end
 
     def downgrade_subscription
-      ActiveRecord::Base.transaction do
-        cancel_pending_subscription if pending_subscription?
+      cancel_pending_subscription if pending_subscription?
 
-        # NOTE: When downgrading a subscription, we keep the current one active
-        #       until the next billing day. The new subscription will become active at this date
-        Subscription.create!(
-          customer: current_customer,
-          plan: current_plan,
-          name: name,
-          external_id: current_subscription.external_id,
-          previous_subscription_id: current_subscription.id,
-          subscription_date: current_subscription.subscription_date,
-          status: :pending,
-          billing_time: current_subscription.billing_time,
-        )
-      end
+      # NOTE: When downgrading a subscription, we keep the current one active
+      #       until the next billing day. The new subscription will become active at this date
+      Subscription.create!(
+        customer: current_customer,
+        plan: current_plan,
+        name: name,
+        external_id: current_subscription.external_id,
+        previous_subscription_id: current_subscription.id,
+        subscription_date: current_subscription.subscription_date,
+        status: :pending,
+        billing_time: current_subscription.billing_time,
+      )
 
       current_subscription
     end

@@ -2,16 +2,26 @@
 
 module Charges
   module Validators
-    class BaseService < ::BaseService
+    class BaseService < BaseValidator
       def initialize(charge:)
         @charge = charge
+        @result = ::BaseService::Result.new
 
-        super(nil)
+        super(result)
       end
 
-      def validate
-        # Override in subclasses
+      def valid?
+        # NOTE: override and add validation rules
+
+        if errors?
+          result.validation_failure!(errors: errors)
+          return false
+        end
+
+        true
       end
+
+      attr_reader :result
 
       private
 

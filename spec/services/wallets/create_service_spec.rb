@@ -7,19 +7,19 @@ RSpec.describe Wallets::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization, external_id: 'foobar') }
-  let(:subscription) { create(:subscription, customer: customer) }
-
-  before { subscription }
+  let(:customer) { create(:customer, organization: organization, external_id: 'foobar', currency: customer_currency) }
+  let(:customer_currency) { 'EUR' }
 
   describe '.create' do
     let(:paid_credits) { '1.00' }
     let(:granted_credits) { '0.00' }
+
     let(:create_args) do
       {
         name: 'New Wallet',
         customer: customer,
         organization_id: organization.id,
+        currency: 'EUR',
         rate_amount: '1.00',
         expiration_date: '2022-01-01',
         paid_credits: paid_credits,
@@ -45,6 +45,16 @@ RSpec.describe Wallets::CreateService, type: :service do
 
         expect(result).not_to be_success
         expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
+      end
+    end
+
+    context 'when customer does not have a currency' do
+      let(:customer_currency) { nil }
+
+      it 'applies the currency to the customer' do
+        create_service.create(**create_args)
+
+        expect(customer.reload.currency).to eq('EUR')
       end
     end
   end

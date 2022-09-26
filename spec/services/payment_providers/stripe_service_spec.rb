@@ -181,9 +181,12 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           signature: 'signature',
         )
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('webhook_error')
-        expect(result.error).to eq('Invalid payload')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('webhook_error')
+          expect(result.error.error_message).to eq('Invalid payload')
+        end
       end
     end
 
@@ -200,9 +203,12 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           signature: 'signature',
         )
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('webhook_error')
-        expect(result.error).to eq('Invalid signature')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('webhook_error')
+          expect(result.error.error_message).to eq('Invalid signature')
+        end
       end
     end
   end
@@ -307,8 +313,12 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           event_json: event.to_json,
         )
 
-        expect(result).not_to be_success
-        expect(result.error_code).to eq('invalid_stripe_event_type')
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('webhook_error')
+          expect(result.error.error_message).to eq('Invalid stripe event type: invalid')
+        end
 
         expect(Invoices::Payments::StripeService).not_to have_received(:new)
         expect(payment_service).not_to have_received(:update_status)

@@ -11,11 +11,14 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
     []
   end
 
-  describe '.validate' do
+  describe '.valid?' do
     it 'ensures the presence of ranges' do
-      result = graduated_service.validate
-
-      expect(result.error).to include(:missing_graduated_range)
+      aggregate_failures do
+        expect(graduated_service).not_to be_valid
+        expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(graduated_service.result.error.messages.keys).to include(:ranges)
+        expect(graduated_service.result.error.messages[:ranges]).to include('missing_graduated_range')
+      end
     end
 
     context 'when ranges does not starts at 0' do
@@ -23,7 +26,14 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         [{ from_value: -1, to_value: 100 }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_graduated_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:ranges)
+          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+        end
+      end
     end
 
     context 'when ranges does not ends at infinity' do
@@ -31,7 +41,14 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         [{ from_value: 0, to_value: 100 }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_graduated_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:ranges)
+          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+        end
+      end
     end
 
     context 'when ranges have holes' do
@@ -42,7 +59,14 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         ]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_graduated_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:ranges)
+          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+        end
+      end
     end
 
     context 'when ranges are overlapping' do
@@ -53,55 +77,104 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         ]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_graduated_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:ranges)
+          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+        end
+      end
     end
 
-    context 'with no range per unit amount cents' do
+    context 'with no range per unit amount' do
       let(:ranges) do
         [{ from_value: 0, to_value: nil, per_unit_amount: nil, flat_amount: '0' }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(graduated_service.result.error.messages[:per_unit_amount]).to include('invalid_amount')
+        end
+      end
     end
 
-    context 'with invalid range per unit amount cents' do
+    context 'with invalid range per unit amount' do
       let(:ranges) do
         [{ from_value: 0, to_value: nil, per_unit_amount: 'foo', flat_amount: '0' }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(graduated_service.result.error.messages[:per_unit_amount]).to include('invalid_amount')
+        end
+      end
     end
 
-    context 'with negative range per unit amount cents' do
+    context 'with negative range per unit amount' do
       let(:ranges) do
         [{ from_value: 0, to_value: nil, per_unit_amount: '-2', flat_amount: 0 }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(graduated_service.result.error.messages[:per_unit_amount]).to include('invalid_amount')
+        end
+      end
     end
 
-    context 'with no range flat amount cents' do
+    context 'with no range flat amount' do
       let(:ranges) do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: nil }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:flat_amount)
+          expect(graduated_service.result.error.messages[:flat_amount]).to include('invalid_amount')
+        end
+      end
     end
 
-    context 'with invalid range flat amount cents' do
+    context 'with invalid range flat amount' do
       let(:ranges) do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: 'foo' }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:flat_amount)
+          expect(graduated_service.result.error.messages[:flat_amount]).to include('invalid_amount')
+        end
+      end
     end
 
-    context 'with negative range flat amount cents' do
+    context 'with negative range flat amount' do
       let(:ranges) do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '-2' }]
       end
 
-      it { expect(graduated_service.validate.error).to include(:invalid_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_service).not_to be_valid
+          expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_service.result.error.messages.keys).to include(:flat_amount)
+          expect(graduated_service.result.error.messages[:flat_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with applicable ranges' do
@@ -128,7 +201,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         ]
       end
 
-      it { expect(graduated_service.validate).to be_success }
+      it { expect(graduated_service).to be_valid }
     end
   end
 end

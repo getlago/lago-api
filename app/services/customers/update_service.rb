@@ -8,7 +8,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if args.key?(:currency)
-          update_currency(customer: customer, currency: args[:currency])
+          update_currency(customer: customer, currency: args[:currency], customer_update: true)
           return result unless result.success?
         end
 
@@ -29,7 +29,7 @@ module Customers
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
 
         # NOTE: external_id is not editable if customer is attached to subscriptions
-        customer.external_id = args[:external_id] if !customer.attached_to_subscriptions? && args.key?(:external_id)
+        customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 
         customer.save!
       end
@@ -43,11 +43,19 @@ module Customers
       result.record_validation_failure!(record: e.record)
     end
 
-    def update_currency(customer:, currency:)
-      result.customer = customer
+    def update_currency(customer:, currency:, customer_update: false)
+      return result if customer.currency == currency
 
-      # TODO: remove default currency check after migration to customer currency
-      if !editable_currency? && customer.default_currency != currency
+      if customer_update
+        # NOTE: direct update of the customer currency
+        unless customer.editable?
+          return result.single_validation_failure!(
+            field: :currency,
+            error_code: 'currencies_does_not_match',
+          )
+        end
+      elsif customer.currency.present? || !customer.editable?
+        # NOTE: Assign currency from another resource
         return result.single_validation_failure!(
           field: :currency,
           error_code: 'currencies_does_not_match',
@@ -77,13 +85,6 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.stripe_customer&.reload
-    end
-
-    def editable_currency?
-      !result.customer.active_subscription &&
-        result.customer.applied_add_ons.none? &&
-        result.customer.applied_coupons.none? &&
-        result.customer.wallets.none?
     end
   end
 end

@@ -47,9 +47,11 @@ class Charge < ApplicationRecord
   end
 
   def validate_charge_model(validator)
-    validation_result = validator.new(charge: self).validate
-    return if validation_result.success?
+    instance = validator.new(charge: self)
+    return if instance.valid?
 
-    validation_result.error.each { |error| errors.add(:properties, error) }
+    instance.result.error.messages.map { |_, codes| codes }
+      .flatten
+      .each { |code| errors.add(:properties, code) }
   end
 end

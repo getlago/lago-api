@@ -5,13 +5,24 @@ module Wallets
     def create(**args)
       return result unless valid?(**args)
 
-      wallet = Wallet.create!(
+      wallet = Wallet.new(
         customer_id: result.current_customer.id,
         name: args[:name],
         rate_amount: args[:rate_amount],
         expiration_date: args[:expiration_date],
         status: :active,
       )
+
+      ActiveRecord::Base.transaction do
+        currency_result = Customers::UpdateService.new(nil).update_currency(
+          customer: result.current_customer,
+          currency: args[:currency],
+        )
+        return currency_result unless currency_result.success?
+
+        wallet.currency = wallet.customer.currency
+        wallet.save!
+      end
 
       result.wallet = wallet
 

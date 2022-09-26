@@ -3,7 +3,6 @@
 require 'rails_helper'
 
 RSpec.describe BillAddOnJob, type: :job do
-  let(:subscription) { create(:subscription) }
   let(:applied_add_on) { create(:applied_add_on) }
   let(:date) { Time.zone.now.to_date }
 
@@ -12,14 +11,14 @@ RSpec.describe BillAddOnJob, type: :job do
 
   before do
     allow(Invoices::AddOnService).to receive(:new)
-      .with(subscription: subscription, applied_add_on: applied_add_on, date: date)
+      .with(applied_add_on: applied_add_on, date: date)
       .and_return(invoice_service)
     allow(invoice_service).to receive(:create)
       .and_return(result)
   end
 
   it 'calls the add on create service' do
-    described_class.perform_now(subscription, applied_add_on, date)
+    described_class.perform_now(applied_add_on, date)
 
     expect(Invoices::AddOnService).to have_received(:new)
     expect(invoice_service).to have_received(:create)
@@ -32,7 +31,7 @@ RSpec.describe BillAddOnJob, type: :job do
 
     it 'raises an error' do
       expect do
-        described_class.perform_now(subscription, applied_add_on, date)
+        described_class.perform_now(applied_add_on, date)
       end.to raise_error(BaseService::FailedResult)
 
       expect(Invoices::AddOnService).to have_received(:new)

@@ -5167,6 +5167,22 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -6517,6 +6533,24 @@
               ]
             },
             {
+              "name": "canEditAttributes",
+              "description": "Check if customer attributes are editable",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "city",
               "description": null,
               "type": {
@@ -7037,6 +7071,24 @@
             {
               "name": "canBeDeleted",
               "description": "Check if customer is deletable",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "canEditAttributes",
+              "description": "Check if customer attributes are editable",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,

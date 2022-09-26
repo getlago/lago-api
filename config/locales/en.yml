@@ -28,3 +28,4 @@ en:
         invalid_content_type: invalid_content_type
         invalid_size: invalid_size
         value_already_exists: value_already_exists
+        too_long: value_is_too_long

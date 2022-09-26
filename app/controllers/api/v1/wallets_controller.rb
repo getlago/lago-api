@@ -81,6 +81,7 @@ module Api
         params.require(:wallet).permit(
           :rate_amount,
           :name,
+          :currency,
           :paid_credits,
           :granted_credits,
           :expiration_date,

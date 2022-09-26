@@ -22,10 +22,6 @@ module Types
       def applied_add_ons
         object.applied_add_ons.order(created_at: :desc)
       end
-
-      def currency
-        object.default_currency
-      end
     end
   end
 end

@@ -12,10 +12,13 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
   end
 
   describe '.validate' do
-    it 'ensures the presence of ranges' do
-      result = volume_service.validate
-
-      expect(result.error).to include(:missing_ranges)
+    it 'is invalid' do
+      aggregate_failures do
+        expect(volume_service).not_to be_valid
+        expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(volume_service.result.error.messages.keys).to include(:ranges)
+        expect(volume_service.result.error.messages[:ranges]).to include('missing_ranges')
+      end
     end
 
     context 'when ranges does not starts at 0' do
@@ -23,7 +26,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: -1, to_value: 100 }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:ranges)
+          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+        end
+      end
     end
 
     context 'when ranges does not ends at infinity' do
@@ -31,7 +41,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: 100 }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:ranges)
+          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+        end
+      end
     end
 
     context 'when ranges have holes' do
@@ -42,7 +59,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         ]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:ranges)
+          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+        end
+      end
     end
 
     context 'when ranges are overlapping' do
@@ -53,7 +77,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         ]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_ranges) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:ranges)
+          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+        end
+      end
     end
 
     context 'with no range per unit amount cents' do
@@ -61,7 +92,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: nil, flat_amount: '0' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_per_unit_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(volume_service.result.error.messages[:per_unit_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with invalid range per unit amount cents' do
@@ -69,7 +107,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: 'foo', flat_amount: '0' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_per_unit_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(volume_service.result.error.messages[:per_unit_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with negative range per unit amount cents' do
@@ -77,7 +122,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '-2', flat_amount: 0 }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_per_unit_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(volume_service.result.error.messages[:per_unit_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with no range flat amount cents' do
@@ -85,7 +137,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: nil }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_flat_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:flat_amount)
+          expect(volume_service.result.error.messages[:flat_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with invalid range flat amount cents' do
@@ -93,7 +152,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: 'foo' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_flat_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:flat_amount)
+          expect(volume_service.result.error.messages[:flat_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with negative range flat amount cents' do
@@ -101,7 +167,14 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '-2' }]
       end
 
-      it { expect(volume_service.validate.error).to include(:invalid_flat_amount) }
+      it 'is invalid' do
+        aggregate_failures do
+          expect(volume_service).not_to be_valid
+          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(volume_service.result.error.messages.keys).to include(:flat_amount)
+          expect(volume_service.result.error.messages[:flat_amount]).to include('invalid_amount')
+        end
+      end
     end
 
     context 'with applicable ranges' do
@@ -128,7 +201,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         ]
       end
 
-      it { expect(volume_service.validate).to be_success }
+      it { expect(volume_service).to be_valid }
     end
   end
 end
