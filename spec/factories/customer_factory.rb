@@ -17,5 +17,6 @@ FactoryBot.define do
     logo_url { Faker::Internet.url }
     legal_name { Faker::Company.name }
     legal_number { Faker::Company.duns_number }
+    currency { 'EUR' }
   end
 end

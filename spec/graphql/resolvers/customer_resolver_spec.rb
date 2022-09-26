@@ -20,7 +20,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) do
-    create(:customer, organization: organization)
+    create(:customer, organization: organization, currency: 'EUR')
   end
   let(:subscription) { create(:subscription, customer: customer) }
   let(:applied_add_on) { create(:applied_add_on, customer: customer) }

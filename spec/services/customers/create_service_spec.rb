@@ -103,7 +103,10 @@ RSpec.describe Customers::CreateService, type: :service do
           }
         end
 
-        before { create(:subscription, customer: customer) }
+        before do
+          subscription = create(:subscription, customer: customer)
+          customer.update!(currency: subscription.plan.amount_currency)
+        end
 
         it 'fails is we change the subscription' do
           result = customers_service.create_from_api(

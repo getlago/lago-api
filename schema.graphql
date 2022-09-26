@@ -1635,6 +1635,7 @@ input CreateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  currency: CurrencyEnum!
   customerId: ID!
   expirationDate: ISO8601Date
   grantedCredits: String!
@@ -2404,6 +2405,11 @@ type Customer {
   Check if customer is deletable
   """
   canBeDeleted: Boolean!
+
+  """
+  Check if customer attributes are editable
+  """
+  canEditAttributes: Boolean!
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
@@ -2452,6 +2458,11 @@ type CustomerDetails {
   Check if customer is deletable
   """
   canBeDeleted: Boolean!
+
+  """
+  Check if customer attributes are editable
+  """
+  canEditAttributes: Boolean!
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!

@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::WalletsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization: organization, currency: 'EUR') }
   let(:subscription) { create(:subscription, customer: customer) }
 
   before { subscription }
@@ -15,6 +15,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         external_customer_id: customer.external_id,
         rate_amount: '1',
         name: 'Wallet1',
+        currency: 'EUR',
         paid_credits: '10',
         granted_credits: '10',
         expiration_date: '2022-06-06',

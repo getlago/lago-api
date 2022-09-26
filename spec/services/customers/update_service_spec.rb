@@ -48,7 +48,8 @@ RSpec.describe Customers::UpdateService, type: :service do
 
     context 'when attached to a subscription' do
       before do
-        create(:subscription, customer: customer)
+        subscription = create(:subscription, customer: customer)
+        customer.update!(currency: subscription.plan.amount_currency)
       end
 
       it 'updates only the name' do

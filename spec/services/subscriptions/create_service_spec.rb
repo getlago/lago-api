@@ -275,14 +275,20 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           }
         end
 
+        before { customer.update!(currency: plan.amount_currency) }
+
         it 'fails' do
           result = create_service.create_from_api(
             organization: organization,
             params: params,
           )
 
-          expect(result).not_to be_success
-          expect(result.error).to eq('currencies does not match')
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:currency)
+            expect(result.error.messages[:currency]).to include('currencies_does_not_match')
+          end
         end
       end
 

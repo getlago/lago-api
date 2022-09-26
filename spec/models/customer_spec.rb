@@ -82,4 +82,34 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
+
+  describe 'deletable?' do
+    let(:customer) { create(:customer) }
+
+    it { expect(customer).to be_deletable }
+
+    context 'when attached to a subscription' do
+      before { create(:subscription, customer: customer) }
+
+      it { expect(customer).not_to be_deletable }
+    end
+
+    context 'when attached to an add-on' do
+      before { create(:applied_add_on, customer: customer) }
+
+      it { expect(customer).not_to be_deletable }
+    end
+
+    context 'when attached to a coupon' do
+      before { create(:applied_coupon, customer: customer) }
+
+      it { expect(customer).not_to be_deletable }
+    end
+
+    context 'when attached to a wallet' do
+      before { create(:wallet, customer: customer) }
+
+      it { expect(customer).not_to be_deletable }
+    end
+  end
 end

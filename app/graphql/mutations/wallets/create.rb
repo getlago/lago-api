@@ -15,6 +15,7 @@ module Mutations
       argument :paid_credits, String, required: true
       argument :granted_credits, String, required: true
       argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
+      argument :currency, Types::CurrencyEnum, required: true
 
       type Types::Wallets::Object
 
@@ -27,7 +28,7 @@ module Mutations
             **args
               .merge(organization_id: current_organization.id)
               .merge(customer: current_customer(args[:customer_id]))
-              .except(:customer_id)
+              .except(:customer_id),
           )
 
         result.success? ? result.wallet : result_error(result)

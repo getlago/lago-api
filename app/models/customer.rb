@@ -39,7 +39,7 @@ class Customer < ApplicationRecord
   end
 
   def deletable?
-    !attached_to_subscriptions?
+    !attached_to_subscriptions? && applied_add_ons.none? && applied_coupons.none? && wallets.none?
   end
 
   def active_subscription
@@ -56,8 +56,8 @@ class Customer < ApplicationRecord
     organization.vat_rate || 0
   end
 
-  def default_currency
-    currency || active_subscription&.plan&.amount_currency
+  def editable?
+    deletable?
   end
 
   private

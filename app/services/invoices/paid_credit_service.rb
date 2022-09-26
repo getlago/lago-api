@@ -44,7 +44,7 @@ module Invoices
     attr_accessor :customer, :timestamp, :wallet_transaction
 
     def currency
-      @currency ||= customer.default_currency
+      @currency ||= wallet_transaction.wallet.currency
     end
 
     def compute_amounts(invoice)

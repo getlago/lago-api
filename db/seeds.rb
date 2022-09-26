@@ -34,7 +34,7 @@ Charge.create_with(
   amount_currency: 'EUR',
   properties: {
     amount: Faker::Number.between(from: 100, to: 500).to_s,
-  }
+  },
 ).find_or_create_by!(
   plan: plan,
   billable_metric: billable_metric,
@@ -56,6 +56,7 @@ Charge.create_with(
     logo_url: Faker::Internet.url,
     legal_name: Faker::Company.name,
     legal_number: Faker::Company.duns_number,
+    currency: 'EUR',
   ).find_or_create_by!(
     organization: organization,
     external_id: "cust_#{i + 1}",
