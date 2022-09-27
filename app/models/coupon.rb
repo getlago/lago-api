@@ -33,13 +33,13 @@ class Coupon < ApplicationRecord
   enum coupon_type: COUPON_TYPES
   enum frequency: FREQUENCIES
 
-  monetize :amount_cents
+  monetize :amount_cents, disable_validation: true, allow_nil: true
 
   validates :name, presence: true
   validates :code, uniqueness: { scope: :organization_id, allow_nil: true }
 
-  validates :amount_cents, numericality: { greater_than: 0 }
-  validates :amount_currency, inclusion: { in: currency_list }
+  validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: true
+  validates :amount_currency, inclusion: { in: currency_list }, allow_nil: true
 
   scope :order_by_status_and_expiration, lambda {
     order(
