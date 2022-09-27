@@ -13,7 +13,7 @@ module LagoHttpClient
     end
 
     def post(body, headers)
-      req = Net::HTTP::Post.new(uri.path, 'Content-Type' => 'application/json')
+      req = Net::HTTP::Post.new(uri.path.presence || '/', 'Content-Type' => 'application/json')
 
       headers.each do |header|
         key = header.keys.first
@@ -83,7 +83,7 @@ module LagoHttpClient
     attr_reader :uri, :http_client
 
     def raise_error(response)
-      raise ::LagoHttpClient::HttpError.new(response.code, response.body, uri)
+      raise(::LagoHttpClient::HttpError.new(response.code, response.body, uri))
     end
   end
 end

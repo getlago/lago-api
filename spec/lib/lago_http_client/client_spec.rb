@@ -12,7 +12,7 @@ RSpec.describe LagoHttpClient::Client do
       let(:response) do
         {
           'status' => 200,
-          'message' => 'Success'
+          'message' => 'Success',
         }.to_json
       end
 
@@ -65,6 +65,29 @@ RSpec.describe LagoHttpClient::Client do
 
       it 'raises an error' do
         expect { client.post('', {}) }.to raise_error LagoHttpClient::HttpError
+      end
+    end
+
+    context 'when path is empty' do
+      let(:url) { 'http://example.com' }
+
+      let(:response) do
+        {
+          'status' => 200,
+          'message' => 'Success',
+        }.to_json
+      end
+
+      before do
+        stub_request(:post, 'http://example.com/')
+          .to_return(body: response, status: 200)
+      end
+
+      it 'returns response body' do
+        response = client.post('', {})
+
+        expect(response['status']).to eq 200
+        expect(response['message']).to eq 'Success'
       end
     end
   end
