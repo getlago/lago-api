@@ -37,6 +37,7 @@ RSpec.describe Webhooks::Invoices::GeneratedService do
       expect(lago_client).to have_received(:post) do |payload|
         expect(payload[:webhook_type]).to eq('invoice.generated')
         expect(payload[:object_type]).to eq('invoice')
+        expect(payload['invoice'][:customer]).to be_present
       end
     end
   end
