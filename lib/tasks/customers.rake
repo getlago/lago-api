@@ -9,10 +9,10 @@ namespace :customers do
   desc 'Set customer currency from active subscription'
   task populate_currency: :environment do
     Customer.where(currency: nil).find_each do |customer|
-      subscription = customer.active_subscription
-      next unless subscription
+      currencies = customer.subscriptions.map { |s| s.plan.currency }.uniq
+      next if currencies.size > 1 || currencies.size.zero?
 
-      customer.update!(currency: subscription.plan.amount_currency)
+      customer.update!(currency: currencies.first)
     end
   end
 end
