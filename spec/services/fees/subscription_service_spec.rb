@@ -846,9 +846,11 @@ RSpec.describe Fees::SubscriptionService do
     end
   end
 
-  context 'when billing an new upgraded subscription' do
+  context 'when billing a new upgraded subscription' do
     let(:previous_plan) { create(:plan, pay_in_advance: true, amount_cents: 80) }
-    let(:previous_subscription) { create(:subscription, status: :terminated, plan: previous_plan) }
+    let(:previous_subscription) do
+      create(:subscription, status: :terminated, plan: previous_plan, started_at: started_at - 6.months)
+    end
     let(:started_at) { Time.zone.parse('2022-03-15 00:00:00') }
 
     let(:subscription) do
@@ -934,7 +936,7 @@ RSpec.describe Fees::SubscriptionService do
         before { plan.update(trial_period: trial_duration) }
 
         context 'when trial period ends before end of period' do
-          let(:trial_duration) { 3 }
+          let(:trial_duration) { (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 3 }
 
           it 'creates a fee with prorated amount based on the trial period' do
             result = fees_subscription_service.create
@@ -944,7 +946,9 @@ RSpec.describe Fees::SubscriptionService do
         end
 
         context 'when trial period end after end of period' do
-          let(:trial_duration) { 45 }
+          let(:trial_duration) do
+            (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 45
+          end
 
           it 'creates a fee with zero amount' do
             result = fees_subscription_service.create
@@ -1058,7 +1062,7 @@ RSpec.describe Fees::SubscriptionService do
         before { plan.update(trial_period: trial_duration) }
 
         context 'when trial period end before period end' do
-          let(:trial_duration) { 3 }
+          let(:trial_duration) { (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 3 }
 
           it 'creates a fee with prorated amount based on the trial' do
             result = fees_subscription_service.create
@@ -1068,7 +1072,9 @@ RSpec.describe Fees::SubscriptionService do
         end
 
         context 'when trial period end after period end' do
-          let(:trial_duration) { 45 }
+          let(:trial_duration) do
+            (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 45
+          end
 
           it 'creates a fee with zero amount' do
             result = fees_subscription_service.create

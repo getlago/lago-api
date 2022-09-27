@@ -60,7 +60,13 @@ class Subscription < ApplicationRecord
   def trial_end_date
     return unless plan.has_trial?
 
-    started_at.to_date + plan.trial_period.days
+    initial_started_at.to_date + plan.trial_period.days
+  end
+
+  def initial_started_at
+    return started_at || subscription_date unless previous_subscription
+
+    previous_subscription.initial_started_at
   end
 
   def next_subscription

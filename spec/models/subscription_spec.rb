@@ -113,6 +113,59 @@ RSpec.describe Subscription, type: :model do
         expect(subscription.trial_end_date).to be_nil
       end
     end
+
+    context 'with a previous subscription' do
+      let(:subscription) do
+        create(
+          :active_subscription,
+          previous_subscription: previous_subscription,
+          started_at: Time.zone.yesterday,
+          plan: plan,
+        )
+      end
+      let(:previous_subscription) { create(:subscription, started_at: Time.current.last_month) }
+
+      it 'takes previous subscription started_at into account' do
+        trial_end_date = subscription.trial_end_date
+
+        aggregate_failures do
+          expect(trial_end_date).to be_present
+          expect(trial_end_date).to eq(previous_subscription.started_at.to_date + 3.days)
+        end
+      end
+    end
+  end
+
+  describe '#initial_started_at' do
+    let(:subscription) do
+      create(:subscription, previous_subscription: previous_subscription, started_at: Time.zone.yesterday)
+    end
+
+    let(:previous_subscription) { nil }
+
+    it 'returns the subscription started_at' do
+      expect(subscription.initial_started_at).to eq(subscription.started_at)
+    end
+
+    context 'with a previous subscription' do
+      let(:previous_subscription) { create(:subscription, started_at: Time.current.last_month) }
+
+      it 'returns the previous subscription started_at' do
+        expect(subscription.initial_started_at).to eq(previous_subscription.started_at)
+      end
+    end
+
+    context 'with two previous subscriptions' do
+      let(:previous_subscription) do
+        create(:subscription, previous_subscription: initial_subscription, started_at: Time.zone.yesterday)
+      end
+
+      let(:initial_subscription) { create(:subscription, started_at: Time.current.last_year) }
+
+      it 'returns the initial subscription started_at' do
+        expect(subscription.initial_started_at).to eq(initial_subscription.started_at)
+      end
+    end
   end
 
   describe '#valid_external_id' do
@@ -124,7 +177,7 @@ RSpec.describe Subscription, type: :model do
       create(
         :active_subscription,
         plan: plan,
-        customer: create(:customer, organization: organization)
+        customer: create(:customer, organization: organization),
       )
     end
 
@@ -133,7 +186,7 @@ RSpec.describe Subscription, type: :model do
         :active_subscription,
         plan: plan,
         external_id: external_id,
-        customer: create(:customer, organization: organization)
+        customer: create(:customer, organization: organization),
       )
     end
 
