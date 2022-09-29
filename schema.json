@@ -747,13 +747,9 @@
               "name": "amountCents",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -765,13 +761,9 @@
               "name": "amountCurrency",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,

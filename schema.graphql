@@ -93,8 +93,8 @@ type AppliedAddOn {
 }
 
 type AppliedCoupon {
-  amountCents: Int!
-  amountCurrency: CurrencyEnum!
+  amountCents: Int
+  amountCurrency: CurrencyEnum
   coupon: Coupon!
   createdAt: ISO8601DateTime!
   frequency: CouponFrequency!

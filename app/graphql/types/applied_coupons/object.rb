@@ -8,8 +8,8 @@ module Types
       field :id, ID, null: false
       field :coupon, Types::Coupons::Object, null: false
 
-      field :amount_cents, Integer, null: false
-      field :amount_currency, Types::CurrencyEnum, null: false
+      field :amount_cents, Integer, null: true
+      field :amount_currency, Types::CurrencyEnum, null: true
 
       field :percentage_rate, Float, null: true
       field :frequency, Types::Coupons::FrequencyEnum, null: false
