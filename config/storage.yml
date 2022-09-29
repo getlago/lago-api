@@ -18,3 +18,4 @@ amazon_compatible_endpoint:
   access_key_id: <%= ENV['LAGO_AWS_S3_ACCESS_KEY_ID'] %>
   secret_access_key: <%= ENV['LAGO_AWS_S3_SECRET_ACCESS_KEY'] %>
   endpoint: <%= ENV['LAGO_AWS_S3_ENDPOINT'] %>
+  bucket: <%= ENV['LAGO_AWS_S3_BUCKET'] %>
