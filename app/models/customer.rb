@@ -57,7 +57,10 @@ class Customer < ApplicationRecord
   end
 
   def editable?
-    deletable?
+    !attached_to_subscriptions? &&
+      applied_add_ons.none? &&
+      applied_coupons.where.not(amount_currency: nil).none? &&
+      wallets.none?
   end
 
   private
