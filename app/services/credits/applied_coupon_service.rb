@@ -18,7 +18,7 @@ module Credits
         invoice: invoice,
         applied_coupon: applied_coupon,
         amount_cents: credit_amount,
-        amount_currency: applied_coupon.amount_currency,
+        amount_currency: invoice.amount_currency,
       )
 
       applied_coupon.frequency_duration -= 1 if applied_coupon.recurring?

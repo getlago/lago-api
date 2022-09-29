@@ -129,7 +129,9 @@ module Invoices
     def should_create_credit?
       return false if applied_coupon.nil?
 
-      applied_coupon.amount_currency == currency
+      return applied_coupon.amount_currency == currency if applied_coupon.coupon.fixed_amount?
+
+      true
     end
 
     def should_create_applied_prepaid_credit?(invoice)
