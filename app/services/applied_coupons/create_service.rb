@@ -71,13 +71,17 @@ module AppliedCoupons
         frequency_duration: applied_coupon_attributes[:frequency_duration],
       )
 
-      ActiveRecord::Base.transaction do
-        currency_result = Customers::UpdateService.new(nil).update_currency(
-          customer: customer,
-          currency: applied_coupon_attributes[:amount_currency],
-        )
-        return currency_result unless currency_result.success?
+      if coupon.fixed_amount?
+        ActiveRecord::Base.transaction do
+          currency_result = Customers::UpdateService.new(nil).update_currency(
+            customer: customer,
+            currency: applied_coupon_attributes[:amount_currency],
+          )
+          return currency_result unless currency_result.success?
 
+          applied_coupon.save!
+        end
+      else
         applied_coupon.save!
       end
 

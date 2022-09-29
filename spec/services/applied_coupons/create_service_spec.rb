@@ -84,12 +84,18 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
         }
       end
 
+      before { customer.update!(currency: nil) }
+
       it 'applies the coupon to the customer' do
         expect { create_result }.to change(AppliedCoupon, :count).by(1)
       end
 
       it 'sets correct percentage rate' do
         expect(create_result.applied_coupon.percentage_rate).to eq(20.00)
+      end
+
+      it 'does not try to update customer currency' do
+        expect(create_result.applied_coupon.customer.currency).to eq nil
       end
     end
 
