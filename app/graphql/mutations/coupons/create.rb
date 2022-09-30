@@ -11,11 +11,15 @@ module Mutations
 
       argument :name, String, required: true
       argument :code, String, required: false
-      argument :amount_cents, Integer, required: true
-      argument :amount_currency, Types::CurrencyEnum, required: true
+      argument :coupon_type, Types::Coupons::CouponTypeEnum, required: true
+      argument :amount_cents, Integer, required: false
+      argument :amount_currency, Types::CurrencyEnum, required: false
+      argument :percentage_rate, Float, required: false
+      argument :frequency, Types::Coupons::FrequencyEnum, required: true
+      argument :frequency_duration, Integer, required: false
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
-      argument :expiration_duration, Integer, required: false
+      argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Coupons::Object
 

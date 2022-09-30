@@ -18,10 +18,15 @@ module Credits
         invoice: invoice,
         applied_coupon: applied_coupon,
         amount_cents: credit_amount,
-        amount_currency: applied_coupon.amount_currency,
+        amount_currency: invoice.amount_currency,
       )
 
-      applied_coupon.mark_as_terminated! if credit_amount >= remaining_amount
+      applied_coupon.frequency_duration -= 1 if applied_coupon.recurring?
+      if should_terminate_applied_coupon?(credit_amount)
+        applied_coupon.mark_as_terminated!
+      elsif applied_coupon.recurring?
+        applied_coupon.save!
+      end
 
       result.credit = new_credit
       result
@@ -40,9 +45,21 @@ module Credits
     end
 
     def compute_amount
-      return invoice.amount_cents if remaining_amount > invoice.amount_cents
+      if applied_coupon.coupon.percentage?
+        discounted_value = invoice.amount_cents * applied_coupon.percentage_rate.fdiv(100)
 
-      remaining_amount
+        return (discounted_value >= invoice.amount_cents) ? invoice.amount_cents : discounted_value.round
+      end
+
+      if applied_coupon.recurring?
+        return invoice.amount_cents if applied_coupon.amount_cents > invoice.amount_cents
+
+        applied_coupon.amount_cents
+      else
+        return invoice.amount_cents if remaining_amount > invoice.amount_cents
+
+        remaining_amount
+      end
     end
 
     def remaining_amount
@@ -50,6 +67,14 @@ module Credits
 
       already_applied_amount = applied_coupon.credits.sum(:amount_cents)
       @remaining_amount = applied_coupon.amount_cents - already_applied_amount
+    end
+
+    def should_terminate_applied_coupon?(credit_amount)
+      if applied_coupon.once?
+        applied_coupon.coupon.percentage? || credit_amount >= remaining_amount
+      else
+        applied_coupon.frequency_duration <= 0
+      end
     end
   end
 end

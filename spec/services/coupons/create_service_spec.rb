@@ -14,10 +14,12 @@ RSpec.describe Coupons::CreateService, type: :service do
         name: 'Super Coupon',
         code: 'free-beer',
         organization_id: organization.id,
+        coupon_type: 'fixed_amount',
+        frequency: 'once',
         amount_cents: 100,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_duration: 3,
+        expiration_date: (Time.current + 3.days).to_date,
       }
     end
 
@@ -42,6 +44,26 @@ RSpec.describe Coupons::CreateService, type: :service do
           organization_id: coupon.organization_id,
         },
       )
+    end
+
+    context 'when coupon type is percentage' do
+      let(:create_args) do
+        {
+          name: 'Super Coupon',
+          code: 'free-beer',
+          organization_id: organization.id,
+          coupon_type: 'percentage',
+          frequency: 'once',
+          percentage_rate: 20.00,
+          expiration: 'time_limit',
+          expiration_date: (Time.current + 3.days).to_date,
+        }
+      end
+
+      it 'creates a coupon' do
+        expect { create_service.create(**create_args) }
+          .to change(Coupon, :count).by(1)
+      end
     end
 
     context 'with validation error' do

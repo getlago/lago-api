@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_19_133338) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_23_092906) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -72,11 +72,14 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_19_133338) do
     t.uuid "coupon_id", null: false
     t.uuid "customer_id", null: false
     t.integer "status", default: 0, null: false
-    t.integer "amount_cents", null: false
-    t.string "amount_currency", null: false
+    t.integer "amount_cents"
+    t.string "amount_currency"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "terminated_at", precision: nil
+    t.decimal "percentage_rate", precision: 10, scale: 5
+    t.integer "frequency", default: 0, null: false
+    t.integer "frequency_duration"
     t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true, where: "(status = 0)"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
@@ -114,12 +117,16 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_19_133338) do
     t.string "code"
     t.integer "status", default: 0, null: false
     t.datetime "terminated_at"
-    t.bigint "amount_cents", null: false
-    t.string "amount_currency", null: false
+    t.bigint "amount_cents"
+    t.string "amount_currency"
     t.integer "expiration", null: false
-    t.integer "expiration_duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "coupon_type", default: 0, null: false
+    t.decimal "percentage_rate", precision: 10, scale: 5
+    t.integer "frequency", default: 0, null: false
+    t.integer "frequency_duration"
+    t.date "expiration_date"
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end

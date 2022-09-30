@@ -16,6 +16,9 @@ module AppliedCoupons
       process_creation(
         amount_cents: args[:amount_cents] || coupon&.amount_cents,
         amount_currency: args[:amount_currency] || coupon&.amount_currency,
+        percentage_rate: args[:percentage_rate] || coupon&.percentage_rate,
+        frequency: args[:frequency] || coupon&.frequency,
+        frequency_duration: args[:frequency_duration] || coupon&.frequency_duration,
       )
     end
 
@@ -33,6 +36,9 @@ module AppliedCoupons
       process_creation(
         amount_cents: args[:amount_cents] || coupon&.amount_cents,
         amount_currency: args[:amount_currency] || coupon&.amount_currency,
+        percentage_rate: args[:percentage_rate] || coupon&.percentage_rate,
+        frequency: args[:frequency] || coupon&.frequency,
+        frequency_duration: args[:frequency_duration] || coupon&.frequency_duration,
       )
     end
 
@@ -51,24 +57,31 @@ module AppliedCoupons
       )
     end
 
-    def process_creation(amount_cents:, amount_currency:)
+    def process_creation(applied_coupon_attributes)
       check_preconditions
       return result if result.error
 
       applied_coupon = AppliedCoupon.new(
         customer: customer,
         coupon: coupon,
-        amount_cents: amount_cents,
-        amount_currency: amount_currency,
+        amount_cents: applied_coupon_attributes[:amount_cents],
+        amount_currency: applied_coupon_attributes[:amount_currency],
+        percentage_rate: applied_coupon_attributes[:percentage_rate],
+        frequency: applied_coupon_attributes[:frequency],
+        frequency_duration: applied_coupon_attributes[:frequency_duration],
       )
 
-      ActiveRecord::Base.transaction do
-        currency_result = Customers::UpdateService.new(nil).update_currency(
-          customer: customer,
-          currency: amount_currency,
-        )
-        return currency_result unless currency_result.success?
+      if coupon.fixed_amount?
+        ActiveRecord::Base.transaction do
+          currency_result = Customers::UpdateService.new(nil).update_currency(
+            customer: customer,
+            currency: applied_coupon_attributes[:amount_currency],
+          )
+          return currency_result unless currency_result.success?
 
+          applied_coupon.save!
+        end
+      else
         applied_coupon.save!
       end
 

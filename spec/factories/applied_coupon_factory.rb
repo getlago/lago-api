@@ -6,5 +6,6 @@ FactoryBot.define do
     amount_cents { 200 }
     amount_currency { 'EUR' }
     status { 'active' }
+    frequency { 'once' }
   end
 end

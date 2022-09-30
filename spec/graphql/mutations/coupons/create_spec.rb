@@ -14,7 +14,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           amountCents,
           amountCurrency,
           expiration,
-          expirationDuration,
+          expirationDate,
           status
         }
       }
@@ -30,10 +30,12 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
         input: {
           name: 'Super Coupon',
           code: 'free-beer',
+          couponType: 'fixed_amount',
+          frequency: 'once',
           amountCents: 5000,
           amountCurrency: 'EUR',
           expiration: 'time_limit',
-          expirationDuration: 3,
+          expirationDate: (Time.current + 3.days).to_date,
         },
       },
     )
@@ -47,7 +49,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['amountCents']).to eq(5000)
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['expiration']).to eq('time_limit')
-      expect(result_data['expirationDuration']).to eq(3)
+      expect(result_data['expirationDate']).to eq (Time.current + 3.days).to_date.to_s
       expect(result_data['status']).to eq('active')
     end
   end
@@ -61,10 +63,12 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           input: {
             name: 'Super Coupon',
             code: 'free-beer',
+            couponType: 'fixed_amount',
+            frequency: 'once',
             amountCents: 5000,
             amountCurrency: 'EUR',
             expiration: 'time_limit',
-            expirationDuration: 3,
+            expirationDate: (Time.current + 3.days).to_date,
           },
         },
       )
@@ -82,10 +86,12 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           input: {
             name: 'Super Coupon',
             code: 'free-beer',
+            couponType: 'fixed_amount',
+            frequency: 'once',
             amountCents: 5000,
             amountCurrency: 'EUR',
             expiration: 'time_limit',
-            expirationDuration: 3,
+            expirationDate: (Time.current + 3.days).to_date,
           },
         },
       )

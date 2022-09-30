@@ -64,6 +64,41 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       )
     end
 
+    context 'when coupon type is percentage' do
+      let(:coupon) do
+        create(
+          :coupon,
+          status: 'active',
+          organization: organization,
+          coupon_type: 'percentage',
+          percentage_rate: 10.00,
+        )
+      end
+
+      let(:create_args) do
+        {
+          coupon_id: coupon_id,
+          customer_id: customer_id,
+          percentage_rate: 20.00,
+          organization_id: organization.id,
+        }
+      end
+
+      before { customer.update!(currency: nil) }
+
+      it 'applies the coupon to the customer' do
+        expect { create_result }.to change(AppliedCoupon, :count).by(1)
+      end
+
+      it 'sets correct percentage rate' do
+        expect(create_result.applied_coupon.percentage_rate).to eq(20.00)
+      end
+
+      it 'does not try to update customer currency' do
+        expect(create_result.applied_coupon.customer.currency).to eq nil
+      end
+    end
+
     context 'with overridden amount' do
       let(:amount_cents) { 123 }
       let(:amount_currency) { 'EUR' }

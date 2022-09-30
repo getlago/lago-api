@@ -28,8 +28,11 @@ module Api
         params.require(:applied_coupon).permit(
           :external_customer_id,
           :coupon_code,
+          :frequency,
+          :frequency_duration,
           :amount_cents,
           :amount_currency,
+          :percentage_rate,
         )
       end
     end
