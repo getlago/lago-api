@@ -17,7 +17,11 @@ module Sequenced
     end
 
     def generate_sequential_id
-      result = Invoice.with_advisory_lock('invoice_lock', transaction: true, timeout_seconds: 10.seconds) do
+      result = self.class.with_advisory_lock(
+        "#{self.class.name.underscore}_lock",
+        transaction: true,
+        timeout_seconds: 10.seconds,
+      ) do
         sequential_id = sequence_scope.with_sequential_id.order(sequential_id: :desc).limit(1).pick(:sequential_id)
         sequential_id ||= 0
 
@@ -29,7 +33,7 @@ module Sequenced
       end
 
       # NOTE: If the application was unable to aquire the lock, the block returns false
-      raise SequenceError, 'Unable to aquire lock on the database' unless result
+      raise(SequenceError, 'Unable to aquire lock on the database') unless result
 
       result
     end
