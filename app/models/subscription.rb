@@ -64,9 +64,10 @@ class Subscription < ApplicationRecord
   end
 
   def initial_started_at
-    return started_at || subscription_date unless previous_subscription
-
-    previous_subscription.initial_started_at
+    customer.subscriptions
+      .where(external_id: external_id)
+      .where.not(started_at: nil)
+      .order(started_at: :asc).first&.started_at || subscription_date
   end
 
   def next_subscription

@@ -30,12 +30,16 @@ RSpec.describe Fees::SubscriptionService do
     }
   end
 
+  let(:customer) { create(:customer) }
+
   let(:subscription) do
     create(
       :subscription,
       plan: plan,
       started_at: started_at,
       subscription_date: subscription_date,
+      customer: customer,
+      external_id: 'sub_id',
     )
   end
 
@@ -471,6 +475,8 @@ RSpec.describe Fees::SubscriptionService do
             started_at: started_at,
             subscription_date: DateTime.parse('2022-08-31'),
             billing_time: :anniversary,
+            customer: customer,
+            external_id: 'sub_id',
           )
         end
 
@@ -741,6 +747,8 @@ RSpec.describe Fees::SubscriptionService do
         status: :terminated,
         started_at: started_at,
         subscription_date: subscription_date,
+        customer: customer,
+        external_id: 'sub_id',
       )
     end
 
@@ -849,7 +857,14 @@ RSpec.describe Fees::SubscriptionService do
   context 'when billing a new upgraded subscription' do
     let(:previous_plan) { create(:plan, pay_in_advance: true, amount_cents: 80) }
     let(:previous_subscription) do
-      create(:subscription, status: :terminated, plan: previous_plan, started_at: started_at - 6.months)
+      create(
+        :subscription,
+        status: :terminated,
+        plan: previous_plan,
+        started_at: started_at - 6.months,
+        customer: customer,
+        external_id: 'sub_id',
+      )
     end
     let(:started_at) { Time.zone.parse('2022-03-15 00:00:00') }
 
@@ -860,6 +875,8 @@ RSpec.describe Fees::SubscriptionService do
         started_at: started_at,
         subscription_date: subscription_date,
         previous_subscription: previous_subscription,
+        customer: customer,
+        external_id: 'sub_id',
       )
     end
 
@@ -895,6 +912,8 @@ RSpec.describe Fees::SubscriptionService do
             subscription_date: DateTime.parse('2021-03-25'),
             previous_subscription: previous_subscription,
             billing_time: :anniversary,
+            customer: customer,
+            external_id: 'sub_id',
           )
         end
 
@@ -906,6 +925,9 @@ RSpec.describe Fees::SubscriptionService do
             plan: previous_plan,
             subscription_date: DateTime.parse('2021-03-25'),
             billing_time: :anniversary,
+            customer: customer,
+            external_id: 'sub_id',
+            started_at: started_at - trial_duration.days,
           )
         end
 
@@ -916,6 +938,8 @@ RSpec.describe Fees::SubscriptionService do
             timestamp: DateTime.parse('2022-05-26').to_i,
           }
         end
+
+        let(:trial_duration) { 100 }
 
         it 'creates a subscription fee' do
           result = fees_subscription_service.create
@@ -1115,6 +1139,8 @@ RSpec.describe Fees::SubscriptionService do
           subscription_date: DateTime.parse('2021-03-25'),
           previous_subscription: previous_subscription,
           billing_time: :anniversary,
+          customer: customer,
+          external_id: 'sub_id',
         )
       end
 
@@ -1126,6 +1152,8 @@ RSpec.describe Fees::SubscriptionService do
           plan: previous_plan,
           subscription_date: DateTime.parse('2021-03-25'),
           billing_time: :anniversary,
+          customer: customer,
+          external_id: 'sub_id',
         )
       end
 

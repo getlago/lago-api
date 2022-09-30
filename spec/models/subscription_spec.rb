@@ -121,9 +121,13 @@ RSpec.describe Subscription, type: :model do
           previous_subscription: previous_subscription,
           started_at: Time.zone.yesterday,
           plan: plan,
+          external_id: 'sub_id',
+          customer: previous_subscription.customer,
         )
       end
-      let(:previous_subscription) { create(:subscription, started_at: Time.current.last_month) }
+      let(:previous_subscription) do
+        create(:subscription, started_at: Time.current.last_month, external_id: 'sub_id', status: :terminated)
+      end
 
       it 'takes previous subscription started_at into account' do
         trial_end_date = subscription.trial_end_date
@@ -137,8 +141,15 @@ RSpec.describe Subscription, type: :model do
   end
 
   describe '#initial_started_at' do
+    let(:customer) { create(:customer) }
     let(:subscription) do
-      create(:subscription, previous_subscription: previous_subscription, started_at: Time.zone.yesterday)
+      create(
+        :subscription,
+        previous_subscription: previous_subscription,
+        started_at: Time.zone.yesterday,
+        external_id: 'sub_id',
+        customer: customer,
+      )
     end
 
     let(:previous_subscription) { nil }
@@ -148,22 +159,45 @@ RSpec.describe Subscription, type: :model do
     end
 
     context 'with a previous subscription' do
-      let(:previous_subscription) { create(:subscription, started_at: Time.current.last_month) }
+      let(:previous_subscription) do
+        create(
+          :subscription,
+          started_at: Time.current.last_month,
+          status: :terminated,
+          external_id: 'sub_id',
+          customer: customer,
+        )
+      end
 
       it 'returns the previous subscription started_at' do
-        expect(subscription.initial_started_at).to eq(previous_subscription.started_at)
+        expect(subscription.initial_started_at.to_date).to eq(previous_subscription.started_at.to_date)
       end
     end
 
     context 'with two previous subscriptions' do
       let(:previous_subscription) do
-        create(:subscription, previous_subscription: initial_subscription, started_at: Time.zone.yesterday)
+        create(
+          :subscription,
+          previous_subscription: initial_subscription,
+          started_at: Time.zone.yesterday,
+          external_id: 'sub_id',
+          customer: customer,
+          status: :terminated,
+        )
       end
 
-      let(:initial_subscription) { create(:subscription, started_at: Time.current.last_year) }
+      let(:initial_subscription) do
+        create(
+          :subscription,
+          started_at: Time.current.last_year,
+          external_id: 'sub_id',
+          status: :terminated,
+          customer: customer,
+        )
+      end
 
       it 'returns the initial subscription started_at' do
-        expect(subscription.initial_started_at).to eq(initial_subscription.started_at)
+        expect(subscription.initial_started_at.to_date).to eq(initial_subscription.started_at.to_date)
       end
     end
   end
