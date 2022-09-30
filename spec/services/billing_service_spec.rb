@@ -72,7 +72,7 @@ RSpec.describe BillingService, type: :service do
             .with(match_array([subscription1, subscription2]), current_date.to_i)
 
           expect(BillSubscriptionJob).to have_been_enqueued
-             .with([subscription3], current_date.to_i)
+            .with([subscription3], current_date.to_i)
         end
       end
 
@@ -154,7 +154,9 @@ RSpec.describe BillingService, type: :service do
 
       let(:subscription_date) { DateTime.now.prev_occurring(DateTime.now.strftime('%A').downcase.to_sym) }
 
-      let(:current_date) { DateTime.parse('20 Jun 2022').prev_occurring(subscription_date.strftime('%A').downcase.to_sym) }
+      let(:current_date) do
+        DateTime.parse('20 Jun 2022').prev_occurring(subscription_date.strftime('%A').downcase.to_sym)
+      end
 
       it 'enqueues a job on billing day' do
         travel_to(current_date) do
