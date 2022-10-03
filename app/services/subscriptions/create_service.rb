@@ -2,8 +2,15 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan, :current_subscription, :name, :external_id, :billing_time,
-                :subscription_date
+    attr_reader(
+      :current_customer,
+      :current_plan,
+      :current_subscription,
+      :name,
+      :external_id,
+      :billing_time,
+      :subscription_date,
+    )
 
     def create_from_api(organization:, params:)
       if params[:external_customer_id]
@@ -53,9 +60,7 @@ module Subscriptions
     private
 
     def process_create
-      unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_date)
-        return result
-      end
+      return result unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_date)
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
