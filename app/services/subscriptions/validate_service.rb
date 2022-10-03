@@ -30,7 +30,6 @@ module Subscriptions
     end
 
     def valid_subscription_date?
-      return true if args[:subscription_date].nil?
       return true if args[:subscription_date].is_a?(Date)
       return true if args[:subscription_date].is_a?(String) && Date._strptime(args[:subscription_date]).present?
 

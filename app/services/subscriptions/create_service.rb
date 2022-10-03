@@ -28,7 +28,7 @@ module Subscriptions
       @name = params[:name]&.strip
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
-      @subscription_date = params[:subscription_date]
+      @subscription_date = params[:subscription_date] || Time.current.to_date
       @current_subscription = active_subscriptions&.find_by(external_id: external_id)
 
       process_create
@@ -51,7 +51,7 @@ module Subscriptions
       @name = args[:name]&.strip
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
-      @subscription_date = args[:subscription_date]
+      @subscription_date = args[:subscription_date] || Time.current.to_date
       @current_subscription = active_subscriptions&.find_by(id: args[:subscription_id])
 
       process_create
@@ -109,7 +109,7 @@ module Subscriptions
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
-        subscription_date: subscription_date || Time.current.to_date,
+        subscription_date: subscription_date,
         name: name,
         external_id: external_id,
         billing_time: billing_time || :calendar,
