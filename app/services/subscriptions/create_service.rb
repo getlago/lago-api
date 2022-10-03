@@ -2,7 +2,8 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan, :current_subscription, :name, :external_id, :billing_time
+    attr_reader :current_customer, :current_plan, :current_subscription, :name, :external_id, :billing_time,
+                :subscription_date
 
     def create_from_api(organization:, params:)
       if params[:external_customer_id]
@@ -20,6 +21,7 @@ module Subscriptions
       @name = params[:name]&.strip
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
+      @subscription_date = params[:subscription_date]
       @current_subscription = active_subscriptions&.find_by(external_id: external_id)
 
       process_create
@@ -42,6 +44,7 @@ module Subscriptions
       @name = args[:name]&.strip
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
+      @subscription_date = args[:subscription_date]
       @current_subscription = active_subscriptions&.find_by(id: args[:subscription_id])
 
       process_create
@@ -50,8 +53,9 @@ module Subscriptions
     private
 
     def process_create
-      return result.not_found_failure!(resource: 'customer') unless current_customer
-      return result.not_found_failure!(resource: 'plan') unless current_plan
+      unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_date)
+        return result
+      end
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
@@ -69,6 +73,10 @@ module Subscriptions
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
       result.validation_failure!(errors: { billing_time: ['value_is_invalid'] })
+    end
+
+    def valid?(args)
+      Subscriptions::ValidateService.new(result, **args).valid?
     end
 
     def handle_subscription
@@ -96,14 +104,19 @@ module Subscriptions
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
-        subscription_date: Time.zone.now.to_date,
+        subscription_date: subscription_date || Time.current.to_date,
         name: name,
         external_id: external_id,
         billing_time: billing_time || :calendar,
       )
-      new_subscription.mark_as_active!
 
-      if current_plan.pay_in_advance?
+      if new_subscription.subscription_date > Time.current.to_date
+        new_subscription.pending!
+      else
+        new_subscription.mark_as_active!
+      end
+
+      if current_plan.pay_in_advance? && new_subscription.subscription_date.today?
         # NOTE: Since job is laucnhed from inside a db transaction
         #       we must wait for it to be commited before processing the job
         BillSubscriptionJob

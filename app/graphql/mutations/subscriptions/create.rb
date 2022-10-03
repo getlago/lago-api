@@ -14,6 +14,7 @@ module Mutations
       argument :name, String, required: false
       argument :subscription_id, ID, required: false
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
+      argument :subscription_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Subscriptions::Object
 

@@ -1729,6 +1729,7 @@ input CreateSubscriptionInput {
   customerId: ID!
   name: String
   planId: ID!
+  subscriptionDate: ISO8601Date
   subscriptionId: ID
 }
 
