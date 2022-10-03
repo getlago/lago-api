@@ -96,6 +96,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       context 'when plan is pay in advance and subscription fees are created earlier today' do
         let(:pay_in_advance) { true }
+        let(:timestamp) { Time.current.to_i }
 
         before { create(:fee, subscription: subscription) }
 

@@ -267,14 +267,14 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe '#already_billed_today?' do
+  describe '#fee_exists??' do
     let(:subscription) { create(:subscription) }
 
     context 'without subscriptions fees that are created today' do
       before { create(:fee, subscription: subscription, created_at: Time.current - 2.days) }
 
       it 'returns false' do
-        expect(subscription.already_billed_today?).to be false
+        expect(subscription.fee_exists?(Time.current.to_i)).to be false
       end
     end
 
@@ -282,7 +282,7 @@ RSpec.describe Subscription, type: :model do
       before { create(:fee, subscription: subscription) }
 
       it 'returns true' do
-        expect(subscription.already_billed_today?).to be true
+        expect(subscription.fee_exists?(Time.current.to_i)).to be true
       end
     end
   end

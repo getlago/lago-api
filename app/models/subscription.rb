@@ -74,8 +74,10 @@ class Subscription < ApplicationRecord
     next_subscriptions.not_canceled.order(created_at: :desc).first
   end
 
-  def already_billed_today?
-    fees.subscription_kind.where(created_at: Time.current.beginning_of_day..Time.current.end_of_day).any?
+  def fee_exists?(timestamp)
+    time = Time.zone.at(timestamp)
+
+    fees.subscription_kind.where(created_at: time.beginning_of_day..time.end_of_day).any?
   end
 
   def already_billed?
