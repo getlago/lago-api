@@ -11,7 +11,7 @@ module Api
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
             root_name: 'credit_note',
-            includes: %i[fees],
+            includes: %i[items],
           ),
         )
       end

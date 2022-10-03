@@ -20,15 +20,19 @@ module V1
         file_url: nil, # TODO: Expose credit note document in API
       }
 
-      payload = payload.merge(fees) if include?(:fees)
+      payload = payload.merge(items) if include?(:items)
 
       payload
     end
 
     private
 
-    def fees
-      ::CollectionSerializer.new(model.fees, ::V1::FeeSerializer, collection_name: 'fees').serialize
+    def items
+      ::CollectionSerializer.new(
+        model.items.order(created_at: :asc),
+        ::V1::CreditNoteItemSerializer,
+        collection_name: 'items',
+      ).serialize
     end
   end
 end
