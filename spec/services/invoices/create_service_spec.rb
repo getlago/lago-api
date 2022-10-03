@@ -94,6 +94,22 @@ RSpec.describe Invoices::CreateService, type: :service do
         end
       end
 
+      context 'when plan is pay in advance and subscription fees are created earlier today' do
+        let(:pay_in_advance) { true }
+        let(:timestamp) { Time.current.to_i }
+
+        before { create(:fee, subscription: subscription) }
+
+        it 'creates an invoice for without subscription fees' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.subscription_kind.count).to eq(0)
+          end
+        end
+      end
+
       context 'when subscription is billed on anniversary date' do
         let(:timestamp) { DateTime.parse('07 Mar 2022') }
         let(:started_at) { DateTime.parse('06 Jun 2021').to_date }

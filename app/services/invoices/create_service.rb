@@ -82,6 +82,10 @@ module Invoices
     end
 
     def should_create_subscription_fee?(subscription)
+      # NOTE: When plan is pay in advance we generate an invoice upon subscription creation
+      # We want to prevent creating subscription fee if subscription creation already happened on billing day
+      return false if subscription.plan.pay_in_advance? && subscription.fee_exists?(Time.zone.at(timestamp).to_date)
+
       return false unless should_create_yearly_subscription_fee?(subscription)
 
       # NOTE: When a subscription is terminated we still need to charge the subscription

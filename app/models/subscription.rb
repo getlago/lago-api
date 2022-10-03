@@ -74,6 +74,10 @@ class Subscription < ApplicationRecord
     next_subscriptions.not_canceled.order(created_at: :desc).first
   end
 
+  def fee_exists?(date)
+    fees.subscription_kind.where(created_at: date.beginning_of_day..date.end_of_day).any?
+  end
+
   def already_billed?
     fees.subscription_kind.any?
   end
