@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_23_092906) do
+ActiveRecord::Schema[7.0].define(version: 2022_09_30_143002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -131,6 +131,35 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_23_092906) do
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end
 
+  create_table "credit_note_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "credit_note_id", null: false
+    t.uuid "fee_id", null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["credit_note_id"], name: "index_credit_note_items_on_credit_note_id"
+    t.index ["fee_id"], name: "index_credit_note_items_on_fee_id"
+  end
+
+  create_table "credit_notes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.uuid "invoice_id", null: false
+    t.integer "sequential_id", null: false
+    t.string "number", null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.integer "status", default: 0, null: false
+    t.bigint "remaining_amount_cents", default: 0, null: false
+    t.string "remaining_amount_currency", default: "0", null: false
+    t.integer "reason", null: false
+    t.string "file"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
+    t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
+  end
+
   create_table "credits", force: :cascade do |t|
     t.uuid "invoice_id"
     t.uuid "applied_coupon_id"
@@ -138,7 +167,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_23_092906) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "credit_notes_id"
     t.index ["applied_coupon_id"], name: "index_credits_on_applied_coupon_id"
+    t.index ["credit_notes_id"], name: "index_credits_on_credit_notes_id"
     t.index ["invoice_id"], name: "index_credits_on_invoice_id"
   end
 
@@ -428,7 +459,12 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_23_092906) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
+  add_foreign_key "credit_note_items", "credit_notes"
+  add_foreign_key "credit_note_items", "fees"
+  add_foreign_key "credit_notes", "customers"
+  add_foreign_key "credit_notes", "invoices"
   add_foreign_key "credits", "applied_coupons"
+  add_foreign_key "credits", "credit_notes", column: "credit_notes_id"
   add_foreign_key "credits", "invoices"
   add_foreign_key "customers", "organizations"
   add_foreign_key "events", "customers"

@@ -14,6 +14,9 @@ class Fee < ApplicationRecord
   has_one :billable_metric, through: :charge
   has_one :add_on, through: :applied_add_on
 
+  has_many :credit_note_items
+  has_many :credit_notes, through: :credit_note_items
+
   monetize :amount_cents
   monetize :vat_amount_cents
 

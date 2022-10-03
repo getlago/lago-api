@@ -4,7 +4,8 @@ class Credit < ApplicationRecord
   include Currencies
 
   belongs_to :invoice
-  belongs_to :applied_coupon
+  belongs_to :applied_coupon, optional: true
+  belongs_to :credit_note, optional: true
 
   has_one :coupon, through: :applied_coupon
 
