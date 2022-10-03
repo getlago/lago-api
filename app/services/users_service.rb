@@ -4,12 +4,13 @@ class UsersService < BaseService
   def login(email, password)
     result.user = User.find_by(email: email)&.authenticate(password)
 
-    return result.fail!(code: 'incorrect_login_or_password') unless result.user
-    return result.fail!(code: 'incorrect_login_or_password') unless result.user.memberships.active.any?
+    unless result.user.present? && result.user.memberships&.active&.any?
+      return result.single_validation_failure!(error_code: 'incorrect_login_or_password')
+    end
 
     result.token = generate_token if result.user
 
-    # Note: We're tracking the first membership linked to the user.
+    # NOTE: We're tracking the first membership linked to the user.
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.user.memberships.first.id}")
 
     result
@@ -19,7 +20,7 @@ class UsersService < BaseService
     result.user = User.find_or_initialize_by(email: email)
 
     if result.user.id
-      result.fail!(code: 'user_already_exists')
+      result.single_validation_failure!(field: :email, error_code: 'user_already_exists')
 
       return result
     end
@@ -77,13 +78,13 @@ class UsersService < BaseService
   def generate_token
     JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
   rescue StandardError => e
-    result.fail!(code: 'token_encoding_error', message: e.message)
+    result.service_failure!(code: 'token_encoding_error', message: e.message)
   end
 
   def payload
     {
       sub: result.user.id,
-      exp: Time.now.to_i + 8640 # 6 hours expiration
+      exp: Time.now.to_i + 8640, # 6 hours expiration
     }
   end
 
@@ -94,7 +95,7 @@ class UsersService < BaseService
       properties: {
         organization_name: organization.name,
         organization_id: organization.id,
-      }
+      },
     )
   end
 end

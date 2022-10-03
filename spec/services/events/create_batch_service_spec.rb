@@ -34,13 +34,13 @@ RSpec.describe Events::CreateBatchService, type: :service do
       it 'returns an error' do
         result = create_batch_service.validate_params(params: event_arguments)
 
-        expect(result).not_to be_success
-
         aggregate_failures do
-          expect(result.error_code).to eq('missing_mandatory_param')
-          expect(result.error_details).to include(:transaction_id)
-          expect(result.error_details).to include(:code)
-          expect(result.error_details).to include(:external_subscription_ids)
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:transaction_id, :code, :external_subscription_ids])
+          expect(result.error.messages[:transaction_id]).to eq(['value_is_mandatory'])
+          expect(result.error.messages[:code]).to eq(['value_is_mandatory'])
+          expect(result.error.messages[:external_subscription_ids]).to eq(['value_is_mandatory'])
         end
       end
     end

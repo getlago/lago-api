@@ -37,7 +37,7 @@ module Api
       render(
         json: {
           status: 422,
-          error: 'Unprocessable entity',
+          error: 'Unprocessable Entity',
           code: 'validation_errors',
           error_details: errors,
         },
@@ -65,8 +65,7 @@ module Api
       when BaseService::ValidationFailure
         validation_errors(errors: error_result.error.messages)
       else
-        # TODO: remove after all service error migration
-        validation_errors(errors: error_result.error_details)
+        raise(error_result.error)
       end
     end
 

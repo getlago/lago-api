@@ -1,14 +1,16 @@
-# frozen_string_literal: true
+# frozen_string_literal: true
 
 module Events
   class CreateBatchService < BaseService
     ALL_REQUIRED_PARAMS = %i[transaction_id code external_subscription_ids].freeze
 
     def validate_params(params:)
-      missing_params = ALL_REQUIRED_PARAMS.select { |key| params[key].blank? }
-      return result if missing_params.blank?
+      params_errors = ALL_REQUIRED_PARAMS.each_with_object({}) do |key, errors|
+        errors[key] = ['value_is_mandatory'] if params[key].blank?
+      end
+      return result if params_errors.blank?
 
-      result.fail!(code: 'missing_mandatory_param', details: missing_params)
+      result.validation_failure!(errors: params_errors)
     end
 
     def call(organization:, params:, timestamp:, metadata:)

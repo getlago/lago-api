@@ -6,19 +6,21 @@ module Events
     ONE_REQUIRED_PARAMS = %i[external_subscription_id external_customer_id].freeze
 
     def validate_params(params:)
-      missing_params = ALL_REQUIRED_PARAMS.select { |key| params[key].blank? }
-      missing_params |= ONE_REQUIRED_PARAMS if ONE_REQUIRED_PARAMS.all? { |key| params[key].blank? }
+      params_errors = ALL_REQUIRED_PARAMS.each_with_object({}) do |key, errors|
+        errors[key] = ['value_is_mandatory'] if params[key].blank?
+      end
+      params_errors[:base] = ['missing_external_identifier'] if ONE_REQUIRED_PARAMS.all? { |key| params[key].blank? }
 
       # NOTE: In case of multiple subscriptions, we return an error if subscription_id is not given.
       if params[:external_customer_id].present? && params[:external_subscription_id].blank?
         customer = Customer.find_by(external_id: params[:external_customer_id])
         subscriptions_count = customer ? customer.active_subscriptions.count : 0
-        missing_params |= %i[external_subscription_id] if subscriptions_count > 1
+        params_errors[:external_subscription_id] = ['value_is_mandatory'] if subscriptions_count > 1
       end
 
-      return result if missing_params.blank?
+      return result if params_errors.blank?
 
-      result.fail!(code: 'missing_mandatory_param', details: missing_params)
+      result.validation_failure!(errors: params_errors)
     end
 
     def call(organization:, params:, timestamp:, metadata:)
