@@ -13,6 +13,7 @@ class Customer < ApplicationRecord
   has_many :invoices
   has_many :applied_coupons
   has_many :coupons, through: :applied_coupons
+  has_many :credit_notes
   has_many :applied_add_ons
   has_many :add_ons, through: :applied_add_ons
   has_many :wallets
