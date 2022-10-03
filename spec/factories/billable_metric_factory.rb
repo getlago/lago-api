@@ -5,7 +5,7 @@ FactoryBot.define do
     organization
     name { 'Some metric' }
     description { 'some description' }
-    code { Faker::Name.first_name }
+    code { Faker::Alphanumeric.alphanumeric(number: 10) }
     aggregation_type { 'count_agg' }
     properties { {} }
   end
