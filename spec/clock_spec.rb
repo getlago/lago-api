@@ -27,4 +27,25 @@ describe Clockwork do
       expect(Clock::SubscriptionsBillerJob).to have_been_enqueued
     end
   end
+
+  describe 'schedule:activate_subscriptions' do
+    let(:job) { 'schedule:activate_subscriptions' }
+    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
+    let(:end_time) { Time.zone.parse('1 Apr 2022 00:31:00') }
+
+    it 'enqueue a activate subscriptions job' do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time: start_time,
+        end_time: end_time,
+        tick_speed: 1.second,
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ActivateSubscriptionsJob).to have_been_enqueued
+    end
+  end
 end
