@@ -9,6 +9,7 @@ module Types
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
       field :applied_coupons, [Types::AppliedCoupons::Object], null: true
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
+      field :credit_notes, [Types::CreditNotes::Object], null: true
       field :currency, Types::CurrencyEnum, null: true
 
       def invoices
