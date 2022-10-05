@@ -3,8 +3,9 @@
 module Subscriptions
   class ValidateService < BaseValidator
     def valid?
-      valid_customer?
-      valid_plan?
+      return false unless valid_customer?
+      return false unless valid_plan?
+
       valid_subscription_date?
 
       if errors?
@@ -20,20 +21,26 @@ module Subscriptions
     def valid_customer?
       return true if args[:customer]
 
-      add_error(field: :customer, error_code: 'customer_not_found')
+      result.not_found_failure!(resource: 'customer')
+
+      false
     end
 
     def valid_plan?
       return true if args[:plan]
 
-      add_error(field: :plan, error_code: 'plan_not_found')
+      result.not_found_failure!(resource: 'plan')
+
+      false
     end
 
     def valid_subscription_date?
       return true if args[:subscription_date].is_a?(Date)
       return true if args[:subscription_date].is_a?(String) && Date._strptime(args[:subscription_date]).present?
 
-      add_error(field: :subscription_date, error_code: 'invalid_subscription_date')
+      add_error(field: :subscription_date, error_code: 'invalid_date')
+
+      false
     end
   end
 end

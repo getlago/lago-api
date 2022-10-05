@@ -45,10 +45,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     context 'with invalid plan code' do
       let(:plan_code) { "#{plan.code}-invalid" }
 
-      it 'returns an unprocessable_entity error' do
+      it 'returns a not_found error' do
         post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:not_found)
       end
     end
 

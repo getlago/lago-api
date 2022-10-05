@@ -190,7 +190,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:customer]).to eq(['customer_not_found'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('customer_not_found')
         end
       end
     end
@@ -212,7 +213,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:plan]).to eq(['plan_not_found'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('plan_not_found')
         end
       end
     end
@@ -229,7 +231,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         }
       end
 
-      it 'returns invalid_subscription_date error' do
+      it 'returns invalid_date error' do
         result = create_service.create_from_api(
           organization: organization,
           params: params,
@@ -237,7 +239,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_subscription_date'])
+          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
         end
       end
     end
@@ -607,7 +609,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:customer]).to eq(['customer_not_found'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('customer_not_found')
         end
       end
     end
@@ -626,7 +629,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:plan]).to eq(['plan_not_found'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('plan_not_found')
         end
       end
     end
@@ -642,12 +646,12 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         }
       end
 
-      it 'returns invalid_subscription_date error' do
+      it 'returns invalid_date error' do
         result = create_service.create(**params)
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_subscription_date'])
+          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
         end
       end
     end

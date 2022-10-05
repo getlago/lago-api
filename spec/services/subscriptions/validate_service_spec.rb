@@ -30,7 +30,11 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:customer]).to eq(['customer_not_found'])
+
+        aggregate_failures do
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('customer_not_found')
+        end
       end
     end
 
@@ -39,7 +43,11 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:plan]).to eq(['plan_not_found'])
+
+        aggregate_failures do
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('plan_not_found')
+        end
       end
     end
 
@@ -49,7 +57,7 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
 
         it 'returns false and result has errors' do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_subscription_date'])
+          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
         end
       end
 
@@ -58,7 +66,7 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
 
         it 'returns false and result has errors' do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_subscription_date'])
+          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
         end
       end
     end
