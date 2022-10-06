@@ -63,6 +63,10 @@ class Subscription < ApplicationRecord
     initial_started_at.to_date + plan.trial_period.days
   end
 
+  def started_in_past?
+    subscription_date < created_at.to_date
+  end
+
   def initial_started_at
     customer.subscriptions
       .where(external_id: external_id)

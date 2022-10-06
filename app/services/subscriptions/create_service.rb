@@ -117,6 +117,8 @@ module Subscriptions
 
       if new_subscription.subscription_date > Time.current.to_date
         new_subscription.pending!
+      elsif new_subscription.subscription_date < Time.current.to_date
+        new_subscription.mark_as_active!(new_subscription.subscription_date.beginning_of_day)
       else
         new_subscription.mark_as_active!
       end
