@@ -20,9 +20,9 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
     end
 
     it 'activates all pending subscriptions with subscription date set to today' do
-      expect do
-        activate_service.activate_all_pending
-      end.to change(Subscription.pending, :count).by(-3).and change(Subscription.active, :count).by(3)
+      expect { activate_service.activate_all_pending }
+        .to change(Subscription.pending, :count).by(-3)
+        .and change(Subscription.active, :count).by(3)
     end
   end
 end
