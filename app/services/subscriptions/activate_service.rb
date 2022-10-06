@@ -14,7 +14,7 @@ module Subscriptions
         .where(previous_subscription: nil)
         .where(subscription_date: Time.zone.at(timestamp).to_date)
         .find_each do |subscription|
-          subscription.mark_as_active!
+          subscription.mark_as_active!(Time.zone.at(timestamp))
 
           BillSubscriptionJob.perform_later([subscription], timestamp) if subscription.plan.pay_in_advance?
         end
