@@ -1,20 +1,7 @@
 # frozen_string_literal: true
 
 class BaseService
-  class FailedResult < StandardError
-    def initialize(result)
-      super(format_message(result))
-    end
-
-    private
-
-    def format_message(result)
-      return result if result.is_a?(String)
-      return result.error unless result.error_details
-
-      "#{result.error}: #{[result.error_details].flatten.join(', ')}"
-    end
-  end
+  class FailedResult < StandardError; end
 
   class NotFoundFailure < FailedResult
     attr_reader :resource
@@ -68,7 +55,7 @@ class BaseService
   end
 
   class Result < OpenStruct
-    attr_reader :error, :error_code, :error_details
+    attr_reader :error
 
     def initialize
       super
@@ -79,19 +66,6 @@ class BaseService
 
     def success?
       !failure
-    end
-
-    def fail!(code:, message: nil, details: nil)
-      @failure = true
-      @error_code = code
-      @error = message || code
-      @error_details = details
-
-      # Return self to return result immediately in case of failure:
-      # ```
-      # return result.fail!(code: 'not_found')
-      # ```
-      self
     end
 
     def fail_with_error!(error)
@@ -128,9 +102,7 @@ class BaseService
     def throw_error
       return if success?
 
-      raise(error) if error.is_a?(FailedResult)
-
-      raise(FailedResult, self)
+      raise(error)
     end
 
     private

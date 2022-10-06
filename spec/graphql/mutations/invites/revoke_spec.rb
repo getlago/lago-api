@@ -55,7 +55,8 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
 
         aggregate_failures do
           expect(result['errors'].first['message']).to eq('Resource not found')
-          expect(result['errors'].first['extensions']['code']).to eq('invite_not_found')
+          expect(result['errors'].first['extensions']['code']).to eq('not_found')
+          expect(result['errors'].first['extensions']['details']['invite']).to eq(['not_found'])
         end
       end
     end

@@ -25,7 +25,7 @@ RSpec.describe UsersService, type: :service do
         properties: {
           organization_name: result.organization.name,
           organization_id: result.organization.id,
-        }
+        },
       )
     end
 
@@ -35,6 +35,21 @@ RSpec.describe UsersService, type: :service do
       expect(result.membership).to be_present
       expect(result.organization).to be_present
       expect(result.token).to be_present
+    end
+
+    context 'when user already exists' do
+      let(:user) { create(:user) }
+
+      it 'fails' do
+        result = user_service.register(user.email, 'password', 'organization_name')
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:email)
+          expect(result.error.messages[:email]).to include('user_already_exists')
+        end
+      end
     end
   end
 

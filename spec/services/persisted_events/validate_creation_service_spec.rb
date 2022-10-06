@@ -3,14 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
-  subject(:validate_result) do
-    described_class.call(
+  subject(:validation_service) do
+    described_class.new(
       subscription: subscription,
       billable_metric: billable_metric,
-      params: params,
+      args: args,
+      result: result,
     )
   end
 
+  let(:result) { BaseService::Result.new }
   let(:subscription) { create(:subscription) }
   let(:customer) { subscription.customer }
 
@@ -23,7 +25,7 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
     )
   end
 
-  let(:params) do
+  let(:args) do
     {
       code: billable_metric.code,
       properties: {
@@ -39,17 +41,29 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
   context 'without operation type' do
     let(:operation_type) { nil }
 
-    it { expect(validate_result).to eq('invalid_operation_type') }
+    it 'fails' do
+      aggregate_failures do
+        expect(validation_service).not_to be_valid
+        expect(validation_service.errors.keys).to include(:operation_type)
+        expect(validation_service.errors[:operation_type]).to eq(['invalid_operation_type'])
+      end
+    end
   end
 
   context 'with invalid operation type' do
     let(:operation_type) { 'invalid' }
 
-    it { expect(validate_result).to eq('invalid_operation_type') }
+    it 'fails' do
+      aggregate_failures do
+        expect(validation_service).not_to be_valid
+        expect(validation_service.errors.keys).to include(:operation_type)
+        expect(validation_service.errors[:operation_type]).to eq(['invalid_operation_type'])
+      end
+    end
   end
 
   context 'when operation type is add' do
-    it { expect(validate_result).to be_nil }
+    it { expect(validation_service).to be_valid }
 
     context 'with an active persisted metric' do
       before do
@@ -61,7 +75,14 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
         )
       end
 
-      it { expect(validate_result).to eq('recurring_resource_already_added') }
+      it 'fails' do
+        aggregate_failures do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.errors.keys).to include(billable_metric.field_name.to_sym)
+          expect(validation_service.errors[billable_metric.field_name.to_sym])
+            .to eq(['recurring_resource_already_added'])
+        end
+      end
     end
 
     context 'with removed persisted metric' do
@@ -75,7 +96,7 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
         )
       end
 
-      it { expect(validate_result).to be_nil }
+      it { expect(validation_service).to be_valid }
     end
   end
 
@@ -83,7 +104,13 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
     let(:operation_type) { 'remove' }
 
     context 'without persisted metric' do
-      it { expect(validate_result).to eq('recurring_resource_not_found') }
+      it 'fails' do
+        aggregate_failures do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.errors.keys).to include(billable_metric.field_name.to_sym)
+          expect(validation_service.errors[billable_metric.field_name.to_sym]).to eq(['recurring_resource_not_found'])
+        end
+      end
     end
 
     context 'with an active persisted metric' do
@@ -96,7 +123,7 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
         )
       end
 
-      it { expect(validate_result).to be_nil }
+      it { expect(validation_service).to be_valid }
     end
 
     context 'with a removed persisted metric' do
@@ -110,7 +137,13 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
         )
       end
 
-      it { expect(validate_result).to eq('recurring_resource_not_found') }
+      it 'fails' do
+        aggregate_failures do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.errors.keys).to include(billable_metric.field_name.to_sym)
+          expect(validation_service.errors[billable_metric.field_name.to_sym]).to eq(['recurring_resource_not_found'])
+        end
+      end
     end
   end
 end

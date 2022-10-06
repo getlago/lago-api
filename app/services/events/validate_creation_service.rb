@@ -23,25 +23,27 @@ module Events
     attr_reader :organization, :params, :result, :customer, :batch
 
     def validate_create_batch
-      return blank_subscription_error if params[:external_subscription_ids].blank?
+      return missing_subscription_error if params[:external_subscription_ids].blank?
       return invalid_customer_error unless customer
 
-      invalid_subscriptions = params[:external_subscription_ids].select do |arg|
-        !customer_external_subscription_ids.include?(arg)
+      invalid_subscriptions = params[:external_subscription_ids].reject do |arg|
+        customer_external_subscription_ids.include?(arg)
       end
-      return invalid_subscription_error if invalid_subscriptions.present?
+      return missing_subscription_error if invalid_subscriptions.present?
       return invalid_code_error unless valid_code?
 
       invalid_persisted_events = params[:external_subscription_ids]
         .map { |external_id| organization.subscriptions.find_by(external_id: external_id) }
-        .map { |subscription| [subscription.external_id, persisted_event_validation(subscription)] }
-        .reject { |errors| errors.last.blank? }
+        .each_with_object({}) do |subscription, errors|
+          validation_result = persisted_event_validation(subscription)
+          next errors if validation_result.blank?
 
-      if invalid_persisted_events.present?
-        return invalid_persisted_event_error(
-          invalid_persisted_events.map { |errors| "Subscription #{errors.first}: #{errors.last}" }.join(','),
-        )
-      end
+          validation_result.each do |field, codes|
+            errors["subscription[#{subscription.external_id}]_#{field}".to_sym] = codes
+          end
+          errors
+        end
+      return invalid_persisted_event_error(invalid_persisted_events) if invalid_persisted_events.present?
 
       nil
     end
@@ -50,12 +52,11 @@ module Events
       return invalid_customer_error unless customer
 
       if customer_external_subscription_ids.count > 1
-        return blank_subscription_error if params[:external_subscription_id].blank?
-        return invalid_subscription_error unless valid_subscription_id?
+        return missing_subscription_error if params[:external_subscription_id].blank? || !valid_subscription_id?
       elsif params[:external_subscription_id]
-        return invalid_subscription_error unless valid_subscription_id?
+        return missing_subscription_error unless valid_subscription_id?
       elsif customer_external_subscription_ids.blank?
-        return blank_subscription_error
+        return missing_subscription_error
       end
 
       return invalid_code_error unless valid_code?
@@ -93,13 +94,8 @@ module Events
       @customer_external_subscription_ids ||= customer&.active_subscriptions&.pluck(:external_id)
     end
 
-    def blank_subscription_error
+    def missing_subscription_error
       result.not_found_failure!(resource: 'subscription')
-      send_webhook_notice
-    end
-
-    def invalid_subscription_error
-      result.fail!(code: 'invalid_argument', message: 'external_subscription_id is invalid')
       send_webhook_notice
     end
 
@@ -113,8 +109,8 @@ module Events
       send_webhook_notice
     end
 
-    def invalid_persisted_event_error(message)
-      result.fail!(code: 'invalid_recurring_resource', message: message)
+    def invalid_persisted_event_error(errors)
+      result.validation_failure!(errors: errors)
       send_webhook_notice
     end
 
@@ -123,13 +119,17 @@ module Events
     end
 
     def persisted_event_validation(subscription)
-      return unless billable_metric.recurring_count_agg?
+      return {} unless billable_metric.recurring_count_agg?
 
-      PersistedEvents::ValidateCreationService.call(
+      validation_service = PersistedEvents::ValidateCreationService.new(
+        result: result,
         subscription: subscription,
         billable_metric: billable_metric,
-        params: params,
+        args: params,
       )
+      return {} if validation_service.valid?
+
+      validation_service.errors
     end
   end
 end

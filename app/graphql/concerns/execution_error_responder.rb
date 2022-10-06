@@ -12,7 +12,7 @@ module ExecutionErrorResponder
       code: code,
     }
 
-    if code == 'unprocessable_entity' && details.is_a?(Hash)
+    if details.is_a?(Hash)
       payload[:details] = details&.transform_keys do |key|
         key.to_s.camelize(:lower)
       end
@@ -25,7 +25,10 @@ module ExecutionErrorResponder
     execution_error(
       error: 'Resource not found',
       status: 404,
-      code: "#{resource}_not_found",
+      code: 'not_found',
+      details: {
+        resource => ['not_found'],
+      },
     )
   end
 
@@ -56,9 +59,9 @@ module ExecutionErrorResponder
       validation_error(messages: service_result.error.messages)
     else
       execution_error(
-        code: service_result.error_code,
-        error: service_result.error,
-        details: service_result.error_details,
+        error: 'Internal error',
+        status: 500,
+        code: service_result.error.code,
       )
     end
   end

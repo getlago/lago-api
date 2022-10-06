@@ -64,7 +64,8 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
         )
 
         expect(result['errors'].first['extensions']['status']).to eq(404)
-        expect(result['errors'].first['extensions']['code']).to eq('invite_not_found')
+        expect(result['errors'].first['extensions']['code']).to eq('not_found')
+        expect(result['errors'].first['extensions']['details']['invite']).to eq(['not_found'])
       end
     end
 
@@ -86,7 +87,8 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
         )
 
         expect(result['errors'].first['extensions']['status']).to eq(404)
-        expect(result['errors'].first['extensions']['code']).to eq('invite_not_found')
+        expect(result['errors'].first['extensions']['code']).to eq('not_found')
+        expect(result['errors'].first['extensions']['details']['invite']).to eq(['not_found'])
       end
     end
   end
