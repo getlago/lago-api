@@ -50,6 +50,10 @@ class Customer < ApplicationRecord
     subscriptions.active.order(started_at: :desc)
   end
 
+  def editable_subscriptions
+    subscriptions.active.or(subscriptions.pending.where(previous_subscription: nil)).order(started_at: :desc)
+  end
+
   def applicable_vat_rate
     return vat_rate if vat_rate.present?
 
