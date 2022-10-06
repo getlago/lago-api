@@ -140,6 +140,7 @@ module Subscriptions
     def upgrade_subscription
       if current_subscription.pending?
         current_subscription.plan = current_plan
+        current_subscription.name = name if name.present?
         current_subscription.save!
 
         return current_subscription
@@ -190,6 +191,7 @@ module Subscriptions
     def downgrade_subscription
       if current_subscription.pending?
         current_subscription.plan = current_plan
+        current_subscription.name = name if name.present?
         current_subscription.save!
 
         return current_subscription
