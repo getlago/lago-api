@@ -4,6 +4,8 @@ module Subscriptions
   class ActivateService < BaseService
     def initialize(timestamp:)
       @timestamp = timestamp
+
+      super(nil)
     end
 
     def activate_all_pending
