@@ -12,14 +12,22 @@ RSpec.describe Invoices::GenerateService, type: :service do
   let(:credit) { create(:credit, invoice: invoice) }
   let(:fees) { create_list(:fee, 3, invoice: invoice) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice: invoice, subscription: subscription) }
-  let(:response) do
+  let(:pdf_content) do
     File.read(Rails.root.join('spec/fixtures/blank.pdf'))
+  end
+
+  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+  let(:pdf_response) do
+    BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
   end
 
   before do
     invoice_subscription
-    stub_request(:post, "#{ENV['LAGO_PDF_URL']}/forms/chromium/convert/html")
-      .to_return(body: response, status: 200)
+
+    allow(Utils::PdfGenerator).to receive(:new)
+      .and_return(pdf_generator)
+    allow(pdf_generator).to receive(:call)
+      .and_return(pdf_response)
   end
 
   describe '.generate' do
