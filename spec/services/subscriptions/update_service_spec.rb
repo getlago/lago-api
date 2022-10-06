@@ -9,13 +9,15 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
   let(:subscription) { create(:subscription) }
 
   describe 'update' do
+    let(:subscription_date) { '2022-07-07' }
+
     before { subscription }
 
     let(:update_args) do
       {
         id: subscription.id,
         name: 'new name',
-        subscription_date: '2022-07-07',
+        subscription_date: subscription_date,
       }
     end
 
@@ -41,6 +43,29 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         aggregate_failures do
           expect(result.subscription.name).to eq('new name')
           expect(result.subscription.subscription_date.to_s).to eq('2022-07-07')
+        end
+      end
+
+      context 'when subscription date is set to today' do
+        let(:subscription_date) { Time.current.to_date }
+
+        before { subscription.plan.update!(pay_in_advance: true) }
+
+        it 'activates subscription' do
+          result = update_service.update(**update_args)
+
+          expect(result).to be_success
+
+          aggregate_failures do
+            expect(result.subscription.name).to eq('new name')
+            expect(result.subscription.status).to eq('active')
+          end
+        end
+
+        it 'enqueues a job to bill the subscription' do
+          expect do
+            update_service.update(**update_args)
+          end.to have_enqueued_job(BillSubscriptionJob)
         end
       end
     end
