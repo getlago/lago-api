@@ -87,8 +87,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   end
 
   describe 'update' do
-    let(:subscription) { create(:subscription, customer: customer, plan: plan) }
-    let(:update_params) { { name: 'subscription name new' } }
+    let(:subscription) { create(:pending_subscription, customer: customer, plan: plan) }
+    let(:update_params) { { name: 'subscription name new', subscription_date: '2022-09-05' } }
 
     before { subscription }
 
@@ -98,6 +98,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:subscription][:lago_id]).to eq(subscription.id)
       expect(json[:subscription][:name]).to eq('subscription name new')
+      expect(json[:subscription][:subscription_date].to_s).to eq('2022-09-05')
     end
 
     context 'with not existing subscription' do

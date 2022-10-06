@@ -51,7 +51,7 @@ class Customer < ApplicationRecord
   end
 
   def editable_subscriptions
-    subscriptions.active.or(subscriptions.pending.where(previous_subscription: nil)).order(started_at: :desc)
+    subscriptions.active.or(subscriptions.starting_in_the_future).order(started_at: :desc)
   end
 
   def applicable_vat_rate

@@ -15,17 +15,14 @@ module Resolvers
         statuses = status
         subscriptions = object.subscriptions
 
-        if statuses&.include?('pending')
-          pending_subscriptions = subscriptions.pending.where(previous_subscription: nil)
-          statuses -= ['pending']
+        return subscriptions.order(created_at: :desc) if statuses.blank?
+        return subscriptions.where(status: statuses).order(created_at: :desc) unless statuses&.include?('pending')
 
-          subscriptions = subscriptions.where(status: statuses) if statuses.present?
-          subscriptions = subscriptions.or(pending_subscriptions)
-        elsif statuses.present?
-          subscriptions = subscriptions.where(status: statuses)
-        end
+        statuses -= ['pending']
 
-        subscriptions.order(created_at: :desc)
+        return subscriptions.starting_in_the_future.order(created_at: :desc) if statuses.blank?
+
+        subscriptions.where(status: statuses).or(subscriptions.starting_in_the_future).order(created_at: :desc)
       end
     end
   end

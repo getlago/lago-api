@@ -7,7 +7,10 @@ module Subscriptions
       return result.not_found_failure!(resource: 'subscription') unless subscription
 
       subscription.name = args[:name] if args.key?(:name)
-      subscription.subscription_date = args[:subscription_date] if args.key?(:subscription_date)
+
+      if subscription.starting_in_the_future?
+        subscription.subscription_date = args[:subscription_date] if args.key?(:subscription_date)
+      end
 
       subscription.save!
 
@@ -22,7 +25,10 @@ module Subscriptions
       return result.not_found_failure!(resource: 'subscription') unless subscription
 
       subscription.name = params[:name] if params.key?(:name)
-      subscription.subscription_date = params[:subscription_date] if params.key?(:subscription_date)
+
+      if subscription.starting_in_the_future?
+        subscription.subscription_date = params[:subscription_date] if params.key?(:subscription_date)
+      end
 
       subscription.save!
 

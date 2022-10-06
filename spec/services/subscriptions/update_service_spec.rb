@@ -15,6 +15,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       {
         id: subscription.id,
         name: 'new name',
+        subscription_date: '2022-07-07',
       }
     end
 
@@ -25,6 +26,22 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.subscription.name).to eq('new name')
+        expect(result.subscription.subscription_date.to_s).not_to eq('2022-07-07')
+      end
+    end
+
+    context 'when subscription is starting in the future' do
+      let(:subscription) { create(:pending_subscription) }
+
+      it 'updates the subscription_date as well' do
+        result = update_service.update(**update_args)
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          expect(result.subscription.name).to eq('new name')
+          expect(result.subscription.subscription_date.to_s).to eq('2022-07-07')
+        end
       end
     end
 
@@ -50,6 +67,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     let(:update_args) do
       {
         name: 'new name',
+        subscription_date: '2022-07-07',
       }
     end
     let(:customer) { create(:customer, organization: organization) }
@@ -68,6 +86,26 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.subscription.name).to eq('new name')
+        expect(result.subscription.subscription_date.to_s).not_to eq('2022-07-07')
+      end
+    end
+
+    context 'when subscription is starting in the future' do
+      let(:subscription) { create(:pending_subscription, customer: customer) }
+
+      it 'updates the subscription_date as well' do
+        result = update_service.update_from_api(
+          organization: organization,
+          external_id: subscription.external_id,
+          params: update_args,
+        )
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          expect(result.subscription.name).to eq('new name')
+          expect(result.subscription.subscription_date.to_s).to eq('2022-07-07')
+        end
       end
     end
 
