@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::ActivateService, type: :service do
-  subject(:activate_service) { described_class.new }
+  subject(:activate_service) { described_class.new(timestamp: Time.current.to_i) }
 
   describe 'activate_all_expired' do
     let(:active_subscription) { create(:active_subscription) }

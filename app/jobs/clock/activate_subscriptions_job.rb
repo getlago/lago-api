@@ -5,7 +5,7 @@ module Clock
     queue_as 'clock'
 
     def perform
-      Subscriptions::ActivateService.new.activate_all_pending
+      Subscriptions::ActivateService.new(timestamp: Time.current.to_i).activate_all_pending
     end
   end
 end
