@@ -2,7 +2,15 @@
 
 module Subscriptions
   class CreateService < BaseService
-    attr_reader :current_customer, :current_plan, :current_subscription, :name, :external_id, :billing_time
+    attr_reader(
+      :current_customer,
+      :current_plan,
+      :current_subscription,
+      :name,
+      :external_id,
+      :billing_time,
+      :subscription_date,
+    )
 
     def create_from_api(organization:, params:)
       if params[:external_customer_id]
@@ -20,7 +28,8 @@ module Subscriptions
       @name = params[:name]&.strip
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
-      @current_subscription = active_subscriptions&.find_by(external_id: external_id)
+      @subscription_date = params[:subscription_date] || Time.current.to_date
+      @current_subscription = editable_subscriptions&.find_by(external_id: external_id)
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
@@ -42,7 +51,8 @@ module Subscriptions
       @name = args[:name]&.strip
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
-      @current_subscription = active_subscriptions&.find_by(id: args[:subscription_id])
+      @subscription_date = args[:subscription_date] || Time.current.to_date
+      @current_subscription = editable_subscriptions&.find_by(id: args[:subscription_id])
 
       process_create
     end
@@ -50,8 +60,7 @@ module Subscriptions
     private
 
     def process_create
-      return result.not_found_failure!(resource: 'customer') unless current_customer
-      return result.not_found_failure!(resource: 'plan') unless current_plan
+      return result unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_date)
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
@@ -69,6 +78,10 @@ module Subscriptions
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
       result.validation_failure!(errors: { billing_time: ['value_is_invalid'] })
+    end
+
+    def valid?(args)
+      Subscriptions::ValidateService.new(result, **args).valid?
     end
 
     def handle_subscription
@@ -96,14 +109,21 @@ module Subscriptions
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
-        subscription_date: Time.zone.now.to_date,
+        subscription_date: subscription_date,
         name: name,
         external_id: external_id,
         billing_time: billing_time || :calendar,
       )
-      new_subscription.mark_as_active!
 
-      if current_plan.pay_in_advance?
+      if new_subscription.subscription_date > Time.current.to_date
+        new_subscription.pending!
+      elsif new_subscription.subscription_date < Time.current.to_date
+        new_subscription.mark_as_active!(new_subscription.subscription_date.beginning_of_day)
+      else
+        new_subscription.mark_as_active!
+      end
+
+      if current_plan.pay_in_advance? && new_subscription.subscription_date.today?
         # NOTE: Since job is laucnhed from inside a db transaction
         #       we must wait for it to be commited before processing the job
         BillSubscriptionJob
@@ -118,6 +138,12 @@ module Subscriptions
     end
 
     def upgrade_subscription
+      if current_subscription.starting_in_the_future?
+        update_pending_subscription
+
+        return current_subscription
+      end
+
       new_subscription = Subscription.new(
         customer: current_customer,
         plan: current_plan,
@@ -161,6 +187,12 @@ module Subscriptions
     end
 
     def downgrade_subscription
+      if current_subscription.starting_in_the_future?
+        update_pending_subscription
+
+        return current_subscription
+      end
+
       cancel_pending_subscription if pending_subscription?
 
       # NOTE: When downgrading a subscription, we keep the current one active
@@ -218,8 +250,18 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
-    def active_subscriptions
-      @active_subscriptions ||= current_customer&.active_subscriptions
+    def update_pending_subscription
+      current_subscription.plan = current_plan
+      current_subscription.name = name if name.present?
+      current_subscription.save!
+    end
+
+    def editable_subscriptions
+      return nil unless current_customer
+
+      @editable_subscriptions ||= current_customer.subscriptions.active
+        .or(current_customer.subscriptions.starting_in_the_future)
+        .order(started_at: :desc)
     end
   end
 end

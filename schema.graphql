@@ -1729,6 +1729,7 @@ input CreateSubscriptionInput {
   customerId: ID!
   name: String
   planId: ID!
+  subscriptionDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -3805,7 +3806,8 @@ input UpdateSubscriptionInput {
   """
   clientMutationId: String
   id: ID!
-  name: String!
+  name: String
+  subscriptionDate: ISO8601Date
 }
 
 type User {

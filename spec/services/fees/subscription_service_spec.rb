@@ -12,6 +12,7 @@ RSpec.describe Fees::SubscriptionService do
   end
 
   let(:started_at) { Time.zone.parse('2022-01-01 00:01') }
+  let(:created_at) { started_at }
   let(:subscription_date) { started_at }
 
   let(:plan) do
@@ -39,6 +40,7 @@ RSpec.describe Fees::SubscriptionService do
       started_at: started_at,
       subscription_date: subscription_date,
       customer: customer,
+      created_at: created_at,
       external_id: 'sub_id',
     )
   end
@@ -271,6 +273,38 @@ RSpec.describe Fees::SubscriptionService do
 
                 expect(result.fee.amount_cents).to eq(0)
               end
+            end
+          end
+        end
+
+        context 'when subscription is created in the past' do
+          context 'when plan is pay in advance' do
+            let(:created_at) { subscription_date + 2.days }
+
+            before { plan.update(pay_in_advance: true) }
+
+            it 'creates a full amount fee' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(plan.amount_cents)
+            end
+          end
+
+          context 'when subscription has started before previous billing period' do
+            let(:created_at) { subscription_date + 8.days }
+
+            let(:boundaries) do
+              {
+                from_date: subscription.created_at.beginning_of_week.to_date,
+                to_date: subscription.created_at.end_of_week.to_date,
+                timestamp: (subscription.created_at.end_of_week + 1.day).to_i,
+              }
+            end
+
+            it 'creates a full amount fee' do
+              result = fees_subscription_service.create
+
+              expect(result.fee.amount_cents).to eq(plan.amount_cents)
             end
           end
         end

@@ -84,8 +84,16 @@ module Fees
     #        or when it is payed in advance on an anniversary base
     def should_use_full_amount?
       return true if plan.pay_in_advance? && subscription.anniversary?
+      return true if subscription.fees.subscription_kind.exists?
 
-      subscription.fees.subscription_kind.exists?
+      return true if subscription.started_in_past? && plan.pay_in_advance?
+
+      if subscription.started_in_past? &&
+         subscription.started_at < date_service(subscription).previous_beginning_of_period
+        return true
+      end
+
+      false
     end
 
     def first_subscription_amount
