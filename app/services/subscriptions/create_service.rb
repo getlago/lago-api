@@ -139,9 +139,7 @@ module Subscriptions
 
     def upgrade_subscription
       if current_subscription.starting_in_the_future?
-        current_subscription.plan = current_plan
-        current_subscription.name = name if name.present?
-        current_subscription.save!
+        update_pending_subscription
 
         return current_subscription
       end
@@ -190,9 +188,7 @@ module Subscriptions
 
     def downgrade_subscription
       if current_subscription.starting_in_the_future?
-        current_subscription.plan = current_plan
-        current_subscription.name = name if name.present?
-        current_subscription.save!
+        update_pending_subscription
 
         return current_subscription
       end
@@ -254,8 +250,18 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
+    def update_pending_subscription
+      current_subscription.plan = current_plan
+      current_subscription.name = name if name.present?
+      current_subscription.save!
+    end
+
     def editable_subscriptions
-      @editable_subscriptions ||= current_customer&.editable_subscriptions
+      return nil unless current_customer
+
+      @editable_subscriptions ||= current_customer.subscriptions.active
+        .or(current_customer.subscriptions.starting_in_the_future)
+        .order(started_at: :desc)
     end
   end
 end

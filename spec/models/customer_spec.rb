@@ -112,26 +112,4 @@ RSpec.describe Customer, type: :model do
       it { expect(customer).not_to be_deletable }
     end
   end
-
-  describe '.editable_subscriptions' do
-    let(:customer) { create(:customer) }
-    let(:subscription) { create(:active_subscription, customer: customer) }
-    let(:second_subscription) { create(:pending_subscription, customer: customer) }
-    let(:third_subscription) { create(:pending_subscription, customer: customer, previous_subscription: subscription) }
-
-    before do
-      subscription
-      second_subscription
-      third_subscription
-    end
-
-    it 'returns only active and pending subscriptions that are NOT downgraded' do
-      result = customer.editable_subscriptions
-
-      aggregate_failures do
-        expect(result.count).to eq(2)
-        expect(result.pluck(:id)).not_to include(third_subscription.id)
-      end
-    end
-  end
 end

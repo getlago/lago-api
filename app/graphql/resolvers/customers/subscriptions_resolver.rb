@@ -11,6 +11,10 @@ module Resolvers
 
       type Types::Subscriptions::Object, null: false
 
+      # FE needs possibility to fetch subscriptions by status. However is status is pending, only
+      # starting_in_the_future subscriptions should be returned since FE handles downgraded (pending)
+      # subscriptions a bit different (it checks if next_plan exists and it uses some of next plan's properties
+      # that are needed in the UI)
       def resolve(status: nil)
         statuses = status
         subscriptions = object.subscriptions

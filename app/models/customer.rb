@@ -50,10 +50,6 @@ class Customer < ApplicationRecord
     subscriptions.active.order(started_at: :desc)
   end
 
-  def editable_subscriptions
-    subscriptions.active.or(subscriptions.starting_in_the_future).order(started_at: :desc)
-  end
-
   def applicable_vat_rate
     return vat_rate if vat_rate.present?
 

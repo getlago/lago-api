@@ -287,4 +287,31 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#starting_in_the_future?' do
+    context 'when subscription is active' do
+      let(:subscription) { create(:active_subscription) }
+
+      it 'returns false' do
+        expect(subscription.starting_in_the_future?).to be false
+      end
+    end
+
+    context 'when subscription is pending and starting in the future' do
+      let(:subscription) { create(:pending_subscription) }
+
+      it 'returns true' do
+        expect(subscription.starting_in_the_future?).to be true
+      end
+    end
+
+    context 'when subscription is pending and downgraded' do
+      let(:old_subscription) { create(:active_subscription) }
+      let(:subscription) { create(:pending_subscription, previous_subscription: old_subscription) }
+
+      it 'returns false' do
+        expect(subscription.starting_in_the_future?).to be false
+      end
+    end
+  end
 end

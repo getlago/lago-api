@@ -32,6 +32,26 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
+    context 'when subscription_date is not passed at all' do
+      let(:update_args) do
+        {
+          id: subscription.id,
+          name: 'new name',
+        }
+      end
+
+      it 'updates the subscription' do
+        result = update_service.update(**update_args)
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          expect(result.subscription.name).to eq('new name')
+          expect(result.subscription.subscription_date.to_s).not_to eq('2022-07-07')
+        end
+      end
+    end
+
     context 'when subscription is starting in the future' do
       let(:subscription) { create(:pending_subscription) }
 
