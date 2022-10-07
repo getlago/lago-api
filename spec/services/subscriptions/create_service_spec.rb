@@ -451,6 +451,24 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             end
           end
 
+          context 'when current subscription is pending' do
+            before { subscription.pending! }
+
+            it 'returns existing subscription with updated attributes' do
+              result = create_service.create_from_api(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).to eq(subscription.id)
+                expect(result.subscription.plan_id).to eq(higher_plan.id)
+                expect(result.subscription.name).to eq('invoice display name new')
+              end
+            end
+          end
+
           context 'when old subscription is payed in arrear' do
             before { plan.update!(pay_in_advance: false) }
 
@@ -546,6 +564,24 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result.subscription.id).to eq(subscription.id)
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
+            end
+          end
+
+          context 'when current subscription is pending' do
+            before { subscription.pending! }
+
+            it 'returns existing subscription with updated attributes' do
+              result = create_service.create_from_api(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).to eq(subscription.id)
+                expect(result.subscription.plan_id).to eq(lower_plan.id)
+                expect(result.subscription.name).to eq('invoice display name new')
+              end
             end
           end
 

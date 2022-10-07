@@ -30,6 +30,8 @@ class Subscription < ApplicationRecord
   enum status: STATUSES
   enum billing_time: BILLING_TIME
 
+  scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
+
   def mark_as_active!(timestamp = Time.zone.now)
     self.started_at ||= timestamp
     active!
@@ -84,6 +86,10 @@ class Subscription < ApplicationRecord
 
   def already_billed?
     fees.subscription_kind.any?
+  end
+
+  def starting_in_the_future?
+    pending? && previous_subscription.nil?
   end
 
   def validate_external_id

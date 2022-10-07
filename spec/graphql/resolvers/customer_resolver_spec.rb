@@ -52,6 +52,48 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     end
   end
 
+  context 'when active and pending subscriptions are requested' do
+    let(:second_subscription) { create(:pending_subscription, customer: customer) }
+    let(:third_subscription) { create(:pending_subscription, customer: customer, previous_subscription: subscription) }
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customer(id: $customerId) {
+            id externalId name currency
+            invoices { id invoiceType status }
+            subscriptions(status: [active, pending]) { id, status }
+            appliedCoupons { id amountCents amountCurrency coupon { id name } }
+            appliedAddOns { id amountCents amountCurrency addOn { id name } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      second_subscription
+      third_subscription
+    end
+
+    it 'returns a single customer with correct subscriptions' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+        variables: {
+          customerId: customer.id,
+        },
+      )
+
+      subscription_ids = result['data']['customer']['subscriptions'].map { |el| el['id'] }
+
+      aggregate_failures do
+        expect(subscription_ids.count).to eq(2)
+        expect(subscription_ids).not_to include(third_subscription.id)
+      end
+    end
+  end
+
   context 'without current organization' do
     it 'returns an error' do
       result = execute_graphql(

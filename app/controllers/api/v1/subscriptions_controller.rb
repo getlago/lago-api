@@ -90,7 +90,7 @@ module Api
       end
 
       def update_params
-        params.require(:subscription).permit(:name)
+        params.require(:subscription).permit(:name, :subscription_date)
       end
     end
   end

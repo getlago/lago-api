@@ -29,7 +29,7 @@ module Subscriptions
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
       @subscription_date = params[:subscription_date] || Time.current.to_date
-      @current_subscription = active_subscriptions&.find_by(external_id: external_id)
+      @current_subscription = editable_subscriptions&.find_by(external_id: external_id)
 
       process_create
     rescue ActiveRecord::RecordInvalid => e
@@ -52,7 +52,7 @@ module Subscriptions
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
       @subscription_date = args[:subscription_date] || Time.current.to_date
-      @current_subscription = active_subscriptions&.find_by(id: args[:subscription_id])
+      @current_subscription = editable_subscriptions&.find_by(id: args[:subscription_id])
 
       process_create
     end
@@ -138,6 +138,12 @@ module Subscriptions
     end
 
     def upgrade_subscription
+      if current_subscription.starting_in_the_future?
+        update_pending_subscription
+
+        return current_subscription
+      end
+
       new_subscription = Subscription.new(
         customer: current_customer,
         plan: current_plan,
@@ -181,6 +187,12 @@ module Subscriptions
     end
 
     def downgrade_subscription
+      if current_subscription.starting_in_the_future?
+        update_pending_subscription
+
+        return current_subscription
+      end
+
       cancel_pending_subscription if pending_subscription?
 
       # NOTE: When downgrading a subscription, we keep the current one active
@@ -238,8 +250,18 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
-    def active_subscriptions
-      @active_subscriptions ||= current_customer&.active_subscriptions
+    def update_pending_subscription
+      current_subscription.plan = current_plan
+      current_subscription.name = name if name.present?
+      current_subscription.save!
+    end
+
+    def editable_subscriptions
+      return nil unless current_customer
+
+      @editable_subscriptions ||= current_customer.subscriptions.active
+        .or(current_customer.subscriptions.starting_in_the_future)
+        .order(started_at: :desc)
     end
   end
 end
