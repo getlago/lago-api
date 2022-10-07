@@ -2,8 +2,6 @@
 
 module Invoices
   class GenerateService < BaseService
-    include ActiveSupport::NumberHelper
-
     def generate_from_api(invoice)
       generate_pdf(invoice)
 

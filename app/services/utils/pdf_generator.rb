@@ -2,6 +2,8 @@
 
 module Utils
   class PdfGenerator < BaseService
+    include ActiveSupport::NumberHelper
+
     def initialize(template:, context:)
       @template = template
       @context = context
