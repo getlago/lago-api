@@ -12,6 +12,21 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
+          creditNotes {
+            id
+            status
+            reason
+            amountCents
+            amountCurrency
+            remainingAmountCents
+            remainingAmountCurrency
+            items {
+              id
+              amountCents
+              amountCurrency
+              fee { id amountCents amountCurrency itemType itemCode itemName vatRate units eventsCount }
+            }
+          }
         }
       }
     GQL
@@ -24,11 +39,14 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   end
   let(:subscription) { create(:subscription, customer: customer) }
   let(:applied_add_on) { create(:applied_add_on, customer: customer) }
+  let(:credit_note) { create(:credit_note, customer: customer) }
+  let(:credit_note_item) { create(:credit_note_item, credit_note: credit_note) }
 
   before do
     create_list(:invoice, 2, customer: customer)
     applied_add_on
     subscription
+    credit_note_item
   end
 
   it 'returns a single customer' do

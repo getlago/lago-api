@@ -2,7 +2,7 @@ FactoryBot.define do
   factory :coupon do
     organization
     name { Faker::Name.name }
-    code { Faker::Name.first_name }
+    code { Faker::Alphanumeric.alphanumeric(number: 10) }
     coupon_type { 'fixed_amount' }
     status { 'active' }
     expiration { 'no_expiration' }
