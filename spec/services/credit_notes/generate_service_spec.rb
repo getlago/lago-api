@@ -71,5 +71,11 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
 
       expect(credit_note.file).to be_present
     end
+
+    it 'calls the SendWebhook job' do
+      expect do
+        credit_note_generate_service.call_from_api(credit_note: credit_note)
+      end.to have_enqueued_job(SendWebhookJob)
+    end
   end
 end

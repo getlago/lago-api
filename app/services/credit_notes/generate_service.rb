@@ -4,6 +4,8 @@ module CreditNotes
   class GenerateService < BaseService
     def call_from_api(credit_note:)
       generate_pdf(credit_note)
+
+      SendWebhookJob.perform_later('credit_note.generated', credit_note)
     end
 
     def call(credit_note_id:)

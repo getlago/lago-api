@@ -17,15 +17,22 @@ module V1
         remaining_amount_currency: model.remaining_amount_currency,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        file_url: nil, # TODO: Expose credit note document in API
+        file_url: model.file_url,
       }
 
+      payload = payload.merge(customer) if include?(:customer)
       payload = payload.merge(items) if include?(:items)
 
       payload
     end
 
     private
+
+    def customer
+      {
+        customer: ::V1::CustomerSerializer.new(model.customer).serialize,
+      }
+    end
 
     def items
       ::CollectionSerializer.new(

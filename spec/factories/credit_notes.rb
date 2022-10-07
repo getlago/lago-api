@@ -12,5 +12,15 @@ FactoryBot.define do
 
     remaining_amount_cents { 100 }
     remaining_amount_currency { 'EUR' }
+
+    trait :with_file do
+      after(:build) do |credit_note|
+        credit_note.file.attach(
+          io: File.open(Rails.root.join('spec/fixtures/blank.pdf')),
+          filename: 'blank.pdf',
+          content_type: 'application/pdf',
+        )
+      end
+    end
   end
 end
