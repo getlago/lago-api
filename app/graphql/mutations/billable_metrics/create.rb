@@ -14,6 +14,7 @@ module Mutations
       argument :description, String
       argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
       argument :field_name, String, required: false
+      argument :group, GraphQL::Types::JSON, required: false
 
       type Types::BillableMetrics::Object
 

@@ -13,6 +13,7 @@ module Types
       field :description, String
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
       field :field_name, String, null: true
+      field :group, GraphQL::Types::JSON, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -23,6 +24,10 @@ module Types
 
       def can_be_deleted
         object.deletable?
+      end
+
+      def group
+        object.groups_as_tree
       end
     end
   end

@@ -13,7 +13,8 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           name,
           code,
           aggregationType,
-          organization { id }
+          organization { id },
+          group
         }
       }
     GQL
@@ -29,9 +30,9 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           name: 'New Metric',
           code: 'new_metric',
           description: 'New metric description',
-          aggregationType: 'count_agg'
-        }
-      }
+          aggregationType: 'count_agg',
+        },
+      },
     )
 
     result_data = result['data']['updateBillableMetric']
@@ -45,6 +46,37 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
     end
   end
 
+  context 'with group parameter' do
+    it 'updates billable metric\'s group' do
+      create(:group, billable_metric: billable_metric)
+      group = {
+        key: 'cloud',
+        values: [
+          { name: 'AWS', key: 'region', values: %w[usa europe] },
+          { name: 'Google', key: 'region', values: ['usa'] },
+        ],
+      }
+
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: {
+            id: billable_metric.id,
+            name: 'metric',
+            code: 'metric',
+            description: 'metric description',
+            aggregationType: 'count_agg',
+            group: group,
+          },
+        },
+      )
+
+      result_data = result['data']['updateBillableMetric']
+      expect(result_data['group']).to eq(group)
+    end
+  end
+
   context 'without current_user' do
     it 'returns an error' do
       result = execute_graphql(
@@ -55,9 +87,9 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
             name: 'New Metric',
             code: 'new_metric',
             description: 'New metric description',
-            aggregationType: 'count_agg'
-          }
-        }
+            aggregationType: 'count_agg',
+          },
+        },
       )
 
       expect_unauthorized_error(result)

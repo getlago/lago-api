@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-#
+
 module V1
   class BillableMetricSerializer < ModelSerializer
     def serialize
@@ -10,7 +10,8 @@ module V1
         description: model.description,
         aggregation_type: model.aggregation_type,
         created_at: model.created_at.iso8601,
-        field_name: model.field_name
+        field_name: model.field_name,
+        group: model.groups_as_tree,
       }
     end
   end
