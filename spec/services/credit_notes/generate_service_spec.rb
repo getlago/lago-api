@@ -11,12 +11,12 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
   let(:credit_note) { create(:credit_note, invoice: invoice, customer: customer) }
   let(:fee) { create(:fee, invoice: invoice) }
   let(:credit_note_item) { create(:credit_note_item, credit_note: credit_note, fee: fee) }
+  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
 
   let(:pdf_content) do
     File.read(Rails.root.join('spec/fixtures/blank.pdf'))
   end
 
-  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
   let(:pdf_response) do
     BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
   end
