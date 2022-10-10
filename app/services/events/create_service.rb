@@ -72,7 +72,7 @@ module Events
       if organization.webhook_url?
         SendWebhookJob.perform_later(
           :event,
-          { input_params: params, error: result.error, organization_id: organization.id },
+          { input_params: params, error: result.error.message, organization_id: organization.id },
         )
       end
 

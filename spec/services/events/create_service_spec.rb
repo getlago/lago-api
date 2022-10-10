@@ -291,6 +291,35 @@ RSpec.describe Events::CreateService, type: :service do
           )
         end.to change(PersistedEvent, :count).by(1)
       end
+
+      context 'when a validation error occurs' do
+        let(:create_args) do
+          {
+            customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            properties: {
+              'operation_type' => 'add',
+            },
+            timestamp: Time.zone.now.to_i,
+          }
+        end
+
+        it 'returns an error and send an error webhook' do
+          result = create_service.call(
+            organization: organization,
+            params: create_args,
+            timestamp: timestamp,
+            metadata: {},
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(SendWebhookJob).to have_been_enqueued
+          end
+        end
+      end
     end
   end
 end
