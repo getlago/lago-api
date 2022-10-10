@@ -307,17 +307,18 @@ RSpec.describe Events::CreateService, type: :service do
         end
 
         it 'returns an error and send an error webhook' do
-          result = create_service.call(
-            organization: organization,
-            params: create_args,
-            timestamp: timestamp,
-            metadata: {},
-          )
+          result = nil
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(SendWebhookJob).to have_been_enqueued
-          end
+          expect do
+            result = create_service.call(
+              organization: organization,
+              params: create_args,
+              timestamp: timestamp,
+              metadata: {},
+            )
+          end.to have_enqueued_job(SendWebhookJob)
+
+          expect(result).not_to be_success
         end
       end
     end
