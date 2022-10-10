@@ -59,19 +59,19 @@ module Credits
 
     def compute_credit_amount(credit_note, remaining_invoice_amount)
       # TODO: might change to be applied VAT included
-      if credit_note.remaining_amount_cents > remaining_invoice_amount
+      if credit_note.balance_amount_cents > remaining_invoice_amount
         remaining_invoice_amount
       else
-        credit_note.remaining_amount_cents
+        credit_note.balance_amount_cents
       end
     end
 
     def update_remaining_credit(credit_note, consumed_credit)
       credit_note.update!(
-        remaining_amount_cents: credit_note.remaining_amount_cents - consumed_credit,
+        balance_amount_cents: credit_note.balance_amount_cents - consumed_credit,
       )
 
-      credit_note.consumed! if credit_note.remaining_amount_cents.zero?
+      credit_note.consumed! if credit_note.balance_amount_cents.zero?
     end
   end
 end

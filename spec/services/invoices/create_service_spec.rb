@@ -676,9 +676,12 @@ RSpec.describe Invoices::CreateService, type: :service do
         create(
           :credit_note,
           customer: subscription.customer,
-          amount_cents: 10,
-          remaining_amount_cents: 10,
-          amount_currency: plan.amount_currency,
+          total_amount_cents: 10,
+          total_amount_currency: plan.amount_currency,
+          balance_amount_cents: 10,
+          balance_amount_currency: plan.amount_currency,
+          credit_amount_cents: 10,
+          credit_amount_currency: plan.amount_currency,
         )
       end
 

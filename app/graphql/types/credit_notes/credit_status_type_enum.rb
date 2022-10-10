@@ -2,10 +2,10 @@
 
 module Types
   module CreditNotes
-    class StatusTypeEnum < Types::BaseEnum
+    class CreditStatusTypeEnum < Types::BaseEnum
       graphql_name 'CreditNoteTypeEnum'
 
-      CreditNote::STATUS.each do |type|
+      CreditNote::CREDIT_STATUS.each do |type|
         value type
       end
     end

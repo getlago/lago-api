@@ -20,8 +20,9 @@ RSpec.describe Credits::CreditNoteService do
   let(:credit_note1) do
     create(
       :credit_note,
-      amount_cents: 20,
-      remaining_amount_cents: 20,
+      total_amount_cents: 20,
+      balance_amount_cents: 20,
+      credit_amount_cents: 20,
       customer: customer,
     )
   end
@@ -29,8 +30,9 @@ RSpec.describe Credits::CreditNoteService do
   let(:credit_note2) do
     create(
       :credit_note,
-      amount_cents: 50,
-      remaining_amount_cents: 50,
+      total_amount_cents: 50,
+      balance_amount_cents: 50,
+      credit_amount_cents: 50,
       customer: customer,
     )
   end
@@ -53,7 +55,7 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit1.credit_note).to eq(credit_note1)
         expect(credit1.amount_cents).to eq(20)
         expect(credit1.amount_currency).to eq('EUR')
-        expect(credit_note1.reload.remaining_amount_cents).to be_zero
+        expect(credit_note1.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
 
         credit2 = result.credits.last
@@ -61,7 +63,7 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit2.credit_note).to eq(credit_note2)
         expect(credit2.amount_cents).to eq(50)
         expect(credit2.amount_currency).to eq('EUR')
-        expect(credit_note2.reload.remaining_amount_cents).to be_zero
+        expect(credit_note2.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
       end
     end
@@ -94,7 +96,7 @@ RSpec.describe Credits::CreditNoteService do
           expect(credit.credit_note).to eq(credit_note1)
           expect(credit.amount_cents).to eq(10)
           expect(credit.amount_currency).to eq('EUR')
-          expect(credit_note1.reload.remaining_amount_cents).to eq(10)
+          expect(credit_note1.reload.balance_amount_cents).to eq(10)
           expect(credit_note1).to be_available
         end
       end

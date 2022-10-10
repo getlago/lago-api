@@ -14,12 +14,14 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
           creditNotes {
             id
-            status
+            creditStatus
             reason
-            amountCents
-            amountCurrency
-            remainingAmountCents
-            remainingAmountCurrency
+            totalAmountCents
+            totalAmountCurrency
+            creditAmountCents
+            creditAmountCurrency
+            balanceAmountCents
+            balanceAmountCurrency
             items {
               id
               creditAmountCents
