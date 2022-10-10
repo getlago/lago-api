@@ -1733,6 +1733,39 @@ input CreateSubscriptionInput {
   subscriptionId: ID
 }
 
+type CreditNote {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  invoice: Invoice
+  items: [CreditNoteItem!]!
+  number: String!
+  reason: CreditNoteReasonEnum!
+  remainingAmountCents: BigInt!
+  remainingAmountCurrency: CurrencyEnum!
+  sequentialId: ID!
+  status: CreditNoteTypeEnum!
+  updatedAt: ISO8601DateTime!
+}
+
+type CreditNoteItem {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  fee: Fee!
+  id: ID!
+}
+
+enum CreditNoteReasonEnum {
+  overpaid
+}
+
+enum CreditNoteTypeEnum {
+  available
+  consumed
+}
+
 enum CurrencyEnum {
   """
   United Arab Emirates dirham
@@ -2493,6 +2526,7 @@ type CustomerDetails {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  creditNotes: [CreditNote!]
   currency: CurrencyEnum
   email: String
   externalId: String!
@@ -2706,6 +2740,20 @@ type EventCollection {
   metadata: CollectionMetadata!
 }
 
+type Fee implements InvoiceItem {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  eventsCount: BigInt
+  id: ID!
+  itemCode: String!
+  itemName: String!
+  itemType: String!
+  units: Float!
+  vatAmountCents: BigInt!
+  vatAmountCurrency: CurrencyEnum!
+  vatRate: Float
+}
+
 type GraduatedRange {
   flatAmount: String!
   fromValue: Int!
@@ -2770,6 +2818,18 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
+}
+
+"""
+Invoice Item
+"""
+interface InvoiceItem {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  id: ID!
+  itemCode: String!
+  itemName: String!
+  itemType: String!
 }
 
 enum InvoiceStatusTypeEnum {

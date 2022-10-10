@@ -4,6 +4,7 @@ module V1
   class FeeSerializer < ModelSerializer
     def serialize
       {
+        lago_id: model.id,
         item: {
           type: model.fee_type,
           code: model.item_code,
