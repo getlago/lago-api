@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_07_075812) do
+ActiveRecord::Schema[7.0].define(version: 2022_10_10_083509) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -167,9 +167,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_07_075812) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "credit_notes_id"
+    t.uuid "credit_note_id"
     t.index ["applied_coupon_id"], name: "index_credits_on_applied_coupon_id"
-    t.index ["credit_notes_id"], name: "index_credits_on_credit_notes_id"
+    t.index ["credit_note_id"], name: "index_credits_on_credit_note_id"
     t.index ["invoice_id"], name: "index_credits_on_invoice_id"
   end
 
@@ -476,7 +476,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_07_075812) do
   add_foreign_key "credit_notes", "customers"
   add_foreign_key "credit_notes", "invoices"
   add_foreign_key "credits", "applied_coupons"
-  add_foreign_key "credits", "credit_notes", column: "credit_notes_id"
+  add_foreign_key "credits", "credit_notes"
   add_foreign_key "credits", "invoices"
   add_foreign_key "customers", "organizations"
   add_foreign_key "events", "customers"

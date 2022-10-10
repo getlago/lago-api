@@ -11,15 +11,28 @@ class Credit < ApplicationRecord
 
   validates :amount_currency, inclusion: { in: currency_list }
 
+  def item_id
+    return coupon&.id if applied_coupon_id
+
+    credit_note.id
+  end
+
   def item_type
-    'coupon'
+    return 'coupon' if applied_coupon_id?
+
+    'credit_note'
   end
 
   def item_code
-    coupon&.code
+    return coupon&.code if applied_coupon_id?
+
+    credit_note.number
   end
 
   def item_name
-    coupon&.name
+    return coupon&.name if applied_coupon_id?
+
+    # TODO: change it depending on invoice template
+    credit_note.invoice.number
   end
 end
