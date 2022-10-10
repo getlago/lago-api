@@ -22,6 +22,7 @@ en:
         invalid_free_units: invalid_free_units
         invalid_package_size: invalid_package_size
         invalid_rate: invalid_rate
+        invalid_date: invalid_date
         invalid_fixed_amount: invalid_fixed_amount
         invalid_free_units_per_events: invalid_free_units_per_events
         invalid_free_units_per_total_aggregation: invalid_free_units_per_total_aggregation

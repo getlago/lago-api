@@ -86,11 +86,11 @@ module Api
 
       def create_params
         params.require(:subscription)
-          .permit(:external_customer_id, :plan_code, :name, :external_id, :billing_time)
+          .permit(:external_customer_id, :plan_code, :name, :external_id, :billing_time, :subscription_date)
       end
 
       def update_params
-        params.require(:subscription).permit(:name)
+        params.require(:subscription).permit(:name, :subscription_date)
       end
     end
   end

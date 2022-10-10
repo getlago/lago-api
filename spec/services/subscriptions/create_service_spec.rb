@@ -26,7 +26,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
 
-    it 'creates a subscription' do
+    it 'creates a subscription with subscription date set to current date' do
       result = create_service.create_from_api(
         organization: organization,
         params: params,
@@ -135,7 +135,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
       end
 
-      context 'when plan is pay_in_advance' do
+      context 'when plan is pay_in_advance and subscription_date is current date' do
         before { plan.update(pay_in_advance: true) }
 
         it 'enqueued a job to bill the subscription' do
@@ -145,6 +145,30 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               params: params,
             )
           end.to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context 'when plan is pay_in_advance and subscription_date is in the future' do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            name: 'invoice display name',
+            external_id: external_id,
+            billing_time: 'anniversary',
+            subscription_date: (Time.current + 5.days).to_date,
+          }
+        end
+
+        before { plan.update(pay_in_advance: true) }
+
+        it 'did not enqueue a job to bill the subscription' do
+          expect do
+            create_service.create_from_api(
+              organization: organization,
+              params: params,
+            )
+          end.not_to have_enqueued_job(BillSubscriptionJob)
         end
       end
     end
@@ -191,6 +215,101 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq('plan_not_found')
+        end
+      end
+    end
+
+    context 'when subscription_date is given and is invalid' do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code: plan.code,
+          name: 'invoice display name',
+          external_id: external_id,
+          billing_time: 'anniversary',
+          subscription_date: '2022-99-99',
+        }
+      end
+
+      it 'returns invalid_date error' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
+        end
+      end
+    end
+
+    context 'when subscription_date is given and is in the future' do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code: plan.code,
+          name: 'invoice display name',
+          external_id: external_id,
+          billing_time: 'anniversary',
+          subscription_date: (Time.current + 5.days).to_date,
+        }
+      end
+
+      it 'creates a pending subscription' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        expect(result).to be_success
+
+        subscription = result.subscription
+
+        aggregate_failures do
+          expect(subscription.customer_id).to eq(customer.id)
+          expect(subscription.plan_id).to eq(plan.id)
+          expect(subscription.started_at).not_to be_present
+          expect(subscription.subscription_date).to eq((Time.current + 5.days).to_date)
+          expect(subscription.name).to eq('invoice display name')
+          expect(subscription).to be_pending
+          expect(subscription.external_id).to eq(external_id)
+          expect(subscription).to be_anniversary
+        end
+      end
+    end
+
+    context 'when subscription_date is given and is in the past' do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code: plan.code,
+          name: 'invoice display name',
+          external_id: external_id,
+          billing_time: 'anniversary',
+          subscription_date: (Time.current - 5.days).to_date,
+        }
+      end
+
+      it 'creates a active subscription' do
+        result = create_service.create_from_api(
+          organization: organization,
+          params: params,
+        )
+
+        expect(result).to be_success
+
+        subscription = result.subscription
+
+        aggregate_failures do
+          expect(subscription.customer_id).to eq(customer.id)
+          expect(subscription.plan_id).to eq(plan.id)
+          expect(subscription.started_at).to eq((Time.current - 5.days).beginning_of_day)
+          expect(subscription.subscription_date).to eq((Time.current - 5.days).to_date)
+          expect(subscription.name).to eq('invoice display name')
+          expect(subscription).to be_active
+          expect(subscription.external_id).to eq(external_id)
+          expect(subscription).to be_anniversary
         end
       end
     end
@@ -332,6 +451,24 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             end
           end
 
+          context 'when current subscription is pending' do
+            before { subscription.pending! }
+
+            it 'returns existing subscription with updated attributes' do
+              result = create_service.create_from_api(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).to eq(subscription.id)
+                expect(result.subscription.plan_id).to eq(higher_plan.id)
+                expect(result.subscription.name).to eq('invoice display name new')
+              end
+            end
+          end
+
           context 'when old subscription is payed in arrear' do
             before { plan.update!(pay_in_advance: false) }
 
@@ -427,6 +564,24 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result.subscription.id).to eq(subscription.id)
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
+            end
+          end
+
+          context 'when current subscription is pending' do
+            before { subscription.pending! }
+
+            it 'returns existing subscription with updated attributes' do
+              result = create_service.create_from_api(
+                organization: organization,
+                params: params,
+              )
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).to eq(subscription.id)
+                expect(result.subscription.plan_id).to eq(lower_plan.id)
+                expect(result.subscription.name).to eq('invoice display name new')
+              end
             end
           end
 
@@ -547,6 +702,27 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq('plan_not_found')
+        end
+      end
+    end
+
+    context 'when subscription_date is given and is invalid' do
+      let(:params) do
+        {
+          customer_id: customer.id,
+          plan_id: plan.id,
+          organization_id: organization.id,
+          billing_time: :anniversary,
+          subscription_date: '2022-99-99',
+        }
+      end
+
+      it 'returns invalid_date error' do
+        result = create_service.create(**params)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
         end
       end
     end

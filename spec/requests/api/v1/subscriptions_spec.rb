@@ -8,13 +8,17 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:plan) { create(:plan, organization: organization) }
 
   describe 'create' do
+    let(:subscription_date) { '2022-06-06' }
+    let(:plan_code) { plan.code }
+
     let(:params) do
       {
         external_customer_id: customer.external_id,
-        plan_code: plan.code,
+        plan_code: plan_code,
         name: 'subscription name',
         external_id: SecureRandom.uuid,
         billing_time: 'anniversary',
+        subscription_date: subscription_date,
       }
     end
 
@@ -32,20 +36,29 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:name]).to eq('subscription name')
       expect(json[:subscription][:started_at]).to be_present
       expect(json[:subscription][:billing_time]).to eq('anniversary')
+      expect(json[:subscription][:subscription_date].to_s).to eq('2022-06-06')
       expect(json[:subscription][:previous_plan_code]).to be_nil
       expect(json[:subscription][:next_plan_code]).to be_nil
       expect(json[:subscription][:downgrade_plan_date]).to be_nil
     end
 
     context 'with invalid plan code' do
-      let(:params) do
-        { plan_code: plan.code }
-      end
+      let(:plan_code) { "#{plan.code}-invalid" }
 
       it 'returns a not_found error' do
         post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'with invalid subscription_date' do
+      let(:subscription_date) { 'hello' }
+
+      it 'returns an unprocessable_entity error' do
+        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
@@ -74,8 +87,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   end
 
   describe 'update' do
-    let(:subscription) { create(:subscription, customer: customer, plan: plan) }
-    let(:update_params) { { name: 'subscription name new' } }
+    let(:subscription) { create(:pending_subscription, customer: customer, plan: plan) }
+    let(:update_params) { { name: 'subscription name new', subscription_date: '2022-09-05' } }
 
     before { subscription }
 
@@ -85,6 +98,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:subscription][:lago_id]).to eq(subscription.id)
       expect(json[:subscription][:name]).to eq('subscription name new')
+      expect(json[:subscription][:subscription_date].to_s).to eq('2022-09-05')
     end
 
     context 'with not existing subscription' do

@@ -12,14 +12,16 @@ RSpec.describe Invoices::CreateService, type: :service do
       create(
         :subscription,
         plan: plan,
-        subscription_date: (Time.zone.now - 2.years).to_date,
-        started_at: Time.zone.now - 2.years,
+        subscription_date: started_at.to_date,
+        started_at: started_at,
+        created_at: started_at,
       )
     end
     let(:subscriptions) { [subscription] }
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now.beginning_of_month }
+    let(:started_at) { Time.zone.now - 2.years }
 
     let(:plan) { create(:plan, interval: 'monthly', pay_in_advance: pay_in_advance) }
     let(:pay_in_advance) { false }
@@ -110,6 +112,42 @@ RSpec.describe Invoices::CreateService, type: :service do
         end
       end
 
+      context 'when plan is pay in advance and subscription started in the past' do
+        let(:pay_in_advance) { true }
+        let(:created_at) { timestamp }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan: plan,
+            subscription_date: started_at.to_date,
+            started_at: started_at,
+            created_at: timestamp,
+          )
+        end
+
+        it 'creates an invoice with charge fees' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.charge_kind.count).to eq(1)
+          end
+        end
+      end
+
+      context 'when plan is pay in advance and subscription started on creation day' do
+        let(:pay_in_advance) { true }
+
+        it 'creates an invoice with charge fees' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.charge_kind.count).to eq(0)
+          end
+        end
+      end
+
       context 'when subscription is billed on anniversary date' do
         let(:timestamp) { DateTime.parse('07 Mar 2022') }
         let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
@@ -122,6 +160,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             subscription_date: subscription_date,
             started_at: started_at,
             billing_time: :anniversary,
+            created_at: started_at,
           )
         end
 
@@ -232,6 +271,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           plan: plan,
           subscription_date: started_at.to_date,
           started_at: started_at,
+          created_at: started_at,
         )
       end
 
@@ -288,6 +328,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             subscription_date: subscription_date,
             started_at: started_at,
             billing_time: :anniversary,
+            created_at: started_at,
           )
         end
 
@@ -337,6 +378,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           plan: plan,
           subscription_date: started_at.to_date,
           started_at: started_at,
+          created_at: started_at,
         )
       end
 
@@ -418,6 +460,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             subscription_date: subscription_date,
             started_at: started_at,
             billing_time: :anniversary,
+            created_at: started_at,
           )
         end
 
@@ -470,6 +513,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           plan: plan,
           subscription_date: started_at.to_date,
           started_at: started_at,
+          created_at: started_at,
         )
       end
 
@@ -501,6 +545,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           plan: plan,
           subscription_date: started_at.to_date,
           started_at: started_at,
+          created_at: started_at,
         )
       end
 
@@ -529,6 +574,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           started_at: started_at,
           status: :terminated,
           terminated_at: terminated_at,
+          created_at: started_at,
         )
       end
 
@@ -558,6 +604,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             status: :terminated,
             billing_time: :anniversary,
             terminated_at: terminated_at,
+            created_at: started_at,
           )
         end
 
@@ -603,6 +650,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           previous_subscription: previous_subscription,
           subscription_date: started_at.to_date,
           started_at: terminated_at + 1.day,
+          created_at: terminated_at + 1.day,
         )
       end
 
