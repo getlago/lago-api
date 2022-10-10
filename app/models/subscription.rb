@@ -66,7 +66,7 @@ class Subscription < ApplicationRecord
   end
 
   def started_in_past?
-    subscription_date < created_at.to_date
+    started_at.to_date < created_at.to_date
   end
 
   def initial_started_at
