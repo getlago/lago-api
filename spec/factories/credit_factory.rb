@@ -9,7 +9,7 @@ FactoryBot.define do
     amount_currency { 'EUR' }
   end
 
-  factory :credit_note_credit do
+  factory :credit_note_credit, class: 'Credit' do
     invoice
     credit_note
 
