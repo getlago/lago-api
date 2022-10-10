@@ -20,12 +20,21 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         description: 'New metric description',
         organization_id: organization.id,
         aggregation_type: 'count_agg',
+        group: {
+          key: 'region',
+          values: %w[usa europe],
+        },
       }
     end
 
     it 'creates a billable metric' do
       expect { create_service.create(**create_args) }
-        .to change { BillableMetric.count }.by(1)
+        .to change(BillableMetric, :count).by(1)
+    end
+
+    it 'creates expected groups' do
+      expect { create_service.create(**create_args) }
+        .to change(Group, :count).by(2)
     end
 
     it 'calls SegmentTrackJob' do

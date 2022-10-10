@@ -3,17 +3,26 @@
 module BillableMetrics
   class CreateService < BaseService
     def create(**args)
-      metric = BillableMetric.create!(
-        organization_id: args[:organization_id],
-        name: args[:name],
-        code: args[:code],
-        description: args[:description],
-        aggregation_type: args[:aggregation_type]&.to_sym,
-        field_name: args[:field_name],
-      )
+      ActiveRecord::Base.transaction do
+        metric = BillableMetric.create!(
+          organization_id: args[:organization_id],
+          name: args[:name],
+          code: args[:code],
+          description: args[:description],
+          aggregation_type: args[:aggregation_type]&.to_sym,
+          field_name: args[:field_name],
+        )
 
-      result.billable_metric = metric
-      track_billable_metric_created(metric)
+        if args[:group].present?
+          Groups::CreateBatchService.call(
+            billable_metric: metric,
+            group_params: args[:group],
+          )
+        end
+
+        result.billable_metric = metric
+        track_billable_metric_created(metric)
+      end
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
