@@ -20,14 +20,6 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
   end
 
   it 'creates a billable metric' do
-    group = {
-      key: 'cloud',
-      values: [
-        { name: 'AWS', key: 'region', values: %w[usa europe] },
-        { name: 'Google', key: 'region', values: ['usa'] },
-      ],
-    }
-
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -38,7 +30,6 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           code: 'new_metric',
           description: 'New metric description',
           aggregationType: 'count_agg',
-          group: group,
         },
       },
     )
@@ -51,6 +42,38 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
       expect(result_data['code']).to eq('new_metric')
       expect(result_data['organization']['id']).to eq(membership.organization_id)
       expect(result_data['aggregationType']).to eq('count_agg')
+      expect(result_data['group']).to eq({})
+    end
+  end
+
+  context 'with group parameter' do
+    let(:group) do
+      {
+        key: 'cloud',
+        values: [
+          { name: 'AWS', key: 'region', values: %w[usa europe] },
+          { name: 'Google', key: 'region', values: ['usa'] },
+        ],
+      }
+    end
+
+    it 'creates billable metric\'s group' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        variables: {
+          input: {
+            name: 'New Metric',
+            code: 'new_metric',
+            description: 'New metric description',
+            aggregationType: 'count_agg',
+            group: group,
+          },
+        },
+      )
+      result_data = result['data']['createBillableMetric']
+
       expect(result_data['group']).to eq(group)
     end
   end

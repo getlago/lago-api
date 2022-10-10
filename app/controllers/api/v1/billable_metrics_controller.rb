@@ -29,7 +29,7 @@ module Api
         result = service.update_from_api(
           organization: current_organization,
           code: params[:code],
-          params: input_params,
+          params: input_params.to_h,
         )
 
         if result.success?
@@ -103,6 +103,7 @@ module Api
           :description,
           :aggregation_type,
           :field_name,
+          group: {},
         )
       end
     end

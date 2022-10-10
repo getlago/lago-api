@@ -21,7 +21,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
     end
 
     it 'updates the billable metric' do
-      result = subject.update(**update_args)
+      result = update_service.update(**update_args)
 
       aggregate_failures do
         expect(result).to be_success
@@ -31,6 +31,26 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         expect(metric.name).to eq('New Metric')
         expect(metric.code).to eq('new_metric')
         expect(metric.aggregation_type).to eq('count_agg')
+      end
+    end
+
+    context 'with group parameter' do
+      let(:group) do
+        {
+          key: 'cloud',
+          values: [
+            { name: 'AWS', key: 'region', values: %w[usa europe] },
+            { name: 'Google', key: 'region', values: ['usa'] },
+          ],
+        }
+      end
+
+      it 'updates billable metric\'s group' do
+        create(:group, billable_metric: billable_metric)
+
+        expect do
+          update_service.update(**update_args.merge(group: group))
+        end.to change { billable_metric.groups.active.reload.count }.from(1).to(5)
       end
     end
 
@@ -46,7 +66,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it 'returns an error' do
-        result = subject.update(**update_args)
+        result = update_service.update(**update_args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -60,7 +80,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       let(:billable_metric) { nil }
 
       it 'returns an error' do
-        result = subject.update(**update_args)
+        result = update_service.update(**update_args)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('billable_metric_not_found')
@@ -82,7 +102,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
     end
 
     it 'updates the billable metric' do
-      result = subject.update_from_api(
+      result = update_service.update_from_api(
         organization: organization,
         code: billable_metric.code,
         params: update_args,
@@ -99,11 +119,35 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
     end
 
+    context 'with group parameter' do
+      let(:group) do
+        {
+          key: 'cloud',
+          values: [
+            { name: 'AWS', key: 'region', values: %w[usa europe] },
+            { name: 'Google', key: 'region', values: ['usa'] },
+          ],
+        }
+      end
+
+      it 'updates billable metric\'s group' do
+        create(:group, billable_metric: billable_metric)
+
+        expect do
+          update_service.update_from_api(
+            organization: organization,
+            code: billable_metric.code,
+            params: update_args.merge(group: group),
+          )
+        end.to change { billable_metric.groups.active.reload.count }.from(1).to(5)
+      end
+    end
+
     context 'with validation errors' do
       let(:name) { nil }
 
       it 'returns an error' do
-        result = subject.update_from_api(
+        result = update_service.update_from_api(
           organization: organization,
           code: billable_metric.code,
           params: update_args,
@@ -119,7 +163,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
     context 'when billable metric is not found' do
       it 'returns an error' do
-        result = subject.update_from_api(
+        result = update_service.update_from_api(
           organization: organization,
           code: 'fake_code12345',
           params: update_args,

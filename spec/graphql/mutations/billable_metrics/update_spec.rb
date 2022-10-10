@@ -47,15 +47,18 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
   end
 
   context 'with group parameter' do
-    it 'updates billable metric\'s group' do
-      create(:group, billable_metric: billable_metric)
-      group = {
+    let(:group) do
+      {
         key: 'cloud',
         values: [
           { name: 'AWS', key: 'region', values: %w[usa europe] },
           { name: 'Google', key: 'region', values: ['usa'] },
         ],
       }
+    end
+
+    it 'updates billable metric\'s group' do
+      create(:group, billable_metric: billable_metric)
 
       result = execute_graphql(
         current_user: membership.user,
@@ -71,8 +74,8 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           },
         },
       )
-
       result_data = result['data']['updateBillableMetric']
+
       expect(result_data['group']).to eq(group)
     end
   end
