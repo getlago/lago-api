@@ -80,6 +80,31 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
     end
   end
 
+  context 'with invalid group parameter' do
+    let(:group) do
+      { foo: 'bar' }
+    end
+
+    it 'creates billable metric\'s group' do
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: {
+            id: billable_metric.id,
+            name: 'metric',
+            code: 'metric',
+            description: 'metric description',
+            aggregationType: 'count_agg',
+            group: group,
+          },
+        },
+      )
+
+      expect_unprocessable_entity(result)
+    end
+  end
+
   context 'without current_user' do
     it 'returns an error' do
       result = execute_graphql(

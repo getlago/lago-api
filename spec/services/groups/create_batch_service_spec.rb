@@ -12,6 +12,51 @@ RSpec.describe Groups::CreateBatchService, type: :service do
 
   let(:billable_metric) { create(:billable_metric) }
 
+  context 'when format is not valid' do
+    let(:group_params) do
+      { "invalid": 'region', "values": %w[usa] }
+    end
+
+    it 'returns an error' do
+      result = create_batch_service
+
+      aggregate_failures do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:group]).to eq(['invalid_format'])
+      end
+    end
+  end
+
+  context 'when three dimensions' do
+    let(:group_params) do
+      {
+        key: 'region',
+        values: [
+          {
+            name: 'Europe',
+            key: 'cloud',
+            values: [
+              name: 'AWS',
+              key: 'country',
+              values: %w[France],
+            ],
+          },
+        ],
+      }
+    end
+
+    it 'returns an error' do
+      result = create_batch_service
+
+      aggregate_failures do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:group]).to eq(['invalid_format'])
+      end
+    end
+  end
+
   context 'with one dimension' do
     let(:group_params) do
       { "key": 'region', "values": %w[usa europe] }

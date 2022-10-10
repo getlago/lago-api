@@ -48,6 +48,21 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         expect(json[:billable_metric][:group]).to eq(group)
       end
     end
+
+    context 'with invalid group parameter' do
+      it 'returns an error' do
+        post_with_token(
+          organization,
+          '/api/v1/billable_metrics',
+          { billable_metric: create_params.merge(group: { foo: 'bar' }) },
+        )
+
+        aggregate_failures do
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to eq({ group: %w[invalid_format] })
+        end
+      end
+    end
   end
 
   describe 'update' do
@@ -86,6 +101,21 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
+      end
+    end
+
+    context 'with invalid group parameter' do
+      it 'returns an error' do
+        put_with_token(
+          organization,
+          "/api/v1/billable_metrics/#{billable_metric.code}",
+          { billable_metric: update_params.merge(group: { foo: 'bar' }) },
+        )
+
+        aggregate_failures do
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to eq({ group: %w[invalid_format] })
+        end
       end
     end
 
