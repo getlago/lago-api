@@ -16,12 +16,7 @@ module BillableMetrics
         metric.aggregation_type = args[:aggregation_type]&.to_sym
         metric.field_name = args[:field_name]
 
-        if args[:group].present?
-          ActiveRecord::Base.transaction do
-            metric.groups.each(&:inactive!)
-            Groups::CreateBatchService.call(billable_metric: metric, group_params: args[:group])
-          end
-        end
+        update_groups(metric, args[:group]) if args[:group].present?
       end
 
       metric.save!
@@ -43,6 +38,8 @@ module BillableMetrics
         metric.code = params[:code] if params.key?(:code)
         metric.aggregation_type = params[:aggregation_type] if params.key?(:aggregation_type)
         metric.field_name = params[:field_name] if params.key?(:field_name)
+
+        update_groups(metric, params[:group]) if params[:group].present?
       end
 
       metric.save!
@@ -51,6 +48,19 @@ module BillableMetrics
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    end
+
+    private
+
+    def update_groups(metric, group_params)
+      ActiveRecord::Base.transaction do
+        metric.groups.each(&:inactive!)
+
+        Groups::CreateBatchService.call(
+          billable_metric: metric,
+          group_params: group_params.with_indifferent_access,
+        )
+      end
     end
   end
 end

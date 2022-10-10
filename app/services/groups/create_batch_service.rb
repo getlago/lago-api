@@ -8,7 +8,7 @@ module Groups
 
     def initialize(billable_metric:, group_params:)
       @billable_metric = billable_metric
-      @group_params = group_params.with_indifferent_access
+      @group_params = group_params
     end
 
     def call

@@ -16,7 +16,7 @@ module BillableMetrics
         if args[:group].present?
           Groups::CreateBatchService.call(
             billable_metric: metric,
-            group_params: args[:group],
+            group_params: args[:group].with_indifferent_access,
           )
         end
 

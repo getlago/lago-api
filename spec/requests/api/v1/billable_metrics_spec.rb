@@ -5,6 +5,16 @@ require 'rails_helper'
 RSpec.describe Api::V1::BillableMetricsController, type: :request do
   let(:organization) { create(:organization) }
 
+  let(:group) do
+    {
+      key: 'cloud',
+      values: [
+        { name: 'AWS', key: 'region', values: %w[usa europe] },
+        { name: 'Google', key: 'region', values: ['usa'] },
+      ],
+    }
+  end
+
   describe 'create' do
     let(:create_params) do
       {
@@ -24,6 +34,19 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:code]).to eq(create_params[:code])
       expect(json[:billable_metric][:name]).to eq(create_params[:name])
       expect(json[:billable_metric][:created_at]).to be_present
+      expect(json[:billable_metric][:group]).to eq({})
+    end
+
+    context 'with group parameter' do
+      it 'creates billable metric\'s group' do
+        post_with_token(
+          organization,
+          '/api/v1/billable_metrics',
+          { billable_metric: create_params.merge(group: group) },
+        )
+
+        expect(json[:billable_metric][:group]).to eq(group)
+      end
     end
   end
 
@@ -50,6 +73,20 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
       expect(json[:billable_metric][:code]).to eq(update_params[:code])
+    end
+
+    context 'with group parameter' do
+      it 'updates billable metric\'s group' do
+        create(:group, billable_metric: billable_metric)
+
+        put_with_token(
+          organization,
+          "/api/v1/billable_metrics/#{billable_metric.code}",
+          { billable_metric: update_params.merge(group: group) },
+        )
+
+        expect(json[:billable_metric][:group]).to eq(group)
+      end
     end
 
     context 'when billable metric does not exist' do
