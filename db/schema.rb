@@ -244,6 +244,18 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_07_075812) do
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
   end
 
+  create_table "groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "billable_metric_id", null: false
+    t.uuid "parent_group_id"
+    t.string "key", null: false
+    t.string "value", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billable_metric_id"], name: "index_groups_on_billable_metric_id"
+    t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
+  end
+
   create_table "invites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "membership_id"
@@ -474,6 +486,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_07_075812) do
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
+  add_foreign_key "groups", "billable_metrics", on_delete: :cascade
+  add_foreign_key "groups", "groups", column: "parent_group_id"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"
   add_foreign_key "invoice_subscriptions", "invoices"

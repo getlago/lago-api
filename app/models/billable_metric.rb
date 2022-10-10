@@ -4,6 +4,7 @@ class BillableMetric < ApplicationRecord
   belongs_to :organization
 
   has_many :charges, dependent: :destroy
+  has_many :groups, dependent: :destroy
   has_many :plans, through: :charges
   has_many :persisted_events
 
