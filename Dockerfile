@@ -29,7 +29,8 @@ COPY . /app
 RUN apk add --no-cache \
   bash \
   postgresql-dev \
-  tzdata
+  tzdata \
+  libc6-compat
 
 ARG SEGMENT_WRITE_KEY
 
