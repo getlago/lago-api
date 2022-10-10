@@ -64,9 +64,11 @@ RSpec.describe UsersService, type: :service do
   end
 
   describe 'login' do
+    let(:membership) { create(:membership) }
+
     it 'calls SegmentIdentifyJob' do
       allow(SegmentIdentifyJob).to receive(:perform_later)
-      result = user_service.register('email', 'password', 'organization_name')
+      result = user_service.login(membership.user.email, membership.user.password)
 
       expect(SegmentIdentifyJob).to have_received(:perform_later).with(
         membership_id: "membership/#{result.user.memberships.first.id}",
