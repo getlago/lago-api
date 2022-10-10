@@ -18,6 +18,7 @@ RSpec.describe ::V1::BillableMetricSerializer do
       expect(result['billable_metric']['aggregation_type']).to eq(billable_metric.aggregation_type)
       expect(result['billable_metric']['field_name']).to eq(billable_metric.field_name)
       expect(result['billable_metric']['created_at']).to eq(billable_metric.created_at.iso8601)
+      expect(result['billable_metric']['group']).to eq({})
     end
   end
 end

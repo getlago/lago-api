@@ -121,6 +121,7 @@ type BillableMetric {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
+  group: JSON
   id: ID!
   name: String!
   organization: Organization
@@ -143,6 +144,7 @@ type BillableMetricDetail {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
+  group: JSON
   id: ID!
   name: String!
   organization: Organization
@@ -1600,6 +1602,7 @@ input CreateBillableMetricInput {
   code: String!
   description: String!
   fieldName: String
+  group: JSON
   name: String!
 }
 
@@ -3729,6 +3732,7 @@ input UpdateBillableMetricInput {
   code: String!
   description: String!
   fieldName: String
+  group: JSON
   id: String!
   name: String!
 }

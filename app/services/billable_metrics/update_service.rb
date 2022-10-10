@@ -15,6 +15,13 @@ module BillableMetrics
         metric.code = args[:code]
         metric.aggregation_type = args[:aggregation_type]&.to_sym
         metric.field_name = args[:field_name]
+
+        if args[:group].present?
+          ActiveRecord::Base.transaction do
+            metric.groups.each(&:inactive!)
+            Groups::CreateBatchService.call(billable_metric: metric, group_params: args[:group])
+          end
+        end
       end
 
       metric.save!
