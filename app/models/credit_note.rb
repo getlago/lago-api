@@ -26,6 +26,9 @@ class CreditNote < ApplicationRecord
 
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) }
 
+  validates :amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :remaining_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+
   def file_url
     return if file.blank?
 

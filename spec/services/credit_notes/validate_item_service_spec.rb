@@ -33,6 +33,19 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       expect(validator).to be_valid
     end
 
+    context 'when fee is missing' do
+      let(:fee) { nil }
+
+      it 'fails the validation' do
+        aggregate_failures do
+          expect(validator).not_to be_valid
+
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq('fee')
+        end
+      end
+    end
+
     context 'when credit amount is higher than fee amount' do
       let(:credit_amount_cents) { fee.amount_cents + 10 }
 
