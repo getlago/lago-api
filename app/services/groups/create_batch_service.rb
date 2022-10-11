@@ -14,7 +14,7 @@ module Groups
     end
 
     def call
-      return result.validation_failure!(errors: { group: %w[invalid_format] }) unless valid_format?
+      return result.validation_failure!(errors: { group: %w[value_is_invalid] }) unless valid_format?
 
       ActiveRecord::Base.transaction do
         if one_dimension?

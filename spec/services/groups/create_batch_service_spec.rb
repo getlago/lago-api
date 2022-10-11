@@ -23,7 +23,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
       aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:group]).to eq(['invalid_format'])
+        expect(result.error.messages[:group]).to eq(['value_is_invalid'])
       end
     end
   end
@@ -52,7 +52,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
       aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:group]).to eq(['invalid_format'])
+        expect(result.error.messages[:group]).to eq(['value_is_invalid'])
       end
     end
   end
