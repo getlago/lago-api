@@ -8,5 +8,9 @@ module Types
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
     field :organizations, [Types::OrganizationType]
+
+    def organizations
+      object.memberships.active.map(&:organization)
+    end
   end
 end
