@@ -2,7 +2,7 @@
 
 module CreditNotes
   class CreateService < BaseService
-    def initialize(invoice:, items_attr:, reason: :overpaid)
+    def initialize(invoice:, items_attr:, reason: :other)
       @invoice = invoice
       @items_attr = items_attr
       @reason = reason

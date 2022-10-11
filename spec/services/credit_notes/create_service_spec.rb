@@ -35,7 +35,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.amount_cents).to eq(15)
         expect(credit_note.remaining_amount_currency).to eq(invoice.amount_currency)
         expect(credit_note.remaining_amount_cents).to eq(15)
-        expect(credit_note).to be_overpaid
+        expect(credit_note).to be_other
 
         expect(credit_note.items.count).to eq(2)
         items1 = credit_note.items.order(created_at: :asc).first
