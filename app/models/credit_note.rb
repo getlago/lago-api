@@ -19,7 +19,7 @@ class CreditNote < ApplicationRecord
   monetize :remaining_amount_cents
 
   STATUS = %i[available consumed].freeze
-  REASON = %i[overpaid].freeze
+  REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
 
   enum status: STATUS
   enum reason: REASON

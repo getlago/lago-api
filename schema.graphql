@@ -1761,7 +1761,12 @@ type CreditNoteItem {
 }
 
 enum CreditNoteReasonEnum {
-  overpaid
+  duplicated_charge
+  fraudulent_charge
+  order_cancellation
+  order_change
+  other
+  product_unsatisfactory
 }
 
 enum CreditNoteTypeEnum {
