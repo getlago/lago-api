@@ -44,6 +44,10 @@ class Invoice < ApplicationRecord
     Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
   end
 
+  def fee_total_amount_cents
+    fees.sum(:amount_cents) + fees.sum(:vat_amount_cents)
+  end
+
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end

@@ -50,7 +50,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       let(:credit_amount_cents) { fee.amount_cents + 10 }
 
       before do
-        invoice.update!(total_amount_cents: 200)
+        create(:fee, invoice: invoice, amount_cents: 100, vat_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -72,22 +72,6 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
 
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:credit_amount_cents]).to eq(['higher_than_remaining_fee_amount'])
-        end
-      end
-    end
-
-    context 'when credit amount is higher than invoice total amount' do
-      before do
-        create(:credit, invoice: invoice, amount_cents: 99)
-        invoice.update!(total_amount_cents: 1)
-      end
-
-      it 'fails the validation' do
-        aggregate_failures do
-          expect(validator).not_to be_valid
-
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:credit_amount_cents]).to eq(['higher_than_remaining_invoice_amount'])
         end
       end
     end
