@@ -131,7 +131,7 @@ module Invoices
     end
 
     def credit_notes
-      customer.credit_notes.available
+      @credit_notes ||= customer.credit_notes.available.order(created_at: :asc)
     end
 
     def wallet
@@ -160,7 +160,10 @@ module Invoices
     end
 
     def create_credit_note_credit(invoice)
-      credit_result = Credits::CreditNoteService.new(invoice: invoice).call
+      credit_result = Credits::CreditNoteService.new(
+        invoice: invoice,
+        credit_notes: credit_notes,
+      ).call
       credit_result.throw_error unless credit_result.success?
 
       refresh_amounts(invoice: invoice, credit_amount_cents: credit_result.credits.sum(&:amount_cents))

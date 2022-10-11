@@ -2,8 +2,9 @@
 
 module Credits
   class CreditNoteService < BaseService
-    def initialize(invoice:)
+    def initialize(invoice:, credit_notes:)
       @invoice = invoice
+      @credit_notes = credit_notes
 
       super(nil)
     end
@@ -45,13 +46,9 @@ module Credits
 
     private
 
-    attr_accessor :invoice
+    attr_accessor :invoice, :credit_notes
 
     delegate :customer, to: :invoice
-
-    def credit_notes
-      customer.credit_notes.available.order(created_at: :asc)
-    end
 
     def already_applied?
       invoice.credits.where.not(credit_note_id: nil).exists?
