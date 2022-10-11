@@ -7,7 +7,7 @@ module CreditNotes
       @items_attr = items_attr
       @reason = reason
 
-      super(nil)
+      super
     end
 
     def call
