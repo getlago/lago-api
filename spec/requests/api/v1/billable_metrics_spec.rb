@@ -59,7 +59,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ group: %w[invalid_format] })
+          expect(json[:error_details]).to eq({ group: %w[value_is_invalid] })
         end
       end
     end
@@ -114,7 +114,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ group: %w[invalid_format] })
+          expect(json[:error_details]).to eq({ group: %w[value_is_invalid] })
         end
       end
     end
