@@ -5888,7 +5888,25 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "amountCents",
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "creditAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -5906,7 +5924,7 @@
               ]
             },
             {
-              "name": "amountCurrency",
+              "name": "creditAmountCurrency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -5914,24 +5932,6 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "createdAt",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
                   "ofType": null
                 }
               },

@@ -22,8 +22,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             remainingAmountCurrency
             items {
               id
-              amountCents
-              amountCurrency
+              creditAmountCents
+              creditAmountCurrency
               fee { id amountCents amountCurrency itemType itemCode itemName vatRate units eventsCount }
             }
           }

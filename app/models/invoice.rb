@@ -14,6 +14,7 @@ class Invoice < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
+  has_many :credit_notes
 
   has_one_attached :file
 

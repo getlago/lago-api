@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :credit_note_item do
     credit_note
     fee
-    amount_cents { 100 }
-    amount_currency { 'EUR' }
+    credit_amount_cents { 100 }
+    credit_amount_currency { 'EUR' }
   end
 end
