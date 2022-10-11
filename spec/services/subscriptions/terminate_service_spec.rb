@@ -24,6 +24,16 @@ RSpec.describe Subscriptions::TerminateService do
       end.to have_enqueued_job(BillSubscriptionJob)
     end
 
+    context 'when subscription is starting in the future' do
+      let(:subscription) { create(:pending_subscription) }
+
+      it 'does not enqueue a BillSubscriptionJob' do
+        expect do
+          terminate_service.terminate(subscription.id)
+        end.not_to have_enqueued_job(BillSubscriptionJob)
+      end
+    end
+
     context 'when subscription is not found' do
       let(:subscription) { OpenStruct.new(id: '123456') }
 
