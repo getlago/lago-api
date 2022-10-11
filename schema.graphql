@@ -1753,9 +1753,9 @@ type CreditNote {
 }
 
 type CreditNoteItem {
-  amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
+  creditAmountCents: BigInt!
+  creditAmountCurrency: CurrencyEnum!
   fee: Fee!
   id: ID!
 }

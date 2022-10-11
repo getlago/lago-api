@@ -5,8 +5,8 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        amount_cents: model.amount_cents,
-        amount_currency: model.amount_currency,
+        credit_amount_cents: model.credit_amount_cents,
+        credit_amount_currency: model.credit_amount_currency,
         fee: fee,
       }
     end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_10_083509) do
+ActiveRecord::Schema[7.0].define(version: 2022_10_11_083520) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -134,8 +134,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_10_083509) do
   create_table "credit_note_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "credit_note_id", null: false
     t.uuid "fee_id", null: false
-    t.bigint "amount_cents", default: 0, null: false
-    t.string "amount_currency", null: false
+    t.bigint "credit_amount_cents", default: 0, null: false
+    t.string "credit_amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["credit_note_id"], name: "index_credit_note_items_on_credit_note_id"

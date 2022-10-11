@@ -149,6 +149,19 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#fee_total_amount_cents' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:invoice) { create(:invoice, customer: customer) }
+    let(:fees) { create_list(:fee, 2, invoice: invoice, amount_cents: 100, vat_amount_cents: 20) }
+
+    before { fees }
+
+    it 'returns the fee amount vat included' do
+      expect(invoice.fee_total_amount_cents).to eq(240)
+    end
+  end
+
   describe '#subscription_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }

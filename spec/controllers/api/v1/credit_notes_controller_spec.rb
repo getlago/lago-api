@@ -36,8 +36,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         json_item = json[:credit_note][:items].first
         item = credit_note_items.first
         expect(json_item[:lago_id]).to eq(item.id)
-        expect(json_item[:amount_cents]).to eq(item.amount_cents)
-        expect(json_item[:amount_currency]).to eq(item.amount_currency)
+        expect(json_item[:credit_amount_cents]).to eq(item.credit_amount_cents)
+        expect(json_item[:credit_amount_currency]).to eq(item.credit_amount_currency)
         expect(json_item[:fee][:lago_id]).to eq(item.fee.id)
         expect(json_item[:fee][:amount_cents]).to eq(item.fee.amount_cents)
         expect(json_item[:fee][:amount_currency]).to eq(item.fee.amount_currency)
