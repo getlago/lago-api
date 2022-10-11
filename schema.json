@@ -5991,7 +5991,37 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "overpaid",
+              "name": "duplicated_charge",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_unsatisfactory",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_change",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_cancellation",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fraudulent_charge",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "other",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

@@ -6,7 +6,7 @@ FactoryBot.define do
     invoice
 
     status { 'available' }
-    reason { 'overpaid' }
+    reason { 'duplicated_charge' }
     amount_cents { 100 }
     amount_currency { 'EUR' }
 
