@@ -53,11 +53,12 @@ module Subscriptions
     private
 
     def process_terminate(subscription)
-      unless subscription.terminated?
+      if subscription.starting_in_the_future?
+        subscription.mark_as_terminated!
+      elsif !subscription.terminated?
         subscription.mark_as_terminated!
 
-        BillSubscriptionJob
-          .perform_later([subscription], subscription.terminated_at)
+        BillSubscriptionJob.perform_later([subscription], subscription.terminated_at)
       end
 
       # NOTE: Pending next subscription should be canceled as well
