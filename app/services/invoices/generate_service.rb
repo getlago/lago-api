@@ -2,8 +2,6 @@
 
 module Invoices
   class GenerateService < BaseService
-    include ActiveSupport::NumberHelper
-
     def generate_from_api(invoice)
       generate_pdf(invoice)
 
@@ -24,24 +22,11 @@ module Invoices
     private
 
     def generate_pdf(invoice)
-      template = File.read(Rails.root.join('app/views/templates/invoice.slim'), encoding: 'UTF-8')
-      invoice_html = Slim::Template.new { template }.render(invoice)
-
-      pdf_url = URI.join(ENV['LAGO_PDF_URL'], '/forms/chromium/convert/html').to_s
-      http_client = LagoHttpClient::Client.new(pdf_url)
-      response = http_client.post_multipart_file(
-        invoice_html,
-        'text/html',
-        'index.html',
-        scale: '1.28',
-        marginTop: '0.42',
-        marginBottom: '0.42',
-        marginLeft: '0.42',
-        marginRight: '0.42',
-      )
+      pdf_service = Utils::PdfGenerator.new(template: 'invoice', context: invoice)
+      pdf_result = pdf_service.call
 
       invoice.file.attach(
-        io: StringIO.new(response.body.force_encoding('UTF-8')),
+        io: pdf_result.io,
         filename: "#{invoice.number}.pdf",
         content_type: 'application/pdf',
       )

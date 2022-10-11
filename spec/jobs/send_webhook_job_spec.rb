@@ -47,10 +47,10 @@ RSpec.describe SendWebhookJob, type: :job do
         input_params: {
           customer_id: 'customer',
           transaction_id: SecureRandom.uuid,
-          code: 'code'
+          code: 'code',
         },
         error: 'Code does not exist',
-        organization_id: organization.id
+        organization_id: organization.id,
       }
     end
 
@@ -150,6 +150,28 @@ RSpec.describe SendWebhookJob, type: :job do
       )
 
       expect(Webhooks::PaymentProviders::CustomerErrorService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is credit_note.generated' do
+    let(:webhook_service) { instance_double(Webhooks::CreditNotes::GeneratedService) }
+    let(:credit_note) { create(:credit_note) }
+
+    before do
+      allow(Webhooks::CreditNotes::GeneratedService).to receive(:new)
+        .with(credit_note)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      described_class.perform_now(
+        'credit_note.generated',
+        credit_note,
+      )
+
+      expect(Webhooks::CreditNotes::GeneratedService).to have_received(:new)
       expect(webhook_service).to have_received(:call)
     end
   end

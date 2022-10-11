@@ -32,10 +32,12 @@ class SendWebhookJob < ApplicationJob
 
     # NOTE: This add the new way of managing webhooks
     # A refact has to be done to improve webhooks management internally
+    when 'credit_note.generated'
+      Webhooks::CreditNotes::GeneratedService.new(object).call
     when 'invoice.generated'
       Webhooks::Invoices::GeneratedService.new(object).call
     else
-      raise NotImplementedError
+      raise(NotImplementedError)
     end
   end
 end

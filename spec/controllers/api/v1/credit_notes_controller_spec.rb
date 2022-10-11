@@ -64,6 +64,46 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
+  describe 'GET /credit_notes/:id/download' do
+    it 'enqueues a job to generate the PDF' do
+      post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+        expect(CreditNotes::GeneratePdfJob).to have_been_enqueued
+      end
+    end
+
+    context 'when a file is attached to the credit note' do
+      let(:credit_note) { create(:credit_note, :with_file, invoice: invoice, customer: customer) }
+
+      it 'returns the credit note object' do
+        post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note]).to be_present
+        end
+      end
+    end
+
+    context 'when credit note does not exists' do
+      it 'returns not found' do
+        post_with_token(organization, '/api/v1/credit_notes/foo/download')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when credit note belongs to another organization' do
+      let(:wrong_credit_note) { create(:credit_note) }
+
+      it 'returns not found' do
+        post_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}/download")
+      end
+    end
+  end
+
   describe 'GET /credits_notes' do
     let(:second_customer) { create(:customer, organization: organization) }
     let(:second_invoice) { create(:invoice, customer: second_customer) }

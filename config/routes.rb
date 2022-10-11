@@ -24,7 +24,9 @@ Rails.application.routes.draw do
       resources :add_ons, param: :code
       resources :billable_metrics, param: :code
       resources :coupons, param: :code
-      resources :credit_notes, only: %i[show index]
+      resources :credit_notes, only: %i[show index] do
+        post :download, on: :member
+      end
       resources :events, only: %i[create show]
       resources :applied_coupons, only: %i[create]
       resources :applied_add_ons, only: %i[create]
