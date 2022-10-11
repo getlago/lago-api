@@ -82,10 +82,10 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
 
   context 'with invalid group parameter' do
     let(:group) do
-      { foo: 'bar' }
+      { key: 'foo', foo: 'bar' }
     end
 
-    it 'creates billable metric\'s group' do
+    it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         query: mutation,

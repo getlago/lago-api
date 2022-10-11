@@ -20,10 +20,6 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         description: 'New metric description',
         organization_id: organization.id,
         aggregation_type: 'count_agg',
-        group: {
-          key: 'region',
-          values: %w[usa europe],
-        },
       }
     end
 
@@ -32,9 +28,32 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         .to change(BillableMetric, :count).by(1)
     end
 
-    it 'creates expected groups' do
-      expect { create_service.create(**create_args) }
-        .to change(Group, :count).by(2)
+    context 'with group parameter' do
+      let(:group) do
+        {
+          key: 'cloud',
+          values: [
+            { name: 'AWS', key: 'region', values: %w[usa europe] },
+            { name: 'Google', key: 'region', values: ['usa'] },
+          ],
+        }
+      end
+
+      it 'creates billable metric\'s groups' do
+        expect do
+          create_service.create(**create_args.merge(group: group))
+        end.to change(Group, :count).by(5)
+      end
+
+      it 'returns an error if group is invalid' do
+        result = create_service.create(**create_args.merge(group: { key: 'foo' }))
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+        end
+      end
     end
 
     it 'calls SegmentTrackJob' do

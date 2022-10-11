@@ -51,13 +51,11 @@ module Groups
     #   }]
     # }
     def valid_format?
-      return false unless group_params[:key].is_a?(String)
+      return false unless group_params[:key].is_a?(String) && group_params[:values].is_a?(Array)
       return true if one_dimension?
+      return false unless group_params[:values].all?(Hash)
 
-      values = group_params[:values]
-      return false if !values.is_a?(Array) && values.size != 2
-
-      values.map { |e| [e[:name], e[:key], e[:values]] }.flatten.all?(String)
+      group_params[:values].map { |e| [e[:name], e[:key], e[:values]] }.flatten.all?(String)
     end
 
     def create_groups(key, values, parent_group_id = nil)
@@ -72,7 +70,7 @@ module Groups
 
     def one_dimension?
       # ie: { key: "region", values: ["USA", "EUROPE"] }
-      group_params[:key].is_a?(String) && group_params[:values].all?(String)
+      group_params[:key].is_a?(String) && group_params[:values]&.all?(String)
     end
   end
 end
