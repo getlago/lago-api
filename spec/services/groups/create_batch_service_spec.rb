@@ -13,18 +13,37 @@ RSpec.describe Groups::CreateBatchService, type: :service do
   let(:billable_metric) { create(:billable_metric) }
 
   context 'when format is not valid' do
-    let(:group_params) do
-      { "invalid": 'region', "values": %w[usa] }
+    it 'returns an error' do
+      result = create_groups({ key: 0, values: 1 })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ key: 'foo' })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ invalid: 'foo', values: ['bar'] })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ key: 'foo', values: 'bar' })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ key: 'foo', values: [1, 2] })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ key: 'foo', values: [{ name: 1 }] })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ key: 'foo', values: [{ name: 'bar', key: 1, values: ['baz'] }] })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+
+      result = create_groups({ key: 'foo', values: [{ name: 'bar', key: 'baz', values: [1] }] })
+      expect(result.error.messages[:group]).to eq(['value_is_invalid'])
     end
 
-    it 'returns an error' do
-      result = create_batch_service
-
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:group]).to eq(['value_is_invalid'])
-      end
+    def create_groups(group_params)
+      described_class.call(
+        billable_metric: billable_metric,
+        group_params: group_params,
+      )
     end
   end
 
@@ -37,9 +56,11 @@ RSpec.describe Groups::CreateBatchService, type: :service do
             name: 'Europe',
             key: 'cloud',
             values: [
-              name: 'AWS',
-              key: 'country',
-              values: %w[France],
+              {
+                name: 'AWS',
+                key: 'country',
+                values: %w[France],
+              },
             ],
           },
         ],

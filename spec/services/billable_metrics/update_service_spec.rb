@@ -52,6 +52,16 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
           update_service.update(**update_args.merge(group: group))
         end.to change { billable_metric.groups.active.reload.count }.from(1).to(5)
       end
+
+      it 'returns an error if group is invalid' do
+        result = update_service.update(**update_args.merge(group: { key: 1 }))
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+        end
+      end
     end
 
     context 'with validation errors' do
@@ -140,6 +150,20 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
             params: update_args.merge(group: group),
           )
         end.to change { billable_metric.groups.active.reload.count }.from(1).to(5)
+      end
+
+      it 'returns an error if group is invalid' do
+        result = update_service.update_from_api(
+          organization: organization,
+          code: billable_metric.code,
+          params: update_args.merge(group: { key: 1 }),
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+        end
       end
     end
 
