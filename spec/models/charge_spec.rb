@@ -3,6 +3,25 @@
 require 'rails_helper'
 
 RSpec.describe Charge, type: :model do
+  describe '#properties' do
+    context 'with group properties' do
+      it 'returns the group properties' do
+        charge = create(:standard_charge)
+        property = create(:group_property, charge: charge, values: { foo: 'bar' })
+
+        expect(charge.properties(group_id: property.group_id)).to eq(property.values)
+      end
+    end
+
+    context 'without group properties' do
+      it 'returns the charge properties' do
+        charge = create(:standard_charge)
+
+        expect(charge.properties).to eq(charge.properties)
+      end
+    end
+  end
+
   describe '.validate_graduated_range' do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)

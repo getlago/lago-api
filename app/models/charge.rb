@@ -7,6 +7,7 @@ class Charge < ApplicationRecord
   belongs_to :billable_metric
 
   has_many :fees
+  has_many :group_properties, dependent: :destroy
 
   CHARGE_MODELS = %i[
     standard
@@ -23,6 +24,10 @@ class Charge < ApplicationRecord
   validate :validate_package, if: :package?
   validate :validate_percentage, if: :percentage?
   validate :validate_volume, if: :volume?
+
+  def properties(group_id: nil)
+    group_properties.find_by(group_id: group_id)&.values || read_attribute(:properties)
+  end
 
   private
 
