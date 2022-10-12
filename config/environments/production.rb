@@ -14,6 +14,8 @@ Rails.application.configure do
     else
       :amazon
     end
+  elsif ENV['LAGO_USE_GCS'].present? && ENV['LAGO_USE_GCS'] == 'true'
+    :google
   else
     :local
   end
