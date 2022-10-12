@@ -14,6 +14,7 @@ module Types
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
       field :field_name, String, null: true
       field :group, GraphQL::Types::JSON, null: true
+      field :flat_groups, [GraphQL::Types::JSON], null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -28,6 +29,12 @@ module Types
 
       def group
         object.groups_as_tree
+      end
+
+      def flat_groups
+        object.groups.active.children.map do |group|
+          { id: group.id, key: group.parent.value, value: group.value }
+        end
       end
     end
   end
