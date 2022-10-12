@@ -43,6 +43,7 @@ gem 'sentry-sidekiq'
 
 # Storage
 gem 'aws-sdk-s3', require: false
+gem 'google-cloud-storage', require: false
 
 # PDF Templating
 gem 'slim'
