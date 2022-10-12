@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_11_083520) do
+ActiveRecord::Schema[7.0].define(version: 2022_10_11_133055) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -242,6 +242,16 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_11_083520) do
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
+  end
+
+  create_table "group_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "charge_id", null: false
+    t.uuid "group_id", null: false
+    t.jsonb "values", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["charge_id"], name: "index_group_properties_on_charge_id"
+    t.index ["group_id"], name: "index_group_properties_on_group_id"
   end
 
   create_table "groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -486,6 +496,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_11_083520) do
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
+  add_foreign_key "group_properties", "charges", on_delete: :cascade
+  add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
   add_foreign_key "invites", "memberships"
