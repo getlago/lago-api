@@ -7,7 +7,7 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
     <<~GQL
       query {
         billableMetrics(limit: 5) {
-          collection { id, name, canBeDeleted }
+          collection { id, name, canBeDeleted, flatGroups }
           metadata { currentPage totalCount }
         }
       }
@@ -20,6 +20,9 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
   it 'returns a list of billable metrics' do
     metric = create(:billable_metric, organization: organization)
 
+    group1 = create(:group, billable_metric: metric, key: 'cloud', value: 'aws')
+    group2 = create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: group1.id)
+
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -30,6 +33,9 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
       expect(result['data']['billableMetrics']['collection'].count).to eq(organization.billable_metrics.count)
       expect(result['data']['billableMetrics']['collection'].first['id']).to eq(metric.id)
       expect(result['data']['billableMetrics']['collection'].first['canBeDeleted']).to eq(true)
+      expect(result['data']['billableMetrics']['collection'].first['flatGroups']).to eq(
+        [{ id: group2.id, key: 'aws', value: 'usa' }],
+      )
 
       expect(result['data']['billableMetrics']['metadata']['currentPage']).to eq(1)
       expect(result['data']['billableMetrics']['metadata']['totalCount']).to eq(1)

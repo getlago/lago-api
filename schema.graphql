@@ -121,6 +121,7 @@ type BillableMetric {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
+  flatGroups: [JSON!]
   group: JSON
   id: ID!
   name: String!
@@ -144,6 +145,7 @@ type BillableMetricDetail {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
+  flatGroups: [JSON!]
   group: JSON
   id: ID!
   name: String!
