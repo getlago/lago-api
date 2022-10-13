@@ -21,8 +21,7 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      # TODO: Expose credit note document
-      # field :file_url, String, null: true
+      field :file_url, String, null: true
 
       field :invoice, Types::Invoices::Object
       field :items, [Types::CreditNoteItems::Object], null: false
