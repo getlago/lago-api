@@ -62,7 +62,7 @@ module Subscriptions
       date
     end
 
-    def next_end_of_period(date)
+    def next_end_of_period(date = billing_date)
       compute_next_end_of_period(date)
     end
 
