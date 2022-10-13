@@ -484,6 +484,31 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             end
           end
 
+          context 'when old subscription was payed in advance' do
+            before do
+              plan.update!(pay_in_advance: true)
+
+              create(
+                :fee,
+                subscription: subscription,
+                amount_cents: 100,
+                vat_amount_cents: 20,
+                invoiceable_type: 'Subscription',
+                invoiceable_id: subscription.id,
+                vat_rate: 20,
+              )
+            end
+
+            it 'creates a credit note for the remaining days' do
+              expect do
+                create_service.create_from_api(
+                  organization: organization,
+                  params: params,
+                )
+              end.to change(CreditNote, :count)
+            end
+          end
+
           context 'when new subscription is payed in advance' do
             before { higher_plan.update!(pay_in_advance: false) }
 

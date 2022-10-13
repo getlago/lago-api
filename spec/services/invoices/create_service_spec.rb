@@ -87,7 +87,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         expect(result.invoice.total_amount_cents).to eq(120)
         expect(result.invoice.total_amount_currency).to eq('EUR')
 
-        expect(result.invoice).to be_legacy
+        expect(result.invoice).not_to be_legacy
       end
     end
 

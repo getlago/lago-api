@@ -94,7 +94,7 @@ module Invoices
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
-        issuing_date: date_service.next_end_of_period(Time.zone.now),
+        issuing_date: date_service.next_end_of_period,
       }
     end
 

@@ -95,7 +95,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
 
   describe 'next_end_of_period' do
     it 'raises a not implemented error' do
-      expect { date_service.next_end_of_period(billing_date.to_date) }
+      expect { date_service.next_end_of_period }
         .to raise_error(NotImplementedError)
     end
   end
