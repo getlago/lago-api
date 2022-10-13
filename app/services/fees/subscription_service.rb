@@ -147,10 +147,6 @@ module Fees
       from_date = boundaries.from_date
       to_date = boundaries.to_date
 
-      # NOTE: to_date for previous plan might be different from to_date
-      #       if plan interval is not the same
-      old_to_date = compute_old_to_date(previous_subscription, boundaries.to_date)
-
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
 
@@ -161,37 +157,17 @@ module Fees
       end
 
       # NOTE: number of days between the upgrade and the end of the period
-      new_number_of_day_to_bill = (to_date + 1.day - from_date).to_i
-      old_number_of_day_to_bill = (old_to_date + 1.day - from_date).to_i
+      number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-      if previous_subscription.plan.pay_in_advance?
-        # NOTE: Previous subscription was payed in advance
-        #       We have to bill the difference between old plan and new plan cost on the
-        #       period between upgrade date and the end of the period
-        #
-        #       The amount to bill is computed with:
-        #       **nb_day** = number of days between current date and end of period
-        #       **old_day_price** = (old plan amount_cents / full period duration)
-        #       **new_day_price** = (new plan amount_cents / full period duration)
-        #       amount_to_bill = nb_day * (new_day_price - old_day_price)
-        old_from_date = compute_from_date(previous_subscription)
-        old_day_price = single_day_price(previous_subscription, optional_from_date: old_from_date)
-
-        amount = new_number_of_day_to_bill * single_day_price(subscription) - old_number_of_day_to_bill * old_day_price
-
-        return 0 if amount.negative?
-
-        amount
-      else
-        # NOTE: Previous subscription was payed in arrear
-        #       We only bill the days between the upgrade date and the end of the period
-        #
-        #       The amount to bill is computed with:
-        #       **nb_day** = number of days between upgrade and the end of the period
-        #       **day_cost** = (plan amount_cents / full period duration)
-        #       amount_to_bill = (nb_day * day_cost)
-        new_number_of_day_to_bill * single_day_price(subscription)
-      end
+      # NOTE: Subscription is upgraded from another plan
+      #       We only bill the days between the upgrade date and the end of the period
+      #       A credit note will apply automatically the amount of days from previous plan that were not consumed
+      #
+      #       The amount to bill is computed with:
+      #       **nb_day** = number of days between upgrade and the end of the period
+      #       **day_cost** = (plan amount_cents / full period duration)
+      #       amount_to_bill = (nb_day * day_cost)
+      number_of_day_to_bill * single_day_price(subscription)
     end
 
     def full_period_amount

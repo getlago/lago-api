@@ -922,299 +922,66 @@ RSpec.describe Fees::SubscriptionService do
       }
     end
 
-    context 'when previous subscription was payed in advance' do
-      it 'creates a subscription fee' do
-        result = fees_subscription_service.create
-        created_fee = result.fee
+    before { previous_plan.update!(pay_in_advance: false) }
 
-        aggregate_failures do
-          expect(created_fee.id).not_to be_nil
-          expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.amount_cents).to eq(11)
-          expect(created_fee.amount_currency).to eq(plan.amount_currency)
-          expect(created_fee.vat_amount_cents).to eq(3)
-          expect(created_fee.vat_rate).to eq(20.0)
-        end
+    it 'creates a subscription fee' do
+      result = fees_subscription_service.create
+      created_fee = result.fee
+
+      aggregate_failures do
+        expect(created_fee.id).not_to be_nil
+        expect(created_fee.invoice_id).to eq(invoice.id)
+        expect(created_fee.amount_cents).to eq(55)
+        expect(created_fee.amount_currency).to eq(plan.amount_currency)
+        expect(created_fee.vat_amount_cents).to eq(11)
+        expect(created_fee.vat_rate).to eq(20.0)
       end
+    end
 
-      context 'when subscription is billed on anniversary date' do
-        let(:subscription) do
-          create(
-            :subscription,
-            plan: plan,
-            started_at: started_at,
-            subscription_date: DateTime.parse('2021-03-25'),
-            previous_subscription: previous_subscription,
-            billing_time: :anniversary,
-            customer: customer,
-            external_id: 'sub_id',
-          )
-        end
+    context 'when plan has trial period' do
+      before { plan.update(trial_period: trial_duration) }
 
-        let(:previous_subscription) do
-          create(
-            :subscription,
-            status: :terminated,
-            terminated_at: DateTime.parse('2022-05-09'),
-            plan: previous_plan,
-            subscription_date: DateTime.parse('2021-03-25'),
-            billing_time: :anniversary,
-            customer: customer,
-            external_id: 'sub_id',
-            started_at: started_at - trial_duration.days,
-          )
-        end
+      context 'when trial period end before period end' do
+        let(:trial_duration) { (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 3 }
 
-        let(:boundaries) do
-          {
-            from_date: DateTime.parse('2022-05-09').to_date,
-            to_date: DateTime.parse('2022-05-24').to_date,
-            timestamp: DateTime.parse('2022-05-26').to_i,
-          }
-        end
-
-        let(:trial_duration) { 100 }
-
-        it 'creates a subscription fee' do
+        it 'creates a fee with prorated amount based on the trial' do
           result = fees_subscription_service.create
-          created_fee = result.fee
 
-          aggregate_failures do
-            expect(created_fee.id).not_to be_nil
-            expect(created_fee.invoice_id).to eq(invoice.id)
-            expect(created_fee.amount_cents).to eq(11)
-            expect(created_fee.amount_currency).to eq(plan.amount_currency)
-            expect(created_fee.vat_amount_cents).to eq(3)
-            expect(created_fee.vat_rate).to eq(20.0)
-          end
+          expect(result.fee.amount_cents).to eq(45)
         end
       end
 
-      context 'when plan has trial period' do
-        before { plan.update(trial_period: trial_duration) }
-
-        context 'when trial period ends before end of period' do
-          let(:trial_duration) { (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 3 }
-
-          it 'creates a fee with prorated amount based on the trial period' do
-            result = fees_subscription_service.create
-
-            expect(result.fee.amount_cents).to eq(9)
-          end
+      context 'when trial period end after period end' do
+        let(:trial_duration) do
+          (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 45
         end
 
-        context 'when trial period end after end of period' do
-          let(:trial_duration) do
-            (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 45
-          end
-
-          it 'creates a fee with zero amount' do
-            result = fees_subscription_service.create
-
-            expect(result.fee.amount_cents).to eq(0)
-          end
-        end
-      end
-
-      context 'when new plan is pay in advance' do
-        before do
-          plan.update(pay_in_advance: true)
-          subscription.previous_subscription.update(terminated_at: subscription.started_at)
-        end
-
-        let(:boundaries) do
-          {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_month.to_date,
-            timestamp: (subscription.started_at + 1.day).to_i,
-          }
-        end
-
-        it 'creates a subscription fee' do
+        it 'creates a fee with zero amount' do
           result = fees_subscription_service.create
-          created_fee = result.fee
 
-          expect(created_fee.amount_cents).to eq(11)
-        end
-      end
-
-      context 'when new plan is yearly and pay in advance' do
-        before do
-          plan.update(interval: :yearly, pay_in_advance: true, amount_cents: 100_000)
-          subscription.previous_subscription.update(terminated_at: subscription.started_at)
-        end
-
-        let(:boundaries) do
-          {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_year.to_date,
-            timestamp: subscription.started_at.to_i,
-          }
-        end
-
-        it 'creates a subscription fee' do
-          result = fees_subscription_service.create
-          created_fee = result.fee
-
-          expect(created_fee.amount_cents).to eq(79_956)
-        end
-      end
-
-      context 'when new plan is weekly and pay in advance' do
-        before do
-          plan.update(interval: :weekly, pay_in_advance: true, amount_cents: 100_000)
-          previous_plan.update(interval: :weekly)
-          subscription.previous_subscription.update(terminated_at: subscription.started_at)
-        end
-
-        let(:boundaries) do
-          {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_week.to_date,
-            timestamp: subscription.started_at.to_i,
-          }
-        end
-
-        it 'creates a subscription fee' do
-          result = fees_subscription_service.create
-          created_fee = result.fee
-
-          expect(created_fee.amount_cents).to eq(85_646)
-        end
-      end
-
-      context 'when old plan is yearly and new plan is monthly' do
-        before do
-          plan.update(interval: :monthly, pay_in_advance: true, amount_cents: 1_000)
-          previous_plan.update(interval: :yearly, amount_cents: 10_000)
-          subscription.previous_subscription.update(terminated_at: subscription.started_at)
-        end
-
-        it 'creates a subscription fee with amount zero' do
-          result = fees_subscription_service.create
-          created_fee = result.fee
-
-          expect(created_fee.amount_cents).to eq(0)
+          expect(result.fee.amount_cents).to eq(0)
         end
       end
     end
 
-    context 'when previous subscription was payed in arrear' do
-      before { previous_plan.update!(pay_in_advance: false) }
-
-      it 'creates a subscription fee' do
-        result = fees_subscription_service.create
-        created_fee = result.fee
-
-        aggregate_failures do
-          expect(created_fee.id).not_to be_nil
-          expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.amount_cents).to eq(55)
-          expect(created_fee.amount_currency).to eq(plan.amount_currency)
-          expect(created_fee.vat_amount_cents).to eq(11)
-          expect(created_fee.vat_rate).to eq(20.0)
-        end
+    context 'when new plan is pay in advance' do
+      before do
+        plan.update(pay_in_advance: true)
+        subscription.previous_subscription.update(terminated_at: subscription.started_at)
       end
-
-      context 'when plan has trial period' do
-        before { plan.update(trial_period: trial_duration) }
-
-        context 'when trial period end before period end' do
-          let(:trial_duration) { (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 3 }
-
-          it 'creates a fee with prorated amount based on the trial' do
-            result = fees_subscription_service.create
-
-            expect(result.fee.amount_cents).to eq(45)
-          end
-        end
-
-        context 'when trial period end after period end' do
-          let(:trial_duration) do
-            (subscription.started_at.to_date - previous_subscription.started_at.to_date).to_i + 45
-          end
-
-          it 'creates a fee with zero amount' do
-            result = fees_subscription_service.create
-
-            expect(result.fee.amount_cents).to eq(0)
-          end
-        end
-      end
-
-      context 'when new plan is pay in advance' do
-        before do
-          plan.update(pay_in_advance: true)
-          subscription.previous_subscription.update(terminated_at: subscription.started_at)
-        end
-
-        let(:boundaries) do
-          {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_month.to_date,
-            timestamp: subscription.started_at.to_i,
-          }
-        end
-
-        it 'creates a subscription fee' do
-          result = fees_subscription_service.create
-
-          expect(result.fee.amount_cents).to eq(55)
-        end
-      end
-    end
-
-    context 'when both plan are payed in advance and subscription is billed anniversary' do
-      let(:subscription) do
-        create(
-          :subscription,
-          plan: plan,
-          started_at: started_at,
-          subscription_date: DateTime.parse('2021-03-25'),
-          previous_subscription: previous_subscription,
-          billing_time: :anniversary,
-          customer: customer,
-          external_id: 'sub_id',
-        )
-      end
-
-      let(:previous_subscription) do
-        create(
-          :subscription,
-          status: :terminated,
-          terminated_at: DateTime.parse('2022-05-08'),
-          plan: previous_plan,
-          subscription_date: DateTime.parse('2021-03-25'),
-          billing_time: :anniversary,
-          customer: customer,
-          external_id: 'sub_id',
-        )
-      end
-
-      let(:previous_plan) { create(:plan, pay_in_advance: true, amount_cents: 80) }
 
       let(:boundaries) do
         {
-          from_date: DateTime.parse('2022-05-08').to_date,
-          to_date: DateTime.parse('2022-05-24').to_date,
-          timestamp: DateTime.parse('2022-05-26').to_i,
+          from_date: subscription.started_at.to_date,
+          to_date: subscription.started_at.end_of_month.to_date,
+          timestamp: subscription.started_at.to_i,
         }
       end
 
-      before { plan.update!(pay_in_advance: true) }
-
       it 'creates a subscription fee' do
         result = fees_subscription_service.create
-        created_fee = result.fee
 
-        aggregate_failures do
-          expect(created_fee.id).not_to be_nil
-          expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.amount_cents).to eq(11)
-          expect(created_fee.amount_currency).to eq(plan.amount_currency)
-          expect(created_fee.vat_amount_cents).to eq(3)
-          expect(created_fee.vat_rate).to eq(20.0)
-        end
+        expect(result.fee.amount_cents).to eq(55)
       end
     end
   end
