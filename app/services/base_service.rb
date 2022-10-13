@@ -1,15 +1,23 @@
 # frozen_string_literal: true
 
 class BaseService
-  class FailedResult < StandardError; end
+  class FailedResult < StandardError
+    attr_reader :result
+
+    def initialize(result, message)
+      @result = result
+
+      super(message)
+    end
+  end
 
   class NotFoundFailure < FailedResult
     attr_reader :resource
 
-    def initialize(resource:)
+    def initialize(result, resource:)
       @resource = resource
 
-      super(error_code)
+      super(result, error_code)
     end
 
     def error_code
@@ -20,20 +28,20 @@ class BaseService
   class MethodNotAllowedFailure < FailedResult
     attr_reader :code
 
-    def initialize(code:)
+    def initialize(result, code:)
       @code = code
 
-      super(code)
+      super(result, code)
     end
   end
 
   class ValidationFailure < FailedResult
     attr_reader :messages
 
-    def initialize(messages:)
+    def initialize(result, messages:)
       @messages = messages
 
-      super(format_messages)
+      super(result, format_messages)
     end
 
     private
@@ -46,11 +54,11 @@ class BaseService
   class ServiceFailure < FailedResult
     attr_reader :code, :error_message
 
-    def initialize(code:, error_message:)
+    def initialize(result, code:, error_message:)
       @code = code
       @error_message = error_message
 
-      super("#{code}: #{error_message}")
+      super(result, "#{code}: #{error_message}")
     end
   end
 
@@ -76,11 +84,11 @@ class BaseService
     end
 
     def not_found_failure!(resource:)
-      fail_with_error!(NotFoundFailure.new(resource: resource))
+      fail_with_error!(NotFoundFailure.new(self, resource: resource))
     end
 
     def not_allowed_failure!(code:)
-      fail_with_error!(MethodNotAllowedFailure.new(code: code))
+      fail_with_error!(MethodNotAllowedFailure.new(self, code: code))
     end
 
     def record_validation_failure!(record:)
@@ -88,7 +96,7 @@ class BaseService
     end
 
     def validation_failure!(errors:)
-      fail_with_error!(ValidationFailure.new(messages: errors))
+      fail_with_error!(ValidationFailure.new(self, messages: errors))
     end
 
     def single_validation_failure!(error_code:, field: :base)
@@ -96,7 +104,7 @@ class BaseService
     end
 
     def service_failure!(code:, message:)
-      fail_with_error!(ServiceFailure.new(code: code, error_message: message))
+      fail_with_error!(ServiceFailure.new(self, code: code, error_message: message))
     end
 
     def throw_error

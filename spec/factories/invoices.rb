@@ -6,5 +6,7 @@ FactoryBot.define do
 
     issuing_date { Time.zone.now - 1.day }
     status { 'pending' }
+    amount_currency { 'EUR' }
+    total_amount_currency { 'EUR' }
   end
 end

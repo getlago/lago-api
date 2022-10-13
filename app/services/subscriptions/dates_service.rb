@@ -62,8 +62,8 @@ module Subscriptions
       date
     end
 
-    def next_end_of_period(date)
-      compute_next_end_of_period(date)
+    def next_end_of_period
+      compute_next_end_of_period
     end
 
     # NOTE: Retrieve the beginning of the previous period based on the billing date
@@ -141,7 +141,7 @@ module Subscriptions
       raise(NotImplementedError)
     end
 
-    def compute_next_end_of_period(date)
+    def compute_next_end_of_period
       raise(NotImplementedError)
     end
 
