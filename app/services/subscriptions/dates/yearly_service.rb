@@ -57,16 +57,16 @@ module Subscriptions
         compute_to_date(compute_charges_from_date)
       end
 
-      def compute_next_end_of_period(date)
-        return date.end_of_year if calendar?
+      def compute_next_end_of_period
+        return billing_date.end_of_year if calendar?
 
-        year = date.year
+        year = billing_date.year
         month = subscription_date.month
         day = subscription_date.day
 
         # NOTE: we need the last day of the period, and not the first of the next one
         result_date = build_date(year, month, day) - 1.day
-        return result_date if result_date >= date
+        return result_date if result_date >= billing_date
 
         build_date(year + 1, month, day) - 1.day
       end

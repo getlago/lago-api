@@ -8,7 +8,6 @@ module CreditNotes
       super
     end
 
-    # TODO: take VAT into account
     def call
       return result if (last_subscription_fee&.amount_cents || 0).zero?
 

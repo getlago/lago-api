@@ -43,12 +43,12 @@ module Subscriptions
         compute_charges_from_date + 6.days
       end
 
-      def compute_next_end_of_period(date)
-        return date.end_of_week if calendar?
-        return date if date.wday == (subscription_date - 1.day).wday
+      def compute_next_end_of_period
+        return billing_date.end_of_week if calendar?
+        return billing_date if billing_date.wday == (subscription_date - 1.day).wday
 
         # NOTE: we need the last day of the period, and not the first of the next one
-        date.next_occurring(subscription_day_name) - 1.day
+        billing_date.next_occurring(subscription_day_name) - 1.day
       end
 
       def compute_previous_beginning_of_period(date)
