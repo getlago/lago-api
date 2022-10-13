@@ -22,12 +22,14 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '.validate_graduated_range' do
+  describe '.validate_graduated' do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)
     end
 
-    let(:charge_properties) { [{ 'foo' => 'bar' }] }
+    let(:charge_properties) do
+      { graduated_ranges: [{ 'foo' => 'bar' }] }
+    end
     let(:validation_service) { instance_double(Charges::Validators::GraduatedService) }
 
     let(:service_response) do
@@ -260,14 +262,14 @@ RSpec.describe Charge, type: :model do
       build(:volume_charge, properties: charge_properties)
     end
 
-    let(:charge_properties) { { ranges: [{ 'foo' => 'bar' }] } }
+    let(:charge_properties) { { volume_ranges: [{ 'foo' => 'bar' }] } }
     let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
 
     let(:service_response) do
       BaseService::Result.new.validation_failure!(
         errors: {
           amount: ['invalid_amount'],
-          ranges: ['invalid_ranges'],
+          volume_ranges: ['invalid_volume_ranges'],
         },
       )
     end
@@ -284,7 +286,7 @@ RSpec.describe Charge, type: :model do
         expect(charge).not_to be_valid
         expect(charge.errors.messages.keys).to include(:properties)
         expect(charge.errors.messages[:properties]).to include('invalid_amount')
-        expect(charge.errors.messages[:properties]).to include('invalid_ranges')
+        expect(charge.errors.messages[:properties]).to include('invalid_volume_ranges')
 
         expect(Charges::Validators::VolumeService).to have_received(:new)
           .with(charge: charge)

@@ -24,7 +24,9 @@ FactoryBot.define do
 
     factory :graduated_charge do
       charge_model { 'graduated' }
-      properties { [] }
+      properties do
+        { graduated_ranges: [] }
+      end
     end
 
     factory :package_charge do
@@ -52,7 +54,7 @@ FactoryBot.define do
       charge_model { 'volume' }
       properties do
         {
-          ranges: [
+          volume_ranges: [
             { from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1' },
             { from_value: 101, to_value: nil, per_unit_amount: '1', flat_amount: '0' },
           ],

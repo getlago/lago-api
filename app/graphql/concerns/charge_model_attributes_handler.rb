@@ -4,10 +4,10 @@ module ChargeModelAttributesHandler
   # NOTE: Map custom arguments of charge models into the properties hash
   #       of each charges.
   #       - Standard model only has one property `amount_cents`
-  #       - Graduated model relies on the the list of `GraduatedRange`
+  #       - Graduated model has property `graduated_ranges` which relies on the the list of `GraduatedRange`
   #       - Package model has properties `amount_cents`, `package_size` and `free_units`
   #       - Percentage model has properties `rate`, `fixed_amount`, `free_units_per_events`, `free_units_per_total_aggregation`
-  #       - Volume model has property `ranges` which relies on the list of VolumeRange
+  #       - Volume model has property `volume_ranges` which relies on the list of `VolumeRange``
   def prepare_arguments(arguments)
     return arguments if arguments[:charges].blank?
 
@@ -18,7 +18,9 @@ module ChargeModelAttributesHandler
       when :standard
         output[:properties] = { amount: output[:amount] }
       when :graduated
-        output[:properties] = output[:graduated_ranges]
+        output[:properties] = {
+          graduated_ranges: output[:graduated_ranges],
+        }
       when :package
         output[:properties] = {
           amount: output[:amount],
@@ -34,7 +36,7 @@ module ChargeModelAttributesHandler
         }
       when :volume
         output[:properties] = {
-          ranges: output[:volume_ranges],
+          volume_ranges: output[:volume_ranges],
         }
       end
 
