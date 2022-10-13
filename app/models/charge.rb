@@ -20,7 +20,7 @@ class Charge < ApplicationRecord
   enum charge_model: CHARGE_MODELS
 
   validate :validate_amount, if: :standard?
-  validate :validate_graduated_range, if: :graduated?
+  validate :validate_graduated, if: :graduated?
   validate :validate_package, if: :package?
   validate :validate_percentage, if: :percentage?
   validate :validate_volume, if: :volume?
@@ -35,7 +35,7 @@ class Charge < ApplicationRecord
     validate_charge_model(Charges::Validators::StandardService)
   end
 
-  def validate_graduated_range
+  def validate_graduated
     validate_charge_model(Charges::Validators::GraduatedService)
   end
 

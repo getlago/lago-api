@@ -83,14 +83,16 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         plan: subscription.plan,
         charge_model: 'graduated',
         billable_metric: billable_metric,
-        properties: [
-          {
-            from_value: 0,
-            to_value: nil,
-            per_unit_amount: '0.01',
-            flat_amount: '0.01',
-          },
-        ],
+        properties: {
+          graduated_ranges: [
+            {
+              from_value: 0,
+              to_value: nil,
+              per_unit_amount: '0.01',
+              flat_amount: '0.01',
+            },
+          ],
+        },
       )
     end
 

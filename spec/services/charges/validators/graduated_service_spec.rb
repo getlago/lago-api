@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Charges::Validators::GraduatedService, type: :service do
   subject(:graduated_service) { described_class.new(charge: charge) }
 
-  let(:charge) { build(:graduated_charge, properties: ranges) }
+  let(:charge) { build(:graduated_charge, properties: { graduated_ranges: ranges }) }
 
   let(:ranges) do
     []
@@ -16,8 +16,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
       aggregate_failures do
         expect(graduated_service).not_to be_valid
         expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
-        expect(graduated_service.result.error.messages.keys).to include(:ranges)
-        expect(graduated_service.result.error.messages[:ranges]).to include('missing_graduated_range')
+        expect(graduated_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(graduated_service.result.error.messages[:graduated_ranges]).to include('missing_graduated_ranges')
       end
     end
 
@@ -30,8 +30,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         aggregate_failures do
           expect(graduated_service).not_to be_valid
           expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(graduated_service.result.error.messages.keys).to include(:ranges)
-          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+          expect(graduated_service.result.error.messages.keys).to include(:graduated_ranges)
+          expect(graduated_service.result.error.messages[:graduated_ranges]).to include('invalid_graduated_ranges')
         end
       end
     end
@@ -45,8 +45,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         aggregate_failures do
           expect(graduated_service).not_to be_valid
           expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(graduated_service.result.error.messages.keys).to include(:ranges)
-          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+          expect(graduated_service.result.error.messages.keys).to include(:graduated_ranges)
+          expect(graduated_service.result.error.messages[:graduated_ranges]).to include('invalid_graduated_ranges')
         end
       end
     end
@@ -63,8 +63,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         aggregate_failures do
           expect(graduated_service).not_to be_valid
           expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(graduated_service.result.error.messages.keys).to include(:ranges)
-          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+          expect(graduated_service.result.error.messages.keys).to include(:graduated_ranges)
+          expect(graduated_service.result.error.messages[:graduated_ranges]).to include('invalid_graduated_ranges')
         end
       end
     end
@@ -81,8 +81,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
         aggregate_failures do
           expect(graduated_service).not_to be_valid
           expect(graduated_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(graduated_service.result.error.messages.keys).to include(:ranges)
-          expect(graduated_service.result.error.messages[:ranges]).to include('invalid_graduated_ranges')
+          expect(graduated_service.result.error.messages.keys).to include(:graduated_ranges)
+          expect(graduated_service.result.error.messages[:graduated_ranges]).to include('invalid_graduated_ranges')
         end
       end
     end

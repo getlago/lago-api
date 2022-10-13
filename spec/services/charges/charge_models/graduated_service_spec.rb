@@ -16,26 +16,28 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
   let(:charge) do
     create(
       :graduated_charge,
-      properties: [
-        {
-          from_value: 0,
-          to_value: 10,
-          per_unit_amount: '10',
-          flat_amount: '2',
-        },
-        {
-          from_value: 11,
-          to_value: 20,
-          per_unit_amount: '5',
-          flat_amount: '3',
-        },
-        {
-          from_value: 21,
-          to_value: nil,
-          per_unit_amount: '5',
-          flat_amount: '3',
-        },
-      ],
+      properties: {
+        graduated_ranges: [
+          {
+            from_value: 0,
+            to_value: 10,
+            per_unit_amount: '10',
+            flat_amount: '2',
+          },
+          {
+            from_value: 11,
+            to_value: 20,
+            per_unit_amount: '5',
+            flat_amount: '3',
+          },
+          {
+            from_value: 21,
+            to_value: nil,
+            per_unit_amount: '5',
+            flat_amount: '3',
+          },
+        ],
+      },
     )
   end
 

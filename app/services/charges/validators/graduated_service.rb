@@ -5,14 +5,14 @@ module Charges
     class GraduatedService < Charges::Validators::BaseService
       def valid?
         if ranges.blank?
-          add_error(field: :ranges, error_code: 'missing_graduated_range')
+          add_error(field: :graduated_ranges, error_code: 'missing_graduated_ranges')
         else
           next_from_value = 0
           ranges.each_with_index do |range, index|
             validate_amounts(range)
 
             unless valid_bounds?(range, index, next_from_value)
-              add_error(field: :ranges, error_code: 'invalid_graduated_ranges')
+              add_error(field: :graduated_ranges, error_code: 'invalid_graduated_ranges')
             end
 
             next_from_value = (range[:to_value] || 0) + 1
@@ -25,7 +25,7 @@ module Charges
       private
 
       def ranges
-        charge.properties.map(&:with_indifferent_access)
+        charge.properties['graduated_ranges'].map(&:with_indifferent_access)
       end
 
       def validate_amounts(range)

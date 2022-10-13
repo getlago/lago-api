@@ -56,20 +56,22 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               billable_metric_id: billable_metric.id,
               charge_model: 'graduated',
-              properties: [
-                {
-                  to_value: 1,
-                  from_value: 0,
-                  flat_amount: '0',
-                  per_unit_amount: '0',
-                },
-                {
-                  to_value: nil,
-                  from_value: 2,
-                  flat_amount: '0',
-                  per_unit_amount: '3200',
-                },
-              ],
+              properties: {
+                graduated_ranges: [
+                  {
+                    to_value: 1,
+                    from_value: 0,
+                    flat_amount: '0',
+                    per_unit_amount: '0',
+                  },
+                  {
+                    to_value: nil,
+                    from_value: 2,
+                    flat_amount: '0',
+                    per_unit_amount: '3200',
+                  },
+                ],
+              },
             },
           ],
         }

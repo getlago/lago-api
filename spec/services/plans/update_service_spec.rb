@@ -32,20 +32,22 @@ RSpec.describe Plans::UpdateService, type: :service do
         {
           billable_metric_id: billable_metrics.last.id,
           charge_model: 'graduated',
-          properties: [
-            {
-              from_value: 0,
-              to_value: 10,
-              per_unit_amount: '2',
-              flat_amount: '0',
-            },
-            {
-              from_value: 11,
-              to_value: nil,
-              per_unit_amount: '3',
-              flat_amount: '3',
-            },
-          ],
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: 10,
+                per_unit_amount: '2',
+                flat_amount: '0',
+              },
+              {
+                from_value: 11,
+                to_value: nil,
+                per_unit_amount: '3',
+                flat_amount: '3',
+              },
+            ],
+          },
         },
       ],
     }

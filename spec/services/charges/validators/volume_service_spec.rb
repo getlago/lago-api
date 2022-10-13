@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Charges::Validators::VolumeService, type: :service do
   subject(:volume_service) { described_class.new(charge: charge) }
 
-  let(:charge) { build(:volume_charge, properties: { ranges: ranges }) }
+  let(:charge) { build(:volume_charge, properties: { volume_ranges: ranges }) }
 
   let(:ranges) do
     []
@@ -16,8 +16,8 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
       aggregate_failures do
         expect(volume_service).not_to be_valid
         expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-        expect(volume_service.result.error.messages.keys).to include(:ranges)
-        expect(volume_service.result.error.messages[:ranges]).to include('missing_ranges')
+        expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
+        expect(volume_service.result.error.messages[:volume_ranges]).to include('missing_volume_ranges')
       end
     end
 
@@ -30,8 +30,8 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         aggregate_failures do
           expect(volume_service).not_to be_valid
           expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:ranges)
-          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(volume_service.result.error.messages[:volume_ranges]).to include('invalid_volume_ranges')
         end
       end
     end
@@ -45,8 +45,8 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         aggregate_failures do
           expect(volume_service).not_to be_valid
           expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:ranges)
-          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(volume_service.result.error.messages[:volume_ranges]).to include('invalid_volume_ranges')
         end
       end
     end
@@ -63,8 +63,8 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         aggregate_failures do
           expect(volume_service).not_to be_valid
           expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:ranges)
-          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(volume_service.result.error.messages[:volume_ranges]).to include('invalid_volume_ranges')
         end
       end
     end
@@ -81,8 +81,8 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
         aggregate_failures do
           expect(volume_service).not_to be_valid
           expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:ranges)
-          expect(volume_service.result.error.messages[:ranges]).to include('invalid_ranges')
+          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(volume_service.result.error.messages[:volume_ranges]).to include('invalid_volume_ranges')
         end
       end
     end

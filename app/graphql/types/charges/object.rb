@@ -40,7 +40,7 @@ module Types
       def graduated_ranges
         return unless object.graduated?
 
-        object.properties
+        object.properties['graduated_ranges']
       end
 
       def free_units
@@ -82,7 +82,7 @@ module Types
       def volume_ranges
         return unless object.volume?
 
-        object.properties['ranges']
+        object.properties['volume_ranges']
       end
     end
   end
