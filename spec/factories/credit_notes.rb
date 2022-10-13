@@ -5,11 +5,7 @@ FactoryBot.define do
     customer
     invoice
 
-    status { 'available' }
     reason { 'duplicated_charge' }
-    amount_cents { 100 }
-    amount_currency { 'EUR' }
-
     total_amount_cents { 100 }
     total_amount_currency { 'EUR' }
 

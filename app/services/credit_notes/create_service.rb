@@ -15,8 +15,9 @@ module CreditNotes
         result.credit_note = CreditNote.create!(
           customer: invoice.customer,
           invoice: invoice,
-          amount_currency: invoice.amount_currency,
-          remaining_amount_currency: invoice.amount_currency,
+          total_amount_currency: invoice.amount_currency,
+          credit_amount_currency: invoice.amount_currency,
+          balance_amount_currency: invoice.amount_currency,
           reason: reason,
         )
 
@@ -24,7 +25,8 @@ module CreditNotes
         return result unless result.success?
 
         credit_note.update!(
-          remaining_amount_cents: credit_note.amount_cents,
+          total_amount_cents: credit_note.credit_amount_cents,
+          balance_amount_cents: credit_note.credit_amount_cents,
         )
       end
 
@@ -52,7 +54,7 @@ module CreditNotes
 
         # NOTE: update credit note credit amount to allow validation on next item
         credit_note.update!(
-          amount_cents: credit_note.amount_cents + item.credit_amount_cents,
+          credit_amount_cents: credit_note.credit_amount_cents + item.credit_amount_cents,
         )
       end
     end

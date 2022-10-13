@@ -30,7 +30,7 @@ module CreditNotes
     end
 
     def credited_invoice_amount_cents
-      invoice.credit_notes.sum(:amount_cents)
+      invoice.credit_notes.sum(:credit_amount_cents)
     end
 
     def valid_fee?
