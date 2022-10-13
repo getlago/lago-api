@@ -161,16 +161,14 @@ module Subscriptions
       current_subscription.mark_as_terminated!
       new_subscription.mark_as_active!
 
-      if current_subscription.plan.pay_in_arrear?
-        # NOTE: Since job is laucnhed from inside a db transaction
-        #       we must wait for it to be commited before processing the job
-        BillSubscriptionJob
-          .set(wait: 2.seconds)
-          .perform_later(
-            [current_subscription],
-            Time.zone.now.to_i,
-          )
-      end
+      # NOTE: Create an invoice for the terminated subscription
+      #       if it has not been billed yet
+      #       or only for the charges if subscription was billed in advance
+      BillSubscriptionJob.set(wait: 2.seconds)
+        .perform_later(
+          [current_subscription],
+          Time.zone.now.to_i,
+        )
 
       if current_plan.pay_in_advance?
         # NOTE: Since job is laucnhed from inside a db transaction
