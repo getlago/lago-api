@@ -12,7 +12,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       :credit_note,
       invoice: invoice,
       customer: customer,
-      amount_cents: 0,
+      credit_amount_cents: 0,
     )
   end
   let(:item) do
@@ -78,7 +78,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
 
     context 'when invoice already has credit note items' do
       before do
-        create(:credit_note, invoice: invoice, amount_cents: 99)
+        create(:credit_note, invoice: invoice, total_amount_cents: 99)
       end
 
       it 'fails the validation' do

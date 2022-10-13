@@ -40,8 +40,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
+          invoice_type: invoice.invoice_type,
+        },
       )
     end
 
@@ -286,7 +286,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result).to be_success
 
           expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
-          expect(result.invoice.fees.first.properties['from_date']).to eq (subscription.subscription_date).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq subscription.subscription_date.to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -393,7 +393,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result).to be_success
 
           expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
-          expect(result.invoice.fees.first.properties['from_date']).to eq (subscription.subscription_date).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq subscription.subscription_date.to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -524,7 +524,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result).to be_success
 
           expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
-          expect(result.invoice.fees.first.properties['from_date']).to eq (subscription.subscription_date).to_date.to_s
+          expect(result.invoice.fees.first.properties['from_date']).to eq subscription.subscription_date.to_date.to_s
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -667,6 +667,45 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_cents).to eq(0)
           expect(result.invoice.status).to eq('succeeded')
           expect(result.invoice.fees.charge_kind.count).to eq(0)
+        end
+      end
+    end
+
+    context 'with credit' do
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer: subscription.customer,
+          total_amount_cents: 10,
+          total_amount_currency: plan.amount_currency,
+          balance_amount_cents: 10,
+          balance_amount_currency: plan.amount_currency,
+          credit_amount_cents: 10,
+          credit_amount_currency: plan.amount_currency,
+        )
+      end
+
+      before { credit_note }
+
+      it 'creates an invoice' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.amount_cents).to eq(90)
+          expect(result.invoice.amount_currency).to eq('EUR')
+          expect(result.invoice.vat_amount_cents).to eq(18)
+          expect(result.invoice.vat_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(108)
+          expect(result.invoice.total_amount_currency).to eq('EUR')
+
+          expect(result.invoice.credits.count).to eq(1)
+
+          credit = result.invoice.credits.first
+          expect(credit.credit_note).to eq(credit_note)
+          expect(credit.amount_cents).to eq(10)
+          expect(credit.amount_currency).to eq('EUR')
         end
       end
     end

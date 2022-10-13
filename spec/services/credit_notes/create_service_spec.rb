@@ -31,10 +31,12 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         credit_note = result.credit_note
         expect(credit_note.invoice).to eq(invoice)
         expect(credit_note.customer).to eq(invoice.customer)
-        expect(credit_note.amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.amount_cents).to eq(15)
-        expect(credit_note.remaining_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.remaining_amount_cents).to eq(15)
+        expect(credit_note.total_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.total_amount_cents).to eq(15)
+        expect(credit_note.credit_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.credit_amount_cents).to eq(15)
+        expect(credit_note.balance_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.balance_amount_cents).to eq(15)
         expect(credit_note).to be_other
 
         expect(credit_note.items.count).to eq(2)

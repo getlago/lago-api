@@ -5,13 +5,15 @@ FactoryBot.define do
     customer
     invoice
 
-    status { 'available' }
     reason { 'duplicated_charge' }
-    amount_cents { 100 }
-    amount_currency { 'EUR' }
+    total_amount_cents { 100 }
+    total_amount_currency { 'EUR' }
 
-    remaining_amount_cents { 100 }
-    remaining_amount_currency { 'EUR' }
+    credit_status { 'available' }
+    credit_amount_cents { 100 }
+    credit_amount_currency { 'EUR' }
+    balance_amount_cents { 100 }
+    balance_amount_currency { 'EUR' }
 
     trait :with_file do
       after(:build) do |credit_note|

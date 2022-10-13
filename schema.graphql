@@ -1739,19 +1739,21 @@ input CreateSubscriptionInput {
 }
 
 type CreditNote {
-  amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
+  balanceAmountCents: BigInt!
+  balanceAmountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
+  creditAmountCents: BigInt!
+  creditAmountCurrency: CurrencyEnum!
+  creditStatus: CreditNoteTypeEnum!
   fileUrl: String
   id: ID!
   invoice: Invoice
   items: [CreditNoteItem!]!
   number: String!
   reason: CreditNoteReasonEnum!
-  remainingAmountCents: BigInt!
-  remainingAmountCurrency: CurrencyEnum!
   sequentialId: ID!
-  status: CreditNoteTypeEnum!
+  totalAmountCents: BigInt!
+  totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
 }
 

@@ -9,14 +9,17 @@ module Types
       field :sequential_id, ID, null: false
       field :number, String, null: false
 
-      field :status, Types::CreditNotes::StatusTypeEnum, null: false
+      field :credit_status, Types::CreditNotes::CreditStatusTypeEnum, null: false
       field :reason, Types::CreditNotes::ReasonTypeEnum, null: false
 
-      field :amount_cents, GraphQL::Types::BigInt, null: false
-      field :amount_currency, Types::CurrencyEnum, null: false
+      field :total_amount_cents, GraphQL::Types::BigInt, null: false
+      field :total_amount_currency, Types::CurrencyEnum, null: false
 
-      field :remaining_amount_cents, GraphQL::Types::BigInt, null: false
-      field :remaining_amount_currency, Types::CurrencyEnum, null: false
+      field :credit_amount_cents, GraphQL::Types::BigInt, null: false
+      field :credit_amount_currency, Types::CurrencyEnum, null: false
+
+      field :balance_amount_cents, GraphQL::Types::BigInt, null: false
+      field :balance_amount_currency, Types::CurrencyEnum, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

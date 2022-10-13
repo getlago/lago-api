@@ -15,19 +15,21 @@ class CreditNote < ApplicationRecord
 
   has_one_attached :file
 
-  monetize :amount_cents
-  monetize :remaining_amount_cents
+  monetize :total_amount_cents
+  monetize :credit_amount_cents
+  monetize :balance_amount_cents
 
-  STATUS = %i[available consumed].freeze
+  CREDIT_STATUS = %i[available consumed].freeze
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
 
-  enum status: STATUS
+  enum credit_status: CREDIT_STATUS
   enum reason: REASON
 
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) }
 
-  validates :amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :remaining_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :balance_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
   def file_url
     return if file.blank?

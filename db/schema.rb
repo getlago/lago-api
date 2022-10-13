@@ -147,15 +147,17 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_11_133055) do
     t.uuid "invoice_id", null: false
     t.integer "sequential_id", null: false
     t.string "number", null: false
-    t.bigint "amount_cents", default: 0, null: false
-    t.string "amount_currency", null: false
-    t.integer "status", default: 0, null: false
-    t.bigint "remaining_amount_cents", default: 0, null: false
-    t.string "remaining_amount_currency", default: "0", null: false
+    t.bigint "credit_amount_cents", default: 0, null: false
+    t.string "credit_amount_currency", null: false
+    t.integer "credit_status", default: 0, null: false
+    t.bigint "balance_amount_cents", default: 0, null: false
+    t.string "balance_amount_currency", default: "0", null: false
     t.integer "reason", null: false
     t.string "file"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "total_amount_cents", default: 0, null: false
+    t.string "total_amount_currency", null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
