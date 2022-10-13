@@ -154,6 +154,28 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is credit_note.created' do
+    let(:webhook_service) { instance_double(Webhooks::CreditNotes::CreatedService) }
+    let(:credit_note) { create(:credit_note) }
+
+    before do
+      allow(Webhooks::CreditNotes::CreatedService).to receive(:new)
+        .with(credit_note)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      described_class.perform_now(
+        'credit_note.created',
+        credit_note,
+      )
+
+      expect(Webhooks::CreditNotes::CreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is credit_note.generated' do
     let(:webhook_service) { instance_double(Webhooks::CreditNotes::GeneratedService) }
     let(:credit_note) { create(:credit_note) }
