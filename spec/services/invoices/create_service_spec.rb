@@ -668,7 +668,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
       before { subscription }
 
-      it 'creates an invoice without charge fee and with amount equal to zero' do
+      it 'creates an invoice with pro-rated charge fee and without charge fees' do
         result = invoice_service.create
 
         aggregate_failures do
@@ -676,8 +676,8 @@ RSpec.describe Invoices::CreateService, type: :service do
             .to eq(subscription.started_at.to_date.end_of_month.to_s)
           expect(result.invoice.fees.first.properties['from_date'])
             .to eq(subscription.started_at.to_date.to_s)
-          expect(result.invoice.total_amount_cents).to eq(0)
-          expect(result.invoice.status).to eq('succeeded')
+          expect(result.invoice.total_amount_cents).to eq(81)
+          expect(result.invoice).to be_pending
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end

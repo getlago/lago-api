@@ -201,19 +201,5 @@ module Fees
         optional_from_date: optional_from_date,
       )
     end
-
-    def compute_old_to_date(old_subscription, base_date)
-      return base_date if plan.pay_in_arrear?
-
-      # NOTE: when plan is pay in advance, the_to date should be the
-      #       end of the actual period
-      date_service(old_subscription).next_end_of_period(old_subscription.terminated_at.to_date)
-    end
-
-    def compute_from_date(target_subscription)
-      date_service(target_subscription).previous_beginning_of_period(
-        current_period: target_subscription.plan.pay_in_advance? && subscription.plan.pay_in_advance?,
-      )
-    end
   end
 end
