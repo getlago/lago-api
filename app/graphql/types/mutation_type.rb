@@ -41,6 +41,8 @@ module Types
     field :destroy_payment_provider, mutation: Mutations::PaymentProviders::Destroy
     field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe
 
+    field :add_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless
+
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
     field :download_invoice, mutation: Mutations::Invoices::Download
 
