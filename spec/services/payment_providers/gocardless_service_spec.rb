@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe PaymentProviders::GocardlessService, type: :service do
   subject(:gocardless_service) { described_class.new(membership.user) }
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:access_code) { '1234567!abc' }
