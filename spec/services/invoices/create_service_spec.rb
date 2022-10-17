@@ -671,6 +671,60 @@ RSpec.describe Invoices::CreateService, type: :service do
       end
     end
 
+    context 'when subscription is pay in advance and terminated after upgrade' do
+      let(:plan) do
+        create(:plan, interval: :monthly, pay_in_advance: true, amount_cents: 1000)
+      end
+      let(:next_subscription) do
+        create(
+          :subscription,
+          plan: next_plan,
+          subscription_date: started_at.to_date,
+          started_at: terminated_at,
+          status: :active,
+          billing_time: :calendar,
+          previous_subscription: subscription,
+          customer: subscription.customer,
+        )
+      end
+
+      let(:started_at) { DateTime.parse('07 Mar 2022') }
+      let(:terminated_at) { DateTime.parse('17 Oct 2022') }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          plan: plan,
+          subscription_date: started_at.to_date,
+          started_at: started_at,
+          status: :terminated,
+          terminated_at: terminated_at,
+          billing_time: :calendar,
+        )
+      end
+
+      let(:next_plan) { create(:plan, interval: :monthly, amount_cents: 2000) }
+
+      let(:charge) do
+        create(:standard_charge, plan: plan, properties: { amount: 100 })
+      end
+
+      before { next_subscription }
+
+      it 'creates an invoice with only the charge fees' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result.invoice.fees.subscription_kind.count).to eq(0)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+          charge_fee = result.invoice.fees.charge_kind.first
+          expect(charge_fee.properties['charges_from_date']).to eq('2022-10-01')
+          expect(charge_fee.properties['charges_to_date']).to eq('2022-10-17')
+        end
+      end
+    end
+
     context 'with credit' do
       let(:credit_note) do
         create(
