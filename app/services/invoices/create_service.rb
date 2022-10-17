@@ -56,7 +56,11 @@ module Invoices
     attr_accessor :subscriptions, :timestamp, :customer, :currency
 
     def date_service(subscription)
-      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(timestamp).to_date)
+      Subscriptions::DatesService.new_instance(
+        subscription,
+        Time.zone.at(timestamp).to_date,
+        current_usage: subscription.terminated? && subscription.upgraded?,
+      )
     end
 
     def compute_amounts(invoice)

@@ -424,10 +424,12 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           end
 
           it 'terminates the existing subscription' do
-            create_service.create_from_api(
-              organization: organization,
-              params: params,
-            )
+            expect do
+              create_service.create_from_api(
+                organization: organization,
+                params: params,
+              )
+            end.to have_enqueued_job(BillSubscriptionJob)
 
             old_subscription = Subscription.find(subscription.id)
 
