@@ -2836,7 +2836,7 @@ type Invoice {
   plan: Plan
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
-  subscription: Subscription
+  subscriptions: [Subscription!]
   totalAmountCents: Int!
   totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!

@@ -9990,12 +9990,20 @@
               ]
             },
             {
-              "name": "subscription",
+              "name": "subscriptions",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "Subscription",
-                "ofType": null
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "Subscription",
+                    "ofType": null
+                  }
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
