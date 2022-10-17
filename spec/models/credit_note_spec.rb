@@ -82,4 +82,142 @@ RSpec.describe CreditNote, type: :model do
       expect(credit_note.number).to eq('CUST-001-CN001')
     end
   end
+
+  describe '#credited?' do
+    let(:credit_note) { build(:credit_note, credit_amount_cents: 0) }
+
+    it { expect(credit_note).not_to be_credited }
+
+    context 'when credit amount is present' do
+      let(:credit_note) { build(:credit_note, credit_amount_cents: 10) }
+
+      it { expect(credit_note).to be_credited }
+    end
+  end
+
+  describe '#refunded?' do
+    # TODO: will change in credit note phase 2
+    let(:credit_note) { build(:credit_note) }
+
+    it { expect(credit_note).not_to be_refunded }
+  end
+
+  describe '#refund_amount_cents' do
+    # TODO: will change in credit note phase 2
+    let(:credit_note) { build(:credit_note) }
+
+    it { expect(credit_note.refund_amount_cents).to be_zero }
+  end
+
+  describe '#vat_amount_cents' do
+    # TODO: will change in credit note phase 2
+    let(:credit_note) { build(:credit_note) }
+
+    it { expect(credit_note.vat_amount_cents).to be_zero }
+  end
+
+  describe '#subscription_ids' do
+    let(:credit_note) { create(:credit_note) }
+    let(:invoice) { credit_note.invoice }
+
+    let(:subscription_fee) { create(:fee, invoice: invoice) }
+    let(:credit_note_item1) do
+      create(:credit_note_item, credit_note: credit_note, fee: subscription_fee)
+    end
+
+    let(:charge_fee) { create(:charge_fee, invoice: invoice) }
+    let(:credit_note_item2) do
+      create(:credit_note_item, credit_note: credit_note, fee: charge_fee)
+    end
+
+    before do
+      credit_note_item1
+      credit_note_item2
+    end
+
+    it 'returns the list of subscription ids' do
+      expect(credit_note.subscription_ids).to eq([subscription_fee.subscription_id, charge_fee.subscription_id])
+    end
+
+    context 'with add_on fee' do
+      let(:add_on_fee) { create(:add_on_fee, invoice: invoice) }
+      let(:credit_note_item3) do
+        create(:credit_note_item, credit_note: credit_note, fee: add_on_fee)
+      end
+
+      before { credit_note_item3 }
+
+      it 'returns an empty subscription id' do
+        expect(credit_note.subscription_ids).to eq(
+          [
+            subscription_fee.subscription_id,
+            charge_fee.subscription_id,
+            nil,
+          ],
+        )
+      end
+    end
+
+    describe '#subscription_item' do
+      let(:credit_note) { create(:credit_note) }
+      let(:invoice) { credit_note.invoice }
+
+      let(:subscription_fee) { create(:fee, invoice: invoice) }
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note: credit_note, fee: subscription_fee)
+      end
+
+      let(:subscription) { subscription_fee.subscription }
+
+      let(:charge_fee) { create(:charge_fee, invoice: invoice, subscription: subscription) }
+      let(:credit_note_item2) do
+        create(:credit_note_item, credit_note: credit_note, fee: charge_fee)
+      end
+
+      before do
+        credit_note_item1
+        credit_note_item2
+      end
+
+      it 'returns the item for the subscription fee' do
+        expect(credit_note.subscription_item(subscription.id)).to eq(credit_note_item1)
+      end
+
+      context 'when subscription id does not match an existing fee' do
+        let(:missing_subscription) { create(:subscription) }
+
+        it 'returns a new fee' do
+          fee = credit_note.subscription_item(missing_subscription.id)
+
+          expect(fee).to be_new_record
+        end
+      end
+    end
+
+    describe '#subscription_charge_items' do
+      let(:credit_note) { create(:credit_note) }
+      let(:invoice) { credit_note.invoice }
+
+      let(:subscription_fee) { create(:fee, invoice: invoice) }
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note: credit_note, fee: subscription_fee)
+      end
+
+      let(:subscription) { subscription_fee.subscription }
+
+      let(:charge_fee) { create(:charge_fee, invoice: invoice, subscription: subscription) }
+      let(:credit_note_item2) do
+        create(:credit_note_item, credit_note: credit_note, fee: charge_fee)
+      end
+
+      before do
+        credit_note_item1
+        credit_note_item2
+      end
+
+      it 'returns the item for the subscription fee' do
+        expect(credit_note.subscription_charge_items(subscription.id)).to eq([credit_note_item2])
+      end
+    end
+  end
 end

@@ -314,4 +314,20 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#display_name' do
+    let(:subscription) { build(:subscription, name: subscription_name, plan: plan) }
+    let(:subscription_name) { 'some_name' }
+    let(:plan) { create(:plan, name: 'some_plan_name') }
+
+    it { expect(subscription.display_name).to eq('some_name') }
+
+    context 'when name is empty' do
+      let(:subscription_name) { nil }
+
+      it 'returns the plan name' do
+        expect(subscription.display_name).to eq('some_plan_name')
+      end
+    end
+  end
 end

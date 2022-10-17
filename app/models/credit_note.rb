@@ -18,6 +18,8 @@ class CreditNote < ApplicationRecord
   monetize :total_amount_cents
   monetize :credit_amount_cents
   monetize :balance_amount_cents
+  monetize :refund_amount_cents
+  monetize :vat_amount_cents
 
   CREDIT_STATUS = %i[available consumed].freeze
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
@@ -35,6 +37,39 @@ class CreditNote < ApplicationRecord
     return if file.blank?
 
     Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
+  end
+
+  def credited?
+    credit_amount_cents.positive?
+  end
+
+  def refunded?
+    refund_amount_cents.positive?
+  end
+
+  def refund_amount_cents
+    0 # TODO: will change in credit note phase 2
+  end
+
+  def vat_amount_cents
+    0 # TODO: Take VAT into account
+  end
+
+  def subscription_ids
+    fees.pluck(:subscription_id).uniq
+  end
+
+  def subscription_item(subscription_id)
+    items.joins(:fee)
+      .merge(Fee.subscription)
+      .find_by(fees: { subscription_id: subscription_id }) || Fee.new
+  end
+
+  def subscription_charge_items(subscription_id)
+    items.joins(:fee)
+      .merge(Fee.charge)
+      .where(fees: { subscription_id: subscription_id })
+      .includes(:fee)
   end
 
   private
