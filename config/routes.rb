@@ -23,6 +23,7 @@ Rails.application.routes.draw do
 
       resources :add_ons, param: :code
       resources :billable_metrics, param: :code
+      resources :groups, only: :index
       resources :coupons, param: :code
       resources :credit_notes, only: %i[show index] do
         post :download, on: :member
