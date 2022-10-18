@@ -27,6 +27,8 @@ module Types
 
       field :next_plan, Types::Plans::Object
 
+      field :fees, [Types::Fees::Object], null: true
+
       def next_plan
         object.next_subscription&.plan
       end
