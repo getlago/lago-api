@@ -6,6 +6,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
     described_class.new(wallet_transaction: wallet_transaction, timestamp: timestamp)
   end
+
   let(:timestamp) { Time.current.to_i }
 
   describe 'create' do
@@ -36,8 +37,11 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         expect(result.invoice.amount_currency).to eq('EUR')
         expect(result.invoice.vat_amount_cents).to eq(300)
         expect(result.invoice.vat_amount_currency).to eq('EUR')
+        expect(result.invoice.vat_rate).to eq(20)
         expect(result.invoice.total_amount_cents).to eq(1800)
         expect(result.invoice.total_amount_currency).to eq('EUR')
+
+        expect(result.invoice).to be_legacy
       end
     end
 
@@ -56,8 +60,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
+          invoice_type: invoice.invoice_type,
+        },
       )
     end
 

@@ -14,7 +14,7 @@ namespace :invoices do
 
       invoice_subscription = InvoiceSubscription.find_by(
         invoice_id: invoice.id,
-        subscription_id: subscription_id
+        subscription_id: subscription_id,
       )
 
       next if invoice_subscription
@@ -27,6 +27,15 @@ namespace :invoices do
   task fill_customer: :environment do
     Invoice.where(customer_id: nil).find_each do |invoice|
       invoice.update!(customer_id: invoice.subscriptions&.first&.customer_id)
+    end
+  end
+
+  desc 'Fill invoice VAT rate'
+  task fill_vat_rate: :environment do
+    Invoice.where(vat_rate: nil).find_each do |invoice|
+      invoice.update!(
+        vat_rate: (invoice.vat_amount_cents.fdiv(invoice.amount_cents) * 100).round(2),
+      )
     end
   end
 end

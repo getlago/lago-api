@@ -30,8 +30,11 @@ RSpec.describe Invoices::AddOnService, type: :service do
         expect(result.invoice.amount_currency).to eq('EUR')
         expect(result.invoice.vat_amount_cents).to eq(40)
         expect(result.invoice.vat_amount_currency).to eq('EUR')
+        expect(result.invoice.vat_rate).to eq(20)
         expect(result.invoice.total_amount_cents).to eq(240)
         expect(result.invoice.total_amount_currency).to eq('EUR')
+
+        expect(result.invoice).to be_legacy
       end
     end
 
