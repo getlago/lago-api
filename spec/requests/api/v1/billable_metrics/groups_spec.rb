@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::V1::GroupsController, type: :request do
+RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization: organization) }
 
@@ -11,7 +11,7 @@ RSpec.describe Api::V1::GroupsController, type: :request do
 
     context 'when billable_metric_id does not exist' do
       it 'returns a not found error' do
-        get_with_token(organization, '/api/v1/groups?billable_metric_id=unknown')
+        get_with_token(organization, '/api/v1/billable_metrics/unknown/groups')
 
         expect(response).to have_http_status(:not_found)
       end
@@ -20,9 +20,18 @@ RSpec.describe Api::V1::GroupsController, type: :request do
     context 'when billable_metric_id does not belong to the current organization' do
       it 'returns a not found error' do
         metric = create(:billable_metric)
-        get_with_token(organization, "/api/v1/groups?billable_metric_id=#{metric.id}")
+        get_with_token(organization, "/api/v1/billable_metrics/#{metric.code}/groups")
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when billable metric has no groups' do
+      it 'returns an empty array' do
+        get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:groups]).to eq([])
       end
     end
 
@@ -32,7 +41,7 @@ RSpec.describe Api::V1::GroupsController, type: :request do
       children2 = create(:group, billable_metric: billable_metric, parent_group_id: parent.id)
       create(:group, billable_metric: billable_metric, parent_group_id: parent.id, status: :inactive)
 
-      get_with_token(organization, "/api/v1/groups?billable_metric_id=#{billable_metric.id}")
+      get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
       expect(response).to have_http_status(:success)
       expect(json[:groups]).to match_array(
@@ -48,7 +57,7 @@ RSpec.describe Api::V1::GroupsController, type: :request do
         parent = create(:group, billable_metric: billable_metric)
         create_list(:group, 2, billable_metric: billable_metric, parent_group_id: parent.id)
 
-        get_with_token(organization, "/api/v1/groups?billable_metric_id=#{billable_metric.id}&page=1&per_page=1")
+        get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups?page=1&per_page=1")
 
         expect(response).to have_http_status(:success)
 
