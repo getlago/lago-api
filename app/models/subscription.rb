@@ -107,4 +107,8 @@ class Subscription < ApplicationRecord
     ::Subscriptions::DatesService.new_instance(self, Time.zone.today)
       .next_end_of_period(Time.zone.today) + 1.day
   end
+
+  def display_name
+    name.presence || plan.name
+  end
 end

@@ -20,7 +20,7 @@ FactoryBot.define do
 
   factory :charge_fee, parent: :fee do
     invoice
-    charge
+    charge factory: :standard_charge
     fee_type { 'charge' }
 
     invoiceable_type { 'Charge' }
@@ -32,5 +32,18 @@ FactoryBot.define do
         'charges_to_date' => Date.parse('2022-08-30'),
       }
     end
+  end
+
+  factory :add_on_fee, class: 'Fee' do
+    invoice
+    fee_type { 'add_on' }
+
+    amount_cents { 200 }
+    amount_currency { 'EUR' }
+
+    invoiceable factory: :add_on
+
+    vat_amount_cents { 2 }
+    vat_amount_currency { 'EUR' }
   end
 end
