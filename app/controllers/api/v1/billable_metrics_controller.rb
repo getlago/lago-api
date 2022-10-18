@@ -4,7 +4,7 @@ module Api
   module V1
     class BillableMetricsController < Api::BaseController
       def create
-        service = BillableMetrics::CreateService.new
+        service = ::BillableMetrics::CreateService.new
         result = service.create(
           **input_params
             .merge(organization_id: current_organization.id)
@@ -25,7 +25,7 @@ module Api
       end
 
       def update
-        service = BillableMetrics::UpdateService.new
+        service = ::BillableMetrics::UpdateService.new
         result = service.update_from_api(
           organization: current_organization,
           code: params[:code],
@@ -45,7 +45,7 @@ module Api
       end
 
       def destroy
-        service = BillableMetrics::DestroyService.new
+        service = ::BillableMetrics::DestroyService.new
         result = service.destroy_from_api(
           organization: current_organization,
           code: params[:code],
