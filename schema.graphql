@@ -2845,6 +2845,9 @@ type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
+  creditAmountCents: Int!
+  creditAmountCurrency: CurrencyEnum!
+  fees: [Fee!]
   fileUrl: String
   id: ID!
   invoiceType: InvoiceTypeEnum!
@@ -2854,11 +2857,13 @@ type Invoice {
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
   subscriptions: [Subscription!]
+  subtotalBeforePrepaidCredits: String!
   totalAmountCents: Int!
   totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
+  walletTransactionAmountCents: Int!
 }
 
 """
@@ -3557,6 +3562,16 @@ type Query {
   Query pending invites of an organization
   """
   invites(limit: Int, page: Int): InviteCollection!
+
+  """
+  Query a single Invoice of an organization
+  """
+  invoice(
+    """
+    Uniq ID of the invoice
+    """
+    id: ID!
+  ): Invoice
 
   """
   Query memberships of an organization
