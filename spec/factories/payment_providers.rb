@@ -13,4 +13,13 @@ FactoryBot.define do
       { create_customers: true }
     end
   end
+
+  factory :gocardless_provider, class: 'PaymentProviders::GocardlessProvider' do
+    organization
+    type { 'PaymentProviders::GocardlessProvider' }
+
+    secrets do
+      { access_token: SecureRandom.uuid }.to_json
+    end
+  end
 end
