@@ -2779,15 +2779,25 @@ type EventCollection {
 type Fee implements InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  charge: Charge
   eventsCount: BigInt
+  feeType: FeeTypesEnum!
   id: ID!
   itemCode: String!
   itemName: String!
   itemType: String!
+  subscription: Subscription
   units: Float!
   vatAmountCents: BigInt!
   vatAmountCurrency: CurrencyEnum!
   vatRate: Float
+}
+
+enum FeeTypesEnum {
+  add_on
+  charge
+  credit
+  subscription
 }
 
 type GocardlessProvider {
@@ -2844,12 +2854,15 @@ enum InviteStatusTypeEnum {
 type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
+  chargeAmountCents: Int!
   createdAt: ISO8601DateTime!
   creditAmountCents: Int!
   creditAmountCurrency: CurrencyEnum!
+  customer: Customer!
   fees: [Fee!]
   fileUrl: String
   id: ID!
+  invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
   number: String!
@@ -2882,6 +2895,17 @@ enum InvoiceStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+type InvoiceSubscription {
+  chargeAmountCents: Int!
+  fees: [Fee!]
+  fromDate: ISO8601Date!
+  invoice: Invoice!
+  subscription: Subscription!
+  subscriptionAmountCents: Int!
+  toDate: ISO8601Date!
+  totalAmountCents: Int!
 }
 
 enum InvoiceTypeEnum {
@@ -3728,6 +3752,7 @@ type Subscription {
   createdAt: ISO8601DateTime!
   customer: Customer!
   externalId: String!
+  fees: [Fee!]
   id: ID!
   name: String
   nextName: String

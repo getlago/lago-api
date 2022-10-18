@@ -13,6 +13,17 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             id
             name
           }
+          invoiceSubscriptions {
+            subscription {
+              id
+            }
+            fees {
+              id
+            }
+          }
+          subscriptions {
+            id
+          }
         }
       }
     GQL
@@ -21,7 +32,12 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
-  let(:invoice) { create(:invoice, customer: customer) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice: create(:invoice, customer: customer)) }
+  let(:invoice) { invoice_subscription.invoice }
+  let(:subscription) { invoice_subscription.subscription }
+  let(:fee) { create(:fee, subscription: subscription, invoice: invoice, amount_cents: 10) }
+
+  before { fee }
 
   it 'returns a single invoice' do
     result = execute_graphql(
@@ -39,6 +55,8 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     expect(data['number']).to eq(invoice.number)
     expect(data['customer']['id']).to eq(customer.id)
     expect(data['customer']['name']).to eq(customer.name)
+    expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
+    expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
   end
 
   context 'when invoice is not found' do
