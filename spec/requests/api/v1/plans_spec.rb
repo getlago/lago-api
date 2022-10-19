@@ -90,6 +90,51 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
+    context 'with group properties on charges' do
+      let(:group) { create(:group, billable_metric: billable_metric) }
+      let(:create_params) do
+        {
+          name: 'P1',
+          code: 'plan_code',
+          interval: 'weekly',
+          description: 'description',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          trial_period: 1,
+          pay_in_advance: false,
+          charges: [
+            {
+              billable_metric_id: billable_metric.id,
+              charge_model: 'standard',
+              group_properties: [
+                {
+                  group_id: group.id,
+                  values: { amount: '0.22' },
+                },
+              ],
+            },
+          ],
+        }
+      end
+
+      it 'creates a plan' do
+        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:plan][:lago_id]).to be_present
+        expect(json[:plan][:code]).to eq(create_params[:code])
+        expect(json[:plan][:charges].first[:group_properties]).to eq(
+          [
+            {
+              group_id: group.id,
+              values: { amount: '0.22' },
+            },
+          ],
+        )
+      end
+    end
+
     context 'without charges' do
       let(:create_params) do
         {
@@ -177,6 +222,51 @@ RSpec.describe Api::V1::PlansController, type: :request do
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    context 'with group properties on charges' do
+      let(:group) { create(:group, billable_metric: billable_metric) }
+      let(:update_params) do
+        {
+          name: 'P1',
+          code: 'plan_code',
+          interval: 'weekly',
+          description: 'description',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          trial_period: 1,
+          pay_in_advance: false,
+          charges: [
+            {
+              billable_metric_id: billable_metric.id,
+              charge_model: 'standard',
+              group_properties: [
+                {
+                  group_id: group.id,
+                  values: { amount: '0.22' },
+                },
+              ],
+            },
+          ],
+        }
+      end
+
+      it 'creates a plan' do
+        put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:plan][:lago_id]).to be_present
+        expect(json[:plan][:code]).to eq(update_params[:code])
+        expect(json[:plan][:charges].first[:group_properties]).to eq(
+          [
+            {
+              group_id: group.id,
+              values: { amount: '0.22' },
+            },
+          ],
+        )
       end
     end
   end

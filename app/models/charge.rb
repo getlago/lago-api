@@ -19,11 +19,11 @@ class Charge < ApplicationRecord
 
   enum charge_model: CHARGE_MODELS
 
-  validate :validate_amount, if: :standard?
-  validate :validate_graduated, if: :graduated?
-  validate :validate_package, if: :package?
-  validate :validate_percentage, if: :percentage?
-  validate :validate_volume, if: :volume?
+  validate :validate_amount, if: -> { standard? && group_properties.empty? }
+  validate :validate_graduated, if: -> { graduated? && group_properties.empty? }
+  validate :validate_package, if: -> { package? && group_properties.empty? }
+  validate :validate_percentage, if: -> { percentage? && group_properties.empty? }
+  validate :validate_volume, if: -> { volume? && group_properties.empty? }
 
   def properties(group_id: nil)
     group_properties.find_by(group_id: group_id)&.values || read_attribute(:properties)

@@ -9,24 +9,8 @@ module Types
       argument :billable_metric_id, ID, required: true
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
 
-      # NOTE: Standard and Package charge model
-      argument :amount, String, required: false
-
-      # NOTE: Graduated charge model
-      argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
-
-      # NOTE: Package charge model
-      argument :free_units, Integer, required: false
-      argument :package_size, Integer, required: false
-
-      # NOTE: Percentage charge model
-      argument :rate, String, required: false
-      argument :fixed_amount, String, required: false
-      argument :free_units_per_events, Integer, required: false
-      argument :free_units_per_total_aggregation, String, required: false
-
-      # NOTE: Volume charge model
-      argument :volume_ranges, [Types::Charges::VolumeRangeInput], required: false
+      argument :properties, Types::Charges::PropertiesInput, required: false
+      argument :group_properties, [Types::Charges::GroupPropertiesInput], required: false
     end
   end
 end

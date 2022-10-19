@@ -12,6 +12,7 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:billable_metrics) do
     create_list(:billable_metric, 2, organization: organization)
   end
+  let(:group) { create(:group, billable_metric: billable_metrics.first) }
   let(:update_args) do
     {
       id: plan.id,
@@ -25,9 +26,12 @@ RSpec.describe Plans::UpdateService, type: :service do
         {
           billable_metric_id: billable_metrics.first.id,
           charge_model: 'standard',
-          properties: {
-            amount: '100',
-          },
+          group_properties: [
+            {
+              group_id: group.id,
+              values: { amount: '100' },
+            },
+          ],
         },
         {
           billable_metric_id: billable_metrics.last.id,

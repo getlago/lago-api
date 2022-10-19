@@ -21,15 +21,31 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             id,
             chargeModel,
             billableMetric { id name code },
-            amount,
-            freeUnits,
-            packageSize,
-            rate,
-            fixedAmount,
-            freeUnitsPerEvents,
-            freeUnitsPerTotalAggregation,
-            graduatedRanges { fromValue, toValue },
-            volumeRanges { fromValue, toValue }
+            properties {
+              amount,
+              freeUnits,
+              packageSize,
+              rate,
+              fixedAmount,
+              freeUnitsPerEvents,
+              freeUnitsPerTotalAggregation,
+              graduatedRanges { fromValue, toValue },
+              volumeRanges { fromValue, toValue }
+            }
+            groupProperties {
+              groupId,
+              values {
+                amount,
+                freeUnits,
+                packageSize,
+                rate,
+                fixedAmount,
+                freeUnitsPerEvents,
+                freeUnitsPerTotalAggregation,
+                graduatedRanges { fromValue, toValue },
+                volumeRanges { fromValue, toValue }
+              }
+            }
           }
         }
       }
@@ -39,6 +55,8 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
   let(:billable_metrics) do
     create_list(:billable_metric, 5, organization: organization)
   end
+
+  let(:group) { create(:group, billable_metric: BillableMetric.first) }
 
   it 'updates a plan' do
     result = execute_graphql(
@@ -56,59 +74,77 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           charges: [
             {
               billableMetricId: billable_metrics[0].id,
-              amount: '100.00',
               chargeModel: 'standard',
+              properties: { amount: '100.00' },
             },
             {
               billableMetricId: billable_metrics[1].id,
               chargeModel: 'package',
-              amount: '300.00',
-              freeUnits: 10,
-              packageSize: 10,
+              groupProperties: [
+                {
+                  groupId: group.id,
+                  values: {
+                    amount: '300.00',
+                    freeUnits: 10,
+                    packageSize: 10,
+                  },
+                },
+              ],
             },
             {
               billableMetricId: billable_metrics[2].id,
               chargeModel: 'percentage',
-              rate: '0.25',
-              fixedAmount: '2',
-              freeUnitsPerEvents: 5,
-              freeUnitsPerTotalAggregation: '50',
+              groupProperties: [
+                {
+                  groupId: group.id,
+                  values: {
+                    rate: '0.25',
+                    fixedAmount: '2',
+                    freeUnitsPerEvents: 5,
+                    freeUnitsPerTotalAggregation: '50',
+                  },
+                },
+              ],
             },
             {
               billableMetricId: billable_metrics[3].id,
               chargeModel: 'graduated',
-              graduatedRanges: [
-                {
-                  fromValue: 0,
-                  toValue: 10,
-                  perUnitAmount: '2.00',
-                  flatAmount: '0',
-                },
-                {
-                  fromValue: 11,
-                  toValue: nil,
-                  perUnitAmount: '3.00',
-                  flatAmount: '3.00',
-                },
-              ],
+              properties: {
+                graduatedRanges: [
+                  {
+                    fromValue: 0,
+                    toValue: 10,
+                    perUnitAmount: '2.00',
+                    flatAmount: '0',
+                  },
+                  {
+                    fromValue: 11,
+                    toValue: nil,
+                    perUnitAmount: '3.00',
+                    flatAmount: '3.00',
+                  },
+                ],
+              },
             },
             {
               billableMetricId: billable_metrics[4].id,
               chargeModel: 'volume',
-              volumeRanges: [
-                {
-                  fromValue: 0,
-                  toValue: 10,
-                  perUnitAmount: '2.00',
-                  flatAmount: '0',
-                },
-                {
-                  fromValue: 11,
-                  toValue: nil,
-                  perUnitAmount: '3.00',
-                  flatAmount: '3.00',
-                },
-              ],
+              properties: {
+                volumeRanges: [
+                  {
+                    fromValue: 0,
+                    toValue: 10,
+                    perUnitAmount: '2.00',
+                    flatAmount: '0',
+                  },
+                  {
+                    fromValue: 11,
+                    toValue: nil,
+                    perUnitAmount: '3.00',
+                    flatAmount: '3.00',
+                  },
+                ],
+              },
             },
           ],
         },
@@ -128,29 +164,31 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data['charges'].count).to eq(5)
 
       standard_charge = result_data['charges'][0]
-      expect(standard_charge['amount']).to eq('100.00')
+      expect(standard_charge['properties']['amount']).to eq('100.00')
       expect(standard_charge['chargeModel']).to eq('standard')
 
       package_charge = result_data['charges'][1]
       expect(package_charge['chargeModel']).to eq('package')
-      expect(package_charge['amount']).to eq('300.00')
-      expect(package_charge['freeUnits']).to eq(10)
-      expect(package_charge['packageSize']).to eq(10)
+      group_properties = package_charge['groupProperties'][0]['values']
+      expect(group_properties['amount']).to eq('300.00')
+      expect(group_properties['freeUnits']).to eq(10)
+      expect(group_properties['packageSize']).to eq(10)
 
       percentage_charge = result_data['charges'][2]
       expect(percentage_charge['chargeModel']).to eq('percentage')
-      expect(percentage_charge['rate']).to eq('0.25')
-      expect(percentage_charge['fixedAmount']).to eq('2')
-      expect(percentage_charge['freeUnitsPerEvents']).to eq(5)
-      expect(percentage_charge['freeUnitsPerTotalAggregation']).to eq('50')
+      group_properties = percentage_charge['groupProperties'][0]['values']
+      expect(group_properties['rate']).to eq('0.25')
+      expect(group_properties['fixedAmount']).to eq('2')
+      expect(group_properties['freeUnitsPerEvents']).to eq(5)
+      expect(group_properties['freeUnitsPerTotalAggregation']).to eq('50')
 
       graduated_charge = result_data['charges'][3]
       expect(graduated_charge['chargeModel']).to eq('graduated')
-      expect(graduated_charge['graduatedRanges'].count).to eq(2)
+      expect(graduated_charge['properties']['graduatedRanges'].count).to eq(2)
 
       volume_charge = result_data['charges'][4]
       expect(volume_charge['chargeModel']).to eq('volume')
-      expect(volume_charge['volumeRanges'].count).to eq(2)
+      expect(volume_charge['properties']['volumeRanges'].count).to eq(2)
     end
   end
 
