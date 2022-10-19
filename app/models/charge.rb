@@ -63,9 +63,9 @@ class Charge < ApplicationRecord
   end
 
   def validate_group_properties
-    # Group properties should be set for all the groups of a BM
-    bm_group_ids = billable_metric.groups.pluck(:id).sort
-    gp_group_ids = group_properties.map { |gp| gp[:group_id] }.sort
+    # Group properties should be set for all the selectable groups of a BM
+    bm_group_ids = billable_metric.selectable_groups.pluck(:id).sort
+    gp_group_ids = group_properties.map { |gp| gp[:group_id] }.compact.sort
 
     errors.add(:group_properties, :values_not_all_present) if bm_group_ids != gp_group_ids
   end

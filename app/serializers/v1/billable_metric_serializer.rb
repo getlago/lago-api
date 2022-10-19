@@ -11,7 +11,7 @@ module V1
         aggregation_type: model.aggregation_type,
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
-        group: model.groups_as_tree,
+        group: model.active_groups_as_tree,
       }
     end
   end

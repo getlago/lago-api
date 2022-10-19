@@ -50,7 +50,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
         expect do
           update_service.update(**update_args.merge(group: group))
-        end.to change { billable_metric.groups.active.reload.count }.from(1).to(5)
+        end.to change { billable_metric.active_groups.reload.count }.from(1).to(5)
       end
 
       it 'returns an error if group is invalid' do
@@ -149,7 +149,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
             code: billable_metric.code,
             params: update_args.merge(group: group),
           )
-        end.to change { billable_metric.groups.active.reload.count }.from(1).to(5)
+        end.to change { billable_metric.active_groups.reload.count }.from(1).to(5)
       end
 
       it 'returns an error if group is invalid' do

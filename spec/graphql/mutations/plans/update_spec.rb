@@ -56,7 +56,8 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
     create_list(:billable_metric, 5, organization: organization)
   end
 
-  let(:group) { create(:group, billable_metric: BillableMetric.first) }
+  let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }
+  let(:second_group) { create(:group, billable_metric: billable_metrics[2]) }
 
   it 'updates a plan' do
     result = execute_graphql(
@@ -82,7 +83,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               chargeModel: 'package',
               groupProperties: [
                 {
-                  groupId: group.id,
+                  groupId: first_group.id,
                   values: {
                     amount: '300.00',
                     freeUnits: 10,
@@ -96,7 +97,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               chargeModel: 'percentage',
               groupProperties: [
                 {
-                  groupId: group.id,
+                  groupId: second_group.id,
                   values: {
                     rate: '0.25',
                     fixedAmount: '2',

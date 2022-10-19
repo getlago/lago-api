@@ -8,7 +8,7 @@ module Api
           metric = current_organization.billable_metrics.find_by(code: params[:code])
           return not_found_error(resource: 'billable_metric') unless metric
 
-          groups = metric.groups.active.children.page(params[:page]).per(params[:per_page] || PER_PAGE)
+          groups = metric.selectable_groups.page(params[:page]).per(params[:per_page] || PER_PAGE)
 
           render(
             json: ::CollectionSerializer.new(

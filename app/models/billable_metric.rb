@@ -35,20 +35,28 @@ class BillableMetric < ApplicationRecord
     AGGREGATION_TYPES.include?(value&.to_sym) ? super : nil
   end
 
-  def groups_as_tree
-    groups = self.groups.active
-    return {} if groups.blank?
+  def active_groups
+    groups.active.order(created_at: :asc)
+  end
 
-    unless groups.children.exists?
+  # NOTE: 1 dimension: all groups, 2 dimensions: all children.
+  def selectable_groups
+    active_groups.children.exists? ? active_groups.children : active_groups
+  end
+
+  def active_groups_as_tree
+    return {} if active_groups.blank?
+
+    unless active_groups.children.exists?
       return {
-        key: groups.pluck(:key).uniq.first,
-        values: groups.pluck(:value),
+        key: active_groups.pluck(:key).uniq.first,
+        values: active_groups.pluck(:value),
       }
     end
 
     {
-      key: groups.parents.pluck(:key).uniq.first,
-      values: groups.parents.map do |p|
+      key: active_groups.parents.pluck(:key).uniq.first,
+      values: active_groups.parents.map do |p|
         {
           name: p.value,
           key: p.children.first.key,

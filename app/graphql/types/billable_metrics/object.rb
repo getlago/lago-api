@@ -28,12 +28,12 @@ module Types
       end
 
       def group
-        object.groups_as_tree
+        object.active_groups_as_tree
       end
 
       def flat_groups
-        object.groups.active.children.map do |group|
-          { id: group.id, key: group.parent.value, value: group.value }
+        object.selectable_groups.map do |group|
+          { id: group.id, key: group.parent&.value, value: group.value }
         end
       end
     end
