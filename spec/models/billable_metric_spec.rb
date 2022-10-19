@@ -29,12 +29,43 @@ RSpec.describe BillableMetric, type: :model do
     end
   end
 
-  describe '#groups_as_tree' do
+  describe '#selectable_groups' do
+    let(:metric) { create(:billable_metric) }
+
+    context 'without active groups' do
+      it 'returns an empty collection' do
+        expect(metric.selectable_groups).to be_empty
+      end
+    end
+
+    context 'when groups contain one dimension' do
+      it 'returns all groups' do
+        one = create(:group, billable_metric: metric, key: 'country', value: 'france')
+        second = create(:group, billable_metric: metric, key: 'country', value: 'italy')
+
+        expect(metric.selectable_groups).to match_array([one, second])
+      end
+    end
+
+    context 'when groups contain two dimensions' do
+      it 'returns only children groups' do
+        france = create(:group, billable_metric: metric, key: 'country', value: 'france')
+        italy = create(:group, billable_metric: metric, key: 'country', value: 'italy')
+        one = create(:group, billable_metric: metric, key: 'cloud', value: 'aws', parent_group_id: france.id)
+        second = create(:group, billable_metric: metric, key: 'cloud', value: 'google', parent_group_id: france.id)
+        third = create(:group, billable_metric: metric, key: 'cloud', value: 'google', parent_group_id: italy.id)
+
+        expect(metric.selectable_groups).to match_array([one, second, third])
+      end
+    end
+  end
+
+  describe '#active_groups_as_tree' do
     let(:billable_metric) { create(:billable_metric) }
 
     context 'without active groups' do
       it 'returns {}' do
-        expect(billable_metric.groups_as_tree).to eq({})
+        expect(billable_metric.active_groups_as_tree).to eq({})
       end
     end
 
@@ -45,7 +76,7 @@ RSpec.describe BillableMetric, type: :model do
       end
 
       it 'returns a tree with one dimension' do
-        expect(billable_metric.groups_as_tree).to eq(
+        expect(billable_metric.active_groups_as_tree).to eq(
           {
             key: 'country',
             values: %w[france italy],
@@ -64,7 +95,7 @@ RSpec.describe BillableMetric, type: :model do
       end
 
       it 'returns a tree with two dimensions' do
-        expect(billable_metric.groups_as_tree).to eq(
+        expect(billable_metric.active_groups_as_tree).to eq(
           {
             key: 'country',
             values: [

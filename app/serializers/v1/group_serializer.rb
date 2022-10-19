@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        key: model.key,
+        key: model.parent&.value,
         value: model.value,
       }
     end
