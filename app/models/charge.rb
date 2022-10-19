@@ -25,6 +25,8 @@ class Charge < ApplicationRecord
   validate :validate_percentage, if: -> { percentage? && group_properties.empty? }
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
 
+  validate :validate_group_properties
+
   def properties(group_id: nil)
     group_properties.find_by(group_id: group_id)&.values || read_attribute(:properties)
   end
@@ -58,5 +60,13 @@ class Charge < ApplicationRecord
     instance.result.error.messages.map { |_, codes| codes }
       .flatten
       .each { |code| errors.add(:properties, code) }
+  end
+
+  def validate_group_properties
+    # Group properties should be set for all the groups of a BM
+    bm_group_ids = billable_metric.groups.pluck(:id).sort
+    gp_group_ids = group_properties.map { |gp| gp[:group_id] }.sort
+
+    errors.add(:group_properties, :values_not_all_present) if bm_group_ids != gp_group_ids
   end
 end

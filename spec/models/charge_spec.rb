@@ -22,7 +22,7 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '.validate_graduated' do
+  describe '#validate_graduated' do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)
     end
@@ -82,7 +82,7 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '.validate_amount' do
+  describe '#validate_amount' do
     subject(:charge) do
       build(:standard_charge, properties: charge_properties)
     end
@@ -138,7 +138,7 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '.validate_package' do
+  describe '#validate_package' do
     subject(:charge) do
       build(:package_charge, properties: charge_properties)
     end
@@ -198,7 +198,7 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '.validate_percentage' do
+  describe '#validate_percentage' do
     subject(:charge) { build(:percentage_charge, properties: charge_properties) }
 
     let(:charge_properties) { [{ 'foo' => 'bar' }] }
@@ -257,7 +257,7 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '.validate_volume' do
+  describe '#validate_volume' do
     subject(:charge) do
       build(:volume_charge, properties: charge_properties)
     end
@@ -311,6 +311,41 @@ RSpec.describe Charge, type: :model do
         expect(Charges::Validators::VolumeService).not_to have_received(:new)
         expect(validation_service).not_to have_received(:valid?)
         expect(validation_service).not_to have_received(:result)
+      end
+    end
+  end
+
+  describe '#validate_group_properties' do
+    context 'without groups' do
+      it 'does not return an error' do
+        expect(build(:standard_charge)).to be_valid
+      end
+    end
+
+    context 'with group properties missing for some groups' do
+      it 'returns an error' do
+        charge = create(:standard_charge)
+        create(:group, billable_metric: charge.billable_metric)
+
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:group_properties)
+        expect(charge.errors.messages[:group_properties]).to include('values_not_all_present')
+      end
+    end
+
+    context 'with group properties for all groups' do
+      it 'does not return an error' do
+        metric = create(:billable_metric)
+        group = create(:group, billable_metric: metric)
+
+        charge = create(
+          :standard_charge,
+          billable_metric: metric,
+          properties: {},
+          group_properties: [build(:group_property, group: group)],
+        )
+
+        expect(charge).to be_valid
       end
     end
   end
