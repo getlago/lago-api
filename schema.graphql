@@ -171,35 +171,21 @@ enum BillingTimeEnum {
 }
 
 type Charge {
-  amount: String
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
-  fixedAmount: String
-  freeUnits: Int
-  freeUnitsPerEvents: Int
-  freeUnitsPerTotalAggregation: String
-  graduatedRanges: [GraduatedRange!]
+  groupProperties: [GroupProperties!]
   id: ID!
-  packageSize: Int
-  rate: String
+  properties: Properties
   updatedAt: ISO8601DateTime!
-  volumeRanges: [VolumeRange!]
 }
 
 input ChargeInput {
-  amount: String
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
-  fixedAmount: String
-  freeUnits: Int
-  freeUnitsPerEvents: Int
-  freeUnitsPerTotalAggregation: String
-  graduatedRanges: [GraduatedRangeInput!]
+  groupProperties: [GroupPropertiesInput!]
   id: ID
-  packageSize: Int
-  rate: String
-  volumeRanges: [VolumeRangeInput!]
+  properties: PropertiesInput
 }
 
 enum ChargeModelEnum {
@@ -2819,6 +2805,16 @@ input GraduatedRangeInput {
   toValue: Int
 }
 
+type GroupProperties {
+  groupId: ID!
+  values: Properties!
+}
+
+input GroupPropertiesInput {
+  groupId: ID!
+  values: PropertiesInput!
+}
+
 """
 An ISO 8601-encoded date
 """
@@ -3446,6 +3442,30 @@ enum PlanInterval {
   monthly
   weekly
   yearly
+}
+
+type Properties {
+  amount: String
+  fixedAmount: String
+  freeUnits: Int
+  freeUnitsPerEvents: Int
+  freeUnitsPerTotalAggregation: String
+  graduatedRanges: [GraduatedRange!]
+  packageSize: Int
+  rate: String
+  volumeRanges: [VolumeRange!]
+}
+
+input PropertiesInput {
+  amount: String
+  fixedAmount: String
+  freeUnits: Int
+  freeUnitsPerEvents: Int
+  freeUnitsPerTotalAggregation: String
+  graduatedRanges: [GraduatedRangeInput!]
+  packageSize: Int
+  rate: String
+  volumeRanges: [VolumeRangeInput!]
 }
 
 enum ProviderTypeEnum {

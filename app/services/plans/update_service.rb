@@ -82,6 +82,7 @@ module Plans
         amount_currency: args[:amount_currency],
         charge_model: args[:charge_model]&.to_sym,
         properties: args[:properties] || {},
+        group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
     end
 
@@ -94,7 +95,14 @@ module Plans
 
         if charge
           # NOTE: charges cannot be edited if plan is attached to a subscription
-          charge.update(payload_charge) unless plan.attached_to_subscriptions?
+          unless plan.attached_to_subscriptions?
+            if payload_charge[:group_properties]
+              charge.group_properties = payload_charge[:group_properties].map { |gp| GroupProperty.new(gp) }
+            end
+            charge.update(payload_charge)
+            charge
+          end
+
           next
         end
 

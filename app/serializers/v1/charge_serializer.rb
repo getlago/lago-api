@@ -9,7 +9,17 @@ module V1
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
         properties: model.properties,
-      }
+      }.merge(group_properties)
+    end
+
+    private
+
+    def group_properties
+      ::CollectionSerializer.new(
+        model.group_properties,
+        ::V1::GroupPropertiesSerializer,
+        collection_name: 'group_properties',
+      ).serialize
     end
   end
 end

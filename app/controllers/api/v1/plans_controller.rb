@@ -88,7 +88,16 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
-          charges: [:id, :billable_metric_id, :charge_model, { properties: {} }],
+          charges: [
+            :id,
+            :billable_metric_id,
+            :charge_model,
+            { properties: {} },
+            group_properties: [
+              :group_id,
+              { values: {} },
+            ],
+          ],
         )
       end
 

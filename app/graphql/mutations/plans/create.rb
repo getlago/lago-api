@@ -5,7 +5,6 @@ module Mutations
     class Create < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
-      include ChargeModelAttributesHandler
 
       graphql_name 'CreatePlan'
       description 'Creates a new Plan'
@@ -27,15 +26,11 @@ module Mutations
 
       def resolve(**args)
         validate_organization!
+        args[:charges].map!(&:to_h)
 
         result = ::Plans::CreateService
           .new(context[:current_user])
-          .create(
-            **(
-              prepare_arguments(**args)
-                .merge(organization_id: current_organization.id)
-            ),
-          )
+          .create(**args.merge(organization_id: current_organization.id))
 
         result.success? ? result.plan : result_error(result)
       end

@@ -45,6 +45,7 @@ module Plans
         billable_metric_id: args[:billable_metric_id],
         charge_model: args[:charge_model]&.to_sym,
         properties: args[:properties] || {},
+        group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
     end
 

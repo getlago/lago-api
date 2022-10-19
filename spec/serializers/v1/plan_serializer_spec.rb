@@ -26,6 +26,7 @@ RSpec.describe ::V1::PlanSerializer do
       expect(result['plan']['pay_in_advance']).to eq(plan.pay_in_advance)
       expect(result['plan']['bill_charges_monthly']).to eq(plan.bill_charges_monthly)
       expect(result['plan']['charges'].first['lago_id']).to eq(charge.id)
+      expect(result['plan']['charges'].first['group_properties']).to eq([])
     end
   end
 end

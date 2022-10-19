@@ -11,7 +11,7 @@ RSpec.describe Plans::CreateService, type: :service do
   describe 'create' do
     let(:plan_name) { 'Some plan name' }
     let(:billable_metrics) { create_list(:billable_metric, 2, organization: organization) }
-
+    let(:group) { create(:group, billable_metric: billable_metrics.first) }
     let(:create_args) do
       {
         name: plan_name,
@@ -25,9 +25,12 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             billable_metric_id: billable_metrics.first.id,
             charge_model: 'standard',
-            properties: {
-              amount: '100',
-            },
+            group_properties: [
+              {
+                group_id: group.id,
+                values: { amount: '100' },
+              },
+            ],
           },
           {
             billable_metric_id: billable_metrics.last.id,
