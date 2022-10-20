@@ -2919,6 +2919,7 @@ type Invoice {
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
+  legacy: Boolean!
   number: String!
   plan: Plan
   sequentialId: ID!

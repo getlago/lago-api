@@ -18,12 +18,14 @@ module Invoices
           issuing_date: Time.zone.at(timestamp).to_date,
           invoice_type: :subscription,
 
+          amount_currency: currency,
+          vat_amount_currency: currency,
+          credit_amount_currency: currency,
+          total_amount_currency: currency,
+
           # NOTE: Apply credits before VAT, will be changed with credit note feature
           legacy: true,
           vat_rate: customer.applicable_vat_rate,
-          amount_currency: currency,
-          vat_amount_currency: currency,
-          total_amount_currency: currency,
         )
 
         subscriptions.each do |subscription|
@@ -74,6 +76,10 @@ module Invoices
 
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
+
+      invoice.credit_amount_cents = 0
+
+      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
     end
 
     def create_subscription_fee(invoice, subscription, boundaries)
@@ -162,7 +168,7 @@ module Invoices
 
     def should_create_applied_prepaid_credit?(invoice)
       return false unless wallet&.active?
-      return false unless invoice.amount_cents&.positive?
+      return false unless invoice.total_amount_cents&.positive?
 
       wallet.balance.positive?
     end
@@ -194,11 +200,10 @@ module Invoices
       refresh_amounts(invoice: invoice, credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
-    # NOTE: Since credit impact the invoice amount, we need to recompute the amount and
-    #       the VAT amount
+    # NOTE: Since credit impact the invoice total amount, we need to recompute it
     def refresh_amounts(invoice:, credit_amount_cents:)
-      invoice.amount_cents = invoice.amount_cents - credit_amount_cents
-      invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
+      invoice.credit_amount_cents += credit_amount_cents
+      invoice.total_amount_cents -= credit_amount_cents
     end
 
     def create_payment(invoice)

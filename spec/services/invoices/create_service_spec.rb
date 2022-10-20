@@ -66,6 +66,8 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.vat_amount_currency).to eq('EUR')
           expect(result.invoice.vat_rate).to eq(20)
+          expect(result.invoice.credit_amount_cents).to eq(0)
+          expect(result.invoice.credit_amount_currency).to eq('EUR')
           expect(result.invoice.total_amount_cents).to eq(120)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
@@ -187,6 +189,8 @@ RSpec.describe Invoices::CreateService, type: :service do
             expect(result.invoice.vat_amount_cents).to eq(20)
             expect(result.invoice.vat_amount_currency).to eq('EUR')
             expect(result.invoice.vat_rate).to eq(20)
+            expect(result.invoice.credit_amount_cents).to eq(0)
+            expect(result.invoice.credit_amount_currency).to eq('EUR')
             expect(result.invoice.total_amount_cents).to eq(120)
             expect(result.invoice.total_amount_currency).to eq('EUR')
 
@@ -217,6 +221,8 @@ RSpec.describe Invoices::CreateService, type: :service do
               expect(result.invoice.vat_amount_cents).to eq(20)
               expect(result.invoice.vat_amount_currency).to eq('EUR')
               expect(result.invoice.vat_rate).to eq(20)
+              expect(result.invoice.credit_amount_cents).to eq(0)
+              expect(result.invoice.credit_amount_currency).to eq('EUR')
               expect(result.invoice.total_amount_cents).to eq(120)
               expect(result.invoice.total_amount_currency).to eq('EUR')
 
@@ -259,6 +265,8 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.vat_amount_cents).to eq(40)
           expect(result.invoice.vat_amount_currency).to eq('EUR')
           expect(result.invoice.vat_rate).to eq(20)
+          expect(result.invoice.credit_amount_cents).to eq(0)
+          expect(result.invoice.credit_amount_currency).to eq('EUR')
           expect(result.invoice.total_amount_cents).to eq(240)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
@@ -760,12 +768,14 @@ RSpec.describe Invoices::CreateService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoice.amount_cents).to eq(90)
+          expect(result.invoice.amount_cents).to eq(100)
           expect(result.invoice.amount_currency).to eq('EUR')
-          expect(result.invoice.vat_amount_cents).to eq(18)
+          expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.vat_amount_currency).to eq('EUR')
           expect(result.invoice.vat_rate).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(108)
+          expect(result.invoice.credit_amount_cents).to eq(10)
+          expect(result.invoice.credit_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice.credits.count).to eq(1)
@@ -810,12 +820,14 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-          expect(result.invoice.amount_cents).to eq(90)
+          expect(result.invoice.amount_cents).to eq(100)
           expect(result.invoice.amount_currency).to eq('EUR')
-          expect(result.invoice.vat_amount_cents).to eq(18)
+          expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.vat_amount_currency).to eq('EUR')
           expect(result.invoice.vat_rate).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(108)
+          expect(result.invoice.credit_amount_cents).to eq(10)
+          expect(result.invoice.credit_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
@@ -866,12 +878,14 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-          expect(result.invoice.amount_cents).to eq(70)
+          expect(result.invoice.amount_cents).to eq(100)
           expect(result.invoice.amount_currency).to eq('EUR')
-          expect(result.invoice.vat_amount_cents).to eq(14)
+          expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.vat_amount_currency).to eq('EUR')
           expect(result.invoice.vat_rate).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(84)
+          expect(result.invoice.credit_amount_cents).to eq(30)
+          expect(result.invoice.credit_amount_currency).to eq('EUR')
+          expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
@@ -891,7 +905,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           create(
             :applied_coupon,
             customer: subscription.customer,
-            amount_cents: 100,
+            amount_cents: 120,
             amount_currency: plan.amount_currency,
           )
         end
