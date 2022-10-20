@@ -16,6 +16,8 @@ RSpec.describe Credits::CreditNoteService do
       customer: customer,
       amount_cents: amount_cents,
       amount_currency: 'EUR',
+      total_amount_cents: amount_cents,
+      total_amount_currency: 'EUR',
     )
   end
 

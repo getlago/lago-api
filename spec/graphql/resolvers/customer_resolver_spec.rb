@@ -10,7 +10,15 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           id externalId name currency
           timezone
           applicableTimezone
-          invoices { id invoiceType paymentStatus }
+          invoices {
+            id
+            invoiceType
+            paymentStatus
+            totalAmountCents
+            creditAmountCents
+            vatAmountCents
+            amountCents
+          }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }

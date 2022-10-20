@@ -2936,6 +2936,7 @@ type Invoice {
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
+  legacy: Boolean!
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
   plan: Plan

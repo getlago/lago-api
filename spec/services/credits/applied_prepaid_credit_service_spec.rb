@@ -11,6 +11,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       customer: customer,
       amount_cents: amount_cents,
       amount_currency: 'EUR',
+      total_amount_cents: amount_cents,
+      total_amount_currency: 'EUR',
     )
   end
   let(:amount_cents) { 100 }
