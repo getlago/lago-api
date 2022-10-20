@@ -87,6 +87,68 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#currency' do
+    let(:invoice) { build(:invoice, amount_currency: 'JPY') }
+
+    it { expect(invoice.currency).to eq('JPY') }
+  end
+
+  describe '#sub_total_vat_excluded_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, customer: customer, amount_currency: 'EUR') }
+    let(:fees) { create_list(:fee, 3, invoice: invoice, amount_cents: 300) }
+
+    before { fees }
+
+    it 'returns the sub total amount without VAT' do
+      expect(invoice.sub_total_vat_excluded_amount.to_s).to eq('9.00')
+    end
+  end
+
+  describe '#sub_total_vat_included_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization, vat_rate: 20) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, customer: customer, amount_currency: 'EUR', vat_amount_cents: 180) }
+    let(:fees) { create_list(:fee, 3, invoice: invoice, amount_cents: 300) }
+
+    before { fees }
+
+    it 'returns the sub total amount with VAT' do
+      expect(invoice.sub_total_vat_included_amount.to_s).to eq('10.80')
+    end
+  end
+
+  describe '#coupon_total_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, customer: customer) }
+    let(:credit) { create(:credit, invoice: invoice) }
+
+    before { credit }
+
+    it 'returns the coupon amount' do
+      expect(invoice.coupon_total_amount.to_s).to eq('2.00')
+    end
+  end
+
+  describe '#credit_note_total_amount' do
+    let(:organization) { create(:organization, name: 'LAGO') }
+    let(:customer) { create(:customer, organization: organization) }
+    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
+    let(:invoice) { create(:invoice, customer: customer) }
+    let(:credit) { create(:credit_note_credit, invoice: invoice) }
+
+    before { credit }
+
+    it 'returns the credit note amount' do
+      expect(invoice.credit_note_total_amount.to_s).to eq('2.00')
+    end
+  end
+
   describe '#charge_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization: organization) }

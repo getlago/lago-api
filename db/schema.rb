@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_11_133055) do
+ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -308,6 +308,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_11_133055) do
     t.integer "sequential_id"
     t.string "file"
     t.uuid "customer_id"
+    t.boolean "legacy", default: false, null: false
+    t.float "vat_rate"
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 

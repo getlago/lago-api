@@ -17,6 +17,10 @@ module Invoices
           customer: customer,
           issuing_date: Time.zone.at(timestamp).to_date,
           invoice_type: :subscription,
+
+          # NOTE: Apply credits before VAT, will be changed with credit note feature
+          legacy: true,
+          vat_rate: customer.applicable_vat_rate,
         )
 
         subscriptions.each do |subscription|

@@ -11,6 +11,9 @@ class Credit < ApplicationRecord
 
   validates :amount_currency, inclusion: { in: currency_list }
 
+  scope :coupon_kind, -> { where.not(applied_coupon_id: nil) }
+  scope :credit_note_kind, -> { where.not(credit_note_id: nil) }
+
   def item_id
     return coupon&.id if applied_coupon_id
 

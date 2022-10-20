@@ -431,7 +431,7 @@ html
                 .body-1 All usage based fees
               td.body-1 style="text-align: right;" width="30%"
                 = charge_amount.format
-          - if credits.any?
+          - if legacy? && credits.any?
             tr
               td width="70%"
                 .body-1 Coupons
@@ -439,19 +439,48 @@ html
                 = credit_amount.format
 
         table.total-table width="100%"
-          tr
-            td.body-2 width="70%" Sub total
-            td.body-1 width="30%" = subtotal_before_prepaid_credits.format
-          - if subscription? && wallet_transactions.exists?
+          - if legacy?
             tr
-              td.body-2 width="70%" Prepaid credits
-              td.prepaid-amount width="30%" = wallet_transaction_amount.format
-          tr
-            td.body-2 Tax
-            td.body-1 = vat_amount.format
-          tr
-            td.body-2 Total due
-            td.body-1 = total_amount.format
+              td.body-2 width="70%" Sub total
+              td.body-1 width="30%" = subtotal_before_prepaid_credits.format
+            - if subscription? && wallet_transactions.exists?
+              tr
+                td.body-2 width="70%" Prepaid credits
+                td.prepaid-amount width="30%" = wallet_transaction_amount.format
+            tr
+              td.body-2 Tax
+              td.body-1 = vat_amount.format
+            tr
+              td.body-2 Total due
+              td.body-1 = total_amount.format
+          - else
+            tr
+              td.body-1 width="70%" Sub total (excl. tax)
+              td.body-1 width="30%" = sub_total_vat_excluded_amount.format
+            tr
+              td.body-2 Tax (#{vat_rate || 0})%
+              td.body-1 = vat_amount.format
+            tr
+              td.body-1 Sub total (incl. tax)
+              td.body-1 = sub_total_vat_included_amount.format
+            - if credits.credit_note_kind.any?
+              tr
+                td.body-2 Credit Notes
+                td.body-1 style="text-align: right; color: #008559;"
+                  = credit_notes_total_amount.format
+            - if credits.coupon_kind.any?
+              tr
+                td.body-2 Coupons
+                td.body-1 style="text-align: right; color: #008559;"
+                  = coupon_total_amount.format
+            - if subscription? && wallet_transactions.exists?
+              tr
+                td.body-2 width="70%" Prepaid credits
+                td.prepaid-amount width="30%" = wallet_transaction_amount.format
+            tr
+              td.body-1 Total due
+              td.body-1 = total_amount.format
+
 
       p.body-3.mb-24 = organization.invoice_footer
 

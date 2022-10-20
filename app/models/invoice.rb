@@ -23,6 +23,10 @@ class Invoice < ApplicationRecord
   monetize :total_amount_cents
 
   # NOTE: Readonly fields
+  monetize :sub_total_vat_excluded_amount_cents, disable_validation: true, allow_nil: true
+  monetize :sub_total_vat_included_amount_cents, disable_validation: true, allow_nil: true
+  monetize :coupon_total_amount_cents, disable_validation: true, allow_nil: true
+  monetize :credit_note_total_amount_cents, disable_validation: true, allow_nil: true
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :credit_amount_cents, disable_validation: true, allow_nil: true
@@ -48,29 +52,44 @@ class Invoice < ApplicationRecord
     fees.sum(:amount_cents) + fees.sum(:vat_amount_cents)
   end
 
+  def currency
+    amount_currency
+  end
+
+  def sub_total_vat_excluded_amount_cents
+    fees.sum(:amount_cents)
+  end
+  alias sub_total_vat_excluded_amount_currency currency
+
+  def sub_total_vat_included_amount_cents
+    sub_total_vat_excluded_amount_cents + vat_amount_cents
+  end
+  alias sub_total_vat_included_amount_currency currency
+
+  def coupon_total_amount_cents
+    credits.coupon_kind.sum(:amount_cents)
+  end
+  alias coupon_total_amount_currency currency
+
+  def credit_note_total_amount_cents
+    credits.credit_note_kind.sum(:amount_cents)
+  end
+  alias credit_notes_total_amount_currency currency
+
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end
-
-  def charge_amount_currency
-    amount_currency
-  end
+  alias charge_amount_currency currency
 
   def subscription_amount_cents
     fees.subscription_kind.sum(:amount_cents)
   end
-
-  def subscription_amount_currency
-    amount_currency
-  end
+  alias subscription_amount_currency currency
 
   def credit_amount_cents
     credits.sum(:amount_cents)
   end
-
-  def credit_amount_currency
-    amount_currency
-  end
+  alias credit_amount_currency currency
 
   def wallet_transaction_amount_cents
     transaction_amount = wallet_transactions.sum(:amount)
@@ -80,10 +99,7 @@ class Invoice < ApplicationRecord
 
     rounded_amount * currency.subunit_to_unit
   end
-
-  def wallet_transaction_amount_currency
-    amount_currency
-  end
+  alias wallet_transaction_amount_currency currency
 
   def subtotal_before_prepaid_credits
     return amount unless wallet_transactions.exists?
