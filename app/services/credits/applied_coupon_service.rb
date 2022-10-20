@@ -18,7 +18,7 @@ module Credits
         invoice: invoice,
         applied_coupon: applied_coupon,
         amount_cents: credit_amount,
-        amount_currency: invoice.amount_currency,
+        amount_currency: invoice.currency,
       )
 
       applied_coupon.frequency_duration -= 1 if applied_coupon.recurring?
@@ -46,17 +46,17 @@ module Credits
 
     def compute_amount
       if applied_coupon.coupon.percentage?
-        discounted_value = invoice.amount_cents * applied_coupon.percentage_rate.fdiv(100)
+        discounted_value = invoice.total_amount_cents * applied_coupon.percentage_rate.fdiv(100)
 
-        return (discounted_value >= invoice.amount_cents) ? invoice.amount_cents : discounted_value.round
+        return (discounted_value >= invoice.total_amount_cents) ? invoice.total_amount_cents : discounted_value.round
       end
 
       if applied_coupon.recurring?
-        return invoice.amount_cents if applied_coupon.amount_cents > invoice.amount_cents
+        return invoice.total_amount_cents if applied_coupon.amount_cents > invoice.total_amount_cents
 
         applied_coupon.amount_cents
       else
-        return invoice.amount_cents if remaining_amount > invoice.amount_cents
+        return invoice.total_amount_cents if remaining_amount > invoice.total_amount_cents
 
         remaining_amount
       end
