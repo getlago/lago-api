@@ -13205,6 +13205,35 @@
               ]
             },
             {
+              "name": "creditNote",
+              "description": "Query a single credit note",
+              "type": {
+                "kind": "OBJECT",
+                "name": "CreditNote",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the credit note",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "currentUser",
               "description": "Retrieves currently connected user",
               "type": {
