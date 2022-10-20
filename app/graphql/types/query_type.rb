@@ -15,6 +15,7 @@ module Types
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :coupon, resolver: Resolvers::CouponResolver
+    field :credit_note, resolver: Resolvers::CreditNoteResolver
     field :customers, resolver: Resolvers::CustomersResolver
     field :customer, resolver: Resolvers::CustomerResolver
     field :events, resolver: Resolvers::EventsResolver

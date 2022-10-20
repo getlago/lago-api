@@ -3492,6 +3492,16 @@ type Query {
   ): CouponCollection!
 
   """
+  Query a single credit note
+  """
+  creditNote(
+    """
+    Uniq ID of the credit note
+    """
+    id: ID!
+  ): CreditNote
+
+  """
   Retrieves currently connected user
   """
   currentUser: User!
