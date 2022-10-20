@@ -20,6 +20,7 @@ module Invoices
 
           amount_currency: currency,
           vat_amount_currency: currency,
+          credit_amount_currency: currency,
           total_amount_currency: currency,
 
           # NOTE: Apply credits before VAT, will be changed with credit note feature
@@ -74,6 +75,8 @@ module Invoices
 
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
+
+      invoice.credit_amount_cents = 0
 
       invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
     end
@@ -198,6 +201,7 @@ module Invoices
 
     # NOTE: Since credit impact the invoice total amount, we need to recompute it
     def refresh_amounts(invoice:, credit_amount_cents:)
+      invoice.credit_amount_cents += credit_amount_cents
       invoice.total_amount_cents -= credit_amount_cents
     end
 
