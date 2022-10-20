@@ -484,7 +484,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             end
           end
 
-          context 'when old subscription was payed in advabce' do
+          context 'when old subscription was payed in advance' do
             before do
               plan.update!(pay_in_advance: true)
 
