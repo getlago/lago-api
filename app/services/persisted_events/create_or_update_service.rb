@@ -39,6 +39,7 @@ module PersistedEvents
         billable_metric: matching_billable_metric,
         external_subscription_id: subscription.external_id,
         external_id: event.properties[matching_billable_metric.field_name],
+        properties: event.properties,
         added_at: event.timestamp,
       )
     end

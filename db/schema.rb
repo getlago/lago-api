@@ -400,6 +400,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "billable_metric_id"
+    t.jsonb "properties", default: {}, null: false
     t.index ["billable_metric_id"], name: "index_persisted_events_on_billable_metric_id"
     t.index ["customer_id", "external_subscription_id", "billable_metric_id"], name: "index_search_persisted_events"
     t.index ["customer_id"], name: "index_persisted_events_on_customer_id"
