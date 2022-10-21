@@ -8,6 +8,7 @@ module BillableMetrics
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.maximum("(#{sanitized_field_name})::numeric") || 0
+        result.aggregation_per_group = aggregation_per_group(events, aggregation_select)
         result.count = events.count
         result
       rescue ActiveRecord::StatementInvalid => e
@@ -16,13 +17,8 @@ module BillableMetrics
 
       private
 
-      def sanitized_field_name
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          [
-            'events.properties->>?',
-            billable_metric.field_name,
-          ],
-        )
+      def aggregation_select
+        "max((#{sanitized_field_name})::numeric)"
       end
     end
   end

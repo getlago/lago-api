@@ -23,16 +23,57 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   let(:from_date) { Time.zone.today - 1.month }
   let(:to_date) { Time.zone.today }
 
+  # TODO : only count existing groups (not africa)
   before do
-    create_list(
+    create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+    create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+
+    create(
       :event,
-      4,
       code: billable_metric.code,
       customer: customer,
       subscription: subscription,
       timestamp: Time.zone.now,
       properties: {
-        total_count: rand(10),
+        total_count: 6,
+        region: 'europe',
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      subscription: subscription,
+      timestamp: Time.zone.now,
+      properties: {
+        total_count: 8,
+        region: 'europe',
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      subscription: subscription,
+      timestamp: Time.zone.now,
+      properties: {
+        total_count: 6,
+        region: 'usa',
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      subscription: subscription,
+      timestamp: Time.zone.now,
+      properties: {
+        total_count: 8,
+        region: 'africa',
       },
     )
 
@@ -44,6 +85,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       timestamp: Time.zone.now,
       properties: {
         total_count: 12,
+        country: 'france',
       },
     )
   end
@@ -52,6 +94,12 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
     expect(result.aggregation).to eq(12)
+    expect(result.aggregation_per_group).to eq(
+      [
+        [{ 'africa' => 8 }, { 'europe' => 8 }, { 'usa' => 6 }],
+        [{ 'france' => 12 }],
+      ],
+    )
     expect(result.count).to eq(5)
   end
 
@@ -62,6 +110,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.aggregation_per_group).to eq([[], []])
       expect(result.count).to eq(0)
     end
   end
@@ -75,6 +124,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       result = max_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.aggregation_per_group).to eq([[], []])
       expect(result.count).to eq(0)
     end
   end
