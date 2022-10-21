@@ -246,9 +246,9 @@ GEM
       timeout
     newrelic_rpm (8.9.0)
     nio4r (2.5.8)
-    nokogiri (1.13.7-aarch64-linux)
+    nokogiri (1.13.9-aarch64-linux)
       racc (~> 1.4)
-    nokogiri (1.13.7-x86_64-linux)
+    nokogiri (1.13.9-x86_64-linux)
       racc (~> 1.4)
     oauth2 (2.0.9)
       faraday (>= 0.17.3, < 3.0)
