@@ -47,7 +47,9 @@ RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
       :invoice,
       customer: subscription.customer,
       amount_currency: 'EUR',
+      amount_cents: 100,
       total_amount_currency: 'EUR',
+      total_amount_cents: 120,
     )
   end
 
@@ -62,7 +64,7 @@ RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
 
         credit_note = result.credit_note
         expect(credit_note).to be_available
-        expect(credit_note).to be_other
+        expect(credit_note).to be_order_change
         expect(credit_note.total_amount_cents).to eq(20)
         expect(credit_note.total_amount_currency).to eq('EUR')
         expect(credit_note.credit_amount_cents).to eq(20)
@@ -111,7 +113,7 @@ RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
 
           credit_note = result.credit_note
           expect(credit_note).to be_available
-          expect(credit_note).to be_other
+          expect(credit_note).to be_order_change
           expect(credit_note.total_amount_cents).to eq(17)
           expect(credit_note.total_amount_currency).to eq('EUR')
           expect(credit_note.credit_amount_cents).to eq(17)

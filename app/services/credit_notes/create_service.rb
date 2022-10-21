@@ -2,7 +2,7 @@
 
 module CreditNotes
   class CreateService < BaseService
-    def initialize(invoice:, items_attr:, description:, reason: :other)
+    def initialize(invoice:, items_attr:, description: nil, reason: :other)
       @invoice = invoice
       @items_attr = items_attr
       @reason = reason
@@ -50,6 +50,8 @@ module CreditNotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ArgumentError
+      result.single_validation_failure!(field: :reason, error_code: 'value_is_invalid')
     end
 
     private

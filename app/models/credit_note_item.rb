@@ -9,6 +9,7 @@ class CreditNoteItem < ApplicationRecord
   monetize :total_amount_cents
 
   validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :refund_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
   def currency
     credit_amount_currency

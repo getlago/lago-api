@@ -325,6 +325,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
     t.float "vat_rate"
+    t.bigint "credit_amount_cents", default: 0, null: false
+    t.string "credit_amount_currency"
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 

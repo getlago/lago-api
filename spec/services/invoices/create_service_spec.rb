@@ -647,8 +647,8 @@ RSpec.describe Invoices::CreateService, type: :service do
         create(:plan, interval: :monthly, pay_in_advance: true, amount_cents: 1000)
       end
 
-      let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
-      let(:started_at) { Time.zone.today - 3.months }
+      let(:timestamp) { Time.zone.parse('30 Sep 2022 00:31:00') }
+      let(:started_at) { Time.zone.parse('12 Aug 2022 00:31:00') }
       let(:terminated_at) { timestamp - 2.days }
       let(:previous_plan) { create(:plan, amount_cents: 10_000, interval: :yearly, pay_in_advance: true) }
 
