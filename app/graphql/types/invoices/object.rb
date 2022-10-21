@@ -37,6 +37,11 @@ module Types
 
       field :wallet_transaction_amount_cents, Integer, null: false
       field :subtotal_before_prepaid_credits, String, null: false
+
+      field :sub_total_vat_excluded_amount_cents, Integer, null: false
+      field :sub_total_vat_included_amount_cents, Integer, null: false
+      field :coupon_total_amount_cents, Integer, null: false
+      field :credit_note_total_amount_cents, Integer, null: false
     end
   end
 end

@@ -2926,9 +2926,11 @@ type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   chargeAmountCents: Int!
+  couponTotalAmountCents: Int!
   createdAt: ISO8601DateTime!
   creditAmountCents: Int!
   creditAmountCurrency: CurrencyEnum!
+  creditNoteTotalAmountCents: Int!
   customer: Customer!
   fees: [Fee!]
   fileUrl: String
@@ -2941,6 +2943,8 @@ type Invoice {
   paymentStatus: InvoicePaymentStatusTypeEnum!
   plan: Plan
   sequentialId: ID!
+  subTotalVatExcludedAmountCents: Int!
+  subTotalVatIncludedAmountCents: Int!
   subscriptions: [Subscription!]
   subtotalBeforePrepaidCredits: String!
   totalAmountCents: Int!
