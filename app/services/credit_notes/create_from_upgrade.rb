@@ -24,6 +24,7 @@ module CreditNotes
             credit_amount_cents: amount + vat_amount,
           },
         ],
+        reason: :order_change,
       ).call
     end
 
