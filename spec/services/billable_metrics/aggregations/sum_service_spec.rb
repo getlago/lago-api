@@ -27,15 +27,56 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   end
 
   before do
+    create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+    create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+
     create_list(
       :event,
-      4,
+      3,
       code: billable_metric.code,
       customer: customer,
       subscription: subscription,
       timestamp: Time.zone.now,
       properties: {
         total_count: 12,
+        region: 'europe',
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      subscription: subscription,
+      timestamp: Time.zone.now,
+      properties: {
+        total_count: 6,
+        region: 'usa',
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      subscription: subscription,
+      timestamp: Time.zone.now,
+      properties: {
+        total_count: 8,
+        region: 'africa',
+      },
+    )
+
+    create(
+      :event,
+      code: billable_metric.code,
+      customer: customer,
+      subscription: subscription,
+      timestamp: Time.zone.now,
+      properties: {
+        total_count: 4,
+        country: 'france',
       },
     )
   end
@@ -43,8 +84,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   it 'aggregates the events' do
     result = sum_service.aggregate(from_date: from_date, to_date: to_date, options: options)
 
-    expect(result.aggregation).to eq(48)
-    expect(result.count).to eq(4)
+    expect(result.aggregation).to eq(54)
+    expect(result.aggregation_per_group).to eq(
+      [
+        [{ 'africa' => 8 }, { 'europe' => 36 }, { 'usa' => 6 }],
+        [{ 'france' => 4 }],
+      ],
+    )
+    expect(result.count).to eq(6)
     expect(result.options).to eq({ running_total: [12, 24] })
   end
 
@@ -97,6 +144,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.aggregation_per_group).to eq([[], []])
       expect(result.count).to eq(0)
       expect(result.options).to eq({ running_total: [] })
     end
@@ -111,6 +159,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
       expect(result.aggregation).to eq(0)
+      expect(result.aggregation_per_group).to eq([[], []])
       expect(result.count).to eq(0)
       expect(result.options).to eq({ running_total: [] })
     end
@@ -126,6 +175,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
         timestamp: Time.zone.now,
         properties: {
           total_count: 4.5,
+          country: 'france',
         },
       )
     end
@@ -133,7 +183,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     it 'aggregates the events' do
       result = sum_service.aggregate(from_date: from_date, to_date: to_date)
 
-      expect(result.aggregation).to eq(52.5)
+      expect(result.aggregation).to eq(58.5)
+      expect(result.aggregation_per_group).to eq(
+        [
+          [{ 'africa' => 8 }, { 'europe' => 36 }, { 'usa' => 6 }],
+          [{ 'france' => 8.5 }],
+        ],
+      )
     end
   end
 

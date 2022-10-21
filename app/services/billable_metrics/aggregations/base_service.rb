@@ -25,6 +25,32 @@ module BillableMetrics
           .to_date(to_date)
           .where(code: billable_metric.code)
       end
+
+      def groups
+        billable_metric.selectable_groups.pluck(:key).uniq
+      end
+
+      def sanitized_name(property)
+        ActiveRecord::Base.sanitize_sql_for_conditions(
+          ['events.properties->>?', property],
+        )
+      end
+
+      def sanitized_field_name
+        sanitized_name(billable_metric.field_name)
+      end
+
+      def aggregation_per_group(events, aggregation_select)
+        groups.map do |group|
+          events.select(
+            "(#{aggregation_select}) as group_agg, #{sanitized_name(group)} as group_name",
+          ).group(
+            sanitized_name(group),
+          ).map do |e|
+            { e.group_name => e.group_agg } if e.group_name
+          end.compact
+        end
+      end
     end
   end
 end
