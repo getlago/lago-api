@@ -30,6 +30,7 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
     {
       'operation_type' => operation_type,
       billable_metric.field_name => 'ext_12345',
+      'region' => 'europe',
     }
   end
 
@@ -47,6 +48,7 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
           expect(persisted_event.customer).to eq(event.customer)
           expect(persisted_event.external_subscription_id).to eq(event.subscription.external_id)
           expect(persisted_event.external_id).to eq('ext_12345')
+          expect(persisted_event.properties).to eq(event.properties)
           expect(persisted_event.added_at.to_s).to eq(event.timestamp.to_s)
         end
       end
