@@ -4,7 +4,7 @@ module PaymentProviders
   class GocardlessService < BaseService
     # NOTE: These links will be changed later
     AUTH_SITE = 'https://connect-sandbox.gocardless.com'
-    REDIRECT_URI = 'https://example.com'
+    REDIRECT_URI = 'https://proxy.lago.dev/gocardless/callback'
 
     def create_or_update(**args)
       access_token = oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token

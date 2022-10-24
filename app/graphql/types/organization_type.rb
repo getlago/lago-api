@@ -22,5 +22,6 @@ module Types
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
     field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
+    field :gocardless_payment_provider, Types::PaymentProviders::Gocardless, null: true
   end
 end

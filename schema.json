@@ -12269,6 +12269,20 @@
               ]
             },
             {
+              "name": "gocardlessPaymentProvider",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "GocardlessProvider",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
