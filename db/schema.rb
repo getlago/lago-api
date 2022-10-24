@@ -151,7 +151,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
     t.string "number", null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency", null: false
-    t.integer "credit_status", default: 0, null: false
+    t.integer "credit_status"
     t.bigint "balance_amount_cents", default: 0, null: false
     t.string "balance_amount_currency", default: "0", null: false
     t.integer "reason", null: false
@@ -162,7 +162,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
     t.string "total_amount_currency", null: false
     t.bigint "refund_amount_cents", default: 0, null: false
     t.string "refund_amount_currency"
-    t.integer "refund_status", default: 0, null: false
+    t.integer "refund_status"
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
