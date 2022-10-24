@@ -68,7 +68,7 @@ module Customers
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
-      create_billing_configuration(customer, billing_configuration)
+      create_billing_configuration(customer, billing_configuration, is_api: false)
 
       result.customer = customer
       track_customer_created(customer)
@@ -79,7 +79,7 @@ module Customers
 
     private
 
-    def create_billing_configuration(customer, billing_configuration = {}, is_api = false)
+    def create_billing_configuration(customer, billing_configuration = {}, is_api:)
       return if billing_configuration.blank?
 
       create_provider_customer = billing_configuration[:sync_with_provider]
@@ -97,14 +97,14 @@ module Customers
       billing_configuration = params[:billing_configuration]
 
       if new_customer
-        create_billing_configuration(customer, billing_configuration, true)
+        create_billing_configuration(customer, billing_configuration, is_api: true)
         return
       end
 
       unless billing_configuration[:payment_provider] == 'stripe' ||
-        billing_configuration[:payment_provider] == 'gocardless'
-          customer.update!(payment_provider: nil)
-          return
+             billing_configuration[:payment_provider] == 'gocardless'
+        customer.update!(payment_provider: nil)
+        return
       end
 
       customer.update!(payment_provider: billing_configuration[:payment_provider])

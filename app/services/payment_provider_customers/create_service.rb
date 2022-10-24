@@ -55,9 +55,11 @@ module PaymentProviderCustomers
 
       if result.provider_customer.type == 'PaymentProviderCustomers::StripeCustomer'
         return PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer) if async
+
         PaymentProviderCustomers::StripeCreateJob.perform_now(result.provider_customer)
       else
         return PaymentProviderCustomers::GocardlessCreateJob.perform_later(result.provider_customer) if async
+
         PaymentProviderCustomers::GocardlessCreateJob.perform_now(result.provider_customer)
       end
     end
