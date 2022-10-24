@@ -97,6 +97,8 @@ module Api
             :payment_provider,
             :provider_customer_id,
             :sync,
+            :gocardless_mandate_id,
+            :sync_with_provider,
           ],
         )
       end

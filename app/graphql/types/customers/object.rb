@@ -29,6 +29,7 @@ module Types
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
 
       field :stripe_customer, Types::PaymentProviderCustomers::Stripe, null: true
+      field :gocardless_customer, Types::PaymentProviderCustomers::Gocardless, null: true
       field :subscriptions, [Types::Subscriptions::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

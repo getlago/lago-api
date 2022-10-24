@@ -27,7 +27,7 @@ module Mutations
       argument :currency, Types::CurrencyEnum, required: false
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
-      argument :stripe_customer, Types::PaymentProviderCustomers::StripeInput, required: false
+      argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false
 
       type Types::Customers::Object
 

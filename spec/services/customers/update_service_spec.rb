@@ -113,7 +113,7 @@ RSpec.describe Customers::UpdateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
-            stripe_customer: { provider_customer_id: 'cus_12345' },
+            provider_customer: { provider_customer_id: 'cus_12345' },
           }
         end
 
@@ -139,13 +139,16 @@ RSpec.describe Customers::UpdateService, type: :service do
               name: 'Foo Bar',
               organization_id: organization.id,
               payment_provider: nil,
-              stripe_customer: { provider_customer_id: nil },
+              provider_customer: { provider_customer_id: nil },
             }
           end
 
           let(:stripe_customer) { create(:stripe_customer, customer: customer) }
 
-          before { stripe_customer }
+          before do
+            stripe_customer
+            customer.update!(payment_provider: 'stripe')
+          end
 
           it 'removes the provider customer id' do
             result = customers_service.update(**update_args)
