@@ -1775,6 +1775,7 @@ enum CreditNoteReasonEnum {
 enum CreditNoteTypeEnum {
   available
   consumed
+  no_credit
 }
 
 enum CurrencyEnum {
