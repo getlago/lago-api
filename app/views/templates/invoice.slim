@@ -382,7 +382,7 @@ html
               = organization.city
           - if organization.state.present?
             .body-2 = organization.state
-          .body-2 = ISO3166::Country.new(customer.country)&.common_name
+          .body-2 = ISO3166::Country.new(organization.country)&.common_name
           .body-2 = organization.email
         .billing-information-column
           .body-1 Bill To
