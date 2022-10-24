@@ -19,6 +19,7 @@ module CreditNotes
           credit_amount_currency: invoice.amount_currency,
           balance_amount_currency: invoice.amount_currency,
           reason: reason,
+          credit_status: 'available',
         )
 
         create_items
