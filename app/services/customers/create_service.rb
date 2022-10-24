@@ -112,14 +112,15 @@ module Customers
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      create_result = if billing_configuration[:payment_provider] == 'stripe'
+      case billing_configuration[:payment_provider]
+      when 'stripe'
         PaymentProviderCustomers::CreateService.new(customer).create_or_update(
           customer_class: PaymentProviderCustomers::StripeCustomer,
           payment_provider_id: customer.organization.stripe_payment_provider&.id,
           params: billing_configuration,
           async: !(billing_configuration || {})[:sync],
         )
-      elsif billing_configuration[:payment_provider] == 'gocardless'
+      when 'gocardless'
         PaymentProviderCustomers::CreateService.new(customer).create_or_update(
           customer_class: PaymentProviderCustomers::GocardlessCustomer,
           payment_provider_id: customer.organization.gocardless_payment_provider&.id,

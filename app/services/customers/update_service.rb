@@ -76,13 +76,14 @@ module Customers
       handle_provider_customer = customer.payment_provider.present?
       handle_provider_customer ||= (billing_configuration || {})[:provider_customer_id].present?
 
-      if payment_provider == 'stripe'
+      case payment_provider
+      when 'stripe'
         handle_provider_customer ||= customer.stripe_customer&.provider_customer_id.present?
 
         return unless handle_provider_customer
 
         update_stripe_customer(customer, billing_configuration)
-      elsif payment_provider == 'gocardless'
+      when 'gocardless'
         handle_provider_customer ||= customer.gocardless_customer&.provider_customer_id.present?
 
         return unless handle_provider_customer
