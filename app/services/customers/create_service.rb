@@ -119,7 +119,7 @@ module Customers
           params: billing_configuration,
           async: !(billing_configuration || {})[:sync],
         )
-      else
+      elsif billing_configuration[:payment_provider] == 'gocardless'
         PaymentProviderCustomers::CreateService.new(customer).create_or_update(
           customer_class: PaymentProviderCustomers::GocardlessCustomer,
           payment_provider_id: customer.organization.gocardless_payment_provider&.id,

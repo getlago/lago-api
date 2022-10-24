@@ -82,7 +82,7 @@ module Customers
         return unless handle_provider_customer
 
         update_stripe_customer(customer, billing_configuration)
-      else
+      elsif payment_provider == 'gocardless'
         handle_provider_customer ||= customer.gocardless_customer&.provider_customer_id.present?
 
         return unless handle_provider_customer
