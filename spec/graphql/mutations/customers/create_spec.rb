@@ -40,7 +40,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           country: 'GB',
           paymentProvider: 'stripe',
           currency: 'EUR',
-          stripeCustomer: {
+          providerCustomer: {
             providerCustomerId: 'cu_12345',
           },
         },

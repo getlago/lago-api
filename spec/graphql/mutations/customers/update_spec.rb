@@ -38,7 +38,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           externalId: external_id,
           paymentProvider: 'stripe',
           currency: 'EUR',
-          stripeCustomer: {
+          providerCustomer: {
             providerCustomerId: 'cu_12345',
           },
         },

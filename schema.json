@@ -4959,11 +4959,11 @@
               "deprecationReason": null
             },
             {
-              "name": "stripeCustomer",
+              "name": "providerCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
-                "name": "StripeCustomerInput",
+                "name": "ProviderCustomerInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -7042,6 +7042,20 @@
               ]
             },
             {
+              "name": "gocardlessCustomer",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "GocardlessCustomer",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "hasActiveWallet",
               "description": "Define if a customer has an active wallet",
               "type": {
@@ -7610,6 +7624,20 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "gocardlessCustomer",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "GocardlessCustomer",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -9270,6 +9298,79 @@
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "GocardlessCustomer",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "mandateId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "providerCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "syncWithProvider",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
           "inputFields": null,
           "enumValues": null
         },
@@ -13489,6 +13590,53 @@
           "enumValues": null
         },
         {
+          "kind": "INPUT_OBJECT",
+          "name": "ProviderCustomerInput",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "providerCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "syncWithProvider",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "gocardlessMandateId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
           "kind": "ENUM",
           "name": "ProviderTypeEnum",
           "description": null,
@@ -13499,6 +13647,12 @@
           "enumValues": [
             {
               "name": "stripe",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "gocardless",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -14834,32 +14988,23 @@
               "args": [
 
               ]
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
-          "name": "StripeCustomerInput",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": [
+            },
             {
-              "name": "providerCustomerId",
+              "name": "syncWithProvider",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "ID",
+                "name": "Boolean",
                 "ofType": null
               },
-              "defaultValue": null,
               "isDeprecated": false,
-              "deprecationReason": null
+              "deprecationReason": null,
+              "args": [
+
+              ]
             }
           ],
+          "inputFields": null,
           "enumValues": null
         },
         {
@@ -16048,11 +16193,11 @@
               "deprecationReason": null
             },
             {
-              "name": "stripeCustomer",
+              "name": "providerCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
-                "name": "StripeCustomerInput",
+                "name": "ProviderCustomerInput",
                 "ofType": null
               },
               "defaultValue": null,
