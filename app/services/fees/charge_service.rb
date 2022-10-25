@@ -76,8 +76,6 @@ module Fees
     end
 
     def options
-      return {} unless charge.properties.is_a?(Hash)
-
       {
         free_units_per_events: charge.properties['free_units_per_events'].to_i,
         free_units_per_total_aggregation: BigDecimal(charge.properties['free_units_per_total_aggregation'] || 0),
