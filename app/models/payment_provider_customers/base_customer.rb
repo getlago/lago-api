@@ -18,6 +18,14 @@ module PaymentProviderCustomers
       (settings || {})[key]
     end
 
+    def provider_mandate_id
+      get_from_settings('provider_mandate_id')
+    end
+
+    def provider_mandate_id=(provider_mandate_id)
+      push_to_settings(key: 'provider_mandate_id', value: provider_mandate_id)
+    end
+
     def sync_with_provider
       get_from_settings('sync_with_provider')
     end

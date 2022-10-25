@@ -183,7 +183,7 @@ RSpec.describe Customers::CreateService, type: :service do
           billing_configuration: {
             payment_provider: 'gocardless',
             provider_customer_id: 'gocardless_id',
-            gocardless_mandate_id: 'mandate_id',
+            provider_mandate_id: 'mandate_id',
           },
         }
       end
@@ -206,7 +206,7 @@ RSpec.describe Customers::CreateService, type: :service do
           gocardless_customer = customer.gocardless_customer
           expect(gocardless_customer.id).to be_present
           expect(gocardless_customer.provider_customer_id).to eq('gocardless_id')
-          expect(gocardless_customer.mandate_id).to eq('mandate_id')
+          expect(gocardless_customer.provider_mandate_id).to eq('mandate_id')
         end
       end
     end

@@ -7,7 +7,7 @@ module Types
 
       argument :provider_customer_id, ID, required: false
       argument :sync_with_provider, Boolean, required: false
-      argument :gocardless_mandate_id, String, required: false
+      argument :provider_mandate_id, String, required: false
     end
   end
 end

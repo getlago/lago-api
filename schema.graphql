@@ -3470,15 +3470,15 @@ input PropertiesInput {
 }
 
 type ProviderCustomer {
-  gocardlessMandateId: String
   id: ID!
   providerCustomerId: ID
+  providerMandateId: String
   syncWithProvider: Boolean
 }
 
 input ProviderCustomerInput {
-  gocardlessMandateId: String
   providerCustomerId: ID
+  providerMandateId: String
   syncWithProvider: Boolean
 }
 
