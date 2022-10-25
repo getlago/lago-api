@@ -23,7 +23,6 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   let(:from_date) { Time.zone.today - 1.month }
   let(:to_date) { Time.zone.today }
 
-  # TODO : only count existing groups (not africa)
   before do
     create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
     create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
