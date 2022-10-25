@@ -43,7 +43,9 @@ module Types
 
     field :add_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless
 
+    field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
+
     field :download_invoice, mutation: Mutations::Invoices::Download
 
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
