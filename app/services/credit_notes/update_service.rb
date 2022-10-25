@@ -4,7 +4,7 @@ module CreditNotes
   class UpdateService < BaseService
     def initialize(credit_note:, **params)
       @credit_note = credit_note
-      @params = params
+      @params = params&.with_indifferent_access
 
       super
     end
