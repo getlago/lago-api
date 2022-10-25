@@ -49,6 +49,15 @@ class Organization < ApplicationRecord
     end
   end
 
+  def payment_provider(provider)
+    case provider
+    when 'stripe'
+      stripe_payment_provider
+    when 'gocardless'
+      gocardless_payment_provider
+    end
+  end
+
   private
 
   def generate_api_key

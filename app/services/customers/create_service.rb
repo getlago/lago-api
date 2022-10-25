@@ -111,22 +111,19 @@ module Customers
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      create_result = case billing_configuration[:payment_provider]
-                      when 'stripe'
-                        PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-                          customer_class: PaymentProviderCustomers::StripeCustomer,
-                          payment_provider_id: customer.organization.stripe_payment_provider&.id,
-                          params: billing_configuration,
-                          async: !(billing_configuration || {})[:sync],
-                        )
-                      when 'gocardless'
-                        PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-                          customer_class: PaymentProviderCustomers::GocardlessCustomer,
-                          payment_provider_id: customer.organization.gocardless_payment_provider&.id,
-                          params: billing_configuration,
-                          async: !(billing_configuration || {})[:sync],
-                        )
+      provider_class = case billing_configuration[:payment_provider]
+                       when 'stripe'
+                         PaymentProviderCustomers::StripeCustomer
+                       when 'gocardless'
+                         PaymentProviderCustomers::GocardlessCustomer
       end
+
+      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
+        customer_class: provider_class,
+        payment_provider_id: customer.organization.payment_provider(billing_configuration[:payment_provider])&.id,
+        params: billing_configuration,
+        async: !(billing_configuration || {})[:sync],
+      )
 
       create_result.throw_error unless create_result.success?
     end
