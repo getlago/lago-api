@@ -9,6 +9,12 @@ RSpec.describe Api::BaseController, type: :controller do
     end
   end
 
+  it 'sets the context source to api' do
+    get :index
+
+    expect(CurrentContext.source).to eq 'api'
+  end
+
   describe 'authenticate' do
     let(:organization) { create(:organization) }
 
