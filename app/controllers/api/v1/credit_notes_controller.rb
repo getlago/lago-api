@@ -3,6 +3,27 @@
 module Api
   module V1
     class CreditNotesController < Api::BaseController
+      def create
+        service = CreditNotes::CreateService.new(
+          invoice: current_organization.invoices.find_by(id: input_params[:invoice_id]),
+          reason: input_params[:reason],
+          items_attr: input_params[:items],
+        )
+        result = service.call
+
+        if result.success?
+          render(
+            json: ::V1::CreditNoteSerializer.new(
+              result.credit_note,
+              root_name: 'credit_note',
+              includes: %i[items],
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def show
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: 'credit_note') unless credit_note
@@ -53,6 +74,21 @@ module Api
             meta: pagination_metadata(credit_notes),
           ),
         )
+      end
+
+      private
+
+      def input_params
+        @input_params ||= params.require(:credit_note)
+          .permit(
+            :invoice_id,
+            :reason,
+            items: [
+              :fee_id,
+              :credit_amount_cents,
+              :refund_amount_cents,
+            ],
+          )
       end
     end
   end

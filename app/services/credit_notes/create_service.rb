@@ -11,6 +11,8 @@ module CreditNotes
     end
 
     def call
+      return result.not_found_failure!(resource: invoice) unless invoice
+
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.create!(
           customer: invoice.customer,
