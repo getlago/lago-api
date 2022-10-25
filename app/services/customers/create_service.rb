@@ -101,8 +101,7 @@ module Customers
         return
       end
 
-      unless billing_configuration[:payment_provider] == 'stripe' ||
-             billing_configuration[:payment_provider] == 'gocardless'
+      unless %w[stripe gocardless].include?(billing_configuration[:payment_provider])
         customer.update!(payment_provider: nil)
         return
       end
