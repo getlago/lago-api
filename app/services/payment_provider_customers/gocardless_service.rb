@@ -53,12 +53,6 @@ module PaymentProviderCustomers
       {
         email: customer.email,
         company_name: customer.name,
-        address_line1: customer.address_line1,
-        address_line2: customer.address_line2,
-        city: customer.city,
-        postal_code: customer.zipcode,
-        country: customer.country,
-        phone_number: customer.phone,
       }
     end
 

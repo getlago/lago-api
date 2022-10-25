@@ -2487,7 +2487,6 @@ type Customer {
   currency: CurrencyEnum
   email: String
   externalId: String!
-  gocardlessCustomer: GocardlessCustomer
 
   """
   Define if a customer has an active wallet
@@ -2500,10 +2499,10 @@ type Customer {
   name: String
   paymentProvider: ProviderTypeEnum
   phone: String
+  providerCustomer: ProviderCustomer
   sequentialId: String!
   slug: String!
   state: String
-  stripeCustomer: StripeCustomer
   subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
   url: String
@@ -2542,7 +2541,6 @@ type CustomerDetails {
   currency: CurrencyEnum
   email: String
   externalId: String!
-  gocardlessCustomer: GocardlessCustomer
 
   """
   Define if a customer has an active wallet
@@ -2556,10 +2554,10 @@ type CustomerDetails {
   name: String
   paymentProvider: ProviderTypeEnum
   phone: String
+  providerCustomer: ProviderCustomer
   sequentialId: String!
   slug: String!
   state: String
-  stripeCustomer: StripeCustomer
 
   """
   Query subscriptions of a customer
@@ -2786,13 +2784,6 @@ enum FeeTypesEnum {
   charge
   credit
   subscription
-}
-
-type GocardlessCustomer {
-  id: ID!
-  mandateId: String
-  providerCustomerId: ID
-  syncWithProvider: Boolean
 }
 
 type GocardlessProvider {
@@ -3478,6 +3469,13 @@ input PropertiesInput {
   volumeRanges: [VolumeRangeInput!]
 }
 
+type ProviderCustomer {
+  gocardlessMandateId: String
+  id: ID!
+  providerCustomerId: ID
+  syncWithProvider: Boolean
+}
+
 input ProviderCustomerInput {
   gocardlessMandateId: String
   providerCustomerId: ID
@@ -3766,12 +3764,6 @@ enum StatusTypeEnum {
   canceled
   pending
   terminated
-}
-
-type StripeCustomer {
-  id: ID!
-  providerCustomerId: ID
-  syncWithProvider: Boolean
 }
 
 type StripeProvider {
