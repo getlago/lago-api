@@ -18,6 +18,7 @@ module Charges
       def compute_fixed_amount
         return 0 if units.zero?
         return 0 if fixed_amount.nil?
+        return 0 if free_units_count >= aggregation_result.count
 
         (aggregation_result.count - free_units_count) * fixed_amount
       end
