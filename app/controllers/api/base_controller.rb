@@ -6,6 +6,7 @@ module Api
     include Common
 
     before_action :authenticate
+    before_action :set_context_source
     include Trackable
 
     private
@@ -71,6 +72,10 @@ module Api
 
     def current_organization(api_key = nil)
       @current_organization ||= Organization.find_by(api_key: api_key)
+    end
+
+    def set_context_source
+      CurrentContext.source = 'api'
     end
   end
 end

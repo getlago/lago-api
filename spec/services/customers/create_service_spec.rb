@@ -20,6 +20,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(CurrentContext).to receive(:source).and_return('api')
     end
 
     it 'creates a new customer' do
@@ -300,6 +301,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(CurrentContext).to receive(:source).and_return('graphql')
     end
 
     it 'creates a new customer' do
