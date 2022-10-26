@@ -32,7 +32,7 @@ module PaymentProviderCustomers
       SendWebhookJob.perform_later(
         :payment_provider_customer_checkout_url,
         customer,
-        checkout_url: billing_request_flow.authorisation_url
+        checkout_url: billing_request_flow.authorisation_url,
       )
     end
 
@@ -59,7 +59,7 @@ module PaymentProviderCustomers
         params: {
           email: customer.email,
           company_name: customer.name,
-        }
+        },
       )
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)
@@ -97,8 +97,8 @@ module PaymentProviderCustomers
           },
           links: {
             customer: gocardless_customer_id,
-          }
-        }
+          },
+        },
       )
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)
@@ -113,8 +113,8 @@ module PaymentProviderCustomers
           exit_uri: 'https://gocardless.com/',
           links: {
             billing_request: billing_request_id,
-          }
-        }
+          },
+        },
       )
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)

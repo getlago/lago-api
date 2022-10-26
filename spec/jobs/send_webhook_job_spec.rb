@@ -137,7 +137,7 @@ RSpec.describe SendWebhookJob, type: :job do
       described_class.perform_now(
         :payment_provider_customer_checkout_url,
         customer,
-        checkout_url: 'https://example.com'
+        checkout_url: 'https://example.com',
       )
 
       expect(Webhooks::PaymentProviders::CustomerCheckoutService).to have_received(:new)
