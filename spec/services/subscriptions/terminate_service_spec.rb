@@ -105,6 +105,19 @@ RSpec.describe Subscriptions::TerminateService do
         expect(result.error.error_code).to eq('subscription_not_found')
       end
     end
+
+    context 'when subscription is not active' do
+      let(:subscription) { create(:terminated_subscription) }
+
+      it 'returns an error' do
+        result = terminate_service.terminate_from_api(
+          organization: organization,
+          external_id: subscription.external_id,
+        )
+
+        expect(result.error.error_code).to eq('subscription_not_found')
+      end
+    end
   end
 
   describe '.terminate_and_start_next' do

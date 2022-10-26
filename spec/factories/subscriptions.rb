@@ -15,5 +15,10 @@ FactoryBot.define do
     factory :pending_subscription do
       status { :pending }
     end
+
+    factory :terminated_subscription do
+      status { :terminated }
+      terminated_at { Time.zone.now }
+    end
   end
 end
