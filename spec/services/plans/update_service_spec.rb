@@ -120,9 +120,12 @@ RSpec.describe Plans::UpdateService, type: :service do
               id: existing_charge.id,
               billable_metric_id: billable_metrics.first.id,
               charge_model: 'standard',
-              properties: {
-                amount: '100',
-              },
+              group_properties: [
+                {
+                  group_id: group.id,
+                  values: { amount: '100' },
+                },
+              ],
             },
             {
               billable_metric_id: billable_metrics.last.id,
@@ -138,6 +141,16 @@ RSpec.describe Plans::UpdateService, type: :service do
       it 'updates existing charge and creates an other one' do
         expect { plans_service.update(**update_args) }
           .to change(Charge, :count).by(1)
+      end
+
+      it 'updates group properties' do
+        expect { plans_service.update(**update_args) }
+          .to change(GroupProperty, :count).by(1)
+
+        expect(existing_charge.reload.group_properties.first).to have_attributes(
+          group_id: group.id,
+          values: { 'amount' => '100' },
+        )
       end
     end
 
