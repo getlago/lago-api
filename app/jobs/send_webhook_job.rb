@@ -29,6 +29,8 @@ class SendWebhookJob < ApplicationJob
       Webhooks::PaymentProviders::CustomerCreatedService.new(object).call
     when :payment_provider_customer_error
       Webhooks::PaymentProviders::CustomerErrorService.new(object, options).call
+    when :payment_provider_customer_checkout_url
+      Webhooks::PaymentProviders::CustomerCheckoutService.new(object, options).call
 
     # NOTE: This add the new way of managing webhooks
     # A refact has to be done to improve webhooks management internally

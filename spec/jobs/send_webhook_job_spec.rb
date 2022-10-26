@@ -122,6 +122,29 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is payment_provider_customer_checkout_url' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerCheckoutService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::PaymentProviders::CustomerCheckoutService).to receive(:new)
+        .with(customer, checkout_url: 'https://example.com')
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      described_class.perform_now(
+        :payment_provider_customer_checkout_url,
+        customer,
+        checkout_url: 'https://example.com'
+      )
+
+      expect(Webhooks::PaymentProviders::CustomerCheckoutService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is payment_provider_customer_error' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerErrorService) }
     let(:customer) { create(:customer) }
