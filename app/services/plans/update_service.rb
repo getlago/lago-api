@@ -96,9 +96,7 @@ module Plans
         if charge
           # NOTE: charges cannot be edited if plan is attached to a subscription
           unless plan.attached_to_subscriptions?
-            if payload_charge[:group_properties]
-              charge.group_properties = payload_charge[:group_properties].map { |gp| GroupProperty.new(gp) }
-            end
+            payload_charge[:group_properties]&.map! { |gp| GroupProperty.new(gp) }
             charge.update(payload_charge)
             charge
           end
