@@ -4,7 +4,11 @@ require 'rails_helper'
 
 RSpec.describe Charges::ChargeModels::PackageService, type: :service do
   subject(:apply_package_service) do
-    described_class.apply(charge: charge, aggregation_result: aggregation_result)
+    described_class.apply(
+      charge: charge,
+      aggregation_result: aggregation_result,
+      properties: charge.properties,
+    )
   end
 
   before do
