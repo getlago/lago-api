@@ -8,7 +8,8 @@ module BillableMetrics
         @to_date = to_date
 
         result.aggregation = compute_aggregation.ceil(5)
-        result.aggregation_per_group = aggregation_per_group
+        result.count = result.aggregation
+        result.options = {}
         result
       end
 
@@ -31,20 +32,6 @@ module BillableMetrics
 
       def compute_aggregation
         ActiveRecord::Base.connection.execute(aggregation_query).first['aggregation_result']
-      end
-
-      def aggregation_per_group
-        return [] if groups.empty?
-
-        ActiveRecord::Base.connection.execute(group_aggregation_query).map do |e|
-          { e['group_name'] => e['total_sum'].ceil(5) } if e['group_name']
-        end.compact
-      end
-
-      def sanitized_name(property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['persisted_events.properties->>?', property],
-        )
       end
 
       def aggregation_query
@@ -76,43 +63,15 @@ module BillableMetrics
         "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
       end
 
-      def group_aggregation_query
-        group_queries = groups.each_with_object([]) do |group, result|
-          result << [
-            # NOTE: Billed on the full period
-            persisted.select(
-              "(SUM(#{persisted_pro_rata}::numeric)) as group_sum, #{sanitized_name(group)} as group_name",
-            ).group(sanitized_name(group)).to_sql,
-
-            # NOTE: Added during the period
-            added.select(
-              "(SUM(('#{to_date}'::date - DATE(persisted_events.added_at) + 1)::numeric  / #{period_duration})::numeric) as group_sum, \
-              #{sanitized_name(group)} as group_name",
-            ).group(sanitized_name(group)).to_sql,
-
-            # NOTE: removed during the period
-            removed.select(
-              "(SUM((DATE(persisted_events.removed_at) - '#{from_date}'::date + 1)::numeric / #{period_duration})::numeric) as group_sum, \
-              #{sanitized_name(group)} as group_name",
-            ).group(sanitized_name(group)).to_sql,
-
-            # NOTE: Added and then removed during the period
-            added_and_removed.select(
-              "(SUM((DATE(persisted_events.removed_at) - DATE(persisted_events.added_at) + 1)::numeric / #{period_duration})::numeric) as group_sum, \
-              #{sanitized_name(group)} as group_name",
-            ).group(sanitized_name(group)).to_sql,
-          ]
-        end
-
-        "SELECT SUM(COALESCE(group_sum, 0)) as total_sum, group_name \
-        FROM (#{group_queries.join(' UNION ')}) AS global_query GROUP BY group_name"
-      end
-
       def base_scope
-        PersistedEvent
+        persisted_events = PersistedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.external_id)
+
+        return persisted_events unless group
+
+        persisted_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
       end
 
       # NOTE: Full period duration to take upgrade, terminate
