@@ -39,7 +39,7 @@ module Invoices
           issuing_date: boundaries[:issuing_date],
         )
 
-        add_charge_fee
+        add_charge_fees
         compute_amounts
 
         format_usage
@@ -59,21 +59,21 @@ module Invoices
       )
     end
 
-    def add_charge_fee
+    def add_charge_fees
       query = subscription.plan.charges.joins(:billable_metric)
         .order(Arel.sql('lower(unaccent(billable_metrics.name)) ASC'))
 
       query.each do |charge|
-        fee_result = Fees::ChargeService.new(
+        fees_result = Fees::ChargeService.new(
           invoice: invoice,
           charge: charge,
           subscription: subscription,
           boundaries: boundaries,
         ).current_usage
 
-        fee_result.throw_error unless fee_result.success?
+        fees_result.throw_error unless fees_result.success?
 
-        invoice.fees << fee_result.fee
+        invoice.fees << fees_result.fees
       end
     end
 
