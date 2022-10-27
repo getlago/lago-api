@@ -7,15 +7,15 @@ module Charges
         new(...).apply
       end
 
-      def initialize(charge:, aggregation_result:)
+      def initialize(charge:, aggregation_result:, properties:)
         super(nil)
         @charge = charge
         @aggregation_result = aggregation_result
+        @properties = properties
       end
 
       def apply
         result.units = aggregation_result.aggregation
-        result.group_units = aggregation_result.group_aggregation
         result.count = aggregation_result.count
         result.amount = compute_amount
         result
@@ -23,11 +23,11 @@ module Charges
 
       protected
 
-      attr_accessor :charge, :aggregation_result
+      attr_accessor :charge, :aggregation_result, :properties
 
       delegate :units, to: :result
 
-      def compute_amount(value)
+      def compute_amount
         raise NotImplementedError
       end
     end
