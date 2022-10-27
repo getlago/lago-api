@@ -3,10 +3,11 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      def initialize(billable_metric:, subscription:)
+      def initialize(billable_metric:, subscription:, group: nil)
         super(nil)
         @billable_metric = billable_metric
         @subscription = subscription
+        @group = group
       end
 
       def aggregate(from_date:, to_date:, options: {})
@@ -15,19 +16,19 @@ module BillableMetrics
 
       protected
 
-      attr_accessor :billable_metric, :subscription
+      attr_accessor :billable_metric, :subscription, :group
 
       delegate :customer, to: :subscription
 
       def events_scope(from_date:, to_date:)
-        subscription.events
+        events = subscription.events
           .from_date(from_date)
           .to_date(to_date)
           .where(code: billable_metric.code)
-      end
 
-      def groups
-        billable_metric.selectable_groups.pluck(:key).uniq
+        return events unless group
+
+        events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
       end
 
       def sanitized_name(property)
@@ -38,18 +39,6 @@ module BillableMetrics
 
       def sanitized_field_name
         sanitized_name(billable_metric.field_name)
-      end
-
-      def aggregation_per_group(events, aggregation_select)
-        groups.map do |group|
-          events.select(
-            "(#{aggregation_select}) as group_agg, #{sanitized_name(group)} as group_name",
-          ).group(
-            sanitized_name(group),
-          ).map do |e|
-            { e.group_name => e.group_agg } if e.group_name
-          end.compact
-        end
       end
     end
   end

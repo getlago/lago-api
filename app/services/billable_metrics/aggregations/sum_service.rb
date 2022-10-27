@@ -8,7 +8,6 @@ module BillableMetrics
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
-        result.aggregation_per_group = aggregation_per_group(events, aggregation_select)
         result.count = events.count
         result.options = { running_total: running_total(events, options) }
         result
@@ -16,14 +15,7 @@ module BillableMetrics
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
-      private
-
-      def aggregation_select
-        "sum((#{sanitized_field_name})::numeric)"
-      end
-
       # NOTE: Return cumulative sum of field_name based on the number of free units (per_events or per_total_aggregation).
-      # TODO: Running total per groups :(
       def running_total(events, options)
         free_units_per_events = options[:free_units_per_events].to_i
         free_units_per_total_aggregation = BigDecimal(options[:free_units_per_total_aggregation] || 0)
