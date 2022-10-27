@@ -13,17 +13,17 @@ module Fees
     def create
       return result if already_billed?
 
-      init_fee
+      init_fees
       return result unless result.success?
 
-      result.fee.save!
+      result.fees.each(&:save!)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
 
     def current_usage
-      init_fee
+      init_fees
     end
 
     private
@@ -34,8 +34,19 @@ module Fees
     delegate :billable_metric, to: :charge
     delegate :plan, to: :subscription
 
-    def init_fee
-      amount_result = compute_amount
+    def init_fees
+      result.fees = []
+      return init_fee(properties: charge.properties) if charge.group_properties.blank?
+
+      charge.group_properties.each do |group_properties|
+        group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
+        init_fee(properties: group_properties.values, group: group)
+      end
+      result
+    end
+
+    def init_fee(properties:, group: nil)
+      amount_result = compute_amount(properties: properties, group: group)
       return result.fail_with_error!(amount_result.error) unless amount_result.success?
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
@@ -60,38 +71,38 @@ module Fees
       )
 
       new_fee.compute_vat
-      result.fee = new_fee
+      result.fees << new_fee
       result
     end
 
-    def compute_amount
-      aggregation_result = aggregator.aggregate(
+    def compute_amount(properties:, group: nil)
+      aggregation_result = aggregator(group: group).aggregate(
         from_date: boundaries.charges_from_date,
         to_date: boundaries.charges_to_date,
-        options: options,
+        options: options(properties),
       )
       return aggregation_result unless aggregation_result.success?
 
-      apply_charge_model_service(aggregation_result)
+      apply_charge_model_service(aggregation_result, properties)
     end
 
-    def options
+    def options(properties)
       {
-        free_units_per_events: charge.properties['free_units_per_events'].to_i,
-        free_units_per_total_aggregation: BigDecimal(charge.properties['free_units_per_total_aggregation'] || 0),
+        free_units_per_events: properties['free_units_per_events'].to_i,
+        free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
       }
     end
 
     def already_billed?
-      existing_fee = invoice.fees.find_by(charge_id: charge.id, subscription_id: subscription.id)
-      return false unless existing_fee
+      existing_fees = invoice.fees.where(charge_id: charge.id, subscription_id: subscription.id)
+      return false if existing_fees.blank?
 
-      result.fee = existing_fee
+      result.fees = existing_fees
       true
     end
 
-    def aggregator
-      return @aggregator if @aggregator
+    def aggregator(group:)
+      return @aggregator if @aggregator && !group
 
       aggregator_service = case billable_metric.aggregation_type.to_sym
                            when :count_agg
@@ -108,12 +119,14 @@ module Fees
                              raise(NotImplementedError)
       end
 
-      @aggregator = aggregator_service.new(billable_metric: billable_metric, subscription: subscription)
+      @aggregator = aggregator_service.new(
+        billable_metric: billable_metric,
+        subscription: subscription,
+        group: group,
+      )
     end
 
-    def apply_charge_model_service(aggregation_result)
-      return @charge_model if @charge_model
-
+    def apply_charge_model_service(aggregation_result, properties)
       model_service = case charge.charge_model.to_sym
                       when :standard
                         Charges::ChargeModels::StandardService
@@ -129,7 +142,11 @@ module Fees
                         raise(NotImplementedError)
       end
 
-      @charge_model = model_service.apply(charge: charge, aggregation_result: aggregation_result)
+      model_service.apply(
+        charge: charge,
+        aggregation_result: aggregation_result,
+        properties: properties,
+      )
     end
   end
 end
