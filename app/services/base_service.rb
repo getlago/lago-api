@@ -112,7 +112,7 @@ class BaseService
 
   def initialize(current_user = nil)
     @result = Result.new
-    @source = CurrentContext.source
+    @source = CurrentContext&.source
     result.user = current_user
   end
 
