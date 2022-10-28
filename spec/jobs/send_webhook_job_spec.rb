@@ -3,6 +3,8 @@
 require 'rails_helper'
 
 RSpec.describe SendWebhookJob, type: :job do
+  subject { described_class }
+
   let(:webhook_invoice_service) { instance_double(Webhooks::InvoicesService) }
   let(:webhook_add_on_service) { instance_double(Webhooks::AddOnService) }
   let(:webhook_event_service) { instance_double(Webhooks::EventService) }
@@ -18,7 +20,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook invoice service' do
-      described_class.perform_now(:invoice, invoice)
+      subject.perform_now(:invoice, invoice)
 
       expect(Webhooks::InvoicesService).to have_received(:new)
       expect(webhook_invoice_service).to have_received(:call)
@@ -34,7 +36,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook invoice service' do
-      described_class.perform_now(:add_on, invoice)
+      subject.perform_now(:add_on, invoice)
 
       expect(Webhooks::AddOnService).to have_received(:new)
       expect(webhook_add_on_service).to have_received(:call)
@@ -62,7 +64,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(:event, object)
+      subject.perform_now(:event, object)
 
       expect(Webhooks::EventService).to have_received(:new)
       expect(webhook_event_service).to have_received(:call)
@@ -89,7 +91,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(
+      subject.perform_now(
         :payment_provider_invoice_payment_error,
         invoice,
         webhook_options,
@@ -112,7 +114,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(
+      subject.perform_now(
         :payment_provider_customer_created,
         customer,
       )
@@ -134,7 +136,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook service' do
-      described_class.perform_now(
+      subject.perform_now(
         :payment_provider_customer_checkout_url,
         customer,
         checkout_url: 'https://example.com',
@@ -166,7 +168,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(
+      subject.perform_now(
         :payment_provider_customer_error,
         customer,
         webhook_options,
@@ -189,7 +191,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook service' do
-      described_class.perform_now(
+      subject.perform_now(
         'credit_note.created',
         credit_note,
       )
@@ -211,7 +213,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook service' do
-      described_class.perform_now(
+      subject.perform_now(
         'credit_note.generated',
         credit_note,
       )
@@ -223,7 +225,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
-      expect { described_class.perform_now(:subscription, invoice) }
+      expect { subject.perform_now(:subscription, invoice) }
         .to raise_error(NotImplementedError)
     end
   end

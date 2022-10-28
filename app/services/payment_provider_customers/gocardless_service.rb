@@ -46,12 +46,15 @@ module PaymentProviderCustomers
       @organization ||= customer.organization
     end
 
-    def access_token
-      organization.gocardless_payment_provider.access_token
+    def gocardless_payment_provider
+      @gocardless_payment_provider || organization.gocardless_payment_provider
     end
 
     def client
-      @client || GoCardlessPro::Client.new(access_token: access_token, environment: :sandbox)
+      @client || GoCardlessPro::Client.new(
+        access_token: gocardless_payment_provider.access_token,
+        environment: gocardless_payment_provider.environment,
+      )
     end
 
     def create_gocardless_customer
@@ -109,8 +112,8 @@ module PaymentProviderCustomers
     def create_billing_request_flow(billing_request_id)
       client.billing_request_flows.create(
         params: {
-          redirect_uri: 'https://gocardless.com/',
-          exit_uri: 'https://gocardless.com/',
+          redirect_uri: PaymentProviders::GocardlessProvider::BILLING_REQUEST_REDIRECT_URL,
+          exit_uri: PaymentProviders::GocardlessProvider::BILLING_REQUEST_REDIRECT_URL,
           links: {
             billing_request: billing_request_id,
           },
