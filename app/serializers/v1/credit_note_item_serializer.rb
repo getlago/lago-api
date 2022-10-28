@@ -7,6 +7,8 @@ module V1
         lago_id: model.id,
         credit_amount_cents: model.credit_amount_cents,
         credit_amount_currency: model.credit_amount_currency,
+        refund_amount_cents: model.refund_amount_cents,
+        refund_amount_currency: model.refund_amount_currency,
         fee: fee,
       }
     end
