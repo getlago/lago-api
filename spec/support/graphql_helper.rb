@@ -54,4 +54,11 @@ module GraphQLHelper
       message: :unprocessable_entity,
     )
   end
+
+  def expect_not_found(result)
+    expect_graphql_error(
+      result: result,
+      message: :not_found,
+    )
+  end
 end
