@@ -38,4 +38,16 @@ namespace :invoices do
       )
     end
   end
+
+  desc 'Set currency to fees'
+  task set_currency_to_fees: :environment do
+    Invoice.find_each do |invoice|
+      invoice.fees.each do |fee|
+        fee.update(
+          amount_currency: invoice.currency,
+          vat_amount_currency: invoice.currency,
+        )
+      end
+    end
+  end
 end
