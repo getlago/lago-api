@@ -37,6 +37,9 @@ module Invoices
         @invoice = Invoice.new(
           customer: subscription.customer,
           issuing_date: boundaries[:issuing_date],
+          amount_currency: plan.amount_currency,
+          vat_amount_currency: plan.amount_currency,
+          total_amount_currency: plan.amount_currency,
         )
 
         add_charge_fees
@@ -97,11 +100,8 @@ module Invoices
 
     def compute_amounts
       invoice.amount_cents = invoice.fees.sum(&:amount_cents)
-      invoice.amount_currency = plan.amount_currency
       invoice.vat_amount_cents = invoice.fees.sum(&:vat_amount_cents)
-      invoice.vat_amount_currency = plan.amount_currency
       invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-      invoice.total_amount_currency = plan.amount_currency
     end
 
     def cache_key
