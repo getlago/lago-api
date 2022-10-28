@@ -79,6 +79,32 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
           expect(service_result.persisted_event.removed_at.to_s).to eq(event.timestamp.to_s)
         end
       end
+
+      context 'with already removed and an active events' do
+        before do
+          create(
+            :persisted_event,
+            customer: event.customer,
+            billable_metric: billable_metric,
+            external_subscription_id: event.subscription.external_id,
+            external_id: 'ext_12345',
+            removed_at: (Time.current - 1.hour).to_i,
+          )
+
+          persisted_event
+        end
+
+        it 'updates the active persisted metric' do
+          aggregate_failures do
+            service_result
+
+            expect(service_result).to be_success
+
+            expect(service_result.persisted_event).to eq(persisted_event)
+            expect(service_result.persisted_event.removed_at.to_s).to eq(event.timestamp.to_s)
+          end
+        end
+      end
     end
   end
 
