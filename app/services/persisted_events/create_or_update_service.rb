@@ -50,7 +50,10 @@ module PersistedEvents
         billable_metric_id: matching_billable_metric.id,
         external_subscription_id: subscription.external_id,
         external_id: event.properties[matching_billable_metric.field_name],
+        removed_at: nil,
       )
+
+      return if metric.blank?
 
       metric.update!(removed_at: event.timestamp)
       metric
