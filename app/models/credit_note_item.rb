@@ -10,7 +10,12 @@ class CreditNoteItem < ApplicationRecord
 
   validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
-  def total_amount_cents
-    credit_amount_cents # TODO: will take refund amount into account
+  def currency
+    credit_amount_currency
   end
+
+  def total_amount_cents
+    credit_amount_cents + refund_amount_cents
+  end
+  alias total_amount_currency currency
 end

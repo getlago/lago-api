@@ -19,6 +19,7 @@ class Fee < ApplicationRecord
 
   monetize :amount_cents
   monetize :vat_amount_cents
+  monetize :total_amount_cents
 
   FEE_TYPES = %i[charge add_on subscription credit].freeze
 
@@ -52,4 +53,13 @@ class Fee < ApplicationRecord
 
     subscription.plan.name
   end
+
+  def currency
+    amount_currency
+  end
+
+  def total_amount_cents
+    amount_cents + vat_amount_cents
+  end
+  alias total_amount_currency currency
 end
