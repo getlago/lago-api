@@ -6,5 +6,7 @@ FactoryBot.define do
     fee
     credit_amount_cents { 100 }
     credit_amount_currency { 'EUR' }
+    refund_amount_cents { 100 }
+    refund_amount_currency { 'EUR' }
   end
 end

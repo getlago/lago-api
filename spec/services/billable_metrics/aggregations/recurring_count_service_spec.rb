@@ -4,7 +4,11 @@ require 'rails_helper'
 
 RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :service do
   subject(:recurring_service) do
-    described_class.new(billable_metric: billable_metric, subscription: subscription)
+    described_class.new(
+      billable_metric: billable_metric,
+      subscription: subscription,
+      group: group,
+    )
   end
 
   let(:subscription) do
@@ -20,6 +24,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
   let(:started_at) { subscription_date }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
+  let(:group) { nil }
 
   let(:billable_metric) do
     create(
@@ -374,6 +379,59 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             expect(item.total_duration).to eq(31)
           end
         end
+      end
+    end
+
+    context 'when group is given' do
+      let(:group) do
+        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+      end
+
+      before do
+        create(
+          :persisted_event,
+          customer: customer,
+          added_at: added_at,
+          removed_at: removed_at,
+          external_subscription_id: subscription.external_id,
+          billable_metric: billable_metric,
+          properties: {
+            total_count: 12,
+            region: 'europe',
+          },
+        )
+
+        create(
+          :persisted_event,
+          customer: customer,
+          added_at: added_at,
+          removed_at: removed_at,
+          external_subscription_id: subscription.external_id,
+          billable_metric: billable_metric,
+          properties: {
+            total_count: 8,
+            region: 'europe',
+          },
+        )
+
+        create(
+          :persisted_event,
+          customer: customer,
+          added_at: added_at,
+          removed_at: removed_at,
+          external_subscription_id: subscription.external_id,
+          billable_metric: billable_metric,
+          properties: {
+            total_count: 8,
+            region: 'africa',
+          },
+        )
+      end
+
+      it 'aggregates the events' do
+        result = recurring_service.aggregate(from_date: from_date, to_date: to_date)
+
+        expect(result.aggregation).to eq(2)
       end
     end
   end

@@ -22,4 +22,19 @@ namespace :events do
       event.update!(subscription_id: subscription.id)
     end
   end
+
+  desc 'Fill missing properties on persisted_events'
+  task fill_persisted_properties: :environment do
+    PersistedEvent.find_each do |persisted_event|
+      event = Event.where(
+        organization_id: persisted_event.billable_metric.organization_id,
+        customer_id: persisted_event.customer_id,
+      ).where(
+        "properties -> '#{persisted_event.billable_metric.field_name}' = ?",
+        persisted_event.external_id,
+      ).first
+
+      persisted_event.update!(properties: event.properties)
+    end
+  end
 end

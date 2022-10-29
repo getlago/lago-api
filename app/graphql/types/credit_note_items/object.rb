@@ -6,8 +6,13 @@ module Types
       graphql_name 'CreditNoteItem'
 
       field :id, ID, null: false
+
       field :credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_amount_currency, Types::CurrencyEnum, null: false
+
+      field :refund_amount_cents, GraphQL::Types::BigInt, null: false
+      field :refund_amount_currency, Types::CurrencyEnum, null: false
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :fee, Types::Fees::Object, null: false

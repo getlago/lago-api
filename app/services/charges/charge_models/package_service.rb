@@ -14,15 +14,15 @@ module Charges
         #       It's rounded up, because a group counts from its first unit
         package_count = billed_units.fdiv(package_size).ceil
 
-        package_count * BigDecimal(charge.properties['amount'])
+        package_count * BigDecimal(properties['amount'])
       end
 
       def free_units
-        charge.properties['free_units'] || 0
+        properties['free_units'] || 0
       end
 
       def package_size
-        charge.properties['package_size']
+        properties['package_size']
       end
     end
   end

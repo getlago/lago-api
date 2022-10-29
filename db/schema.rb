@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
+ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -138,6 +138,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
     t.string "credit_amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "refund_amount_cents", default: 0, null: false
+    t.string "refund_amount_currency"
     t.index ["credit_note_id"], name: "index_credit_note_items_on_credit_note_id"
     t.index ["fee_id"], name: "index_credit_note_items_on_fee_id"
   end
@@ -149,7 +151,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
     t.string "number", null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency", null: false
-    t.integer "credit_status", default: 0, null: false
+    t.integer "credit_status"
     t.bigint "balance_amount_cents", default: 0, null: false
     t.string "balance_amount_currency", default: "0", null: false
     t.integer "reason", null: false
@@ -158,6 +160,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
     t.datetime "updated_at", null: false
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency", null: false
+    t.bigint "refund_amount_cents", default: 0, null: false
+    t.string "refund_amount_currency"
+    t.integer "refund_status"
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
@@ -235,10 +240,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
+    t.integer "events_count"
     t.integer "fee_type"
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
-    t.integer "events_count"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
@@ -393,6 +398,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_18_144521) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "billable_metric_id"
+    t.jsonb "properties", default: {}, null: false
     t.index ["billable_metric_id"], name: "index_persisted_events_on_billable_metric_id"
     t.index ["customer_id", "external_subscription_id", "billable_metric_id"], name: "index_search_persisted_events"
     t.index ["customer_id"], name: "index_persisted_events_on_customer_id"

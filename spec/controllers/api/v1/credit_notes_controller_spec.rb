@@ -3,11 +3,23 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::CreditNotesController, type: :request do
-  let(:invoice) { create(:invoice) }
   let(:organization) { invoice.organization }
   let(:customer) { invoice.customer }
   let(:credit_note) { create(:credit_note, invoice: invoice, customer: customer) }
   let(:credit_note_items) { create_list(:credit_note_item, 2, credit_note: credit_note) }
+
+  let(:invoice) do
+    create(
+      :invoice,
+      status: 'succeeded',
+      amount_cents: 100,
+      amount_currency: 'EUR',
+      vat_amount_cents: 120,
+      vat_amount_currency: 'EUR',
+      total_amount_cents: 120,
+      total_amount_currency: 'EUR',
+    )
+  end
 
   describe 'GET /credit_notes/:id' do
     before { credit_note_items }
@@ -102,6 +114,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
       it 'returns not found' do
         post_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}/download")
+
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
@@ -154,6 +168,77 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           expect(json[:credit_notes].count).to eq(1)
           expect(json[:credit_notes].first[:lago_id]).to eq(credit_note.id)
         end
+      end
+    end
+  end
+
+  describe 'POST /credit_notes' do
+    let(:fee1) { create(:fee, invoice: invoice) }
+    let(:fee2) { create(:charge_fee, invoice: invoice) }
+
+    let(:invoice_id) { invoice.id }
+
+    let(:create_params) do
+      {
+        invoice_id: invoice_id,
+        reason: 'duplicated_charge',
+        items: [
+          {
+            fee_id: fee1.id,
+            credit_amount_cents: 10,
+            refund_amount_cents: 5,
+          },
+          {
+            fee_id: fee2.id,
+            credit_amount_cents: 5,
+            refund_amount_cents: 10,
+          },
+        ],
+      }
+    end
+
+    it 'creates a credit note' do
+      post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:credit_note][:lago_id]).to be_present
+        expect(json[:credit_note][:credit_status]).to eq('available')
+        expect(json[:credit_note][:refund_status]).to eq('pending')
+        expect(json[:credit_note][:reason]).to eq('duplicated_charge')
+        expect(json[:credit_note][:total_amount_cents]).to eq(30)
+        expect(json[:credit_note][:total_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:credit_amount_cents]).to eq(15)
+        expect(json[:credit_note][:credit_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:balance_amount_cents]).to eq(15)
+        expect(json[:credit_note][:balance_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:refund_amount_cents]).to eq(15)
+        expect(json[:credit_note][:refund_amount_currency]).to eq('EUR')
+
+        expect(json[:credit_note][:items][0][:lago_id]).to be_present
+        expect(json[:credit_note][:items][0][:credit_amount_cents]).to eq(10)
+        expect(json[:credit_note][:items][0][:credit_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][0][:refund_amount_cents]).to eq(5)
+        expect(json[:credit_note][:items][0][:refund_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][0][:fee][:lago_id]).to eq(fee1.id)
+
+        expect(json[:credit_note][:items][1][:lago_id]).to be_present
+        expect(json[:credit_note][:items][1][:credit_amount_cents]).to eq(5)
+        expect(json[:credit_note][:items][1][:credit_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][1][:refund_amount_cents]).to eq(10)
+        expect(json[:credit_note][:items][1][:refund_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
+      end
+    end
+
+    context 'when invoice is not found' do
+      let(:invoice_id) { 'foo_id' }
+
+      it 'returns not found' do
+        post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

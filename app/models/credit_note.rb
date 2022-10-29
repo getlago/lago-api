@@ -21,10 +21,20 @@ class CreditNote < ApplicationRecord
   monetize :refund_amount_cents
   monetize :vat_amount_cents
 
+  # NOTE: Status of the credit part
+  # - available: a credit amount remain available
+  # - consumed: the credit amount was totaly consumed
   CREDIT_STATUS = %i[available consumed].freeze
+
+  # NOTE: Status of the refund part
+  # - pending: the refund is pending for its execution
+  # - refunded: the refund has been executed
+  REFUND_STATUS = %i[pending refunded].freeze
+
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
 
   enum credit_status: CREDIT_STATUS
+  enum refund_status: REFUND_STATUS
   enum reason: REASON
 
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) }
@@ -45,10 +55,6 @@ class CreditNote < ApplicationRecord
 
   def refunded?
     refund_amount_cents.positive?
-  end
-
-  def refund_amount_cents
-    0 # TODO: will change in credit note phase 2
   end
 
   def vat_amount_cents

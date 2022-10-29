@@ -9,18 +9,8 @@ module BillableMetrics
 
         result.aggregation = events.count("DISTINCT (#{sanitized_field_name})")
         result.count = events.count
+        result.options = {}
         result
-      end
-
-      private
-
-      def sanitized_field_name
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          [
-            'events.properties->>?',
-            billable_metric.field_name,
-          ],
-        )
       end
     end
   end

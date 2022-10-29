@@ -4,7 +4,11 @@ require 'rails_helper'
 
 RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   subject(:apply_percentage_service) do
-    described_class.apply(charge: charge, aggregation_result: aggregation_result)
+    described_class.apply(
+      charge: charge,
+      aggregation_result: aggregation_result,
+      properties: charge.properties,
+    )
   end
 
   before do
@@ -46,7 +50,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   context 'when fixed amount value is 0' do
     it 'returns expected percentage amount' do
       expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount)
+        (expected_percentage_amount + expected_fixed_amount),
       )
     end
   end
@@ -58,7 +62,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
 
     it 'returns expected percentage amount' do
       expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount)
+        (expected_percentage_amount + expected_fixed_amount),
       )
     end
   end
@@ -70,7 +74,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
 
     it 'returns expected percentage amount' do
       expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount)
+        (expected_percentage_amount + expected_fixed_amount),
       )
     end
   end
@@ -85,7 +89,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
 
     it 'returns expected percentage amount' do
       expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount)
+        (expected_percentage_amount + expected_fixed_amount),
       )
     end
   end
@@ -97,8 +101,18 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
 
     it 'returns expected percentage amount based on last running total' do
       expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount)
+        (expected_percentage_amount + expected_fixed_amount),
       )
+    end
+  end
+
+  context 'when free_units_count > number of events' do
+    let(:free_units_per_events) { 5 }
+    let(:free_units_per_total_aggregation) { nil }
+    let(:aggregation) { 400 }
+
+    it 'returns 0' do
+      expect(apply_percentage_service.amount).to eq(0)
     end
   end
 end

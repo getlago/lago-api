@@ -26,7 +26,7 @@ Rails.application.routes.draw do
       get '/billable_metrics/:code/groups', to: 'billable_metrics/groups#index', as: 'billable_metric_groups'
 
       resources :coupons, param: :code
-      resources :credit_notes, only: %i[show index] do
+      resources :credit_notes, only: %i[create show index] do
         post :download, on: :member
       end
       resources :events, only: %i[create show]

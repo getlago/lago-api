@@ -87,4 +87,18 @@ RSpec.describe Fee, type: :model do
       end
     end
   end
+
+  describe '#total_amount_cents' do
+    let(:fee) { create(:fee, amount_cents: 100, vat_amount_cents: 20) }
+
+    it 'returns the sum of amount and vat' do
+      expect(fee.total_amount_cents).to eq(120)
+    end
+  end
+
+  describe '#total_amount_currency' do
+    let(:fee) { create(:fee, amount_currency: 'EUR') }
+
+    it { expect(fee.total_amount_currency).to eq('EUR') }
+  end
 end

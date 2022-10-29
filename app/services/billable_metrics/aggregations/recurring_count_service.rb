@@ -8,6 +8,8 @@ module BillableMetrics
         @to_date = to_date
 
         result.aggregation = compute_aggregation.ceil(5)
+        result.count = result.aggregation
+        result.options = {}
         result
       end
 
@@ -29,9 +31,7 @@ module BillableMetrics
       attr_reader :from_date, :to_date
 
       def compute_aggregation
-        ActiveRecord::Base.connection
-          .execute(aggregation_query)
-          .first['aggregation_result']
+        ActiveRecord::Base.connection.execute(aggregation_query).first['aggregation_result']
       end
 
       def aggregation_query
@@ -53,7 +53,7 @@ module BillableMetrics
             )
             .to_sql,
 
-          # # NOTE: Added and then removed during the period
+          # NOTE: Added and then removed during the period
           added_and_removed
             .select(
               "SUM((DATE(persisted_events.removed_at) - DATE(persisted_events.added_at) + 1)::numeric / #{period_duration})::numeric",
@@ -64,10 +64,14 @@ module BillableMetrics
       end
 
       def base_scope
-        PersistedEvent
+        persisted_events = PersistedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.external_id)
+
+        return persisted_events unless group
+
+        persisted_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
       end
 
       # NOTE: Full period duration to take upgrade, terminate

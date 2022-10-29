@@ -9,20 +9,10 @@ module BillableMetrics
 
         result.aggregation = events.maximum("(#{sanitized_field_name})::numeric") || 0
         result.count = events.count
+        result.options = {}
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
-      end
-
-      private
-
-      def sanitized_field_name
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          [
-            'events.properties->>?',
-            billable_metric.field_name,
-          ],
-        )
       end
     end
   end

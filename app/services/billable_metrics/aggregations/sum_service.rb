@@ -15,17 +15,6 @@ module BillableMetrics
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
-      private
-
-      def sanitized_field_name
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          [
-            'events.properties->>?',
-            billable_metric.field_name,
-          ],
-        )
-      end
-
       # NOTE: Return cumulative sum of field_name based on the number of free units (per_events or per_total_aggregation).
       def running_total(events, options)
         free_units_per_events = options[:free_units_per_events].to_i
