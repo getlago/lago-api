@@ -18,10 +18,6 @@ module PaymentProviderCustomers
         provider_customer.provider_customer_id = params[:provider_customer_id].presence
       end
 
-      if (params || {}).key?(:provider_mandate_id)
-        provider_customer.provider_mandate_id = params[:provider_mandate_id].presence
-      end
-
       if (params || {}).key?(:sync_with_provider)
         provider_customer.sync_with_provider = params[:sync_with_provider].presence
       end

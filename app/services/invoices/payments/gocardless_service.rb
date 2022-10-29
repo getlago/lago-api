@@ -26,7 +26,7 @@ module Invoices
 
         payment = Payment.new(
           invoice: invoice,
-          payment_provider_id: organization.gocardless_payment_provider.id,
+          payment_provider_id: gocardless_payment_provider.id,
           payment_provider_customer_id: customer.gocardless_customer.id,
           amount_cents: gocardless_result.amount,
           amount_currency: gocardless_result.currency&.upcase,
@@ -72,19 +72,36 @@ module Invoices
 
       def should_process_payment?
         return false if invoice.succeeded?
-        return false if organization.gocardless_payment_provider.blank?
-        return false if customer&.gocardless_customer&.provider_customer_id.blank?
-        return false if customer&.gocardless_customer&.provider_mandate_id.blank?
+        return false if gocardless_payment_provider.blank?
 
-        true
+        customer&.gocardless_customer&.provider_customer_id
       end
 
       def client
-        @client ||= GoCardlessPro::Client.new(access_token: access_token, environment: :sandbox)
+        @client ||= GoCardlessPro::Client.new(
+          access_token: gocardless_payment_provider.access_token,
+          environment: gocardless_payment_provider.environment,
+        )
       end
 
-      def access_token
-        organization.gocardless_payment_provider.access_token
+      def gocardless_payment_provider
+        @gocardless_payment_provider ||= organization.gocardless_payment_provider
+      end
+
+      def mandate_id
+        result = client.mandates.list(
+          params: {
+            customer: customer.gocardless_customer.provider_customer_id,
+            status: %w[pending_customer_approval pending_submission submitted active],
+          },
+        )
+
+        mandate = result&.records&.first
+
+        customer.gocardless_customer.provider_mandate_id = mandate&.id
+        customer.gocardless_customer.save!
+
+        mandate&.id
       end
 
       def create_gocardless_payment
@@ -99,7 +116,7 @@ module Invoices
               invoice_issuing_date: invoice.issuing_date.iso8601,
             },
             links: {
-              mandate: customer.gocardless_customer.provider_mandate_id,
+              mandate: mandate_id,
             },
           },
           headers: {

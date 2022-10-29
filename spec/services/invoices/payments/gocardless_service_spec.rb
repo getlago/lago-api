@@ -8,9 +8,11 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
   let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
-  let(:gocardless_customer) { create(:gocardless_customer, customer: customer, provider_mandate_id: '123') }
+  let(:gocardless_customer) { create(:gocardless_customer, customer: customer) }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
+  let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
+  let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
 
   let(:invoice) do
     create(
@@ -28,6 +30,14 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
       allow(GoCardlessPro::Client).to receive(:new)
         .and_return(gocardless_client)
+      allow(gocardless_client).to receive(:mandates)
+        .and_return(gocardless_mandates_service)
+      allow(gocardless_mandates_service).to receive(:list)
+        .and_return(gocardless_list_response)
+      allow(gocardless_list_response).to receive(:records)
+        .and_return([GoCardlessPro::Resources::Mandate.new(
+          'id' => 'mandate_id',
+        )])
       allow(gocardless_client).to receive(:payments)
         .and_return(gocardless_payments_service)
       allow(gocardless_payments_service).to receive(:create)
@@ -41,7 +51,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
-    it 'creates a gocardless payment and a payment' do
+    it 'creates a gocardless payment' do
       result = gocardless_service.create
 
       expect(result).to be_success
@@ -56,6 +66,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.total_amount_currency)
         expect(result.payment.status).to eq('paid_out')
+        expect(gocardless_customer.reload.provider_mandate_id).to eq('mandate_id')
       end
 
       expect(gocardless_payments_service).to have_received(:create)
@@ -150,23 +161,6 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
     context 'when customer does not have a provider customer id' do
       before { gocardless_customer.update!(provider_customer_id: nil) }
-
-      it 'does not creates a gocardless payment' do
-        result = gocardless_service.create
-
-        expect(result).to be_success
-
-        aggregate_failures do
-          expect(result.invoice).to eq(invoice)
-          expect(result.payment).to be_nil
-
-          expect(gocardless_payments_service).not_to have_received(:create)
-        end
-      end
-    end
-
-    context 'when customer does not have a provider mandate id' do
-      before { gocardless_customer.update!(provider_mandate_id: nil) }
 
       it 'does not creates a gocardless payment' do
         result = gocardless_service.create

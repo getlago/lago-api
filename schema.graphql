@@ -2818,6 +2818,7 @@ enum FeeTypesEnum {
 type GocardlessProvider {
   hasAccessToken: Boolean!
   id: ID!
+  webhookSecret: String
 }
 
 type GraduatedRange {
@@ -3511,13 +3512,11 @@ input PropertiesInput {
 type ProviderCustomer {
   id: ID!
   providerCustomerId: ID
-  providerMandateId: String
   syncWithProvider: Boolean
 }
 
 input ProviderCustomerInput {
   providerCustomerId: ID
-  providerMandateId: String
   syncWithProvider: Boolean
 }
 

@@ -14,6 +14,7 @@ module PaymentProviders
       )
 
       gocardless_provider.access_token = access_token if access_token
+      gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50)
       gocardless_provider.save!
 
       result.gocardless_provider = gocardless_provider
