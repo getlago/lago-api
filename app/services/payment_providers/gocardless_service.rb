@@ -5,6 +5,7 @@ module PaymentProviders
     # NOTE: These links will be changed later
     AUTH_SITE = 'https://connect-sandbox.gocardless.com'
     REDIRECT_URI = 'https://proxy.lago.dev/gocardless/callback'
+    PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
 
     def create_or_update(**args)
       access_token = oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
@@ -23,6 +24,43 @@ module PaymentProviders
       result.record_validation_failure!(record: e.record)
     rescue OAuth2::Error => e
       result.service_failure!(code: 'unauthorized', message: e.description)
+    end
+
+    def handle_incoming_webhook(organization_id:, body:, signature:)
+      organization = Organization.find_by(id: organization_id)
+
+      events = GoCardlessPro::Webhook.parse(
+        request_body: body,
+        signature_header: signature,
+        webhook_endpoint_secret: organization&.gocardless_payment_provider&.webhook_secret,
+      )
+
+      PaymentProviders::Gocardless::HandleEventJob.perform_later(
+        events: events.to_json,
+      )
+
+      result.events = events
+      result
+    rescue JSON::ParserError
+      result.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+    rescue GoCardlessPro::Webhook::InvalidSignatureError
+      result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
+    end
+
+    def handle_event(events_json:)
+      events = JSON.parse(events_json)
+      events.each do |event|
+        case event['object']['resource_type']
+        when 'payments'
+          if PAYMENT_ACTIONS.include?(event['object']['action'])
+            Invoices::Payments::GocardlessService
+              .new.update_status(
+                provider_payment_id: event['object']['links']['payment'],
+                status: event['object']['action'],
+              )
+          end
+        end
+      end
     end
 
     private
