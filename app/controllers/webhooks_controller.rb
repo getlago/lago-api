@@ -18,4 +18,22 @@ class WebhooksController < ApplicationController
 
     head(:ok)
   end
+
+  def gocardless
+    result = PaymentProviders::GocardlessService.new.handle_incoming_webhook(
+      organization_id: params[:organization_id],
+      body: request.body.read,
+      signature: request.headers['Webhook-Signature'],
+    )
+
+    unless result.success?
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
+        return head(:bad_request)
+      end
+
+      result.throw_error
+    end
+
+    head(:ok)
+  end
 end
