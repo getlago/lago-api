@@ -4075,7 +4075,7 @@ type Wallet {
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
-  name: String!
+  name: String
   rateAmount: String!
   status: WalletStatusEnum!
   terminatedAt: ISO8601DateTime
@@ -4099,7 +4099,7 @@ type WalletDetails {
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
-  name: String!
+  name: String
   rateAmount: String!
   status: WalletStatusEnum!
   terminatedAt: ISO8601DateTime
