@@ -35,9 +35,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       allow(gocardless_mandates_service).to receive(:list)
         .and_return(gocardless_list_response)
       allow(gocardless_list_response).to receive(:records)
-        .and_return([GoCardlessPro::Resources::Mandate.new(
-          'id' => 'mandate_id',
-        )])
+        .and_return([GoCardlessPro::Resources::Mandate.new('id' => 'mandate_id')])
       allow(gocardless_client).to receive(:payments)
         .and_return(gocardless_payments_service)
       allow(gocardless_payments_service).to receive(:create)
