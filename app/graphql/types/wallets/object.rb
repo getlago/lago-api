@@ -8,7 +8,7 @@ module Types
       field :id, ID, null: false
       field :customer, Types::Customers::Object
 
-      field :name, String, null: false
+      field :name, String, null: true
       field :status, Types::Wallets::StatusEnum, null: false
       field :rate_amount, String, null: false
       field :currency, Types::CurrencyEnum, null: false
