@@ -21,11 +21,13 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
       properties: properties,
       organization: billable_metric.organization,
       code: billable_metric.code,
+      timestamp: event_timestamp,
     )
   end
 
   let(:operation_type) { 'add' }
   let(:external_id) { 'external_id' }
+  let(:event_timestamp) { Time.zone.parse('31 Oct 2022 10:02:00') }
   let(:properties) do
     {
       'operation_type' => operation_type,
@@ -50,6 +52,30 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
           expect(persisted_event.external_id).to eq('ext_12345')
           expect(persisted_event.properties).to eq(event.properties)
           expect(persisted_event.added_at.to_s).to eq(event.timestamp.to_s)
+        end
+      end
+
+      context 'when a persisted metric was removed on the day' do
+        let(:persisted_event) do
+          create(
+            :persisted_event,
+            customer: event.customer,
+            billable_metric: billable_metric,
+            external_subscription_id: event.subscription.external_id,
+            external_id: 'ext_12345',
+            removed_at: Time.zone.parse('31 Oct 2022 09:25:00'),
+          )
+        end
+
+        before { persisted_event }
+
+        it 'reactivate the persisted metric' do
+          aggregate_failures do
+            expect { service_result }.to change(PersistedEvent, :count).by(0)
+
+            expect(service_result).to be_success
+            expect(persisted_event.reload.removed_at).to be_nil
+          end
         end
       end
     end
