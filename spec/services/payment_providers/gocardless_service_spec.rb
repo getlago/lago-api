@@ -123,8 +123,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
     context 'when failing to validate the signature' do
       it 'returns an error' do
         allow(GoCardlessPro::Webhook).to receive(:parse)
-          .and_raise(GoCardlessPro::Webhook::InvalidSignatureError.new('error')
-        )
+          .and_raise(GoCardlessPro::Webhook::InvalidSignatureError.new('error'))
 
         result = gocardless_service.handle_incoming_webhook(
           organization_id: organization.id,
