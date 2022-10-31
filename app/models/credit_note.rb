@@ -84,6 +84,13 @@ class CreditNote < ApplicationRecord
     balance_amount_cents.positive?
   end
 
+  def mark_as_voided!(timestamp: Time.current)
+    update!(
+      credit_status: :voided,
+      voided_at: timestamp,
+    )
+  end
+
   private
 
   def ensure_number

@@ -14,10 +14,7 @@ module CreditNotes
       result.credit_note = credit_note
       return result.not_allowed_failure!(code: 'no_voidable_amount') unless credit_note.voidable?
 
-      credit_note.update!(
-        credit_status: :voided,
-        voided_at: Time.current,
-      )
+      credit_note.mark_as_voided!
 
       result
     end
