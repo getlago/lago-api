@@ -8,6 +8,7 @@ module Api
           invoice: current_organization.invoices.find_by(id: input_params[:invoice_id]),
           reason: input_params[:reason],
           items_attr: input_params[:items],
+          description: input_params[:description],
         )
         result = service.call
 
@@ -83,6 +84,7 @@ module Api
           .permit(
             :invoice_id,
             :reason,
+            :description,
             items: [
               :fee_id,
               :credit_amount_cents,

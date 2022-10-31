@@ -182,6 +182,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       {
         invoice_id: invoice_id,
         reason: 'duplicated_charge',
+        description: 'Duplicated charge',
         items: [
           {
             fee_id: fee1.id,
@@ -207,6 +208,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_note][:credit_status]).to eq('available')
         expect(json[:credit_note][:refund_status]).to eq('pending')
         expect(json[:credit_note][:reason]).to eq('duplicated_charge')
+        expect(json[:credit_note][:description]).to eq('Duplicated charge')
         expect(json[:credit_note][:total_amount_cents]).to eq(30)
         expect(json[:credit_note][:total_amount_currency]).to eq('EUR')
         expect(json[:credit_note][:credit_amount_cents]).to eq(15)

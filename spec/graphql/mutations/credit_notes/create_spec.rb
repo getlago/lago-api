@@ -30,6 +30,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
           creditStatus
           refundStatus
           reason
+          description
           totalAmountCents
           totalAmountCurrency
           creditAmountCents
@@ -60,6 +61,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
         input: {
           reason: 'duplicated_charge',
           invoiceId: invoice.id,
+          description: 'Duplicated charge',
           items: [
             {
               feeId: fee1.id,
@@ -83,6 +85,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
       expect(result_data['creditStatus']).to eq('available')
       expect(result_data['refundStatus']).to eq('pending')
       expect(result_data['reason']).to eq('duplicated_charge')
+      expect(result_data['description']).to eq('Duplicated charge')
       expect(result_data['totalAmountCents']).to eq('30')
       expect(result_data['totalAmountCurrency']).to eq('EUR')
       expect(result_data['creditAmountCents']).to eq('15')
