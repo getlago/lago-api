@@ -1635,6 +1635,7 @@ input CreateCreditNoteInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  description: String
   invoiceId: ID!
   items: [CreditNoteItemInput!]!
   reason: CreditNoteReasonEnum!
@@ -1756,6 +1757,7 @@ type CreditNote {
   creditAmountCents: BigInt!
   creditAmountCurrency: CurrencyEnum!
   creditStatus: CreditNoteCreditStatusEnum
+  description: String
   fileUrl: String
   id: ID!
   invoice: Invoice

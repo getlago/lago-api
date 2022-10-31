@@ -12,6 +12,7 @@ module Types
       field :credit_status, Types::CreditNotes::CreditStatusTypeEnum, null: true
       field :refund_status, Types::CreditNotes::RefundStatusTypeEnum, null: true
       field :reason, Types::CreditNotes::ReasonTypeEnum, null: false
+      field :description, String, null: true
 
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_currency, Types::CurrencyEnum, null: false

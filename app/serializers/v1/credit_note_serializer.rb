@@ -12,6 +12,7 @@ module V1
         credit_status: model.credit_status,
         refund_status: model.refund_status,
         reason: model.reason,
+        description: model.description,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.total_amount_currency,
         balance_amount_cents: model.balance_amount_cents,
