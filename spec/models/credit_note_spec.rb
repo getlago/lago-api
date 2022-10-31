@@ -220,4 +220,27 @@ RSpec.describe CreditNote, type: :model do
       end
     end
   end
+
+  describe '#voidable?' do
+    let(:credit_note) do
+      create(:credit_note, balance_amount_cents: balance_amount_cents, credit_status: credit_status)
+    end
+
+    let(:balance_amount_cents) { 10 }
+    let(:credit_status) { :available }
+
+    it { expect(credit_note).to be_voidable }
+
+    context 'when balance is consumed' do
+      let(:balance_amount_cents) { 0 }
+
+      it { expect(credit_note).not_to be_voidable }
+    end
+
+    context 'when already voided' do
+      let(:credit_status) { :voided }
+
+      it { expect(credit_note).not_to be_voidable }
+    end
+  end
 end
