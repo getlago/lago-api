@@ -33,6 +33,14 @@ module Types
 
       field :invoice, Types::Invoices::Object
       field :items, [Types::CreditNoteItems::Object], null: false
+
+      field :can_be_voided, Boolean, null: false do
+        description 'Check if credit note can be voided'
+      end
+
+      def can_be_voided
+        object.voidable?
+      end
     end
   end
 end
