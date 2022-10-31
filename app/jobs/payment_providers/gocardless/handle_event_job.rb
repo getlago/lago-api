@@ -5,8 +5,8 @@ module PaymentProviders
     class HandleEventJob < ApplicationJob
       queue_as 'providers'
 
-      def perform(events:)
-        result = PaymentProviders::GocardlessService.new.handle_event(events_json: events)
+      def perform(events_json:)
+        result = PaymentProviders::GocardlessService.new.handle_event(events_json: events_json)
         result.throw_error
       end
     end

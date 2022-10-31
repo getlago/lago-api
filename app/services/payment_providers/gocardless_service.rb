@@ -35,9 +35,7 @@ module PaymentProviders
         webhook_endpoint_secret: organization&.gocardless_payment_provider&.webhook_secret,
       )
 
-      PaymentProviders::Gocardless::HandleEventJob.perform_later(
-        events: events.to_json,
-      )
+      PaymentProviders::Gocardless::HandleEventJob.perform_later(events_json: body)
 
       result.events = events
       result
@@ -48,15 +46,16 @@ module PaymentProviders
     end
 
     def handle_event(events_json:)
-      events = JSON.parse(events_json)
-      events.each do |event|
-        case event['object']['resource_type']
+      events = JSON.parse(events_json)['events']
+      parsed_events = events.map { |event| GoCardlessPro::Resources::Event.new(event) }
+      parsed_events.each do |event|
+        case event.resource_type
         when 'payments'
-          if PAYMENT_ACTIONS.include?(event['object']['action'])
+          if PAYMENT_ACTIONS.include?(event.action)
             Invoices::Payments::GocardlessService
               .new.update_status(
-                provider_payment_id: event['object']['links']['payment'],
-                status: event['object']['action'],
+                provider_payment_id: event.links.payment,
+                status: event.action,
               )
           end
         end
