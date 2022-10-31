@@ -4,6 +4,7 @@ module V1
   class OrganizationSerializer < ModelSerializer
     def serialize
       {
+        lago_id: model.id,
         name: model.name,
         created_at: model.created_at.iso8601,
         webhook_url: model.webhook_url,
