@@ -38,6 +38,27 @@ module Api
         )
       end
 
+      def update
+        credit_note = current_organization.credit_notes.find_by(id: params[:id])
+        return not_found_error(resource: 'credit_note') unless credit_note
+
+        result = CreditNotes::UpdateService.new(
+          credit_note: credit_note, **update_params,
+        ).call
+
+        if result.success?
+          render(
+            json: ::V1::CreditNoteSerializer.new(
+              credit_note,
+              root_name: 'credit_note',
+              includes: %i[items],
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def download
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: 'credit_note') unless credit_note
@@ -91,6 +112,10 @@ module Api
               :refund_amount_cents,
             ],
           )
+      end
+
+      def update_params
+        params.require(:credit_note).permit(:refund_status)
       end
     end
   end
