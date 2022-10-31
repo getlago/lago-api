@@ -46,6 +46,34 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
     end
   end
 
+  context 'when name is not present' do
+    it 'creates a wallet' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: nil,
+            rateAmount: '1',
+            paidCredits: '0.00',
+            grantedCredits: '0.00',
+            expirationDate: (Time.zone.now + 1.year).to_date,
+            currency: 'EUR',
+          },
+        },
+      )
+
+      result_data = result['data']['createCustomerWallet']
+
+      aggregate_failures do
+        expect(result_data['id']).to be_present
+        expect(result_data['name']).to be_nil
+      end
+    end
+  end
+
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(
