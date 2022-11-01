@@ -21,6 +21,9 @@ module Invoices
           # NOTE: Apply credits before VAT, will be changed with credit note feature
           legacy: true,
           vat_rate: customer.applicable_vat_rate,
+          amount_currency: currency,
+          vat_amount_currency: currency,
+          total_amount_currency: currency,
         )
 
         subscriptions.each do |subscription|
@@ -37,7 +40,6 @@ module Invoices
         create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-        invoice.total_amount_currency = currency
         invoice.status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.save!
 
@@ -71,9 +73,7 @@ module Invoices
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
-      invoice.amount_currency = currency
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-      invoice.vat_amount_currency = currency
     end
 
     def create_subscription_fee(invoice, subscription, boundaries)
