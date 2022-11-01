@@ -24,12 +24,13 @@ class CreditNote < ApplicationRecord
   # NOTE: Status of the credit part
   # - available: a credit amount remain available
   # - consumed: the credit amount was totaly consumed
-  CREDIT_STATUS = %i[available consumed].freeze
+  CREDIT_STATUS = %i[available consumed voided].freeze
 
   # NOTE: Status of the refund part
   # - pending: the refund is pending for its execution
   # - refunded: the refund has been executed
-  REFUND_STATUS = %i[pending refunded].freeze
+  # - failed: the refund process has failed
+  REFUND_STATUS = %i[pending refunded failed].freeze
 
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
 
@@ -76,6 +77,19 @@ class CreditNote < ApplicationRecord
       .merge(Fee.charge)
       .where(fees: { subscription_id: subscription_id })
       .includes(:fee)
+  end
+
+  def voidable?
+    return false if voided?
+
+    balance_amount_cents.positive?
+  end
+
+  def mark_as_voided!(timestamp: Time.current)
+    update!(
+      credit_status: :voided,
+      voided_at: timestamp,
+    )
   end
 
   private

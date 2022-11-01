@@ -2,10 +2,11 @@
 
 module CreditNotes
   class CreateService < BaseService
-    def initialize(invoice:, items_attr:, reason: :other)
+    def initialize(invoice:, items_attr:, description:, reason: :other)
       @invoice = invoice
       @items_attr = items_attr
       @reason = reason
+      @description = description
 
       super
     end
@@ -22,6 +23,7 @@ module CreditNotes
           refund_amount_currency: invoice.amount_currency,
           balance_amount_currency: invoice.amount_currency,
           reason: reason,
+          description: description,
           credit_status: 'available',
         )
 
@@ -43,7 +45,7 @@ module CreditNotes
 
     private
 
-    attr_accessor :invoice, :items_attr, :reason
+    attr_accessor :invoice, :items_attr, :reason, :description
 
     delegate :credit_note, to: :result
 

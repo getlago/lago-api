@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe CreditNotes::CreateService, type: :service do
-  subject(:create_service) { described_class.new(invoice: invoice, items_attr: items) }
+  subject(:create_service) { described_class.new(invoice: invoice, items_attr: items, description: nil) }
 
   let(:invoice) do
     create(:invoice, amount_currency: 'EUR', amount_cents: 20, total_amount_cents: 20, status: :succeeded)

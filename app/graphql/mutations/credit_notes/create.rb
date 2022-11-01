@@ -11,6 +11,7 @@ module Mutations
 
       argument :reason, Types::CreditNotes::ReasonTypeEnum, required: true
       argument :invoice_id, ID, required: true
+      argument :description, String, required: false
 
       argument :items, [Types::CreditNoteItems::Input], required: true
 
@@ -25,6 +26,7 @@ module Mutations
             invoice: current_organization.invoices.find_by(id: args[:invoice_id]),
             items_attr: args[:items],
             reason: args[:reason],
+            description: args[:description],
           )
           .call
 
