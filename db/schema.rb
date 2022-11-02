@@ -252,8 +252,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
     t.integer "events_count"
+    t.uuid "group_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
+    t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
@@ -529,6 +531,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
   add_foreign_key "events", "subscriptions"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
+  add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
   add_foreign_key "group_properties", "charges", on_delete: :cascade
