@@ -137,13 +137,14 @@ module Invoices
         total_amount_currency: invoice.total_amount_currency,
         vat_amount_cents: invoice.vat_amount_cents,
         vat_amount_currency: invoice.vat_amount_currency,
-        fees: invoice.fees.map do |fee|
+        fees: invoice.fees.group_by(&:charge_id).map do |charge_id, fees|
+          fee = fees.first
           {
-            units: fee.units,
-            amount_cents: fee.amount_cents,
+            units: fees.sum(&:units),
+            amount_cents: fees.sum(&:amount_cents),
             amount_currency: fee.amount_currency,
             charge: {
-              id: fee.charge.id,
+              id: charge_id,
               charge_model: fee.charge.charge_model,
             },
             billable_metric: {
@@ -152,7 +153,16 @@ module Invoices
               code: fee.billable_metric.code,
               aggregation_type: fee.billable_metric.aggregation_type,
             },
-            group: fee.group.presence,
+            groups: fees.map do |f|
+              {
+                id: f.group.id,
+                key: f.group.parent&.value,
+                value: f.group.value,
+                units: f.units,
+                amount_cents: f.amount_cents,
+                amount_currency: f.amount_currency,
+              } if f.group
+            end,
           }
         end,
       }.to_json

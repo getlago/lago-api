@@ -19,7 +19,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
           chargesUsage {
             billableMetric { name code aggregationType }
             charge { chargeModel }
-            group { id key value }
+            groups { id key value units amountCents }
             units
             amountCents
           }
@@ -42,13 +42,13 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
   end
   let(:plan) { create(:plan, interval: 'monthly') }
 
-  let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+  let(:metric) { create(:billable_metric, aggregation_type: 'count_agg') }
   let(:charge) do
     create(
       :graduated_charge,
       plan: subscription.plan,
       charge_model: 'graduated',
-      billable_metric: billable_metric,
+      billable_metric: metric,
       properties: {
         graduated_ranges: [
           {
@@ -72,7 +72,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       organization: organization,
       customer: customer,
       subscription: subscription,
-      code: billable_metric.code,
+      code: metric.code,
       timestamp: Time.zone.now,
     )
   end
@@ -102,8 +102,8 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(usage_response['vatAmountCurrency']).to eq('EUR')
 
       charge_usage = usage_response['chargesUsage'].first
-      expect(charge_usage['billableMetric']['name']).to eq(billable_metric.name)
-      expect(charge_usage['billableMetric']['code']).to eq(billable_metric.code)
+      expect(charge_usage['billableMetric']['name']).to eq(metric.name)
+      expect(charge_usage['billableMetric']['code']).to eq(metric.code)
       expect(charge_usage['billableMetric']['aggregationType']).to eq('count_agg')
       expect(charge_usage['charge']['chargeModel']).to eq('graduated')
       expect(charge_usage['units']).to eq(4.0)
@@ -111,25 +111,54 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     end
   end
 
-  context 'when fee is linked to a group' do
-    it 'returns the group usage for the customer' do
-      group = create(:group, billable_metric: billable_metric)
+  context 'with one dimension group' do
+    let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
+    let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
+    let(:charge) do
       create(
-        :group_property,
-        charge: charge,
-        group: group,
-        values: {
-          graduated_ranges: [
-            {
-              from_value: 0,
-              to_value: nil,
-              per_unit_amount: '0.01',
-              flat_amount: '0.01',
-            },
-          ],
-        },
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric: metric,
+        properties: {},
+        group_properties: [
+          build(
+            :group_property,
+            group: aws,
+            values: { amount: '10', amount_currency: 'EUR' },
+          ),
+          build(
+            :group_property,
+            group: google,
+            values: { amount: '20', amount_currency: 'EUR' },
+          ),
+        ],
+      )
+    end
+
+    before do
+      create_list(
+        :event,
+        3,
+        organization: organization,
+        customer: customer,
+        subscription: subscription,
+        code: metric.code,
+        timestamp: Time.zone.now,
+        properties: { cloud: 'aws' },
       )
 
+      create(
+        :event,
+        organization: organization,
+        customer: customer,
+        subscription: subscription,
+        code: metric.code,
+        timestamp: Time.zone.now,
+        properties: { cloud: 'google' },
+      )
+    end
+
+    it 'returns the group usage for the customer' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -140,11 +169,112 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         },
       )
 
-      group_usage = result['data']['customerUsage']['chargesUsage'][0]['group']
+      charge_usage = result['data']['customerUsage']['chargesUsage'][0]
+      groups_usage = charge_usage['groups']
+
       aggregate_failures do
-        expect(group_usage['id']).to eq(group.id)
-        expect(group_usage['key']).to be_nil
-        expect(group_usage['value']).to eq(group.value)
+        expect(charge_usage['units']).to eq(4)
+        expect(charge_usage['amountCents']).to eq('5000')
+        expect(groups_usage).to match_array(
+          [
+            { 'id' => aws.id, 'key' => nil, 'value' => 'aws', 'units' => 3, 'amountCents' => '3000' },
+            { 'id' => google.id, 'key' => nil, 'value' => 'google', 'units' => 1, 'amountCents' => '2000' },
+          ],
+        )
+      end
+    end
+  end
+
+  context 'with two dimensions group' do
+    let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
+    let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
+    let(:aws_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: aws.id) }
+    let(:aws_france) { create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id) }
+    let(:google_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id) }
+
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric: metric,
+        properties: {},
+        group_properties: [
+          build(
+            :group_property,
+            group: aws_usa,
+            values: { amount: '10', amount_currency: 'EUR' },
+          ),
+          build(
+            :group_property,
+            group: aws_france,
+            values: { amount: '20', amount_currency: 'EUR' },
+          ),
+          build(
+            :group_property,
+            group: google_usa,
+            values: { amount: '30', amount_currency: 'EUR' },
+          ),
+        ],
+      )
+    end
+
+    before do
+      create_list(
+        :event,
+        2,
+        organization: organization,
+        customer: customer,
+        subscription: subscription,
+        code: metric.code,
+        timestamp: Time.zone.now,
+        properties: { cloud: 'aws', region: 'usa' },
+      )
+
+      create(
+        :event,
+        organization: organization,
+        customer: customer,
+        subscription: subscription,
+        code: metric.code,
+        timestamp: Time.zone.now,
+        properties: { cloud: 'aws', region: 'france' },
+      )
+
+      create(
+        :event,
+        organization: organization,
+        customer: customer,
+        subscription: subscription,
+        code: metric.code,
+        timestamp: Time.zone.now,
+        properties: { cloud: 'google', region: 'usa' },
+      )
+    end
+
+    it 'returns the group usage for the customer' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+        variables: {
+          customerId: customer.id,
+          subscriptionId: subscription.id,
+        },
+      )
+
+      charge_usage = result['data']['customerUsage']['chargesUsage'][0]
+      groups_usage = charge_usage['groups']
+
+      aggregate_failures do
+        expect(charge_usage['units']).to eq(4)
+        expect(charge_usage['amountCents']).to eq('7000')
+        expect(groups_usage).to match_array(
+          [
+            { 'id' => aws_usa.id, 'key' => 'aws', 'value' => 'usa', 'units' => 2, 'amountCents' => '2000' },
+            { 'id' => aws_france.id, 'key' => 'aws', 'value' => 'france', 'units' => 1, 'amountCents' => '2000' },
+            { 'id' => google_usa.id, 'key' => 'google', 'value' => 'usa', 'units' => 1, 'amountCents' => '3000' },
+          ],
+        )
       end
     end
   end
