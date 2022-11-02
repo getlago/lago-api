@@ -17,6 +17,15 @@ module V1
           code: model.billable_metric.code,
           aggregation_type: model.billable_metric.aggregation_type,
         },
+        groups: model.groups.map do |group|
+          {
+            lago_id: group.id,
+            key: group.key,
+            value: group.value,
+            units: group.units,
+            amount_cents: group.amount_cents,
+          }
+        end,
       }
     end
   end
