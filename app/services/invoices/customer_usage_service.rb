@@ -152,6 +152,7 @@ module Invoices
               code: fee.billable_metric.code,
               aggregation_type: fee.billable_metric.aggregation_type,
             },
+            group: fee.group.presence,
           }
         end,
       }.to_json
