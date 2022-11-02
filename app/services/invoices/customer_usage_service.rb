@@ -154,15 +154,16 @@ module Invoices
               aggregation_type: fee.billable_metric.aggregation_type,
             },
             groups: fees.map do |f|
+              next unless f.group
+
               {
                 id: f.group.id,
                 key: f.group.parent&.value,
                 value: f.group.value,
                 units: f.units,
                 amount_cents: f.amount_cents,
-                amount_currency: f.amount_currency,
-              } if f.group
-            end,
+              }
+            end.compact,
           }
         end,
       }.to_json
