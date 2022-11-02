@@ -7,18 +7,19 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     <<~GQL
       query($customerId: ID!, $subscriptionId: ID!) {
         customerUsage(customerId: $customerId, subscriptionId: $subscriptionId) {
-          fromDate,
-          toDate,
-          issuingDate,
-          amountCents,
-          amountCurrency,
-          totalAmountCents,
-          totalAmountCurrency,
-          vatAmountCents,
-          vatAmountCurrency,
+          fromDate
+          toDate
+          issuingDate
+          amountCents
+          amountCurrency
+          totalAmountCents
+          totalAmountCurrency
+          vatAmountCents
+          vatAmountCurrency
           chargesUsage {
-            billableMetric { name, code, aggregationType }
+            billableMetric { name code aggregationType }
             charge { chargeModel }
+            group { id key value }
             units
             amountCents
           }
@@ -107,6 +108,44 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(charge_usage['charge']['chargeModel']).to eq('graduated')
       expect(charge_usage['units']).to eq(4.0)
       expect(charge_usage['amountCents']).to eq('5')
+    end
+  end
+
+  context 'when fee is linked to a group' do
+    it 'returns the group usage for the customer' do
+      group = create(:group, billable_metric: billable_metric)
+      create(
+        :group_property,
+        charge: charge,
+        group: group,
+        values: {
+          graduated_ranges: [
+            {
+              from_value: 0,
+              to_value: nil,
+              per_unit_amount: '0.01',
+              flat_amount: '0.01',
+            },
+          ],
+        },
+      )
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: query,
+        variables: {
+          customerId: customer.id,
+          subscriptionId: subscription.id,
+        },
+      )
+
+      group_usage = result['data']['customerUsage']['chargesUsage'][0]['group']
+      aggregate_failures do
+        expect(group_usage['id']).to eq(group.id)
+        expect(group_usage['key']).to be_nil
+        expect(group_usage['value']).to eq(group.value)
+      end
     end
   end
 end

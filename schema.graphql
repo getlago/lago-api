@@ -200,6 +200,7 @@ type ChargeUsage {
   amountCents: BigInt!
   billableMetric: BillableMetric!
   charge: Charge!
+  group: Group
   units: Float!
 }
 

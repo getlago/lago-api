@@ -1793,6 +1793,20 @@
               ]
             },
             {
+              "name": "group",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Group",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "units",
               "description": null,
               "type": {
