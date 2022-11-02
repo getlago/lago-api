@@ -7,6 +7,7 @@ class Fee < ApplicationRecord
   belongs_to :charge, optional: true
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
+  belongs_to :group, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
 
   has_one :customer, through: :subscription
