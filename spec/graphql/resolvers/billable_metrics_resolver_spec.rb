@@ -7,7 +7,14 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
     <<~GQL
       query {
         billableMetrics(limit: 5) {
-          collection { id, name, canBeDeleted, flatGroups }
+          collection {
+            id
+            name
+            canBeDeleted
+            flatGroups {
+              id key value
+            }
+          }
           metadata { currentPage totalCount }
         }
       }
@@ -34,7 +41,7 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
       expect(result['data']['billableMetrics']['collection'].first['id']).to eq(metric.id)
       expect(result['data']['billableMetrics']['collection'].first['canBeDeleted']).to eq(true)
       expect(result['data']['billableMetrics']['collection'].first['flatGroups']).to eq(
-        [{ id: group2.id, key: 'aws', value: 'usa' }],
+        [{ 'id' => group2.id, 'key' => 'aws', 'value' => 'usa' }],
       )
 
       expect(result['data']['billableMetrics']['metadata']['currentPage']).to eq(1)

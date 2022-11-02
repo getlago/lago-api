@@ -133,7 +133,7 @@ type BillableMetric {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
-  flatGroups: [JSON!]
+  flatGroups: [Group!]
   group: JSON
   id: ID!
   name: String!
@@ -157,7 +157,7 @@ type BillableMetricDetail {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
-  flatGroups: [JSON!]
+  flatGroups: [Group!]
   group: JSON
   id: ID!
   name: String!
@@ -2806,6 +2806,7 @@ type Fee implements InvoiceItem {
   charge: Charge
   eventsCount: BigInt
   feeType: FeeTypesEnum!
+  group: Group
   id: ID!
   itemCode: String!
   itemName: String!
@@ -2841,6 +2842,12 @@ input GraduatedRangeInput {
   fromValue: Int!
   perUnitAmount: String!
   toValue: Int
+}
+
+type Group {
+  id: ID!
+  key: String
+  value: String!
 }
 
 type GroupProperties {
@@ -2919,6 +2926,7 @@ Invoice Item
 interface InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  group: Group
   id: ID!
   itemCode: String!
   itemName: String!

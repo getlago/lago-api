@@ -307,16 +307,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 4000,
             vat_amount_cents: 800,
             units: 2,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 5000,
             vat_amount_cents: 1000,
             units: 1,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 4000,
             vat_amount_cents: 800,
             units: 1,
@@ -341,16 +344,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 30_000,
             vat_amount_cents: 6000,
             units: 15,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 60_000,
             vat_amount_cents: 12_000,
             units: 12,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 20_000,
             vat_amount_cents: 4000,
             units: 5,
@@ -375,16 +381,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 20_000,
             vat_amount_cents: 4000,
             units: 10,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 60_000,
             vat_amount_cents: 12_000,
             units: 12,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 20_000,
             vat_amount_cents: 4000,
             units: 5,
@@ -409,16 +418,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 4000,
             vat_amount_cents: 800,
             units: 2,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 5000,
             vat_amount_cents: 1000,
             units: 1,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 4000,
             vat_amount_cents: 800,
             units: 1,
@@ -493,16 +505,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 2000,
             vat_amount_cents: 400,
             units: 1,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 5000,
             vat_amount_cents: 1000,
             units: 1,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 4000,
             vat_amount_cents: 800,
             units: 1,
@@ -617,16 +632,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 10_000,
             vat_amount_cents: 2000,
             units: 2,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 5000,
             vat_amount_cents: 1000,
             units: 1,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 0,
             vat_amount_cents: 0,
             units: 1,
@@ -729,16 +747,19 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 200 + 2 * 2,
             vat_amount_cents: 41,
             units: 2,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 1 * 1,
             vat_amount_cents: 1,
             units: 1,
           )
           expect(created_fees.third).to have_attributes(
+            group: france,
             amount_cents: 100 + 5 * 1,
             vat_amount_cents: 21,
             units: 1,
@@ -841,11 +862,13 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 3,
             vat_amount_cents: 1,
             units: 2,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 4,
             vat_amount_cents: 1,
             units: 1,
@@ -938,11 +961,13 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
+            group: europe,
             amount_cents: 1400,
             vat_amount_cents: 280,
             units: 2,
           )
           expect(created_fees.second).to have_attributes(
+            group: usa,
             amount_cents: 1100,
             vat_amount_cents: 220,
             units: 1,
