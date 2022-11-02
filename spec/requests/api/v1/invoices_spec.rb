@@ -31,6 +31,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'GET /invoices/:id' do
     it 'returns a invoice' do
+      group = create(:group)
+      create(:fee, invoice_id: invoice.id, group: group)
+
       get_with_token(organization, "/api/v1/invoices/#{invoice.id}")
 
       aggregate_failures do
@@ -39,7 +42,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoice][:status]).to eq(invoice.status)
         expect(json[:invoice][:customer]).not_to be_nil
         expect(json[:invoice][:subscriptions]).not_to be_nil
-        expect(json[:invoice][:fees]).not_to be_nil
+        expect(json[:invoice][:fees].first).to include(lago_group_id: group.id)
         expect(json[:invoice][:credits]).not_to be_nil
       end
     end

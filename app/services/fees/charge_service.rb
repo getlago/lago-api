@@ -68,6 +68,7 @@ module Fees
         units: amount_result.units,
         properties: boundaries.to_h,
         events_count: amount_result.count,
+        group_id: group&.id,
       )
 
       new_fee.compute_vat
