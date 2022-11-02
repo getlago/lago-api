@@ -4,7 +4,7 @@ module PaymentProviders
   class GocardlessService < BaseService
     # NOTE: These links will be changed later
     AUTH_SITE = 'https://connect-sandbox.gocardless.com'
-    REDIRECT_URI = 'https://proxy.lago.dev/gocardless/callback'
+    REDIRECT_URI = "#{ENV['LAGO_OAUTH_PROXY_URL']}/gocardless/callback"
     PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
 
     def create_or_update(**args)
