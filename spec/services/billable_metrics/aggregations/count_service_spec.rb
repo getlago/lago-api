@@ -55,8 +55,18 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   end
 
   context 'when group_id is given' do
+    let(:parent_group) do
+      create(:group, billable_metric_id: billable_metric.id, key: 'cloud', value: 'AWS')
+    end
+
     let(:group) do
-      create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+      create(
+        :group,
+        billable_metric_id: billable_metric.id,
+        key: 'region',
+        value: 'europe',
+        parent_group_id: parent_group.id,
+      )
     end
 
     before do
@@ -68,6 +78,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         timestamp: Time.zone.now,
         properties: {
           total_count: 12,
+          cloud: 'AWS',
           region: 'europe',
         },
       )
@@ -80,6 +91,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         timestamp: Time.zone.now,
         properties: {
           total_count: 8,
+          cloud: 'AWS',
           region: 'europe',
         },
       )
@@ -92,6 +104,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         timestamp: Time.zone.now,
         properties: {
           total_count: 12,
+          cloud: 'AWS',
           region: 'africa',
         },
       )
