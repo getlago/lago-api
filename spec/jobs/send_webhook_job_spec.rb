@@ -198,6 +198,38 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is credit_note.provider_refund_failure' do
+    let(:webhook_service) { instance_double(Webhooks::CreditNotes::PaymentProviderRefundFailureService) }
+    let(:credit_note) { create(:credit_note) }
+
+    let(:webhook_options) do
+      {
+        provider_error: {
+          message: 'message',
+          error_code: 'code',
+        },
+      }
+    end
+
+    before do
+      allow(Webhooks::CreditNotes::PaymentProviderRefundFailureService).to receive(:new)
+        .with(credit_note, webhook_options)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      described_class.perform_now(
+        'credit_note.provider_refund_failure',
+        credit_note,
+        webhook_options,
+      )
+
+      expect(Webhooks::CreditNotes::PaymentProviderRefundFailureService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
       expect { described_class.perform_now(:subscription, invoice) }

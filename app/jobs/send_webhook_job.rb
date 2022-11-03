@@ -36,6 +36,8 @@ class SendWebhookJob < ApplicationJob
       Webhooks::CreditNotes::CreatedService.new(object).call
     when 'credit_note.generated'
       Webhooks::CreditNotes::GeneratedService.new(object).call
+    when 'credit_note.provider_refund_failure'
+      Webhooks::CreditNotes::PaymentProviderRefundFailureService.new(object, options).call
     when 'invoice.generated'
       Webhooks::Invoices::GeneratedService.new(object).call
     else
