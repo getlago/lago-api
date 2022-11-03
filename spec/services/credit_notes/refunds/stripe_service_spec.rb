@@ -219,5 +219,35 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
         end
       end
     end
+
+    context 'when status is failed' do
+      before { stripe_customer }
+
+      it 'delivers an error webhook' do
+        result = stripe_service.update_status(
+          provider_refund_id: refund.provider_refund_id,
+          status: 'failed',
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('refund_failed')
+          expect(result.error.error_message).to eq('Refund failed to perform')
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              'credit_note.provider_refund_failure',
+              credit_note,
+              provider_customer_id: stripe_customer.provider_customer_id,
+              provider_error: {
+                message: 'Payment refund failed',
+                error_code: nil,
+              },
+            )
+        end
+      end
+    end
   end
 end

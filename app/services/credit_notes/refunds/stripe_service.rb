@@ -46,7 +46,10 @@ module CreditNotes
         update_credit_note_status(status)
         track_refund_status_changed(status)
 
-        # TODO
+        if status.to_sym == :failed
+          deliver_error_webhook(message: 'Payment refund failed', code: nil)
+          result.service_failure!(code: 'refund_failed', message: 'Refund failed to perform')
+        end
 
         result
       rescue ArgumentError
@@ -83,7 +86,7 @@ module CreditNotes
           },
         )
       rescue Stripe::InvalidRequestError => e
-        deliver_error_webhook(e)
+        deliver_error_webhook(message: e.message, code: e.code)
         update_credit_note_status(:failed)
 
         raise
@@ -114,7 +117,7 @@ module CreditNotes
         end
       end
 
-      def deliver_error_webhook(stripe_error)
+      def deliver_error_webhook(message:, code:)
         return unless organization.webhook_url?
 
         SendWebhookJob.perform_later(
@@ -122,8 +125,8 @@ module CreditNotes
           credit_note,
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
-            message: stripe_error.message,
-            error_code: stripe_error.code,
+            message: message,
+            error_code: code,
           },
         )
       end
