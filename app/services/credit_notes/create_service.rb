@@ -38,6 +38,8 @@ module CreditNotes
         )
       end
 
+      track_credit_note_created
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -72,6 +74,22 @@ module CreditNotes
 
     def valid_item?(item)
       CreditNotes::ValidateItemService.new(result, item: item).valid?
+    end
+
+    def track_credit_note_created
+      types = []
+      types << 'credit' if credit_note.credited?
+      types << 'refund' if credit_note.refunded?
+
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'credit_note_created',
+        properties: {
+          organization_id: credit_note.organization.id,
+          credit_note_id: credit_note.id,
+          credit_note_type: types.join('_and_'),
+        },
+      )
     end
   end
 end

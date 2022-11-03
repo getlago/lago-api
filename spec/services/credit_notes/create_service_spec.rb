@@ -68,6 +68,22 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
+    it 'calls SegmentTrackJob' do
+      allow(SegmentTrackJob).to receive(:perform_later)
+
+      credit_note = create_service.call.credit_note
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'credit_note_created',
+        properties: {
+          organization_id: credit_note.organization.id,
+          credit_note_id: credit_note.id,
+          credit_note_type: 'credit_and_refund',
+        },
+      )
+    end
+
     context 'with invalid items' do
       let(:items) do
         [
