@@ -14,6 +14,7 @@ module CreditNotes
       result.credit_note = credit_note
       return result.not_allowed_failure!(code: 'no_voidable_amount') unless credit_note.voidable?
 
+      credit_note.balance_amount_cents = 0
       credit_note.mark_as_voided!
 
       result
