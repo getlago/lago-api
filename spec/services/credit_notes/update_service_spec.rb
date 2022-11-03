@@ -8,7 +8,7 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
   let(:credit_note) { create(:credit_note) }
 
   let(:params) do
-    { refund_status: 'refunded' }
+    { refund_status: 'succeeded' }
   end
 
   it 'updates the credit note status' do
@@ -16,7 +16,7 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
 
     aggregate_failures do
       expect(result).to be_success
-      expect(result.credit_note.refund_status).to eq('refunded')
+      expect(result.credit_note.refund_status).to eq('succeeded')
     end
   end
 

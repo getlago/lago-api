@@ -31,7 +31,7 @@ class CreditNote < ApplicationRecord
   # - pending: the refund is pending for its execution
   # - refunded: the refund has been executed
   # - failed: the refund process has failed
-  REFUND_STATUS = %i[pending refunded failed].freeze
+  REFUND_STATUS = %i[pending succeeded failed].freeze
 
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
 

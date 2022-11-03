@@ -26,7 +26,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
       variables: {
         input: {
           id: credit_note.id,
-          refundStatus: 'refunded',
+          refundStatus: 'succeeded',
         },
       },
     )
@@ -35,7 +35,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
 
     aggregate_failures do
       expect(result_data['id']).to eq(credit_note.id)
-      expect(result_data['refundStatus']).to eq('refunded')
+      expect(result_data['refundStatus']).to eq('succeeded')
     end
   end
 
@@ -47,7 +47,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
         variables: {
           input: {
             id: 'foo_bar',
-            refundStatus: 'refunded',
+            refundStatus: 'succeeded',
           },
         },
       )
@@ -63,7 +63,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
         variables: {
           input: {
             id: credit_note.id,
-            refundStatus: 'refunded',
+            refundStatus: 'succeeded',
           },
         },
       )

@@ -110,7 +110,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     end
   end
 
-  describe '.register_webhook' do
+  describe '.refresh_webhook' do
     let(:stripe_provider) do
       create(:stripe_provider, organization: organization)
     end
@@ -293,6 +293,34 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(PaymentProviderCustomers::StripeService).to have_received(:new)
         expect(provider_customer_service).to have_received(:delete_payment_method)
+      end
+    end
+
+    context 'when refund updated event' do
+      let(:refund_service) { instance_double(CreditNotes::Refunds::StripeService) }
+
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/charge_refund_updated_event.json')
+        File.read(path)
+      end
+
+      before do
+        allow(CreditNotes::Refunds::StripeService).to receive(:new)
+          .and_return(refund_service)
+        allow(refund_service).to receive(:update_status)
+          .and_return(service_result)
+      end
+
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization: organization,
+          event_json: event,
+        )
+
+        expect(result).to be_success
+
+        expect(CreditNotes::Refunds::StripeService).to have_received(:new)
+        expect(refund_service).to have_received(:update_status)
       end
     end
 

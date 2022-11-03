@@ -6268,7 +6268,7 @@
               "deprecationReason": null
             },
             {
-              "name": "refunded",
+              "name": "succeeded",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
