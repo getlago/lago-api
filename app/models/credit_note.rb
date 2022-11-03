@@ -12,6 +12,7 @@ class CreditNote < ApplicationRecord
 
   has_many :items, class_name: 'CreditNoteItem'
   has_many :fees, through: :items
+  has_many :refunds
 
   has_one_attached :file
 
