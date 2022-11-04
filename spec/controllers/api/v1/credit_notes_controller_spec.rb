@@ -277,4 +277,36 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
   end
+
+  describe 'PUT /credit_notes/:id/void' do
+    it 'voids the credit note' do
+      put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
+        expect(json[:credit_note][:credit_status]).to eq('voided')
+        expect(json[:credit_note][:balance_amount_cents]).to eq(0)
+      end
+    end
+
+    context 'when credit note does not exist' do
+      it 'returns a not found error' do
+        put_with_token(organization, '/api/v1/credit_notes/555/void')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when credit note is not voidable' do
+      before { credit_note.update!(credit_amount_cents: 0, credit_status: :voided) }
+
+      it 'returns an unprocessable entity error' do
+        put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
+
+        expect(response).to have_http_status(:method_not_allowed)
+      end
+    end
+  end
 end
