@@ -8,7 +8,7 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
   let(:credit_note) { create(:credit_note) }
 
   let(:params) do
-    { refund_status: 'refunded' }
+    { refund_status: 'succeeded' }
   end
 
   it 'updates the credit note status' do
@@ -16,8 +16,24 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
 
     aggregate_failures do
       expect(result).to be_success
-      expect(result.credit_note.refund_status).to eq('refunded')
+      expect(result.credit_note.refund_status).to eq('succeeded')
     end
+  end
+
+  it 'call SegmentTrackJob' do
+    allow(SegmentTrackJob).to receive(:perform_later)
+
+    credit_note_service.call
+
+    expect(SegmentTrackJob).to have_received(:perform_later).with(
+      membership_id: CurrentContext.membership,
+      event: 'refund_status_changed',
+      properties: {
+        organization_id: credit_note.organization.id,
+        credit_note_id: credit_note.id,
+        refund_status: 'succeeded',
+      },
+    )
   end
 
   context 'with invalid refund status' do

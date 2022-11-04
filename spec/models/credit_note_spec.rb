@@ -96,14 +96,12 @@ RSpec.describe CreditNote, type: :model do
   end
 
   describe '#refunded?' do
-    # TODO: will change in credit note phase 2
     let(:credit_note) { build(:credit_note) }
 
     it { expect(credit_note).not_to be_refunded }
   end
 
   describe '#refund_amount_cents' do
-    # TODO: will change in credit note phase 2
     let(:credit_note) { build(:credit_note) }
 
     it { expect(credit_note.refund_amount_cents).to be_zero }

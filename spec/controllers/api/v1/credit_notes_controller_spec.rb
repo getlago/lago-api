@@ -79,7 +79,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
   end
 
   describe 'PUT /credit_notes/:id' do
-    let(:update_params) { { refund_status: 'refunded' } }
+    let(:update_params) { { refund_status: 'succeeded' } }
 
     it 'updates the credit note' do
       put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
@@ -88,7 +88,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(response).to have_http_status(:success)
 
         expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-        expect(json[:credit_note][:refund_status]).to eq('refunded')
+        expect(json[:credit_note][:refund_status]).to eq('succeeded')
       end
     end
 

@@ -17,6 +17,8 @@ module CreditNotes
 
       result.credit_note = credit_note
 
+      track_refund_status_changed(credit_note.refund_status)
+
       result
     rescue ArgumentError
       result.single_validation_failure!(field: :refund_status, error_code: 'value_is_invalid')
@@ -25,5 +27,17 @@ module CreditNotes
     private
 
     attr_reader :credit_note, :params
+
+    def track_refund_status_changed(status)
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'refund_status_changed',
+        properties: {
+          organization_id: credit_note.organization.id,
+          credit_note_id: credit_note.id,
+          refund_status: status,
+        },
+      )
+    end
   end
 end

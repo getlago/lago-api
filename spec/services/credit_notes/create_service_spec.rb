@@ -6,8 +6,15 @@ RSpec.describe CreditNotes::CreateService, type: :service do
   subject(:create_service) { described_class.new(invoice: invoice, items_attr: items, description: nil) }
 
   let(:invoice) do
-    create(:invoice, amount_currency: 'EUR', amount_cents: 20, total_amount_cents: 20, status: :succeeded)
+    create(
+      :invoice,
+      amount_currency: 'EUR',
+      amount_cents: 20,
+      total_amount_cents: 20,
+      status: :succeeded,
+    )
   end
+
   let(:fee1) { create(:fee, invoice: invoice, amount_cents: 10) }
   let(:fee2) { create(:fee, invoice: invoice, amount_cents: 10) }
   let(:items) do
@@ -84,6 +91,13 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       )
     end
 
+    it 'delivers a webhook' do
+      create_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued
+        .with('credit_note.created', CreditNote)
+    end
+
     context 'with invalid items' do
       let(:items) do
         [
@@ -111,6 +125,40 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               higher_than_remaining_invoice_amount
             ],
           )
+        end
+      end
+    end
+
+    context 'with a refund, a payment and a succeeded invoice' do
+      let(:payment) { create(:payment, invoice: invoice) }
+
+      before { payment }
+
+      it 'enqueues a refund job' do
+        create_service.call
+
+        expect(CreditNotes::Refunds::StripeCreateJob).to have_been_enqueued
+          .with(CreditNote)
+      end
+
+      context 'when credit note does not have refund amount' do
+        let(:items) do
+          [
+            {
+              fee_id: fee1.id,
+              credit_amount_cents: 10,
+              refund_amount_cents: 0,
+            },
+            {
+              fee_id: fee2.id,
+              credit_amount_cents: 5,
+              refund_amount_cents: 0,
+            },
+          ]
+        end
+
+        it 'does not enqueue a refund job' do
+          expect { create_service.call }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
         end
       end
     end
