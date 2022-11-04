@@ -72,7 +72,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'refund_status_change',
+        event: 'refund_status_changed',
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
@@ -179,7 +179,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'refund_status_change',
+        event: 'refund_status_changed',
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,

@@ -138,7 +138,7 @@ module CreditNotes
       def track_refund_status_changed(status)
         SegmentTrackJob.perform_later(
           membership_id: CurrentContext.membership,
-          event: 'refund_status_change',
+          event: 'refund_status_changed',
           properties: {
             organization_id: organization.id,
             credit_note_id: credit_note.id,
