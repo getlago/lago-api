@@ -20,6 +20,22 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
     end
   end
 
+  it 'call SegmentTrackJob' do
+    allow(SegmentTrackJob).to receive(:perform_later)
+
+    credit_note_service.call
+
+    expect(SegmentTrackJob).to have_received(:perform_later).with(
+      membership_id: CurrentContext.membership,
+      event: 'refund_status_change',
+      properties: {
+        organization_id: credit_note.organization.id,
+        credit_note_id: credit_note.id,
+        refund_status: 'succeeded',
+      },
+    )
+  end
+
   context 'with invalid refund status' do
     let(:params) do
       { refund_status: 'foo_bar' }
