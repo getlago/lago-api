@@ -532,18 +532,44 @@ html
               | List of charges used from #{invoice_subscription(subscription.id).charges_from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).charges_to_date&.strftime('%b %d, %Y')}
             .charge-details.mb-24
               table.charge-details-table width="100%"
-                - subscription_fees(subscription.id).charge_kind.each do |fee|
-                  tr
-                    td width="70%"
-                      .body-1 = fee.billable_metric.name
-                      .body-3
-                        - if fee.charge.billable_metric.recurring_count_agg?
-                          | See breakdown for total unit
-                        - elsif fee.charge.percentage?
-                          | Total unit: #{fee.events_count} events for #{fee.units}
-                        - else
-                          | Total unit: #{fee.units}
-                    td.body-1 width="30%" = fee.amount.format
+                - subscription_fees(subscription.id).charge_kind.group_by(&:charge_id).each do |_charge_id, fees|
+                  - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+                    tr
+                      td width="70%"
+                        .body-1 = fees.first.billable_metric.name
+                        .body-3
+                          - if fees.first.charge.billable_metric.recurring_count_agg?
+                            | See breakdown for total unit
+                          - elsif fees.first.charge.percentage?
+                            | Total unit: #{fees.sum(&:events_count)} events for #{fees.sum(&:units)}
+                          - else
+                            | Total unit: #{fees.sum(&:units)}
+                      td width="30%"
+
+                    - fees.select { |f| f.amount.positive? }.each do |fee|
+                      tr
+                        td width="70%" style="padding-left: 16px;"
+                          .body-1 = fee.group.name
+                          .body-3
+                            - if fee.charge.billable_metric.recurring_count_agg?
+                              | See breakdown for total unit
+                            - elsif fee.charge.percentage?
+                              | Total unit: #{fee.events_count} events for #{fee.units}
+                            - else
+                              | Total unit: #{fee.units}
+                        td.body-1 width="30%" = fee.amount.format
+                  - else
+                    tr
+                      td width="70%"
+                        .body-1 = fees.first.billable_metric.name
+                        .body-3
+                          - if fees.first.charge.billable_metric.recurring_count_agg?
+                            | See breakdown for total unit
+                          - elsif fees.first.charge.percentage?
+                            | Total unit: #{fees.sum(&:events_count)} events for #{fees.sum(&:units)}
+                          - else
+                            | Total unit: #{fees.sum(&:units)}
+                      td.body-1 width="30%" = fees.sum(&:amount).format
 
               table.total-table width="100%"
                 tr
