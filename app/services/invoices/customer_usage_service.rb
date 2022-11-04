@@ -115,6 +115,8 @@ module Invoices
     end
 
     def cache_key(date)
+      # NOTE: charges_to_date is used in key to make sure the cache is reseted when a new
+      #       billing period starts
       [
         'current_usage',
         "#{subscription.id}-#{boundaries[:charges_to_date].iso8601}-#{date.iso8601}",
