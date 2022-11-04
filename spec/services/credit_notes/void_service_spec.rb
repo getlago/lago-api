@@ -16,6 +16,7 @@ RSpec.describe CreditNotes::VoidService, type: :service do
 
         expect(result.credit_note).to be_voided
         expect(result.credit_note.voided_at).to be_present
+        expect(result.credit_note.balance_amount_cents).to eq(0)
       end
     end
 
