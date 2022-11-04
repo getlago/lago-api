@@ -80,7 +80,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
 
   context 'with one dimension' do
     let(:group_params) do
-      { "key": 'region', "values": %w[usa europe] }
+      { "key": 'region', "values": %w[usa europe usa] }
     end
 
     it 'creates expected groups' do
@@ -104,7 +104,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
           {
             "name": 'Google',
             "key": 'region',
-            "values": %w[usa],
+            "values": %w[usa usa],
           },
         ],
       }
