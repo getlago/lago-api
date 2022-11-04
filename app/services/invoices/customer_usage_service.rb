@@ -33,7 +33,7 @@ module Invoices
     #         + 1 day to handle cache generated on the last billing period
     #       - The cache key includes the customer id and the creation date of the last customer event
     def compute_usage
-      Rails.cache.fetch(cache_key, expires_in: cache_expiration.days) do
+      Rails.cache.fetch(current_cache_key, expires_in: cache_expiration) do
         @invoice = Invoice.new(
           customer: subscription.customer,
           issuing_date: boundaries[:issuing_date],
@@ -104,26 +104,36 @@ module Invoices
       invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
     end
 
-    def cache_key
-      return @cache_key if @cache_key
+    def current_cache_key
+      return @current_cache_key if @current_cache_key
 
       last_events = subscription.events.order(created_at: :desc).first(2).pluck(:created_at)
-      expire_cache(last_events[1]) if last_events.count > 1
+      expire_cache(cache_key(last_events[1])) if last_events.count > 1
       last_created_at = last_events.first || subscription.created_at
 
-      @cache_key = "current_usage/#{subscription.id}-#{last_created_at.iso8601}/#{plan.updated_at.iso8601}"
+      @current_cache_key = cache_key(last_created_at)
     end
 
-    def expire_cache(date)
-      Rails.cache.delete("current_usage/#{subscription.id}-#{date.iso8601}/#{plan.updated_at.iso8601}")
+    def cache_key(date)
+      # NOTE: charges_to_date is used in key to make sure the cache is reseted when a new
+      #       billing period starts
+      [
+        'current_usage',
+        "#{subscription.id}-#{boundaries[:charges_to_date].iso8601}-#{date.iso8601}",
+        plan.updated_at.iso8601,
+      ].join('/')
+    end
+
+    def expire_cache(key)
+      Rails.cache.delete(key)
     end
 
     def cache_expiration
       expiration = (boundaries[:charges_to_date] - Time.zone.today).to_i + 1
-      return 1 if expiration < 1
-      return 4 if expiration > 4
+      return 1.day if expiration < 1
+      return 4.days if expiration > 4
 
-      expiration
+      expiration.days
     end
 
     def format_usage
