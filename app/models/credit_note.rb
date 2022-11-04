@@ -90,6 +90,7 @@ class CreditNote < ApplicationRecord
     update!(
       credit_status: :voided,
       voided_at: timestamp,
+      balance_amount_cents: 0,
     )
   end
 
