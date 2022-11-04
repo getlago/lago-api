@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       resources :coupons, param: :code
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
+        put :void, on: :member
       end
       resources :events, only: %i[create show]
       resources :applied_coupons, only: %i[create]
