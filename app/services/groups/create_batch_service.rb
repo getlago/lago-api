@@ -18,11 +18,11 @@ module Groups
 
       ActiveRecord::Base.transaction do
         if one_dimension?
-          create_groups(group_params[:key], group_params[:values])
+          create_groups(group_params[:key], group_params[:values].uniq)
         else
           group_params[:values].each do |value|
             parent_group = billable_metric.groups.create!(key: group_params[:key], value: value[:name])
-            create_groups(value[:key], value[:values], parent_group.id)
+            create_groups(value[:key], value[:values].uniq, parent_group.id)
           end
         end
       end
