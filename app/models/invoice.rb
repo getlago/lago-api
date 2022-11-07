@@ -74,7 +74,7 @@ class Invoice < ApplicationRecord
   def credit_note_total_amount_cents
     credits.credit_note_kind.sum(:amount_cents)
   end
-  alias credit_notes_total_amount_currency currency
+  alias credit_note_total_amount_currency currency
 
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
