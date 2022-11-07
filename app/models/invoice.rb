@@ -128,6 +128,7 @@ class Invoice < ApplicationRecord
     result = BillableMetrics::Aggregations::RecurringCountService.new(
       billable_metric: fee.charge.billable_metric,
       subscription: fee.subscription,
+      group: fee.group,
     ).breakdown(
       from_date: Date.parse(fee.properties['charges_from_date']),
       to_date: Date.parse(fee.properties['charges_to_date']),
