@@ -2809,6 +2809,7 @@ type Fee implements InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   charge: Charge
+  creditableAmountCents: Int!
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group
@@ -2816,6 +2817,7 @@ type Fee implements InvoiceItem {
   itemCode: String!
   itemName: String!
   itemType: String!
+  refundableAmountCents: Int!
   subscription: Subscription
   units: Float!
   vatAmountCents: BigInt!
@@ -2914,6 +2916,7 @@ type Invoice {
   creditAmountCents: Int!
   creditAmountCurrency: CurrencyEnum!
   creditNoteTotalAmountCents: Int!
+  creditableAmountCents: Int!
   customer: Customer!
   fees: [Fee!]
   fileUrl: String
@@ -2924,6 +2927,7 @@ type Invoice {
   legacy: Boolean!
   number: String!
   plan: Plan
+  refundableAmountCents: Int!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
   subTotalVatExcludedAmountCents: Int!
