@@ -16,11 +16,17 @@ class CreditNote < ApplicationRecord
 
   has_one_attached :file
 
-  monetize :total_amount_cents
   monetize :credit_amount_cents
   monetize :balance_amount_cents
+  monetize :credit_vat_amount_cents
+
   monetize :refund_amount_cents
+  monetize :refund_vat_amount_cents
+
+  monetize :total_amount_cents
   monetize :vat_amount_cents
+
+  monetize :sub_total_vat_excluded_amount_cents
 
   # NOTE: Status of the credit part
   # - available: a credit amount remain available
@@ -51,16 +57,16 @@ class CreditNote < ApplicationRecord
     Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
   end
 
+  def currency
+    total_amount_currency
+  end
+
   def credited?
     credit_amount_cents.positive?
   end
 
   def refunded?
     refund_amount_cents.positive?
-  end
-
-  def vat_amount_cents
-    0 # TODO: Take VAT into account
   end
 
   def subscription_ids
@@ -93,6 +99,11 @@ class CreditNote < ApplicationRecord
       balance_amount_cents: 0,
     )
   end
+
+  def sub_total_vat_excluded_amount_cents
+    total_amount_cents - vat_amount_cents
+  end
+  alias sub_total_vat_excluded_amount_currency currency
 
   private
 

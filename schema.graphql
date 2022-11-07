@@ -1773,9 +1773,13 @@ type CreditNote {
   refundAmountCurrency: CurrencyEnum!
   refundStatus: CreditNoteRefundStatusEnum
   sequentialId: ID!
+  subTotalVatExcludedAmountCents: BigInt!
+  subTotalVatExcludedAmountCurrency: CurrencyEnum!
   totalAmountCents: BigInt!
   totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
+  vatAmountCents: BigInt!
+  vatAmountCurrency: CurrencyEnum!
 }
 
 enum CreditNoteCreditStatusEnum {
