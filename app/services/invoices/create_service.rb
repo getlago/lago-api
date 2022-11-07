@@ -22,9 +22,6 @@ module Invoices
           vat_amount_currency: currency,
           credit_amount_currency: currency,
           total_amount_currency: currency,
-
-          # NOTE: Apply credits before VAT, will be changed with credit note feature
-          legacy: true,
           vat_rate: customer.applicable_vat_rate,
         )
 

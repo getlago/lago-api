@@ -71,7 +71,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_cents).to eq(120)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
-          expect(result.invoice).to be_legacy
+          expect(result.invoice).not_to be_legacy
         end
       end
 
@@ -194,7 +194,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             expect(result.invoice.total_amount_cents).to eq(120)
             expect(result.invoice.total_amount_currency).to eq('EUR')
 
-            expect(result.invoice).to be_legacy
+            expect(result.invoice).not_to be_legacy
           end
         end
 
@@ -226,7 +226,7 @@ RSpec.describe Invoices::CreateService, type: :service do
               expect(result.invoice.total_amount_cents).to eq(120)
               expect(result.invoice.total_amount_currency).to eq('EUR')
 
-              expect(result.invoice).to be_legacy
+              expect(result.invoice).not_to be_legacy
             end
           end
         end
@@ -270,7 +270,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_cents).to eq(240)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
-          expect(result.invoice).to be_legacy
+          expect(result.invoice).not_to be_legacy
         end
       end
 
@@ -780,7 +780,7 @@ RSpec.describe Invoices::CreateService, type: :service do
 
           expect(result.invoice.credits.count).to eq(1)
 
-          expect(result.invoice).to be_legacy
+          expect(result.invoice).not_to be_legacy
 
           credit = result.invoice.credits.first
           expect(credit.credit_note).to eq(credit_note)
@@ -830,7 +830,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
-          expect(result.invoice).to be_legacy
+          expect(result.invoice).not_to be_legacy
 
           expect(result.invoice.credits.count).to eq(1)
         end
@@ -888,7 +888,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
-          expect(result.invoice).to be_legacy
+          expect(result.invoice).not_to be_legacy
 
           expect(result.invoice.wallet_transactions.count).to eq(1)
         end
