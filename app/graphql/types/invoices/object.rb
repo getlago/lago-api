@@ -42,6 +42,19 @@ module Types
       field :sub_total_vat_included_amount_cents, Integer, null: false
       field :coupon_total_amount_cents, Integer, null: false
       field :credit_note_total_amount_cents, Integer, null: false
+
+      field :refundable_amount_cents, Integer, null: false
+      field :creditable_amount_cents, Integer, null: false
+
+      def refundable_amount_cents
+        return 0 unless object.succeeded?
+
+        object.total_amount_cents - object.credit_notes.sum(:refund_amount_cents)
+      end
+
+      def creditable_amount_cents
+        object.fee_total_amount_cents - object.credit_notes.sum(:credit_amount_cents)
+      end
     end
   end
 end

@@ -2832,6 +2832,7 @@ type Fee implements InvoiceItem {
   itemCode: String!
   itemName: String!
   itemType: String!
+  refundableAmountCents: Int!
   subscription: Subscription
   units: Float!
   vatAmountCents: BigInt!
@@ -2931,6 +2932,7 @@ type Invoice {
   creditAmountCents: Int!
   creditAmountCurrency: CurrencyEnum!
   creditNoteTotalAmountCents: Int!
+  creditableAmountCents: Int!
   customer: Customer!
   fees: [Fee!]
   fileUrl: String
@@ -2942,6 +2944,7 @@ type Invoice {
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
   plan: Plan
+  refundableAmountCents: Int!
   sequentialId: ID!
   subTotalVatExcludedAmountCents: Int!
   subTotalVatIncludedAmountCents: Int!
