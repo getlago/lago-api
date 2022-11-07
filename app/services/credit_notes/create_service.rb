@@ -19,8 +19,11 @@ module CreditNotes
           customer: invoice.customer,
           invoice: invoice,
           total_amount_currency: invoice.amount_currency,
+          vat_amount_currency: invoice.amount_currency,
           credit_amount_currency: invoice.amount_currency,
+          credit_vat_amount_currency: invoice.amount_currency,
           refund_amount_currency: invoice.amount_currency,
+          refund_vat_amount_currency: invoice.amount_currency,
           balance_amount_currency: invoice.amount_currency,
           reason: reason,
           description: description,
@@ -32,8 +35,10 @@ module CreditNotes
 
         credit_note.credit_status = 'available' if credit_note.credited?
         credit_note.refund_status = 'pending' if credit_note.refunded?
+
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
+          vat_amount_cents: credit_note.credit_vat_amount_cents + credit_note.refund_vat_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents,
         )
       end
@@ -71,11 +76,21 @@ module CreditNotes
           credit_amount_cents: credit_note.credit_amount_cents + item.credit_amount_cents,
           refund_amount_cents: credit_note.refund_amount_cents + item.refund_amount_cents,
         )
+        refresh_vat_amounts
       end
     end
 
     def valid_item?(item)
       CreditNotes::ValidateItemService.new(result, item: item).valid?
+    end
+
+    def refresh_vat_amounts
+      credit_note.credit_vat_amount_cents = compute_vat_amount(credit_note.credit_amount_cents)
+      credit_note.refund_vat_amount_cents = compute_vat_amount(credit_note.refund_amount_cents)
+    end
+
+    def compute_vat_amount(total_amount)
+      total_amount - total_amount.fdiv(1 + (invoice.vat_rate || 0).fdiv(100))
     end
 
     def track_credit_note_created
