@@ -40,7 +40,12 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     end
 
     it 'uses the Rails cache' do
-      key = "current_usage/#{subscription.id}-#{subscription.created_at.iso8601}/#{subscription.plan.updated_at.iso8601}"
+      to_date = invoice_service.__send__(:boundaries)[:charges_to_date]
+      key = [
+        'current_usage',
+        "#{subscription.id}-#{to_date.iso8601}-#{subscription.created_at.iso8601}",
+        subscription.plan.updated_at.iso8601,
+      ].join('/')
 
       expect do
         invoice_service.usage

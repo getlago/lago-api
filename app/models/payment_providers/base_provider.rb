@@ -12,6 +12,7 @@ module PaymentProviders
              foreign_key: :payment_provider_id
 
     has_many :payments, dependent: :nullify, foreign_key: :payment_provider_id
+    has_many :refunds, dependent: :nullify, foreign_key: :payment_provider_id
 
     encrypts :secrets
 

@@ -2,10 +2,11 @@
 
 module CreditNotes
   class CreateService < BaseService
-    def initialize(invoice:, items_attr:, reason: :other)
+    def initialize(invoice:, items_attr:, description:, reason: :other)
       @invoice = invoice
       @items_attr = items_attr
       @reason = reason
+      @description = description
 
       super
     end
@@ -22,6 +23,7 @@ module CreditNotes
           refund_amount_currency: invoice.amount_currency,
           balance_amount_currency: invoice.amount_currency,
           reason: reason,
+          description: description,
           credit_status: 'available',
         )
 
@@ -36,6 +38,10 @@ module CreditNotes
         )
       end
 
+      track_credit_note_created
+      deliver_webhook
+      handle_refund if should_handle_refund?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -43,7 +49,7 @@ module CreditNotes
 
     private
 
-    attr_accessor :invoice, :items_attr, :reason
+    attr_accessor :invoice, :items_attr, :reason, :description
 
     delegate :credit_note, to: :result
 
@@ -70,6 +76,48 @@ module CreditNotes
 
     def valid_item?(item)
       CreditNotes::ValidateItemService.new(result, item: item).valid?
+    end
+
+    def track_credit_note_created
+      types = []
+      types << 'credit' if credit_note.credited?
+      types << 'refund' if credit_note.refunded?
+
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'credit_note_created',
+        properties: {
+          organization_id: credit_note.organization.id,
+          credit_note_id: credit_note.id,
+          credit_note_type: types.join('_and_'),
+        },
+      )
+    end
+
+    def deliver_webhook
+      SendWebhookJob.perform_later(
+        'credit_note.created',
+        credit_note,
+      )
+    end
+
+    def should_handle_refund?
+      return false unless credit_note.refunded?
+      return false unless credit_note.invoice.succeeded?
+
+      invoice_payment.present?
+    end
+
+    def invoice_payment
+      @invoice_payment ||= credit_note.invoice.payments.order(created_at: :desc).first
+    end
+
+    def handle_refund
+      # TODO: implement refunds on GoCardless
+      case invoice_payment.payment_provider
+      when PaymentProviders::StripeProvider
+        CreditNotes::Refunds::StripeCreateJob.perform_later(credit_note)
+      end
     end
   end
 end

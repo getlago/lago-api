@@ -21,7 +21,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice does not exist' do
-      it 'returns an unprocessable entity error' do
+      it 'returns a not found error' do
         put_with_token(organization, '/api/v1/invoices/555', { invoice: update_params })
 
         expect(response).to have_http_status(:not_found)

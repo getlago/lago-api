@@ -13,7 +13,7 @@ module LagoHttpClient
     end
 
     def post(body, headers)
-      req = Net::HTTP::Post.new(uri.path.presence || '/', 'Content-Type' => 'application/json')
+      req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/json')
 
       headers.each do |header|
         key = header.keys.first

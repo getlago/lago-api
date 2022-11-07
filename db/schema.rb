@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
+ActiveRecord::Schema[7.0].define(version: 2022_10_31_144907) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -163,6 +163,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
     t.bigint "refund_amount_cents", default: 0, null: false
     t.string "refund_amount_currency"
     t.integer "refund_status"
+    t.datetime "voided_at"
+    t.text "description"
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
@@ -240,10 +242,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
-    t.integer "events_count"
     t.integer "fee_type"
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
+    t.integer "events_count"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
@@ -424,6 +426,23 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end
 
+  create_table "refunds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "payment_id", null: false
+    t.uuid "credit_note_id", null: false
+    t.uuid "payment_provider_id", null: false
+    t.uuid "payment_provider_customer_id", null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.string "status", null: false
+    t.string "provider_refund_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["credit_note_id"], name: "index_refunds_on_credit_note_id"
+    t.index ["payment_id"], name: "index_refunds_on_payment_id"
+    t.index ["payment_provider_customer_id"], name: "index_refunds_on_payment_provider_customer_id"
+    t.index ["payment_provider_id"], name: "index_refunds_on_payment_provider_id"
+  end
+
   create_table "subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.uuid "plan_id", null: false
@@ -525,6 +544,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_24_090308) do
   add_foreign_key "persisted_events", "customers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
+  add_foreign_key "refunds", "credit_notes"
+  add_foreign_key "refunds", "payment_provider_customers"
+  add_foreign_key "refunds", "payment_providers"
+  add_foreign_key "refunds", "payments"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "wallet_transactions", "invoices"

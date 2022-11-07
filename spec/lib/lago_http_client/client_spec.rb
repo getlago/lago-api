@@ -90,5 +90,28 @@ RSpec.describe LagoHttpClient::Client do
         expect(response['message']).to eq 'Success'
       end
     end
+
+    context 'with query params' do
+      let(:url) { 'http://example.com/api?foo=bar' }
+
+      let(:response) do
+        {
+          'status' => 200,
+          'message' => 'Success',
+        }.to_json
+      end
+
+      before do
+        stub_request(:post, 'http://example.com/api?foo=bar')
+          .to_return(body: response, status: 200)
+      end
+
+      it 'returns response body' do
+        response = client.post('', {})
+
+        expect(response['status']).to eq 200
+        expect(response['message']).to eq 'Success'
+      end
+    end
   end
 end

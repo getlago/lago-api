@@ -8,6 +8,7 @@ module PaymentProviders
       'payment_intent.payment_failed',
       'payment_intent.succeeded',
       'payment_method.detached',
+      'charge.refund.updated',
     ].freeze
 
     def create_or_update(**args)
@@ -125,6 +126,12 @@ module PaymentProviders
             payment_method_id: event.data.object.id,
           )
         result.throw_error || result
+      when 'charge.refund.updated'
+        CreditNotes::Refunds::StripeService
+          .new.update_status(
+            provider_refund_id: event.data.object.id,
+            status: event.data.object.status,
+          )
       end
     end
 
