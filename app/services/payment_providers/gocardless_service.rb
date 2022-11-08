@@ -23,7 +23,7 @@ module PaymentProviders
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue OAuth2::Error => e
-      result.service_failure!(code: 'unauthorized', message: e.description)
+      result.service_failure!(code: 'internal_error', message: e.description)
     end
 
     def handle_incoming_webhook(organization_id:, body:, signature:)
