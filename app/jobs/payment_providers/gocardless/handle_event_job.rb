@@ -7,7 +7,7 @@ module PaymentProviders
 
       def perform(events_json:)
         result = PaymentProviders::GocardlessService.new.handle_event(events_json: events_json)
-        result.throw_error
+        result.throw_error if result.present?
       end
     end
   end

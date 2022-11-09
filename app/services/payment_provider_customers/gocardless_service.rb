@@ -34,6 +34,9 @@ module PaymentProviderCustomers
         customer,
         checkout_url: billing_request_flow.authorisation_url,
       )
+
+      result.checkout_url = billing_request_flow.authorisation_url
+      result
     end
 
     private
