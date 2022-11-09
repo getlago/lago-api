@@ -71,7 +71,10 @@ module BillableMetrics
 
         return persisted_events unless group
 
-        persisted_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
+        persisted_events = persisted_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
+        return persisted_events unless group.parent
+
+        persisted_events.where('properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
 
       # NOTE: Full period duration to take upgrade, terminate
