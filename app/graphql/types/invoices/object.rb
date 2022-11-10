@@ -22,6 +22,7 @@ module Types
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
       field :status, Types::Invoices::StatusTypeEnum, null: false
       field :file_url, String, null: true
+      field :vat_rate, Float, null: false
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
@@ -47,12 +48,15 @@ module Types
       field :creditable_amount_cents, Integer, null: false
 
       def refundable_amount_cents
+        return 0 if object.legacy?
         return 0 unless object.succeeded?
 
         object.total_amount_cents - object.credit_notes.sum(:refund_amount_cents)
       end
 
       def creditable_amount_cents
+        return 0 if object.legacy?
+
         object.fee_total_amount_cents - object.credit_notes.sum(:credit_amount_cents)
       end
     end
