@@ -174,6 +174,15 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         end
       end
 
+      context 'when anniversary date is first day of a month' do
+        let(:subscription_date) { DateTime.parse('01 Dec 2022') }
+        let(:billing_date) { DateTime.parse('02 Jan 2024') }
+
+        it 'returns the last day of the previous month on next year' do
+          expect(result).to eq('2023-11-30')
+        end
+      end
+
       context 'when plan is pay in advance' do
         before { plan.update!(pay_in_advance: true) }
 
