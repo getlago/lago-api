@@ -11323,6 +11323,24 @@
               ]
             },
             {
+              "name": "vatRate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "walletTransactionAmountCents",
               "description": null,
               "type": {

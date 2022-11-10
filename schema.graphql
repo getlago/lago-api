@@ -2960,6 +2960,7 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
+  vatRate: Float!
   walletTransactionAmountCents: Int!
 }
 
