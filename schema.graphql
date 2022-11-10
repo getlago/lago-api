@@ -3772,6 +3772,18 @@ type Query {
   ): Invoice
 
   """
+  Query invoice's credit note
+  """
+  invoiceCreditNotes(
+    """
+    Uniq ID of the invoice
+    """
+    invoiceId: ID!
+    limit: Int
+    page: Int
+  ): CreditNoteCollection
+
+  """
   Query memberships of an organization
   """
   memberships(limit: Int, page: Int): MembershipCollection!
