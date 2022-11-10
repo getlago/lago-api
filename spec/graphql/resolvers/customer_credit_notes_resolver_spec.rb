@@ -2,11 +2,11 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
+RSpec.describe Resolvers::CustomerCreditNotesResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query($customerId: ID!) {
-        creditNotes(customerId: $customerId, limit: 5) {
+        customerCreditNotes(customerId: $customerId, limit: 5) {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -25,7 +25,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
     credit_note
   end
 
-  it 'returns a list of credit_notes' do
+  it 'returns a list of credit_notes for a customer' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -35,7 +35,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       },
     )
 
-    credit_notes_response = result['data']['creditNotes']
+    credit_notes_response = result['data']['customerCreditNotes']
 
     aggregate_failures do
       expect(credit_notes_response['collection'].count).to eq(customer.credit_notes.count)

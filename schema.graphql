@@ -3688,23 +3688,6 @@ type Query {
   ): CreditNote
 
   """
-  Query a single credit note
-  """
-  creditNotes(
-    """
-    Uniq ID of the customer
-    """
-    customerId: ID!
-
-    """
-    List of plan ID to fetch
-    """
-    ids: [String!]
-    limit: Int
-    page: Int
-  ): CreditNoteCollection
-
-  """
   Retrieves currently connected user
   """
   currentUser: User!
@@ -3723,6 +3706,23 @@ type Query {
     """
     id: ID!
   ): CustomerDetails
+
+  """
+  Query customer's credit note
+  """
+  customerCreditNotes(
+    """
+    Uniq ID of the customer
+    """
+    customerId: ID!
+
+    """
+    List of plan ID to fetch
+    """
+    ids: [String!]
+    limit: Int
+    page: Int
+  ): CreditNoteCollection
 
   """
   Query the usage of the customer on the current billing period
