@@ -2837,7 +2837,6 @@ type Fee implements InvoiceItem {
   itemCode: String!
   itemName: String!
   itemType: String!
-  refundableAmountCents: Int!
   subscription: Subscription
   units: Float!
   vatAmountCents: BigInt!
