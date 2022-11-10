@@ -29,7 +29,6 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           }
           fees {
             id
-            refundableAmountCents
             creditableAmountCents
           }
         }

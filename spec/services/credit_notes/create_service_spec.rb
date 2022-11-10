@@ -133,7 +133,6 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           expect(result.error.messages[:amount_cents]).to eq(
             %w[
               higher_than_remaining_fee_amount
-              higher_than_remaining_invoice_amount
             ],
           )
         end
