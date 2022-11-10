@@ -1783,6 +1783,11 @@ type CreditNote {
   vatAmountCurrency: CurrencyEnum!
 }
 
+type CreditNoteCollection {
+  collection: [CreditNote!]!
+  metadata: CollectionMetadata!
+}
+
 enum CreditNoteCreditStatusEnum {
   available
   consumed
@@ -3647,6 +3652,23 @@ type Query {
     """
     id: ID!
   ): CreditNote
+
+  """
+  Query a single credit note
+  """
+  creditNotes(
+    """
+    Uniq ID of the customer
+    """
+    customerId: ID!
+
+    """
+    List of plan ID to fetch
+    """
+    ids: [String!]
+    limit: Int
+    page: Int
+  ): CreditNoteCollection
 
   """
   Retrieves currently connected user
