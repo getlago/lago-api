@@ -1636,10 +1636,12 @@ input CreateCreditNoteInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  creditAmountCents: BigInt
   description: String
   invoiceId: ID!
   items: [CreditNoteItemInput!]!
   reason: CreditNoteReasonEnum!
+  refundAmountCents: BigInt
 }
 
 """
@@ -1795,19 +1797,16 @@ enum CreditNoteCreditStatusEnum {
 }
 
 type CreditNoteItem {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
-  creditAmountCents: BigInt!
-  creditAmountCurrency: CurrencyEnum!
   fee: Fee!
   id: ID!
-  refundAmountCents: BigInt!
-  refundAmountCurrency: CurrencyEnum!
 }
 
 input CreditNoteItemInput {
-  creditAmountCents: BigInt!
+  amountCents: BigInt!
   feeId: ID!
-  refundAmountCents: BigInt!
 }
 
 enum CreditNoteReasonEnum {
@@ -2822,7 +2821,6 @@ type Fee implements InvoiceItem {
   itemCode: String!
   itemName: String!
   itemType: String!
-  refundableAmountCents: Int!
   subscription: Subscription
   units: Float!
   vatAmountCents: BigInt!

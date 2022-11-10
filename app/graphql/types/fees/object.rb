@@ -18,19 +18,14 @@ module Types
 
       field :fee_type, Types::Fees::TypesEnum, null: false
 
-      field :refundable_amount_cents, Integer, null: false
       field :creditable_amount_cents, Integer, null: false
 
       def item_type
         object.fee_type
       end
 
-      def refundable_amount_cents
-        object.total_amount_cents - object.credit_note_items.sum(:refund_amount_cents)
-      end
-
       def creditable_amount_cents
-        object.total_amount_cents - object.credit_note_items.sum(:credit_amount_cents)
+        object.total_amount_cents - object.credit_note_items.sum(:amount_cents)
       end
     end
   end

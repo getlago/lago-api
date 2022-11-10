@@ -18,10 +18,12 @@ module CreditNotes
 
       CreditNotes::CreateService.new(
         invoice: last_subscription_fee.invoice,
-        items_attr: [
+        credit_amount_cents: amount + vat_amount,
+        refund_amount_cents: 0,
+        items: [
           {
             fee_id: last_subscription_fee.id,
-            credit_amount_cents: amount + vat_amount,
+            amount_cents: amount + vat_amount,
           },
         ],
         reason: :order_change,

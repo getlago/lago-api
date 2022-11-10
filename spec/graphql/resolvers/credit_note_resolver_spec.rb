@@ -29,8 +29,8 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
           invoice { id number }
           items {
             id
-            creditAmountCents
-            creditAmountCurrency
+            amountCents
+            amountCurrency
             createdAt
             fee { id amountCents itemType itemCode itemName }
           }
