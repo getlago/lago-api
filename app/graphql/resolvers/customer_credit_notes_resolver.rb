@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class CreditNotesResolver < Resolvers::BaseResolver
+  class CustomerCreditNotesResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query a single credit note'
+    description "Query customer's credit note"
 
     argument :ids, [String], required: false, description: 'List of plan ID to fetch'
     argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
