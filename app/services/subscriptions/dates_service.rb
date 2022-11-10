@@ -105,6 +105,16 @@ module Subscriptions
 
     # NOTE: Handle leap years and anniversary date > 28
     def build_date(year, month, day)
+      if day.zero?
+        day = 31
+        month -= 1
+
+        if month.zero?
+          month = 12
+          year -= 1
+        end
+      end
+
       days_count_in_month = Time.days_in_month(month, year)
       day = days_count_in_month if days_count_in_month < day
 
