@@ -32,7 +32,7 @@ module Invoices
         payment.save!
 
         update_invoice_status(payment.status)
-        handle_prepaid_credits(payment.status)
+        handle_prepaid_credits(payment.invoice, payment.status)
         track_payment_status_changed(payment.invoice)
 
         result.payment = payment
@@ -49,7 +49,7 @@ module Invoices
 
         payment.update!(status: status)
         payment.invoice.update!(status: status)
-        handle_prepaid_credits(status)
+        handle_prepaid_credits(payment.invoice, status)
         track_payment_status_changed(payment.invoice)
 
         result
@@ -140,7 +140,7 @@ module Invoices
         invoice.update!(status: status)
       end
 
-      def handle_prepaid_credits(status)
+      def handle_prepaid_credits(invoice, status)
         return unless invoice.invoice_type == 'credit'
         return unless status == 'succeeded'
 
