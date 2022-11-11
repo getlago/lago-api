@@ -133,7 +133,7 @@ type BillableMetric {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
-  flatGroups: [JSON!]
+  flatGroups: [Group!]
   group: JSON
   id: ID!
   name: String!
@@ -157,7 +157,7 @@ type BillableMetricDetail {
   createdAt: ISO8601DateTime!
   description: String
   fieldName: String
-  flatGroups: [JSON!]
+  flatGroups: [Group!]
   group: JSON
   id: ID!
   name: String!
@@ -200,6 +200,7 @@ type ChargeUsage {
   amountCents: BigInt!
   billableMetric: BillableMetric!
   charge: Charge!
+  groups: [GroupUsage!]
   units: Float!
 }
 
@@ -1773,9 +1774,13 @@ type CreditNote {
   refundAmountCurrency: CurrencyEnum!
   refundStatus: CreditNoteRefundStatusEnum
   sequentialId: ID!
+  subTotalVatExcludedAmountCents: BigInt!
+  subTotalVatExcludedAmountCurrency: CurrencyEnum!
   totalAmountCents: BigInt!
   totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
+  vatAmountCents: BigInt!
+  vatAmountCurrency: CurrencyEnum!
 }
 
 enum CreditNoteCreditStatusEnum {
@@ -2806,6 +2811,7 @@ type Fee implements InvoiceItem {
   charge: Charge
   eventsCount: BigInt
   feeType: FeeTypesEnum!
+  group: Group
   id: ID!
   itemCode: String!
   itemName: String!
@@ -2844,6 +2850,12 @@ input GraduatedRangeInput {
   toValue: Int
 }
 
+type Group {
+  id: ID!
+  key: String
+  value: String!
+}
+
 type GroupProperties {
   groupId: ID!
   values: Properties!
@@ -2852,6 +2864,14 @@ type GroupProperties {
 input GroupPropertiesInput {
   groupId: ID!
   values: PropertiesInput!
+}
+
+type GroupUsage {
+  amountCents: BigInt!
+  id: ID!
+  key: String
+  units: Float!
+  value: String!
 }
 
 """
@@ -2920,6 +2940,7 @@ Invoice Item
 interface InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  group: Group
   id: ID!
   itemCode: String!
   itemName: String!

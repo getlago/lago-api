@@ -14,6 +14,9 @@ module Types
       field :reason, Types::CreditNotes::ReasonTypeEnum, null: false
       field :description, String, null: true
 
+      field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false
+      field :sub_total_vat_excluded_amount_currency, Types::CurrencyEnum, null: false
+
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_currency, Types::CurrencyEnum, null: false
 
@@ -25,6 +28,9 @@ module Types
 
       field :refund_amount_cents, GraphQL::Types::BigInt, null: false
       field :refund_amount_currency, Types::CurrencyEnum, null: false
+
+      field :vat_amount_cents, GraphQL::Types::BigInt, null: false
+      field :vat_amount_currency, Types::CurrencyEnum, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

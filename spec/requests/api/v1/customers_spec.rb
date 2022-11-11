@@ -76,13 +76,13 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
     let(:plan) { create(:plan, interval: 'monthly') }
 
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+    let(:metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:charge) do
       create(
         :graduated_charge,
         plan: subscription.plan,
         charge_model: 'graduated',
-        billable_metric: billable_metric,
+        billable_metric: metric,
         properties: {
           graduated_ranges: [
             {
@@ -106,7 +106,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         organization: organization,
         customer: customer,
         subscription: subscription,
-        code: billable_metric.code,
+        code: metric.code,
         timestamp: Time.zone.now,
       )
     end
@@ -131,13 +131,172 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer_usage][:vat_amount_currency]).to eq('EUR')
 
         charge_usage = json[:customer_usage][:charges_usage].first
-        expect(charge_usage[:billable_metric][:name]).to eq(billable_metric.name)
-        expect(charge_usage[:billable_metric][:code]).to eq(billable_metric.code)
+        expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
+        expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
         expect(charge_usage[:billable_metric][:aggregation_type]).to eq('count_agg')
         expect(charge_usage[:charge][:charge_model]).to eq('graduated')
         expect(charge_usage[:units]).to eq('4.0')
         expect(charge_usage[:amount_cents]).to eq(5)
         expect(charge_usage[:amount_currency]).to eq('EUR')
+        expect(charge_usage[:groups]).to eq([])
+      end
+    end
+
+    context 'with one dimension group' do
+      let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
+      let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: metric,
+          properties: {},
+          group_properties: [
+            build(
+              :group_property,
+              group: aws,
+              values: { amount: '10', amount_currency: 'EUR' },
+            ),
+            build(
+              :group_property,
+              group: google,
+              values: { amount: '20', amount_currency: 'EUR' },
+            ),
+          ],
+        )
+      end
+
+      before do
+        create_list(
+          :event,
+          3,
+          organization: organization,
+          customer: customer,
+          subscription: subscription,
+          code: metric.code,
+          timestamp: Time.zone.now,
+          properties: { cloud: 'aws' },
+        )
+
+        create(
+          :event,
+          organization: organization,
+          customer: customer,
+          subscription: subscription,
+          code: metric.code,
+          timestamp: Time.zone.now,
+          properties: { cloud: 'google' },
+        )
+      end
+
+      it 'returns the group usage for the customer' do
+        get_with_token(
+          organization,
+          "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}",
+        )
+
+        charge_usage = json[:customer_usage][:charges_usage].first
+        groups_usage = charge_usage[:groups]
+
+        aggregate_failures do
+          expect(charge_usage[:units]).to eq('4.0')
+          expect(charge_usage[:amount_cents]).to eq(5000)
+          expect(groups_usage).to match_array(
+            [
+              { lago_id: aws.id, key: nil, value: 'aws', units: '3.0', amount_cents: 3000 },
+              { lago_id: google.id, key: nil, value: 'google', units: '1.0', amount_cents: 2000 },
+            ],
+          )
+        end
+      end
+    end
+
+    context 'with two dimensions group' do
+      let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
+      let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
+      let(:aws_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: aws.id) }
+      let(:aws_france) { create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id) }
+      let(:google_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id) }
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: metric,
+          properties: {},
+          group_properties: [
+            build(
+              :group_property,
+              group: aws_usa,
+              values: { amount: '10', amount_currency: 'EUR' },
+            ),
+            build(
+              :group_property,
+              group: aws_france,
+              values: { amount: '20', amount_currency: 'EUR' },
+            ),
+            build(
+              :group_property,
+              group: google_usa,
+              values: { amount: '30', amount_currency: 'EUR' },
+            ),
+          ],
+        )
+      end
+
+      before do
+        create_list(
+          :event,
+          2,
+          organization: organization,
+          customer: customer,
+          subscription: subscription,
+          code: metric.code,
+          timestamp: Time.zone.now,
+          properties: { cloud: 'aws', region: 'usa' },
+        )
+
+        create(
+          :event,
+          organization: organization,
+          customer: customer,
+          subscription: subscription,
+          code: metric.code,
+          timestamp: Time.zone.now,
+          properties: { cloud: 'aws', region: 'france' },
+        )
+
+        create(
+          :event,
+          organization: organization,
+          customer: customer,
+          subscription: subscription,
+          code: metric.code,
+          timestamp: Time.zone.now,
+          properties: { cloud: 'google', region: 'usa' },
+        )
+      end
+
+      it 'returns the group usage for the customer' do
+        get_with_token(
+          organization,
+          "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}",
+        )
+
+        charge_usage = json[:customer_usage][:charges_usage].first
+        groups_usage = charge_usage[:groups]
+
+        aggregate_failures do
+          expect(charge_usage[:units]).to eq('4.0')
+          expect(charge_usage[:amount_cents]).to eq(7000)
+          expect(groups_usage).to match_array(
+            [
+              { lago_id: aws_usa.id, key: 'aws', value: 'usa', units: '2.0', amount_cents: 2000 },
+              { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000 },
+              { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000 },
+            ],
+          )
+        end
       end
     end
 

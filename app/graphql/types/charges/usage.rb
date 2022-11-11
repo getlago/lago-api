@@ -10,6 +10,7 @@ module Types
 
       field :charge, Types::Charges::Object, null: false
       field :billable_metric, Types::BillableMetrics::Object, null: false
+      field :groups, [Types::Groups::Usage], null: true
     end
   end
 end

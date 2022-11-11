@@ -19,6 +19,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             }
             fees {
               id
+              group { id key value }
             }
           }
           subscriptions {
@@ -57,6 +58,25 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     expect(data['customer']['name']).to eq(customer.name)
     expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
     expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
+  end
+
+  it 'includes group for each fee' do
+    group1 = create(:group, key: 'cloud', value: 'aws')
+    group2 = create(:group, key: 'region', value: 'usa', parent_group_id: group1.id)
+    fee.update!(group_id: group2.id)
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      query: query,
+      variables: { id: invoice.id },
+    )
+
+    group = result['data']['invoice']['invoiceSubscriptions'][0]['fees'][0]['group']
+
+    expect(group['id']).to eq(group2.id)
+    expect(group['key']).to eq('aws')
+    expect(group['value']).to eq('usa')
   end
 
   context 'when invoice is not found' do

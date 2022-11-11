@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_31_144907) do
+ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -165,6 +165,12 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_31_144907) do
     t.integer "refund_status"
     t.datetime "voided_at"
     t.text "description"
+    t.bigint "credit_vat_amount_cents", default: 0, null: false
+    t.string "credit_vat_amount_currency"
+    t.bigint "refund_vat_amount_cents", default: 0, null: false
+    t.string "refund_vat_amount_currency"
+    t.bigint "vat_amount_cents", default: 0, null: false
+    t.string "vat_amount_currency"
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
@@ -246,8 +252,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_31_144907) do
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
     t.integer "events_count"
+    t.uuid "group_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
+    t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
@@ -523,6 +531,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_31_144907) do
   add_foreign_key "events", "subscriptions"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
+  add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
   add_foreign_key "group_properties", "charges", on_delete: :cascade

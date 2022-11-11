@@ -123,7 +123,7 @@ module CreditNotes
 
     # NOTE: Check if item credit note amount is less than or equal to invoice fee amount
     def valid_global_amount?
-      return true if item.total_amount_cents <= invoice.amount_cents - invoice_credit_note_total_amount_cents
+      return true if item.total_amount_cents <= invoice.total_amount_cents - invoice_credit_note_total_amount_cents
 
       add_error(field: :base, error_code: 'higher_than_remaining_invoice_amount')
     end

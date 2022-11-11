@@ -83,6 +83,12 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
+  describe '#currency' do
+    let(:credit_note) { build(:credit_note, total_amount_currency: 'JPY') }
+
+    it { expect(credit_note.currency).to eq('JPY') }
+  end
+
   describe '#credited?' do
     let(:credit_note) { build(:credit_note, credit_amount_cents: 0) }
 
@@ -105,13 +111,6 @@ RSpec.describe CreditNote, type: :model do
     let(:credit_note) { build(:credit_note) }
 
     it { expect(credit_note.refund_amount_cents).to be_zero }
-  end
-
-  describe '#vat_amount_cents' do
-    # TODO: will change in credit note phase 2
-    let(:credit_note) { build(:credit_note) }
-
-    it { expect(credit_note.vat_amount_cents).to be_zero }
   end
 
   describe '#subscription_ids' do
@@ -239,6 +238,15 @@ RSpec.describe CreditNote, type: :model do
       let(:credit_status) { :voided }
 
       it { expect(credit_note).not_to be_voidable }
+    end
+  end
+
+  describe ' #sub_total_vat_exclueded_amount_cents' do
+    let(:credit_note) { create(:credit_note) }
+
+    it 'returs the total amount without the vat' do
+      expect(credit_note.sub_total_vat_excluded_amount_cents)
+        .to eq(credit_note.total_amount_cents - credit_note.vat_amount_cents)
     end
   end
 end

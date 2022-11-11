@@ -19,6 +19,10 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
           balanceAmountCurrency
           totalAmountCents
           totalAmountCurrency
+          vatAmountCents
+          vatAmountCurrency
+          subTotalVatExcludedAmountCents
+          subTotalVatExcludedAmountCurrency
           createdAt
           updatedAt
           fileUrl

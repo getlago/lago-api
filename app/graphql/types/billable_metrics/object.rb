@@ -14,8 +14,7 @@ module Types
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
       field :field_name, String, null: true
       field :group, GraphQL::Types::JSON, null: true
-      field :flat_groups, [GraphQL::Types::JSON], null: true
-
+      field :flat_groups, [Types::Groups::Object], null: true
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -32,9 +31,7 @@ module Types
       end
 
       def flat_groups
-        object.selectable_groups.map do |group|
-          { id: group.id, key: group.parent&.value, value: group.value }
-        end
+        object.selectable_groups
       end
     end
   end

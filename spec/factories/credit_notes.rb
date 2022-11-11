@@ -6,13 +6,16 @@ FactoryBot.define do
     invoice
 
     reason { 'duplicated_charge' }
-    total_amount_cents { 100 }
+    total_amount_cents { 120 }
     total_amount_currency { 'EUR' }
+    vat_amount_cents { 20 }
+    vat_amount_currency { 'EUR' }
 
     credit_status { 'available' }
-    credit_amount_cents { 100 }
+    credit_amount_cents { 120 }
+    credit_vat_amount_cents { 20 }
     credit_amount_currency { 'EUR' }
-    balance_amount_cents { 100 }
+    balance_amount_cents { 120 }
     balance_amount_currency { 'EUR' }
 
     trait :with_file do
