@@ -3,7 +3,8 @@
 module Invoices
   module Payments
     class GocardlessService < BaseService
-      PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed].freeze
+      PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed resubmission_requested]
+        .freeze
       SUCCESS_STATUSES = %w[paid_out].freeze
       FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
 
@@ -109,7 +110,7 @@ module Invoices
           params: {
             amount: invoice.total_amount_cents,
             currency: invoice.total_amount_currency.upcase,
-            reference: invoice.id,
+            retry_if_possible: true,
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
