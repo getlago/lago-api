@@ -6,6 +6,14 @@ module PaymentProviders
 
     validates :access_token, presence: true
 
+    def self.auth_site
+      if Rails.env.production?
+        'https://connect.gocardless.com'
+      else
+        'https://connect-sandbox.gocardless.com'
+      end
+    end
+
     def environment
       if Rails.env.production?
         :live
