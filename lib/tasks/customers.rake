@@ -19,7 +19,7 @@ namespace :customers do
   desc 'Set sync_with_provider field for existing customers'
   task populate_sync_with_provider: :environment do
     Organization.all.each do |org|
-      next if org&.stripe_payment_provider&.create_customers&.blank?
+      next if org&.stripe_payment_provider&.create_customers.blank?
 
       org.customers.each do |customer|
         stripe_customer = customer&.stripe_customer
