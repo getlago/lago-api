@@ -2,8 +2,6 @@
 
 module PaymentProviders
   class GocardlessService < BaseService
-    # NOTE: These links will be changed later
-    AUTH_SITE = 'https://connect-sandbox.gocardless.com'
     REDIRECT_URI = "#{ENV['LAGO_OAUTH_PROXY_URL']}/gocardless/callback"
     PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back resubmission_requested].freeze
 
@@ -46,20 +44,28 @@ module PaymentProviders
     end
 
     def handle_event(events_json:)
+      handled_events = []
       events = JSON.parse(events_json)['events']
       parsed_events = events.map { |event| GoCardlessPro::Resources::Event.new(event) }
       parsed_events.each do |event|
         case event.resource_type
         when 'payments'
           if PAYMENT_ACTIONS.include?(event.action)
-            Invoices::Payments::GocardlessService
+            update_status_result = Invoices::Payments::GocardlessService
               .new.update_status(
                 provider_payment_id: event.links.payment,
                 status: event.action,
               )
+
+            return update_status_result unless update_status_result.success?
+
+            handled_events << event
           end
         end
       end
+
+      result.handled_events = handled_events
+      result
     end
 
     private
@@ -68,7 +74,7 @@ module PaymentProviders
       OAuth2::Client.new(
         ENV['GOCARDLESS_CLIENT_ID'],
         ENV['GOCARDLESS_CLIENT_SECRET'],
-        site: AUTH_SITE,
+        site: PaymentProviders::GocardlessProvider.auth_site,
         authorize_url: '/oauth/authorize',
         token_url: '/oauth/access_token',
         auth_scheme: :request_body,
