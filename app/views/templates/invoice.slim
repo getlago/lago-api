@@ -547,7 +547,7 @@ html
                             | Total unit: #{fees.sum(&:units)}
                       td width="30%"
 
-                    - fees.select { |f| f.amount.positive? }.each do |fee|
+                    - fees.select { |f| f.units.positive? }.each do |fee|
                       tr
                         td width="70%" style="padding-left: 16px;"
                           .body-1 = fee.group.name
@@ -563,7 +563,7 @@ html
                       td width="70%"
                         .body-1 = fee.billable_metric.name
                         .body-3
-                          - if fee.charge.billable_metric.recurring_count_agg?
+                          - if fee.charge.billable_metric.recurring_count_agg? && fees.sum(&:units) > 0
                             | See breakdown for total unit
                           - elsif fee.charge.percentage?
                             | Total unit: #{fees.sum(&:events_count)} events for #{fees.sum(&:units)}
@@ -581,47 +581,48 @@ html
                   td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format
 
             - recurring_fees(subscription.id).group_by(&:charge_id).each do |_charge_id, fees|
-              - if subscription.name.present?
-                h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
-              - else
-                h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
+              - if fees.sum(&:units) > 0
+                - if subscription.name.present?
+                  h2.invoice-details-title.title-2.mb-24 #{subscription.name} details
+                - else
+                  h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
 
-              - if fees.all? { |f| f.group_id? }
-                - fees.select { |f| f.amount.positive? }.each do |fee|
+                - if fees.all? { |f| f.group_id? }
+                  - fees.select { |f| f.units.positive? }.each do |fee|
+                    .body-3 = fees.first.billable_metric.name
+                    .body-1.mb-24 Breakdown of #{fee.group.name}
+                    .breakdown-details.mb-24
+                      table.breakdown-details-table width="100%"
+                        - recurring_breakdown(fee).each do |breakdown|
+                          tr
+                            td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
+                            td.body-1 width="65%"
+                              - if breakdown.action.to_sym == :add
+                                | +#{breakdown.count} #{fee.item_name}
+                              - elsif breakdown.action.to_sym == :remove
+                                | -#{breakdown.count} #{fee.item_name}
+                              - else
+                                | +/-#{breakdown.count} #{fee.item_name}
+                            td.body-3 width="20%"
+                              | #{breakdown.duration} of #{breakdown.total_duration} days
+                - else
                   .body-3 = fees.first.billable_metric.name
-                  .body-1.mb-24 Breakdown of #{fee.group.name}
+                  .body-1.mb-24 Breakdown
                   .breakdown-details.mb-24
                     table.breakdown-details-table width="100%"
-                      - recurring_breakdown(fee).each do |breakdown|
-                        tr
-                          td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
-                          td.body-1 width="65%"
-                            - if breakdown.action.to_sym == :add
-                              | +#{breakdown.count} #{fee.item_name}
-                            - elsif breakdown.action.to_sym == :remove
-                              | -#{breakdown.count} #{fee.item_name}
-                            - else
-                              | +/-#{breakdown.count} #{fee.item_name}
-                          td.body-3 width="20%"
-                            | #{breakdown.duration} of #{breakdown.total_duration} days
-              - else
-                .body-3 = fees.first.billable_metric.name
-                .body-1.mb-24 Breakdown
-                .breakdown-details.mb-24
-                  table.breakdown-details-table width="100%"
-                    - fees.each do |fee|
-                      - recurring_breakdown(fee).each do |breakdown|
-                        tr
-                          td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
-                          td.body-1 width="65%"
-                            - if breakdown.action.to_sym == :add
-                              | +#{breakdown.count} #{fee.item_name}
-                            - elsif breakdown.action.to_sym == :remove
-                              | -#{breakdown.count} #{fee.item_name}
-                            - else
-                              | +/-#{breakdown.count} #{fee.item_name}
-                          td.body-3 width="20%"
-                            | #{breakdown.duration} of #{breakdown.total_duration} days
+                      - fees.each do |fee|
+                        - recurring_breakdown(fee).each do |breakdown|
+                          tr
+                            td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
+                            td.body-1 width="65%"
+                              - if breakdown.action.to_sym == :add
+                                | +#{breakdown.count} #{fee.item_name}
+                              - elsif breakdown.action.to_sym == :remove
+                                | -#{breakdown.count} #{fee.item_name}
+                              - else
+                                | +/-#{breakdown.count} #{fee.item_name}
+                            td.body-3 width="20%"
+                              | #{breakdown.duration} of #{breakdown.total_duration} days
 
-              .alert.body-3
-                | For example, if a unit is added with 15 days left in your monthly plan, we multiply the price by 15/31 (days remaining divided by the total number of days in your plan) to calculate the prorated price. Same logic when removing a unit used during 10 days, we multiply the price by 10/31.
+                .alert.body-3
+                  | For example, if a unit is added with 15 days left in your monthly plan, we multiply the price by 15/31 (days remaining divided by the total number of days in your plan) to calculate the prorated price. Same logic when removing a unit used during 10 days, we multiply the price by 10/31.
