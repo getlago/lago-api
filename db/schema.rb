@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
+ActiveRecord::Schema[7.0].define(version: 2022_11_15_100834) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -211,8 +211,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
     t.string "slug"
     t.bigint "sequential_id"
     t.string "currency"
+    t.integer "invoice_grace_period", default: 0, null: false
     t.index ["external_id"], name: "index_customers_on_external_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
+    t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
   end
 
   create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -358,7 +360,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_07_151038) do
     t.string "legal_name"
     t.string "legal_number"
     t.text "invoice_footer"
+    t.integer "invoice_grace_period", default: 0, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
+    t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end
 
   create_table "payment_provider_customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

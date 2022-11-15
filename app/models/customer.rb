@@ -29,11 +29,12 @@ class Customer < ApplicationRecord
 
   sequenced scope: ->(customer) { customer.organization.customers }
 
-  validates :external_id, presence: true, uniqueness: { scope: :organization_id }
   validates :country, country_code: true, unless: -> { country.nil? }
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
   validates :currency, inclusion: { in: currency_list }, allow_nil: true
+  validates :external_id, presence: true, uniqueness: { scope: :organization_id }
+  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
+  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
+  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
 
   def attached_to_subscriptions?
     subscriptions.exists?

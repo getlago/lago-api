@@ -23,15 +23,16 @@ class Organization < ApplicationRecord
 
   before_create :generate_api_key
 
-  validates :name, presence: true
-  validates :webhook_url, url: true, allow_nil: true
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
   validates :country, country_code: true, unless: -> { country.nil? }
-  validates :invoice_footer, length: { maximum: 600 }
   validates :email, email: true, if: :email?
+  validates :invoice_footer, length: { maximum: 600 }
+  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
   validates :logo,
             image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
             if: :logo?
+  validates :name, presence: true
+  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
+  validates :webhook_url, url: true, allow_nil: true
 
   def logo_url
     return if logo.blank?
