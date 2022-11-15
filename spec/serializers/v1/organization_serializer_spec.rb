@@ -25,6 +25,7 @@ RSpec.describe ::V1::OrganizationSerializer do
       expect(result['organization']['legal_name']).to eq(organization.legal_name)
       expect(result['organization']['legal_number']).to eq(organization.legal_number)
       expect(result['organization']['invoice_footer']).to eq(organization.invoice_footer)
+      expect(result['organization']['invoice_grace_period']).to eq(organization.invoice_grace_period)
     end
   end
 end
