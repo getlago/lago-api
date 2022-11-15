@@ -7586,6 +7586,24 @@
               ]
             },
             {
+              "name": "hasCreditNotes",
+              "description": "Define if a customer has any credit note",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -8196,6 +8214,24 @@
             {
               "name": "hasActiveWallet",
               "description": "Define if a customer has an active wallet",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "hasCreditNotes",
+              "description": "Define if a customer has any credit note",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
