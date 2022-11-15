@@ -46,6 +46,7 @@ module Organizations
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
       organization.invoice_footer = params[:invoice_footer] if params.key?(:invoice_footer)
+      organization.invoice_grace_period = params[:invoice_grace_period] if params.key?(:invoice_grace_period)
       organization.save!
 
       result.organization = organization

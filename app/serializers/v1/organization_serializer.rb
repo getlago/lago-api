@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-#
+
 module V1
   class OrganizationSerializer < ModelSerializer
     def serialize
@@ -17,7 +17,8 @@ module V1
         city: model.city,
         legal_name: model.legal_name,
         legal_number: model.legal_number,
-        invoice_footer: model.invoice_footer
+        invoice_footer: model.invoice_footer,
+        invoice_grace_period: model.invoice_grace_period,
       }
     end
   end
