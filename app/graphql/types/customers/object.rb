@@ -35,6 +35,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
+      field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
       field :active_subscription_count, Integer, null: false, description: 'Number of active subscriptions per customer'
 
       field :can_be_deleted, Boolean, null: false do
@@ -51,6 +52,10 @@ module Types
 
       def has_active_wallet
         object.wallets.active.any?
+      end
+
+      def has_credit_notes
+        object.credit_notes.any?
       end
 
       def active_subscription_count
