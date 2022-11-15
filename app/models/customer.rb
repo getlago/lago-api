@@ -34,6 +34,7 @@ class Customer < ApplicationRecord
   validates :external_id, presence: true, uniqueness: { scope: :organization_id }
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
+  validates :timezone, timezone: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
 
   def attached_to_subscriptions?
