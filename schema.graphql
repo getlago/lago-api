@@ -2539,6 +2539,11 @@ type Customer {
   Define if a customer has an active wallet
   """
   hasActiveWallet: Boolean!
+
+  """
+  Define if a customer has any credit note
+  """
+  hasCreditNotes: Boolean!
   id: ID!
   legalName: String
   legalNumber: String
@@ -2593,6 +2598,11 @@ type CustomerDetails {
   Define if a customer has an active wallet
   """
   hasActiveWallet: Boolean!
+
+  """
+  Define if a customer has any credit note
+  """
+  hasCreditNotes: Boolean!
   id: ID!
   invoices: [Invoice!]
   legalName: String
