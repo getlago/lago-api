@@ -2531,6 +2531,16 @@ type Customer {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+
+  """
+  Credit notes credits balance available per customer
+  """
+  creditNotesBalanceAmountCents: BigInt!
+
+  """
+  Number of available credits from credit notes per customer
+  """
+  creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
   email: String
   externalId: String!
@@ -2590,6 +2600,16 @@ type CustomerDetails {
   country: CountryCode
   createdAt: ISO8601DateTime!
   creditNotes: [CreditNote!]
+
+  """
+  Credit notes credits balance available per customer
+  """
+  creditNotesBalanceAmountCents: BigInt!
+
+  """
+  Number of available credits from credit notes per customer
+  """
+  creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
   email: String
   externalId: String!

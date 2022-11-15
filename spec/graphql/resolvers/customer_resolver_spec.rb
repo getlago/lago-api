@@ -7,7 +7,13 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     <<~GQL
       query($customerId: ID!) {
         customer(id: $customerId) {
-          id externalId name currency hasCreditNotes
+          id
+          externalId
+          name
+          currency
+          hasCreditNotes
+          creditNotesCreditsAvailableCount
+          creditNotesBalanceAmountCents
           invoices {
             id
             invoiceType
@@ -84,6 +90,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['appliedAddOns'].count).to eq(1)
       expect(customer_response['currency']).to be_present
       expect(customer_response['hasCreditNotes']).to be true
+      expect(customer_response['creditNotesCreditsAvailableCount']).to eq(1)
+      expect(customer_response['creditNotesBalanceAmountCents']).to eq('120')
     end
   end
 
