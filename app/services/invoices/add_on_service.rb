@@ -16,9 +16,6 @@ module Invoices
           issuing_date: date,
           invoice_type: :add_on,
           status: :pending,
-
-          # NOTE: Apply credits before VAT, will be changed with credit note feature
-          legacy: true,
           vat_rate: customer.applicable_vat_rate,
         )
 
