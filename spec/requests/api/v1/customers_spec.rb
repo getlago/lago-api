@@ -10,6 +10,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         currency: 'EUR',
+        invoice_grace_period: 3,
       }
     end
 
@@ -17,11 +18,15 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       post_with_token(organization, '/api/v1/customers', { customer: create_params })
 
       expect(response).to have_http_status(:success)
-      expect(json[:customer][:lago_id]).to be_present
-      expect(json[:customer][:external_id]).to eq(create_params[:external_id])
-      expect(json[:customer][:name]).to eq(create_params[:name])
-      expect(json[:customer][:created_at]).to be_present
-      expect(json[:customer][:currency]).to eq(create_params[:currency])
+
+      aggregate_failures do
+        expect(json[:customer][:lago_id]).to be_present
+        expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+        expect(json[:customer][:name]).to eq(create_params[:name])
+        expect(json[:customer][:created_at]).to be_present
+        expect(json[:customer][:currency]).to eq(create_params[:currency])
+        expect(json[:customer][:invoice_grace_period]).to eq(create_params[:invoice_grace_period])
+      end
     end
 
     context 'with billing configuration' do
