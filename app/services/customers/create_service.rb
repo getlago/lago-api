@@ -21,6 +21,7 @@ module Customers
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
         customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
+        customer.invoice_grace_period = params[:invoice_grace_period] if params.key?(:invoice_grace_period)
 
         if params.key?(:currency)
           currency_result = Customers::UpdateService.new(nil).update_currency(

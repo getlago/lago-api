@@ -93,6 +93,7 @@ module Api
           :legal_number,
           :vat_rate,
           :currency,
+          :invoice_grace_period,
           billing_configuration: [
             :payment_provider,
             :provider_customer_id,
