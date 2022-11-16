@@ -178,7 +178,7 @@ module Invoices
 
     def create_coupon_credit(invoice)
       applied_coupons.each do |applied_coupon|
-        return unless invoice.amount_cents&.positive?
+        break unless invoice.amount_cents&.positive?
 
         next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
 

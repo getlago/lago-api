@@ -137,7 +137,7 @@ RSpec.describe Credits::AppliedCouponService do
           frequency: 'recurring',
           frequency_duration: 3,
           frequency_duration_remaining: 3,
-          amount_cents: 12
+          amount_cents: 12,
         )
       end
 
