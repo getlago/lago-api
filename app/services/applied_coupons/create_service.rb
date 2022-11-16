@@ -49,12 +49,6 @@ module AppliedCoupons
     def check_preconditions
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'coupon') unless coupon
-      return unless coupon_already_applied?
-
-      result.single_validation_failure!(
-        field: 'coupon',
-        error_code: 'coupon_already_applied',
-      )
     end
 
     def process_creation(applied_coupon_attributes)
@@ -69,6 +63,7 @@ module AppliedCoupons
         percentage_rate: applied_coupon_attributes[:percentage_rate],
         frequency: applied_coupon_attributes[:frequency],
         frequency_duration: applied_coupon_attributes[:frequency_duration],
+        frequency_duration_remaining: applied_coupon_attributes[:frequency_duration],
       )
 
       if coupon.fixed_amount?
@@ -90,10 +85,6 @@ module AppliedCoupons
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    end
-
-    def coupon_already_applied?
-      customer.applied_coupons.active.exists?
     end
 
     def track_applied_coupon_created(applied_coupon)
