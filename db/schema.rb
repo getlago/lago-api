@@ -80,7 +80,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_18_084547) do
     t.decimal "percentage_rate", precision: 10, scale: 5
     t.integer "frequency", default: 0, null: false
     t.integer "frequency_duration"
-    t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true, where: "(status = 0)"
+    t.integer "frequency_duration_remaining"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
   end
@@ -210,8 +210,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_18_084547) do
     t.string "slug"
     t.bigint "sequential_id"
     t.string "currency"
-    t.index ["external_id"], name: "index_customers_on_external_id"
+    t.integer "invoice_grace_period", default: 0, null: false
+    t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_customers_on_organization_id"
+    t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
   end
 
   create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -247,10 +249,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_18_084547) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
+    t.integer "events_count"
     t.integer "fee_type"
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
-    t.integer "events_count"
     t.uuid "group_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
@@ -359,7 +361,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_18_084547) do
     t.string "legal_name"
     t.string "legal_number"
     t.text "invoice_footer"
+    t.integer "invoice_grace_period", default: 0, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
+    t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end
 
   create_table "payment_provider_customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
