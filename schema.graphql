@@ -1768,6 +1768,7 @@ type CreditNote {
   creditAmountCents: BigInt!
   creditAmountCurrency: CurrencyEnum!
   creditStatus: CreditNoteCreditStatusEnum
+  customer: Customer!
   description: String
   fileUrl: String
   id: ID!
