@@ -25,6 +25,7 @@ module V1
         legal_number: model.legal_number,
         currency: model.currency,
         billing_configuration: billing_configuration,
+        invoice_grace_period: model.invoice_grace_period,
       }
     end
 
