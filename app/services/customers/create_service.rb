@@ -68,7 +68,8 @@ module Customers
       )
 
       # NOTE: handle configuration for configured payment providers
-      create_billing_configuration(customer, args[:stripe_customer])
+      billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
+      create_billing_configuration(customer, billing_configuration)
 
       result.customer = customer
       track_customer_created(customer)
@@ -79,47 +80,52 @@ module Customers
 
     private
 
-    # NOTE: Check if a payment provider is configured in the organization and
-    #       force creation of provider customers
     def create_billing_configuration(customer, billing_configuration = {})
-      create_stripe_customer = customer.organization.stripe_payment_provider&.create_customers
-      create_stripe_customer ||= (billing_configuration || {})[:provider_customer_id]
-      return unless create_stripe_customer
+      return if billing_configuration.blank?
 
-      customer.update!(payment_provider: 'stripe')
+      create_provider_customer = billing_configuration[:sync_with_provider]
+      create_provider_customer ||= billing_configuration[:provider_customer_id]
+      return unless create_provider_customer
 
-      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: PaymentProviderCustomers::StripeCustomer,
-        payment_provider_id: customer.organization.stripe_payment_provider&.id,
-        params: billing_configuration,
-      )
-      create_result.throw_error unless create_result.success?
+      customer.update!(payment_provider: billing_configuration[:payment_provider]) if api_context?
+
+      create_or_update_provider_customer(customer, billing_configuration)
     end
 
     def handle_api_billing_configuration(customer, params, new_customer)
-      unless params.key?(:billing_configuration)
-        create_billing_configuration(customer) if new_customer
-        return
-      end
+      return unless params.key?(:billing_configuration)
 
       billing_configuration = params[:billing_configuration]
 
-      unless billing_configuration[:payment_provider] == 'stripe'
+      if new_customer
+        create_billing_configuration(customer, billing_configuration)
+        return
+      end
+
+      unless %w[stripe gocardless].include?(billing_configuration[:payment_provider])
         customer.update!(payment_provider: nil)
         return
       end
 
-      customer.update!(payment_provider: 'stripe')
+      customer.update!(payment_provider: billing_configuration[:payment_provider])
       create_or_update_provider_customer(customer, billing_configuration)
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
+      provider_class = case billing_configuration[:payment_provider]
+                       when 'stripe'
+                         PaymentProviderCustomers::StripeCustomer
+                       when 'gocardless'
+                         PaymentProviderCustomers::GocardlessCustomer
+      end
+
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: PaymentProviderCustomers::StripeCustomer,
-        payment_provider_id: customer.organization.stripe_payment_provider&.id,
+        customer_class: provider_class,
+        payment_provider_id: customer.organization.payment_provider(billing_configuration[:payment_provider])&.id,
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync],
       )
+
       create_result.throw_error unless create_result.success?
     end
 

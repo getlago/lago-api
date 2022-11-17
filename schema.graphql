@@ -1664,8 +1664,8 @@ input CreateCustomerInput {
   name: String!
   paymentProvider: ProviderTypeEnum
   phone: String
+  providerCustomer: ProviderCustomerInput
   state: String
-  stripeCustomer: StripeCustomerInput
   url: String
   vatRate: Float
   zipcode: String
@@ -2542,10 +2542,10 @@ type Customer {
   name: String
   paymentProvider: ProviderTypeEnum
   phone: String
+  providerCustomer: ProviderCustomer
   sequentialId: String!
   slug: String!
   state: String
-  stripeCustomer: StripeCustomer
   subscriptions: [Subscription!]
   updatedAt: ISO8601DateTime!
   url: String
@@ -2597,10 +2597,10 @@ type CustomerDetails {
   name: String
   paymentProvider: ProviderTypeEnum
   phone: String
+  providerCustomer: ProviderCustomer
   sequentialId: String!
   slug: String!
   state: String
-  stripeCustomer: StripeCustomer
 
   """
   Query subscriptions of a customer
@@ -2833,6 +2833,7 @@ enum FeeTypesEnum {
 type GocardlessProvider {
   hasAccessToken: Boolean!
   id: ID!
+  webhookSecret: String
 }
 
 type GraduatedRange {
@@ -3442,6 +3443,7 @@ type Organization {
   country: CountryCode
   createdAt: ISO8601DateTime!
   email: String
+  gocardlessPaymentProvider: GocardlessProvider
   id: ID!
   invoiceFooter: String
   legalName: String
@@ -3557,7 +3559,19 @@ input PropertiesInput {
   volumeRanges: [VolumeRangeInput!]
 }
 
+type ProviderCustomer {
+  id: ID!
+  providerCustomerId: ID
+  syncWithProvider: Boolean
+}
+
+input ProviderCustomerInput {
+  providerCustomerId: ID
+  syncWithProvider: Boolean
+}
+
 enum ProviderTypeEnum {
+  gocardless
   stripe
 }
 
@@ -3840,15 +3854,6 @@ enum StatusTypeEnum {
   terminated
 }
 
-type StripeCustomer {
-  id: ID!
-  providerCustomerId: ID
-}
-
-input StripeCustomerInput {
-  providerCustomerId: ID
-}
-
 type StripeProvider {
   createCustomers: Boolean!
   id: ID!
@@ -4012,8 +4017,8 @@ input UpdateCustomerInput {
   name: String!
   paymentProvider: ProviderTypeEnum
   phone: String
+  providerCustomer: ProviderCustomerInput
   state: String
-  stripeCustomer: StripeCustomerInput
   url: String
   vatRate: Float
   zipcode: String

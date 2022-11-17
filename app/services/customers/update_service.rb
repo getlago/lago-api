@@ -11,6 +11,7 @@ module Customers
           update_currency(customer: customer, currency: args[:currency], customer_update: true)
           return result unless result.success?
         end
+        old_payment_provider = customer.payment_provider
 
         customer.name = args[:name] if args.key?(:name)
         customer.country = args[:country]&.upcase if args.key?(:country)
@@ -33,10 +34,11 @@ module Customers
         customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 
         customer.save!
-      end
 
-      # NOTE: if payment provider is updated, we need to create/update the provider customer
-      create_or_update_provider_customer(customer, args[:stripe_customer])
+        # NOTE: if payment provider is updated, we need to create/update the provider customer
+        payment_provider = old_payment_provider || customer.payment_provider
+        create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
+      end
 
       result.customer = customer
       result
@@ -71,12 +73,27 @@ module Customers
 
     private
 
-    def create_or_update_provider_customer(customer, billing_configuration = {})
-      handle_stripe_customer = customer.payment_provider.present?
-      handle_stripe_customer ||= (billing_configuration || {})[:provider_customer_id].present?
-      handle_stripe_customer ||= customer.stripe_customer&.provider_customer_id.present?
-      return unless handle_stripe_customer
+    def create_or_update_provider_customer(customer, payment_provider, billing_configuration = {})
+      handle_provider_customer = customer.payment_provider.present?
+      handle_provider_customer ||= (billing_configuration || {})[:provider_customer_id].present?
 
+      case payment_provider
+      when 'stripe'
+        handle_provider_customer ||= customer.stripe_customer&.provider_customer_id.present?
+
+        return unless handle_provider_customer
+
+        update_stripe_customer(customer, billing_configuration)
+      when 'gocardless'
+        handle_provider_customer ||= customer.gocardless_customer&.provider_customer_id.present?
+
+        return unless handle_provider_customer
+
+        update_gocardless_customer(customer, billing_configuration)
+      end
+    end
+
+    def update_stripe_customer(customer, billing_configuration)
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
         payment_provider_id: customer.organization.stripe_payment_provider&.id,
@@ -86,6 +103,18 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.stripe_customer&.reload
+    end
+
+    def update_gocardless_customer(customer, billing_configuration)
+      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
+        customer_class: PaymentProviderCustomers::GocardlessCustomer,
+        payment_provider_id: customer.organization.gocardless_payment_provider&.id,
+        params: billing_configuration,
+      )
+      return create_result.throw_error unless create_result.success?
+
+      # NOTE: Create service is modifying an other instance of the provider customer
+      customer.gocardless_customer&.reload
     end
   end
 end

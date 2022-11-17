@@ -20,6 +20,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(CurrentContext).to receive(:source).and_return('api')
     end
 
     it 'creates a new customer' do
@@ -175,6 +176,40 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
+    context 'with gocardless configuration' do
+      let(:create_args) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          billing_configuration: {
+            payment_provider: 'gocardless',
+            provider_customer_id: 'gocardless_id',
+          },
+        }
+      end
+
+      it 'creates a gocardless customer' do
+        result = customers_service.create_from_api(
+          organization: organization,
+          params: create_args,
+        )
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          customer = result.customer
+          expect(customer.id).to be_present
+          expect(customer.payment_provider).to eq('gocardless')
+
+          expect(customer.gocardless_customer).to be_present
+
+          gocardless_customer = customer.gocardless_customer
+          expect(gocardless_customer.id).to be_present
+          expect(gocardless_customer.provider_customer_id).to eq('gocardless_id')
+        end
+      end
+    end
+
     context 'with unknown payment provider' do
       let(:create_args) do
         {
@@ -199,19 +234,12 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(customer.id).to be_present
           expect(customer.payment_provider).to be_nil
           expect(customer.stripe_customer).to be_nil
+          expect(customer.gocardless_customer).to be_nil
         end
       end
     end
 
-    context 'when forcing customer creation on stripe' do
-      before do
-        create(
-          :stripe_provider,
-          organization: organization,
-          create_customers: true,
-        )
-      end
-
+    context 'when billing configuration is not provided' do
       it 'creates a payment provider customer' do
         result = customers_service.create_from_api(
           organization: organization,
@@ -223,8 +251,9 @@ RSpec.describe Customers::CreateService, type: :service do
 
           customer = result.customer
           expect(customer.id).to be_present
-          expect(customer.payment_provider).to eq('stripe')
-          expect(customer.stripe_customer).to be_present
+          expect(customer.payment_provider).to eq(nil)
+          expect(customer.stripe_customer).not_to be_present
+          expect(customer.gocardless_customer).not_to be_present
         end
       end
 
@@ -251,6 +280,7 @@ RSpec.describe Customers::CreateService, type: :service do
             expect(customer.id).to be_present
             expect(customer.payment_provider).to be_nil
             expect(customer.stripe_customer).not_to be_present
+            expect(customer.gocardless_customer).not_to be_present
           end
         end
       end
@@ -269,6 +299,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(CurrentContext).to receive(:source).and_return('graphql')
     end
 
     it 'creates a new customer' do
@@ -329,26 +360,12 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
-    context 'with payment provider' do
+    context 'with stripe payment provider' do
       before do
         create(
           :stripe_provider,
           organization: organization,
-          create_customers: true,
         )
-      end
-
-      it 'creates a payment provider customer' do
-        result = customers_service.create(**create_args)
-
-        aggregate_failures do
-          expect(result).to be_success
-
-          customer = result.customer
-          expect(customer.id).to be_present
-          expect(customer.payment_provider).to eq('stripe')
-          expect(customer.stripe_customer).to be_present
-        end
       end
 
       context 'with provider customer id' do
@@ -358,7 +375,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
-            stripe_customer: { provider_customer_id: 'cus_12345' },
+            provider_customer: { provider_customer_id: 'cus_12345' },
           }
         end
 
@@ -373,6 +390,66 @@ RSpec.describe Customers::CreateService, type: :service do
             expect(customer.payment_provider).to eq('stripe')
             expect(customer.stripe_customer).to be_present
             expect(customer.stripe_customer.provider_customer_id).to eq('cus_12345')
+          end
+        end
+      end
+    end
+
+    context 'with gocardless payment provider' do
+      before do
+        create(
+          :gocardless_provider,
+          organization: organization,
+        )
+      end
+
+      context 'with provider customer id' do
+        let(:create_args) do
+          {
+            external_id: SecureRandom.uuid,
+            name: 'Foo Bar',
+            organization_id: organization.id,
+            payment_provider: 'gocardless',
+            provider_customer: { provider_customer_id: 'cus_12345' },
+          }
+        end
+
+        it 'creates a payment provider customer' do
+          result = customers_service.create(**create_args)
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            customer = result.customer
+            expect(customer.id).to be_present
+            expect(customer.payment_provider).to eq('gocardless')
+            expect(customer.gocardless_customer).to be_present
+            expect(customer.gocardless_customer.provider_customer_id).to eq('cus_12345')
+          end
+        end
+      end
+
+      context 'with sync option enabled' do
+        let(:create_args) do
+          {
+            external_id: SecureRandom.uuid,
+            name: 'Foo Bar',
+            organization_id: organization.id,
+            payment_provider: 'gocardless',
+            provider_customer: { sync_with_provider: true },
+          }
+        end
+
+        it 'creates a payment provider customer' do
+          result = customers_service.create(**create_args)
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            customer = result.customer
+            expect(customer.id).to be_present
+            expect(customer.payment_provider).to eq('gocardless')
+            expect(customer.gocardless_customer).to be_present
           end
         end
       end

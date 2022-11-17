@@ -2,13 +2,17 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::Payments::StripeService, type: :service do
-  subject(:stripe_service) { described_class.new(invoice) }
+RSpec.describe Invoices::Payments::GocardlessService, type: :service do
+  subject(:gocardless_service) { described_class.new(invoice) }
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
-  let(:stripe_payment_provider) { create(:stripe_provider, organization: organization) }
-  let(:stripe_customer) { create(:stripe_customer, customer: customer, payment_method_id: 'pm_123456') }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
+  let(:gocardless_customer) { create(:gocardless_customer, customer: customer) }
+  let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
+  let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
+  let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
+  let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
 
   let(:invoice) do
     create(
@@ -20,37 +24,33 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
   end
 
   describe '.create' do
-    let(:provider_customer_service) { instance_double(PaymentProviderCustomers::StripeService) }
-    let(:provider_customer_service_result) do
-      BaseService::Result.new.tap do |result|
-        result.payment_method = Stripe::PaymentMethod.new(id: 'pm_123456')
-      end
-    end
-
     before do
-      stripe_payment_provider
-      stripe_customer
+      gocardless_payment_provider
+      gocardless_customer
 
-      allow(Stripe::PaymentIntent).to receive(:create)
-        .and_return(
-          Stripe::PaymentIntent.construct_from(
-            id: 'ch_123456',
-            status: 'succeeded',
-            amount: invoice.total_amount_cents,
-            currency: invoice.total_amount_currency,
-          ),
-        )
+      allow(GoCardlessPro::Client).to receive(:new)
+        .and_return(gocardless_client)
+      allow(gocardless_client).to receive(:mandates)
+        .and_return(gocardless_mandates_service)
+      allow(gocardless_mandates_service).to receive(:list)
+        .and_return(gocardless_list_response)
+      allow(gocardless_list_response).to receive(:records)
+        .and_return([GoCardlessPro::Resources::Mandate.new('id' => 'mandate_id')])
+      allow(gocardless_client).to receive(:payments)
+        .and_return(gocardless_payments_service)
+      allow(gocardless_payments_service).to receive(:create)
+        .and_return(GoCardlessPro::Resources::Payment.new(
+          'id' => '_ID_',
+          'amount' => invoice.total_amount_cents,
+          'currency' => invoice.total_amount_currency,
+          'status' => 'paid_out',
+        ))
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
-
-      allow(PaymentProviderCustomers::StripeService).to receive(:new)
-        .and_return(provider_customer_service)
-      allow(provider_customer_service).to receive(:check_payment_method)
-        .and_return(provider_customer_service_result)
     end
 
-    it 'creates a stripe payment and a payment' do
-      result = stripe_service.create
+    it 'creates a gocardless payment' do
+      result = gocardless_service.create
 
       expect(result).to be_success
 
@@ -59,14 +59,15 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
         expect(result.payment.id).to be_present
         expect(result.payment.invoice).to eq(invoice)
-        expect(result.payment.payment_provider).to eq(stripe_payment_provider)
-        expect(result.payment.payment_provider_customer).to eq(stripe_customer)
+        expect(result.payment.payment_provider).to eq(gocardless_payment_provider)
+        expect(result.payment.payment_provider_customer).to eq(gocardless_customer)
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.total_amount_currency)
-        expect(result.payment.status).to eq('succeeded')
+        expect(result.payment.status).to eq('paid_out')
+        expect(gocardless_customer.reload.provider_mandate_id).to eq('mandate_id')
       end
 
-      expect(Stripe::PaymentIntent).to have_received(:create)
+      expect(gocardless_payments_service).to have_received(:create)
     end
 
     context 'when invoice type is credit and new status is succeeded' do
@@ -93,14 +94,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'calls Invoices::PrepaidCreditJob' do
-        stripe_service.create
+        gocardless_service.create
 
         expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
       end
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = stripe_service.create.payment.invoice
+      invoice = gocardless_service.create.payment.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -114,10 +115,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'with no payment provider' do
-      let(:stripe_payment_provider) { nil }
+      let(:gocardless_payment_provider) { nil }
 
-      it 'does not creates a stripe payment' do
-        result = stripe_service.create
+      it 'does not creates a gocardless payment' do
+        result = gocardless_service.create
 
         expect(result).to be_success
 
@@ -125,7 +126,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(Stripe::PaymentIntent).not_to have_received(:create)
+          expect(gocardless_payments_service).not_to have_received(:create)
         end
       end
     end
@@ -140,8 +141,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         )
       end
 
-      it 'does not creates a stripe payment' do
-        result = stripe_service.create
+      it 'does not creates a gocardless payment' do
+        result = gocardless_service.create
 
         expect(result).to be_success
 
@@ -151,16 +152,16 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
           expect(result.invoice).to be_succeeded
 
-          expect(Stripe::PaymentIntent).not_to have_received(:create)
+          expect(gocardless_payments_service).not_to have_received(:create)
         end
       end
     end
 
     context 'when customer does not have a provider customer id' do
-      before { stripe_customer.update!(provider_customer_id: nil) }
+      before { gocardless_customer.update!(provider_customer_id: nil) }
 
-      it 'does not creates a stripe payment' do
-        result = stripe_service.create
+      it 'does not creates a gocardless payment' do
+        result = gocardless_service.create
 
         expect(result).to be_success
 
@@ -168,46 +169,12 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(Stripe::PaymentIntent).not_to have_received(:create)
+          expect(gocardless_payments_service).not_to have_received(:create)
         end
       end
     end
 
-    context 'when customer does not have a payment method' do
-      let(:stripe_customer) { create(:stripe_customer, customer: customer) }
-
-      before do
-        allow(Stripe::PaymentMethod).to receive(:list)
-          .and_return(Stripe::ListObject.construct_from(
-            data: [
-              {
-                id: 'pm_123456',
-                object: 'payment_method',
-                card: { 'brand': 'visa' },
-                created: 1_656_422_973,
-                customer: 'cus_123456',
-                livemode: false,
-                metadata: {},
-                type: 'card',
-              },
-            ],
-          ))
-      end
-
-      it 'retrieves the payment method' do
-        result = stripe_service.create
-
-        expect(result).to be_success
-        expect(customer.stripe_customer.reload).to be_present
-        expect(customer.stripe_customer.provider_customer_id).to eq(stripe_customer.provider_customer_id)
-        expect(customer.stripe_customer.payment_method_id).to eq('pm_123456')
-
-        expect(Stripe::PaymentMethod).to have_received(:list)
-        expect(Stripe::PaymentIntent).to have_received(:create)
-      end
-    end
-
-    context 'with card error on stripe' do
+    context 'with error on gocardless' do
       let(:customer) { create(:customer, organization: organization) }
 
       let(:subscription) do
@@ -221,22 +188,22 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       before do
         subscription
 
-        allow(Stripe::PaymentIntent).to receive(:create)
-          .and_raise(Stripe::CardError.new('error', {}))
+        allow(gocardless_payments_service).to receive(:create)
+          .and_raise(GoCardlessPro::Error.new('code' => 'code', 'message' => 'error'))
       end
 
       it 'delivers an error webhook' do
-        expect { stripe_service.create }
-          .to raise_error(Stripe::CardError)
+        expect { gocardless_service.create }
+          .to raise_error(GoCardlessPro::Error)
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
             :payment_provider_invoice_payment_error,
             invoice,
-            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {
               message: 'error',
-              error_code: nil,
+              error_code: 'code',
             },
           )
       end
@@ -249,6 +216,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         :payment,
         invoice: invoice,
         provider_payment_id: 'ch_123456',
+        status: 'pending_submission',
       )
     end
 
@@ -258,20 +226,20 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     it 'updates the payment and invoice status' do
-      result = stripe_service.update_status(
+      result = gocardless_service.update_status(
         provider_payment_id: 'ch_123456',
-        status: 'succeeded',
+        status: 'paid_out',
       )
 
       expect(result).to be_success
-      expect(result.payment.status).to eq('succeeded')
+      expect(result.payment.status).to eq('paid_out')
       expect(result.invoice.status).to eq('succeeded')
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = stripe_service.update_status(
+      invoice = gocardless_service.update_status(
         provider_payment_id: 'ch_123456',
-        status: 'succeeded',
+        status: 'paid_out',
       ).payment.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
@@ -289,9 +257,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       before { invoice.succeeded! }
 
       it 'does not update the status of invoice and payment' do
-        result = stripe_service.update_status(
+        result = gocardless_service.update_status(
           provider_payment_id: 'ch_123456',
-          status: 'succeeded',
+          status: 'paid_out',
         )
 
         expect(result).to be_success
@@ -300,8 +268,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'with invalid status' do
-      it 'does not update the status of invoice and payment' do
-        result = stripe_service.update_status(
+      it 'does not update the status of invoice' do
+        result = gocardless_service.update_status(
           provider_payment_id: 'ch_123456',
           status: 'foo-bar',
         )

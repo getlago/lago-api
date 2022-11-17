@@ -112,10 +112,19 @@ class BaseService
 
   def initialize(current_user = nil)
     @result = Result.new
+    @source = CurrentContext&.source
     result.user = current_user
   end
 
   private
 
-  attr_reader :result
+  attr_reader :result, :source
+
+  def api_context?
+    source&.to_sym == :api
+  end
+
+  def graphql_context?
+    source&.to_sym == :graphql
+  end
 end

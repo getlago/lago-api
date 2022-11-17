@@ -3,6 +3,8 @@
 require 'rails_helper'
 
 RSpec.describe SendWebhookJob, type: :job do
+  subject(:send_webhook_job) { described_class }
+
   let(:webhook_invoice_service) { instance_double(Webhooks::InvoicesService) }
   let(:webhook_add_on_service) { instance_double(Webhooks::AddOnService) }
   let(:webhook_event_service) { instance_double(Webhooks::EventService) }
@@ -18,7 +20,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook invoice service' do
-      described_class.perform_now(:invoice, invoice)
+      send_webhook_job.perform_now(:invoice, invoice)
 
       expect(Webhooks::InvoicesService).to have_received(:new)
       expect(webhook_invoice_service).to have_received(:call)
@@ -34,7 +36,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook invoice service' do
-      described_class.perform_now(:add_on, invoice)
+      send_webhook_job.perform_now(:add_on, invoice)
 
       expect(Webhooks::AddOnService).to have_received(:new)
       expect(webhook_add_on_service).to have_received(:call)
@@ -62,7 +64,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(:event, object)
+      send_webhook_job.perform_now(:event, object)
 
       expect(Webhooks::EventService).to have_received(:new)
       expect(webhook_event_service).to have_received(:call)
@@ -89,7 +91,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(
+      send_webhook_job.perform_now(
         :payment_provider_invoice_payment_error,
         invoice,
         webhook_options,
@@ -112,12 +114,35 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(
+      send_webhook_job.perform_now(
         :payment_provider_customer_created,
         customer,
       )
 
       expect(Webhooks::PaymentProviders::CustomerCreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is payment_provider_customer_checkout_url' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerCheckoutService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::PaymentProviders::CustomerCheckoutService).to receive(:new)
+        .with(customer, checkout_url: 'https://example.com')
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        :payment_provider_customer_checkout_url,
+        customer,
+        checkout_url: 'https://example.com',
+      )
+
+      expect(Webhooks::PaymentProviders::CustomerCheckoutService).to have_received(:new)
       expect(webhook_service).to have_received(:call)
     end
   end
@@ -143,7 +168,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook event service' do
-      described_class.perform_now(
+      send_webhook_job.perform_now(
         :payment_provider_customer_error,
         customer,
         webhook_options,
@@ -166,7 +191,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook service' do
-      described_class.perform_now(
+      send_webhook_job.perform_now(
         'credit_note.created',
         credit_note,
       )
@@ -188,7 +213,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook service' do
-      described_class.perform_now(
+      send_webhook_job.perform_now(
         'credit_note.generated',
         credit_note,
       )
@@ -232,7 +257,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
-      expect { described_class.perform_now(:subscription, invoice) }
+      expect { send_webhook_job.perform_now(:subscription, invoice) }
         .to raise_error(NotImplementedError)
     end
   end

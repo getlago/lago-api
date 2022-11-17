@@ -9,7 +9,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
   let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
 
   let(:create_params) do
-    { provider_customer_id: 'stripe_id' }
+    { provider_customer_id: 'id', sync_with_provider: true }
   end
 
   describe '.create_or_update' do
@@ -22,20 +22,12 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
       expect(result).to be_success
       expect(result.provider_customer).to be_present
-      expect(result.provider_customer.provider_customer_id).to eq('stripe_id')
+      expect(result.provider_customer.provider_customer_id).to eq('id')
     end
 
     context 'when no provider customer id and should create on service' do
       let(:create_params) do
-        { provider_customer_id: nil }
-      end
-
-      let(:stripe_provider) do
-        create(
-          :stripe_provider,
-          organization: customer.organization,
-          create_customers: true,
-        )
+        { provider_customer_id: nil, sync_with_provider: true }
       end
 
       it 'enqueues a job to create the customer on the provider' do
@@ -49,17 +41,32 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       end
     end
 
-    context 'when removing the provider customer id and should create on service' do
+    context 'when no gocardless provider customer id and should create on service' do
       let(:create_params) do
-        { provider_customer_id: nil }
+        { provider_customer_id: nil, sync_with_provider: true }
       end
 
-      let(:stripe_provider) do
+      let(:gocardless_provider) do
         create(
-          :stripe_provider,
+          :gocardless_provider,
           organization: customer.organization,
-          create_customers: true,
         )
+      end
+
+      it 'enqueues a job to create the customer on the provider' do
+        expect do
+          create_service.create_or_update(
+            customer_class: PaymentProviderCustomers::GocardlessCustomer,
+            payment_provider_id: gocardless_provider.id,
+            params: create_params,
+          )
+        end.to have_enqueued_job(PaymentProviderCustomers::GocardlessCreateJob)
+      end
+    end
+
+    context 'when removing the provider customer id and should create on service' do
+      let(:create_params) do
+        { provider_customer_id: nil, sync_with_provider: true }
       end
 
       let(:stripe_customer) do

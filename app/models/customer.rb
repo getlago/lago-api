@@ -24,8 +24,9 @@ class Customer < ApplicationRecord
   has_many :persisted_events
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
+  has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
 
-  PAYMENT_PROVIDERS = %w[stripe].freeze
+  PAYMENT_PROVIDERS = %w[stripe gocardless].freeze
 
   sequenced scope: ->(customer) { customer.organization.customers }
 

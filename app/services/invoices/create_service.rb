@@ -205,6 +205,8 @@ module Invoices
       case customer.payment_provider&.to_sym
       when :stripe
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
+      when :gocardless
+        Invoices::Payments::GocardlessCreateJob.perform_later(invoice)
       end
     end
 

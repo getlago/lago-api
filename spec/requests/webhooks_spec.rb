@@ -77,4 +77,79 @@ RSpec.describe WebhooksController, type: :request do
       end
     end
   end
+
+  describe 'POST /gocardless' do
+    let(:organization) { create(:organization) }
+
+    let(:gocardless_provider) do
+      create(
+        :gocardless_provider,
+        organization: organization,
+        webhook_secret: 'secrets',
+      )
+    end
+
+    let(:gocardless_service) { instance_double(PaymentProviders::GocardlessService) }
+
+    let(:events) do
+      path = Rails.root.join('spec/fixtures/gocardless/events.json')
+      JSON.parse(File.read(path))
+    end
+
+    let(:result) do
+      result = BaseService::Result.new
+      result.events = events['events'].map { |event| GoCardlessPro::Resources::Event.new(event) }
+      result
+    end
+
+    before do
+      allow(PaymentProviders::GocardlessService).to receive(:new)
+        .and_return(gocardless_service)
+      allow(gocardless_service).to receive(:handle_incoming_webhook)
+        .with(
+          organization_id: organization.id,
+          body: events.to_json,
+          signature: 'signature',
+        )
+        .and_return(result)
+    end
+
+    it 'handle gocardless webhooks' do
+      post(
+        "/webhooks/gocardless/#{gocardless_provider.organization_id}",
+        params: events.to_json,
+        headers: {
+          'Webhook-Signature' => 'signature',
+          'Content-Type' => 'application/json',
+        },
+      )
+
+      expect(response).to have_http_status(:success)
+
+      expect(PaymentProviders::GocardlessService).to have_received(:new)
+      expect(gocardless_service).to have_received(:handle_incoming_webhook)
+    end
+
+    context 'when failing to handle gocardless event' do
+      let(:result) do
+        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+      end
+
+      it 'returns a bad request' do
+        post(
+          "/webhooks/gocardless/#{gocardless_provider.organization_id}",
+          params: events.to_json,
+          headers: {
+            'Webhook-Signature' => 'signature',
+            'Content-Type' => 'application/json',
+          },
+        )
+
+        expect(response).to have_http_status(:bad_request)
+
+        expect(PaymentProviders::GocardlessService).to have_received(:new)
+        expect(gocardless_service).to have_received(:handle_incoming_webhook)
+      end
+    end
+  end
 end

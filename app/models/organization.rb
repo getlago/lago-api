@@ -18,6 +18,7 @@ class Organization < ApplicationRecord
   has_many :wallet_transactions, through: :wallets
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
+  has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
 
   has_one_attached :logo
 
@@ -47,6 +48,15 @@ class Organization < ApplicationRecord
     logo.blob.open do |tempfile|
       data = tempfile.read
       Base64.encode64(data)
+    end
+  end
+
+  def payment_provider(provider)
+    case provider
+    when 'stripe'
+      stripe_payment_provider
+    when 'gocardless'
+      gocardless_payment_provider
     end
   end
 
