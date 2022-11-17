@@ -106,11 +106,13 @@ type AppliedAddOn {
 
 type AppliedCoupon {
   amountCents: Int
+  amountCentsRemaining: Int
   amountCurrency: CurrencyEnum
   coupon: Coupon!
   createdAt: ISO8601DateTime!
   frequency: CouponFrequency!
   frequencyDuration: Int
+  frequencyDurationRemaining: Int
   id: ID!
   percentageRate: Float
   terminatedAt: ISO8601DateTime!
