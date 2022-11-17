@@ -27,6 +27,16 @@ RSpec.describe Customer, type: :model do
       customer.country = ''
       expect(customer).not_to be_valid
     end
+
+    it 'validates the timezone' do
+      expect(customer).to be_valid
+
+      customer.timezone = 'Europe/Paris'
+      expect(customer).to be_valid
+
+      customer.timezone = 'foo'
+      expect(customer).not_to be_valid
+    end
   end
 
   describe 'applicable_vat_rate' do

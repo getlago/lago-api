@@ -31,6 +31,7 @@ class Organization < ApplicationRecord
             image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
             if: :logo?
   validates :name, presence: true
+  validates :timezone, timezone: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
   validates :webhook_url, url: true, allow_nil: true
 
