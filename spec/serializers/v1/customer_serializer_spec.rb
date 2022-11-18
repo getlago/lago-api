@@ -33,6 +33,7 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['currency']).to eq(customer.currency)
       expect(result['customer']['invoice_grace_period']).to eq(customer.invoice_grace_period)
       expect(result['customer']['timezone']).to eq(customer.timezone)
+      expect(result['customer']['applicable_timezone']).to eq(customer.applicable_timezone)
 
       expect(result['customer']['billing_configuration']['payment_provider']).to eq(customer.payment_provider)
     end
