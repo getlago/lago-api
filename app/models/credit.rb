@@ -9,6 +9,8 @@ class Credit < ApplicationRecord
 
   has_one :coupon, through: :applied_coupon
 
+  monetize :amount_cents, disable_validation: true, allow_nil: true
+
   validates :amount_currency, inclusion: { in: currency_list }
 
   scope :coupon_kind, -> { where.not(applied_coupon_id: nil) }
