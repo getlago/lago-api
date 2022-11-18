@@ -20,6 +20,7 @@ module Types
     field :country, Types::CountryCodeEnum, null: true
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+    field :timezone, Types::TimezoneEnum, null: true
 
     field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
     field :gocardless_payment_provider, Types::PaymentProviders::Gocardless, null: true

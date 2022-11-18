@@ -8,18 +8,19 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     <<~GQL
       mutation($input: UpdateOrganizationInput!) {
         updateOrganization(input: $input) {
-          webhookUrl,
-          vatRate,
-          legalNumber,
-          legalName,
-          email,
-          addressLine1,
-          addressLine2,
-          state,
-          zipcode,
-          city,
-          country,
+          webhookUrl
+          vatRate
+          legalNumber
+          legalName
+          email
+          addressLine1
+          addressLine2
+          state
+          zipcode
+          city
+          country
           invoiceFooter
+          timezone
         }
       }
     GQL
@@ -62,6 +63,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     expect(result_data['city']).to eq('Foobar')
     expect(result_data['country']).to eq('FR')
     expect(result_data['invoiceFooter']).to eq('invoice footer')
+    expect(result_data['timezone']).to eq('TZ_UTC')
   end
 
   context 'with invalid webhook url' do
