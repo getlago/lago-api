@@ -5,6 +5,8 @@ class GraphqlController < ApplicationController
   include OrganizationHeader
   include Trackable
 
+  before_action :set_context_source
+
   rescue_from JWT::ExpiredSignature do
     render_graphql_error(code: 'expired_jwt_token', status: 401)
   end
@@ -71,5 +73,9 @@ class GraphqlController < ApplicationController
         }
       ]
     }
+  end
+
+  def set_context_source
+    CurrentContext.source = 'graphql'
   end
 end

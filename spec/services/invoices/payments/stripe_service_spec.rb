@@ -157,33 +157,19 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'when customer does not have a provider customer id' do
-      let(:stripe_customer) {}
-      let(:create_customer_result) do
-        BaseService::Result.new.tap do |result|
-          result.stripe_customer = PaymentProviderCustomers::StripeCustomer.create!(
-            customer: customer,
-            provider_customer_id: 'cus_123456',
-          )
-        end
-      end
+      before { stripe_customer.update!(provider_customer_id: nil) }
 
-      before do
-        allow(provider_customer_service).to receive(:create)
-          .and_return(create_customer_result)
-
-        allow(Stripe::PaymentMethod).to receive(:list)
-          .and_return(Stripe::ListObject.construct_from(data: []))
-      end
-
-      it 'creates the customer' do
+      it 'does not creates a stripe payment' do
         result = stripe_service.create
 
         expect(result).to be_success
-        expect(customer.stripe_customer.reload).to be_present
-        expect(customer.stripe_customer.provider_customer_id).to eq('cus_123456')
 
-        expect(Stripe::PaymentMethod).to have_received(:list)
-        expect(Stripe::PaymentIntent).to have_received(:create)
+        aggregate_failures do
+          expect(result.invoice).to eq(invoice)
+          expect(result.payment).to be_nil
+
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
+        end
       end
     end
 

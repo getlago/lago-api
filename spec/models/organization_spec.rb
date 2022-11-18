@@ -92,6 +92,12 @@ RSpec.describe Organization, type: :model do
 
       expect(organization).not_to be_valid
     end
+
+    it 'is invalid with invalid timezone' do
+      organization.timezone = 'foo'
+
+      expect(organization).not_to be_valid
+    end
   end
 
   describe 'Callbacks' do

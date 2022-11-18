@@ -20,6 +20,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         legal_name: 'test1',
         legal_number: '123',
         invoice_footer: 'footer',
+        invoice_grace_period: 3,
       }
     end
 
@@ -32,10 +33,13 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      expect(json[:organization][:name]).to eq(organization.name)
-      expect(json[:organization][:webhook_url]).to eq(update_params[:webhook_url])
-      expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
-      expect(json[:organization][:invoice_footer]).to eq(update_params[:invoice_footer])
+      aggregate_failures do
+        expect(json[:organization][:name]).to eq(organization.name)
+        expect(json[:organization][:webhook_url]).to eq(update_params[:webhook_url])
+        expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
+        expect(json[:organization][:invoice_footer]).to eq(update_params[:invoice_footer])
+        expect(json[:organization][:invoice_grace_period]).to eq(update_params[:invoice_grace_period])
+      end
     end
   end
 end

@@ -28,7 +28,7 @@ module Types
       field :currency, Types::CurrencyEnum, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
 
-      field :stripe_customer, Types::PaymentProviderCustomers::Stripe, null: true
+      field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
       field :subscriptions, [Types::Subscriptions::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -59,6 +59,17 @@ module Types
 
       def can_edit_attributes
         object.editable?
+      end
+
+      def provider_customer
+        case object&.payment_provider&.to_sym
+        when :stripe
+          object.stripe_customer
+        when :gocardless
+          object.gocardless_customer
+        else
+          nil
+        end
       end
     end
   end

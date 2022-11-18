@@ -35,6 +35,7 @@ module Api
           :legal_name,
           :legal_number,
           :invoice_footer,
+          :invoice_grace_period,
         )
       end
     end

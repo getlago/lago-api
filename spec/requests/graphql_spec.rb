@@ -32,6 +32,7 @@ RSpec.describe GraphqlController, type: :request do
       }
 
       expect(response.status).to be(200)
+      expect(CurrentContext.source).to eq 'graphql'
 
       json = JSON.parse(response.body)
       expect(json['data']['loginUser']['token']).to be_present

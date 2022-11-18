@@ -19,6 +19,7 @@ class Organization < ApplicationRecord
   has_many :wallet_transactions, through: :wallets
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
+  has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
 
   has_one_attached :logo
 
@@ -32,6 +33,7 @@ class Organization < ApplicationRecord
             image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
             if: :logo?
   validates :name, presence: true
+  validates :timezone, timezone: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
   validates :webhook_url, url: true, allow_nil: true
 
@@ -47,6 +49,15 @@ class Organization < ApplicationRecord
     logo.blob.open do |tempfile|
       data = tempfile.read
       Base64.encode64(data)
+    end
+  end
+
+  def payment_provider(provider)
+    case provider
+    when 'stripe'
+      stripe_payment_provider
+    when 'gocardless'
+      gocardless_payment_provider
     end
   end
 

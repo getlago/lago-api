@@ -25,6 +25,7 @@ module V1
         legal_number: model.legal_number,
         currency: model.currency,
         billing_configuration: billing_configuration,
+        invoice_grace_period: model.invoice_grace_period,
       }
     end
 
@@ -38,6 +39,9 @@ module V1
       if model.payment_provider&.to_sym == :stripe
         configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
         configuration.merge!(model.stripe_customer&.settings || {})
+      elsif model.payment_provider&.to_sym == :gocardless
+        configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id
+        configuration.merge!(model.gocardless_customer&.settings || {})
       end
 
       configuration

@@ -11,6 +11,7 @@ gem 'bcrypt'
 gem 'bootsnap', require: false
 gem 'clockwork', require: false
 gem 'countries'
+gem 'gocardless_pro', '~> 2.34'
 gem 'graphql'
 gem 'graphql-pagination'
 gem 'jwt'

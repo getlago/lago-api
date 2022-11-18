@@ -17,7 +17,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           city
           country
           paymentProvider
-          stripeCustomer { id, providerCustomerId }
+          providerCustomer { id, providerCustomerId }
           currency
           canEditAttributes
         }
@@ -40,7 +40,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           country: 'GB',
           paymentProvider: 'stripe',
           currency: 'EUR',
-          stripeCustomer: {
+          providerCustomer: {
             providerCustomerId: 'cu_12345',
           },
         },
@@ -57,8 +57,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['country']).to eq('GB')
       expect(result_data['currency']).to eq('EUR')
       expect(result_data['paymentProvider']).to eq('stripe')
-      expect(result_data['stripeCustomer']['id']).to be_present
-      expect(result_data['stripeCustomer']['providerCustomerId']).to eq('cu_12345')
+      expect(result_data['providerCustomer']['id']).to be_present
+      expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
     end
   end
 

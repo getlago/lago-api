@@ -18,6 +18,10 @@ module PaymentProviderCustomers
         provider_customer.provider_customer_id = params[:provider_customer_id].presence
       end
 
+      if (params || {}).key?(:sync_with_provider)
+        provider_customer.sync_with_provider = params[:sync_with_provider].presence
+      end
+
       provider_customer.save!
 
       result.provider_customer = provider_customer
@@ -39,16 +43,20 @@ module PaymentProviderCustomers
       # NOTE: the customer already exists on the service provider
       return if result.provider_customer.provider_customer_id?
 
-      # NOTE: the customer id wa removed from the customer
+      # NOTE: the customer id was removed from the customer
       return if result.provider_customer.provider_customer_id_previously_changed?
 
-      # NOTE: organization does not have stripe config or does not enforce customer creation on stripe
-      return unless organization.stripe_payment_provider&.create_customers
+      # NOTE: customer sync with provider setting is not set to true
+      return if result.provider_customer.sync_with_provider.blank?
 
-      if async
-        PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer)
-      else
+      if result.provider_customer.type == 'PaymentProviderCustomers::StripeCustomer'
+        return PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer) if async
+
         PaymentProviderCustomers::StripeCreateJob.perform_now(result.provider_customer)
+      else
+        return PaymentProviderCustomers::GocardlessCreateJob.perform_later(result.provider_customer) if async
+
+        PaymentProviderCustomers::GocardlessCreateJob.perform_now(result.provider_customer)
       end
     end
   end

@@ -18,8 +18,6 @@ module Invoices
           return result
         end
 
-        ensure_provider_customer
-
         stripe_result = create_stripe_payment
 
         payment = Payment.new(
@@ -34,7 +32,7 @@ module Invoices
         payment.save!
 
         update_invoice_status(payment.status)
-        handle_prepaid_credits(payment.status)
+        handle_prepaid_credits(payment.invoice, payment.status)
         track_payment_status_changed(payment.invoice)
 
         result.payment = payment
@@ -51,7 +49,7 @@ module Invoices
 
         payment.update!(status: status)
         payment.invoice.update!(status: status)
-        handle_prepaid_credits(status)
+        handle_prepaid_credits(payment.invoice, status)
         track_payment_status_changed(payment.invoice)
 
         result
@@ -67,24 +65,9 @@ module Invoices
 
       def should_process_payment?
         return false if invoice.succeeded?
+        return false if organization.stripe_payment_provider.blank?
 
-        organization.stripe_payment_provider.present?
-      end
-
-      def ensure_provider_customer
-        return if customer.stripe_customer&.provider_customer_id
-
-        customer_result = PaymentProviderCustomers::CreateService.new(customer)
-          .create_or_update(
-            customer_class: PaymentProviderCustomers::StripeCustomer,
-            payment_provider_id: organization.stripe_payment_provider.id,
-            params: {},
-            async: false,
-          )
-        customer_result.throw_error
-
-        # NOTE: stripe customer is created on an other instance of the customer
-        customer.reload
+        customer&.stripe_customer&.provider_customer_id
       end
 
       def stripe_api_key
@@ -157,7 +140,7 @@ module Invoices
         invoice.update!(status: status)
       end
 
-      def handle_prepaid_credits(status)
+      def handle_prepaid_credits(invoice, status)
         return unless invoice.invoice_type == 'credit'
         return unless status == 'succeeded'
 

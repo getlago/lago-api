@@ -5100,11 +5100,11 @@
               "deprecationReason": null
             },
             {
-              "name": "stripeCustomer",
+              "name": "providerCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
-                "name": "StripeCustomerInput",
+                "name": "ProviderCustomerInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -7583,6 +7583,20 @@
               ]
             },
             {
+              "name": "providerCustomer",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "ProviderCustomer",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "sequentialId",
               "description": null,
               "type": {
@@ -7624,20 +7638,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "stripeCustomer",
-              "description": null,
-              "type": {
-                "kind": "OBJECT",
-                "name": "StripeCustomer",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -8181,6 +8181,20 @@
               ]
             },
             {
+              "name": "providerCustomer",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "ProviderCustomer",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "sequentialId",
               "description": null,
               "type": {
@@ -8222,20 +8236,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "stripeCustomer",
-              "description": null,
-              "type": {
-                "kind": "OBJECT",
-                "name": "StripeCustomer",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -9746,6 +9746,20 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "webhookSecret",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -12967,6 +12981,20 @@
               ]
             },
             {
+              "name": "gocardlessPaymentProvider",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "GocardlessProvider",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -14173,6 +14201,100 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "ProviderCustomer",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "providerCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "syncWithProvider",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "ProviderCustomerInput",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "providerCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "syncWithProvider",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
           "kind": "ENUM",
           "name": "ProviderTypeEnum",
           "description": null,
@@ -14183,6 +14305,12 @@
           "enumValues": [
             {
               "name": "stripe",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "gocardless",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -15480,74 +15608,6 @@
         },
         {
           "kind": "OBJECT",
-          "name": "StripeCustomer",
-          "description": null,
-          "interfaces": [
-
-          ],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "id",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "providerCustomerId",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ID",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
-          "name": "StripeCustomerInput",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": [
-            {
-              "name": "providerCustomerId",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ID",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "enumValues": null
-        },
-        {
-          "kind": "OBJECT",
           "name": "StripeProvider",
           "description": null,
           "interfaces": [
@@ -16787,11 +16847,11 @@
               "deprecationReason": null
             },
             {
-              "name": "stripeCustomer",
+              "name": "providerCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
-                "name": "StripeCustomerInput",
+                "name": "ProviderCustomerInput",
                 "ofType": null
               },
               "defaultValue": null,
