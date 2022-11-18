@@ -28,10 +28,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             refundAmountCurrency
             items {
               id
-              creditAmountCents
-              creditAmountCurrency
-              refundAmountCents
-              refundAmountCurrency
+              amountCents
+              amountCurrency
               fee { id amountCents amountCurrency itemType itemCode itemName vatRate units eventsCount }
             }
           }

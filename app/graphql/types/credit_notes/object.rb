@@ -36,6 +36,9 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :refunded_at, GraphQL::Types::ISO8601DateTime, null: true
+
       field :file_url, String, null: true
 
       field :invoice, Types::Invoices::Object

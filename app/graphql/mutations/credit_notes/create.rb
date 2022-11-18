@@ -13,6 +13,9 @@ module Mutations
       argument :invoice_id, ID, required: true
       argument :description, String, required: false
 
+      argument :credit_amount_cents, GraphQL::Types::BigInt, required: false
+      argument :refund_amount_cents, GraphQL::Types::BigInt, required: false
+
       argument :items, [Types::CreditNoteItems::Input], required: true
 
       type Types::CreditNotes::Object
@@ -24,9 +27,7 @@ module Mutations
         result = ::CreditNotes::CreateService
           .new(
             invoice: current_organization.invoices.find_by(id: args[:invoice_id]),
-            items_attr: args[:items],
-            reason: args[:reason],
-            description: args[:description],
+            **args,
           )
           .call
 

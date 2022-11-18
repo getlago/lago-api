@@ -2,11 +2,14 @@
 
 module CreditNotes
   class CreateService < BaseService
-    def initialize(invoice:, items_attr:, description:, reason: :other)
+    def initialize(invoice:, **args)
       @invoice = invoice
-      @items_attr = items_attr
-      @reason = reason
-      @description = description
+      args = args.with_indifferent_access
+      @items_attr = args[:items]
+      @reason = args[:reason] || :other
+      @description = args[:description]
+      @credit_amount_cents = args[:credit_amount_cents] || 0
+      @refund_amount_cents = args[:refund_amount_cents] || 0
 
       super
     end
@@ -26,6 +29,8 @@ module CreditNotes
           refund_amount_currency: invoice.amount_currency,
           refund_vat_amount_currency: invoice.amount_currency,
           balance_amount_currency: invoice.amount_currency,
+          credit_amount_cents: credit_amount_cents,
+          refund_amount_cents: refund_amount_cents,
           reason: reason,
           description: description,
           credit_status: 'available',
@@ -33,6 +38,9 @@ module CreditNotes
 
         create_items
         return result unless result.success?
+
+        valid_credit_note?
+        result.throw_error unless result.success?
 
         credit_note.credit_status = 'available' if credit_note.credited?
         credit_note.refund_status = 'pending' if credit_note.refunded?
@@ -51,11 +59,15 @@ module CreditNotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ArgumentError
+      result.single_validation_failure!(field: :reason, error_code: 'value_is_invalid')
+    rescue BaseService::ValidationFailure
+      result
     end
 
     private
 
-    attr_accessor :invoice, :items_attr, :reason, :description
+    attr_accessor :invoice, :items_attr, :reason, :description, :credit_amount_cents, :refund_amount_cents
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
@@ -69,26 +81,22 @@ module CreditNotes
       items_attr.each do |item_attr|
         item = credit_note.items.new(
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
-          credit_amount_cents: item_attr[:credit_amount_cents] || 0,
-          credit_amount_currency: invoice.amount_currency,
-          refund_amount_cents: item_attr[:refund_amount_cents] || 0,
-          refund_amount_currency: invoice.amount_currency,
+          amount_cents: item_attr[:amount_cents] || 0,
+          amount_currency: invoice.amount_currency,
         )
         break unless valid_item?(item)
 
         item.save!
-
-        # NOTE: update credit note amounts to allow validation on next item
-        credit_note.update!(
-          credit_amount_cents: credit_note.credit_amount_cents + item.credit_amount_cents,
-          refund_amount_cents: credit_note.refund_amount_cents + item.refund_amount_cents,
-        )
         refresh_vat_amounts
       end
     end
 
     def valid_item?(item)
       CreditNotes::ValidateItemService.new(result, item: item).valid?
+    end
+
+    def valid_credit_note?
+      CreditNotes::ValidateService.new(result, item: credit_note).valid?
     end
 
     def refresh_vat_amounts

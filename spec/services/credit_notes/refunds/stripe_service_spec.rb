@@ -64,6 +64,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
         expect(result.refund.provider_refund_id).to eq('re_123456')
 
         expect(result.credit_note).to be_succeeded
+        expect(result.credit_note.refunded_at).to be_present
       end
     end
 

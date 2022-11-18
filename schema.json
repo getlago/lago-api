@@ -4841,6 +4841,30 @@
               "deprecationReason": null
             },
             {
+              "name": "creditAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "refundAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "items",
               "description": null,
               "type": {
@@ -5983,6 +6007,20 @@
               ]
             },
             {
+              "name": "refundedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "sequentialId",
               "description": null,
               "type": {
@@ -6125,6 +6163,20 @@
               "args": [
 
               ]
+            },
+            {
+              "name": "voidedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
             }
           ],
           "inputFields": null,
@@ -6169,25 +6221,7 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "createdAt",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "creditAmountCents",
+              "name": "amountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -6205,7 +6239,7 @@
               ]
             },
             {
-              "name": "creditAmountCurrency",
+              "name": "amountCurrency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -6213,6 +6247,24 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
                   "ofType": null
                 }
               },
@@ -6257,42 +6309,6 @@
               "args": [
 
               ]
-            },
-            {
-              "name": "refundAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "refundAmountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
             }
           ],
           "inputFields": null,
@@ -6323,23 +6339,7 @@
               "deprecationReason": null
             },
             {
-              "name": "creditAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "refundAmountCents",
+              "name": "amountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -9614,6 +9614,24 @@
                 "kind": "OBJECT",
                 "name": "Charge",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "creditableAmountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
