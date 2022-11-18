@@ -12,7 +12,10 @@ module CreditNotes
     def call
       return result.not_found_failure!(resource: 'credit_note') if credit_note.nil?
 
-      credit_note.refund_status = params[:refund_status] if params.key?(:refund_status)
+      if params.key?(:refund_status)
+        credit_note.refund_status = params[:refund_status]
+        credit_note.refunded_at = Time.current if credit_note.succeeded?
+      end
       credit_note.save!
 
       result.credit_note = credit_note

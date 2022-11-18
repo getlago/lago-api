@@ -17,6 +17,7 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
     aggregate_failures do
       expect(result).to be_success
       expect(result.credit_note.refund_status).to eq('succeeded')
+      expect(result.credit_note.refunded_at).to be_present
     end
   end
 

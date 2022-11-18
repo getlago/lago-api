@@ -25,6 +25,8 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
           subTotalVatExcludedAmountCurrency
           createdAt
           updatedAt
+          voidedAt
+          refundedAt
           fileUrl
           invoice { id number }
           items {
