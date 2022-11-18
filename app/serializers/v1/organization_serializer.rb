@@ -8,7 +8,6 @@ module V1
         name: model.name,
         created_at: model.created_at.iso8601,
         webhook_url: model.webhook_url,
-        vat_rate: model.vat_rate,
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
@@ -18,8 +17,11 @@ module V1
         city: model.city,
         legal_name: model.legal_name,
         legal_number: model.legal_number,
-        invoice_footer: model.invoice_footer,
-        invoice_grace_period: model.invoice_grace_period,
+        billing_configuration: {
+          invoice_footer: model.invoice_footer,
+          invoice_grace_period: model.invoice_grace_period,
+          vat_rate: model.vat_rate,
+        },
       }
     end
   end

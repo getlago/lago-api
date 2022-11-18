@@ -61,7 +61,6 @@ RSpec.describe Organizations::UpdateService do
     let(:update_args) do
       {
         webhook_url: 'http://test.example',
-        vat_rate: 20,
         country: country,
         address_line1: 'address1',
         address_line2: 'address2',
@@ -71,7 +70,11 @@ RSpec.describe Organizations::UpdateService do
         city: 'test_city',
         legal_name: 'test1',
         legal_number: '123',
-        invoice_footer: 'footer',
+        billing_configuration: {
+          invoice_footer: 'footer',
+          invoice_grace_period: 3,
+          vat_rate: 20,
+        },
       }
     end
 
@@ -84,8 +87,11 @@ RSpec.describe Organizations::UpdateService do
         organization_response = result.organization
         expect(organization_response.name).to eq(organization.name)
         expect(organization_response.webhook_url).to eq(update_args[:webhook_url])
-        expect(organization_response.vat_rate).to eq(update_args[:vat_rate])
-        expect(organization_response.invoice_footer).to eq(update_args[:invoice_footer])
+
+        billing = update_args[:billing_configuration]
+        expect(organization_response.invoice_footer).to eq(billing[:invoice_footer])
+        expect(organization_response.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        expect(organization_response.vat_rate).to eq(billing[:vat_rate])
       end
     end
 
