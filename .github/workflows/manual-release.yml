@@ -36,6 +36,9 @@ jobs:
           tags: getlago/api:${{ github.event.inputs.version }}
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
+            GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
+            GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
+            LAGO_OAUTH_URL=https://proxy.getlago.com
       
       - name: Build and Push ARM64 Docker Image
         uses: docker/build-push-action@v3
@@ -47,3 +50,6 @@ jobs:
           tags: getlago/api-arm64v8:${{ github.event.inputs.version }}
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
+            GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
+            GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
+            LAGO_OAUTH_URL=https://proxy.getlago.com
