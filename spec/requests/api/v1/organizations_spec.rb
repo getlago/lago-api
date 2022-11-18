@@ -9,7 +9,6 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
     let(:update_params) do
       {
         webhook_url: 'http://test.example',
-        vat_rate: 20,
         country: 'pl',
         address_line1: 'address1',
         address_line2: 'address2',
@@ -19,8 +18,11 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         city: 'test_city',
         legal_name: 'test1',
         legal_number: '123',
-        invoice_footer: 'footer',
-        invoice_grace_period: 3,
+        billing_configuration: {
+          invoice_footer: 'footer',
+          invoice_grace_period: 3,
+          vat_rate: 20,
+        },
       }
     end
 
@@ -37,8 +39,11 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         expect(json[:organization][:name]).to eq(organization.name)
         expect(json[:organization][:webhook_url]).to eq(update_params[:webhook_url])
         expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
-        expect(json[:organization][:invoice_footer]).to eq(update_params[:invoice_footer])
-        expect(json[:organization][:invoice_grace_period]).to eq(update_params[:invoice_grace_period])
+
+        billing = json[:organization][:billing_configuration]
+        expect(billing[:invoice_footer]).to eq('footer')
+        expect(billing[:invoice_grace_period]).to eq(3)
+        expect(billing[:vat_rate]).to eq(20)
       end
     end
   end

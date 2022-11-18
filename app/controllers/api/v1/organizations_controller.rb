@@ -24,7 +24,6 @@ module Api
       def input_params
         params.require(:organization).permit(
           :webhook_url,
-          :vat_rate,
           :country,
           :address_line1,
           :address_line2,
@@ -34,8 +33,11 @@ module Api
           :city,
           :legal_name,
           :legal_number,
-          :invoice_footer,
-          :invoice_grace_period,
+          billing_configuration: [
+            :invoice_footer,
+            :invoice_grace_period,
+            :vat_rate,
+          ],
         )
       end
     end

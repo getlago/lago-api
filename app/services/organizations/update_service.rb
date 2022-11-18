@@ -35,7 +35,6 @@ module Organizations
 
     def update_from_api(params:)
       organization.webhook_url = params[:webhook_url] if params.key?(:webhook_url)
-      organization.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
       organization.country = params[:country] if params.key?(:country)
       organization.address_line1 = params[:address_line1] if params.key?(:address_line1)
       organization.address_line2 = params[:address_line2] if params.key?(:address_line2)
@@ -45,8 +44,14 @@ module Organizations
       organization.city = params[:city] if params.key?(:city)
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
-      organization.invoice_footer = params[:invoice_footer] if params.key?(:invoice_footer)
-      organization.invoice_grace_period = params[:invoice_grace_period] if params.key?(:invoice_grace_period)
+
+      if params.key?(:billing_configuration)
+        billing = params[:billing_configuration]
+        organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
+        organization.invoice_grace_period = billing[:invoice_grace_period] if billing.key?(:invoice_grace_period)
+        organization.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+      end
+
       organization.save!
 
       result.organization = organization
