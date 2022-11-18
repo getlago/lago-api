@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Organization < ApplicationRecord
+  include OrganizationTimezone
+
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics

@@ -71,6 +71,61 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#applicable_timezone' do
+    subject(:customer) do
+      described_class.new(
+        organization: organization,
+        timezone: 'Europe/Paris',
+      )
+    end
+
+    it 'returns the customer timezone' do
+      expect(customer.applicable_timezone).to eq('Europe/Paris')
+    end
+
+    context 'when customer does not have a timezone' do
+      let(:organization_timezone) { 'Europe/London' }
+
+      before do
+        customer.timezone = nil
+        organization.timezone = organization_timezone
+      end
+
+      it 'returns the organization timezone' do
+        expect(customer.applicable_timezone).to eq('Europe/London')
+      end
+
+      context 'when organization timezone is nil' do
+        let(:organization_timezone) { nil }
+
+        it 'returns the default timezone' do
+          expect(customer.applicable_timezone).to eq('UTC')
+        end
+      end
+    end
+  end
+
+  describe 'timezones' do
+    subject(:customer) do
+      build(
+        :customer,
+        organization: organization,
+        timezone: 'Europe/Paris',
+        created_at: DateTime.parse('2022-11-17 23:34:23'),
+      )
+    end
+
+    let(:organization) { create(:organization, timezone: 'America/Los_Angeles') }
+
+    it 'has helper to get dates in timezones' do
+      aggregate_failures do
+        expect(customer.created_at.to_s).to eq('2022-11-17 23:34:23 UTC')
+        expect(customer.created_at_in_customer_timezone.to_s).to eq('2022-11-18 00:34:23 +0100')
+        expect(customer.created_at_in_organization_timezone.to_s).to eq('2022-11-17 15:34:23 -0800')
+      end
+    end
+  end
+
   describe 'slug' do
     let(:organization) { create(:organization, name: 'LAGO') }
 

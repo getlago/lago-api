@@ -3,6 +3,8 @@
 class Customer < ApplicationRecord
   include Sequenced
   include Currencies
+  include CustomerTimezone
+  include OrganizationTimezone
 
   before_save :ensure_slug
 
@@ -58,6 +60,12 @@ class Customer < ApplicationRecord
     return vat_rate if vat_rate.present?
 
     organization.vat_rate || 0
+  end
+
+  def applicable_timezone
+    return timezone if timezone.present?
+
+    organization.timezone || 'UTC'
   end
 
   def editable?
