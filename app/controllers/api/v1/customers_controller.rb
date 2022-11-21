@@ -91,14 +91,14 @@ module Api
           :logo_url,
           :legal_name,
           :legal_number,
-          :vat_rate,
           :currency,
-          :invoice_grace_period,
           billing_configuration: [
+            :invoice_grace_period,
             :payment_provider,
             :provider_customer_id,
             :sync,
             :sync_with_provider,
+            :vat_rate,
           ],
         )
       end

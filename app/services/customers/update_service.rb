@@ -30,6 +30,13 @@ module Customers
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
         customer.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
 
+        if args.key?(:billing_configuration)
+          billing = args[:billing_configuration]
+          customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
+          customer.invoice_grace_period = billing[:invoice_grace_period] if billing.key?(:invoice_grace_period)
+          customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+        end
+
         # NOTE: external_id is not editable if customer is attached to subscriptions
         customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 

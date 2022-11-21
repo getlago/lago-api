@@ -20,6 +20,10 @@ RSpec.describe Customers::UpdateService, type: :service do
         id: customer.id,
         name: 'Updated customer name',
         external_id: external_id,
+        billing_configuration: {
+          invoice_grace_period: 3,
+          vat_rate: 20,
+        },
       }
     end
 
@@ -29,6 +33,10 @@ RSpec.describe Customers::UpdateService, type: :service do
       updated_customer = result.customer
       aggregate_failures do
         expect(updated_customer.name).to eq('Updated customer name')
+
+        billing = update_args[:billing_configuration]
+        expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        expect(updated_customer.vat_rate).to eq(billing[:vat_rate])
       end
     end
 

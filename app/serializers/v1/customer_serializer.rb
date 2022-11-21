@@ -9,7 +9,6 @@ module V1
         name: model.name,
         sequential_id: model.sequential_id,
         slug: model.slug,
-        vat_rate: model.vat_rate,
         created_at: model.created_at.iso8601,
         country: model.country,
         address_line1: model.address_line1,
@@ -25,7 +24,6 @@ module V1
         legal_number: model.legal_number,
         currency: model.currency,
         billing_configuration: billing_configuration,
-        invoice_grace_period: model.invoice_grace_period,
       }
     end
 
@@ -33,7 +31,9 @@ module V1
 
     def billing_configuration
       configuration = {
+        invoice_grace_period: model.invoice_grace_period,
         payment_provider: model.payment_provider,
+        vat_rate: model.vat_rate,
       }
 
       if model.payment_provider&.to_sym == :stripe
