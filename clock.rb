@@ -20,6 +20,8 @@ module Clockwork
     Clock::ActivateSubscriptionsJob.perform_later
   end
 
+  # NOTE: Keep at on a "plain hour" to prevent double billing on "time change" day
+  #       for countries located on an UTC-1
   every(1.day, 'schedule:bill_customers', at: '01:00') do
     Clock::SubscriptionsBillerJob.perform_later
   end
