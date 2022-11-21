@@ -16,6 +16,7 @@ module Clockwork
     Sentry.capture_exception(error)
   end
 
+  # NOTE: Run every hour to take customer timezone into account
   every(1.hour, 'schedule:activate_subscriptions', at: '**:30') do
     Clock::ActivateSubscriptionsJob.perform_later
   end
