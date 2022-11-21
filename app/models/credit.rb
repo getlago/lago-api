@@ -40,4 +40,13 @@ class Credit < ApplicationRecord
     # TODO: change it depending on invoice template
     credit_note.invoice.number
   end
+
+  def invoice_coupon_display_name
+    return nil if applied_coupon.blank?
+
+    coupon = applied_coupon.coupon
+    suffix = coupon.percentage? ? "#{applied_coupon.percentage_rate}%" : applied_coupon.amount.format
+
+    "Coupon - #{coupon.name} #{suffix}"
+  end
 end

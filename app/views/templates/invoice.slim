@@ -435,7 +435,7 @@ html
             - credits.coupon_kind.order(created_at: :asc).each do |credit|
               tr
                 td width="70%"
-                  .body-1 #{credit.applied_coupon.coupon.name}
+                  .body-1 #{credit.invoice_coupon_display_name}
                 td.body-1 style="text-align: right; color: #008559;" width="30%"
                   = credit.amount.format
 
