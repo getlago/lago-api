@@ -16,7 +16,6 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['name']).to eq(customer.name)
       expect(result['customer']['sequential_id']).to eq(customer.sequential_id)
       expect(result['customer']['slug']).to eq(customer.slug)
-      expect(result['customer']['vat_rate']).to eq(customer.vat_rate)
       expect(result['customer']['created_at']).to eq(customer.created_at.iso8601)
       expect(result['customer']['country']).to eq(customer.country)
       expect(result['customer']['address_line1']).to eq(customer.address_line1)
@@ -31,11 +30,11 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['legal_name']).to eq(customer.legal_name)
       expect(result['customer']['legal_number']).to eq(customer.legal_number)
       expect(result['customer']['currency']).to eq(customer.currency)
-      expect(result['customer']['invoice_grace_period']).to eq(customer.invoice_grace_period)
       expect(result['customer']['timezone']).to eq(customer.timezone)
       expect(result['customer']['applicable_timezone']).to eq(customer.applicable_timezone)
-
       expect(result['customer']['billing_configuration']['payment_provider']).to eq(customer.payment_provider)
+      expect(result['customer']['billing_configuration']['invoice_grace_period']).to eq(customer.invoice_grace_period)
+      expect(result['customer']['billing_configuration']['vat_rate']).to eq(customer.vat_rate)
     end
   end
 end
