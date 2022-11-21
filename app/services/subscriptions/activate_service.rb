@@ -10,9 +10,10 @@ module Subscriptions
 
     def activate_all_pending
       Subscription
+        .joins(customer: :organization)
         .pending
         .where(previous_subscription: nil)
-        .where(subscription_date: Time.zone.at(timestamp).to_date)
+        .where("DATE(#{Subscription.subscription_date_in_timezone_sql}) = ?", Time.zone.at(timestamp).to_date)
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
 
