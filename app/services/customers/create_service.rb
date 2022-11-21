@@ -20,8 +20,6 @@ module Customers
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
-        customer.vat_rate = params[:vat_rate] if params.key?(:vat_rate)
-        customer.invoice_grace_period = params[:invoice_grace_period] if params.key?(:invoice_grace_period)
 
         if params.key?(:currency)
           currency_result = Customers::UpdateService.new(nil).update_currency(
@@ -95,20 +93,22 @@ module Customers
     def handle_api_billing_configuration(customer, params, new_customer)
       return unless params.key?(:billing_configuration)
 
-      billing_configuration = params[:billing_configuration]
+      billing = params[:billing_configuration]
+      customer.invoice_grace_period = billing[:invoice_grace_period] if billing.key?(:invoice_grace_period)
+      customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
       if new_customer
-        create_billing_configuration(customer, billing_configuration)
+        create_billing_configuration(customer, billing)
         return
       end
 
-      unless %w[stripe gocardless].include?(billing_configuration[:payment_provider])
+      unless %w[stripe gocardless].include?(billing[:payment_provider])
         customer.update!(payment_provider: nil)
         return
       end
 
-      customer.update!(payment_provider: billing_configuration[:payment_provider])
-      create_or_update_provider_customer(customer, billing_configuration)
+      customer.update!(payment_provider: billing[:payment_provider])
+      create_or_update_provider_customer(customer, billing)
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})

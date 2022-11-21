@@ -10,7 +10,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         currency: 'EUR',
-        invoice_grace_period: 3,
       }
     end
 
@@ -25,7 +24,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:name]).to eq(create_params[:name])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
-        expect(json[:customer][:invoice_grace_period]).to eq(create_params[:invoice_grace_period])
       end
     end
 
@@ -35,8 +33,10 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           external_id: SecureRandom.uuid,
           name: 'Foo Bar',
           billing_configuration: {
+            invoice_grace_period: 3,
             payment_provider: 'stripe',
             provider_customer_id: 'stripe_id',
+            vat_rate: 20,
           },
         }
       end
@@ -49,9 +49,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:lago_id]).to be_present
         expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
-        expect(json[:customer][:billing_configuration]).to be_present
-        expect(json[:customer][:billing_configuration][:payment_provider]).to eq('stripe')
-        expect(json[:customer][:billing_configuration][:provider_customer_id]).to eq('stripe_id')
+        billing = json[:customer][:billing_configuration]
+        aggregate_failures do
+          expect(billing).to be_present
+          expect(billing[:payment_provider]).to eq('stripe')
+          expect(billing[:provider_customer_id]).to eq('stripe_id')
+          expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:vat_rate]).to eq(20)
+        end
       end
     end
 
