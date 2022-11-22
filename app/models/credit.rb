@@ -46,10 +46,10 @@ class Credit < ApplicationRecord
 
     coupon = applied_coupon.coupon
     suffix = if coupon.percentage?
-               "#{sprintf("%.2f", applied_coupon.percentage_rate)}%"
-             else
-               applied_coupon.amount.format
-             end
+      "#{format('%.2f', applied_coupon.percentage_rate)}%"
+    else
+      applied_coupon.amount.format
+    end
 
     "#{coupon.name} (#{suffix})"
   end
