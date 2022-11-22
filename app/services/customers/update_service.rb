@@ -26,8 +26,11 @@ module Customers
         customer.logo_url = args[:logo_url] if args.key?(:logo_url)
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
+
+        # TODO: delete this when GraphQL will use billing_configuration.
         customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
+        customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
         customer.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
 
         if args.key?(:billing_configuration)

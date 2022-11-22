@@ -24,6 +24,7 @@ module Mutations
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :vat_rate, Float, required: false
+      argument :invoice_grace_period, Integer, required: false
       argument :currency, Types::CurrencyEnum, required: false
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
