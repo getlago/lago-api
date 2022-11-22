@@ -65,30 +65,30 @@ RSpec.describe Subscriptions::DatesService, type: :service do
     end
   end
 
-  describe 'from_date' do
+  describe 'from_datetime' do
     it 'raises a not implemented error' do
-      expect { date_service.from_date }
+      expect { date_service.from_datetime }
         .to raise_error(NotImplementedError)
     end
   end
 
-  describe 'to_date' do
+  describe 'to_datetime' do
     it 'raises a not implemented error' do
-      expect { date_service.to_date }
+      expect { date_service.to_datetime }
         .to raise_error(NotImplementedError)
     end
   end
 
-  describe 'charges_from_date' do
+  describe 'charges_from_datetime' do
     it 'raises a not implemented error' do
-      expect { date_service.charges_from_date }
+      expect { date_service.charges_from_datetime }
         .to raise_error(NotImplementedError)
     end
   end
 
-  describe 'charges_to_date' do
+  describe 'charges_to_datetime' do
     it 'raises a not implemented error' do
-      expect { date_service.charges_to_date }
+      expect { date_service.charges_to_datetime }
         .to raise_error(NotImplementedError)
     end
   end

@@ -44,7 +44,7 @@ module Subscriptions
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_year
         end
 
-        return from_date if plan.pay_in_arrear?
+        return from_datetime if plan.pay_in_arrear?
         return base_date.beginning_of_year if calendar?
 
         previous_anniversary_day(base_date)
