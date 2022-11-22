@@ -85,7 +85,7 @@ module Invoices
 
       date_service = Subscriptions::DatesService.new_instance(
         subscription,
-        Time.zone.now.to_date,
+        Time.current,
         current_usage: true,
       )
 

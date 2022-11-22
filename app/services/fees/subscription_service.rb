@@ -216,7 +216,7 @@ module Fees
     end
 
     def date_service(subscription)
-      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(boundaries.timestamp).to_date)
+      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(boundaries.timestamp))
     end
 
     # NOTE: cost of a single day in a period

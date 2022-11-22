@@ -64,7 +64,7 @@ module Invoices
     def date_service(subscription)
       Subscriptions::DatesService.new_instance(
         subscription,
-        Time.zone.at(timestamp).to_date,
+        Time.zone.at(timestamp),
         current_usage: subscription.terminated? && subscription.upgraded?,
       )
     end

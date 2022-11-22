@@ -80,6 +80,7 @@ module BillableMetrics
       # NOTE: Full period duration to take upgrade, terminate
       #       or start on non-anniversary day into account
       def period_duration
+        # TODO: pass a datetime argument
         @period_duration ||= Subscriptions::DatesService.new_instance(subscription, to_date + 1.day)
           .charges_duration_in_days
       end
