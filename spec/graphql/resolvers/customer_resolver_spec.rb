@@ -8,6 +8,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       query($customerId: ID!) {
         customer(id: $customerId) {
           id externalId name currency
+          timezone
+          applicableTimezone
           invoices { id invoiceType status }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
@@ -49,6 +51,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:credit_note_item) { create(:credit_note_item, credit_note: credit_note) }
 
   before do
+    organization.update!(timezone: 'America/New_York')
     create_list(:invoice, 2, customer: customer)
     applied_add_on
     subscription
@@ -73,6 +76,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['invoices'].count).to eq(2)
       expect(customer_response['appliedAddOns'].count).to eq(1)
       expect(customer_response['currency']).to be_present
+      expect(customer_response['timezone']).to be_nil
+      expect(customer_response['applicableTimezone']).to eq('TZ_AMERICA_NEW_YORK')
     end
   end
 

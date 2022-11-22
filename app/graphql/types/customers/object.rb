@@ -27,6 +27,8 @@ module Types
       field :vat_rate, Float, null: true
       field :currency, Types::CurrencyEnum, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
+      field :timezone, Types::TimezoneEnum, null: true
+      field :applicable_timezone, Types::TimezoneEnum, null: false
 
       field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
       field :subscriptions, [Types::Subscriptions::Object]
