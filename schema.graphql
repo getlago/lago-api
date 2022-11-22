@@ -1658,6 +1658,7 @@ input CreateCustomerInput {
   currency: CurrencyEnum
   email: String
   externalId: String!
+  invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -2537,6 +2538,7 @@ type Customer {
   """
   hasActiveWallet: Boolean!
   id: ID!
+  invoiceGracePeriod: Int!
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -2593,6 +2595,7 @@ type CustomerDetails {
   """
   hasActiveWallet: Boolean!
   id: ID!
+  invoiceGracePeriod: Int!
   invoices: [Invoice!]
   legalName: String
   legalNumber: String
@@ -3450,6 +3453,7 @@ type Organization {
   gocardlessPaymentProvider: GocardlessProvider
   id: ID!
   invoiceFooter: String
+  invoiceGracePeriod: Int!
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -4693,6 +4697,7 @@ input UpdateCustomerInput {
   email: String
   externalId: String!
   id: ID!
+  invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -4746,6 +4751,7 @@ input UpdateOrganizationInput {
   country: CountryCode
   email: String
   invoiceFooter: String
+  invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
   logo: String
