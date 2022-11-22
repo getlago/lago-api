@@ -40,6 +40,25 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
+    context 'without billing configuration namespace' do
+      let(:update_args) do
+        {
+          id: customer.id,
+          name: 'Updated customer name',
+          external_id: external_id,
+          invoice_grace_period: 3,
+          vat_rate: 20,
+        }
+      end
+
+      it 'updates billing information' do
+        result = customers_service.update(**update_args)
+
+        expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
+        expect(result.customer.vat_rate).to eq(update_args[:vat_rate])
+      end
+    end
+
     context 'with validation error' do
       let(:external_id) { nil }
 

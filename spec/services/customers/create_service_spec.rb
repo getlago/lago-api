@@ -304,6 +304,7 @@ RSpec.describe Customers::CreateService, type: :service do
         name: 'Foo Bar',
         organization_id: organization.id,
         currency: 'EUR',
+        invoice_grace_period: 2,
       }
     end
 
@@ -324,6 +325,7 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq('EUR')
+        expect(customer.invoice_grace_period).to eq(2)
       end
     end
 
