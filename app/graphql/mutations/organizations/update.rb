@@ -22,6 +22,7 @@ module Mutations
       argument :city, String, required: false
       argument :country, Types::CountryCodeEnum, required: false
       argument :invoice_footer, String, required: false
+      argument :invoice_grace_period, Integer, required: false
 
       type Types::OrganizationType
 

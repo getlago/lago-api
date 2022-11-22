@@ -17,6 +17,7 @@ module Types
     field :zipcode, String
     field :city, String
     field :invoice_footer, String
+    field :invoice_grace_period, Integer, null: false
     field :country, Types::CountryCodeEnum, null: true
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

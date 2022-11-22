@@ -21,6 +21,7 @@ module Organizations
       organization.city = args[:city] if args.key?(:city)
       organization.country = args[:country] if args.key?(:country)
       organization.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
+      organization.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
 
       handle_base64_logo(args[:logo]) if args.key?(:logo)
 

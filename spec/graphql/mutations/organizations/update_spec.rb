@@ -20,6 +20,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           city
           country
           invoiceFooter
+          invoiceGracePeriod
           timezone
         }
       }
@@ -45,25 +46,29 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           city: 'Foobar',
           country: 'FR',
           invoiceFooter: 'invoice footer',
+          invoiceGracePeriod: 3,
         },
       },
     )
 
     result_data = result['data']['updateOrganization']
 
-    expect(result_data['webhookUrl']).to eq('http://foo.bar')
-    expect(result_data['vatRate']).to eq(12.5)
-    expect(result_data['legalNumber']).to eq('1234')
-    expect(result_data['legalName']).to eq('Foobar')
-    expect(result_data['email']).to eq('foo@bar.com')
-    expect(result_data['addressLine1']).to eq('Line 1')
-    expect(result_data['addressLine2']).to eq('Line 2')
-    expect(result_data['state']).to eq('Foobar')
-    expect(result_data['zipcode']).to eq('FOO1234')
-    expect(result_data['city']).to eq('Foobar')
-    expect(result_data['country']).to eq('FR')
-    expect(result_data['invoiceFooter']).to eq('invoice footer')
-    expect(result_data['timezone']).to eq('TZ_UTC')
+    aggregate_failures do
+      expect(result_data['webhookUrl']).to eq('http://foo.bar')
+      expect(result_data['vatRate']).to eq(12.5)
+      expect(result_data['legalNumber']).to eq('1234')
+      expect(result_data['legalName']).to eq('Foobar')
+      expect(result_data['email']).to eq('foo@bar.com')
+      expect(result_data['addressLine1']).to eq('Line 1')
+      expect(result_data['addressLine2']).to eq('Line 2')
+      expect(result_data['state']).to eq('Foobar')
+      expect(result_data['zipcode']).to eq('FOO1234')
+      expect(result_data['city']).to eq('Foobar')
+      expect(result_data['country']).to eq('FR')
+      expect(result_data['invoiceFooter']).to eq('invoice footer')
+      expect(result_data['invoiceGracePeriod']).to eq(3)
+      expect(result_data['timezone']).to eq('TZ_UTC')
+    end
   end
 
   context 'with invalid webhook url' do

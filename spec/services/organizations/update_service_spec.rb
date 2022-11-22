@@ -22,20 +22,24 @@ RSpec.describe Organizations::UpdateService do
         city: 'Foobar',
         country: 'FR',
         invoice_footer: 'invoice footer',
+        invoice_grace_period: 3,
       )
 
-      expect(result.organization.webhook_url).to eq('http://foo.bar')
-      expect(result.organization.vat_rate).to eq(12.5)
-      expect(result.organization.legal_name).to eq('Foobar')
-      expect(result.organization.legal_number).to eq('1234')
-      expect(result.organization.email).to eq('foo@bar.com')
-      expect(result.organization.address_line1).to eq('Line 1')
-      expect(result.organization.address_line2).to eq('Line 2')
-      expect(result.organization.state).to eq('Foobar')
-      expect(result.organization.zipcode).to eq('FOO1234')
-      expect(result.organization.city).to eq('Foobar')
-      expect(result.organization.country).to eq('FR')
-      expect(result.organization.invoice_footer).to eq('invoice footer')
+      aggregate_failures do
+        expect(result.organization.webhook_url).to eq('http://foo.bar')
+        expect(result.organization.vat_rate).to eq(12.5)
+        expect(result.organization.legal_name).to eq('Foobar')
+        expect(result.organization.legal_number).to eq('1234')
+        expect(result.organization.email).to eq('foo@bar.com')
+        expect(result.organization.address_line1).to eq('Line 1')
+        expect(result.organization.address_line2).to eq('Line 2')
+        expect(result.organization.state).to eq('Foobar')
+        expect(result.organization.zipcode).to eq('FOO1234')
+        expect(result.organization.city).to eq('Foobar')
+        expect(result.organization.country).to eq('FR')
+        expect(result.organization.invoice_footer).to eq('invoice footer')
+        expect(result.organization.invoice_grace_period).to eq(3)
+      end
     end
 
     context 'with base64 logo' do
