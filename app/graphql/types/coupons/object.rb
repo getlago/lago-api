@@ -32,7 +32,7 @@ module Types
       end
 
       def customer_count
-        object.applied_coupons.active.count
+        object.applied_coupons.active.select(:customer_id).distinct.count
       end
 
       def can_be_deleted
