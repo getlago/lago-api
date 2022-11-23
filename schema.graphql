@@ -2940,6 +2940,7 @@ type Invoice {
   paymentStatus: InvoicePaymentStatusTypeEnum!
   plan: Plan
   sequentialId: ID!
+  status: InvoiceStatusTypeEnum!
   subscriptions: [Subscription!]
   subtotalBeforePrepaidCredits: String!
   totalAmountCents: Int!
@@ -2967,6 +2968,11 @@ enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+enum InvoiceStatusTypeEnum {
+  draft
+  finalized
 }
 
 type InvoiceSubscription {
