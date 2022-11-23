@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_11_15_160325) do
+ActiveRecord::Schema[7.0].define(version: 2022_11_18_093903) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -80,7 +80,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_15_160325) do
     t.decimal "percentage_rate", precision: 10, scale: 5
     t.integer "frequency", default: 0, null: false
     t.integer "frequency_duration"
-    t.index ["coupon_id", "customer_id"], name: "index_applied_coupons_on_coupon_id_and_customer_id", unique: true, where: "(status = 0)"
+    t.integer "frequency_duration_remaining"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
   end

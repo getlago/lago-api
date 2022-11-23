@@ -99,6 +99,21 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       end
     end
 
+    context 'when an other coupon is already applied to the customer' do
+      let(:other_coupon) { create(:coupon, status: 'active', organization: organization) }
+
+      before { create(:applied_coupon, customer: customer, coupon: other_coupon) }
+
+      it 'applied the coupon to the customer' do
+        expect { create_result }.to change(AppliedCoupon, :count).by(1)
+
+        expect(create_result.applied_coupon.customer).to eq(customer)
+        expect(create_result.applied_coupon.coupon).to eq(coupon)
+        expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
+        expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
+      end
+    end
+
     context 'with overridden amount' do
       let(:amount_cents) { 123 }
       let(:amount_currency) { 'EUR' }
@@ -155,34 +170,6 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           expect(create_result).not_to be_success
           expect(create_result.error).to be_a(BaseService::NotFoundFailure)
           expect(create_result.error.message).to eq('coupon_not_found')
-        end
-      end
-    end
-
-    context 'when coupon is already applied to the customer' do
-      before { create(:applied_coupon, customer: customer, coupon: coupon) }
-
-      it 'fails' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:coupon)
-          expect(create_result.error.messages[:coupon]).to include('coupon_already_applied')
-        end
-      end
-    end
-
-    context 'when an other coupon is already applied to the customer' do
-      let(:other_coupon) { create(:coupon, status: 'active', organization: organization) }
-
-      before { create(:applied_coupon, customer: customer, coupon: other_coupon) }
-
-      it 'fails' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:coupon)
-          expect(create_result.error.messages[:coupon]).to include('coupon_already_applied')
         end
       end
     end
@@ -251,6 +238,19 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       )
     end
 
+    context 'when coupon is already applied to the customer' do
+      before { create(:applied_coupon, customer: customer, coupon: coupon) }
+
+      it 'applies the coupon to the customer' do
+        expect { create_result }.to change(AppliedCoupon, :count).by(1)
+
+        expect(create_result.applied_coupon.customer).to eq(customer)
+        expect(create_result.applied_coupon.coupon).to eq(coupon)
+        expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
+        expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
+      end
+    end
+
     context 'with overridden amount' do
       let(:amount_cents) { 123 }
       let(:amount_currency) { 'EUR' }
@@ -307,19 +307,6 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           expect(create_result).not_to be_success
           expect(create_result.error).to be_a(BaseService::NotFoundFailure)
           expect(create_result.error.message).to eq('coupon_not_found')
-        end
-      end
-    end
-
-    context 'when coupon is already applied to the customer' do
-      before { create(:applied_coupon, customer: customer, coupon: coupon) }
-
-      it 'fails' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:coupon)
-          expect(create_result.error.messages[:coupon]).to include('coupon_already_applied')
         end
       end
     end

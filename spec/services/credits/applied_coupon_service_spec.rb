@@ -131,7 +131,14 @@ RSpec.describe Credits::AppliedCouponService do
       let(:coupon) { create(:coupon, frequency: 'recurring', frequency_duration: 3) }
 
       let(:applied_coupon) do
-        create(:applied_coupon, coupon: coupon, frequency: 'recurring', frequency_duration: 3, amount_cents: 12)
+        create(
+          :applied_coupon,
+          coupon: coupon,
+          frequency: 'recurring',
+          frequency_duration: 3,
+          frequency_duration_remaining: 3,
+          amount_cents: 12,
+        )
       end
 
       it 'creates a credit' do
@@ -143,7 +150,8 @@ RSpec.describe Credits::AppliedCouponService do
           expect(result.credit.amount_currency).to eq('EUR')
           expect(result.credit.invoice).to eq(invoice)
           expect(result.credit.applied_coupon).to eq(applied_coupon)
-          expect(result.credit.applied_coupon.frequency_duration).to eq(2)
+          expect(result.credit.applied_coupon.frequency_duration).to eq(3)
+          expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
         end
       end
 
@@ -175,6 +183,7 @@ RSpec.describe Credits::AppliedCouponService do
           coupon: coupon,
           frequency: 'recurring',
           frequency_duration: 3,
+          frequency_duration_remaining: 3,
           percentage_rate: 20.00,
         )
       end
@@ -188,7 +197,8 @@ RSpec.describe Credits::AppliedCouponService do
           expect(result.credit.amount_currency).to eq('EUR')
           expect(result.credit.invoice).to eq(invoice)
           expect(result.credit.applied_coupon).to eq(applied_coupon)
-          expect(result.credit.applied_coupon.frequency_duration).to eq(2)
+          expect(result.credit.applied_coupon.frequency_duration).to eq(3)
+          expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
         end
       end
 
@@ -205,7 +215,8 @@ RSpec.describe Credits::AppliedCouponService do
             :applied_coupon,
             coupon: coupon,
             frequency: 'recurring',
-            frequency_duration: 1,
+            frequency_duration: 3,
+            frequency_duration_remaining: 1,
             percentage_rate: 20.00,
           )
         end
@@ -219,7 +230,8 @@ RSpec.describe Credits::AppliedCouponService do
             expect(result.credit.amount_currency).to eq('EUR')
             expect(result.credit.invoice).to eq(invoice)
             expect(result.credit.applied_coupon).to eq(applied_coupon)
-            expect(result.credit.applied_coupon.frequency_duration).to eq(0)
+            expect(result.credit.applied_coupon.frequency_duration).to eq(3)
+            expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
           end
         end
 

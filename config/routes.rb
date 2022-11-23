@@ -31,7 +31,7 @@ Rails.application.routes.draw do
         put :void, on: :member
       end
       resources :events, only: %i[create show]
-      resources :applied_coupons, only: %i[create]
+      resources :applied_coupons, only: %i[create index]
       resources :applied_add_ons, only: %i[create]
       resources :invoices, only: %i[update show index] do
         post :download, on: :member

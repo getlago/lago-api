@@ -780,7 +780,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       end
     end
 
-    context 'with applied coupon' do
+    context 'with applied coupons' do
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:applied_coupon) do
         create(
@@ -790,12 +790,25 @@ RSpec.describe Invoices::CreateService, type: :service do
           amount_currency: plan.amount_currency,
         )
       end
+      let(:coupon_latest) { create(:coupon, coupon_type: 'percentage') }
+      let(:applied_coupon_latest) do
+        create(
+          :applied_coupon,
+          coupon: coupon_latest,
+          customer: subscription.customer,
+          percentage_rate: 20.00,
+          created_at: applied_coupon.created_at + 1.day,
+        )
+      end
 
       let(:plan) do
         create(:plan, interval: 'monthly')
       end
 
-      before { applied_coupon }
+      before do
+        applied_coupon
+        applied_coupon_latest
+      end
 
       it 'creates an invoice' do
         result = invoice_service.create
@@ -810,17 +823,97 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-          expect(result.invoice.amount_cents).to eq(90)
+          expect(result.invoice.amount_cents).to eq(72) # 72 = 100 - 10 (fixed coupon) - 18 (percentage coupon)
           expect(result.invoice.amount_currency).to eq('EUR')
-          expect(result.invoice.vat_amount_cents).to eq(18)
+          expect(result.invoice.vat_amount_cents).to eq(15)
           expect(result.invoice.vat_amount_currency).to eq('EUR')
           expect(result.invoice.vat_rate).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(108)
+          expect(result.invoice.total_amount_cents).to eq(87)
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
 
-          expect(result.invoice.credits.count).to eq(1)
+          expect(result.invoice.credits.count).to eq(2)
+        end
+      end
+
+      context 'when both coupons are fixed amount' do
+        let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount') }
+        let(:applied_coupon_latest) do
+          create(
+            :applied_coupon,
+            coupon: coupon_latest,
+            customer: subscription.customer,
+            amount_cents: 20,
+            amount_currency: plan.amount_currency,
+            created_at: applied_coupon.created_at + 1.day,
+          )
+        end
+
+        it 'creates an invoice' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+            expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+            expect(result.invoice.fees.subscription_kind.count).to eq(1)
+            expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+            expect(result.invoice.amount_cents).to eq(70) # 70 = 100 - 10 (fixed coupon) - 20 (fixed coupon)
+            expect(result.invoice.amount_currency).to eq('EUR')
+            expect(result.invoice.vat_amount_cents).to eq(14)
+            expect(result.invoice.vat_amount_currency).to eq('EUR')
+            expect(result.invoice.vat_rate).to eq(20)
+            expect(result.invoice.total_amount_cents).to eq(84)
+            expect(result.invoice.total_amount_currency).to eq('EUR')
+
+            expect(result.invoice).to be_legacy
+
+            expect(result.invoice.credits.count).to eq(2)
+          end
+        end
+      end
+
+      context 'when both coupons are percentage' do
+        let(:coupon) { create(:coupon, coupon_type: 'percentage') }
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            coupon: coupon,
+            customer: subscription.customer,
+            percentage_rate: 15.00,
+          )
+        end
+
+        it 'creates an invoice' do
+          result = invoice_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
+            expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+            expect(result.invoice.fees.subscription_kind.count).to eq(1)
+            expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+            expect(result.invoice.amount_cents).to eq(68) # 68 = 100 - 15 (percentage coupon) - 17 (percentage coupon)
+            expect(result.invoice.amount_currency).to eq('EUR')
+            expect(result.invoice.vat_amount_cents).to eq(14)
+            expect(result.invoice.vat_amount_currency).to eq('EUR')
+            expect(result.invoice.vat_rate).to eq(20)
+            expect(result.invoice.total_amount_cents).to eq(82)
+            expect(result.invoice.total_amount_currency).to eq('EUR')
+
+            expect(result.invoice).to be_legacy
+
+            expect(result.invoice.credits.count).to eq(2)
+          end
         end
       end
 
@@ -833,6 +926,8 @@ RSpec.describe Invoices::CreateService, type: :service do
             amount_currency: 'NOK',
           )
         end
+
+        before { applied_coupon_latest.update!(status: :terminated) }
 
         it 'ignore the coupon' do
           result = invoice_service.create

@@ -431,12 +431,13 @@ html
                 .body-1 All usage based fees
               td.body-1 style="text-align: right;" width="30%"
                 = charge_amount.format
-          - if legacy? && credits.any?
-            tr
-              td width="70%"
-                .body-1 Coupons
-              td.body-1 style="text-align: right; color: #008559;" width="30%"
-                = credit_amount.format
+          - if legacy? && credits.coupon_kind.any?
+            - credits.coupon_kind.order(created_at: :asc).each do |credit|
+              tr
+                td width="70%"
+                  .body-1 #{credit.invoice_coupon_display_name}
+                td.body-1 style="text-align: right; color: #008559;" width="30%"
+                  = credit.amount.format
 
         table.total-table width="100%"
           - if legacy?
@@ -469,10 +470,11 @@ html
                 td.body-1 style="text-align: right; color: #008559;"
                   = credit_notes_total_amount.format
             - if credits.coupon_kind.any?
-              tr
-                td.body-2 Coupons
-                td.body-1 style="text-align: right; color: #008559;"
-                  = coupon_total_amount.format
+              - credits.coupon_kind.order(created_at: :asc).each do |credit|
+                tr
+                  td.body-2 #{credit.invoice_coupon_display_name}
+                  td.body-1 style="text-align: right; color: #008559;"
+                    = credit.amount.format
             - if subscription? && wallet_transactions.exists?
               tr
                 td.body-2 width="70%" Prepaid credits

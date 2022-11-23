@@ -21,7 +21,7 @@ module Credits
         amount_currency: invoice.amount_currency,
       )
 
-      applied_coupon.frequency_duration -= 1 if applied_coupon.recurring?
+      applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?
       if should_terminate_applied_coupon?(credit_amount)
         applied_coupon.mark_as_terminated!
       elsif applied_coupon.recurring?
@@ -73,7 +73,7 @@ module Credits
       if applied_coupon.once?
         applied_coupon.coupon.percentage? || credit_amount >= remaining_amount
       else
-        applied_coupon.frequency_duration <= 0
+        applied_coupon.frequency_duration_remaining <= 0
       end
     end
   end

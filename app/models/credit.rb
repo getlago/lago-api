@@ -9,6 +9,8 @@ class Credit < ApplicationRecord
 
   has_one :coupon, through: :applied_coupon
 
+  monetize :amount_cents, disable_validation: true, allow_nil: true
+
   validates :amount_currency, inclusion: { in: currency_list }
 
   scope :coupon_kind, -> { where.not(applied_coupon_id: nil) }
@@ -37,5 +39,18 @@ class Credit < ApplicationRecord
 
     # TODO: change it depending on invoice template
     credit_note.invoice.number
+  end
+
+  def invoice_coupon_display_name
+    return nil if applied_coupon.blank?
+
+    coupon = applied_coupon.coupon
+    suffix = if coupon.percentage?
+      "#{format('%.2f', applied_coupon.percentage_rate)}%"
+    else
+      applied_coupon.amount.format
+    end
+
+    "#{coupon.name} (#{suffix})"
   end
 end

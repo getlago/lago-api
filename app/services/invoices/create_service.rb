@@ -36,7 +36,7 @@ module Invoices
         compute_amounts(invoice)
 
         create_credit_note_credit(invoice) if should_create_credit_note_credit?
-        create_coupon_credit(invoice) if should_create_coupon_credit?
+        create_coupon_credit(invoice) if should_create_coupon_credit?(invoice)
         create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
@@ -132,10 +132,10 @@ module Invoices
       customer.organization.webhook_url?
     end
 
-    def applied_coupon
-      return @applied_coupon if @applied_coupon
+    def applied_coupons
+      return @applied_coupons if @applied_coupons
 
-      @applied_coupon = customer.applied_coupons.active.first
+      @applied_coupons = customer.applied_coupons.active.order(created_at: :asc)
     end
 
     def credit_notes
@@ -152,10 +152,9 @@ module Invoices
       credit_notes.any?
     end
 
-    def should_create_coupon_credit?
-      return false if applied_coupon.nil?
-
-      return applied_coupon.amount_currency == currency if applied_coupon.coupon.fixed_amount?
+    def should_create_coupon_credit?(invoice)
+      return false if applied_coupons.blank?
+      return false unless invoice.amount_cents&.positive?
 
       true
     end
@@ -178,13 +177,19 @@ module Invoices
     end
 
     def create_coupon_credit(invoice)
-      credit_result = Credits::AppliedCouponService.new(
-        invoice: invoice,
-        applied_coupon: applied_coupon,
-      ).create
-      credit_result.throw_error unless credit_result.success?
+      applied_coupons.each do |applied_coupon|
+        break unless invoice.amount_cents&.positive?
 
-      refresh_amounts(invoice: invoice, credit_amount_cents: credit_result.credit.amount_cents)
+        next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
+
+        credit_result = Credits::AppliedCouponService.new(
+          invoice: invoice,
+          applied_coupon: applied_coupon,
+        ).create
+        credit_result.throw_error unless credit_result.success?
+
+        refresh_amounts(invoice: invoice, credit_amount_cents: credit_result.credit.amount_cents)
+      end
     end
 
     def create_applied_prepaid_credit(invoice)

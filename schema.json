@@ -793,6 +793,20 @@
               ]
             },
             {
+              "name": "amountCentsRemaining",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "amountCurrency",
               "description": null,
               "type": {
@@ -862,6 +876,20 @@
             },
             {
               "name": "frequencyDuration",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "frequencyDurationRemaining",
               "description": null,
               "type": {
                 "kind": "SCALAR",
