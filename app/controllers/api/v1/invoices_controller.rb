@@ -68,7 +68,7 @@ module Api
       private
 
       def update_params
-        params.require(:invoice).permit(:status)
+        params.require(:invoice).permit(:payment_status)
       end
 
       def render_invoice(invoice)

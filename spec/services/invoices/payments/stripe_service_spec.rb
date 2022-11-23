@@ -108,7 +108,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.status,
+          payment_status: invoice.payment_status,
         },
       )
     end
@@ -243,7 +243,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
   end
 
-  describe '.update_status' do
+  describe '.update_payment_status' do
     let(:payment) do
       create(
         :payment,
@@ -258,18 +258,18 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     it 'updates the payment and invoice status' do
-      result = stripe_service.update_status(
+      result = stripe_service.update_payment_status(
         provider_payment_id: 'ch_123456',
         status: 'succeeded',
       )
 
       expect(result).to be_success
       expect(result.payment.status).to eq('succeeded')
-      expect(result.invoice.status).to eq('succeeded')
+      expect(result.invoice.payment_status).to eq('succeeded')
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = stripe_service.update_status(
+      invoice = stripe_service.update_payment_status(
         provider_payment_id: 'ch_123456',
         status: 'succeeded',
       ).payment.invoice
@@ -280,7 +280,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.status,
+          payment_status: invoice.payment_status,
         },
       )
     end
@@ -289,19 +289,19 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       before { invoice.succeeded! }
 
       it 'does not update the status of invoice and payment' do
-        result = stripe_service.update_status(
+        result = stripe_service.update_payment_status(
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
         )
 
         expect(result).to be_success
-        expect(result.invoice.status).to eq('succeeded')
+        expect(result.invoice.payment_status).to eq('succeeded')
       end
     end
 
     context 'with invalid status' do
       it 'does not update the status of invoice and payment' do
-        result = stripe_service.update_status(
+        result = stripe_service.update_payment_status(
           provider_payment_id: 'ch_123456',
           status: 'foo-bar',
         )
@@ -309,8 +309,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:status)
-          expect(result.error.messages[:status]).to include('value_is_invalid')
+          expect(result.error.messages.keys).to include(:payment_status)
+          expect(result.error.messages[:payment_status]).to include('value_is_invalid')
         end
       end
     end

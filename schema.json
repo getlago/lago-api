@@ -10838,6 +10838,24 @@
               ]
             },
             {
+              "name": "paymentStatus",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "InvoicePaymentStatusTypeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "plan",
               "description": null,
               "type": {
@@ -10860,24 +10878,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ID",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "status",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "InvoiceStatusTypeEnum",
                   "ofType": null
                 }
               },
@@ -11182,7 +11182,7 @@
         },
         {
           "kind": "ENUM",
-          "name": "InvoiceStatusTypeEnum",
+          "name": "InvoicePaymentStatusTypeEnum",
           "description": null,
           "interfaces": null,
           "possibleTypes": null,
