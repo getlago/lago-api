@@ -2937,9 +2937,9 @@ type Invoice {
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
   number: String!
+  paymentStatus: InvoicePaymentStatusTypeEnum!
   plan: Plan
   sequentialId: ID!
-  status: InvoiceStatusTypeEnum!
   subscriptions: [Subscription!]
   subtotalBeforePrepaidCredits: String!
   totalAmountCents: Int!
@@ -2963,7 +2963,7 @@ interface InvoiceItem {
   itemType: String!
 }
 
-enum InvoiceStatusTypeEnum {
+enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded

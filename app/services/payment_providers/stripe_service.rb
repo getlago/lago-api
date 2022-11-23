@@ -113,7 +113,7 @@ module PaymentProviders
         status = event.type == 'payment_intent.succeeded' ? 'succeeded' : 'failed'
 
         Invoices::Payments::StripeService
-          .new.update_status(
+          .new.update_payment_status(
             provider_payment_id: event.data.object.id,
             status: status,
           )

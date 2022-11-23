@@ -9,7 +9,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'UPDATE /invoices' do
     let(:update_params) do
-      { status: 'succeeded' }
+      { payment_status: 'succeeded' }
     end
 
     it 'updates an invoice' do
@@ -17,7 +17,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:invoice][:lago_id]).to eq(invoice.id)
-      expect(json[:invoice][:status]).to eq('succeeded')
+      expect(json[:invoice][:payment_status]).to eq('succeeded')
     end
 
     context 'when invoice does not exist' do
@@ -39,7 +39,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
         expect(json[:invoice][:lago_id]).to eq(invoice.id)
-        expect(json[:invoice][:status]).to eq(invoice.status)
+        expect(json[:invoice][:payment_status]).to eq(invoice.payment_status)
         expect(json[:invoice][:customer]).not_to be_nil
         expect(json[:invoice][:subscriptions]).not_to be_nil
         expect(json[:invoice][:fees].first).to include(lago_group_id: group.id)
@@ -78,7 +78,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:invoices].count).to eq(1)
       expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
-      expect(json[:invoices].first[:status]).to eq(invoice.status)
+      expect(json[:invoices].first[:payment_status]).to eq(invoice.payment_status)
     end
 
     context 'with pagination' do
