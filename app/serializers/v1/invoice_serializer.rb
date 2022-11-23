@@ -9,6 +9,7 @@ module V1
         number: model.number,
         issuing_date: model.issuing_date.iso8601,
         invoice_type: model.invoice_type,
+        status: model.status,
         payment_status: model.payment_status,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,

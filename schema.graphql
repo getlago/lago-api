@@ -2987,6 +2987,7 @@ type Invoice {
   plan: Plan
   refundableAmountCents: Int!
   sequentialId: ID!
+  status: InvoiceStatusTypeEnum!
   subTotalVatExcludedAmountCents: Int!
   subTotalVatIncludedAmountCents: Int!
   subscriptions: [Subscription!]
@@ -3017,6 +3018,11 @@ enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+enum InvoiceStatusTypeEnum {
+  draft
+  finalized
 }
 
 type InvoiceSubscription {
