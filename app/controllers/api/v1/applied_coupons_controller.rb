@@ -58,8 +58,6 @@ module Api
       end
 
       def valid_status?(status)
-        return false unless status
-
         AppliedCoupon.statuses.key?(status)
       end
     end
