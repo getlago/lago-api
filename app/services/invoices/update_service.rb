@@ -7,17 +7,17 @@ module Invoices
 
       return result.not_found_failure!(resource: 'invoice') if invoice.blank?
 
-      unless valid_status?(params[:status])
+      unless valid_payment_status?(params[:payment_status])
         return result.single_validation_failure!(
-          field: :status,
+          field: :payment_status,
           error_code: 'value_is_invalid',
         )
       end
 
-      invoice.status = params[:status] if params.key?(:status)
+      invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
       invoice.save!
 
-      handle_prepaid_credits(invoice, params[:status])
+      handle_prepaid_credits(invoice, params[:payment_status])
 
       result.invoice = invoice
       track_payment_status_changed(invoice)
@@ -28,8 +28,8 @@ module Invoices
 
     private
 
-    def valid_status?(status)
-      Invoice::STATUS.include?(status&.to_sym)
+    def valid_payment_status?(payment_status)
+      Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
     end
 
     def track_payment_status_changed(invoice)
@@ -39,14 +39,14 @@ module Invoices
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.status,
+          payment_status: invoice.payment_status,
         },
       )
     end
 
-    def handle_prepaid_credits(invoice, status)
+    def handle_prepaid_credits(invoice, payment_status)
       return unless invoice.invoice_type == 'credit'
-      return unless status == 'succeeded'
+      return unless payment_status == 'succeeded'
 
       Invoices::PrepaidCreditJob.perform_later(invoice)
     end

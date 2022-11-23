@@ -18,7 +18,7 @@ module Types
       field :vat_amount_cents, Integer, null: false
       field :vat_amount_currency, Types::CurrencyEnum, null: false
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
-      field :status, Types::Invoices::StatusTypeEnum, null: false
+      field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
       field :file_url, String, null: true
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false

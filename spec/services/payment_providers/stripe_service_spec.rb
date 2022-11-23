@@ -221,7 +221,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     before do
       allow(Invoices::Payments::StripeService).to receive(:new)
         .and_return(payment_service)
-      allow(payment_service).to receive(:update_status)
+      allow(payment_service).to receive(:update_payment_status)
         .and_return(service_result)
     end
 
@@ -240,7 +240,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         expect(result).to be_success
 
         expect(Invoices::Payments::StripeService).to have_received(:new)
-        expect(payment_service).to have_received(:update_status)
+        expect(payment_service).to have_received(:update_payment_status)
       end
     end
 
@@ -349,7 +349,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         end
 
         expect(Invoices::Payments::StripeService).not_to have_received(:new)
-        expect(payment_service).not_to have_received(:update_status)
+        expect(payment_service).not_to have_received(:update_payment_status)
       end
     end
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_11_18_093903) do
+ActiveRecord::Schema[7.0].define(version: 2022_11_22_163328) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -321,13 +321,14 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_18_093903) do
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
     t.integer "invoice_type", default: 0, null: false
-    t.integer "status", default: 0, null: false
+    t.integer "payment_status", default: 0, null: false
     t.string "number", default: "", null: false
     t.integer "sequential_id"
     t.string "file"
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
     t.float "vat_rate"
+    t.integer "status", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 

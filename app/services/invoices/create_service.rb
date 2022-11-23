@@ -40,7 +40,7 @@ module Invoices
         create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-        invoice.status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.save!
 
         subscriptions.each { |subscription| invoice.subscriptions << subscription }
