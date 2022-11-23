@@ -2952,6 +2952,7 @@ type Invoice {
   creditAmountCents: Int!
   creditAmountCurrency: CurrencyEnum!
   creditNoteTotalAmountCents: Int!
+  creditNotes: [CreditNote!]
   creditableAmountCents: Int!
   customer: Customer!
   fees: [Fee!]
