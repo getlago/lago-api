@@ -35,6 +35,7 @@ module Types
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
       field :fees, [Types::Fees::Object], null: true
       field :plan, Types::Plans::Object
+      field :credit_notes, [Types::CreditNotes::Object], null: true
 
       field :wallet_transaction_amount_cents, Integer, null: false
       field :subtotal_before_prepaid_credits, String, null: false
