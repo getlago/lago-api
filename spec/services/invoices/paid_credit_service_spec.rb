@@ -31,7 +31,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
         expect(result.invoice.issuing_date).to eq(Time.zone.at(timestamp).to_date)
         expect(result.invoice.invoice_type).to eq('credit')
-        expect(result.invoice.status).to eq('pending')
+        expect(result.invoice.payment_status).to eq('pending')
 
         expect(result.invoice.amount_cents).to eq(1500)
         expect(result.invoice.amount_currency).to eq('EUR')

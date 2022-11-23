@@ -109,7 +109,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.status,
+          payment_status: invoice.payment_status,
         },
       )
     end
@@ -210,7 +210,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     end
   end
 
-  describe '.update_status' do
+  describe '.update_payment_status' do
     let(:payment) do
       create(
         :payment,
@@ -225,19 +225,19 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       payment
     end
 
-    it 'updates the payment and invoice status' do
-      result = gocardless_service.update_status(
+    it 'updates the payment and invoice payment_status' do
+      result = gocardless_service.update_payment_status(
         provider_payment_id: 'ch_123456',
         status: 'paid_out',
       )
 
       expect(result).to be_success
       expect(result.payment.status).to eq('paid_out')
-      expect(result.invoice.status).to eq('succeeded')
+      expect(result.invoice.payment_status).to eq('succeeded')
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = gocardless_service.update_status(
+      invoice = gocardless_service.update_payment_status(
         provider_payment_id: 'ch_123456',
         status: 'paid_out',
       ).payment.invoice
@@ -248,7 +248,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.status,
+          payment_status: invoice.payment_status,
         },
       )
     end
@@ -257,19 +257,19 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       before { invoice.succeeded! }
 
       it 'does not update the status of invoice and payment' do
-        result = gocardless_service.update_status(
+        result = gocardless_service.update_payment_status(
           provider_payment_id: 'ch_123456',
           status: 'paid_out',
         )
 
         expect(result).to be_success
-        expect(result.invoice.status).to eq('succeeded')
+        expect(result.invoice.payment_status).to eq('succeeded')
       end
     end
 
     context 'with invalid status' do
-      it 'does not update the status of invoice' do
-        result = gocardless_service.update_status(
+      it 'does not update the payment_status of invoice' do
+        result = gocardless_service.update_payment_status(
           provider_payment_id: 'ch_123456',
           status: 'foo-bar',
         )
@@ -277,8 +277,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:status)
-          expect(result.error.messages[:status]).to include('value_is_invalid')
+          expect(result.error.messages.keys).to include(:payment_status)
+          expect(result.error.messages[:payment_status]).to include('value_is_invalid')
         end
       end
     end

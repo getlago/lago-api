@@ -12,7 +12,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
   let(:invoice) do
     create(
       :invoice,
-      status: 'succeeded',
+      payment_status: 'succeeded',
       amount_cents: 100,
       amount_currency: 'EUR',
       vat_amount_cents: 120,
