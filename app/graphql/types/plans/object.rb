@@ -36,7 +36,7 @@ module Types
       end
 
       def customer_count
-        object.subscriptions.active.count
+        object.subscriptions.active.select(:customer_id).distinct.count
       end
 
       def can_be_deleted
