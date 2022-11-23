@@ -40,6 +40,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:invoice][:lago_id]).to eq(invoice.id)
         expect(json[:invoice][:payment_status]).to eq(invoice.payment_status)
+        expect(json[:invoice][:status]).to eq(invoice.status)
         expect(json[:invoice][:customer]).not_to be_nil
         expect(json[:invoice][:subscriptions]).not_to be_nil
         expect(json[:invoice][:fees].first).to include(lago_group_id: group.id)
@@ -79,6 +80,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       expect(json[:invoices].count).to eq(1)
       expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
       expect(json[:invoices].first[:payment_status]).to eq(invoice.payment_status)
+      expect(json[:invoices].first[:status]).to eq(invoice.status)
     end
 
     context 'with pagination' do
