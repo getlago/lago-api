@@ -14,7 +14,7 @@ module Invoices
         return result unless should_process_payment?
 
         unless invoice.total_amount_cents.positive?
-          update_invoice_status(:succeeded)
+          update_invoice_payment_status(:succeeded)
           return result
         end
 
@@ -31,7 +31,7 @@ module Invoices
         )
         payment.save!
 
-        update_invoice_status(payment.status)
+        update_invoice_payment_status(payment.status)
         handle_prepaid_credits(payment.invoice, payment.status)
         track_payment_status_changed(payment.invoice)
 
@@ -39,7 +39,7 @@ module Invoices
         result
       end
 
-      def update_status(provider_payment_id:, status:)
+      def update_payment_status(provider_payment_id:, status:)
         payment = Payment.find_by(provider_payment_id: provider_payment_id)
         return result.not_found_failure!(resource: 'stripe_payment') unless payment
 
@@ -48,13 +48,13 @@ module Invoices
         return result if payment.invoice.succeeded?
 
         payment.update!(status: status)
-        payment.invoice.update!(status: status)
+        payment.invoice.update!(payment_status: status)
         handle_prepaid_credits(payment.invoice, status)
         track_payment_status_changed(payment.invoice)
 
         result
       rescue ArgumentError
-        result.single_validation_failure!(field: :status, error_code: 'value_is_invalid')
+        result.single_validation_failure!(field: :payment_status, error_code: 'value_is_invalid')
       end
 
       private
@@ -110,7 +110,7 @@ module Invoices
         )
       rescue Stripe::CardError, Stripe::InvalidRequestError => e
         deliver_error_webhook(e)
-        update_invoice_status(:failed)
+        update_invoice_payment_status(:failed)
 
         raise
       end
@@ -134,15 +134,15 @@ module Invoices
         }
       end
 
-      def update_invoice_status(status)
-        return unless Invoice::STATUS.include?(status&.to_sym)
+      def update_invoice_payment_status(payment_status)
+        return unless Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
 
-        invoice.update!(status: status)
+        invoice.update!(payment_status: payment_status)
       end
 
-      def handle_prepaid_credits(invoice, status)
+      def handle_prepaid_credits(invoice, payment_status)
         return unless invoice.invoice_type == 'credit'
-        return unless status == 'succeeded'
+        return unless payment_status == 'succeeded'
 
         Invoices::PrepaidCreditJob.perform_later(invoice)
       end
@@ -168,7 +168,7 @@ module Invoices
           properties: {
             organization_id: invoice.organization.id,
             invoice_id: invoice.id,
-            payment_status: invoice.status,
+            payment_status: invoice.payment_status,
           },
         )
       end

@@ -70,7 +70,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.issuing_date.to_date).to eq(timestamp)
           expect(result.invoice.invoice_type).to eq('subscription')
-          expect(result.invoice.status).to eq('pending')
+          expect(result.invoice.payment_status).to eq('pending')
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
@@ -181,7 +181,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             expect(result.invoice.subscriptions.first).to eq(subscription)
             expect(result.invoice.issuing_date.to_date).to eq(timestamp)
             expect(result.invoice.invoice_type).to eq('subscription')
-            expect(result.invoice.status).to eq('pending')
+            expect(result.invoice.payment_status).to eq('pending')
             expect(result.invoice.fees.subscription_kind.count).to eq(1)
             expect(result.invoice.fees.charge_kind.count).to eq(1)
 
@@ -211,7 +211,7 @@ RSpec.describe Invoices::CreateService, type: :service do
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.issuing_date.to_date).to eq(timestamp)
               expect(result.invoice.invoice_type).to eq('subscription')
-              expect(result.invoice.status).to eq('pending')
+              expect(result.invoice.payment_status).to eq('pending')
               expect(result.invoice.fees.subscription_kind.count).to eq(1)
               expect(result.invoice.fees.charge_kind.count).to eq(0)
 
@@ -253,7 +253,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.subscriptions).to eq(subscriptions)
           expect(result.invoice.issuing_date.to_date).to eq(timestamp)
           expect(result.invoice.invoice_type).to eq('subscription')
-          expect(result.invoice.status).to eq('pending')
+          expect(result.invoice.payment_status).to eq('pending')
           expect(result.invoice.fees.subscription_kind.count).to eq(2)
           expect(result.invoice.fees.charge_kind.count).to eq(2)
 
@@ -680,7 +680,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.fees.first.properties['from_date'])
             .to eq(subscription.started_at.to_date.to_s)
           expect(result.invoice.total_amount_cents).to eq(0)
-          expect(result.invoice.status).to eq('succeeded')
+          expect(result.invoice.payment_status).to eq('succeeded')
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end

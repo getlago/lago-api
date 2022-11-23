@@ -33,10 +33,10 @@ class Invoice < ApplicationRecord
   monetize :wallet_transaction_amount_cents, disable_validation: true, allow_nil: true
 
   INVOICE_TYPES = %i[subscription add_on credit].freeze
-  STATUS = %i[pending succeeded failed].freeze
+  PAYMENT_STATUS = %i[pending succeeded failed].freeze
 
   enum invoice_type: INVOICE_TYPES
-  enum status: STATUS
+  enum payment_status: PAYMENT_STATUS
 
   sequenced scope: ->(invoice) { invoice.customer.invoices }
 

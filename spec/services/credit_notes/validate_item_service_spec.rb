@@ -25,9 +25,11 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       fee: fee,
     )
   end
-  let(:invoice) { create(:invoice, total_amount_cents: 100, amount_cents: 100, status: invoice_status) }
+  let(:invoice) do
+    create(:invoice, total_amount_cents: 100, amount_cents: 100, payment_status: payment_status)
+  end
   let(:customer) { invoice.customer }
-  let(:invoice_status) { 'succeeded' }
+  let(:payment_status) { 'succeeded' }
 
   let(:fee) { create(:fee, invoice: invoice, amount_cents: 100) }
 
@@ -50,7 +52,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
     end
 
     context 'when invoice is not paid' do
-      let(:invoice_status) { 'pending' }
+      let(:payment_status) { 'pending' }
       let(:refund_amount_cents) { 2 }
 
       it 'fails the validation' do

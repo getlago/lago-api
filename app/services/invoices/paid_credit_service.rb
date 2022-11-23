@@ -16,7 +16,7 @@ module Invoices
           customer: customer,
           issuing_date: issuing_date,
           invoice_type: :credit,
-          status: :pending,
+          payment_status: :pending,
 
           # NOTE: Apply credits before VAT, will be changed with credit note feature
           legacy: true,
