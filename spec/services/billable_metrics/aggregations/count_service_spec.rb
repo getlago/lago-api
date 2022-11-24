@@ -24,8 +24,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     )
   end
 
-  let(:from_date) { Time.zone.today - 1.month }
-  let(:to_date) { Time.zone.today }
+  let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
+  let(:to_datetime) { Time.current.end_of_day }
 
   before do
     create_list(
@@ -34,21 +34,21 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       code: billable_metric.code,
       subscription: subscription,
       customer: customer,
-      timestamp: Time.zone.now,
+      timestamp: Time.zone.now - 1.day,
     )
   end
 
   it 'aggregates the events' do
-    result = count_service.aggregate(from_date: from_date, to_date: to_date)
+    result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
 
     expect(result.aggregation).to eq(4)
   end
 
   context 'when events are out of bounds' do
-    let(:to_date) { Time.zone.now - 2.days }
+    let(:to_datetime) { Time.zone.now - 2.days }
 
     it 'does not take events into account' do
-      result = count_service.aggregate(from_date: from_date, to_date: to_date)
+      result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
 
       expect(result.aggregation).to eq(0)
     end
@@ -75,7 +75,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         code: billable_metric.code,
         customer: customer,
         subscription: subscription,
-        timestamp: Time.zone.now,
+        timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
           cloud: 'AWS',
@@ -88,7 +88,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         code: billable_metric.code,
         customer: customer,
         subscription: subscription,
-        timestamp: Time.zone.now,
+        timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 8,
           cloud: 'AWS',
@@ -101,7 +101,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         code: billable_metric.code,
         customer: customer,
         subscription: subscription,
-        timestamp: Time.zone.now,
+        timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
           cloud: 'AWS',
@@ -111,7 +111,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = count_service.aggregate(from_date: from_date, to_date: to_date)
+      result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
 
       expect(result.aggregation).to eq(2)
     end

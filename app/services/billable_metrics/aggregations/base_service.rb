@@ -11,7 +11,7 @@ module BillableMetrics
       end
 
       def aggregate(from_date:, to_date:, options: {})
-        raise NotImplementedError
+        raise(NotImplementedError)
       end
 
       protected
@@ -20,10 +20,10 @@ module BillableMetrics
 
       delegate :customer, to: :subscription
 
-      def events_scope(from_date:, to_date:)
+      def events_scope(from_datetime:, to_datetime:)
         events = subscription.events
-          .from_date(from_date)
-          .to_date(to_date)
+          .from_datetime(from_datetime)
+          .to_datetime(to_datetime)
           .where(code: billable_metric.code)
         return events unless group
 
