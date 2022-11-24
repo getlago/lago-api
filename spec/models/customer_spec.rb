@@ -105,6 +105,37 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#applicable_invoice_grace_period' do
+    subject(:customer) do
+      described_class.new(organization: organization, invoice_grace_period: 3)
+    end
+
+    it 'returns the customer invoice_grace_period' do
+      expect(customer.applicable_invoice_grace_period).to eq(3)
+    end
+
+    context 'when customer does not have an invoice grace period' do
+      let(:organization_invoice_grace_period) { 5 }
+
+      before do
+        customer.invoice_grace_period = 0
+        organization.invoice_grace_period = organization_invoice_grace_period
+      end
+
+      it 'returns the organization invoice_grace_period' do
+        expect(customer.applicable_invoice_grace_period).to eq(5)
+      end
+
+      context 'when organization invoice_grace_period is nil' do
+        let(:organization_invoice_grace_period) { 0 }
+
+        it 'returns the default invoice_grace_period' do
+          expect(customer.applicable_invoice_grace_period).to eq(0)
+        end
+      end
+    end
+  end
+
   describe 'timezones' do
     subject(:customer) do
       build(

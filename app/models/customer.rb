@@ -68,6 +68,12 @@ class Customer < ApplicationRecord
     organization.timezone || 'UTC'
   end
 
+  def applicable_invoice_grace_period
+    return invoice_grace_period if invoice_grace_period.positive?
+
+    organization.invoice_grace_period
+  end
+
   def editable?
     !attached_to_subscriptions? &&
       applied_add_ons.none? &&
