@@ -15,11 +15,20 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
   end
 
   let(:membership) { create(:membership) }
+  let(:plan) { create(:plan, organization: organization) }
   let(:organization) { membership.organization }
+  let(:customer) { create(:customer, organization: organization) }
+
+  before do
+    plan
+    customer
+
+    2.times do
+      create(:subscription, customer: customer, plan: plan)
+    end
+  end
 
   it 'returns a list of plans' do
-    plan = create(:plan, organization: organization)
-
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -31,7 +40,8 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     aggregate_failures do
       expect(plans_response['collection'].count).to eq(organization.plans.count)
       expect(plans_response['collection'].first['id']).to eq(plan.id)
-      expect(plans_response['collection'].first['canBeDeleted']).to be_truthy
+      expect(plans_response['collection'].first['canBeDeleted']).to be_falsey
+      expect(plans_response['collection'].first['customerCount']).to eq(1)
 
       expect(plans_response['metadata']['currentPage']).to eq(1)
       expect(plans_response['metadata']['totalCount']).to eq(1)
