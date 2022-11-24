@@ -26,6 +26,10 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     customer2
     applied_add_on_list
     applied_add_on
+
+    3.times do
+      create(:subscription, customer: customer)
+    end
   end
 
   it 'returns a single add-on' do

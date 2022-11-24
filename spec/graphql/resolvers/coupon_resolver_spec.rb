@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     <<~GQL
       query($couponId: ID!) {
         coupon(id: $couponId) {
-          id, name, customerCount expirationDate
+          id name customerCount expirationDate
         }
       }
     GQL
@@ -15,7 +15,18 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:customer) { create(:customer, organization: organization) }
   let(:coupon) { create(:coupon, organization: organization) }
+  let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+
+  before do
+    customer
+    applied_coupon
+
+    2.times do
+      create(:subscription, customer: customer)
+    end
+  end
 
   it 'returns a single coupon' do
     result = execute_graphql(
@@ -31,6 +42,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
 
     aggregate_failures do
       expect(coupon_response['id']).to eq(coupon.id)
+      expect(coupon_response['customerCount']).to eq(1)
     end
   end
 
