@@ -4712,6 +4712,7 @@ input UpdateCustomerInput {
   phone: String
   providerCustomer: ProviderCustomerInput
   state: String
+  timezone: TimezoneEnum
   url: String
   vatRate: Float
   zipcode: String
