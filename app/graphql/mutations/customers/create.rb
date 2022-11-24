@@ -26,6 +26,7 @@ module Mutations
       argument :vat_rate, Float, required: false
       argument :invoice_grace_period, Integer, required: false
       argument :currency, Types::CurrencyEnum, required: false
+      argument :timezone, Types::TimezoneEnum, required: false
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false

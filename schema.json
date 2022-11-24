@@ -5212,6 +5212,18 @@
               "deprecationReason": null
             },
             {
+              "name": "timezone",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "TimezoneEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProvider",
               "description": null,
               "type": {
