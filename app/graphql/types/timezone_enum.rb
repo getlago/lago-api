@@ -8,7 +8,7 @@ module Types
       .sort_by { |list| list.first.split('/') }
       .map do |list|
         symbol = list.first.gsub(/[^_a-zA-Z0-9]/, '_').squeeze('_').upcase
-        value("TZ_#{symbol}", "#{list.first} (#{list.last.formatted_offset})", value: list.first)
+        value("TZ_#{symbol}", list.first, value: list.first)
       end
   end
 end

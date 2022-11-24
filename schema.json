@@ -16281,811 +16281,811 @@
           "enumValues": [
             {
               "name": "TZ_AFRICA_ALGIERS",
-              "description": "Africa/Algiers (+01:00)",
+              "description": "Africa/Algiers",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AFRICA_CAIRO",
-              "description": "Africa/Cairo (+02:00)",
+              "description": "Africa/Cairo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AFRICA_CASABLANCA",
-              "description": "Africa/Casablanca (+01:00)",
+              "description": "Africa/Casablanca",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AFRICA_HARARE",
-              "description": "Africa/Harare (+02:00)",
+              "description": "Africa/Harare",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AFRICA_JOHANNESBURG",
-              "description": "Africa/Johannesburg (+02:00)",
+              "description": "Africa/Johannesburg",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AFRICA_MONROVIA",
-              "description": "Africa/Monrovia (+00:00)",
+              "description": "Africa/Monrovia",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AFRICA_NAIROBI",
-              "description": "Africa/Nairobi (+03:00)",
+              "description": "Africa/Nairobi",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_ARGENTINA_BUENOS_AIRES",
-              "description": "America/Argentina/Buenos_Aires (-03:00)",
+              "description": "America/Argentina/Buenos_Aires",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_BOGOTA",
-              "description": "America/Bogota (-05:00)",
+              "description": "America/Bogota",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_CARACAS",
-              "description": "America/Caracas (-04:00)",
+              "description": "America/Caracas",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_CHICAGO",
-              "description": "America/Chicago (-06:00)",
+              "description": "America/Chicago",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_CHIHUAHUA",
-              "description": "America/Chihuahua (-07:00)",
+              "description": "America/Chihuahua",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_DENVER",
-              "description": "America/Denver (-07:00)",
+              "description": "America/Denver",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_GODTHAB",
-              "description": "America/Godthab (-03:00)",
+              "description": "America/Godthab",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_GUATEMALA",
-              "description": "America/Guatemala (-06:00)",
+              "description": "America/Guatemala",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_GUYANA",
-              "description": "America/Guyana (-04:00)",
+              "description": "America/Guyana",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_HALIFAX",
-              "description": "America/Halifax (-04:00)",
+              "description": "America/Halifax",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_INDIANA_INDIANAPOLIS",
-              "description": "America/Indiana/Indianapolis (-05:00)",
+              "description": "America/Indiana/Indianapolis",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_JUNEAU",
-              "description": "America/Juneau (-09:00)",
+              "description": "America/Juneau",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_LA_PAZ",
-              "description": "America/La_Paz (-04:00)",
+              "description": "America/La_Paz",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_LIMA",
-              "description": "America/Lima (-05:00)",
+              "description": "America/Lima",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_LOS_ANGELES",
-              "description": "America/Los_Angeles (-08:00)",
+              "description": "America/Los_Angeles",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_MAZATLAN",
-              "description": "America/Mazatlan (-07:00)",
+              "description": "America/Mazatlan",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_MEXICO_CITY",
-              "description": "America/Mexico_City (-06:00)",
+              "description": "America/Mexico_City",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_MONTERREY",
-              "description": "America/Monterrey (-06:00)",
+              "description": "America/Monterrey",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_MONTEVIDEO",
-              "description": "America/Montevideo (-03:00)",
+              "description": "America/Montevideo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_NEW_YORK",
-              "description": "America/New_York (-05:00)",
+              "description": "America/New_York",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_PHOENIX",
-              "description": "America/Phoenix (-07:00)",
+              "description": "America/Phoenix",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_PUERTO_RICO",
-              "description": "America/Puerto_Rico (-04:00)",
+              "description": "America/Puerto_Rico",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_REGINA",
-              "description": "America/Regina (-06:00)",
+              "description": "America/Regina",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_SANTIAGO",
-              "description": "America/Santiago (-04:00)",
+              "description": "America/Santiago",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_SAO_PAULO",
-              "description": "America/Sao_Paulo (-03:00)",
+              "description": "America/Sao_Paulo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_ST_JOHNS",
-              "description": "America/St_Johns (-03:30)",
+              "description": "America/St_Johns",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AMERICA_TIJUANA",
-              "description": "America/Tijuana (-08:00)",
+              "description": "America/Tijuana",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_ALMATY",
-              "description": "Asia/Almaty (+06:00)",
+              "description": "Asia/Almaty",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_BAGHDAD",
-              "description": "Asia/Baghdad (+03:00)",
+              "description": "Asia/Baghdad",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_BAKU",
-              "description": "Asia/Baku (+04:00)",
+              "description": "Asia/Baku",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_BANGKOK",
-              "description": "Asia/Bangkok (+07:00)",
+              "description": "Asia/Bangkok",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_CHONGQING",
-              "description": "Asia/Chongqing (+08:00)",
+              "description": "Asia/Chongqing",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_COLOMBO",
-              "description": "Asia/Colombo (+05:30)",
+              "description": "Asia/Colombo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_DHAKA",
-              "description": "Asia/Dhaka (+06:00)",
+              "description": "Asia/Dhaka",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_HONG_KONG",
-              "description": "Asia/Hong_Kong (+08:00)",
+              "description": "Asia/Hong_Kong",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_IRKUTSK",
-              "description": "Asia/Irkutsk (+08:00)",
+              "description": "Asia/Irkutsk",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_JAKARTA",
-              "description": "Asia/Jakarta (+07:00)",
+              "description": "Asia/Jakarta",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_JERUSALEM",
-              "description": "Asia/Jerusalem (+02:00)",
+              "description": "Asia/Jerusalem",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KABUL",
-              "description": "Asia/Kabul (+04:30)",
+              "description": "Asia/Kabul",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KAMCHATKA",
-              "description": "Asia/Kamchatka (+12:00)",
+              "description": "Asia/Kamchatka",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KARACHI",
-              "description": "Asia/Karachi (+05:00)",
+              "description": "Asia/Karachi",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KATHMANDU",
-              "description": "Asia/Kathmandu (+05:45)",
+              "description": "Asia/Kathmandu",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KOLKATA",
-              "description": "Asia/Kolkata (+05:30)",
+              "description": "Asia/Kolkata",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KRASNOYARSK",
-              "description": "Asia/Krasnoyarsk (+07:00)",
+              "description": "Asia/Krasnoyarsk",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KUALA_LUMPUR",
-              "description": "Asia/Kuala_Lumpur (+08:00)",
+              "description": "Asia/Kuala_Lumpur",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_KUWAIT",
-              "description": "Asia/Kuwait (+03:00)",
+              "description": "Asia/Kuwait",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_MAGADAN",
-              "description": "Asia/Magadan (+11:00)",
+              "description": "Asia/Magadan",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_MUSCAT",
-              "description": "Asia/Muscat (+04:00)",
+              "description": "Asia/Muscat",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_NOVOSIBIRSK",
-              "description": "Asia/Novosibirsk (+07:00)",
+              "description": "Asia/Novosibirsk",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_RANGOON",
-              "description": "Asia/Rangoon (+06:30)",
+              "description": "Asia/Rangoon",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_RIYADH",
-              "description": "Asia/Riyadh (+03:00)",
+              "description": "Asia/Riyadh",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_SEOUL",
-              "description": "Asia/Seoul (+09:00)",
+              "description": "Asia/Seoul",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_SHANGHAI",
-              "description": "Asia/Shanghai (+08:00)",
+              "description": "Asia/Shanghai",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_SINGAPORE",
-              "description": "Asia/Singapore (+08:00)",
+              "description": "Asia/Singapore",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_SREDNEKOLYMSK",
-              "description": "Asia/Srednekolymsk (+11:00)",
+              "description": "Asia/Srednekolymsk",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_TAIPEI",
-              "description": "Asia/Taipei (+08:00)",
+              "description": "Asia/Taipei",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_TASHKENT",
-              "description": "Asia/Tashkent (+05:00)",
+              "description": "Asia/Tashkent",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_TBILISI",
-              "description": "Asia/Tbilisi (+04:00)",
+              "description": "Asia/Tbilisi",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_TEHRAN",
-              "description": "Asia/Tehran (+03:30)",
+              "description": "Asia/Tehran",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_TOKYO",
-              "description": "Asia/Tokyo (+09:00)",
+              "description": "Asia/Tokyo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_ULAANBAATAR",
-              "description": "Asia/Ulaanbaatar (+08:00)",
+              "description": "Asia/Ulaanbaatar",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_URUMQI",
-              "description": "Asia/Urumqi (+06:00)",
+              "description": "Asia/Urumqi",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_VLADIVOSTOK",
-              "description": "Asia/Vladivostok (+10:00)",
+              "description": "Asia/Vladivostok",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_YAKUTSK",
-              "description": "Asia/Yakutsk (+09:00)",
+              "description": "Asia/Yakutsk",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_YEKATERINBURG",
-              "description": "Asia/Yekaterinburg (+05:00)",
+              "description": "Asia/Yekaterinburg",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ASIA_YEREVAN",
-              "description": "Asia/Yerevan (+04:00)",
+              "description": "Asia/Yerevan",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ATLANTIC_AZORES",
-              "description": "Atlantic/Azores (-01:00)",
+              "description": "Atlantic/Azores",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ATLANTIC_CAPE_VERDE",
-              "description": "Atlantic/Cape_Verde (-01:00)",
+              "description": "Atlantic/Cape_Verde",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_ATLANTIC_SOUTH_GEORGIA",
-              "description": "Atlantic/South_Georgia (-02:00)",
+              "description": "Atlantic/South_Georgia",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_ADELAIDE",
-              "description": "Australia/Adelaide (+09:30)",
+              "description": "Australia/Adelaide",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_BRISBANE",
-              "description": "Australia/Brisbane (+10:00)",
+              "description": "Australia/Brisbane",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_DARWIN",
-              "description": "Australia/Darwin (+09:30)",
+              "description": "Australia/Darwin",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_HOBART",
-              "description": "Australia/Hobart (+10:00)",
+              "description": "Australia/Hobart",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_MELBOURNE",
-              "description": "Australia/Melbourne (+10:00)",
+              "description": "Australia/Melbourne",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_PERTH",
-              "description": "Australia/Perth (+08:00)",
+              "description": "Australia/Perth",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_AUSTRALIA_SYDNEY",
-              "description": "Australia/Sydney (+10:00)",
+              "description": "Australia/Sydney",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_AMSTERDAM",
-              "description": "Europe/Amsterdam (+01:00)",
+              "description": "Europe/Amsterdam",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_ATHENS",
-              "description": "Europe/Athens (+02:00)",
+              "description": "Europe/Athens",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_BELGRADE",
-              "description": "Europe/Belgrade (+01:00)",
+              "description": "Europe/Belgrade",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_BERLIN",
-              "description": "Europe/Berlin (+01:00)",
+              "description": "Europe/Berlin",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_BRATISLAVA",
-              "description": "Europe/Bratislava (+01:00)",
+              "description": "Europe/Bratislava",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_BRUSSELS",
-              "description": "Europe/Brussels (+01:00)",
+              "description": "Europe/Brussels",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_BUCHAREST",
-              "description": "Europe/Bucharest (+02:00)",
+              "description": "Europe/Bucharest",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_BUDAPEST",
-              "description": "Europe/Budapest (+01:00)",
+              "description": "Europe/Budapest",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_COPENHAGEN",
-              "description": "Europe/Copenhagen (+01:00)",
+              "description": "Europe/Copenhagen",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_DUBLIN",
-              "description": "Europe/Dublin (+01:00)",
+              "description": "Europe/Dublin",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_HELSINKI",
-              "description": "Europe/Helsinki (+02:00)",
+              "description": "Europe/Helsinki",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_ISTANBUL",
-              "description": "Europe/Istanbul (+03:00)",
+              "description": "Europe/Istanbul",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_KALININGRAD",
-              "description": "Europe/Kaliningrad (+02:00)",
+              "description": "Europe/Kaliningrad",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_KIEV",
-              "description": "Europe/Kiev (+02:00)",
+              "description": "Europe/Kiev",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_LISBON",
-              "description": "Europe/Lisbon (+00:00)",
+              "description": "Europe/Lisbon",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_LJUBLJANA",
-              "description": "Europe/Ljubljana (+01:00)",
+              "description": "Europe/Ljubljana",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_LONDON",
-              "description": "Europe/London (+00:00)",
+              "description": "Europe/London",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_MADRID",
-              "description": "Europe/Madrid (+01:00)",
+              "description": "Europe/Madrid",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_MINSK",
-              "description": "Europe/Minsk (+03:00)",
+              "description": "Europe/Minsk",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_MOSCOW",
-              "description": "Europe/Moscow (+03:00)",
+              "description": "Europe/Moscow",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_PARIS",
-              "description": "Europe/Paris (+01:00)",
+              "description": "Europe/Paris",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_PRAGUE",
-              "description": "Europe/Prague (+01:00)",
+              "description": "Europe/Prague",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_RIGA",
-              "description": "Europe/Riga (+02:00)",
+              "description": "Europe/Riga",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_ROME",
-              "description": "Europe/Rome (+01:00)",
+              "description": "Europe/Rome",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_SAMARA",
-              "description": "Europe/Samara (+04:00)",
+              "description": "Europe/Samara",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_SARAJEVO",
-              "description": "Europe/Sarajevo (+01:00)",
+              "description": "Europe/Sarajevo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_SKOPJE",
-              "description": "Europe/Skopje (+01:00)",
+              "description": "Europe/Skopje",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_SOFIA",
-              "description": "Europe/Sofia (+02:00)",
+              "description": "Europe/Sofia",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_STOCKHOLM",
-              "description": "Europe/Stockholm (+01:00)",
+              "description": "Europe/Stockholm",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_TALLINN",
-              "description": "Europe/Tallinn (+02:00)",
+              "description": "Europe/Tallinn",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_VIENNA",
-              "description": "Europe/Vienna (+01:00)",
+              "description": "Europe/Vienna",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_VILNIUS",
-              "description": "Europe/Vilnius (+02:00)",
+              "description": "Europe/Vilnius",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_VOLGOGRAD",
-              "description": "Europe/Volgograd (+03:00)",
+              "description": "Europe/Volgograd",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_WARSAW",
-              "description": "Europe/Warsaw (+01:00)",
+              "description": "Europe/Warsaw",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_ZAGREB",
-              "description": "Europe/Zagreb (+01:00)",
+              "description": "Europe/Zagreb",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_EUROPE_ZURICH",
-              "description": "Europe/Zurich (+01:00)",
+              "description": "Europe/Zurich",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_GMT_12",
-              "description": "GMT+12 (-12:00)",
+              "description": "GMT+12",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_APIA",
-              "description": "Pacific/Apia (+13:00)",
+              "description": "Pacific/Apia",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_AUCKLAND",
-              "description": "Pacific/Auckland (+12:00)",
+              "description": "Pacific/Auckland",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_CHATHAM",
-              "description": "Pacific/Chatham (+12:45)",
+              "description": "Pacific/Chatham",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_FAKAOFO",
-              "description": "Pacific/Fakaofo (+13:00)",
+              "description": "Pacific/Fakaofo",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_FIJI",
-              "description": "Pacific/Fiji (+12:00)",
+              "description": "Pacific/Fiji",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_GUADALCANAL",
-              "description": "Pacific/Guadalcanal (+11:00)",
+              "description": "Pacific/Guadalcanal",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_GUAM",
-              "description": "Pacific/Guam (+10:00)",
+              "description": "Pacific/Guam",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_HONOLULU",
-              "description": "Pacific/Honolulu (-10:00)",
+              "description": "Pacific/Honolulu",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_MAJURO",
-              "description": "Pacific/Majuro (+12:00)",
+              "description": "Pacific/Majuro",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_MIDWAY",
-              "description": "Pacific/Midway (-11:00)",
+              "description": "Pacific/Midway",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_NOUMEA",
-              "description": "Pacific/Noumea (+11:00)",
+              "description": "Pacific/Noumea",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_PAGO_PAGO",
-              "description": "Pacific/Pago_Pago (-11:00)",
+              "description": "Pacific/Pago_Pago",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_PORT_MORESBY",
-              "description": "Pacific/Port_Moresby (+10:00)",
+              "description": "Pacific/Port_Moresby",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_PACIFIC_TONGATAPU",
-              "description": "Pacific/Tongatapu (+13:00)",
+              "description": "Pacific/Tongatapu",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "TZ_UTC",
-              "description": "UTC (+00:00)",
+              "description": "UTC",
               "isDeprecated": false,
               "deprecationReason": null
             }
