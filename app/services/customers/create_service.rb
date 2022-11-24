@@ -20,6 +20,7 @@ module Customers
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
+        customer.timezone = params[:timezone] if params.key?(:timezone)
 
         if params.key?(:currency)
           currency_result = Customers::UpdateService.new(nil).update_currency(
@@ -64,6 +65,7 @@ module Customers
         invoice_grace_period: args[:invoice_grace_period] || 0,
         payment_provider: args[:payment_provider],
         currency: args[:currency],
+        timezone: args[:timezone],
       )
 
       # NOTE: handle configuration for configured payment providers

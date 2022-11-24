@@ -92,6 +92,7 @@ module Api
           :legal_name,
           :legal_number,
           :currency,
+          :timezone,
           billing_configuration: [
             :invoice_grace_period,
             :payment_provider,
