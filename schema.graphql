@@ -4763,6 +4763,7 @@ input UpdateOrganizationInput {
   legalNumber: String
   logo: String
   state: String
+  timezone: TimezoneEnum
   vatRate: Float
   webhookUrl: String
   zipcode: String
