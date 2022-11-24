@@ -58,7 +58,7 @@ module Types
       def creditable_amount_cents
         return 0 if object.legacy?
 
-        object.fee_total_amount_cents - object.credit_notes.sum(:credit_amount_cents)
+        object.fee_total_amount_cents - object.credit_notes.sum(:total_amount_cents)
       end
     end
   end
