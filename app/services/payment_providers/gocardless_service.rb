@@ -4,6 +4,7 @@ module PaymentProviders
   class GocardlessService < BaseService
     REDIRECT_URI = "#{ENV['LAGO_OAUTH_PROXY_URL']}/gocardless/callback"
     PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back resubmission_requested].freeze
+    REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
     def create_or_update(**args)
       access_token = oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
@@ -61,6 +62,19 @@ module PaymentProviders
 
             handled_events << event
           end
+        when 'refunds'
+          if REFUND_ACTIONS.include?(event.action)
+            status_result = CreditNotes::Refunds::GocardlessService
+              .new.update_status(
+                provider_refund_id: event.links.refund,
+                status: event.action,
+              )
+
+            return status_result unless status_result.success?
+
+            handled_events << event
+          end
+
         end
       end
 

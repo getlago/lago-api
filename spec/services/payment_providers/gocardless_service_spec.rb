@@ -165,5 +165,27 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         expect(payment_service).to have_received(:update_status)
       end
     end
+
+    context 'when succeeded refund event' do
+      let(:refund_service) { instance_double(CreditNotes::Refunds::GocardlessService) }
+      let(:events) do
+        path = Rails.root.join('spec/fixtures/gocardless/events_refund.json')
+        File.read(path)
+      end
+
+      before do
+        allow(CreditNotes::Refunds::GocardlessService).to receive(:new)
+          .and_return(refund_service)
+        allow(refund_service).to receive(:update_status)
+          .and_return(service_result)
+      end
+
+      it 'routes the event to an other service' do
+        gocardless_service.handle_event(events_json: events)
+
+        expect(CreditNotes::Refunds::GocardlessService).to have_received(:new)
+        expect(refund_service).to have_received(:update_status)
+      end
+    end
   end
 end
