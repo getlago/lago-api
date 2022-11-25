@@ -5853,6 +5853,24 @@
               ]
             },
             {
+              "name": "issuingDate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601Date",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "items",
               "description": null,
               "type": {

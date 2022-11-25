@@ -18,6 +18,7 @@ module CreditNotes
         result.credit_note = CreditNote.create!(
           customer: invoice.customer,
           invoice: invoice,
+          issuing_date: issuing_date,
           total_amount_currency: invoice.amount_currency,
           vat_amount_currency: invoice.amount_currency,
           credit_amount_currency: invoice.amount_currency,
@@ -57,6 +58,12 @@ module CreditNotes
     attr_accessor :invoice, :items_attr, :reason, :description
 
     delegate :credit_note, to: :result
+    delegate :customer, to: :invoice
+
+    # NOTE: issuing_date must be in customer time zone (accounting date)
+    def issuing_date
+      Time.current.in_time_zone(customer.applicable_timezone).to_date
+    end
 
     def create_items
       items_attr.each do |item_attr|
