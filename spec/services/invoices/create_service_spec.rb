@@ -93,7 +93,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       it 'enqueues a SendWebhookJob' do
         expect do
           invoice_service.create
-        end.to have_enqueued_job(SendWebhookJob)
+        end.to have_enqueued_job(SendWebhookJob).with(:invoice, Invoice)
       end
 
       context 'when organization does not have a webhook url' do
@@ -279,7 +279,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       it 'enqueues a SendWebhookJob' do
         expect do
           invoice_service.create
-        end.to have_enqueued_job(SendWebhookJob)
+        end.to have_enqueued_job(SendWebhookJob).with(:invoice, Invoice)
       end
     end
 
@@ -1047,6 +1047,12 @@ RSpec.describe Invoices::CreateService, type: :service do
         result = invoice_service.create
         expect(result).to be_success
         expect(result.invoice).to be_draft
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          invoice_service.create
+        end.to have_enqueued_job(SendWebhookJob).with('invoice.drafted', Invoice)
       end
     end
   end
