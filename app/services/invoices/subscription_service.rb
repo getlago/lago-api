@@ -38,7 +38,9 @@ module Invoices
           recurring: recurring,
         ).call
 
-        unless grace_period?
+        if grace_period?
+          SendWebhookJob.perform_later('invoice.drafted', result.invoice) if should_deliver_webhook?
+        else
           SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
           create_payment(result.invoice)
           track_invoice_created(result.invoice)
