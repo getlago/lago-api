@@ -1809,6 +1809,10 @@ type CreditNoteItem {
   createdAt: ISO8601DateTime!
   fee: Fee!
   id: ID!
+  totalAmountCents: BigInt!
+  totalAmountCurrency: CurrencyEnum!
+  vatAmountCents: BigInt!
+  vatAmountCurrency: CurrencyEnum!
 }
 
 input CreditNoteItemInput {

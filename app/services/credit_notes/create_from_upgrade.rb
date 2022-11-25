@@ -23,7 +23,7 @@ module CreditNotes
         items: [
           {
             fee_id: last_subscription_fee.id,
-            amount_cents: amount + vat_amount,
+            amount_cents: amount,
           },
         ],
         reason: :order_change,

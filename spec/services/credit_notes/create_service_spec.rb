@@ -24,10 +24,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     )
   end
 
-  let(:fee1) { create(:fee, invoice: invoice, amount_cents: 10) }
-  let(:fee2) { create(:fee, invoice: invoice, amount_cents: 10) }
-  let(:credit_amount_cents) { 10 }
-  let(:refund_amount_cents) { 5 }
+  let(:fee1) { create(:fee, invoice: invoice, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
+  let(:fee2) { create(:fee, invoice: invoice, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
+  let(:credit_amount_cents) { 12 }
+  let(:refund_amount_cents) { 6 }
   let(:items) do
     [
       {
@@ -54,19 +54,19 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
 
         expect(credit_note.total_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.total_amount_cents).to eq(15)
+        expect(credit_note.total_amount_cents).to eq(18)
 
         expect(credit_note.credit_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.credit_amount_cents).to eq(10)
+        expect(credit_note.credit_amount_cents).to eq(12)
         expect(credit_note.balance_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.balance_amount_cents).to eq(10)
-        expect(credit_note.credit_vat_amount_cents).to eq(1)
+        expect(credit_note.balance_amount_cents).to eq(12)
+        expect(credit_note.credit_vat_amount_cents).to eq(2)
         expect(credit_note.credit_vat_amount_currency).to eq(invoice.amount_currency)
         expect(credit_note.credit_status).to eq('available')
 
         expect(credit_note.refund_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.refund_amount_cents).to eq(5)
-        expect(credit_note.refund_vat_amount_cents).to eq(0)
+        expect(credit_note.refund_amount_cents).to eq(6)
+        expect(credit_note.refund_vat_amount_cents).to eq(1)
         expect(credit_note.refund_vat_amount_currency).to eq(invoice.amount_currency)
         expect(credit_note.refund_status).to eq('pending')
 

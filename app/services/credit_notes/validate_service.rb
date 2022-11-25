@@ -54,7 +54,7 @@ module CreditNotes
 
     # NOTE: Check if total amount matched the items amount
     def valid_items_amount?
-      return true if total_amount_cents == credit_note.items.sum(&:amount_cents)
+      return true if total_amount_cents == credit_note.items.sum(&:total_amount_cents)
 
       add_error(field: :base, error_code: 'does_not_match_item_amounts')
     end

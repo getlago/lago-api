@@ -25,7 +25,7 @@ module Types
       end
 
       def creditable_amount_cents
-        object.total_amount_cents - object.credit_note_items.sum(:amount_cents)
+        object.amount_cents - object.credit_note_items.sum(:amount_cents)
       end
     end
   end
