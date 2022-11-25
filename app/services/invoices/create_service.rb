@@ -15,7 +15,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           customer: customer,
-          issuing_date: Time.zone.at(timestamp).to_date,
+          issuing_date: issuing_date,
           invoice_type: :subscription,
 
           # NOTE: Apply credits before VAT, will be changed with credit note feature
@@ -60,6 +60,10 @@ module Invoices
     private
 
     attr_accessor :subscriptions, :timestamp, :customer, :currency
+
+    def issuing_date
+      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
 
     def date_service(subscription)
       Subscriptions::DatesService.new_instance(
@@ -207,12 +211,7 @@ module Invoices
     end
 
     def create_payment(invoice)
-      case customer.payment_provider&.to_sym
-      when :stripe
-        Invoices::Payments::StripeCreateJob.perform_later(invoice)
-      when :gocardless
-        Invoices::Payments::GocardlessCreateJob.perform_later(invoice)
-      end
+      Invoices::Payments::CreateService.new(invoice).call
     end
 
     def track_invoice_created(invoice)

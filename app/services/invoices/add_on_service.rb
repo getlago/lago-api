@@ -2,9 +2,9 @@
 
 module Invoices
   class AddOnService < BaseService
-    def initialize(applied_add_on:, date:)
+    def initialize(applied_add_on:, datetime:)
       @applied_add_on = applied_add_on
-      @date = date
+      @datetime = datetime
 
       super(nil)
     end
@@ -13,7 +13,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           customer: customer,
-          issuing_date: date,
+          issuing_date: issuing_date,
           invoice_type: :add_on,
           status: :pending,
 
@@ -44,7 +44,7 @@ module Invoices
 
     private
 
-    attr_accessor :date, :applied_add_on
+    attr_accessor :datetime, :applied_add_on
 
     delegate :customer, to: :applied_add_on
 
@@ -68,10 +68,7 @@ module Invoices
     end
 
     def create_payment(invoice)
-      case customer.payment_provider&.to_sym
-      when :stripe
-        Invoices::Payments::StripeCreateJob.perform_later(invoice)
-      end
+      Invoices::Payments::CreateService.new(invoice).call
     end
 
     def track_invoice_created(invoice)
@@ -84,6 +81,11 @@ module Invoices
           invoice_type: invoice.invoice_type,
         },
       )
+    end
+
+    # NOTE: accounting date must be in customer timezone
+    def issuing_date
+      datetime.in_time_zone(customer.applicable_timezone).to_date
     end
   end
 end

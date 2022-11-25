@@ -14,7 +14,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           customer: customer,
-          issuing_date: Time.zone.at(timestamp).to_date,
+          issuing_date: issuing_date,
           invoice_type: :credit,
           status: :pending,
 
@@ -72,10 +72,7 @@ module Invoices
     end
 
     def create_payment(invoice)
-      case customer.payment_provider&.to_sym
-      when :stripe
-        Invoices::Payments::StripeCreateJob.perform_later(invoice)
-      end
+      Invoices::Payments::CreateService.new(invoice).call
     end
 
     def track_invoice_created(invoice)
@@ -88,6 +85,10 @@ module Invoices
           invoice_type: invoice.invoice_type,
         },
       )
+    end
+
+    def issuing_date
+      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
     end
   end
 end
