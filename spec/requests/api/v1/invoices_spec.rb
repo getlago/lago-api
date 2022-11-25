@@ -136,5 +136,17 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
       end
     end
+
+    context 'with status params' do
+      it 'returns invoices for the given status' do
+        invoice = create(:invoice, customer: customer, status: :finalized)
+
+        get_with_token(organization, '/api/v1/invoices?status=finalized')
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
+      end
+    end
   end
 end
