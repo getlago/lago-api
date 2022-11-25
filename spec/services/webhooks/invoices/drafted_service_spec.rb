@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::InvoicesService do
+RSpec.describe Webhooks::Invoices::DraftedService do
   subject(:webhook_invoice_service) { described_class.new(invoice) }
 
   let(:organization) { create(:organization, webhook_url: webhook_url) }
@@ -12,8 +12,8 @@ RSpec.describe Webhooks::InvoicesService do
   let(:webhook_url) { 'http://foo.bar' }
 
   before do
-    create_list(:fee, 4, invoice: invoice)
-    create_list(:credit, 4, invoice: invoice)
+    create_list(:fee, 2, invoice: invoice)
+    create_list(:credit, 2, invoice: invoice)
   end
 
   describe '.call' do
@@ -34,13 +34,13 @@ RSpec.describe Webhooks::InvoicesService do
       expect(lago_client).to have_received(:post)
     end
 
-    it 'builds payload with invoice.created webhook type' do
+    it 'builds payload with invoice.drafted webhook type' do
       webhook_invoice_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post) do |payload|
-        expect(payload[:webhook_type]).to eq('invoice.created')
+        expect(payload[:webhook_type]).to eq('invoice.drafted')
         expect(payload[:object_type]).to eq('invoice')
       end
     end
@@ -73,7 +73,7 @@ RSpec.describe Webhooks::InvoicesService do
         invoice,
         root_name: 'invoice',
         includes: %i[customer subscription fees],
-      ).serialize.merge(webook_type: 'invoice.created')
+      ).serialize.merge(webook_type: 'invoice.drafted')
     end
 
     it 'generates the query headers' do
