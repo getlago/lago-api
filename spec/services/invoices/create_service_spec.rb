@@ -45,6 +45,19 @@ RSpec.describe Invoices::CreateService, type: :service do
       )
     end
 
+    it 'creates a payment' do
+      payment_create_service = instance_double(Invoices::Payments::CreateService)
+      allow(Invoices::Payments::CreateService)
+        .to receive(:new).and_return(payment_create_service)
+      allow(payment_create_service)
+        .to receive(:call)
+
+      invoice_service.create
+
+      expect(Invoices::Payments::CreateService).to have_received(:new)
+      expect(payment_create_service).to have_received(:call)
+    end
+
     context 'when billed monthly' do
       it 'creates an invoice' do
         result = invoice_service.create
@@ -86,16 +99,6 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect do
             invoice_service.create
           end.not_to have_enqueued_job(SendWebhookJob)
-        end
-      end
-
-      context 'when customer payment_provider is stripe' do
-        before { subscription.customer.update!(payment_provider: 'stripe') }
-
-        it 'enqueu a job to create a payment' do
-          expect do
-            invoice_service.create
-          end.to have_enqueued_job(Invoices::Payments::StripeCreateJob)
         end
       end
 
@@ -998,6 +1001,18 @@ RSpec.describe Invoices::CreateService, type: :service do
 
           expect(result.invoice.wallet_transactions.exists?).to be(false)
         end
+      end
+    end
+
+    context 'with customer timezone' do
+      before { subscription.customer.update!(timezone: 'America/Los_Angeles') }
+
+      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
+
+      it 'assigns the issuing date in the customer timezone' do
+        result = invoice_service.create
+
+        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
       end
     end
   end

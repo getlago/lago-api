@@ -68,7 +68,7 @@ module AppliedAddOns
 
       BillAddOnJob.perform_later(
         applied_add_on,
-        Time.zone.now.to_date,
+        Time.zone.now.to_i,
       )
 
       result.applied_add_on = applied_add_on

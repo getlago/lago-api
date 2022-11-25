@@ -4,10 +4,10 @@ require 'rails_helper'
 
 RSpec.describe Invoices::AddOnService, type: :service do
   subject(:invoice_service) do
-    described_class.new(applied_add_on: applied_add_on, date: date)
+    described_class.new(applied_add_on: applied_add_on, datetime: datetime)
   end
 
-  let(:date) { Time.zone.now.to_date }
+  let(:datetime) { Time.zone.now }
   let(:applied_add_on) { create(:applied_add_on) }
 
   describe 'create' do
@@ -22,7 +22,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
         expect(result).to be_success
 
         expect(result.invoice.subscriptions.first).to be_nil
-        expect(result.invoice.issuing_date).to eq(date)
+        expect(result.invoice.issuing_date).to eq(datetime.to_date)
         expect(result.invoice.invoice_type).to eq('add_on')
         expect(result.invoice.status).to eq('pending')
 
@@ -58,6 +58,19 @@ RSpec.describe Invoices::AddOnService, type: :service do
       )
     end
 
+    it 'creates a payment' do
+      payment_create_service = instance_double(Invoices::Payments::CreateService)
+      allow(Invoices::Payments::CreateService)
+        .to receive(:new).and_return(payment_create_service)
+      allow(payment_create_service)
+        .to receive(:call)
+
+      invoice_service.create
+
+      expect(Invoices::Payments::CreateService).to have_received(:new)
+      expect(payment_create_service).to have_received(:call)
+    end
+
     context 'when organization does not have a webhook url' do
       before { applied_add_on.customer.organization.update!(webhook_url: nil) }
 
@@ -68,13 +81,15 @@ RSpec.describe Invoices::AddOnService, type: :service do
       end
     end
 
-    context 'when customer payment_provider is stripe' do
-      before { applied_add_on.customer.update!(payment_provider: 'stripe') }
+    context 'with customer timezone' do
+      before { applied_add_on.customer.update!(timezone: 'America/Los_Angeles') }
 
-      it 'enqueu a job to create a payment' do
-        expect do
-          invoice_service.create
-        end.to have_enqueued_job(Invoices::Payments::StripeCreateJob)
+      let(:datetime) { DateTime.parse('2022-11-25 01:00:00') }
+
+      it 'assigns the issuing date in the customer timezone' do
+        result = invoice_service.create
+
+        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
       end
     end
   end

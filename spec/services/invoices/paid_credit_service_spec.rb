@@ -65,6 +65,19 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       )
     end
 
+    it 'creates a payment' do
+      payment_create_service = instance_double(Invoices::Payments::CreateService)
+      allow(Invoices::Payments::CreateService)
+        .to receive(:new).and_return(payment_create_service)
+      allow(payment_create_service)
+        .to receive(:call)
+
+      invoice_service.create
+
+      expect(Invoices::Payments::CreateService).to have_received(:new)
+      expect(payment_create_service).to have_received(:call)
+    end
+
     context 'when organization does not have a webhook url' do
       before { customer.organization.update!(webhook_url: nil) }
 
@@ -75,13 +88,15 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    context 'when customer payment_provider is stripe' do
-      before { customer.update!(payment_provider: 'stripe') }
+    context 'with customer timezone' do
+      before { customer.update!(timezone: 'America/Los_Angeles') }
 
-      it 'enqueue a job to create a payment' do
-        expect do
-          invoice_service.create
-        end.to have_enqueued_job(Invoices::Payments::StripeCreateJob)
+      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00').to_i }
+
+      it 'assigns the issuing date in the customer timezone' do
+        result = invoice_service.create
+
+        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
       end
     end
   end
