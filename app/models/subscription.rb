@@ -32,6 +32,14 @@ class Subscription < ApplicationRecord
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
 
+  # NOTE: SQL query to get subscription_date into customer timezone
+  def self.subscription_date_in_timezone_sql
+    <<-SQL
+      subscriptions.subscription_date::timestamptz AT TIME ZONE
+      COALESCE(customers.timezone, organizations.timezone, 'UTC')
+    SQL
+  end
+
   def mark_as_active!(timestamp = Time.zone.now)
     self.started_at ||= timestamp
     active!

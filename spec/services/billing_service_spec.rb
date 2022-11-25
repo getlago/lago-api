@@ -289,13 +289,14 @@ RSpec.describe BillingService, type: :service do
           :subscription,
           subscription_date: subscription_date,
           started_at: Time.zone.now,
+          billing_time: :anniversary,
         )
       end
 
       before { subscription }
 
       it 'enqueues a job on billing day' do
-        current_date = DateTime.parse('01 Feb 2022')
+        current_date = DateTime.parse('20 Feb 2022')
 
         travel_to(current_date) do
           billing_service.call

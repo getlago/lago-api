@@ -3,7 +3,7 @@
 class BillingService
   def call
     # Keep track of billing time for retry and tracking purpose
-    billing_timestamp = Time.zone.now.to_i
+    billing_timestamp = Time.current.to_i
 
     billable_subscriptions.group_by(&:customer_id).each do |_customer_id, customer_subscriptions|
       billing_subscriptions = []
@@ -33,66 +33,75 @@ class BillingService
 
   # NOTE: Retrieve list of subscriptions that should be billed today
   def billable_subscriptions
-    sql = []
+    sql = [
+      # NOTE: Calendar subscriptions
+      weekly_calendar,
+      monthly_calendar,
+      yearly_with_monthly_charges_calendar,
+      yearly_calendar,
 
-    # NOTE: Calendar subscriptions
-
-    # NOTE: For weekly interval we send invoices on Monday
-    sql << weekly_calendar if today.monday?
-
-    if today.day == 1
-      # NOTE: Billed monthly
-      sql << monthly_calendar
-
-      # NOTE: Bill charges monthly for yearly plans
-      sql << yearly_with_monthly_charges_calendar
-
-      # NOTE: Billed yearly and we are on the first day of the year
-      sql << yearly_calendar if today.month == 1
-    end
-
-    # NOTE: Anniversary subscriptions
-    sql << weekly_anniversary
-    sql << monthly_anniversary
-    sql << yearly_with_monthly_charges_anniversary
-    sql << yearly_anniversary
+      # NOTE: Anniversary subscriptions
+      weekly_anniversary,
+      monthly_anniversary,
+      yearly_with_monthly_charges_anniversary,
+      yearly_anniversary,
+    ]
 
     Subscription.where("id in (#{sql.join(' UNION ')})")
   end
 
+  # NOTE: For weekly interval we send invoices on Monday (ISODOW = 1)
   def weekly_calendar
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .calendar
       .merge(Plan.weekly)
+      .where("EXTRACT(ISODOW FROM (#{today_shift_sql})) = 1", today)
       .select(:id).to_sql
   end
 
+  # NOTE: Billed monthly on 1st day of the month
   def monthly_calendar
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .calendar
       .merge(Plan.monthly)
+      .where("DATE_PART('day', (#{today_shift_sql})) = 1", today)
       .select(:id).to_sql
   end
 
+  # NOTE: Bill charges monthly for yearly plans on 1st day of the month
   def yearly_with_monthly_charges_calendar
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .calendar
       .merge(Plan.yearly.where(bill_charges_monthly: true))
+      .where("DATE_PART('day', (#{today_shift_sql})) = 1", today)
       .select(:id).to_sql
   end
 
+  # NOTE: Billed yearly on first day of the year
   def yearly_calendar
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .calendar
       .merge(Plan.yearly)
+      .where("DATE_PART('month', (#{today_shift_sql})) = 1", today)
+      .where("DATE_PART('day', (#{today_shift_sql})) = 1", today)
       .select(:id).to_sql
   end
 
   def weekly_anniversary
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.weekly)
-      .where('EXTRACT(ISODOW FROM subscriptions.subscription_date) = ?', today.wday)
+      .where("EXTRACT(ISODOW FROM (#{Subscription.subscription_date_in_timezone_sql})) = ?", today.wday)
       .select(:id).to_sql
   end
 
@@ -103,10 +112,12 @@ class BillingService
     # we need to take all days up to 31 into account
     ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
 
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.monthly)
-      .where('DATE_PART(\'day\', subscriptions.subscription_date) IN (?)', days)
+      .where("DATE_PART('day', (#{Subscription.subscription_date_in_timezone_sql})) IN (?)", days)
       .select(:id).to_sql
   end
 
@@ -117,11 +128,13 @@ class BillingService
     # If we are not in leap year and we are on 28/02 take 29/02 into account
     days << 29 if !Date.leap?(today.year) && today.day == 28 && today.month == 2
 
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.yearly)
-      .where('DATE_PART(\'month\', subscriptions.subscription_date) = ?', today.month)
-      .where('DATE_PART(\'day\', subscriptions.subscription_date) IN (?)', days)
+      .where("DATE_PART('month', (#{Subscription.subscription_date_in_timezone_sql})) = ?", today.month)
+      .where("DATE_PART('day', (#{Subscription.subscription_date_in_timezone_sql})) IN (?)", days)
       .select(:id).to_sql
   end
 
@@ -132,10 +145,19 @@ class BillingService
     # we need to take all days up to 31 into account
     ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
 
-    Subscription.active.joins(:plan)
+    Subscription
+      .active
+      .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.yearly.where(bill_charges_monthly: true))
-      .where('DATE_PART(\'day\', subscriptions.subscription_date) IN (?)', days)
+      .where("DATE_PART('day', (#{Subscription.subscription_date_in_timezone_sql})) IN (?)", days)
       .select(:id).to_sql
+  end
+
+  def today_shift_sql
+    <<-SQL
+      ?::timestamptz AT TIME ZONE
+      COALESCE(customers.timezone, organizations.timezone, 'UTC')
+    SQL
   end
 end

@@ -3,14 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::ActivateService, type: :service do
-  subject(:activate_service) { described_class.new(timestamp: Time.current.to_i) }
+  subject(:activate_service) { described_class.new(timestamp: timestamp.to_i) }
+
+  let(:timestamp) { Time.current }
 
   describe 'activate_all_expired' do
     let(:active_subscription) { create(:active_subscription) }
-    let(:pending_subscriptions) { create_list(:pending_subscription, 3, subscription_date: Time.current.to_date) }
+    let(:pending_subscriptions) { create_list(:pending_subscription, 3, subscription_date: timestamp.to_date) }
 
     let(:future_pending_subscriptions) do
-      create_list(:pending_subscription, 2, subscription_date: (Time.current + 10.days).to_date)
+      create_list(:pending_subscription, 2, subscription_date: (timestamp + 10.days).to_date)
     end
 
     before do
@@ -23,6 +25,25 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
       expect { activate_service.activate_all_pending }
         .to change(Subscription.pending, :count).by(-3)
         .and change(Subscription.active, :count).by(3)
+    end
+
+    context 'with customer timezone' do
+      let(:timestamp) { DateTime.parse('2022-10-21 00:30:00') }
+      let(:pending_subscription) { pending_subscriptions.first }
+
+      before do
+        active_subscription
+        future_pending_subscriptions
+
+        pending_subscription.customer.update!(timezone: 'America/New_York')
+        pending_subscription.update!(subscription_date: DateTime.parse('2022-10-21').to_date)
+      end
+
+      it 'takes timezone into account' do
+        expect { activate_service.activate_all_pending }
+          .to change(Subscription.pending, :count).by(-2)
+          .and change(Subscription.active, :count).by(2)
+      end
     end
   end
 end
