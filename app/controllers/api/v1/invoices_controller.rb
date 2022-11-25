@@ -31,6 +31,7 @@ module Api
         if params[:external_customer_id]
           invoices = invoices.joins(:customer).where(customers: { external_id: params[:external_customer_id] })
         end
+        invoices = invoices.where(status: params[:status]) if valid_status?(params[:status])
         invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
         invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
         invoices = invoices.order(created_at: :desc)
@@ -88,6 +89,10 @@ module Api
 
       def date_to_criteria
         { issuing_date: ..Date.strptime(params[:issuing_date_to]) }
+      end
+
+      def valid_status?(status)
+        Invoice.statuses.key?(status)
       end
     end
   end
