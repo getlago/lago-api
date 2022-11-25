@@ -146,6 +146,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result).to be_success
         expect(result.invoice).to be_draft
       end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          invoice_service.create
+        end.to have_enqueued_job(SendWebhookJob).with('invoice.drafted', Invoice)
+      end
     end
   end
 end
