@@ -92,8 +92,8 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result.invoice.credit_amount_currency).to eq('EUR')
         expect(result.invoice.total_amount_cents).to eq(120)
         expect(result.invoice.total_amount_currency).to eq('EUR')
-
         expect(result.invoice).not_to be_legacy
+        expect(result.invoice).to be_finalized
       end
     end
 
@@ -122,6 +122,29 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         result = invoice_service.create
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+      end
+    end
+
+    context 'with applicable grace period' do
+      before do
+        subscription.customer.update!(invoice_grace_period: 3)
+      end
+
+      it 'does not track any invoice creation on segment' do
+        invoice_service.create
+        expect(SegmentTrackJob).not_to have_received(:perform_later)
+      end
+
+      it 'does not create any payment' do
+        invoice_service.create
+        expect(Invoices::Payments::StripeCreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::GocardlessCreateJob).not_to have_received(:perform_later)
+      end
+
+      it 'creates an invoice as draft' do
+        result = invoice_service.create
+        expect(result).to be_success
+        expect(result.invoice).to be_draft
       end
     end
   end

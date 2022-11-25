@@ -28,6 +28,7 @@ module Invoices
           total_amount_currency: currency,
           vat_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
+          status: invoice_status,
         )
 
         result = Invoices::CalculateFeesService.new(
@@ -36,6 +37,14 @@ module Invoices
           timestamp: timestamp,
           recurring: recurring,
         ).call
+
+        unless grace_period?
+          SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
+          create_payment(result.invoice)
+          track_invoice_created(result.invoice)
+        end
+
+        result
       end
 
       SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
@@ -53,6 +62,14 @@ module Invoices
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def grace_period?
+      @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_status
+      grace_period? ? :draft : :finalized
     end
 
     def should_deliver_webhook?
