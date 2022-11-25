@@ -1,4 +1,4 @@
-# frozen_time_literal: true
+# frozen_string_literal: true
 
 class AddIssuingDateToCreditNotes < ActiveRecord::Migration[7.0]
   def change
