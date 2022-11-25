@@ -11,7 +11,11 @@ module Types
       field :transaction_id, String, null: true
 
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
+      field :timestamp_in_customer_timezone, GraphQL::Types::ISO8601DateTime, null: true
+
       field :received_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :received_at_in_customer_timezone, GraphQL::Types::ISO8601DateTime, null: false
+
       field :api_client, String, null: true
       field :ip_address, String, null: true
 
@@ -54,6 +58,12 @@ module Types
         return true if object.billable_metric_field_name.blank?
 
         object.properties.key?(object.billable_metric_field_name)
+      end
+
+      delegate :timestamp_in_customer_timezone, to: :object
+
+      def received_at_in_customer_timezone
+        object.created_at_in_customer_timezone
       end
     end
   end
