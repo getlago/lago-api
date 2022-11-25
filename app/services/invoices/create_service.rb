@@ -24,6 +24,7 @@ module Invoices
           amount_currency: currency,
           vat_amount_currency: currency,
           total_amount_currency: currency,
+          status: invoice_status,
         )
 
         subscriptions.each { |subscription| invoice.subscriptions << subscription }
@@ -33,9 +34,11 @@ module Invoices
           timestamp: timestamp,
         ).call
 
-        SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
-        Invoices::Payments::CreateService.new(invoice).call
-        track_invoice_created(invoice)
+        unless grace_period?
+          SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
+          create_payment(result.invoice)
+          track_invoice_created(result.invoice)
+        end
 
         result
       end
@@ -49,6 +52,14 @@ module Invoices
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def grace_period?
+      @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_status
+      grace_period? ? :draft : :finalized
     end
 
     def should_deliver_webhook?
