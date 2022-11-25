@@ -24,6 +24,7 @@ module Invoices
           amount_currency: currency,
           vat_amount_currency: currency,
           total_amount_currency: currency,
+          status: invoice_status,
         )
 
         subscriptions.each do |subscription|
@@ -48,9 +49,11 @@ module Invoices
         result.invoice = invoice
       end
 
-      SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
-      create_payment(result.invoice)
-      track_invoice_created(result.invoice)
+      unless grace_period?
+        SendWebhookJob.perform_later(:invoice, result.invoice) if should_deliver_webhook?
+        create_payment(result.invoice)
+        track_invoice_created(result.invoice)
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -65,10 +68,18 @@ module Invoices
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
     end
 
+    def grace_period?
+      @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_status
+      grace_period? ? :draft : :finalized
+    end
+
     def date_service(subscription)
       Subscriptions::DatesService.new_instance(
         subscription,
-        Time.zone.at(timestamp).to_date,
+        issuing_date,
         current_usage: subscription.terminated? && subscription.upgraded?,
       )
     end
@@ -97,8 +108,7 @@ module Invoices
     def should_create_subscription_fee?(subscription)
       # NOTE: When plan is pay in advance we generate an invoice upon subscription creation
       # We want to prevent creating subscription fee if subscription creation already happened on billing day
-      return false if subscription.plan.pay_in_advance? && subscription.fee_exists?(Time.zone.at(timestamp).to_date)
-
+      return false if subscription.plan.pay_in_advance? && subscription.fee_exists?(issuing_date)
       return false unless should_create_yearly_subscription_fee?(subscription)
 
       # NOTE: When a subscription is terminated we still need to charge the subscription

@@ -28,7 +28,10 @@ RSpec.describe Invoices::CreateService, type: :service do
 
     before do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
+      allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
     end
 
     it 'calls SegmentTrackJob' do
@@ -83,6 +86,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
+          expect(result.invoice).to be_finalized
         end
       end
 
@@ -95,7 +99,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       context 'when organization does not have a webhook url' do
         before { subscription.customer.organization.update!(webhook_url: nil) }
 
-        it 'does not enqueues a SendWebhookJob' do
+        it 'does not enqueue a SendWebhookJob' do
           expect do
             invoice_service.create
           end.not_to have_enqueued_job(SendWebhookJob)
@@ -194,6 +198,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             expect(result.invoice.total_amount_currency).to eq('EUR')
 
             expect(result.invoice).to be_legacy
+            expect(result.invoice).to be_finalized
           end
         end
 
@@ -224,6 +229,7 @@ RSpec.describe Invoices::CreateService, type: :service do
               expect(result.invoice.total_amount_currency).to eq('EUR')
 
               expect(result.invoice).to be_legacy
+              expect(result.invoice).to be_finalized
             end
           end
         end
@@ -266,6 +272,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
+          expect(result.invoice).to be_finalized
         end
       end
 
@@ -835,6 +842,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
+          expect(result.invoice).to be_finalized
 
           expect(result.invoice.credits.count).to eq(2)
         end
@@ -875,6 +883,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             expect(result.invoice.total_amount_currency).to eq('EUR')
 
             expect(result.invoice).to be_legacy
+            expect(result.invoice).to be_finalized
 
             expect(result.invoice.credits.count).to eq(2)
           end
@@ -914,6 +923,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             expect(result.invoice.total_amount_currency).to eq('EUR')
 
             expect(result.invoice).to be_legacy
+            expect(result.invoice).to be_finalized
 
             expect(result.invoice.credits.count).to eq(2)
           end
@@ -973,6 +983,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           expect(result.invoice.total_amount_currency).to eq('EUR')
 
           expect(result.invoice).to be_legacy
+          expect(result.invoice).to be_finalized
 
           expect(result.invoice.wallet_transactions.count).to eq(1)
         end
@@ -1013,6 +1024,29 @@ RSpec.describe Invoices::CreateService, type: :service do
         result = invoice_service.create
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+      end
+    end
+
+    context 'with applicable grace period' do
+      before do
+        subscription.customer.update!(invoice_grace_period: 3)
+      end
+
+      it 'does not track any invoice creation on segment' do
+        invoice_service.create
+        expect(SegmentTrackJob).not_to have_received(:perform_later)
+      end
+
+      it 'does not create any payment' do
+        invoice_service.create
+        expect(Invoices::Payments::StripeCreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::GocardlessCreateJob).not_to have_received(:perform_later)
+      end
+
+      it 'creates an invoice as draft' do
+        result = invoice_service.create
+        expect(result).to be_success
+        expect(result.invoice).to be_draft
       end
     end
   end
