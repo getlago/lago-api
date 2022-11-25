@@ -1770,6 +1770,7 @@ type CreditNote {
   fileUrl: String
   id: ID!
   invoice: Invoice
+  issuingDate: ISO8601Date!
   items: [CreditNoteItem!]!
   number: String!
   reason: CreditNoteReasonEnum!

@@ -5,6 +5,8 @@ FactoryBot.define do
     customer
     invoice
 
+    issuing_date { Time.zone.today }
+
     reason { 'duplicated_charge' }
     total_amount_cents { 120 }
     total_amount_currency { 'EUR' }

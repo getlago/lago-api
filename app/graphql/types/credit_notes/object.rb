@@ -8,6 +8,7 @@ module Types
       field :id, ID, null: false
       field :sequential_id, ID, null: false
       field :number, String, null: false
+      field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
       field :credit_status, Types::CreditNotes::CreditStatusTypeEnum, null: true
       field :refund_status, Types::CreditNotes::RefundStatusTypeEnum, null: true

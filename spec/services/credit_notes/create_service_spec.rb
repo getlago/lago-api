@@ -43,6 +43,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         credit_note = result.credit_note
         expect(credit_note.invoice).to eq(invoice)
         expect(credit_note.customer).to eq(invoice.customer)
+        expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
 
         expect(credit_note.total_amount_currency).to eq(invoice.amount_currency)
         expect(credit_note.total_amount_cents).to eq(19)
@@ -164,6 +165,20 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
         it 'does not enqueue a refund job' do
           expect { create_service.call }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
+        end
+      end
+    end
+
+    context 'with customer timezone' do
+      before { invoice.customer.update!(timezone: 'America/Los_Angeles') }
+
+      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00').to_i }
+
+      it 'assigns the issuing date in the customer timezone' do
+        travel_to(DateTime.parse('2022-11-25 01:00:00')) do
+          result = create_service.call
+
+          expect(result.credit_note.issuing_date.to_s).to eq('2022-11-24')
         end
       end
     end

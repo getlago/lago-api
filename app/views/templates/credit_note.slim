@@ -284,7 +284,7 @@ html
               td.body-2 = invoice.number
             tr
               td.body-1 Issue date
-              td.body-2 = created_at.strftime('%b %d, %Y')
+              td.body-2 = issuing_date.strftime('%b %d, %Y')
 
       .mb-24.overflow-auto
         .billing-information-column
@@ -329,11 +329,11 @@ html
         h2.title-2.mb-8 = total_amount.format
         .body-1
           - if credited? && refunded?
-            | Credited on customer balance and refunded on #{created_at.strftime('%b %d, %Y')}
+            | Credited on customer balance and refunded on #{issuing_date.strftime('%b %d, %Y')}
           - elsif credited?
-            | Credited on customer balance on #{created_at.strftime('%b %d, %Y')}
+            | Credited on customer balance on #{issuing_date.strftime('%b %d, %Y')}
           - else
-            | Refunded on #{created_at.strftime('%b %d, %Y')}
+            | Refunded on #{issuing_date.strftime('%b %d, %Y')}
 
       .credit-note-resume.mb-24.overflow-auto
         table.credit-note-resume-table width="100%"
