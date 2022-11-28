@@ -131,6 +131,22 @@ class Invoice < ApplicationRecord
     result.breakdown
   end
 
+  def creditable_amount_cents
+    return 0 if legacy? || credit?
+
+    fees.map do |fee|
+      creditable = fee.creditable_amount_cents
+      creditable + (creditable * (fee.vat_rate || 0)).fdiv(100).ceil
+    end.sum
+  end
+
+  def refundable_amount_cents
+    return 0 if legacy? || credit? || !succeeded?
+
+    amount = creditable_amount_cents - credits.sum(:amount_cents) - wallet_transaction_amount_cents
+    amount.negative? ? 0 : amount
+  end
+
   private
 
   def ensure_number

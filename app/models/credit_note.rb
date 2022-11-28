@@ -49,6 +49,7 @@ class CreditNote < ApplicationRecord
 
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
   validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :refund_amount_cents, numericality: { greater_than_or_equal_to: 0 }
   validates :balance_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
   def file_url

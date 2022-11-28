@@ -47,21 +47,6 @@ module Types
 
       field :refundable_amount_cents, Integer, null: false
       field :creditable_amount_cents, Integer, null: false
-
-      def refundable_amount_cents
-        return 0 if object.legacy?
-        return 0 if object.credit?
-        return 0 unless object.succeeded?
-
-        object.total_amount_cents - object.credit_notes.sum(:total_amount_cents)
-      end
-
-      def creditable_amount_cents
-        return 0 if object.legacy?
-        return 0 if object.credit?
-
-        object.fee_total_amount_cents - object.credit_notes.sum(:total_amount_cents)
-      end
     end
   end
 end
