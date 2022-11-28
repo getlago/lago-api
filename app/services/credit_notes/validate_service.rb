@@ -52,6 +52,13 @@ module CreditNotes
       true
     end
 
+    def valid_invoice_type?
+      return unless invoice.credit?
+
+      add_error(field: :base, error_code: 'cannot_credit_invoice')
+      false
+    end
+
     # NOTE: Check if total amount matched the items amount
     def valid_items_amount?
       return true if total_amount_cents == credit_note.items.sum(&:total_amount_cents)
