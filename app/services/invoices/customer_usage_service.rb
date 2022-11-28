@@ -90,10 +90,10 @@ module Invoices
       )
 
       {
-        from_date: date_service.from_datetime.to_date,
-        to_date: date_service.to_datetime.to_date,
-        charges_from_date: date_service.charges_from_datetime.to_date,
-        charges_to_date: date_service.charges_to_datetime.to_date,
+        from_datetime: date_service.from_datetime,
+        to_datetime: date_service.to_datetime,
+        charges_from_datetime: date_service.charges_from_datetime,
+        charges_to_datetime: date_service.charges_to_datetime,
         issuing_date: date_service.next_end_of_period(Time.zone.now),
       }
     end
@@ -119,7 +119,7 @@ module Invoices
       #       billing period starts
       [
         'current_usage',
-        "#{subscription.id}-#{boundaries[:charges_to_date].iso8601}-#{date.iso8601}",
+        "#{subscription.id}-#{boundaries[:charges_to_datetime].to_date.iso8601}-#{date.iso8601}",
         plan.updated_at.iso8601,
       ].join('/')
     end
@@ -129,7 +129,7 @@ module Invoices
     end
 
     def cache_expiration
-      expiration = (boundaries[:charges_to_date] - Time.zone.today).to_i + 1
+      expiration = (boundaries[:charges_to_datetime].to_date - Time.zone.today).to_i + 1
       return 1.day if expiration < 1
       return 4.days if expiration > 4
 
@@ -138,8 +138,8 @@ module Invoices
 
     def format_usage
       {
-        from_date: boundaries[:charges_from_date].iso8601,
-        to_date: boundaries[:charges_to_date].iso8601,
+        from_datetime: boundaries[:charges_from_datetime].iso8601,
+        to_datetime: boundaries[:charges_to_datetime].iso8601,
         issuing_date: invoice.issuing_date.iso8601,
         amount_cents: invoice.amount_cents,
         amount_currency: invoice.amount_currency,

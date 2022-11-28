@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 class InvoiceSubscription < ApplicationRecord
+  include CustomerTimezone
+
   belongs_to :invoice
   belongs_to :subscription
+
+  has_one :customer, through: :subscription
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
@@ -16,28 +20,20 @@ class InvoiceSubscription < ApplicationRecord
     )
   end
 
-  def from_date
-    return if fees.empty?
-
-    fees.first.properties['from_date']&.to_date
+  def from_datetime
+    fees_datetime('from_datetime')&.to_datetime
   end
 
-  def to_date
-    return if fees.empty?
-
-    fees.first.properties['to_date']&.to_date
+  def to_datetime
+    fees_datetime('to_datetime')&.to_datetime
   end
 
-  def charges_from_date
-    return if fees.empty?
-
-    fees.first.properties['charges_from_date']&.to_date
+  def charges_from_datetime
+    fees_datetime('charges_from_datetime')&.to_datetime
   end
 
-  def charges_to_date
-    return if fees.empty?
-
-    fees.first.properties['charges_to_date']&.to_date
+  def charges_to_datetime
+    fees_datetime('charges_to_datetime')&.to_datetime
   end
 
   def charge_amount_cents
@@ -58,4 +54,10 @@ class InvoiceSubscription < ApplicationRecord
 
   alias charge_amount_currency total_amount_currency
   alias subscription_amount_currency total_amount_currency
+
+  def fees_datetime(field)
+    return if fees.empty?
+
+    fees.first.properties[field]
+  end
 end

@@ -514,7 +514,7 @@ html
             h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
           .body-1 Subscription
           .mb-24.body-3
-            | From #{invoice_subscription(subscription.id).from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_date&.strftime('%b %d, %Y')}
+            | From #{invoice_subscription(subscription.id).from_datetime_in_customer_timezome&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.strftime('%b %d, %Y')}
 
           .invoice-resume.mb-24.overflow-auto
             table.invoice-resume-table width="100%"
@@ -532,7 +532,7 @@ html
           - if subscription? && subscription_fees(subscription.id).charge_kind.any?
             .body-1 Charges
             .mb-24.body-3
-              | List of charges used from #{invoice_subscription(subscription.id).charges_from_date&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).charges_to_date&.strftime('%b %d, %Y')}
+              | List of charges used from #{invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.strftime('%b %d, %Y')}
             .charge-details.mb-24
               table.charge-details-table width="100%"
                 - subscription_fees(subscription.id).charge_kind.group_by(&:charge_id).each do |_charge_id, fees|

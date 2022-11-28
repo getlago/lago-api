@@ -4,8 +4,8 @@ module V1
   class CustomerUsageSerializer < ModelSerializer
     def serialize
       payload = {
-        from_date: model.from_date,
-        to_date: model.to_date,
+        from_datetime: model.from_datetime,
+        to_datetime: model.to_datetime,
         issuing_date: model.issuing_date,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
@@ -13,7 +13,7 @@ module V1
         total_amount_currency: model.total_amount_currency,
         vat_amount_cents: model.vat_amount_cents,
         vat_amount_currency: model.vat_amount_currency,
-      }
+      }.merge(legacy_values)
 
       payload.merge!(charges_usage) if include?(:charges_usage)
       payload
@@ -27,6 +27,10 @@ module V1
         ::V1::ChargeUsageSerializer,
         collection_name: 'charges_usage',
       ).serialize
+    end
+
+    def legacy_values
+      ::V1::Legacy::CustomerUsageSerializer.new(model).serialize
     end
   end
 end

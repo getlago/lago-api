@@ -67,8 +67,11 @@ RSpec.describe Invoices::CreateService, type: :service do
       aggregate_failures do
         expect(result).to be_success
 
-        expect(result.invoice.fees.first.properties['to_date']).to eq (timestamp - 1.day).to_date.to_s
-        expect(result.invoice.fees.first.properties['from_date']).to eq (timestamp - 1.month).to_date.to_s
+        expect(result.invoice.fees.first.properties['to_datetime'])
+          .to eq (timestamp - 1.day).end_of_day.as_json
+        expect(result.invoice.fees.first.properties['from_datetime'])
+          .to eq (timestamp - 1.month).beginning_of_day.as_json
+
         expect(result.invoice.subscriptions.first).to eq(subscription)
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
         expect(result.invoice.invoice_type).to eq('subscription')

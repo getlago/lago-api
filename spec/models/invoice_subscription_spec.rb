@@ -17,78 +17,78 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
-  describe '#from_date' do
+  describe '#from_datetime' do
     it 'returns first fee from_date' do
       create(
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        properties: { from_date: "2022-01-01" }
+        properties: { from_datetime: '2022-01-01 00:00:00' },
       )
 
-      expect(invoice_subscription.from_date).to eq(Date.parse("2022-01-01"))
+      expect(invoice_subscription.from_datetime).to match_datetime('2022-01-01 00:00:00')
     end
 
     context 'when fees are empty' do
       it 'returns nil' do
-        expect(invoice_subscription.from_date).to be_nil
+        expect(invoice_subscription.from_datetime).to be_nil
       end
     end
   end
 
-  describe '#to_date' do
+  describe '#to_datetime' do
     it 'returns first fee to_date' do
       create(
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        properties: { to_date: "2022-01-31" }
+        properties: { to_datetime: '2022-01-31 23:59:59' },
       )
 
-      expect(invoice_subscription.to_date).to eq(Date.parse("2022-01-31"))
+      expect(invoice_subscription.to_datetime).to match_datetime('2022-01-31 12 23:59:59')
     end
 
     context 'when fees are empty' do
       it 'returns nil' do
-        expect(invoice_subscription.to_date).to be_nil
+        expect(invoice_subscription.to_datetime).to be_nil
       end
     end
   end
 
-  describe '#charges_from_date' do
+  describe '#charges_from_datetime' do
     it 'returns first fee charges_from_date' do
       create(
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        properties: { charges_from_date: '2022-01-01' },
+        properties: { charges_from_datetime: '2022-01-01 00:00:00' },
       )
 
-      expect(invoice_subscription.charges_from_date).to eq(Date.parse('2022-01-01'))
+      expect(invoice_subscription.charges_from_datetime).to match_datetime('2022-01-01 00:00:00')
     end
 
     context 'when fees are empty' do
       it 'returns nil' do
-        expect(invoice_subscription.charges_from_date).to be_nil
+        expect(invoice_subscription.charges_from_datetime).to be_nil
       end
     end
   end
 
-  describe '#charges_to_date' do
+  describe '#charges_to_datetime' do
     it 'returns first fee charges_to_date' do
       create(
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        properties: { charges_to_date: '2022-01-31' },
+        properties: { charges_to_datetime: '2022-01-31 23:59:59' },
       )
 
-      expect(invoice_subscription.charges_to_date).to eq(Date.parse('2022-01-31'))
+      expect(invoice_subscription.charges_to_datetime).to match_datetime('2022-01-31 23:59:59')
     end
 
     context 'when fees are empty' do
       it 'returns nil' do
-        expect(invoice_subscription.charges_to_date).to be_nil
+        expect(invoice_subscription.charges_to_datetime).to be_nil
       end
     end
   end
@@ -102,7 +102,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         invoice_id: invoice.id,
         charge: charge,
         fee_type: 'charge',
-        amount_cents: 100
+        amount_cents: 100,
       )
 
       create(
@@ -111,14 +111,14 @@ RSpec.describe InvoiceSubscription, type: :model do
         invoice_id: invoice.id,
         charge: charge,
         fee_type: 'charge',
-        amount_cents: 200
+        amount_cents: 200,
       )
 
       create(
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        amount_cents: 400
+        amount_cents: 400,
       )
 
       expect(invoice_subscription.charge_amount_cents).to eq(300)
@@ -131,7 +131,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        amount_cents: 50
+        amount_cents: 50,
       )
 
       create(
@@ -140,7 +140,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         invoice_id: invoice.id,
         charge: create(:standard_charge),
         fee_type: 'charge',
-        amount_cents: 200
+        amount_cents: 200,
       )
 
       expect(invoice_subscription.subscription_amount_cents).to eq(50)
@@ -154,7 +154,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        amount_cents: 50
+        amount_cents: 50,
       )
 
       create(
@@ -163,7 +163,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         invoice_id: invoice.id,
         charge: charge,
         fee_type: 'charge',
-        amount_cents: 200
+        amount_cents: 200,
       )
 
       create(
@@ -172,7 +172,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         invoice_id: invoice.id,
         charge: charge,
         fee_type: 'charge',
-        amount_cents: 100
+        amount_cents: 100,
       )
 
       expect(invoice_subscription.total_amount_cents).to eq(350)
