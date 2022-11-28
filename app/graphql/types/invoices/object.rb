@@ -50,6 +50,7 @@ module Types
 
       def refundable_amount_cents
         return 0 if object.legacy?
+        return 0 if object.credit?
         return 0 unless object.succeeded?
 
         object.total_amount_cents - object.credit_notes.sum(:refund_amount_cents)
@@ -57,6 +58,7 @@ module Types
 
       def creditable_amount_cents
         return 0 if object.legacy?
+        return 0 if object.credit?
 
         object.fee_total_amount_cents - object.credit_notes.sum(:total_amount_cents)
       end
