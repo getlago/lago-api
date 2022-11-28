@@ -556,6 +556,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             .to match_datetime(subscription.started_at)
           expect(result.invoice.total_amount_cents).to eq(81)
           expect(result.invoice).to be_pending
+          expect(result.invoice.payment_status).to eq('succeeded')
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end
