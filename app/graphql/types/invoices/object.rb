@@ -53,7 +53,7 @@ module Types
         return 0 if object.credit?
         return 0 unless object.succeeded?
 
-        object.total_amount_cents - object.credit_notes.sum(:refund_amount_cents)
+        object.total_amount_cents - object.credit_notes.sum(:total_amount_cents)
       end
 
       def creditable_amount_cents
