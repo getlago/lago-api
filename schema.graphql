@@ -2951,6 +2951,11 @@ type Invoice {
   walletTransactionAmountCents: Int!
 }
 
+type InvoiceCollection {
+  collection: [Invoice!]!
+  metadata: CollectionMetadata!
+}
+
 """
 Invoice Item
 """
@@ -3698,6 +3703,11 @@ type Query {
     """
     id: ID!
   ): CustomerDetails
+
+  """
+  Query invoices of a customer
+  """
+  customerInvoices(customerId: ID!, limit: Int, page: Int, status: InvoiceStatusTypeEnum): InvoiceCollection!
 
   """
   Query the usage of the customer on the current billing period
