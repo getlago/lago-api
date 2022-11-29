@@ -42,8 +42,8 @@ module Types
       end
 
       def period_end_date
-        ::Subscriptions::DatesService.new_instance(object, Time.zone.today)
-          .next_end_of_period(Time.zone.today)
+        ::Subscriptions::DatesService.new_instance(object, Time.current)
+          .next_end_of_period(Time.current)
       end
     end
   end

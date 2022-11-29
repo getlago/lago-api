@@ -2,7 +2,7 @@
 
 module Subscriptions
   class DatesService
-    def self.new_instance(subscription, billing_date, current_usage: false)
+    def self.new_instance(subscription, billing_at, current_usage: false)
       klass = case subscription.plan.interval&.to_sym
               when :weekly
                 Subscriptions::Dates::WeeklyService
@@ -14,56 +14,57 @@ module Subscriptions
                 raise(NotImplementedError)
       end
 
-      klass.new(subscription, billing_date, current_usage)
+      klass.new(subscription, billing_at, current_usage)
     end
 
-    def initialize(subscription, billing_date, current_usage)
+    def initialize(subscription, billing_at, current_usage)
       @subscription = subscription
 
-      # NOTE: Billing date should usually be the end of the billing period + 1 day
+      # NOTE: Billing time should usually be the end of the billing period + 1 day
       #       When subscription is terminated, it is the termination day
-      @billing_date = billing_date.to_date
+      @billing_at = billing_at
       @current_usage = current_usage
     end
 
-    def from_date
-      return @from_date if @from_date
+    def from_datetime
+      return @from_datetime if @from_datetime
 
-      @from_date = compute_from_date
+      @from_datetime = customer_timezone_shift(compute_from_date)
 
       # NOTE: On first billing period, subscription might start after the computed start of period
       #       ie: if we bill on beginning of period, and user registered on the 15th, the invoice should
       #       start on the 15th (subscription date) and not on the 1st
-      @from_date = subscription.started_at.to_date if @from_date < subscription.started_at
+      @from_datetime = subscription.started_at if @from_datetime < subscription.started_at
 
-      @from_date
+      @from_datetime
     end
 
-    def to_date
-      return @to_date if @to_date
+    def to_datetime
+      return @to_datetime if @to_datetime
 
-      @to_date = compute_to_date
-      @to_date = subscription.terminated_at.to_date if subscription.terminated? && @to_date > subscription.terminated_at
+      @to_datetime = customer_timezone_shift(compute_to_date, end_of_day: true)
+      @to_datetime = subscription.terminated_at if subscription.terminated? && @to_datetime > subscription.terminated_at
 
-      @to_date
+      @to_datetime
     end
 
-    def charges_from_date
-      date = compute_charges_from_date
-      date = subscription.started_at.to_date if date < subscription.started_at
+    def charges_from_datetime
+      datetime = customer_timezone_shift(compute_charges_from_date)
+      datetime = subscription.started_at if datetime < subscription.started_at
 
-      date
+      datetime
     end
 
-    def charges_to_date
-      date = compute_charges_to_date
-      date = subscription.terminated_at.to_date if subscription.terminated? && date > subscription.terminated_at
+    def charges_to_datetime
+      datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
+      datetime = subscription.terminated_at if subscription.terminated? && datetime > subscription.terminated_at
 
-      date
+      datetime
     end
 
     def next_end_of_period(date)
-      compute_next_end_of_period(date)
+      end_utc = compute_next_end_of_period(date)
+      customer_timezone_shift(end_utc, end_of_day: true)
     end
 
     # NOTE: Retrieve the beginning of the previous period based on the billing date
@@ -71,7 +72,8 @@ module Subscriptions
       date = base_date
       date = billing_date if current_period
 
-      compute_previous_beginning_of_period(date)
+      beginning_utc = compute_previous_beginning_of_period(date)
+      customer_timezone_shift(beginning_utc)
     end
 
     def single_day_price(optional_from_date: nil)
@@ -85,12 +87,22 @@ module Subscriptions
 
     private
 
-    attr_accessor :subscription, :billing_date, :current_usage
+    attr_accessor :subscription, :billing_at, :current_usage
 
-    delegate :plan, :subscription_date, :calendar?, to: :subscription
+    delegate :plan, :subscription_date, :calendar?, :customer, to: :subscription
+
+    def billing_date
+      @billing_date ||= billing_at.in_time_zone(customer.applicable_timezone).to_date
+    end
 
     def base_date
       @base_date ||= current_usage ? billing_date : compute_base_date
+    end
+
+    def customer_timezone_shift(date, end_of_day: false)
+      result = date.in_time_zone(customer.applicable_timezone)
+      result = result.end_of_day if end_of_day
+      result.utc
     end
 
     def terminated_pay_in_arrear?

@@ -216,7 +216,7 @@ module Fees
     end
 
     def date_service(subscription)
-      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(boundaries.timestamp).to_date)
+      Subscriptions::DatesService.new_instance(subscription, Time.zone.at(boundaries.timestamp))
     end
 
     # NOTE: cost of a single day in a period
@@ -231,7 +231,7 @@ module Fees
 
       # NOTE: when plan is pay in advance, the_to date should be the
       #       end of the actual period
-      date_service(old_subscription).next_end_of_period(old_subscription.terminated_at.to_date)
+      date_service(old_subscription).next_end_of_period(old_subscription.terminated_at.to_date).to_date
     end
 
     def compute_from_date(target_subscription)
