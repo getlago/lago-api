@@ -20,7 +20,7 @@ module Types
       field :reusable, Boolean, null: false
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
-      field :expiration_date, GraphQL::Types::ISO8601Date, null: true
+      field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -38,6 +38,13 @@ module Types
 
       def can_be_deleted
         object.deletable?
+      end
+
+      # NOTE: Legacy fields, will be removed when releasing the timezone feature
+      field :expiration_date, GraphQL::Types::ISO8601Date, null: true
+
+      def expiration_date
+        object.expiration_at&.to_date
       end
     end
   end

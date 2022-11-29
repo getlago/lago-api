@@ -10,6 +10,8 @@ RSpec.describe Coupons::UpdateService, type: :service do
 
   let(:coupon) { create(:coupon, organization: organization) }
 
+  let(:expiration_at) { Time.current + 30.days }
+
   describe 'update' do
     before { coupon }
 
@@ -23,7 +25,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         amount_currency: 'EUR',
         expiration: 'time_limit',
         reusable: false,
-        expiration_date: (Time.current + 30.days).to_date,
+        expiration_at: expiration_at,
       }
     end
 
@@ -38,7 +40,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         expect(result.coupon.amount_currency).to eq('EUR')
         expect(result.coupon.expiration).to eq('time_limit')
         expect(result.coupon.reusable).to eq(false)
-        expect(result.coupon.expiration_date).to eq (Time.current + 30.days).to_date
+        expect(result.coupon.expiration_at.to_s).to eq((Time.current + 30.days).to_s)
       end
     end
 
@@ -53,7 +55,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
           amount_currency: 'EUR',
           reusable: false,
           expiration: 'time_limit',
-          expiration_date: (Time.current + 30.days).to_date,
+          expiration_at: Time.current + 30.days,
         }
       end
 
@@ -81,12 +83,12 @@ RSpec.describe Coupons::UpdateService, type: :service do
         amount_cents: 123,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_date: (Time.current + 15.days).to_date,
+        expiration_at: Time.current + 15.days,
       }
     end
 
     it 'updates the coupon' do
-      result = subject.update_from_api(
+      result = update_service.update_from_api(
         organization: organization,
         code: coupon.code,
         params: update_args,
@@ -107,7 +109,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       let(:name) { nil }
 
       it 'returns an error' do
-        result = subject.update_from_api(
+        result = update_service.update_from_api(
           organization: organization,
           code: coupon.code,
           params: update_args,
@@ -123,7 +125,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
 
     context 'when coupon is not found' do
       it 'returns an error' do
-        result = subject.update_from_api(
+        result = update_service.update_from_api(
           organization: organization,
           code: 'fake_code12345',
           params: update_args,

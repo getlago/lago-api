@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Mutations::Coupons::Create, type: :graphql do
   let(:membership) { create(:membership) }
+  let(:expiration_at) { Time.current + 3.days }
   let(:mutation) do
     <<-GQL
       mutation($input: CreateCouponInput!) {
@@ -14,7 +15,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           amountCents,
           amountCurrency,
           expiration,
-          expirationDate,
+          expirationAt,
           status,
           reusable
         }
@@ -22,7 +23,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
     GQL
   end
 
-  it 'create a coupon' do
+  it 'creates a coupon' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -36,7 +37,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           amountCents: 5000,
           amountCurrency: 'EUR',
           expiration: 'time_limit',
-          expirationDate: (Time.current + 3.days).to_date,
+          expirationAt: expiration_at.iso8601,
           reusable: false,
         },
       },
@@ -51,9 +52,44 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['amountCents']).to eq(5000)
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['expiration']).to eq('time_limit')
-      expect(result_data['expirationDate']).to eq (Time.current + 3.days).to_date.to_s
+      expect(result_data['expirationAt']).to eq expiration_at.iso8601
       expect(result_data['status']).to eq('active')
       expect(result_data['reusable']).to eq(false)
+    end
+  end
+
+  context 'with an expiration date' do
+    it 'creates a coupon' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        variables: {
+          input: {
+            name: 'Super Coupon',
+            code: 'free-beer',
+            couponType: 'fixed_amount',
+            frequency: 'once',
+            amountCents: 5000,
+            amountCurrency: 'EUR',
+            expiration: 'time_limit',
+            expirationDate: expiration_at.to_date.iso8601,
+          },
+        },
+      )
+
+      result_data = result['data']['createCoupon']
+
+      aggregate_failures do
+        expect(result_data['id']).to be_present
+        expect(result_data['name']).to eq('Super Coupon')
+        expect(result_data['code']).to eq('free-beer')
+        expect(result_data['amountCents']).to eq(5000)
+        expect(result_data['amountCurrency']).to eq('EUR')
+        expect(result_data['expiration']).to eq('time_limit')
+        expect(result_data['expirationAt']).to eq expiration_at.end_of_day.iso8601
+        expect(result_data['status']).to eq('active')
+      end
     end
   end
 
