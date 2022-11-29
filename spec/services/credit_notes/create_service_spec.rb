@@ -3,7 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe CreditNotes::CreateService, type: :service do
-  subject(:create_service) { described_class.new(invoice: invoice, items_attr: items, description: nil) }
+  subject(:create_service) do
+    described_class.new(
+      invoice: invoice,
+      items: items,
+      description: nil,
+      credit_amount_cents: credit_amount_cents,
+      refund_amount_cents: refund_amount_cents,
+    )
+  end
 
   let(:invoice) do
     create(
@@ -18,17 +26,17 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
   let(:fee1) { create(:fee, invoice: invoice, amount_cents: 10) }
   let(:fee2) { create(:fee, invoice: invoice, amount_cents: 10) }
+  let(:credit_amount_cents) { 10 }
+  let(:refund_amount_cents) { 5 }
   let(:items) do
     [
       {
         fee_id: fee1.id,
-        credit_amount_cents: 10,
-        refund_amount_cents: 2,
+        amount_cents: 10,
       },
       {
         fee_id: fee2.id,
-        credit_amount_cents: 5,
-        refund_amount_cents: 2,
+        amount_cents: 5,
       },
     ]
   end
@@ -46,18 +54,18 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
 
         expect(credit_note.total_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.total_amount_cents).to eq(19)
+        expect(credit_note.total_amount_cents).to eq(15)
 
         expect(credit_note.credit_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.credit_amount_cents).to eq(15)
+        expect(credit_note.credit_amount_cents).to eq(10)
         expect(credit_note.balance_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.balance_amount_cents).to eq(15)
-        expect(credit_note.credit_vat_amount_cents).to eq(2)
+        expect(credit_note.balance_amount_cents).to eq(10)
+        expect(credit_note.credit_vat_amount_cents).to eq(1)
         expect(credit_note.credit_vat_amount_currency).to eq(invoice.amount_currency)
         expect(credit_note.credit_status).to eq('available')
 
         expect(credit_note.refund_amount_currency).to eq(invoice.amount_currency)
-        expect(credit_note.refund_amount_cents).to eq(4)
+        expect(credit_note.refund_amount_cents).to eq(5)
         expect(credit_note.refund_vat_amount_cents).to eq(0)
         expect(credit_note.refund_vat_amount_currency).to eq(invoice.amount_currency)
         expect(credit_note.refund_status).to eq('pending')
@@ -67,17 +75,13 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.items.count).to eq(2)
         item1 = credit_note.items.order(created_at: :asc).first
         expect(item1.fee).to eq(fee1)
-        expect(item1.credit_amount_cents).to eq(10)
-        expect(item1.credit_amount_currency).to eq(invoice.amount_currency)
-        expect(item1.refund_amount_cents).to eq(2)
-        expect(item1.refund_amount_currency).to eq(invoice.amount_currency)
+        expect(item1.amount_cents).to eq(10)
+        expect(item1.amount_currency).to eq(invoice.amount_currency)
 
         item2 = credit_note.items.order(created_at: :asc).last
         expect(item2.fee).to eq(fee2)
-        expect(item2.credit_amount_cents).to eq(5)
-        expect(item2.credit_amount_currency).to eq(invoice.amount_currency)
-        expect(item2.refund_amount_cents).to eq(2)
-        expect(item2.refund_amount_currency).to eq(invoice.amount_currency)
+        expect(item2.amount_cents).to eq(5)
+        expect(item2.amount_currency).to eq(invoice.amount_currency)
       end
     end
 
@@ -105,15 +109,17 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     end
 
     context 'with invalid items' do
+      let(:credit_amount_cents) { 10 }
+      let(:refund_amount_cents) { 15 }
       let(:items) do
         [
           {
             fee_id: fee1.id,
-            credit_amount_cents: 10,
+            amount_cents: 10,
           },
           {
             fee_id: fee2.id,
-            credit_amount_cents: 15,
+            amount_cents: 15,
           },
         ]
       end
@@ -124,11 +130,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:credit_amount_cents)
-          expect(result.error.messages[:credit_amount_cents]).to eq(
+          expect(result.error.messages.keys).to include(:amount_cents)
+          expect(result.error.messages[:amount_cents]).to eq(
             %w[
               higher_than_remaining_fee_amount
-              higher_than_remaining_invoice_amount
             ],
           )
         end
@@ -148,20 +153,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
 
       context 'when credit note does not have refund amount' do
-        let(:items) do
-          [
-            {
-              fee_id: fee1.id,
-              credit_amount_cents: 10,
-              refund_amount_cents: 0,
-            },
-            {
-              fee_id: fee2.id,
-              credit_amount_cents: 5,
-              refund_amount_cents: 0,
-            },
-          ]
-        end
+        let(:credit_amount_cents) { 15 }
+        let(:refund_amount_cents) { 0 }
 
         it 'does not enqueue a refund job' do
           expect { create_service.call }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)

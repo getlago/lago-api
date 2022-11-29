@@ -1638,10 +1638,12 @@ input CreateCreditNoteInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  creditAmountCents: BigInt
   description: String
   invoiceId: ID!
   items: [CreditNoteItemInput!]!
   reason: CreditNoteReasonEnum!
+  refundAmountCents: BigInt
 }
 
 """
@@ -1777,6 +1779,7 @@ type CreditNote {
   refundAmountCents: BigInt!
   refundAmountCurrency: CurrencyEnum!
   refundStatus: CreditNoteRefundStatusEnum
+  refundedAt: ISO8601DateTime
   sequentialId: ID!
   subTotalVatExcludedAmountCents: BigInt!
   subTotalVatExcludedAmountCurrency: CurrencyEnum!
@@ -1785,6 +1788,7 @@ type CreditNote {
   updatedAt: ISO8601DateTime!
   vatAmountCents: BigInt!
   vatAmountCurrency: CurrencyEnum!
+  voidedAt: ISO8601DateTime
 }
 
 enum CreditNoteCreditStatusEnum {
@@ -1794,19 +1798,16 @@ enum CreditNoteCreditStatusEnum {
 }
 
 type CreditNoteItem {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
-  creditAmountCents: BigInt!
-  creditAmountCurrency: CurrencyEnum!
   fee: Fee!
   id: ID!
-  refundAmountCents: BigInt!
-  refundAmountCurrency: CurrencyEnum!
 }
 
 input CreditNoteItemInput {
-  creditAmountCents: BigInt!
+  amountCents: BigInt!
   feeId: ID!
-  refundAmountCents: BigInt!
 }
 
 enum CreditNoteReasonEnum {
@@ -2821,6 +2822,7 @@ type Fee implements InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   charge: Charge
+  creditableAmountCents: Int!
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group

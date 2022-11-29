@@ -25,6 +25,10 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           subscriptions {
             id
           }
+          fees {
+            id
+            creditableAmountCents
+          }
         }
       }
     GQL

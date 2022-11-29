@@ -132,7 +132,9 @@ module CreditNotes
       end
 
       def update_credit_note_status(status)
-        credit_note.update!(refund_status: status)
+        credit_note.refund_status = status
+        credit_note.refunded_at = Time.current if credit_note.succeeded?
+        credit_note.save!
       end
 
       def track_refund_status_changed(status)

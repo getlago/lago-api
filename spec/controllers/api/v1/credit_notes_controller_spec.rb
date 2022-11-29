@@ -50,8 +50,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         json_item = json[:credit_note][:items].first
         item = credit_note_items.first
         expect(json_item[:lago_id]).to eq(item.id)
-        expect(json_item[:credit_amount_cents]).to eq(item.credit_amount_cents)
-        expect(json_item[:credit_amount_currency]).to eq(item.credit_amount_currency)
+        expect(json_item[:amount_cents]).to eq(item.amount_cents)
+        expect(json_item[:amount_currency]).to eq(item.amount_currency)
         expect(json_item[:fee][:lago_id]).to eq(item.fee.id)
         expect(json_item[:fee][:amount_cents]).to eq(item.fee.amount_cents)
         expect(json_item[:fee][:amount_currency]).to eq(item.fee.amount_currency)
@@ -216,16 +216,16 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         invoice_id: invoice_id,
         reason: 'duplicated_charge',
         description: 'Duplicated charge',
+        credit_amount_cents: 10,
+        refund_amount_cents: 5,
         items: [
           {
             fee_id: fee1.id,
-            credit_amount_cents: 10,
-            refund_amount_cents: 5,
+            amount_cents: 10,
           },
           {
             fee_id: fee2.id,
-            credit_amount_cents: 5,
-            refund_amount_cents: 10,
+            amount_cents: 5,
           },
         ],
       }
@@ -242,27 +242,23 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_note][:refund_status]).to eq('pending')
         expect(json[:credit_note][:reason]).to eq('duplicated_charge')
         expect(json[:credit_note][:description]).to eq('Duplicated charge')
-        expect(json[:credit_note][:total_amount_cents]).to eq(30)
+        expect(json[:credit_note][:total_amount_cents]).to eq(15)
         expect(json[:credit_note][:total_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:credit_amount_cents]).to eq(15)
+        expect(json[:credit_note][:credit_amount_cents]).to eq(10)
         expect(json[:credit_note][:credit_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:balance_amount_cents]).to eq(15)
+        expect(json[:credit_note][:balance_amount_cents]).to eq(10)
         expect(json[:credit_note][:balance_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:refund_amount_cents]).to eq(15)
+        expect(json[:credit_note][:refund_amount_cents]).to eq(5)
         expect(json[:credit_note][:refund_amount_currency]).to eq('EUR')
 
         expect(json[:credit_note][:items][0][:lago_id]).to be_present
-        expect(json[:credit_note][:items][0][:credit_amount_cents]).to eq(10)
-        expect(json[:credit_note][:items][0][:credit_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:items][0][:refund_amount_cents]).to eq(5)
-        expect(json[:credit_note][:items][0][:refund_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)
+        expect(json[:credit_note][:items][0][:amount_currency]).to eq('EUR')
         expect(json[:credit_note][:items][0][:fee][:lago_id]).to eq(fee1.id)
 
         expect(json[:credit_note][:items][1][:lago_id]).to be_present
-        expect(json[:credit_note][:items][1][:credit_amount_cents]).to eq(5)
-        expect(json[:credit_note][:items][1][:credit_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:items][1][:refund_amount_cents]).to eq(10)
-        expect(json[:credit_note][:items][1][:refund_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][1][:amount_cents]).to eq(5)
+        expect(json[:credit_note][:items][1][:amount_currency]).to eq('EUR')
         expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
       end
     end

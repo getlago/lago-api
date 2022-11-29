@@ -6,9 +6,7 @@ module Api
       def create
         service = CreditNotes::CreateService.new(
           invoice: current_organization.invoices.find_by(id: input_params[:invoice_id]),
-          reason: input_params[:reason],
-          items_attr: input_params[:items],
-          description: input_params[:description],
+          **input_params,
         )
         result = service.call
 
@@ -125,10 +123,11 @@ module Api
             :invoice_id,
             :reason,
             :description,
+            :credit_amount_cents,
+            :refund_amount_cents,
             items: [
               :fee_id,
-              :credit_amount_cents,
-              :refund_amount_cents,
+              :amount_cents,
             ],
           )
       end
