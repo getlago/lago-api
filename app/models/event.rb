@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Event < ApplicationRecord
+  include CustomerTimezone
+  include OrganizationTimezone
+
   belongs_to :organization
   belongs_to :customer
   belongs_to :subscription
