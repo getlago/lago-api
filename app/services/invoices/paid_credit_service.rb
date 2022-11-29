@@ -17,7 +17,6 @@ module Invoices
           issuing_date: issuing_date,
           invoice_type: :credit,
           payment_status: :pending,
-
           amount_currency: currency,
           vat_amount_currency: currency,
           credit_amount_currency: currency,
