@@ -34,7 +34,7 @@ module CreditNotes
 
     attr_accessor :subscription
 
-    delegate :plan, to: :subscription
+    delegate :plan, :terminated_at, to: :subscription
 
     def last_subscription_fee
       @last_subscription_fee ||= subscription.fees.order(created_at: :desc).last
@@ -44,14 +44,10 @@ module CreditNotes
       day_price * remaining_duration
     end
 
-    def termination_date
-      @termination_date ||= subscription.terminated_at.to_date
-    end
-
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        termination_date,
+        terminated_at,
       )
     end
 
@@ -60,7 +56,7 @@ module CreditNotes
     end
 
     def to_date
-      date_service.next_end_of_period
+      date_service.next_end_of_period.to_date # TODO: deal with timezone
     end
 
     def day_price
@@ -68,9 +64,9 @@ module CreditNotes
     end
 
     def remaining_duration
-      billed_from = termination_date
+      billed_from = terminated_at.to_date
 
-      if plan.has_trial? && subscription.trial_end_date >= termination_date
+      if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > to_date
           to_date
         else

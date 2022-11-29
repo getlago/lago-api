@@ -347,14 +347,14 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-03-14 03:59:59 UTC')
+          expect(result).to eq('2022-03-07 04:59:59 UTC')
         end
       end
     end
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('08 Mar 2022') }
+      let(:billing_at) { DateTime.parse('08 Mar 2022 20:00:00') }
 
       it 'returns the end of the billing week' do
         expect(result).to eq('2022-03-14 23:59:59 UTC')
