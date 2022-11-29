@@ -24,6 +24,7 @@ Invoice.all.find_each do |invoice|
     reason: :other,
     total_amount_cents: amount,
     total_amount_currency: fee.amount_currency,
+    issuing_date: Time.current.to_date,
   )
 
   credit_note.items.create!(
