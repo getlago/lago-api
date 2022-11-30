@@ -50,7 +50,9 @@ Rails.application.configure do
       },
     }
 
-    cache_store_config.merge({ password: ENV['LAGO_REDIS_CACHE_PASSWORD'] }) if ENV['LAGO_REDIS_CACHE_PASSWORD'].present?
+    if ENV['LAGO_REDIS_CACHE_PASSWORD'].present?
+      cache_store_config = cache_store_config.merge({ password: ENV['LAGO_REDIS_CACHE_PASSWORD'] })
+    end
 
     config.cache_store = :redis_cache_store, cache_store_config
   end
