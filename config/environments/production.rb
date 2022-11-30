@@ -40,7 +40,7 @@ Rails.application.configure do
     config.cache_store = :mem_cache_store, ENV['LAGO_MEMCACHE_SERVERS'].split(',')
 
   elsif ENV['LAGO_REDIS_CACHE_URL'].present?
-    config.cache_store = :redis_cache_store, {
+    cache_store_config = {
       url: ENV['LAGO_REDIS_CACHE_URL'],
       error_handler: ->(method:, returning:, exception:) {
         Rails.logger.error(exception.message)
@@ -49,5 +49,11 @@ Rails.application.configure do
         Sentry.capture_exception(exception)
       },
     }
+
+    if ENV['LAGO_REDIS_CACHE_PASSWORD'].present?
+      cache_store_config = cache_store_config.merge({ password: ENV['LAGO_REDIS_CACHE_PASSWORD'] })
+    end
+
+    config.cache_store = :redis_cache_store, cache_store_config
   end
 end
