@@ -15,10 +15,10 @@ module Invoices
       return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
-        invoice.fees.destroy_all
         invoice.credit_notes.destroy_all
         invoice.credits.destroy_all
         invoice.wallet_transactions.destroy_all
+        invoice.fees.destroy_all
 
         invoice.update!(
           issuing_date: issuing_date,
