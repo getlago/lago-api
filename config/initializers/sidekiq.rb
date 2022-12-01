@@ -2,7 +2,6 @@
 
 redis_config = {
   url: ENV['REDIS_URL'],
-  password: ENV['REDIS_PASSWORD'],
   pool_timeout: 5,
 }
 
