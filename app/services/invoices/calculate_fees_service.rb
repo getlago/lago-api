@@ -202,10 +202,10 @@ module Invoices
       date_service = date_service(subscription)
 
       {
-        from_date: date_service.from_datetime.to_date,
-        to_date: date_service.to_datetime.to_date,
-        charges_from_date: date_service.charges_from_datetime.to_date,
-        charges_to_date: date_service.charges_to_datetime.to_date,
+        from_datetime: date_service.from_datetime,
+        to_datetime: date_service.to_datetime,
+        charges_from_datetime: date_service.charges_from_datetime,
+        charges_to_datetime: date_service.charges_to_datetime,
         timestamp: timestamp,
       }
     end
