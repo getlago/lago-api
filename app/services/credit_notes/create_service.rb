@@ -143,10 +143,11 @@ module CreditNotes
     end
 
     def handle_refund
-      # TODO: implement refunds on GoCardless
       case invoice_payment.payment_provider
       when PaymentProviders::StripeProvider
         CreditNotes::Refunds::StripeCreateJob.perform_later(credit_note)
+      when PaymentProviders::GocardlessProvider
+        CreditNotes::Refunds::GocardlessCreateJob.perform_later(credit_note)
       end
     end
   end

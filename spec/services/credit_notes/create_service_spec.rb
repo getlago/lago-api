@@ -152,6 +152,25 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           .with(CreditNote)
       end
 
+      context 'when Gocardless provider' do
+        let(:gocardless_provider) { create(:gocardless_provider) }
+        let(:gocardless_customer) { create(:gocardless_customer) }
+        let(:payment) do
+          create(
+            :payment,
+            invoice: invoice,
+            payment_provider: gocardless_provider,
+            payment_provider_customer: gocardless_customer,
+          )
+        end
+
+        it 'enqueues a refund job' do
+          create_service.call
+
+          expect(CreditNotes::Refunds::GocardlessCreateJob).to have_been_enqueued.with(CreditNote)
+        end
+      end
+
       context 'when credit note does not have refund amount' do
         let(:credit_amount_cents) { 15 }
         let(:refund_amount_cents) { 0 }
