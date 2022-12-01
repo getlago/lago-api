@@ -127,6 +127,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(result.invoice.fees.charge_kind.count).to eq(1)
             expect(result.invoice.amount_cents).to eq(100)
             expect(result.invoice.vat_amount_cents).to eq(20)
+            expect(result.invoice.credit_amount_cents).to eq(0)
             expect(result.invoice.total_amount_cents).to eq(120)
           end
         end
@@ -147,6 +148,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               expect(result.invoice.fees.charge_kind.count).to eq(0)
               expect(result.invoice.amount_cents).to eq(100)
               expect(result.invoice.vat_amount_cents).to eq(20)
+              expect(result.invoice.credit_amount_cents).to eq(0)
               expect(result.invoice.total_amount_cents).to eq(120)
             end
           end
@@ -181,6 +183,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.fees.charge_kind.count).to eq(2)
           expect(result.invoice.amount_cents).to eq(200)
           expect(result.invoice.vat_amount_cents).to eq(40)
+          expect(result.invoice.credit_amount_cents).to eq(0)
           expect(result.invoice.total_amount_cents).to eq(240)
         end
       end
@@ -504,8 +507,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(:plan, interval: :monthly, pay_in_advance: true, amount_cents: 1000)
       end
 
-      let(:timestamp) { Time.zone.now.beginning_of_month - 1.day }
-      let(:started_at) { Time.zone.today - 3.months }
+      let(:timestamp) { Time.zone.parse('30 Sep 2022 00:31:00') }
+      let(:started_at) { Time.zone.parse('12 Aug 2022 00:31:00') }
       let(:terminated_at) { timestamp - 2.days }
       let(:previous_plan) { create(:plan, amount_cents: 10_000, interval: :yearly, pay_in_advance: true) }
 
@@ -533,15 +536,16 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
       before { subscription }
 
-      it 'updates the invoice without charge fee and with amount equal to zero' do
+      it 'creates an invoice with pro-rated charge fee and without charge fees' do
         result = invoice_service.call
 
         aggregate_failures do
           expect(result.invoice.fees.first.properties['to_datetime'])
             .to match_datetime(subscription.started_at.end_of_month)
-          expect(result.invoice.fees.first.properties['from_datetime']).to match_datetime(subscription.started_at)
-          expect(result.invoice.total_amount_cents).to eq(0)
-          expect(result.invoice.payment_status).to eq('succeeded')
+          expect(result.invoice.fees.first.properties['from_datetime'])
+            .to match_datetime(subscription.started_at)
+          expect(result.invoice.total_amount_cents).to eq(81)
+          expect(result.invoice).to be_pending
           expect(result.invoice.fees.charge_kind.count).to eq(0)
         end
       end
@@ -623,9 +627,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(90)
-          expect(result.invoice.vat_amount_cents).to eq(18)
-          expect(result.invoice.total_amount_cents).to eq(108)
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.credit_amount_cents).to eq(10)
+          expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.credits.count).to eq(1)
 
           credit = result.invoice.credits.first
@@ -680,9 +685,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-          expect(result.invoice.amount_cents).to eq(72) # 72 = 100 - 10 (fixed coupon) - 18 (percentage coupon)
-          expect(result.invoice.vat_amount_cents).to eq(15)
-          expect(result.invoice.total_amount_cents).to eq(87)
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.credit_amount_cents).to eq(32)
+          expect(result.invoice.total_amount_cents).to eq(88)
+
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -715,9 +722,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(result.invoice.fees.subscription_kind.count).to eq(1)
             expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-            expect(result.invoice.amount_cents).to eq(70) # 70 = 100 - 10 (fixed coupon) - 20 (fixed coupon)
-            expect(result.invoice.vat_amount_cents).to eq(14)
-            expect(result.invoice.total_amount_cents).to eq(84)
+            expect(result.invoice.amount_cents).to eq(100)
+            expect(result.invoice.vat_amount_cents).to eq(20)
+            expect(result.invoice.total_amount_cents).to eq(90)
+
             expect(result.invoice.credits.count).to eq(2)
           end
         end
@@ -749,9 +757,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(result.invoice.fees.subscription_kind.count).to eq(1)
             expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-            expect(result.invoice.amount_cents).to eq(68) # 68 = 100 - 15 (percentage coupon) - 17 (percentage coupon)
-            expect(result.invoice.vat_amount_cents).to eq(14)
+            expect(result.invoice.amount_cents).to eq(100)
+            expect(result.invoice.vat_amount_cents).to eq(20)
             expect(result.invoice.total_amount_cents).to eq(82)
+
             expect(result.invoice.credits.count).to eq(2)
           end
         end
@@ -801,9 +810,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
-          expect(result.invoice.amount_cents).to eq(70)
-          expect(result.invoice.vat_amount_cents).to eq(14)
-          expect(result.invoice.total_amount_cents).to eq(84)
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.credit_amount_cents).to eq(30)
+          expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.wallet_transactions.count).to eq(1)
         end
       end
@@ -819,7 +829,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           create(
             :applied_coupon,
             customer: subscription.customer,
-            amount_cents: 100,
+            amount_cents: 120,
             amount_currency: plan.amount_currency,
           )
         end

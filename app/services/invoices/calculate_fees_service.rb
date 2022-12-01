@@ -29,7 +29,6 @@ module Invoices
         create_coupon_credit if should_create_coupon_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
-        invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.save!
 
@@ -62,6 +61,10 @@ module Invoices
 
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
+
+      invoice.credit_amount_cents = 0
+
+      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
     end
 
     def create_subscription_fee(subscription, boundaries)
@@ -153,7 +156,7 @@ module Invoices
 
     def should_create_applied_prepaid_credit?
       return false unless wallet&.active?
-      return false unless invoice.amount_cents&.positive?
+      return false unless invoice.total_amount_cents&.positive?
 
       wallet.balance.positive?
     end
@@ -194,8 +197,8 @@ module Invoices
     # NOTE: Since credit impact the invoice amount, we need to recompute the amount and
     #       the VAT amount
     def refresh_amounts(credit_amount_cents:)
-      invoice.amount_cents = invoice.amount_cents - credit_amount_cents
-      invoice.vat_amount_cents = (invoice.amount_cents * customer.applicable_vat_rate).fdiv(100).ceil
+      invoice.credit_amount_cents += credit_amount_cents
+      invoice.total_amount_cents -= credit_amount_cents
     end
 
     def calculate_boundaries(subscription)
