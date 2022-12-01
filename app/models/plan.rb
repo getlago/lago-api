@@ -39,7 +39,7 @@ class Plan < ApplicationRecord
   end
 
   def has_trial?
-    trial_period.present?
+    trial_period.present? && trial_period.positive?
   end
 
   # NOTE: Method used to compare plan for upgrade / downgrade on
