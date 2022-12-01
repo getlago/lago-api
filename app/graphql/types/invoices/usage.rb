@@ -5,8 +5,9 @@ module Types
     class Usage < Types::BaseObject
       graphql_name 'CustomerUsage'
 
-      field :from_date, GraphQL::Types::ISO8601Date, null: false
-      field :to_date, GraphQL::Types::ISO8601Date, null: false
+      field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
+      field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
+
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
@@ -20,6 +21,18 @@ module Types
 
       def charges_usage
         object.fees
+      end
+
+      # NOTE: LEGACY FIELDS
+      field :from_date, GraphQL::Types::ISO8601Date, null: false
+      field :to_date, GraphQL::Types::ISO8601Date, null: false
+
+      def from_date
+        object.from_datetime.to_date
+      end
+
+      def to_date
+        object.to_datetime.to_date
       end
     end
   end

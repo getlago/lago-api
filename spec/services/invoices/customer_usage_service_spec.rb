@@ -40,7 +40,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     end
 
     it 'uses the Rails cache' do
-      to_date = invoice_service.__send__(:boundaries)[:charges_to_date]
+      to_date = invoice_service.__send__(:boundaries)[:charges_to_datetime].to_date
       key = [
         'current_usage',
         "#{subscription.id}-#{to_date.iso8601}-#{subscription.created_at.iso8601}",
@@ -60,8 +60,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
           expect(result).to be_success
 
           expect(result.usage.id).to be_nil
-          expect(result.usage.from_date).to eq(Time.zone.today.beginning_of_month.iso8601)
-          expect(result.usage.to_date).to eq(Time.zone.today.end_of_month.iso8601)
+          expect(result.usage.from_datetime).to eq(Time.current.beginning_of_month.iso8601)
+          expect(result.usage.to_datetime).to eq(Time.current.end_of_month.iso8601)
           expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_month.iso8601)
           expect(result.usage.fees.size).to eq(1)
 
@@ -84,7 +84,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
             expect(result).to be_success
 
             expect(result.usage.id).to be_nil
-            expect(result.usage.from_date).to eq(subscription.started_at.to_date.iso8601)
+            expect(result.usage.from_datetime).to eq(subscription.started_at.iso8601)
           end
         end
       end
@@ -113,8 +113,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
               expect(result).to be_success
 
               expect(result.usage.id).to be_nil
-              expect(result.usage.from_date.to_date.to_s).to eq('2022-06-07')
-              expect(result.usage.to_date.to_date.to_s).to eq('2022-07-06')
+              expect(result.usage.from_datetime.to_date.to_s).to eq('2022-06-07')
+              expect(result.usage.to_datetime.to_date.to_s).to eq('2022-07-06')
               expect(result.usage.issuing_date).to eq('2022-07-06')
               expect(result.usage.fees.size).to eq(1)
 
@@ -140,8 +140,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
           expect(result).to be_success
 
           expect(result.usage.id).to be_nil
-          expect(result.usage.from_date).to eq(Time.zone.today.beginning_of_week.iso8601)
-          expect(result.usage.to_date).to eq(Time.zone.today.end_of_week.iso8601)
+          expect(result.usage.from_datetime).to eq(Time.current.beginning_of_week.iso8601)
+          expect(result.usage.to_datetime).to eq(Time.current.end_of_week.iso8601)
           expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_week.iso8601)
           expect(result.usage.fees.size).to eq(1)
 
@@ -178,8 +178,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
               expect(result).to be_success
 
               expect(result.usage.id).to be_nil
-              expect(result.usage.from_date.to_date.to_s).to eq('2022-06-20')
-              expect(result.usage.to_date.to_date.to_s).to eq('2022-06-26')
+              expect(result.usage.from_datetime.to_date.to_s).to eq('2022-06-20')
+              expect(result.usage.to_datetime.to_date.to_s).to eq('2022-06-26')
               expect(result.usage.issuing_date).to eq('2022-06-26')
               expect(result.usage.fees.size).to eq(1)
 
@@ -205,8 +205,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
           expect(result).to be_success
 
           expect(result.usage.id).to be_nil
-          expect(result.usage.from_date).to eq(Time.zone.today.beginning_of_year.iso8601)
-          expect(result.usage.to_date).to eq(Time.zone.today.end_of_year.iso8601)
+          expect(result.usage.from_datetime).to eq(Time.current.beginning_of_year.iso8601)
+          expect(result.usage.to_datetime).to eq(Time.current.end_of_year.iso8601)
           expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_year.iso8601)
           expect(result.usage.fees.size).to eq(1)
 
@@ -243,8 +243,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
               expect(result).to be_success
 
               expect(result.usage.id).to be_nil
-              expect(result.usage.from_date.to_date.to_s).to eq('2022-03-07')
-              expect(result.usage.to_date.to_date.to_s).to eq('2023-03-06')
+              expect(result.usage.from_datetime.to_date.to_s).to eq('2022-03-07')
+              expect(result.usage.to_datetime.to_date.to_s).to eq('2023-03-06')
               expect(result.usage.issuing_date).to eq('2023-03-06')
               expect(result.usage.fees.size).to eq(1)
 

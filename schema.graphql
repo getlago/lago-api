@@ -2633,8 +2633,10 @@ type CustomerUsage {
   amountCurrency: CurrencyEnum!
   chargesUsage: [ChargeUsage!]!
   fromDate: ISO8601Date!
+  fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
   toDate: ISO8601Date!
+  toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
   totalAmountCurrency: CurrencyEnum!
   vatAmountCents: BigInt!
@@ -2970,11 +2972,13 @@ enum InvoiceStatusTypeEnum {
 type InvoiceSubscription {
   chargeAmountCents: Int!
   fees: [Fee!]
-  fromDate: ISO8601Date!
+  fromDate: ISO8601Date
+  fromDatetime: ISO8601DateTime
   invoice: Invoice!
   subscription: Subscription!
   subscriptionAmountCents: Int!
-  toDate: ISO8601Date!
+  toDate: ISO8601Date
+  toDatetime: ISO8601DateTime
   totalAmountCents: Int!
 }
 

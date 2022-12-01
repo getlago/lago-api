@@ -97,8 +97,8 @@ module Fees
     end
 
     def first_subscription_amount
-      from_date = boundaries.from_date
-      to_date = boundaries.to_date
+      from_date = boundaries.from_datetime.to_date
+      to_date = boundaries.to_datetime.to_date
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
@@ -124,8 +124,8 @@ module Fees
     #       **day_cost** = (plan amount_cents / full period duration)
     #       amount_to_bill = (nb_day * day_cost)
     def terminated_amount
-      from_date = boundaries.from_date
-      to_date = boundaries.to_date
+      from_date = boundaries.from_datetime.to_date
+      to_date = boundaries.to_datetime.to_date
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
@@ -144,12 +144,12 @@ module Fees
     end
 
     def upgraded_amount
-      from_date = boundaries.from_date
-      to_date = boundaries.to_date
+      from_date = boundaries.from_datetime.to_date
+      to_date = boundaries.to_datetime.to_date
 
       # NOTE: to_date for previous plan might be different from to_date
       #       if plan interval is not the same
-      old_to_date = compute_old_to_date(previous_subscription, boundaries.to_date)
+      old_to_date = compute_old_to_date(previous_subscription, to_date)
 
       if plan.has_trial?
         from_date = to_date + 1.day if subscription.trial_end_date >= to_date
@@ -195,8 +195,8 @@ module Fees
     end
 
     def full_period_amount
-      from_date = boundaries.from_date
-      to_date = boundaries.to_date
+      from_date = boundaries.from_datetime.to_date
+      to_date = boundaries.to_datetime.to_date
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period

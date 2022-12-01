@@ -25,8 +25,8 @@ RSpec.describe Fees::SubscriptionService do
   let(:invoice) { create(:invoice) }
   let(:boundaries) do
     {
-      from_date: Time.zone.parse('2022-03-01 00:00').to_date,
-      to_date: Time.zone.parse('2022-03-01 00:00').end_of_month.to_date,
+      from_datetime: Time.zone.parse('2022-03-01 00:00:00'),
+      to_datetime: Time.zone.parse('2022-03-31 23:59:59'),
       timestamp: Time.zone.parse('2022-04-02 00:00').end_of_month.to_i,
     }
   end
@@ -65,7 +65,7 @@ RSpec.describe Fees::SubscriptionService do
     context 'when plan has a trial period' do
       before do
         plan.update(trial_period: trial_duration)
-        subscription.update(started_at: boundaries[:from_date])
+        subscription.update(started_at: boundaries[:from_datetime])
       end
 
       context 'when trial end in period' do
@@ -97,8 +97,8 @@ RSpec.describe Fees::SubscriptionService do
   context 'when subscription has never been billed' do
     let(:boundaries) do
       {
-        from_date: subscription.started_at.to_date,
-        to_date: subscription.started_at.end_of_month.to_date,
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
         timestamp: (subscription.started_at.end_of_month + 1.day).to_i,
       }
     end
@@ -106,8 +106,8 @@ RSpec.describe Fees::SubscriptionService do
     context 'when plan is weekly' do
       let(:boundaries) do
         {
-          from_date: subscription.started_at.to_date,
-          to_date: subscription.started_at.end_of_week.to_date,
+          from_datetime: subscription.started_at.to_date.beginning_of_day,
+          to_datetime: subscription.started_at.end_of_week.end_of_day,
           timestamp: (subscription.started_at.end_of_week + 1.day).to_i,
         }
       end
@@ -295,8 +295,8 @@ RSpec.describe Fees::SubscriptionService do
 
             let(:boundaries) do
               {
-                from_date: subscription.created_at.beginning_of_week.to_date,
-                to_date: subscription.created_at.end_of_week.to_date,
+                from_datetime: subscription.created_at.beginning_of_week.beginning_of_day,
+                to_datetime: subscription.created_at.end_of_week.end_of_day,
                 timestamp: (subscription.created_at.end_of_week + 1.day).to_i,
               }
             end
@@ -360,8 +360,8 @@ RSpec.describe Fees::SubscriptionService do
         context 'when plan is pay in advance' do
           let(:boundaries) do
             {
-              from_date: subscription.started_at.to_date,
-              to_date: subscription.started_at.end_of_month.to_date,
+              from_datetime: subscription.started_at.to_date.beginning_of_day,
+              to_datetime: subscription.started_at.end_of_month.end_of_day,
               timestamp: (subscription.started_at + 1.day).to_i,
             }
           end
@@ -448,8 +448,8 @@ RSpec.describe Fees::SubscriptionService do
         context 'when plan is pay in advance' do
           let(:boundaries) do
             {
-              from_date: subscription.started_at.to_date,
-              to_date: subscription.started_at.end_of_month.to_date,
+              from_datetime: subscription.started_at.to_date.beginning_of_day,
+              to_datetime: subscription.started_at.end_of_month.end_of_day,
               timestamp: (subscription.started_at + 1.day).to_i,
             }
           end
@@ -516,8 +516,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: Time.zone.parse('2022-08-31 00:00').to_date,
-            to_date: Time.zone.parse('2022-09-30 00:00').to_date,
+            from_datetime: Time.zone.parse('2022-08-31 00:00:00'),
+            to_datetime: Time.zone.parse('2022-09-30 23:59:59'),
             timestamp: Time.zone.parse('2022-04-02 00:00').end_of_month.to_i,
           }
         end
@@ -546,8 +546,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.beginning_of_year.to_date,
-            to_date: subscription.started_at.end_of_year.to_date,
+            from_datetime: subscription.started_at.beginning_of_year.beginning_of_day,
+            to_datetime: subscription.started_at.end_of_year.end_of_day,
             timestamp: (subscription.started_at.end_of_year + 1.day).to_i,
           }
         end
@@ -585,8 +585,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_year.to_date,
+            from_datetime: subscription.started_at.beginning_of_day,
+            to_datetime: subscription.started_at.end_of_year.end_of_day,
             timestamp: (subscription.started_at.end_of_year + 1.day).to_i,
           }
         end
@@ -626,8 +626,8 @@ RSpec.describe Fees::SubscriptionService do
 
     let(:boundaries) do
       {
-        from_date: subscription.started_at.to_date,
-        to_date: subscription.started_at.end_of_month.to_date,
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
         timestamp: (subscription.started_at.end_of_month + 1.day).to_i,
       }
     end
@@ -675,8 +675,8 @@ RSpec.describe Fees::SubscriptionService do
           context 'when plan is weekly' do
             let(:boundaries) do
               {
-                from_date: subscription.started_at.to_date.end_of_week,
-                to_date: (subscription.started_at.end_of_week + 1.week).to_date,
+                from_datetime: subscription.started_at.to_date.end_of_week.beginning_of_day,
+                to_datetime: (subscription.started_at.end_of_week + 1.week).end_of_day,
                 timestamp: (subscription.started_at.end_of_week + 1.day).to_i,
               }
             end
@@ -697,8 +697,8 @@ RSpec.describe Fees::SubscriptionService do
 
             let(:boundaries) do
               {
-                from_date: subscription.started_at.to_date,
-                to_date: subscription.started_at.end_of_month.to_date,
+                from_datetime: subscription.started_at.beginning_of_day,
+                to_datetime: subscription.started_at.end_of_month.end_of_day,
                 timestamp: (subscription.started_at + 1.day).to_i,
               }
             end
@@ -713,8 +713,8 @@ RSpec.describe Fees::SubscriptionService do
           context 'when plan is yearly' do
             let(:boundaries) do
               {
-                from_date: subscription.started_at.to_date.beginning_of_year,
-                to_date: subscription.started_at.end_of_year.to_date,
+                from_datetime: subscription.started_at.beginning_of_year.beginning_of_day,
+                to_datetime: subscription.started_at.end_of_year.end_of_day,
                 timestamp: (subscription.started_at.beginning_of_year + 1.day).to_i,
               }
             end
@@ -756,8 +756,8 @@ RSpec.describe Fees::SubscriptionService do
 
     let(:boundaries) do
       {
-        from_date: subscription.started_at + 1.month,
-        to_date: subscription.started_at + 2.months,
+        from_datetime: (subscription.started_at + 1.month).beginning_of_day,
+        to_datetime: (subscription.started_at + 2.months).end_of_day,
         timestamp: (subscription.started_at + 2.months + 1.day).to_i,
       }
     end
@@ -788,8 +788,8 @@ RSpec.describe Fees::SubscriptionService do
 
     let(:boundaries) do
       {
-        from_date: subscription.started_at.beginning_of_month.to_date,
-        to_date: subscription.started_at.to_date + 5.days,
+        from_datetime: subscription.started_at.beginning_of_month.beginning_of_day,
+        to_datetime: (subscription.started_at + 5.days).end_of_day,
         timestamp: (subscription.started_at + 6.days).to_i,
       }
     end
@@ -815,8 +815,8 @@ RSpec.describe Fees::SubscriptionService do
     context 'when plan is weekly' do
       let(:boundaries) do
         {
-          from_date: subscription.started_at.beginning_of_week.to_date,
-          to_date: subscription.started_at.to_date + 1.day,
+          from_datetime: subscription.started_at.beginning_of_week.beginning_of_day,
+          to_datetime: (subscription.started_at + 1.day).end_of_day,
           timestamp: (subscription.started_at + 2.days).to_i,
         }
       end
@@ -916,8 +916,8 @@ RSpec.describe Fees::SubscriptionService do
 
     let(:boundaries) do
       {
-        from_date: subscription.started_at.to_date,
-        to_date: subscription.started_at.to_date.end_of_month,
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
         timestamp: (subscription.started_at.end_of_month + 1.day).to_i,
       }
     end
@@ -967,8 +967,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: DateTime.parse('2022-05-09').to_date,
-            to_date: DateTime.parse('2022-05-24').to_date,
+            from_datetime: DateTime.parse('2022-05-09 00:00:00'),
+            to_datetime: DateTime.parse('2022-05-24 23:59:59'),
             timestamp: DateTime.parse('2022-05-26').to_i,
           }
         end
@@ -1024,8 +1024,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_month.to_date,
+            from_datetime: subscription.started_at.beginning_of_day,
+            to_datetime: subscription.started_at.end_of_month.end_of_day,
             timestamp: (subscription.started_at + 1.day).to_i,
           }
         end
@@ -1046,8 +1046,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_year.to_date,
+            from_datetime: subscription.started_at.beginning_of_day,
+            to_datetime: subscription.started_at.end_of_year.end_of_day,
             timestamp: subscription.started_at.to_i,
           }
         end
@@ -1069,8 +1069,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_week.to_date,
+            from_datetime: subscription.started_at.beginning_of_day,
+            to_datetime: subscription.started_at.end_of_week.end_of_day,
             timestamp: subscription.started_at.to_i,
           }
         end
@@ -1150,8 +1150,8 @@ RSpec.describe Fees::SubscriptionService do
 
         let(:boundaries) do
           {
-            from_date: subscription.started_at.to_date,
-            to_date: subscription.started_at.end_of_month.to_date,
+            from_datetime: subscription.started_at.beginning_of_day,
+            to_datetime: subscription.started_at.end_of_month.end_of_day,
             timestamp: subscription.started_at.to_i,
           }
         end
@@ -1195,8 +1195,8 @@ RSpec.describe Fees::SubscriptionService do
 
       let(:boundaries) do
         {
-          from_date: DateTime.parse('2022-05-08').to_date,
-          to_date: DateTime.parse('2022-05-24').to_date,
+          from_datetime: DateTime.parse('2022-05-08 00:00:00'),
+          to_datetime: DateTime.parse('2022-05-24 23:59:59'),
           timestamp: DateTime.parse('2022-05-26').to_i,
         }
       end

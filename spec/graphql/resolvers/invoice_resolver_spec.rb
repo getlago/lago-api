@@ -14,6 +14,10 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             name
           }
           invoiceSubscriptions {
+            fromDatetime
+            toDatetime
+            fromDate
+            toDate
             subscription {
               id
             }

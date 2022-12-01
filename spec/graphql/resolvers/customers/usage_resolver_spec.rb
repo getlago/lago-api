@@ -7,7 +7,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     <<~GQL
       query($customerId: ID!, $subscriptionId: ID!) {
         customerUsage(customerId: $customerId, subscriptionId: $subscriptionId) {
+          fromDatetime
           fromDate
+          toDatetime
           toDate
           issuingDate
           amountCents
@@ -93,6 +95,8 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     aggregate_failures do
       expect(usage_response['fromDate']).to eq(Time.zone.today.beginning_of_month.iso8601)
       expect(usage_response['toDate']).to eq(Time.zone.today.end_of_month.iso8601)
+      expect(usage_response['fromDatetime']).to eq(Time.current.beginning_of_month.iso8601)
+      expect(usage_response['toDatetime']).to eq(Time.current.end_of_month.iso8601)
       expect(usage_response['issuingDate']).to eq(Time.zone.today.end_of_month.iso8601)
       expect(usage_response['amountCents']).to eq('5')
       expect(usage_response['amountCurrency']).to eq('EUR')
@@ -189,8 +193,12 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
     let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
     let(:aws_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: aws.id) }
-    let(:aws_france) { create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id) }
-    let(:google_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id) }
+    let(:aws_france) do
+      create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id)
+    end
+    let(:google_usa) do
+      create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id)
+    end
 
     let(:charge) do
       create(

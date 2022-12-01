@@ -17,10 +17,10 @@ RSpec.describe Fees::ChargeService do
 
   let(:boundaries) do
     {
-      from_date: subscription.started_at.to_date,
-      to_date: subscription.started_at.end_of_month.to_date,
-      charges_from_date: subscription.started_at.to_date,
-      charges_to_date: subscription.started_at.end_of_month.to_date,
+      from_datetime: subscription.started_at.to_date.beginning_of_day,
+      to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_from_datetime: subscription.started_at.beginning_of_day,
+      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
     }
   end
 
@@ -145,10 +145,10 @@ RSpec.describe Fees::ChargeService do
 
         let(:boundaries) do
           {
-            from_date: Time.zone.parse('15 Apr 2022 00:01:00').to_date,
-            to_date: Time.zone.parse('30 Apr 2022 00:01:00').to_date,
-            charges_from_date: subscription.started_at.to_date,
-            charges_to_date: Time.zone.parse('30 Apr 2022 00:01:00').to_date,
+            from_datetime: Time.zone.parse('15 Apr 2022 00:01:00'),
+            to_datetime: Time.zone.parse('30 Apr 2022 00:01:00'),
+            charges_from_datetime: subscription.started_at,
+            charges_to_datetime: Time.zone.parse('30 Apr 2022 00:01:00'),
           }
         end
 
@@ -440,10 +440,10 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for recurring_count_agg aggregation type' do
         boundaries = {
-          from_date: subscription.started_at.at_beginning_of_month.next_month.to_date,
-          to_date: subscription.started_at.next_month.end_of_month.to_date,
-          charges_from_date: subscription.started_at.at_beginning_of_month.next_month.to_date,
-          charges_to_date: subscription.started_at.next_month.end_of_month.to_date,
+          from_datetime: subscription.started_at.at_beginning_of_month.next_month.beginning_of_day,
+          to_datetime: subscription.started_at.next_month.end_of_month.end_of_day,
+          charges_from_datetime: subscription.started_at.at_beginning_of_month.next_month.beginning_of_day,
+          charges_to_datetime: subscription.started_at.next_month.end_of_month.end_of_day,
         }
 
         create(
@@ -490,7 +490,12 @@ RSpec.describe Fees::ChargeService do
         )
 
         billable_metric.update!(aggregation_type: :recurring_count_agg, field_name: 'foo_bar')
-        result = described_class.new(invoice: invoice, charge: charge, subscription: subscription, boundaries: boundaries).create
+        result = described_class.new(
+          invoice: invoice,
+          charge: charge,
+          subscription: subscription,
+          boundaries: boundaries,
+        ).create
         expect(result).to be_success
         created_fees = result.fees
 
