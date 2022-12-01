@@ -9,7 +9,7 @@ module BillableMetrics
 
         result.aggregation = events.maximum("(#{sanitized_field_name})::numeric") || 0
         result.count = events.count
-        result.options = {}
+        result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)

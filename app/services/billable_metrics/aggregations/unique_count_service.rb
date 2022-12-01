@@ -9,7 +9,7 @@ module BillableMetrics
 
         result.aggregation = events.count("DISTINCT (#{sanitized_field_name})")
         result.count = events.count
-        result.options = {}
+        result.options = options
         result
       end
     end

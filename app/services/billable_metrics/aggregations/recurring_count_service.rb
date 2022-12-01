@@ -9,7 +9,7 @@ module BillableMetrics
 
         result.aggregation = compute_aggregation.ceil(5)
         result.count = result.aggregation
-        result.options = {}
+        result.options = options
         result
       end
 
