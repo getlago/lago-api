@@ -128,8 +128,8 @@ module CreditNotes
 
       def update_credit_note_status(status)
         credit_note.refund_status = status
-        # TODO: Remove comment when credit note feature branch gets merged into master
-        # credit_note.refunded_at = Time.current if credit_note.succeeded?
+        credit_note.refunded_at = Time.current if credit_note.succeeded?
+
         credit_note.save!
       end
 
