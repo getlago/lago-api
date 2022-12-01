@@ -18,6 +18,10 @@ module Invoices
           invoice_type: :credit,
           status: :pending,
 
+          amount_currency: currency,
+          vat_amount_currency: currency,
+          total_amount_currency: currency,
+
           # NOTE: Apply credits before VAT, will be changed with credit note feature
           legacy: true,
           vat_rate: customer.applicable_vat_rate,
@@ -28,7 +32,6 @@ module Invoices
         compute_amounts(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-        invoice.total_amount_currency = currency
         invoice.save!
 
         track_invoice_created(invoice)

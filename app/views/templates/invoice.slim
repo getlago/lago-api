@@ -455,15 +455,16 @@ html
               td.body-2 Total due
               td.body-1 = total_amount.format
           - else
-            tr
-              td.body-1 width="70%" Sub total (excl. tax)
-              td.body-1 width="30%" = sub_total_vat_excluded_amount.format
-            tr
-              td.body-2 Tax (#{vat_rate || 0})%
-              td.body-1 = vat_amount.format
-            tr
-              td.body-1 Sub total (incl. tax)
-              td.body-1 = sub_total_vat_included_amount.format
+            - unless credit?
+              tr
+                td.body-1 width="70%" Sub total (excl. tax)
+                td.body-1 width="30%" = sub_total_vat_excluded_amount.format
+              tr
+                td.body-2 Tax (#{vat_rate || 0})%
+                td.body-1 = vat_amount.format
+              tr
+                td.body-1 Sub total (incl. tax)
+                td.body-1 = sub_total_vat_included_amount.format
             - if credits.credit_note_kind.any?
               tr
                 td.body-2 Credit Notes
