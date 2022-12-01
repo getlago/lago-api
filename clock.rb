@@ -27,6 +27,10 @@ module Clockwork
     Clock::SubscriptionsBillerJob.perform_later
   end
 
+  every(1.hour, 'schedule:finalize_invoices') do
+    Clock::FinalizeInvoicesJob.perform_later
+  end
+
   every(1.day, 'schedule:terminate_coupons', at: '5:00') do
     Clock::TerminateCouponsJob.perform_later
   end
