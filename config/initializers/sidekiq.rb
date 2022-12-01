@@ -6,7 +6,7 @@ redis_config = {
   pool_timeout: 5,
 }
 
-redis_config = redis_config.merge({ password: ENV['REDIS_PASSWORD'] }) if ENV['REDIS_PASSWORD'].present?
+redis_config = redis_config.merge({ password: ENV['REDIS_PASSWORD'] }) unless ENV['REDIS_PASSWORD'].empty?
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
