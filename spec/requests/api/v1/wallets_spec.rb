@@ -6,6 +6,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization: organization, currency: 'EUR') }
   let(:subscription) { create(:subscription, customer: customer) }
+  let(:expiration_at) { '2022-06-06 23:59:59' }
 
   before { subscription }
 
@@ -18,27 +19,51 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         currency: 'EUR',
         paid_credits: '10',
         granted_credits: '10',
-        expiration_date: '2022-06-06',
+        expiration_at: expiration_at,
       }
     end
 
     it 'creates a wallet' do
       post_with_token(organization, '/api/v1/wallets', { wallet: create_params })
 
-      expect(response).to have_http_status(:success)
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
 
-      expect(json[:wallet][:lago_id]).to be_present
-      expect(json[:wallet][:name]).to eq(create_params[:name])
-      expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
+        expect(json[:wallet][:lago_id]).to be_present
+        expect(json[:wallet][:name]).to eq(create_params[:name])
+        expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
+        expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+      end
+    end
+
+    context 'with expiration date' do
+      before do
+        create_params.except!(:expiration_at)
+        create_params[:expiration_date] = expiration_at.to_date
+      end
+
+      it 'creates a wallet' do
+        post_with_token(organization, '/api/v1/wallets', { wallet: create_params })
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:wallet][:lago_id]).to be_present
+          expect(json[:wallet][:name]).to eq(create_params[:name])
+          expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
+          expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+        end
+      end
     end
   end
 
   describe 'update' do
     let(:wallet) { create(:wallet, customer: customer) }
+    let(:expiration_at) { '2022-06-06 23:59:59' }
     let(:update_params) do
       {
         name: 'wallet1',
-        expiration_date: '2022-07-07',
+        expiration_date: expiration_at,
       }
     end
 
@@ -51,9 +76,36 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         { wallet: update_params },
       )
 
-      expect(response).to have_http_status(:success)
-      expect(json[:wallet][:lago_id]).to eq(wallet.id)
-      expect(json[:wallet][:name]).to eq(update_params[:name])
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        expect(json[:wallet][:name]).to eq(update_params[:name])
+        expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+      end
+    end
+
+    context 'with expiration date' do
+      before do
+        update_params.except!(:expiration_at)
+        update_params[:expiration_date] = expiration_at.to_date
+      end
+
+      it 'updates a wallet' do
+        put_with_token(
+          organization,
+          "/api/v1/wallets/#{wallet.id}",
+          { wallet: update_params },
+        )
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:wallet][:lago_id]).to eq(wallet.id)
+          expect(json[:wallet][:name]).to eq(update_params[:name])
+          expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+        end
+      end
     end
 
     context 'when wallet does not exist' do

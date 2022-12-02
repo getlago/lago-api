@@ -8,6 +8,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
   let(:customer) { create(:customer, organization: organization) }
   let(:subscription) { create(:subscription, customer: customer) }
   let(:wallet) { create(:wallet, customer: customer) }
+  let(:expiration_at) { DateTime.parse('2022-01-01 23:59:59') }
 
   let(:mutation) do
     <<-GQL
@@ -16,7 +17,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           id,
           name,
           status,
-          expirationDate,
+          expirationAt,
         }
       }
     GQL
@@ -32,7 +33,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
         input: {
           id: wallet.id,
           name: 'New name',
-          expirationDate: '2022-01-01',
+          expirationAt: expiration_at.iso8601,
         },
       },
     )
@@ -42,7 +43,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
       expect(result_data['status']).to eq('active')
-      expect(result_data['expirationDate']).to eq('2022-01-01')
+      expect(result_data['expirationAt']).to eq('2022-01-01T23:59:59Z')
     end
   end
 

@@ -21,19 +21,31 @@ RSpec.describe Wallets::CreateService, type: :service do
         organization_id: organization.id,
         currency: 'EUR',
         rate_amount: '1.00',
-        expiration_date: '2022-01-01',
+        expiration_at: DateTime.parse('2022-01-01 23:59:59'),
         paid_credits: paid_credits,
         granted_credits: granted_credits,
       }
     end
 
+    let(:service_result) { create_service.create(**create_args) }
+
     it 'creates a wallet' do
-      expect { create_service.create(**create_args) }
-        .to change(Wallet, :count).by(1)
+      aggregate_failures do
+        expect { service_result }.to change(Wallet, :count).by(1)
+
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.customer_id).to eq(customer.id)
+        expect(wallet.name).to eq('New Wallet')
+        expect(wallet.currency).to eq('EUR')
+        expect(wallet.rate_amount).to eq(1.0)
+        expect(wallet.expiration_at.iso8601).to eq('2022-01-01T23:59:59Z')
+      end
     end
 
     it 'enqueues the WalletTransaction::CreateJob' do
-      expect { create_service.create(**create_args) }
+      expect { service_result }
         .to have_enqueued_job(WalletTransactions::CreateJob)
     end
 
@@ -41,10 +53,8 @@ RSpec.describe Wallets::CreateService, type: :service do
       let(:paid_credits) { '-15.00' }
 
       it 'returns an error' do
-        result = create_service.create(**create_args)
-
-        expect(result).not_to be_success
-        expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
       end
     end
 
