@@ -5,8 +5,9 @@ module V1
     class CustomerUsageSerializer < ModelSerializer
       def serialize
         {
-          from_date: model.from_datetime.to_date,
-          to_date: model.to_datetime.to_date,
+          # TODO: remove || after all cache key expirations
+          from_date: model.from_date || model.from_datetime&.to_date,
+          to_date: model.to_date || model.to_datetime&.to_date,
         }
       end
     end
