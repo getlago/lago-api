@@ -20,8 +20,8 @@ namespace :fees do
       fee.properties = {
         'from_datetime' => fee.properties['from_date'].to_date.beginning_of_day,
         'to_datetime' => fee.properties['to_date'].to_date.end_of_day,
-        'charges_from_datetime' => fee.properties['charges_from_date'].to_date.beginning_of_day,
-        'charges_to_datetime' => fee.properties['charges_to_date'].to_date.end_of_day,
+        'charges_from_datetime' => fee.properties['charges_from_date']&.to_date&.beginning_of_day,
+        'charges_to_datetime' => fee.properties['charges_to_date']&.to_date&.end_of_day,
       }
       fee.save!
     end
