@@ -15,7 +15,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           amountCurrency,
           expiration,
           expirationDate,
-          status
+          status,
+          reusable
         }
       }
     GQL
@@ -36,6 +37,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           amountCurrency: 'EUR',
           expiration: 'time_limit',
           expirationDate: (Time.current + 3.days).to_date,
+          reusable: false,
         },
       },
     )
@@ -51,6 +53,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['expiration']).to eq('time_limit')
       expect(result_data['expirationDate']).to eq (Time.current + 3.days).to_date.to_s
       expect(result_data['status']).to eq('active')
+      expect(result_data['reusable']).to eq(false)
     end
   end
 

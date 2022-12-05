@@ -22,6 +22,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         amount_cents: 100,
         amount_currency: 'EUR',
         expiration: 'time_limit',
+        reusable: false,
         expiration_date: (Time.current + 30.days).to_date,
       }
     end
@@ -36,6 +37,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         expect(result.coupon.amount_cents).to eq(100)
         expect(result.coupon.amount_currency).to eq('EUR')
         expect(result.coupon.expiration).to eq('time_limit')
+        expect(result.coupon.reusable).to eq(false)
         expect(result.coupon.expiration_date).to eq (Time.current + 30.days).to_date
       end
     end
@@ -49,6 +51,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
           frequency: 'once',
           amount_cents: 100,
           amount_currency: 'EUR',
+          reusable: false,
           expiration: 'time_limit',
           expiration_date: (Time.current + 30.days).to_date,
         }

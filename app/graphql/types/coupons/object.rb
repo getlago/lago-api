@@ -17,6 +17,7 @@ module Types
       field :percentage_rate, Float, null: true
       field :frequency, Types::Coupons::FrequencyEnum, null: false
       field :frequency_duration, Integer, null: true
+      field :reusable, Boolean, null: false
 
       field :expiration, Types::Coupons::ExpirationEnum, null: false
       field :expiration_date, GraphQL::Types::ISO8601Date, null: true

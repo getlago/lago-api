@@ -17,6 +17,7 @@ module Mutations
       argument :percentage_rate, Float, required: false
       argument :frequency, Types::Coupons::FrequencyEnum, required: true
       argument :frequency_duration, Integer, required: false
+      argument :reusable, Boolean, required: false
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
       argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
