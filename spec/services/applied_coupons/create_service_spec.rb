@@ -177,7 +177,6 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       end
     end
 
-
     context 'when coupon is inactive' do
       before { coupon.terminated! }
 
