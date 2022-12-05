@@ -109,17 +109,22 @@ module CreditNotes
     end
 
     def track_credit_note_created
-      types = []
-      types << 'credit' if credit_note.credited?
-      types << 'refund' if credit_note.refunded?
+      types = if credit_note.credited? && credit_note.refunded?
+        'both'
+      elsif credit_note.credited?
+        'credit'
+      elsif credit_note.refunded?
+        'refund'
+      end
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'credit_note_created',
+        event: 'credit_note_issued',
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          credit_note_type: types.join('_and_'),
+          invoice_id: credit_note.invoice_id,
+          credit_note_method: types,
         },
       )
     end
