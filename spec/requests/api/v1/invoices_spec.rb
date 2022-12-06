@@ -149,4 +149,47 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
   end
+
+  describe 'PUT /invoices/:id/refresh' do
+    context 'when invoice does not exist' do
+      it 'returns a not found error' do
+        put_with_token(organization, '/api/v1/invoices/555/refresh', {})
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when invoice is draft' do
+      let(:invoice) { create(:invoice, customer: customer, issuing_date: 2.days.ago) }
+
+      it 'updates the invoice' do
+        expect {
+          put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
+        }.to change { invoice.reload.issuing_date }
+      end
+
+      it 'returns the invoice' do
+        put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+      end
+    end
+
+    context 'when invoice is finalized' do
+      let(:invoice) { create(:invoice, customer: customer, status: :finalized) }
+
+      it 'does not update the invoice' do
+        expect {
+          put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
+        }.not_to change { invoice.reload.issuing_date }
+      end
+
+      it 'returns the invoice' do
+        put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+      end
+    end
+  end
 end

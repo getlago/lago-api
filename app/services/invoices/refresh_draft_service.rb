@@ -13,6 +13,7 @@ module Invoices
     end
 
     def call
+      result.invoice = invoice
       return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
