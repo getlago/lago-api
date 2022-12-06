@@ -3610,20 +3610,6 @@
               ]
             },
             {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "frequency",
               "description": null,
               "type": {
@@ -3995,20 +3981,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -4848,18 +4820,6 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -5369,18 +5329,6 @@
                   "name": "CurrencyEnum",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -8934,24 +8882,6 @@
               ]
             },
             {
-              "name": "fromDate",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601Date",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "fromDatetime",
               "description": null,
               "type": {
@@ -8971,24 +8901,6 @@
             },
             {
               "name": "issuingDate",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601Date",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "toDate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -11908,20 +11820,6 @@
               ]
             },
             {
-              "name": "fromDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "fromDatetime",
               "description": null,
               "type": {
@@ -11982,20 +11880,6 @@
                   "name": "Int",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "toDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -18325,18 +18209,6 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -18788,18 +18660,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19722,20 +19582,6 @@
               ]
             },
             {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "id",
               "description": null,
               "type": {
@@ -20061,20 +19907,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "isDeprecated": false,

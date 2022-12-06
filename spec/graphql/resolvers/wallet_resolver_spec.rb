@@ -7,7 +7,7 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
     <<~GQL
       query($walletId: ID!) {
         wallet(id: $walletId) {
-          id, name, expirationDate
+          id name expirationAt
         }
       }
     GQL

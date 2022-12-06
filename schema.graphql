@@ -1478,7 +1478,6 @@ type Coupon {
   customerCount: Int!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
@@ -1514,7 +1513,6 @@ type CouponDetails {
   customerCount: Int!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
@@ -1628,7 +1626,6 @@ input CreateCouponInput {
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   name: String!
@@ -1694,7 +1691,6 @@ input CreateCustomerWalletInput {
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   grantedCredits: String!
   name: String
   paidCredits: String!
@@ -2681,10 +2677,8 @@ type CustomerUsage {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   chargesUsage: [ChargeUsage!]!
-  fromDate: ISO8601Date!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
-  toDate: ISO8601Date!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
   totalAmountCurrency: CurrencyEnum!
@@ -3030,12 +3024,10 @@ enum InvoicePaymentStatusTypeEnum {
 type InvoiceSubscription {
   chargeAmountCents: Int!
   fees: [Fee!]
-  fromDate: ISO8601Date
   fromDatetime: ISO8601DateTime
   invoice: Invoice!
   subscription: Subscription!
   subscriptionAmountCents: Int!
-  toDate: ISO8601Date
   toDatetime: ISO8601DateTime
   totalAmountCents: Int!
 }
@@ -4760,7 +4752,6 @@ input UpdateCouponInput {
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: String!
@@ -4834,7 +4825,6 @@ input UpdateCustomerWalletInput {
   """
   clientMutationId: String
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   id: ID!
   name: String
 }
@@ -4943,7 +4933,6 @@ type Wallet {
   currency: CurrencyEnum!
   customer: Customer
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
@@ -4968,7 +4957,6 @@ type WalletDetails {
   currency: CurrencyEnum!
   customer: Customer
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime

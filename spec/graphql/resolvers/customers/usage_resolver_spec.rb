@@ -8,9 +8,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       query($customerId: ID!, $subscriptionId: ID!) {
         customerUsage(customerId: $customerId, subscriptionId: $subscriptionId) {
           fromDatetime
-          fromDate
           toDatetime
-          toDate
           issuingDate
           amountCents
           amountCurrency
@@ -93,8 +91,6 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     usage_response = result['data']['customerUsage']
 
     aggregate_failures do
-      expect(usage_response['fromDate']).to eq(Time.zone.today.beginning_of_month.iso8601)
-      expect(usage_response['toDate']).to eq(Time.zone.today.end_of_month.iso8601)
       expect(usage_response['fromDatetime']).to eq(Time.current.beginning_of_month.iso8601)
       expect(usage_response['toDatetime']).to eq(Time.current.end_of_month.iso8601)
       expect(usage_response['issuingDate']).to eq(Time.zone.today.end_of_month.iso8601)

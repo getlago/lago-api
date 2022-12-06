@@ -78,7 +78,7 @@ module Subscriptions
       end
 
       def previous_anniversary_day(date)
-        year = (date.month < subscription_at.month) ? (date.year - 1) : date.year
+        year = (date.month < subscription_at.month) ? date.year - 1 : date.year
         month = subscription_at.month
         day = subscription_at.day
 

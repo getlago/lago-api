@@ -15,18 +15,6 @@ module Types
       field :fees, [Types::Fees::Object], null: true
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
-
-      # NOTE: LEGACY FIELDS
-      field :from_date, GraphQL::Types::ISO8601Date, null: true
-      field :to_date, GraphQL::Types::ISO8601Date, null: true
-
-      def from_date
-        object.from_datetime&.to_date
-      end
-
-      def to_date
-        object.to_datetime&.to_date
-      end
     end
   end
 end

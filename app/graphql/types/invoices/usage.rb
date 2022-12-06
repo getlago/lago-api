@@ -22,18 +22,6 @@ module Types
       def charges_usage
         object.fees
       end
-
-      # NOTE: LEGACY FIELDS
-      field :from_date, GraphQL::Types::ISO8601Date, null: false
-      field :to_date, GraphQL::Types::ISO8601Date, null: false
-
-      def from_date
-        object.from_datetime.to_date
-      end
-
-      def to_date
-        object.to_datetime.to_date
-      end
     end
   end
 end
