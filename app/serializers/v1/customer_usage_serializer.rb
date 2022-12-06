@@ -5,8 +5,8 @@ module V1
     def serialize
       payload = {
         # TODO: remove || after all cache key expirations
-        from_datetime: model.from_date&.beginning_of_day || model.from_datetime,
-        to_datetime: model.to_date&.end_of_day || model.to_datetime,
+        from_datetime: model.from_date&.to_date&.beginning_of_day&.iso8601 || model.from_datetime,
+        to_datetime: model.to_date&.to_date&.end_of_day&.iso8601 || model.to_datetime,
         issuing_date: model.issuing_date,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
