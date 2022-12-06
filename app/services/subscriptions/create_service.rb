@@ -9,7 +9,7 @@ module Subscriptions
       :name,
       :external_id,
       :billing_time,
-      :subscription_date,
+      :subscription_at,
     )
 
     def create_from_api(organization:, params:)
@@ -28,7 +28,7 @@ module Subscriptions
       @name = params[:name]&.strip
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
-      @subscription_date = params[:subscription_date] || Time.current.to_date
+      @subscription_at = params[:subscription_date] || Time.current
       @current_subscription = editable_subscriptions&.find_by(external_id: external_id)
 
       process_create
@@ -53,7 +53,7 @@ module Subscriptions
       @name = args[:name]&.strip
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
-      @subscription_date = args[:subscription_date] || Time.current.to_date
+      @subscription_at = args[:subscription_date] || Time.current
       @current_subscription = editable_subscriptions&.find_by(id: args[:subscription_id])
 
       process_create
@@ -62,7 +62,7 @@ module Subscriptions
     private
 
     def process_create
-      return result unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_date)
+      return result unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_at)
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
@@ -111,21 +111,21 @@ module Subscriptions
       new_subscription = Subscription.new(
         customer: current_customer,
         plan_id: current_plan.id,
-        subscription_date: subscription_date,
+        subscription_at: subscription_at,
         name: name,
         external_id: external_id,
         billing_time: billing_time || :calendar,
       )
 
-      if new_subscription.subscription_date > Time.current.to_date
+      if new_subscription.subscription_at > Time.current
         new_subscription.pending!
-      elsif new_subscription.subscription_date < Time.current.to_date
-        new_subscription.mark_as_active!(new_subscription.subscription_date.beginning_of_day)
+      elsif new_subscription.subscription_at < Time.current
+        new_subscription.mark_as_active!(new_subscription.subscription_at)
       else
         new_subscription.mark_as_active!
       end
 
-      if current_plan.pay_in_advance? && new_subscription.subscription_date.today?
+      if current_plan.pay_in_advance? && new_subscription.subscription_at.today?
         # NOTE: Since job is laucnhed from inside a db transaction
         #       we must wait for it to be commited before processing the job
         BillSubscriptionJob
@@ -152,7 +152,7 @@ module Subscriptions
         name: name,
         external_id: current_subscription.external_id,
         previous_subscription_id: current_subscription.id,
-        subscription_date: current_subscription.subscription_date,
+        subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
       )
 
@@ -210,7 +210,7 @@ module Subscriptions
         name: name,
         external_id: current_subscription.external_id,
         previous_subscription_id: current_subscription.id,
-        subscription_date: current_subscription.subscription_date,
+        subscription_at: current_subscription.subscription_at,
         status: :pending,
         billing_time: current_subscription.billing_time,
       )

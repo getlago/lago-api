@@ -13,7 +13,7 @@ RSpec.describe Fees::SubscriptionService do
 
   let(:started_at) { Time.zone.parse('2022-01-01 00:01') }
   let(:created_at) { started_at }
-  let(:subscription_date) { started_at }
+  let(:subscription_at) { started_at }
 
   let(:plan) do
     create(
@@ -38,7 +38,7 @@ RSpec.describe Fees::SubscriptionService do
       :subscription,
       plan: plan,
       started_at: started_at,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
       customer: customer,
       created_at: created_at,
       external_id: 'sub_id',
@@ -279,7 +279,7 @@ RSpec.describe Fees::SubscriptionService do
 
         context 'when subscription is created in the past' do
           context 'when plan is pay in advance' do
-            let(:created_at) { subscription_date + 2.days }
+            let(:created_at) { subscription_at + 2.days }
 
             before { plan.update(pay_in_advance: true) }
 
@@ -291,7 +291,7 @@ RSpec.describe Fees::SubscriptionService do
           end
 
           context 'when subscription has started before previous billing period' do
-            let(:created_at) { subscription_date + 8.days }
+            let(:created_at) { subscription_at + 8.days }
 
             let(:boundaries) do
               {
@@ -507,7 +507,7 @@ RSpec.describe Fees::SubscriptionService do
             :subscription,
             plan: plan,
             started_at: started_at,
-            subscription_date: DateTime.parse('2022-08-31'),
+            subscription_at: DateTime.parse('2022-08-31'),
             billing_time: :anniversary,
             customer: customer,
             external_id: 'sub_id',
@@ -780,7 +780,7 @@ RSpec.describe Fees::SubscriptionService do
         plan: plan,
         status: :terminated,
         started_at: started_at,
-        subscription_date: subscription_date,
+        subscription_at: subscription_at,
         customer: customer,
         external_id: 'sub_id',
       )
@@ -907,7 +907,7 @@ RSpec.describe Fees::SubscriptionService do
         :subscription,
         plan: plan,
         started_at: started_at,
-        subscription_date: subscription_date,
+        subscription_at: subscription_at,
         previous_subscription: previous_subscription,
         customer: customer,
         external_id: 'sub_id',

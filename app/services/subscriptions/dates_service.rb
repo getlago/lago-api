@@ -101,7 +101,7 @@ module Subscriptions
 
     attr_accessor :subscription, :billing_at, :current_usage
 
-    delegate :plan, :subscription_date, :calendar?, :customer, to: :subscription
+    delegate :plan, :subscription_at, :calendar?, :customer, to: :subscription
 
     def billing_date
       @billing_date ||= billing_at.in_time_zone(customer.applicable_timezone).to_date

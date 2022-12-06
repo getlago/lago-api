@@ -12,7 +12,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       create(
         :subscription,
         plan: plan,
-        subscription_date: started_at.to_date,
+        subscription_at: started_at.to_date,
         started_at: started_at,
         created_at: started_at,
       )

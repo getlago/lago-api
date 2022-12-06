@@ -13,7 +13,7 @@ module Subscriptions
         .joins(customer: :organization)
         .pending
         .where(previous_subscription: nil)
-        .where("DATE(#{Subscription.subscription_date_in_timezone_sql}) = ?", Time.zone.at(timestamp).to_date)
+        .where("DATE(#{Subscription.subscription_at_in_timezone_sql}) = ?", Time.zone.at(timestamp).to_date)
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
 

@@ -64,7 +64,7 @@ Charge.create_with(
 
   sub = Subscription.create_with(
     started_at: Time.current - 3.months,
-    subscription_date: (Time.current - 3.months).to_date,
+    subscription_at: Time.current - 3.months,
     status: :active,
   ).find_or_create_by!(
     customer: customer,

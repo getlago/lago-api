@@ -12,7 +12,7 @@ module V1
         plan_code: model.plan.code,
         status: model.status,
         billing_time: model.billing_time,
-        subscription_date: model.subscription_date&.iso8601,
+        subscription_date: model.subscription_at&.to_date&.iso8601,
         started_at: model.started_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601,
         canceled_at: model.canceled_at&.iso8601,

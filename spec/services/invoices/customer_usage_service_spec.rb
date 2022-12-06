@@ -92,14 +92,14 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:current_date) { DateTime.parse('2022-06-22') }
         let(:started_at) { DateTime.parse('2022-03-07') }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
             customer: customer,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             billing_time: :anniversary,
           )
@@ -157,14 +157,14 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:current_date) { DateTime.parse('2022-06-22') }
         let(:started_at) { DateTime.parse('2022-03-07') }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
             customer: customer,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             billing_time: :anniversary,
           )
@@ -222,14 +222,14 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:current_date) { DateTime.parse('2022-06-22') }
         let(:started_at) { DateTime.parse('2021-03-07') }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
             customer: customer,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             billing_time: :anniversary,
           )

@@ -45,7 +45,7 @@ module Subscriptions
 
       def compute_next_end_of_period
         return billing_date.end_of_week if calendar?
-        return billing_date if billing_date.wday == (subscription_date - 1.day).wday
+        return billing_date if billing_date.wday == (subscription_at - 1.day).wday
 
         # NOTE: we need the last day of the period, and not the first of the next one
         billing_date.next_occurring(subscription_day_name) - 1.day
@@ -58,13 +58,13 @@ module Subscriptions
       end
 
       def previous_anniversary_day(date)
-        return date if date.wday == subscription_date.wday
+        return date if date.wday == subscription_at.wday
 
         date.prev_occurring(subscription_day_name)
       end
 
       def subscription_day_name
-        @subscription_day_name ||= subscription_date.strftime('%A').downcase.to_sym
+        @subscription_day_name ||= subscription_at.strftime('%A').downcase.to_sym
       end
 
       def compute_duration(*)

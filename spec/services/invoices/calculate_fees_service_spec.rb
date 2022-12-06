@@ -23,7 +23,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       create(
         :subscription,
         plan: plan,
-        subscription_date: started_at.to_date,
+        subscription_at: started_at.to_date,
         started_at: started_at,
         created_at: started_at,
       )
@@ -69,7 +69,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           create(
             :subscription,
             plan: plan,
-            subscription_date: started_at.to_date,
+            subscription_at: started_at.to_date,
             started_at: started_at,
             created_at: timestamp,
           )
@@ -101,13 +101,13 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:timestamp) { DateTime.parse('07 Mar 2022') }
         let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             billing_time: :anniversary,
             created_at: started_at,
@@ -162,7 +162,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           :subscription,
           plan: plan,
           customer: subscription.customer,
-          subscription_date: (Time.zone.now - 2.years).to_date,
+          subscription_at: (Time.zone.now - 2.years).to_date,
           started_at: Time.zone.now - 2.years,
         )
       end
@@ -197,7 +197,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: started_at,
           created_at: started_at,
         )
@@ -216,7 +216,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.fees.first.properties['to_datetime'])
             .to match_datetime((timestamp - 1.day).end_of_day)
           expect(result.invoice.fees.first.properties['from_datetime'])
-            .to match_datetime(subscription.subscription_date.beginning_of_day)
+            .to match_datetime(subscription.subscription_at.beginning_of_day)
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -250,13 +250,13 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:timestamp) { DateTime.parse('07 Mar 2022') }
         let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             billing_time: :anniversary,
             created_at: started_at,
@@ -305,7 +305,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: started_at,
           created_at: started_at,
         )
@@ -324,7 +324,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.fees.first.properties['to_datetime'])
             .to match_datetime((timestamp - 1.day).end_of_day)
           expect(result.invoice.fees.first.properties['from_datetime'])
-            .to match_datetime(subscription.subscription_date.beginning_of_day)
+            .to match_datetime(subscription.subscription_at.beginning_of_day)
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -358,13 +358,13 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:timestamp) { DateTime.parse('07 Jun 2022') }
         let(:started_at) { DateTime.parse('06 Jun 2020').to_date }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             billing_time: :anniversary,
             created_at: started_at,
@@ -416,7 +416,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: started_at,
           created_at: started_at,
         )
@@ -430,7 +430,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
           expect(result.invoice.fees.first.properties['to_datetime']).to match_datetime((timestamp - 1.day).end_of_day)
           expect(result.invoice.fees.first.properties['from_datetime'])
-            .to match_datetime(subscription.subscription_date.beginning_of_day)
+            .to match_datetime(subscription.subscription_at.beginning_of_day)
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
@@ -450,7 +450,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: started_at,
           status: :terminated,
           terminated_at: terminated_at,
@@ -473,13 +473,13 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       context 'when subscription is billed on anniversary date' do
         let(:timestamp) { DateTime.parse('07 Mar 2022') }
         let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
-        let(:subscription_date) { started_at }
+        let(:subscription_at) { started_at }
 
         let(:subscription) do
           create(
             :subscription,
             plan: plan,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             started_at: started_at,
             status: :terminated,
             billing_time: :anniversary,
@@ -516,7 +516,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: previous_plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: started_at,
           status: :terminated,
           terminated_at: terminated_at,
@@ -528,7 +528,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           :subscription,
           plan: plan,
           previous_subscription: previous_subscription,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: terminated_at + 1.day,
           created_at: terminated_at + 1.day,
         )
@@ -559,7 +559,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: next_plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: terminated_at,
           status: :active,
           billing_time: :calendar,
@@ -576,7 +576,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :subscription,
           plan: plan,
-          subscription_date: started_at.to_date,
+          subscription_at: started_at.to_date,
           started_at: started_at,
           status: :terminated,
           terminated_at: terminated_at,

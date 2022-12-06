@@ -15,13 +15,13 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
     create(
       :subscription,
       started_at: started_at,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
       billing_time: :anniversary,
     )
   end
 
-  let(:subscription_date) { DateTime.parse('2022-06-09') }
-  let(:started_at) { subscription_date }
+  let(:subscription_at) { DateTime.parse('2022-06-09') }
+  let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
@@ -66,7 +66,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           create(
             :subscription,
             started_at: started_at,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -84,7 +84,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           create(
             :subscription,
             started_at: started_at,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -200,7 +200,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           create(
             :subscription,
             started_at: started_at,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -227,7 +227,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           create(
             :subscription,
             started_at: started_at,
-            subscription_date: subscription_date,
+            subscription_at: subscription_at,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,

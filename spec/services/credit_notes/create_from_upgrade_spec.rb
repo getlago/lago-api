@@ -6,7 +6,7 @@ RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
   subject(:create_service) { described_class.new(subscription: subscription) }
 
   let(:started_at) { Time.zone.parse('2022-09-01 10:00') }
-  let(:subscription_date) { Time.zone.parse('2022-09-01 10:00') }
+  let(:subscription_at) { Time.zone.parse('2022-09-01 10:00') }
   let(:terminated_at) { Time.zone.parse('2022-10-15 10:00') }
 
   let(:subscription) do
@@ -14,7 +14,7 @@ RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
       :subscription,
       plan: plan,
       status: :terminated,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
       started_at: started_at,
       terminated_at: terminated_at,
       billing_time: :calendar,

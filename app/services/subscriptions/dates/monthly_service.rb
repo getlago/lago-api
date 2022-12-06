@@ -44,11 +44,11 @@ module Subscriptions
       end
 
       def compute_to_date(from_date = compute_from_date)
-        return from_date.end_of_month if subscription.calendar? || subscription_date.day == 1
+        return from_date.end_of_month if subscription.calendar? || subscription_at.day == 1
 
         year = from_date.year
         month = from_date.month + 1
-        day = subscription_date.day - 1
+        day = subscription_at.day - 1
 
         if month > 12
           month = 1
@@ -63,7 +63,7 @@ module Subscriptions
 
         year = billing_date.year
         month = billing_date.month
-        day = subscription_date.day
+        day = subscription_at.day
 
         # NOTE: we need the last day of the period, and not the first of the next one
         result_date = build_date(year, month, day) - 1.day
@@ -87,7 +87,7 @@ module Subscriptions
       def previous_anniversary_day(date)
         year = nil
         month = nil
-        day = subscription_date.day
+        day = subscription_at.day
 
         if date.day < day
           year = date.month == 1 ? date.year - 1 : date.year

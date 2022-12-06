@@ -9,7 +9,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
     create(
       :subscription,
       plan: plan,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
       billing_time: :anniversary,
       started_at: started_at,
     )
@@ -18,9 +18,9 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   let(:plan) { create(:plan, interval: interval, pay_in_advance: pay_in_advance) }
   let(:pay_in_advance) { false }
 
-  let(:subscription_date) { DateTime.parse('02 Feb 2021') }
+  let(:subscription_at) { DateTime.parse('02 Feb 2021') }
   let(:billing_date) { DateTime.parse('07 Mar 2022') }
-  let(:started_at) { subscription_date }
+  let(:started_at) { subscription_at }
   let(:interval) { :monthly }
 
   describe '#instance' do

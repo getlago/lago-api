@@ -9,9 +9,9 @@ module Subscriptions
       subscription.name = args[:name] if args.key?(:name)
 
       if subscription.starting_in_the_future? && args.key?(:subscription_date)
-        subscription.subscription_date = args[:subscription_date]
+        subscription.subscription_at = args[:subscription_date]
 
-        process_subscription_date_change(subscription)
+        process_subscription_at_change(subscription)
       else
         subscription.save!
       end
@@ -29,9 +29,9 @@ module Subscriptions
       subscription.name = params[:name] if params.key?(:name)
 
       if subscription.starting_in_the_future? && params.key?(:subscription_date)
-        subscription.subscription_date = params[:subscription_date]
+        subscription.subscription_at = params[:subscription_date]
 
-        process_subscription_date_change(subscription)
+        process_subscription_at_change(subscription)
       else
         subscription.save!
       end
@@ -44,14 +44,14 @@ module Subscriptions
 
     private
 
-    def process_subscription_date_change(subscription)
-      if subscription.subscription_date <= Time.current.to_date
-        subscription.mark_as_active!(subscription.subscription_date.beginning_of_day)
+    def process_subscription_at_change(subscription)
+      if subscription.subscription_at <= Time.current
+        subscription.mark_as_active!(subscription.subscription_at)
       else
         subscription.save!
       end
 
-      return unless subscription.plan.pay_in_advance? && subscription.subscription_date.today?
+      return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
 
       BillSubscriptionJob.perform_later([subscription], Time.current.to_i)
     end

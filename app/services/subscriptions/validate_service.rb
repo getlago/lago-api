@@ -35,7 +35,7 @@ module Subscriptions
     end
 
     def valid_subscription_date?
-      return true if args[:subscription_date].is_a?(Date)
+      return true if args[:subscription_date].respond_to?(:strftime)
       return true if args[:subscription_date].is_a?(String) && Date._strptime(args[:subscription_date]).present?
 
       add_error(field: :subscription_date, error_code: 'invalid_date')
