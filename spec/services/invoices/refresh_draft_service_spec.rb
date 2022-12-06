@@ -15,7 +15,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     let(:subscription) do
       create(
         :subscription,
-        subscription_date: started_at.to_date,
+        subscription_at: started_at,
         started_at: started_at,
         created_at: started_at,
       )
@@ -41,7 +41,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
 
       expect { refresh_service.call }
         .to change { invoice.reload.fees.count }.from(1).to(2)
-        .and change { invoice.reload.fees.pluck(:id).include?(fee.id) }.from(true).to(false)
+        .and change { invoice.fees.pluck(:id).include?(fee.id) }.from(true).to(false)
     end
 
     it 'regenerates credits' do
