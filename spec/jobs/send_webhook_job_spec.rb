@@ -255,6 +255,28 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is invoice.drafted' do
+    let(:webhook_service) { instance_double(Webhooks::Invoices::DraftedService) }
+    let(:invoice) { create(:invoice) }
+
+    before do
+      allow(Webhooks::Invoices::DraftedService).to receive(:new)
+        .with(invoice)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        'invoice.drafted',
+        invoice,
+      )
+
+      expect(Webhooks::Invoices::DraftedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
       expect { send_webhook_job.perform_now(:subscription, invoice) }

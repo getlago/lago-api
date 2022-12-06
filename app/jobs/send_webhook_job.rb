@@ -42,6 +42,8 @@ class SendWebhookJob < ApplicationJob
       Webhooks::CreditNotes::PaymentProviderRefundFailureService.new(object, options).call
     when 'invoice.generated'
       Webhooks::Invoices::GeneratedService.new(object).call
+    when 'invoice.drafted'
+      Webhooks::Invoices::DraftedService.new(object).call
     else
       raise(NotImplementedError)
     end

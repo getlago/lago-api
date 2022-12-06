@@ -8,6 +8,7 @@ module Invoices
 
     def initialize(invoice:)
       @invoice = invoice
+      @subscription_ids = invoice.subscriptions.pluck(:id)
       super
     end
 
@@ -19,6 +20,7 @@ module Invoices
         invoice.credits.destroy_all
         invoice.wallet_transactions.destroy_all
         invoice.fees.destroy_all
+        invoice.invoice_subscriptions.destroy_all
 
         invoice.update!(
           issuing_date: issuing_date,
@@ -27,6 +29,7 @@ module Invoices
 
         Invoices::CalculateFeesService.call(
           invoice: invoice,
+          subscriptions: Subscription.find(subscription_ids),
           timestamp: invoice.created_at.to_i,
         )
       end
@@ -34,7 +37,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice
+    attr_accessor :invoice, :subscription_ids
 
     def issuing_date
       @issuing_date ||= Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date

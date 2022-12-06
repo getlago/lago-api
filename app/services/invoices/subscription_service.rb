@@ -37,21 +37,17 @@ module Invoices
           timestamp: timestamp,
           recurring: recurring,
         ).call
-
-        if grace_period?
-          SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
-        else
-          SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
-          Invoices::Payments::CreateService.new(invoice).call
-          track_invoice_created(result.invoice)
-        end
-
-        result
       end
 
-      SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
-      Invoices::Payments::CreateService.new(invoice).call
-      track_invoice_created(invoice)
+      result.throw_error unless result.success?
+
+      if grace_period?
+        SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
+      else
+        SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
+        Invoices::Payments::CreateService.new(invoice).call
+        track_invoice_created(invoice)
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
