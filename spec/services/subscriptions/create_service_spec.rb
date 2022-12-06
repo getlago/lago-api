@@ -156,7 +156,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             name: 'invoice display name',
             external_id: external_id,
             billing_time: 'anniversary',
-            subscription_date: (Time.current + 5.days).to_date,
+            subscription_at: Time.current + 5.days,
           }
         end
 
@@ -227,11 +227,11 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           name: 'invoice display name',
           external_id: external_id,
           billing_time: 'anniversary',
-          subscription_date: '2022-99-99',
+          subscription_at: '2022-99-99T00:00:00Z',
         }
       end
 
-      it 'returns invalid_date error' do
+      it 'returns invalid_at error' do
         result = create_service.create_from_api(
           organization: organization,
           params: params,
@@ -239,12 +239,13 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
+          expect(result.error.messages[:subscription_at]).to eq(['invalid_date'])
         end
       end
     end
 
     context 'when subscription_at is given and is in the future' do
+      let(:subscription_at) { Time.current + 5.days }
       let(:params) do
         {
           external_customer_id: customer.external_id,
@@ -252,7 +253,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           name: 'invoice display name',
           external_id: external_id,
           billing_time: 'anniversary',
-          subscription_date: (Time.current + 5.days).to_date,
+          subscription_at: subscription_at,
         }
       end
 
@@ -270,7 +271,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(subscription.customer_id).to eq(customer.id)
           expect(subscription.plan_id).to eq(plan.id)
           expect(subscription.started_at).not_to be_present
-          expect(subscription.subscription_at).to eq((Time.current + 5.days).to_date)
+          expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
           expect(subscription.name).to eq('invoice display name')
           expect(subscription).to be_pending
           expect(subscription.external_id).to eq(external_id)
@@ -280,6 +281,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     end
 
     context 'when subscription_at is given and is in the past' do
+      let(:subscription_at) { Time.current - 5.days }
       let(:params) do
         {
           external_customer_id: customer.external_id,
@@ -287,7 +289,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           name: 'invoice display name',
           external_id: external_id,
           billing_time: 'anniversary',
-          subscription_date: (Time.current - 5.days).to_date,
+          subscription_at: subscription_at,
         }
       end
 
@@ -304,8 +306,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         aggregate_failures do
           expect(subscription.customer_id).to eq(customer.id)
           expect(subscription.plan_id).to eq(plan.id)
-          expect(subscription.started_at).to eq((Time.current - 5.days).beginning_of_day)
-          expect(subscription.subscription_at).to eq((Time.current - 5.days).to_date)
+          expect(subscription.started_at.to_s).to eq(subscription_at.to_s)
+          expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
           expect(subscription.name).to eq('invoice display name')
           expect(subscription).to be_active
           expect(subscription.external_id).to eq(external_id)
@@ -763,7 +765,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_id: plan.id,
           organization_id: organization.id,
           billing_time: :anniversary,
-          subscription_date: '2022-99-99',
+          subscription_at: '2022-99-99T00:00:00Z',
         }
       end
 
@@ -772,7 +774,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
+          expect(result.error.messages[:subscription_at]).to eq(['invalid_date'])
         end
       end
     end

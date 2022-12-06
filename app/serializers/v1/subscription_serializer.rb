@@ -12,7 +12,7 @@ module V1
         plan_code: model.plan.code,
         status: model.status,
         billing_time: model.billing_time,
-        subscription_date: model.subscription_at&.to_date&.iso8601,
+        subscription_at: model.subscription_at&.iso8601,
         started_at: model.started_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601,
         canceled_at: model.canceled_at&.iso8601,
@@ -20,7 +20,13 @@ module V1
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
         downgrade_plan_date: model.downgrade_plan_date&.iso8601,
-      }
+      }.merge(legacy_values)
+    end
+
+    private
+
+    def legacy_values
+      ::V1::Legacy::SubscriptionSerializer.new(model).serialize
     end
   end
 end

@@ -6,7 +6,7 @@ module Subscriptions
       return false unless valid_customer?
       return false unless valid_plan?
 
-      valid_subscription_date?
+      valid_subscription_at?
 
       if errors?
         result.validation_failure!(errors: errors)
@@ -34,11 +34,11 @@ module Subscriptions
       false
     end
 
-    def valid_subscription_date?
-      return true if args[:subscription_date].respond_to?(:strftime)
-      return true if args[:subscription_date].is_a?(String) && Date._strptime(args[:subscription_date]).present?
+    def valid_subscription_at?
+      return true if args[:subscription_at].respond_to?(:strftime)
+      return true if args[:subscription_at].is_a?(String) && DateTime._strptime(args[:subscription_at]).present?
 
-      add_error(field: :subscription_date, error_code: 'invalid_date')
+      add_error(field: :subscription_at, error_code: 'invalid_date')
 
       false
     end
