@@ -514,7 +514,7 @@ html
             h2.invoice-details-title.title-2.mb-24 #{subscription.plan.name} details
           .body-1 Subscription
           .mb-24.body-3
-            | From #{invoice_subscription(subscription.id).from_datetime_in_customer_timezome&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.strftime('%b %d, %Y')}
+            | From #{invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.strftime('%b %d, %Y')} to #{invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.strftime('%b %d, %Y')}
 
           .invoice-resume.mb-24.overflow-auto
             table.invoice-resume-table width="100%"
