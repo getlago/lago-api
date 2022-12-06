@@ -35,6 +35,7 @@ Rails.application.routes.draw do
       resources :applied_add_ons, only: %i[create]
       resources :invoices, only: %i[update show index] do
         post :download, on: :member
+        put :refresh, on: :member
       end
       resources :plans, param: :code
       resources :wallet_transactions, only: :create

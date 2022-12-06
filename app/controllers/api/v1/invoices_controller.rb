@@ -67,6 +67,18 @@ module Api
         head(:ok)
       end
 
+      def refresh
+        invoice = current_organization.invoices.find_by(id: params[:id])
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = Invoices::RefreshDraftService.call(invoice: invoice)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def update_params
