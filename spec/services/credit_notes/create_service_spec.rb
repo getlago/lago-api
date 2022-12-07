@@ -92,11 +92,12 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'credit_note_created',
+        event: 'credit_note_issued',
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          credit_note_type: 'credit_and_refund',
+          invoice_id: credit_note.invoice_id,
+          credit_note_method: 'both',
         },
       )
     end
