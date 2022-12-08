@@ -148,7 +148,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
     before do
       allow(Invoices::Payments::GocardlessService).to receive(:new)
         .and_return(payment_service)
-      allow(payment_service).to receive(:update_status)
+      allow(payment_service).to receive(:update_payment_status)
         .and_return(service_result)
     end
 
@@ -162,7 +162,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         gocardless_service.handle_event(events_json: events)
 
         expect(Invoices::Payments::GocardlessService).to have_received(:new)
-        expect(payment_service).to have_received(:update_status)
+        expect(payment_service).to have_received(:update_payment_status)
       end
     end
 

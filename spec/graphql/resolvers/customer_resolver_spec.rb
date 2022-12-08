@@ -10,7 +10,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           id externalId name currency
           timezone
           applicableTimezone
-          invoices { id invoiceType status }
+          invoices { id invoiceType paymentStatus }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
@@ -88,7 +88,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         query($customerId: ID!) {
           customer(id: $customerId) {
             id externalId name currency
-            invoices { id invoiceType status }
+            invoices { id invoiceType paymentStatus }
             subscriptions(status: [active, pending]) { id, status }
             appliedCoupons { id amountCents amountCurrency coupon { id name } }
             appliedAddOns { id amountCents amountCurrency addOn { id name } }

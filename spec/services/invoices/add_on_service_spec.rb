@@ -24,7 +24,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
         expect(result.invoice.subscriptions.first).to be_nil
         expect(result.invoice.issuing_date).to eq(datetime.to_date)
         expect(result.invoice.invoice_type).to eq('add_on')
-        expect(result.invoice.status).to eq('pending')
+        expect(result.invoice.payment_status).to eq('pending')
 
         expect(result.invoice.amount_cents).to eq(200)
         expect(result.invoice.amount_currency).to eq('EUR')

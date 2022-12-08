@@ -19,7 +19,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       amount_currency: 'EUR',
       amount_cents: 20,
       total_amount_cents: 24,
-      status: :succeeded,
+      payment_status: :succeeded,
       vat_rate: 20,
     )
   end

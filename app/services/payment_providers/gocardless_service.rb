@@ -52,13 +52,13 @@ module PaymentProviders
         case event.resource_type
         when 'payments'
           if PAYMENT_ACTIONS.include?(event.action)
-            update_status_result = Invoices::Payments::GocardlessService
-              .new.update_status(
+            update_payment_status_result = Invoices::Payments::GocardlessService
+              .new.update_payment_status(
                 provider_payment_id: event.links.payment,
                 status: event.action,
               )
 
-            return update_status_result unless update_status_result.success?
+            return update_payment_status_result unless update_payment_status_result.success?
 
             handled_events << event
           end

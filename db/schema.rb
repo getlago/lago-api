@@ -321,13 +321,14 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_28_132620) do
     t.bigint "total_amount_cents", default: 0, null: false
     t.string "total_amount_currency"
     t.integer "invoice_type", default: 0, null: false
-    t.integer "status", default: 0, null: false
+    t.integer "payment_status", default: 0, null: false
     t.string "number", default: "", null: false
     t.integer "sequential_id"
     t.string "file"
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
     t.float "vat_rate"
+    t.integer "status", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 
