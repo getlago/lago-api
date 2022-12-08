@@ -48,9 +48,9 @@ module Credits
     end
 
     def compute_amount
-      return balance_cents if balance_cents <= invoice.amount_cents
+      return balance_cents if balance_cents <= invoice.total_amount_cents
 
-      invoice.amount_cents
+      invoice.total_amount_cents
     end
 
     def compute_amount_from_cents(amount)

@@ -113,7 +113,7 @@ class Subscription < ApplicationRecord
     return unless next_subscription.pending?
 
     ::Subscriptions::DatesService.new_instance(self, Time.current)
-      .next_end_of_period(Time.current).to_date + 1.day
+      .next_end_of_period.to_date + 1.day
   end
 
   def display_name

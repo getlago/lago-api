@@ -193,7 +193,7 @@ html
         font-size: 10px;
         font-family: Inter;
         color: #008559;
-        font-weight: 600;
+        font-weight: 400;
         line-height: 16px;
       }
 
@@ -258,6 +258,10 @@ html
       .invoice-resume .total-table tr td {
         padding-bottom: 12px;
         text-align: right;
+      }
+      .invoice-resume .total-table tr td:first-of-type {
+        text-align: left;
+        padding-left: 50%;
       }
 
       .invoice-details-title {
@@ -443,38 +447,38 @@ html
           - if legacy?
             tr
               td.body-2 width="70%" Sub total
-              td.body-1 width="30%" = subtotal_before_prepaid_credits.format
+              td.body-2 width="30%" = subtotal_before_prepaid_credits.format
             - if subscription? && wallet_transactions.exists?
               tr
                 td.body-2 width="70%" Prepaid credits
                 td.prepaid-amount width="30%" = wallet_transaction_amount.format
             tr
               td.body-2 Tax
-              td.body-1 = vat_amount.format
+              td.body-2 = vat_amount.format
             tr
-              td.body-2 Total due
+              td.body-1 Total due
               td.body-1 = total_amount.format
           - else
             - unless credit?
               tr
-                td.body-1 width="70%" Sub total (excl. tax)
-                td.body-1 width="30%" = sub_total_vat_excluded_amount.format
+                td.body-2 width="70%" Sub total (excl. tax)
+                td.body-2 width="30%" = sub_total_vat_excluded_amount.format
               tr
                 td.body-2 Tax (#{vat_rate || 0})%
-                td.body-1 = vat_amount.format
+                td.body-2 = vat_amount.format
               tr
-                td.body-1 Sub total (incl. tax)
-                td.body-1 = sub_total_vat_included_amount.format
+                td.body-2 Sub total (incl. tax)
+                td.body-2 = sub_total_vat_included_amount.format
             - if credits.credit_note_kind.any?
               tr
                 td.body-2 Credit Notes
-                td.body-1 style="text-align: right; color: #008559;"
-                  = credit_notes_total_amount.format
+                td.body-2 style="text-align: right; color: #008559;"
+                  = credit_note_total_amount.format
             - if credits.coupon_kind.any?
               - credits.coupon_kind.order(created_at: :asc).each do |credit|
                 tr
                   td.body-2 #{credit.invoice_coupon_display_name}
-                  td.body-1 style="text-align: right; color: #008559;"
+                  td.body-2 style="text-align: right; color: #008559;"
                     = credit.amount.format
             - if subscription? && wallet_transactions.exists?
               tr

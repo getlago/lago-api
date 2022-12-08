@@ -9,14 +9,17 @@ module V1
         number: model.number,
         issuing_date: model.issuing_date.iso8601,
         invoice_type: model.invoice_type,
-        status: model.status,
+        payment_status: model.payment_status,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
         vat_amount_currency: model.vat_amount_currency,
+        credit_amount_cents: model.credit_amount_cents,
+        credit_amount_currency: model.credit_amount_currency,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.total_amount_currency,
         file_url: model.file_url,
+        legacy: model.legacy,
       }
 
       payload = payload.merge(customer) if include?(:customer)

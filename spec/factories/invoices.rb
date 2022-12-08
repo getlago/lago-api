@@ -5,6 +5,8 @@ FactoryBot.define do
     customer
 
     issuing_date { Time.zone.now - 1.day }
-    status { 'pending' }
+    payment_status { 'pending' }
+    amount_currency { 'EUR' }
+    total_amount_currency { 'EUR' }
   end
 end

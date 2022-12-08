@@ -96,7 +96,6 @@ module CreditNotes
         {
           payment_intent: payment.provider_payment_id,
           amount: credit_note.refund_amount_cents,
-          currency: credit_note.refund_amount_currency.downcase,
           reason: stripe_reason,
           metadata: {
             lago_customer_id: customer.id,

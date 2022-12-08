@@ -38,7 +38,16 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
+      field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
       field :active_subscription_count, Integer, null: false, description: 'Number of active subscriptions per customer'
+      field :credit_notes_credits_available_count,
+            Integer,
+            null: false,
+            description: 'Number of available credits from credit notes per customer'
+      field :credit_notes_balance_amount_cents,
+            GraphQL::Types::BigInt,
+            null: false,
+            description: 'Credit notes credits balance available per customer'
 
       field :can_be_deleted, Boolean, null: false do
         description 'Check if customer is deletable'
@@ -56,6 +65,10 @@ module Types
         object.wallets.active.any?
       end
 
+      def has_credit_notes
+        object.credit_notes.any?
+      end
+
       def active_subscription_count
         object.active_subscriptions.count
       end
@@ -70,9 +83,15 @@ module Types
           object.stripe_customer
         when :gocardless
           object.gocardless_customer
-        else
-          nil
         end
+      end
+
+      def credit_notes_credits_available_count
+        object.credit_notes.where('credit_notes.credit_amount_cents > 0').count
+      end
+
+      def credit_notes_balance_amount_cents
+        object.credit_notes.sum('credit_notes.balance_amount_cents')
       end
     end
   end

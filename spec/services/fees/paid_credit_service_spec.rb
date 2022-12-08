@@ -33,8 +33,8 @@ RSpec.describe Fees::PaidCreditService do
         expect(created_fee.invoiceable_id).to eq(wallet_transaction.id)
         expect(created_fee.amount_cents).to eq(1500)
         expect(created_fee.amount_currency).to eq('EUR')
-        expect(created_fee.vat_amount_cents).to eq(300)
-        expect(created_fee.vat_rate).to eq(20.0)
+        expect(created_fee.vat_amount_cents).to eq(0)
+        expect(created_fee.vat_rate).to eq(0)
         expect(created_fee.units).to eq(1)
       end
     end

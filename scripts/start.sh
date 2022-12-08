@@ -7,4 +7,5 @@ fi
 
 rm -f ./tmp/pids/server.pid
 bundle exec rake db:migrate
+bundle exec rails signup:seed_organization
 bundle exec rails s -b ::

@@ -1771,6 +1771,7 @@ type CreditNote {
   creditAmountCents: BigInt!
   creditAmountCurrency: CurrencyEnum!
   creditStatus: CreditNoteCreditStatusEnum
+  customer: Customer!
   description: String
   fileUrl: String
   id: ID!
@@ -1794,6 +1795,11 @@ type CreditNote {
   voidedAt: ISO8601DateTime
 }
 
+type CreditNoteCollection {
+  collection: [CreditNote!]!
+  metadata: CollectionMetadata!
+}
+
 enum CreditNoteCreditStatusEnum {
   available
   consumed
@@ -1806,6 +1812,10 @@ type CreditNoteItem {
   createdAt: ISO8601DateTime!
   fee: Fee!
   id: ID!
+  totalAmountCents: BigInt!
+  totalAmountCurrency: CurrencyEnum!
+  vatAmountCents: BigInt!
+  vatAmountCurrency: CurrencyEnum!
 }
 
 input CreditNoteItemInput {
@@ -2536,6 +2546,16 @@ type Customer {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+
+  """
+  Credit notes credits balance available per customer
+  """
+  creditNotesBalanceAmountCents: BigInt!
+
+  """
+  Number of available credits from credit notes per customer
+  """
+  creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
   email: String
   externalId: String!
@@ -2544,6 +2564,11 @@ type Customer {
   Define if a customer has an active wallet
   """
   hasActiveWallet: Boolean!
+
+  """
+  Define if a customer has any credit note
+  """
+  hasCreditNotes: Boolean!
   id: ID!
   invoiceGracePeriod: Int!
   legalName: String
@@ -2593,6 +2618,16 @@ type CustomerDetails {
   country: CountryCode
   createdAt: ISO8601DateTime!
   creditNotes: [CreditNote!]
+
+  """
+  Credit notes credits balance available per customer
+  """
+  creditNotesBalanceAmountCents: BigInt!
+
+  """
+  Number of available credits from credit notes per customer
+  """
+  creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
   email: String
   externalId: String!
@@ -2601,6 +2636,11 @@ type CustomerDetails {
   Define if a customer has an active wallet
   """
   hasActiveWallet: Boolean!
+
+  """
+  Define if a customer has any credit note
+  """
+  hasCreditNotes: Boolean!
   id: ID!
   invoiceGracePeriod: Int!
   invoices: [Invoice!]
@@ -2929,9 +2969,13 @@ type Invoice {
   amountCents: Int!
   amountCurrency: CurrencyEnum!
   chargeAmountCents: Int!
+  couponTotalAmountCents: Int!
   createdAt: ISO8601DateTime!
   creditAmountCents: Int!
   creditAmountCurrency: CurrencyEnum!
+  creditNoteTotalAmountCents: Int!
+  creditNotes: [CreditNote!]
+  creditableAmountCents: Int!
   customer: Customer!
   fees: [Fee!]
   fileUrl: String
@@ -2939,10 +2983,14 @@ type Invoice {
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
+  legacy: Boolean!
   number: String!
+  paymentStatus: InvoicePaymentStatusTypeEnum!
   plan: Plan
+  refundableAmountCents: Int!
   sequentialId: ID!
-  status: InvoiceStatusTypeEnum!
+  subTotalVatExcludedAmountCents: Int!
+  subTotalVatIncludedAmountCents: Int!
   subscriptions: [Subscription!]
   subtotalBeforePrepaidCredits: String!
   totalAmountCents: Int!
@@ -2950,6 +2998,7 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   vatAmountCents: Int!
   vatAmountCurrency: CurrencyEnum!
+  vatRate: Float!
   walletTransactionAmountCents: Int!
 }
 
@@ -2966,7 +3015,7 @@ interface InvoiceItem {
   itemType: String!
 }
 
-enum InvoiceStatusTypeEnum {
+enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
@@ -3697,6 +3746,23 @@ type Query {
   ): CustomerDetails
 
   """
+  Query customer's credit note
+  """
+  customerCreditNotes(
+    """
+    Uniq ID of the customer
+    """
+    customerId: ID!
+
+    """
+    List of plan ID to fetch
+    """
+    ids: [String!]
+    limit: Int
+    page: Int
+  ): CreditNoteCollection
+
+  """
   Query the usage of the customer on the current billing period
   """
   customerUsage(customerId: ID, subscriptionId: ID!): CustomerUsage!
@@ -3742,6 +3808,18 @@ type Query {
     """
     id: ID!
   ): Invoice
+
+  """
+  Query invoice's credit note
+  """
+  invoiceCreditNotes(
+    """
+    Uniq ID of the invoice
+    """
+    invoiceId: ID!
+    limit: Int
+    page: Int
+  ): CreditNoteCollection
 
   """
   Query memberships of an organization

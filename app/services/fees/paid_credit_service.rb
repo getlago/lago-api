@@ -23,8 +23,10 @@ module Fees
         invoiceable: wallet_transaction,
         amount_cents: amount_cents,
         amount_currency: wallet_transaction.wallet.currency,
-        vat_rate: customer.applicable_vat_rate,
         units: 1,
+
+        # NOTE: No VAT should be applied on as it can be considered as an advance
+        vat_rate: 0,
       )
 
       new_fee.compute_vat
