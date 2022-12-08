@@ -26,10 +26,9 @@ module Invoices
           timezone: customer.applicable_timezone,
         )
 
-        subscriptions.each { |subscription| invoice.subscriptions << subscription }
-
         result = Invoices::CalculateFeesService.new(
           invoice: invoice,
+          subscriptions: subscriptions,
           timestamp: timestamp,
         ).call
 
