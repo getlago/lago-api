@@ -23,6 +23,7 @@ module Invoices
           credit_amount_currency: currency,
           total_amount_currency: currency,
           vat_rate: customer.applicable_vat_rate,
+          timezone: customer.applicable_timezone,
         )
 
         subscriptions.each { |subscription| invoice.subscriptions << subscription }
