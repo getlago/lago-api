@@ -20,7 +20,6 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
           id
           name
           subscriptionAt
-          subscriptionDate
         }
       }
     GQL
@@ -42,34 +41,6 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
 
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
-    end
-  end
-
-  context 'with legacy subscription_date' do
-    let(:subscription_at) { Time.current + 4.days }
-
-    before { subscription.pending! }
-
-    it 'updates an subscription' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: {
-          input: {
-            id: subscription.id,
-            name: 'New name',
-            subscriptionDate: subscription_at.to_date.iso8601,
-          },
-        },
-      )
-
-      result_data = result['data']['updateSubscription']
-
-      aggregate_failures do
-        expect(result_data['name']).to eq('New name')
-        expect(result_data['subscriptionDate']).to eq(subscription_at.to_date.iso8601)
-        expect(result_data['subscriptionAt']).to eq(subscription_at.beginning_of_day.iso8601)
-      end
     end
   end
 

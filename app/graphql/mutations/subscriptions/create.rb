@@ -16,9 +16,6 @@ module Mutations
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
 
-      # NOTE: LEGACY FIELDS
-      argument :subscription_date, GraphQL::Types::ISO8601Date, required: false
-
       type Types::Subscriptions::Object
 
       def resolve(**args)

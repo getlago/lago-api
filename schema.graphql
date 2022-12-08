@@ -1757,7 +1757,6 @@ input CreateSubscriptionInput {
   name: String
   planId: ID!
   subscriptionAt: ISO8601DateTime
-  subscriptionDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -3976,7 +3975,6 @@ type Subscription {
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
   subscriptionAt: ISO8601DateTime
-  subscriptionDate: ISO8601Date
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
 }
@@ -4888,7 +4886,6 @@ input UpdateSubscriptionInput {
   id: ID!
   name: String
   subscriptionAt: ISO8601DateTime
-  subscriptionDate: ISO8601Date
 }
 
 type User {
