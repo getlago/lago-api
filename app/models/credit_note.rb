@@ -49,6 +49,7 @@ class CreditNote < ApplicationRecord
 
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
   validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :refund_amount_cents, numericality: { greater_than_or_equal_to: 0 }
   validates :balance_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
   def file_url
@@ -76,7 +77,7 @@ class CreditNote < ApplicationRecord
   def subscription_item(subscription_id)
     items.joins(:fee)
       .merge(Fee.subscription)
-      .find_by(fees: { subscription_id: subscription_id }) || Fee.new
+      .find_by(fees: { subscription_id: subscription_id }) || Fee.new(amount_cents: 0)
   end
 
   def subscription_charge_items(subscription_id)

@@ -47,7 +47,7 @@ module CreditNotes
 
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
-          vat_amount_cents: credit_note.credit_vat_amount_cents + credit_note.refund_vat_amount_cents,
+          vat_amount_cents: credit_note.items.sum(&:vat_amount_cents),
           balance_amount_cents: credit_note.credit_amount_cents,
         )
       end

@@ -50,4 +50,14 @@ namespace :invoices do
       end
     end
   end
+
+  desc 'Fill invoice credit amount'
+  task fill_credit_amount: :environment do
+    Invoice.where(credit_amount_cents: 0).find_each do |invoice|
+      invoice.update!(
+        credit_amount_cents: invoice.credit_amount_cents + invoice.wallet_transaction_amount_cents,
+        credit_amount_currency: invoice.currency,
+      )
+    end
+  end
 end

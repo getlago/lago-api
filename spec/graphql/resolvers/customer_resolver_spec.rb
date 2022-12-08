@@ -7,10 +7,27 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     <<~GQL
       query($customerId: ID!) {
         customer(id: $customerId) {
-          id externalId name currency
-          timezone
+          id
+          externalId
+          name
+          currency
+          hasCreditNotes
+          creditNotesCreditsAvailableCount
+          creditNotesBalanceAmountCents
           applicableTimezone
-          invoices { id invoiceType paymentStatus }
+          invoices {
+            id
+            invoiceType
+            paymentStatus
+            totalAmountCents
+            creditAmountCents
+            vatAmountCents
+            amountCents
+            subTotalVatExcludedAmountCents
+            subTotalVatIncludedAmountCents
+            couponTotalAmountCents
+            creditNoteTotalAmountCents
+          }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
@@ -76,6 +93,9 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['currency']).to be_present
       expect(customer_response['timezone']).to be_nil
       expect(customer_response['applicableTimezone']).to eq('TZ_AMERICA_NEW_YORK')
+      expect(customer_response['hasCreditNotes']).to be true
+      expect(customer_response['creditNotesCreditsAvailableCount']).to eq(1)
+      expect(customer_response['creditNotesBalanceAmountCents']).to eq('120')
     end
   end
 

@@ -5,6 +5,7 @@ module Invoices
     def initialize(applied_add_on:, datetime:)
       @applied_add_on = applied_add_on
       @datetime = datetime
+      @currency = applied_add_on.amount_currency
 
       super(nil)
     end
@@ -16,9 +17,10 @@ module Invoices
           issuing_date: issuing_date,
           invoice_type: :add_on,
           payment_status: :pending,
-
-          # NOTE: Apply credits before VAT, will be changed with credit note feature
-          legacy: true,
+          amount_currency: currency,
+          vat_amount_currency: currency,
+          credit_amount_currency: currency,
+          total_amount_currency: currency,
           vat_rate: customer.applicable_vat_rate,
         )
 
@@ -27,7 +29,6 @@ module Invoices
         compute_amounts(invoice)
 
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
-        invoice.total_amount_currency = applied_add_on.amount_currency
         invoice.save!
 
         track_invoice_created(invoice)
@@ -44,7 +45,7 @@ module Invoices
 
     private
 
-    attr_accessor :datetime, :applied_add_on
+    attr_accessor :datetime, :applied_add_on, :currency
 
     delegate :customer, to: :applied_add_on
 

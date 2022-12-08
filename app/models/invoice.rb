@@ -20,6 +20,7 @@ class Invoice < ApplicationRecord
 
   monetize :amount_cents
   monetize :vat_amount_cents
+  monetize :credit_amount_cents
   monetize :total_amount_cents
 
   # NOTE: Readonly fields
@@ -29,7 +30,6 @@ class Invoice < ApplicationRecord
   monetize :credit_note_total_amount_cents, disable_validation: true, allow_nil: true
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
-  monetize :credit_amount_cents, disable_validation: true, allow_nil: true
   monetize :wallet_transaction_amount_cents, disable_validation: true, allow_nil: true
 
   INVOICE_TYPES = %i[subscription add_on credit].freeze
@@ -74,7 +74,7 @@ class Invoice < ApplicationRecord
   def credit_note_total_amount_cents
     credits.credit_note_kind.sum(:amount_cents)
   end
-  alias credit_notes_total_amount_currency currency
+  alias credit_note_total_amount_currency currency
 
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
@@ -85,11 +85,6 @@ class Invoice < ApplicationRecord
     fees.subscription_kind.sum(:amount_cents)
   end
   alias subscription_amount_currency currency
-
-  def credit_amount_cents
-    credits.sum(:amount_cents)
-  end
-  alias credit_amount_currency currency
 
   def wallet_transaction_amount_cents
     transaction_amount = wallet_transactions.sum(:amount)
@@ -134,6 +129,22 @@ class Invoice < ApplicationRecord
       to_date: DateTime.parse(fee.properties['charges_to_datetime']).to_date,
     )
     result.breakdown
+  end
+
+  def creditable_amount_cents
+    return 0 if legacy? || credit?
+
+    fees.map do |fee|
+      creditable = fee.creditable_amount_cents
+      creditable + (creditable * (fee.vat_rate || 0)).fdiv(100).ceil
+    end.sum
+  end
+
+  def refundable_amount_cents
+    return 0 if legacy? || credit? || !succeeded?
+
+    amount = creditable_amount_cents - credits.sum(:amount_cents) - wallet_transaction_amount_cents
+    amount.negative? ? 0 : amount
   end
 
   private

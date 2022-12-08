@@ -25,6 +25,8 @@ Invoice.all.find_each do |invoice|
     total_amount_cents: amount,
     total_amount_currency: fee.amount_currency,
     issuing_date: Time.current.to_date,
+    vat_amount_currency: fee.amount_currency,
+    vat_amount_cents: fee.vat_amount_cents,
   )
 
   credit_note.items.create!(

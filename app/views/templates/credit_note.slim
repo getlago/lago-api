@@ -343,7 +343,7 @@ html
                 td.body-1 width="70%"
                   | Subscription - #{Subscription.find_by(id: subscription_id)&.display_name}
                 td.body-1 width="30%" style="text-align: right;"
-                  = subscription_item(subscription_id).credit_amount.format
+                  = subscription_item(subscription_id).amount.format
               - subscription_charge_items(subscription_id).each do |item|
                 tr
                   td.body-1 = item.fee.item_name

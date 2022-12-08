@@ -13,7 +13,7 @@ module Credits
       return result if already_applied?
 
       result.credits = []
-      remaining_invoice_amount = invoice.amount_cents
+      remaining_invoice_amount = invoice.total_amount_cents
 
       ActiveRecord::Base.transaction do
         credit_notes.each do |credit_note|
@@ -25,7 +25,7 @@ module Credits
             invoice: invoice,
             credit_note: credit_note,
             amount_cents: credit_amount,
-            amount_currency: invoice.amount_currency,
+            amount_currency: invoice.currency,
           )
 
           # NOTE: Consume remaining credit on the credit note
@@ -55,7 +55,6 @@ module Credits
     end
 
     def compute_credit_amount(credit_note, remaining_invoice_amount)
-      # TODO: might change to be applied VAT included
       if credit_note.balance_amount_cents > remaining_invoice_amount
         remaining_invoice_amount
       else

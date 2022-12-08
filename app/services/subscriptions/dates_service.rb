@@ -62,8 +62,8 @@ module Subscriptions
       datetime
     end
 
-    def next_end_of_period(date)
-      end_utc = compute_next_end_of_period(date)
+    def next_end_of_period
+      end_utc = compute_next_end_of_period
       customer_timezone_shift(end_utc, end_of_day: true)
     end
 
@@ -153,7 +153,7 @@ module Subscriptions
       raise(NotImplementedError)
     end
 
-    def compute_next_end_of_period(date)
+    def compute_next_end_of_period
       raise(NotImplementedError)
     end
 

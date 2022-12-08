@@ -23,10 +23,6 @@ module Types
       def item_type
         object.fee_type
       end
-
-      def creditable_amount_cents
-        object.total_amount_cents - object.credit_note_items.sum(:amount_cents)
-      end
     end
   end
 end

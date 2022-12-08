@@ -377,7 +377,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
   end
 
   describe 'next_end_of_period' do
-    let(:result) { date_service.next_end_of_period(billing_at.to_date).to_s }
+    let(:result) { date_service.next_end_of_period.to_s }
 
     context 'when billing_time is calendar' do
       let(:billing_time) { :calendar }

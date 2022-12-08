@@ -63,4 +63,8 @@ class Fee < ApplicationRecord
     amount_cents + vat_amount_cents
   end
   alias total_amount_currency currency
+
+  def creditable_amount_cents
+    amount_cents - credit_note_items.sum(:amount_cents)
+  end
 end

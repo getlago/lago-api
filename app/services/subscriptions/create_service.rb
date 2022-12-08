@@ -34,6 +34,8 @@ module Subscriptions
       process_create
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     def create(**args)
@@ -161,6 +163,13 @@ module Subscriptions
       current_subscription.mark_as_terminated!
       new_subscription.mark_as_active!
 
+      if current_subscription.plan.pay_in_advance?
+        # NOTE: As subscription was payed in advance and terminated before the end of the period,
+        #       we have to create a credit note for the days that were not consumed
+        credit_note_result = CreditNotes::CreateFromUpgrade.new(subscription: current_subscription).call
+        credit_note_result.throw_error unless credit_note_result.success?
+      end
+
       # NOTE: Create an invoice for the terminated subscription
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
@@ -171,7 +180,7 @@ module Subscriptions
         )
 
       if current_plan.pay_in_advance?
-        # NOTE: Since job is laucnhed from inside a db transaction
+        # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be commited before processing the job
         BillSubscriptionJob
           .set(wait: 2.seconds)

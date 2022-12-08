@@ -17,14 +17,13 @@ module Invoices
           issuing_date: issuing_date,
           invoice_type: :credit,
           payment_status: :pending,
-
           amount_currency: currency,
           vat_amount_currency: currency,
+          credit_amount_currency: currency,
           total_amount_currency: currency,
 
-          # NOTE: Apply credits before VAT, will be changed with credit note feature
-          legacy: true,
-          vat_rate: customer.applicable_vat_rate,
+          # NOTE: No VAT should be applied on as it can be considered as an advance
+          vat_rate: 0,
         )
 
         create_credit_fee(invoice)
