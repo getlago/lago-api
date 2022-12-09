@@ -54,7 +54,13 @@ module Subscriptions
       # NOTE: If customer applicable timezone changes during a billing period, there is a risk to double count events
       #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
       #       hole bewtween a charges_from_datetime and the charges_to_datetime of the previous period
-      datetime = previous_charge_to_datetime + 1.second if timezone_has_changed?
+      if timezone_has_changed?
+        new_datetime = previous_charge_to_datetime + 1.second
+
+        # NOTE: Ensure that the invoice is really the previous one
+        #       26 hours is the maximum time difference between two places in the world
+        datetime = new_datetime if ((datetime.in_time_zone - new_datetime.in_time_zone) / 1.hour).abs < 26
+      end
 
       datetime = subscription.started_at if datetime < subscription.started_at
 

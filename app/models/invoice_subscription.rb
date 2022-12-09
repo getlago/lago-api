@@ -13,17 +13,16 @@ class InvoiceSubscription < ApplicationRecord
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
-  scope :order_by_charges_to_datetime, lambda {
-    condition = ActiveRecord::Base.sanitize_sql_for_conditions(
-      <<-SQL
-        COALESCE(
-          (invoice_subscriptions.properties->>\'to_datetime\')::timestamp, invoice_subscriptions.created_at
-        ) ASC
-      SQL
-    )
+  scope :order_by_charges_to_datetime,
+        lambda {
+          condition = <<-SQL
+            COALESCE(
+              (invoice_subscriptions.properties->>\'to_datetime\')::timestamp, invoice_subscriptions.created_at
+            ) ASC
+          SQL
 
-    order(Arel.sql(condition))
-  }
+          order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
+        }
 
   def fees
     @fees ||= Fee.where(

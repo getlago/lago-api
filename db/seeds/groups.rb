@@ -161,6 +161,7 @@ Charge.create_with(
 )
 
 2.times do
+  time = Time.current
   Event.create!(
     customer: customer,
     subscription: subscription,

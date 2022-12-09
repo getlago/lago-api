@@ -219,6 +219,29 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         it 'takes customer timezone into account' do
           expect(result).to eq(date_service.from_datetime.to_s)
         end
+
+        context 'when timezone has changed' do
+          let(:billing_at) { DateTime.parse('08 Mar 2022') }
+
+          let(:previous_invoice_subscription) do
+            create(
+              :invoice_subscription,
+              subscription: subscription,
+              properties: {
+                charges_to_datetime: '2022-02-27T22:59:59Z',
+              },
+            )
+          end
+
+          before do
+            previous_invoice_subscription
+            subscription.customer.update!(timezone: 'America/Los_Angeles')
+          end
+
+          it 'takes previous invoice into account' do
+            expect(result).to match_datetime('2022-02-27 23:00:00')
+          end
+        end
       end
 
       context 'when subscription started in the middle of a period' do
