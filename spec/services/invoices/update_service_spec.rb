@@ -3,29 +3,26 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::UpdateService do
-  subject(:invoice_service) { described_class.new }
+  subject(:invoice_service) { described_class.new(invoice: invoice, params: update_args) }
 
   let(:invoice) { create(:invoice) }
   let(:invoice_id) { invoice.id }
 
-  describe 'update_from_api' do
-    let(:update_args) do
-      {
-        payment_status: 'succeeded',
-      }
-    end
+  let(:update_args) do
+    {
+      payment_status: 'succeeded',
+    }
+  end
 
+  let(:result) { invoice_service.call }
+
+  describe 'call' do
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
     it 'updates the invoice' do
-      result = invoice_service.update_from_api(
-        invoice_id: invoice_id,
-        params: update_args,
-      )
-
       aggregate_failures do
         expect(result).to be_success
         expect(result.invoice).to eq(invoice)
@@ -34,10 +31,7 @@ RSpec.describe Invoices::UpdateService do
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = invoice_service.update_from_api(
-        invoice_id: invoice_id,
-        params: update_args,
-      ).invoice
+      result
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -74,24 +68,16 @@ RSpec.describe Invoices::UpdateService do
       end
 
       it 'calls Invoices::PrepaidCreditJob' do
-        invoice_service.update_from_api(
-          invoice_id: invoice_id,
-          params: update_args,
-        )
+        result
 
         expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
       end
     end
 
     context 'when invoice does not exist' do
-      let(:invoice_id) { 'invalid' }
+      let(:invoice) { nil }
 
       it 'returns an error' do
-        result = invoice_service.update_from_api(
-          invoice_id: invoice_id,
-          params: update_args,
-        )
-
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('invoice_not_found')
       end
@@ -105,11 +91,6 @@ RSpec.describe Invoices::UpdateService do
       end
 
       it 'returns an error' do
-        result = invoice_service.update_from_api(
-          invoice_id: invoice_id,
-          params: update_args,
-        )
-
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -123,11 +104,6 @@ RSpec.describe Invoices::UpdateService do
       let(:update_args) { {} }
 
       it 'returns an error' do
-        result = invoice_service.update_from_api(
-          invoice_id: invoice_id,
-          params: update_args,
-        )
-
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -144,11 +120,6 @@ RSpec.describe Invoices::UpdateService do
       end
 
       it 'returns an error' do
-        result = invoice_service.update_from_api(
-          invoice_id: invoice_id,
-          params: update_args,
-        )
-
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
