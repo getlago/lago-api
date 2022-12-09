@@ -14,8 +14,11 @@ module Mutations
       argument :name, String, required: false
       argument :paid_credits, String, required: true
       argument :granted_credits, String, required: true
-      argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
+      argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :currency, Types::CurrencyEnum, required: true
+
+      # NOTE: Legacy fields, will be removed when releasing the timezone feature
+      argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Wallets::Object
 
@@ -25,10 +28,13 @@ module Mutations
         result = ::Wallets::CreateService
           .new(context[:current_user])
           .create(
-            **args
-              .merge(organization_id: current_organization.id)
-              .merge(customer: current_customer(args[:customer_id]))
-              .except(:customer_id),
+            WalletLegacyInput.new(
+              current_organization,
+              args
+                .merge(organization_id: current_organization.id)
+                .merge(customer: current_customer(args[:customer_id]))
+                .except(:customer_id),
+            ).create_input,
           )
 
         result.success? ? result.wallet : result_error(result)

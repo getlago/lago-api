@@ -12,6 +12,7 @@ class User < ApplicationRecord
   has_many :coupons, through: :organizations
   has_many :add_ons, through: :organizations
   has_many :credit_notes, through: :organizations
+  has_many :wallets, through: :organizations
 
   validates :email, presence: true
   validates :password, presence: true

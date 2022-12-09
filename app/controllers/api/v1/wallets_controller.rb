@@ -6,11 +6,12 @@ module Api
       def create
         service = Wallets::CreateService.new
         result = service.create(
-          **input_params
-            .merge(organization_id: current_organization.id)
-            .merge(customer: customer)
-            .to_h
-            .symbolize_keys,
+          WalletLegacyInput.new(
+            current_organization,
+            input_params
+              .merge(organization_id: current_organization.id)
+              .merge(customer: customer),
+          ).create_input,
         )
 
         if result.success?
@@ -23,9 +24,11 @@ module Api
       def update
         service = Wallets::UpdateService.new
         result = service.update(
-          **update_params.merge(id: params[:id])
-            .to_h
-            .symbolize_keys,
+          wallet: current_organization.wallets.find_by(id: params[:id]),
+          args: WalletLegacyInput.new(
+            current_organization,
+            update_params.merge(id: params[:id]),
+          ).update_input,
         )
 
         if result.success?
@@ -84,6 +87,8 @@ module Api
           :currency,
           :paid_credits,
           :granted_credits,
+          :expiration_at,
+          # NOTE: Legacy field
           :expiration_date,
         )
       end
@@ -95,6 +100,8 @@ module Api
       def update_params
         params.require(:wallet).permit(
           :name,
+          :expiration_at,
+          # NOTE: Legacy field
           :expiration_date,
         )
       end

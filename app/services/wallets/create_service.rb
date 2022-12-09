@@ -2,14 +2,14 @@
 
 module Wallets
   class CreateService < BaseService
-    def create(**args)
+    def create(args)
       return result unless valid?(**args)
 
       wallet = Wallet.new(
         customer_id: result.current_customer.id,
         name: args[:name],
         rate_amount: args[:rate_amount],
-        expiration_date: args[:expiration_date],
+        expiration_at: args[:expiration_at],
         status: :active,
       )
 

@@ -31,7 +31,7 @@ module Clockwork
     Clock::TerminateCouponsJob.perform_later
   end
 
-  every(1.day, 'schedule:terminate_wallets', at: '4:00') do
+  every(1.hour, 'schedule:terminate_wallets', at: '*:45') do
     Clock::TerminateWalletsJob.perform_later
   end
 end

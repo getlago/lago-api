@@ -44,7 +44,7 @@ RSpec.describe Wallets::TerminateService, type: :service do
       create(
         :wallet,
         status: 'active',
-        expiration_date: Time.zone.now - 40.days,
+        expiration_at: Time.zone.now - 40.days,
       )
     end
 
@@ -52,7 +52,7 @@ RSpec.describe Wallets::TerminateService, type: :service do
       create(
         :wallet,
         status: 'active',
-        expiration_date: Time.zone.now + 40.days,
+        expiration_at: Time.zone.now + 40.days,
       )
     end
 

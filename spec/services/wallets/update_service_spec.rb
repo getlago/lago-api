@@ -21,18 +21,18 @@ RSpec.describe Wallets::UpdateService, type: :service do
       {
         id: wallet.id,
         name: 'new name',
-        expiration_date: '2022-01-01',
+        expiration_at: DateTime.parse('2022-01-01 23:59:59'),
       }
     end
 
     it 'updates the wallet' do
-      result = update_service.update(**update_args)
+      result = update_service.update(wallet: wallet, args: update_args)
 
       expect(result).to be_success
 
       aggregate_failures do
         expect(result.wallet.name).to eq('new name')
-        expect(result.wallet.expiration_date).to eq('2022-01-01')
+        expect(result.wallet.expiration_at.iso8601).to eq('2022-01-01T23:59:59Z')
       end
     end
 
@@ -46,7 +46,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       end
 
       it 'returns an error' do
-        result = update_service.update(**update_args)
+        result = update_service.update(wallet: nil, args: update_args)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('wallet_not_found')
