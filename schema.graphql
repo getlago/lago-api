@@ -2843,6 +2843,7 @@ type Event {
   apiClient: String
   billableMetricName: String
   code: String!
+  customerTimezone: TimezoneEnum!
   externalCustomerId: String!
   externalSubscriptionId: String!
   id: ID!
@@ -2851,9 +2852,7 @@ type Event {
   matchCustomField: Boolean!
   payload: JSON!
   receivedAt: ISO8601DateTime!
-  receivedAtInCustomerTimezone: ISO8601DateTime!
   timestamp: ISO8601DateTime
-  timestampInCustomerTimezone: ISO8601DateTime
   transactionId: String
 }
 
