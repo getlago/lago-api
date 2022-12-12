@@ -13,6 +13,13 @@ class InvoiceSubscription < ApplicationRecord
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
+  SOURCES = [
+    :recurring, # Created by the billing service
+    :initial, # Created by the creation or the start of a subscription
+  ].freeze
+
+  enum source: SOURCES
+
   scope :order_by_charges_to_datetime,
         lambda {
           condition = <<-SQL

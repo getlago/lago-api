@@ -4,8 +4,15 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
-    described_class.new(invoice: invoice, subscriptions: subscriptions, timestamp: timestamp.to_i)
+    described_class.new(
+      invoice: invoice,
+      subscriptions: subscriptions,
+      timestamp: timestamp.to_i,
+      invoice_source: invoice_source,
+    )
   end
+
+  let(:invoice_source) { :initial }
 
   describe '#call' do
     let(:invoice) do
@@ -58,6 +65,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
             expect(result.invoice.fees.subscription_kind.count).to eq(0)
+
+            expect(result.invoice.invoice_subscriptions.count).to eq(1)
+            expect(result.invoice.invoice_subscriptions.first).to be_initial
           end
         end
       end

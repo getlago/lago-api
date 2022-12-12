@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 module Invoices
-  class CreateService < BaseService
-    def initialize(subscriptions:, timestamp:)
+  class SubscriptionService < BaseService
+    def initialize(subscriptions:, timestamp:, invoice_source:)
       @subscriptions = subscriptions
       @timestamp = timestamp
+      @invoice_source = invoice_source
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
 
@@ -33,6 +34,7 @@ module Invoices
           invoice: invoice,
           subscriptions: subscriptions,
           timestamp: timestamp,
+          invoice_source: invoice_source,
         ).call
       end
 
@@ -47,7 +49,7 @@ module Invoices
 
     private
 
-    attr_accessor :subscriptions, :timestamp, :customer, :currency
+    attr_accessor :subscriptions, :timestamp, :invoice_source, :customer, :currency
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
