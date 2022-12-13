@@ -92,9 +92,8 @@ module AppliedCoupons
 
     def reusable_coupon?
       return true if coupon.reusable?
-      return false if customer.applied_coupons.where(coupon_id: coupon.id).exists?
 
-      true
+      customer.applied_coupons.where(coupon_id: coupon.id).none?
     end
 
     def track_applied_coupon_created(applied_coupon)
