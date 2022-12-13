@@ -19,6 +19,7 @@ RSpec.describe Coupons::CreateService, type: :service do
         amount_cents: 100,
         amount_currency: 'EUR',
         expiration: 'time_limit',
+        reusable: false,
         expiration_date: (Time.current + 3.days).to_date,
       }
     end

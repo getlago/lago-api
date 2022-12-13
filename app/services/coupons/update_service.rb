@@ -18,6 +18,7 @@ module Coupons
         coupon.percentage_rate = args[:percentage_rate]
         coupon.frequency = args[:frequency]
         coupon.frequency_duration = args[:frequency_duration]
+        coupon.reusable = args[:reusable]
       end
 
       coupon.save!
@@ -44,6 +45,7 @@ module Coupons
         coupon.percentage_rate = params[:percentage_rate] if params.key?(:percentage_rate)
         coupon.frequency = params[:frequency] if params.key?(:frequency)
         coupon.frequency_duration = params[:frequency_duration] if params.key?(:frequency_duration)
+        coupon.reusable = params[:reusable] if params.key?(:reusable)
       end
 
       coupon.save!

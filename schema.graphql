@@ -1484,6 +1484,7 @@ type Coupon {
   name: String!
   organization: Organization
   percentageRate: Float
+  reusable: Boolean!
   status: CouponStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
@@ -1518,6 +1519,7 @@ type CouponDetails {
   name: String!
   organization: Organization
   percentageRate: Float
+  reusable: Boolean!
   status: CouponStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
@@ -1628,6 +1630,7 @@ input CreateCouponInput {
   frequencyDuration: Int
   name: String!
   percentageRate: Float
+  reusable: Boolean
 }
 
 """
@@ -4756,6 +4759,7 @@ input UpdateCouponInput {
   id: String!
   name: String!
   percentageRate: Float
+  reusable: Boolean
 }
 
 """

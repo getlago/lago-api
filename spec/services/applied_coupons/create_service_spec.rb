@@ -162,6 +162,21 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       end
     end
 
+    context 'when coupon is already applied to the customer and is not reusable' do
+      let(:coupon) { create(:coupon, status: 'active', organization: organization, reusable: false) }
+
+      before { create(:applied_coupon, customer: customer, coupon: coupon) }
+
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:coupon)
+          expect(create_result.error.messages[:coupon]).to include('coupon_is_not_reusable')
+        end
+      end
+    end
+
     context 'when coupon is inactive' do
       before { coupon.terminated! }
 
@@ -295,6 +310,21 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           expect(create_result).not_to be_success
           expect(create_result.error).to be_a(BaseService::NotFoundFailure)
           expect(create_result.error.message).to eq('coupon_not_found')
+        end
+      end
+    end
+
+    context 'when coupon is already applied and is not reusable' do
+      let(:coupon) { create(:coupon, status: 'active', organization: organization, reusable: false) }
+
+      before { create(:applied_coupon, customer: customer, coupon: coupon) }
+
+      it 'returns a not found error' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:coupon)
+          expect(create_result.error.messages[:coupon]).to include('coupon_is_not_reusable')
         end
       end
     end

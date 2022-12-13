@@ -13,6 +13,7 @@ module V1
         percentage_rate: model.percentage_rate,
         frequency: model.frequency,
         frequency_duration: model.frequency_duration,
+        reusable: model.reusable,
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
         expiration_date: model.expiration_date&.iso8601,

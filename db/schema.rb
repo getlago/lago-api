@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_02_130126) do
+ActiveRecord::Schema[7.0].define(version: 2022_12_05_112007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -127,6 +127,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_02_130126) do
     t.integer "frequency", default: 0, null: false
     t.integer "frequency_duration"
     t.date "expiration_date"
+    t.boolean "reusable", default: true, null: false
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end

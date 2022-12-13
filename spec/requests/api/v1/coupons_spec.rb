@@ -16,6 +16,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         amount_currency: 'EUR',
         expiration: 'time_limit',
         expiration_date: (Time.current + 15.days).to_date,
+        reusable: false,
       }
     end
 
@@ -27,6 +28,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       expect(json[:coupon][:code]).to eq(create_params[:code])
       expect(json[:coupon][:name]).to eq(create_params[:name])
       expect(json[:coupon][:created_at]).to be_present
+      expect(json[:coupon][:reusable]).to eq(false)
     end
   end
 

@@ -49,6 +49,9 @@ module AppliedCoupons
     def check_preconditions
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'coupon') unless coupon
+      return if reusable_coupon?
+
+      result.single_validation_failure!(field: 'coupon', error_code: 'coupon_is_not_reusable')
     end
 
     def process_creation(applied_coupon_attributes)
@@ -85,6 +88,12 @@ module AppliedCoupons
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    end
+
+    def reusable_coupon?
+      return true if coupon.reusable?
+
+      customer.applied_coupons.where(coupon_id: coupon.id).none?
     end
 
     def track_applied_coupon_created(applied_coupon)
