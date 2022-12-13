@@ -50,60 +50,61 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
     GQL
   end
 
-  it 'creates a credit note' do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      query: mutation,
-      variables: {
-        input: {
-          reason: 'duplicated_charge',
-          invoiceId: invoice.id,
-          description: 'Duplicated charge',
-          creditAmountCents: 10,
-          refundAmountCents: 5,
-          items: [
-            {
-              feeId: fee1.id,
-              amountCents: 10,
-            },
-            {
-              feeId: fee2.id,
-              amountCents: 5,
-            },
-          ],
-        },
-      },
-    )
+  # TODO: credit note feature is diabled for now
+  # it 'creates a credit note' do
+  #   result = execute_graphql(
+  #     current_user: membership.user,
+  #     current_organization: organization,
+  #     query: mutation,
+  #     variables: {
+  #       input: {
+  #         reason: 'duplicated_charge',
+  #         invoiceId: invoice.id,
+  #         description: 'Duplicated charge',
+  #         creditAmountCents: 10,
+  #         refundAmountCents: 5,
+  #         items: [
+  #           {
+  #             feeId: fee1.id,
+  #             amountCents: 10,
+  #           },
+  #           {
+  #             feeId: fee2.id,
+  #             amountCents: 5,
+  #           },
+  #         ],
+  #       },
+  #     },
+  #   )
 
-    result_data = result['data']['createCreditNote']
+  #   result_data = result['data']['createCreditNote']
 
-    aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['creditStatus']).to eq('available')
-      expect(result_data['refundStatus']).to eq('pending')
-      expect(result_data['reason']).to eq('duplicated_charge')
-      expect(result_data['description']).to eq('Duplicated charge')
-      expect(result_data['totalAmountCents']).to eq('15')
-      expect(result_data['totalAmountCurrency']).to eq('EUR')
-      expect(result_data['creditAmountCents']).to eq('10')
-      expect(result_data['creditAmountCurrency']).to eq('EUR')
-      expect(result_data['balanceAmountCents']).to eq('10')
-      expect(result_data['balanceAmountCurrency']).to eq('EUR')
-      expect(result_data['refundAmountCents']).to eq('5')
-      expect(result_data['refundAmountCurrency']).to eq('EUR')
+  #   aggregate_failures do
+  #     expect(result_data['id']).to be_present
+  #     expect(result_data['creditStatus']).to eq('available')
+  #     expect(result_data['refundStatus']).to eq('pending')
+  #     expect(result_data['reason']).to eq('duplicated_charge')
+  #     expect(result_data['description']).to eq('Duplicated charge')
+  #     expect(result_data['totalAmountCents']).to eq('15')
+  #     expect(result_data['totalAmountCurrency']).to eq('EUR')
+  #     expect(result_data['creditAmountCents']).to eq('10')
+  #     expect(result_data['creditAmountCurrency']).to eq('EUR')
+  #     expect(result_data['balanceAmountCents']).to eq('10')
+  #     expect(result_data['balanceAmountCurrency']).to eq('EUR')
+  #     expect(result_data['refundAmountCents']).to eq('5')
+  #     expect(result_data['refundAmountCurrency']).to eq('EUR')
 
-      expect(result_data['items'][0]['id']).to be_present
-      expect(result_data['items'][0]['amountCents']).to eq('10')
-      expect(result_data['items'][0]['amountCurrency']).to eq('EUR')
-      expect(result_data['items'][0]['fee']['id']).to eq(fee1.id)
+  #     expect(result_data['items'][0]['id']).to be_present
+  #     expect(result_data['items'][0]['amountCents']).to eq('10')
+  #     expect(result_data['items'][0]['amountCurrency']).to eq('EUR')
+  #     expect(result_data['items'][0]['fee']['id']).to eq(fee1.id)
 
-      expect(result_data['items'][1]['id']).to be_present
-      expect(result_data['items'][1]['amountCents']).to eq('5')
-      expect(result_data['items'][1]['amountCurrency']).to eq('EUR')
-      expect(result_data['items'][1]['fee']['id']).to eq(fee2.id)
-    end
-  end
+  #     expect(result_data['items'][1]['id']).to be_present
+  #     expect(result_data['items'][1]['amountCents']).to eq('5')
+  #     expect(result_data['items'][1]['amountCurrency']).to eq('EUR')
+  #     expect(result_data['items'][1]['fee']['id']).to eq(fee2.id)
+  #   end
+  # end
 
   context 'when invoice is not found' do
     it 'returns an error' do

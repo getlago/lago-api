@@ -78,8 +78,8 @@ module Fees
 
     def compute_amount(properties:, group: nil)
       aggregation_result = aggregator(group: group).aggregate(
-        from_date: boundaries.charges_from_datetime.to_date,
-        to_date: boundaries.charges_to_datetime.to_date,
+        from_datetime: boundaries.charges_from_datetime,
+        to_datetime: boundaries.charges_to_datetime,
         options: options(properties),
       )
       return aggregation_result unless aggregation_result.success?

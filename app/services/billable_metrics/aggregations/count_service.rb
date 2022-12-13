@@ -3,10 +3,10 @@
 module BillableMetrics
   module Aggregations
     class CountService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_date:, to_date:, options: {})
-        result.aggregation = events_scope(from_date: from_date, to_date: to_date).count
+      def aggregate(from_datetime:, to_datetime:, options: {})
+        result.aggregation = events_scope(from_datetime: from_datetime, to_datetime: to_datetime).count
         result.count = result.aggregation
-        result.options = {}
+        result.options = options
         result
       end
     end

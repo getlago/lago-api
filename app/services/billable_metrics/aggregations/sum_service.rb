@@ -3,8 +3,8 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_date:, to_date:, options: {})
-        events = events_scope(from_date: from_date, to_date: to_date)
+      def aggregate(from_datetime:, to_datetime:, options: {})
+        events = events_scope(from_datetime: from_datetime, to_datetime: to_datetime)
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.sum("(#{sanitized_field_name})::numeric")

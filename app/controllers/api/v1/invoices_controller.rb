@@ -4,11 +4,12 @@ module Api
   module V1
     class InvoicesController < Api::BaseController
       def update
-        service = Invoices::UpdateService.new
-        result = service.update_from_api(
-          invoice_id: params[:id],
+        invoice = current_organization.invoices.find_by(id: params[:id])
+
+        result = Invoices::UpdateService.new(
+          invoice: invoice,
           params: update_params,
-        )
+        ).call
 
         if result.success?
           render_invoice(result.invoice)

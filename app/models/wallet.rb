@@ -19,5 +19,5 @@ class Wallet < ApplicationRecord
     terminated!
   end
 
-  scope :expired, -> { where('wallets.expiration_date < ?', Time.current.beginning_of_day) }
+  scope :expired, -> { where('wallets.expiration_at::timestamp(0) <= ?', Time.current) }
 end

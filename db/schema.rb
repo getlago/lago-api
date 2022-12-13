@@ -510,7 +510,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_05_112007) do
     t.decimal "credits_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "consumed_credits", precision: 30, scale: 5, default: "0.0", null: false
-    t.datetime "expiration_date", precision: nil
+    t.datetime "expiration_at", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
     t.datetime "last_consumed_credit_at", precision: nil
     t.datetime "terminated_at", precision: nil

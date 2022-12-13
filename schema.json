@@ -5295,11 +5295,11 @@
               "deprecationReason": null
             },
             {
-              "name": "expirationDate",
+              "name": "expirationAt",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "ISO8601Date",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "defaultValue": null,
@@ -5317,6 +5317,18 @@
                   "name": "CurrencyEnum",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "expirationDate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -18669,6 +18681,18 @@
               "deprecationReason": null
             },
             {
+              "name": "expirationAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "expirationDate",
               "description": null,
               "type": {
@@ -19558,6 +19582,20 @@
               ]
             },
             {
+              "name": "expirationAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "expirationDate",
               "description": null,
               "type": {
@@ -19883,6 +19921,20 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Customer",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "expirationAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "isDeprecated": false,

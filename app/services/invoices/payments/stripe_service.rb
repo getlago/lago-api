@@ -124,7 +124,7 @@ module Invoices
           confirm: true,
           off_session: true,
           error_on_requires_action: true,
-          description: "Lago - #{organization.name} - Invoice #{invoice.number}",
+          description: "#{organization.name} - Invoice #{invoice.number}",
           metadata: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,

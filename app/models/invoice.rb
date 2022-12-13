@@ -125,8 +125,8 @@ class Invoice < ApplicationRecord
       subscription: fee.subscription,
       group: fee.group,
     ).breakdown(
-      from_date: DateTime.parse(fee.properties['charges_from_datetime']).to_date,
-      to_date: DateTime.parse(fee.properties['charges_to_datetime']).to_date,
+      from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
+      to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
     )
     result.breakdown
   end

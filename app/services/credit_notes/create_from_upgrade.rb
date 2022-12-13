@@ -27,6 +27,7 @@ module CreditNotes
           },
         ],
         reason: :order_change,
+        automatic: true,
       ).call
     end
 
