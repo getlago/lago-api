@@ -429,7 +429,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-04-02 03:59:59 UTC')
+          expect(result).to eq('2022-04-01 03:59:59 UTC')
         end
       end
 
@@ -489,7 +489,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-02-02 05:00:00 UTC')
+          expect(result).to eq('2022-02-01 05:00:00 UTC')
         end
       end
 
