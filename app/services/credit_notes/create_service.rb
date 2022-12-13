@@ -11,11 +11,14 @@ module CreditNotes
       @credit_amount_cents = args[:credit_amount_cents] || 0
       @refund_amount_cents = args[:refund_amount_cents] || 0
 
+      @automatic = args.key?(:automatic) ? args[:automatic] : false
+
       super
     end
 
     def call
       return result.not_found_failure!(resource: invoice) unless invoice
+      return result.forbidden_failure! unless automatic
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.create!(
@@ -67,7 +70,13 @@ module CreditNotes
 
     private
 
-    attr_accessor :invoice, :items_attr, :reason, :description, :credit_amount_cents, :refund_amount_cents
+    attr_accessor :invoice,
+                  :items_attr,
+                  :reason,
+                  :description,
+                  :credit_amount_cents,
+                  :refund_amount_cents,
+                  :automatic
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice

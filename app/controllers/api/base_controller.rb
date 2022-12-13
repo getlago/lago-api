@@ -46,6 +46,17 @@ module Api
       )
     end
 
+    def forbidden_error(code:)
+      render(
+        json: {
+          status: 403,
+          error: 'Forbidden',
+          code: code,
+        },
+        status: :forbidden,
+      )
+    end
+
     def method_not_allowed_error(code:)
       render(
         json: {
@@ -65,6 +76,8 @@ module Api
         method_not_allowed_error(code: error_result.error.code)
       when BaseService::ValidationFailure
         validation_errors(errors: error_result.error.messages)
+      when BaseService::ForbiddenFailure
+        forbidden_error(code: error_result.error.code)
       else
         raise(error_result.error)
       end

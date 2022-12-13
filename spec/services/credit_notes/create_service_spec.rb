@@ -10,6 +10,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       description: nil,
       credit_amount_cents: credit_amount_cents,
       refund_amount_cents: refund_amount_cents,
+      automatic: true, # TODO: credit note feature is diabled for now
     )
   end
 

@@ -62,6 +62,16 @@ class BaseService
     end
   end
 
+  class ForbiddenFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
   class Result < OpenStruct
     attr_reader :error
 
@@ -105,6 +115,10 @@ class BaseService
 
     def service_failure!(code:, message:)
       fail_with_error!(ServiceFailure.new(self, code: code, error_message: message))
+    end
+
+    def forbidden_failure!(code: 'feature_unavailable')
+      fail_with_error!(ServiceFailure.new(self, code: code))
     end
 
     def throw_error
