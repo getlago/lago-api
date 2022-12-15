@@ -45,6 +45,10 @@ module Types
         ::Subscriptions::DatesService.new_instance(object, Time.current)
           .next_end_of_period
       end
+
+      def subscription_date
+        object.subscription_at.to_date
+      end
     end
   end
 end

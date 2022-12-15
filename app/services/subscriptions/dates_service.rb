@@ -101,7 +101,7 @@ module Subscriptions
 
     attr_accessor :subscription, :billing_at, :current_usage
 
-    delegate :plan, :subscription_date, :calendar?, :customer, to: :subscription
+    delegate :plan, :calendar?, :customer, to: :subscription
 
     def billing_date
       @billing_date ||= billing_at.in_time_zone(customer.applicable_timezone).to_date
@@ -109,6 +109,10 @@ module Subscriptions
 
     def base_date
       @base_date ||= current_usage ? billing_date : compute_base_date
+    end
+
+    def subscription_at
+      subscription.subscription_at.in_time_zone(customer.applicable_timezone)
     end
 
     def customer_timezone_shift(date, end_of_day: false)

@@ -11,8 +11,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
   describe 'update' do
     let(:subscription_date) { '2022-07-07' }
 
-    before { subscription }
-
     let(:update_args) do
       {
         id: subscription.id,
@@ -21,6 +19,8 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       }
     end
 
+    before { subscription }
+
     it 'updates the subscription' do
       result = update_service.update(**update_args)
 
@@ -28,11 +28,11 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.subscription.name).to eq('new name')
-        expect(result.subscription.subscription_date.to_s).not_to eq('2022-07-07')
+        expect(result.subscription.subscription_at.to_s).not_to eq('2022-07-07')
       end
     end
 
-    context 'when subscription_date is not passed at all' do
+    context 'when subscription_at is not passed at all' do
       let(:update_args) do
         {
           id: subscription.id,
@@ -47,7 +47,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
         aggregate_failures do
           expect(result.subscription.name).to eq('new name')
-          expect(result.subscription.subscription_date.to_s).not_to eq('2022-07-07')
+          expect(result.subscription.subscription_at.to_s).not_to eq('2022-07-07')
         end
       end
     end
@@ -55,14 +55,14 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     context 'when subscription is starting in the future' do
       let(:subscription) { create(:pending_subscription) }
 
-      it 'updates the subscription_date as well' do
+      it 'updates the subscription_at as well' do
         result = update_service.update(**update_args)
 
         expect(result).to be_success
 
         aggregate_failures do
           expect(result.subscription.name).to eq('new name')
-          expect(result.subscription.subscription_date.to_s).to eq('2022-07-07')
+          expect(result.subscription.subscription_at.to_s).to eq('2022-07-07 00:00:00 UTC')
         end
       end
 
@@ -93,7 +93,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     context 'with invalid id' do
       let(:update_args) do
         {
-          id: subscription.id + '123',
+          id: "#{subscription.id}123",
           name: 'new name',
         }
       end
@@ -131,14 +131,14 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.subscription.name).to eq('new name')
-        expect(result.subscription.subscription_date.to_s).not_to eq('2022-07-07')
+        expect(result.subscription.subscription_at.to_s).not_to eq('2022-07-07')
       end
     end
 
     context 'when subscription is starting in the future' do
       let(:subscription) { create(:pending_subscription, customer: customer) }
 
-      it 'updates the subscription_date as well' do
+      it 'updates the subscription_at as well' do
         result = update_service.update_from_api(
           organization: organization,
           external_id: subscription.external_id,
@@ -149,7 +149,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
         aggregate_failures do
           expect(result.subscription.name).to eq('new name')
-          expect(result.subscription.subscription_date.to_s).to eq('2022-07-07')
+          expect(result.subscription.subscription_at.to_s).to eq('2022-07-07 00:00:00 UTC')
         end
       end
     end
@@ -158,7 +158,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       it 'returns an error' do
         result = update_service.update_from_api(
           organization: organization,
-          external_id: subscription.external_id + '123',
+          external_id: "#{subscription.external_id}123",
           params: update_args,
         )
 

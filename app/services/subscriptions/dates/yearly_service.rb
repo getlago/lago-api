@@ -6,7 +6,7 @@ module Subscriptions
       def first_month_in_yearly_period?
         return billing_date.month == 1 if calendar?
 
-        monthly_service.compute_from_date(billing_date).month == subscription_date.month
+        monthly_service.compute_from_date(billing_date).month == subscription_at.month
       end
 
       private
@@ -28,11 +28,11 @@ module Subscriptions
       end
 
       def compute_to_date(from_date = compute_from_date)
-        return from_date.end_of_year if subscription.calendar? || subscription_date.yday == 1
+        return from_date.end_of_year if subscription.calendar? || subscription_at.yday == 1
 
         year = from_date.year + 1
         month = from_date.month
-        day = subscription_date.day - 1
+        day = subscription_at.day - 1
 
         build_date(year, month, day)
       end
@@ -61,8 +61,8 @@ module Subscriptions
         return billing_date.end_of_year if calendar?
 
         year = billing_date.year
-        month = subscription_date.month
-        day = subscription_date.day
+        month = subscription_at.month
+        day = subscription_at.day
 
         # NOTE: we need the last day of the period, and not the first of the next one
         result_date = build_date(year, month, day) - 1.day
@@ -78,9 +78,9 @@ module Subscriptions
       end
 
       def previous_anniversary_day(date)
-        year = date.month < subscription_date.month ? date.year - 1 : date.year
-        month = subscription_date.month
-        day = subscription_date.day
+        year = (date.month < subscription_at.month) ? (date.year - 1) : date.year
+        month = subscription_at.month
+        day = subscription_at.day
 
         build_date(year, month, day)
       end

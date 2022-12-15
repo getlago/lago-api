@@ -473,10 +473,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_08_142739) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "previous_subscription_id"
-    t.date "subscription_date"
     t.string "name"
     t.string "external_id", null: false
     t.integer "billing_time", default: 0, null: false
+    t.datetime "subscription_at"
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["external_id"], name: "index_subscriptions_on_external_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"

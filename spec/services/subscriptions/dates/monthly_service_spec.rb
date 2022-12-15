@@ -10,7 +10,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       :subscription,
       plan: plan,
       customer: customer,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
       billing_time: billing_time,
       started_at: started_at,
     )
@@ -20,9 +20,9 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
   let(:plan) { create(:plan, interval: :monthly, pay_in_advance: pay_in_advance) }
   let(:pay_in_advance) { false }
 
-  let(:subscription_date) { DateTime.parse('02 Feb 2021') }
+  let(:subscription_at) { DateTime.parse('02 Feb 2021') }
   let(:billing_at) { DateTime.parse('07 Mar 2022') }
-  let(:started_at) { subscription_date }
+  let(:started_at) { subscription_at }
   let(:timezone) { 'UTC' }
 
   describe 'from_datetime' do
@@ -114,7 +114,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
         context 'when billing day after last day of billing month' do
           let(:billing_at) { DateTime.parse('29 Mar 2022') }
-          let(:subscription_date) { DateTime.parse('31 Mar 2021') }
+          let(:subscription_at) { DateTime.parse('31 Mar 2021') }
 
           it 'returns the previous month last day' do
             expect(result).to eq('2022-02-28 00:00:00 UTC')
@@ -123,7 +123,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
         context 'when billing day on first month of the year' do
           let(:billing_at) { DateTime.parse('28 Jan 2022') }
-          let(:subscription_date) { DateTime.parse('29 Mar 2021') }
+          let(:subscription_at) { DateTime.parse('29 Mar 2021') }
 
           it 'returns the previous month last day' do
             expect(result).to eq('2021-12-29 00:00:00 UTC')
@@ -201,7 +201,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when billing subscription day does not exist in the month' do
-        let(:subscription_date) { DateTime.parse('31 Jan 2022') }
+        let(:subscription_at) { DateTime.parse('31 Jan 2022') }
         let(:billing_at) { DateTime.parse('01 Mar 2022') }
 
         it 'returns the last day of the month' do
@@ -210,7 +210,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when anniversary date is first day of the month' do
-        let(:subscription_date) { DateTime.parse('01 Jan 2022') }
+        let(:subscription_at) { DateTime.parse('01 Jan 2022') }
         let(:billing_at) { DateTime.parse('02 Mar 2022') }
 
         it 'returns the last day of the month' do
@@ -295,7 +295,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
       context 'when plan is pay in advance' do
         let(:pay_in_advance) { true }
-        let(:subscription_date) { DateTime.parse('02 Feb 2020') }
+        let(:subscription_at) { DateTime.parse('02 Feb 2020') }
 
         it 'returns the start of the previous period' do
           expect(result).to eq('2022-02-01 00:00:00 UTC')
@@ -321,7 +321,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
       context 'when plan is pay in advance' do
         let(:pay_in_advance) { true }
-        let(:subscription_date) { DateTime.parse('02 Feb 2020') }
+        let(:subscription_at) { DateTime.parse('02 Feb 2020') }
 
         it 'returns the start of the previous period' do
           expect(result).to eq('2022-02-02 00:00:00 UTC')
@@ -429,7 +429,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-04-02 03:59:59 UTC')
+          expect(result).to eq('2022-04-01 03:59:59 UTC')
         end
       end
 
@@ -489,7 +489,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-02-02 05:00:00 UTC')
+          expect(result).to eq('2022-02-01 05:00:00 UTC')
         end
       end
 
@@ -514,7 +514,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when on a leap year' do
-        let(:subscription_date) { DateTime.parse('28 Feb 2019') }
+        let(:subscription_at) { DateTime.parse('28 Feb 2019') }
         let(:billing_at) { DateTime.parse('01 Mar 2020') }
 
         it 'returns the price of single day' do
@@ -531,7 +531,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when on a leap year' do
-        let(:subscription_date) { DateTime.parse('02 Feb 2019') }
+        let(:subscription_at) { DateTime.parse('02 Feb 2019') }
         let(:billing_at) { DateTime.parse('08 Mar 2020') }
 
         it 'returns the price of single day' do
@@ -552,7 +552,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when on a leap year' do
-        let(:subscription_date) { DateTime.parse('28 Feb 2019') }
+        let(:subscription_at) { DateTime.parse('28 Feb 2019') }
         let(:billing_at) { DateTime.parse('01 Mar 2020') }
 
         it 'returns the month duration' do
@@ -569,7 +569,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when on a leap year' do
-        let(:subscription_date) { DateTime.parse('02 Feb 2019') }
+        let(:subscription_at) { DateTime.parse('02 Feb 2019') }
         let(:billing_at) { DateTime.parse('08 Mar 2020') }
 
         it 'returns the month duration' do
