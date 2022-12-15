@@ -43,7 +43,8 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq(create_args[:currency])
-        expect(customer.timezone).to eq(create_args[:timezone])
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(customer.timezone).to eq(create_args[:timezone])
 
         billing = create_args[:billing_configuration]
         expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
@@ -328,7 +329,8 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq('EUR')
-        expect(customer.timezone).to eq('Europe/Paris')
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(customer.timezone).to eq('Europe/Paris')
         expect(customer.invoice_grace_period).to eq(2)
       end
     end

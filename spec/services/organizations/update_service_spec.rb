@@ -38,7 +38,8 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.zipcode).to eq('FOO1234')
         expect(result.organization.city).to eq('Foobar')
         expect(result.organization.country).to eq('FR')
-        expect(result.organization.timezone).to eq('Europe/Paris')
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(result.organization.timezone).to eq('Europe/Paris')
         expect(result.organization.invoice_footer).to eq('invoice footer')
         expect(result.organization.invoice_grace_period).to eq(3)
       end
@@ -94,7 +95,8 @@ RSpec.describe Organizations::UpdateService do
         organization_response = result.organization
         expect(organization_response.name).to eq(organization.name)
         expect(organization_response.webhook_url).to eq(update_args[:webhook_url])
-        expect(organization_response.timezone).to eq(update_args[:timezone])
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(organization_response.timezone).to eq(update_args[:timezone])
 
         billing = update_args[:billing_configuration]
         expect(organization_response.invoice_footer).to eq(billing[:invoice_footer])

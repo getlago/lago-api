@@ -25,7 +25,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:name]).to eq(create_params[:name])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
-        expect(json[:customer][:timezone]).to eq(create_params[:timezone])
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(json[:customer][:timezone]).to eq(create_params[:timezone])
       end
     end
 
