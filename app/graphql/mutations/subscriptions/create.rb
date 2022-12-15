@@ -23,12 +23,7 @@ module Mutations
 
         result = ::Subscriptions::CreateService
           .new
-          .create(
-            SubscriptionLegacyInput.new(
-              current_organization,
-              args.merge(organization_id: current_organization.id),
-            ).create_input,
-          )
+          .create(args.merge(organization_id: current_organization.id))
 
         result.success? ? result.subscription : result_error(result)
       end

@@ -21,10 +21,7 @@ module Mutations
           .new(context[:current_user])
           .update(
             subscription: subscription,
-            args: SubscriptionLegacyInput.new(
-              subscription&.organization,
-              args,
-            ).update_input,
+            args: args,
           )
 
         result.success? ? result.subscription : result_error(result)
