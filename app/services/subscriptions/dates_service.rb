@@ -50,6 +50,18 @@ module Subscriptions
 
     def charges_from_datetime
       datetime = customer_timezone_shift(compute_charges_from_date)
+
+      # NOTE: If customer applicable timezone changes during a billing period, there is a risk to double count events
+      #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
+      #       hole bewtween a charges_from_datetime and the charges_to_datetime of the previous period
+      if timezone_has_changed?
+        new_datetime = previous_charge_to_datetime + 1.second
+
+        # NOTE: Ensure that the invoice is really the previous one
+        #       26 hours is the maximum time difference between two places in the world
+        datetime = new_datetime if ((datetime.in_time_zone - new_datetime.in_time_zone) / 1.hour).abs < 26
+      end
+
       datetime = subscription.started_at if datetime < subscription.started_at
 
       datetime
@@ -103,6 +115,25 @@ module Subscriptions
       result = date.in_time_zone(customer.applicable_timezone)
       result = result.end_of_day if end_of_day
       result.utc
+    end
+
+    def last_invoice_subscription
+      @last_invoice_subscription ||= subscription
+        .invoice_subscriptions
+        .order_by_charges_to_datetime
+        .first
+    end
+
+    def timezone_has_changed?
+      return false if last_invoice_subscription.blank?
+
+      last_invoice_subscription.invoice.timezone != customer.applicable_timezone
+    end
+
+    def previous_charge_to_datetime
+      return if last_invoice_subscription.blank?
+
+      last_invoice_subscription.charges_to_datetime
     end
 
     def terminated_pay_in_arrear?

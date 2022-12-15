@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_05_112007) do
+ActiveRecord::Schema[7.0].define(version: 2022_12_08_142739) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -307,6 +307,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_05_112007) do
     t.uuid "subscription_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "properties", default: "{}", null: false
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
   end
@@ -332,6 +333,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_05_112007) do
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency"
     t.integer "status", default: 0, null: false
+    t.string "timezone", default: "UTC", null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 

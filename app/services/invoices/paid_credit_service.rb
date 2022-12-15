@@ -24,6 +24,7 @@ module Invoices
 
           # NOTE: No VAT should be applied on as it can be considered as an advance
           vat_rate: 0,
+          timezone: customer.applicable_timezone,
         )
 
         create_credit_fee(invoice)

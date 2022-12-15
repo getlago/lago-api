@@ -4,18 +4,18 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
-    described_class.new(invoice: invoice, timestamp: timestamp.to_i)
+    described_class.new(invoice: invoice, subscriptions: subscriptions, timestamp: timestamp.to_i)
   end
 
   describe '#call' do
     let(:invoice) do
       create(
         :invoice,
-        subscriptions: subscriptions,
         amount_currency: 'EUR',
         vat_amount_currency: 'EUR',
         total_amount_currency: 'EUR',
         issuing_date: Time.zone.at(timestamp).to_date,
+        customer: subscription.customer,
       )
     end
 

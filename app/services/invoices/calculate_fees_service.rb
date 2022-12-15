@@ -6,19 +6,24 @@ module Invoices
       new(...).call
     end
 
-    def initialize(invoice:, timestamp:)
+    def initialize(invoice:, subscriptions:, timestamp:)
       @invoice = invoice
+      @subscriptions = subscriptions
       @timestamp = timestamp
-      @customer = invoice.subscriptions&.first&.customer
-      @currency = invoice.subscriptions&.first&.plan&.amount_currency
 
       super
     end
 
     def call
       ActiveRecord::Base.transaction do
-        invoice.subscriptions.each do |subscription|
+        subscriptions.each do |subscription|
           boundaries = calculate_boundaries(subscription)
+
+          InvoiceSubscription.create!(
+            invoice: invoice,
+            subscription: subscription,
+            properties: boundaries,
+          )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
@@ -42,7 +47,9 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :timestamp, :customer, :currency
+    attr_accessor :invoice, :subscriptions, :timestamp
+
+    delegate :customer, :currency, to: :invoice
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
