@@ -17,8 +17,14 @@ RSpec.describe ::V1::CouponSerializer do
       expect(result['coupon']['amount_cents']).to eq(coupon.amount_cents)
       expect(result['coupon']['amount_currency']).to eq(coupon.amount_currency)
       expect(result['coupon']['expiration']).to eq(coupon.expiration)
-      expect(result['coupon']['expiration_date']).to eq(coupon.expiration_date&.iso8601)
+      expect(result['coupon']['expiration_at']).to eq(coupon.expiration_at&.iso8601)
       expect(result['coupon']['created_at']).to eq(coupon.created_at.iso8601)
     end
+  end
+
+  it 'serializes the legacy fields' do
+    result = JSON.parse(serializer.to_json)
+
+    expect(result['coupon']['expiration_date']).to eq(coupon.expiration_at&.to_date&.iso8601)
   end
 end

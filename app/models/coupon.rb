@@ -41,19 +41,20 @@ class Coupon < ApplicationRecord
   validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: true
   validates :amount_currency, inclusion: { in: currency_list }, allow_nil: true
 
-  scope :order_by_status_and_expiration, lambda {
-    order(
-      Arel.sql(
-        [
-          'coupons.status ASC',
-          'coupons.expiration ASC',
-          'coupons.expiration_date ASC',
-        ].join(', '),
-      ),
-    )
-  }
+  scope :order_by_status_and_expiration,
+        lambda {
+          order(
+            Arel.sql(
+              [
+                'coupons.status ASC',
+                'coupons.expiration ASC',
+                'coupons.expiration_at ASC',
+              ].join(', '),
+            ),
+          )
+        }
 
-  scope :expired, -> { where('coupons.expiration_date < ?', Time.current.beginning_of_day) }
+  scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
 
   def attached_to_customers?
     applied_coupons.exists?

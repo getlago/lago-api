@@ -17,10 +17,10 @@ module V1
         frequency: model.frequency,
         frequency_duration: model.frequency_duration,
         frequency_duration_remaining: model.frequency_duration_remaining,
-        expiration_date: model.coupon.expiration_date&.iso8601,
+        expiration_at: model.coupon.expiration_at&.iso8601,
         created_at: model.created_at.iso8601,
         terminated_at: model.terminated_at&.iso8601,
-      }
+      }.merge(legacy_values)
     end
 
     private
@@ -30,6 +30,12 @@ module V1
       return nil if model.coupon.percentage?
 
       model.amount_cents - model.credits.sum(:amount_cents)
+    end
+
+    def legacy_values
+      ::V1::Legacy::AppliedCouponSerializer.new(
+        model,
+      ).serialize
     end
   end
 end

@@ -6,10 +6,10 @@ module Api
       def create
         service = Coupons::CreateService.new
         result = service.create(
-          **input_params
-            .merge(organization_id: current_organization.id)
-            .to_h
-            .symbolize_keys,
+          CouponLegacyInput.new(
+            current_organization,
+            input_params.merge(organization_id: current_organization.id),
+          ).create_input,
         )
 
         if result.success?
@@ -24,7 +24,10 @@ module Api
         result = service.update_from_api(
           organization: current_organization,
           code: params[:code],
-          params: input_params,
+          params: CouponLegacyInput.new(
+            current_organization,
+            input_params,
+          ).update_input,
         )
 
         if result.success?
@@ -87,6 +90,8 @@ module Api
           :frequency,
           :frequency_duration,
           :expiration,
+          :expiration_at,
+          # NOTE: Legacy field
           :expiration_date,
           :reusable,
         )

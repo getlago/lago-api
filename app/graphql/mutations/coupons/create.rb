@@ -20,6 +20,9 @@ module Mutations
       argument :reusable, Boolean, required: false
 
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
+      argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
+
+      # NOTE: Legacy fields, will be removed when releasing the timezone feature
       argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Coupons::Object
@@ -29,7 +32,12 @@ module Mutations
 
         result = ::Coupons::CreateService
           .new(context[:current_user])
-          .create(**args.merge(organization_id: current_organization.id))
+          .create(
+            CouponLegacyInput.new(
+              current_organization,
+              args.merge(organization_id: current_organization.id),
+            ).create_input,
+          )
 
         result.success? ? result.coupon : result_error(result)
       end

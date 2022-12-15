@@ -2,13 +2,13 @@
 
 module Coupons
   class UpdateService < BaseService
-    def update(**args)
+    def update(args)
       coupon = result.user.coupons.find_by(id: args[:id])
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.name = args[:name]
       coupon.expiration = args[:expiration]&.to_sym
-      coupon.expiration_date = args[:expiration_date]
+      coupon.expiration_at = args[:expiration_at]
 
       unless coupon.attached_to_customers?
         coupon.code = args[:code]
@@ -35,7 +35,7 @@ module Coupons
 
       coupon.name = params[:name] if params.key?(:name)
       coupon.expiration = params[:expiration] if params.key?(:expiration)
-      coupon.expiration_date = params[:expiration_date] if params.key?(:expiration_date)
+      coupon.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
 
       unless coupon.attached_to_customers?
         coupon.code = params[:code] if params.key?(:code)

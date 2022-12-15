@@ -16,8 +16,16 @@ module V1
         reusable: model.reusable,
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
-        expiration_date: model.expiration_date&.iso8601,
-      }
+        expiration_at: model.expiration_at&.iso8601,
+      }.merge(legacy_values)
+    end
+
+    private
+
+    def legacy_values
+      ::V1::Legacy::CouponSerializer.new(
+        model,
+      ).serialize
     end
   end
 end

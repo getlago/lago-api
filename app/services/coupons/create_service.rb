@@ -2,7 +2,7 @@
 
 module Coupons
   class CreateService < BaseService
-    def create(**args)
+    def create(args)
       reusable = args.key?(:reusable) ? args[:reusable] : true
 
       coupon = Coupon.create!(
@@ -16,7 +16,7 @@ module Coupons
         frequency: args[:frequency],
         frequency_duration: args[:frequency_duration],
         expiration: args[:expiration]&.to_sym,
-        expiration_date: args[:expiration_date],
+        expiration_at: args[:expiration_at],
         reusable: reusable,
       )
 
