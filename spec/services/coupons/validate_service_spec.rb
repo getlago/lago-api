@@ -32,7 +32,7 @@ RSpec.describe Coupons::ValidateService, type: :service do
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:expiration_at]).to eq(['invalid_value'])
+        expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
       end
     end
   end

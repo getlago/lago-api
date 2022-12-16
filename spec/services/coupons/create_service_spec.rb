@@ -97,7 +97,7 @@ RSpec.describe Coupons::CreateService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:expiration_at]).to eq(['invalid_value'])
+          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
         end
       end
     end
