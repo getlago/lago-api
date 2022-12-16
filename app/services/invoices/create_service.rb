@@ -12,8 +12,11 @@ module Invoices
     end
 
     def create
+      result = nil
+      invoice = nil
+
       ActiveRecord::Base.transaction do
-        result.invoice = Invoice.create!(
+        invoice = Invoice.create!(
           customer: customer,
           issuing_date: issuing_date,
           invoice_type: :subscription,
@@ -26,7 +29,7 @@ module Invoices
           timezone: customer.applicable_timezone,
         )
 
-        self.result = Invoices::CalculateFeesService.new(
+        result = Invoices::CalculateFeesService.new(
           invoice: invoice,
           subscriptions: subscriptions,
           timestamp: timestamp,
@@ -45,7 +48,6 @@ module Invoices
     private
 
     attr_accessor :subscriptions, :timestamp, :customer, :currency
-    delegate :invoice, to: :result
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
