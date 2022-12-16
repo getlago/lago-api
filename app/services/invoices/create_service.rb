@@ -12,6 +12,9 @@ module Invoices
     end
 
     def create
+      result = nil
+      invoice = nil
+
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           customer: customer,
@@ -31,13 +34,13 @@ module Invoices
           subscriptions: subscriptions,
           timestamp: timestamp,
         ).call
-
-        SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
-        Invoices::Payments::CreateService.new(invoice).call
-        track_invoice_created(invoice)
-
-        result
       end
+
+      SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
+      Invoices::Payments::CreateService.new(invoice).call
+      track_invoice_created(invoice)
+
+      result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
