@@ -32,10 +32,10 @@ class Subscription < ApplicationRecord
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
 
-  # NOTE: SQL query to get subscription_date into customer timezone
-  def self.subscription_date_in_timezone_sql
+  # NOTE: SQL query to get subscription_at into customer timezone
+  def self.subscription_at_in_timezone_sql
     <<-SQL
-      subscriptions.subscription_date::timestamptz AT TIME ZONE
+      subscriptions.subscription_at::timestamptz AT TIME ZONE
       COALESCE(customers.timezone, organizations.timezone, 'UTC')
     SQL
   end
@@ -81,7 +81,7 @@ class Subscription < ApplicationRecord
     customer.subscriptions
       .where(external_id: external_id)
       .where.not(started_at: nil)
-      .order(started_at: :asc).first&.started_at || subscription_date
+      .order(started_at: :asc).first&.started_at || subscription_at
   end
 
   def next_subscription

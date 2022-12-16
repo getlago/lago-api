@@ -101,7 +101,7 @@ class BillingService
       .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.weekly)
-      .where("EXTRACT(ISODOW FROM (#{Subscription.subscription_date_in_timezone_sql})) = ?", today.wday)
+      .where("EXTRACT(ISODOW FROM (#{Subscription.subscription_at_in_timezone_sql})) = ?", today.wday)
       .select(:id).to_sql
   end
 
@@ -117,7 +117,7 @@ class BillingService
       .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.monthly)
-      .where("DATE_PART('day', (#{Subscription.subscription_date_in_timezone_sql})) IN (?)", days)
+      .where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
       .select(:id).to_sql
   end
 
@@ -133,8 +133,8 @@ class BillingService
       .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.yearly)
-      .where("DATE_PART('month', (#{Subscription.subscription_date_in_timezone_sql})) = ?", today.month)
-      .where("DATE_PART('day', (#{Subscription.subscription_date_in_timezone_sql})) IN (?)", days)
+      .where("DATE_PART('month', (#{Subscription.subscription_at_in_timezone_sql})) = ?", today.month)
+      .where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
       .select(:id).to_sql
   end
 
@@ -150,7 +150,7 @@ class BillingService
       .joins(:plan, customer: :organization)
       .anniversary
       .merge(Plan.yearly.where(bill_charges_monthly: true))
-      .where("DATE_PART('day', (#{Subscription.subscription_date_in_timezone_sql})) IN (?)", days)
+      .where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
       .select(:id).to_sql
   end
 

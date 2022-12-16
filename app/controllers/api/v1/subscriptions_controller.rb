@@ -7,7 +7,10 @@ module Api
         subscription_service = Subscriptions::CreateService.new
         result = subscription_service.create_from_api(
           organization: current_organization,
-          params: create_params,
+          params: SubscriptionLegacyInput.new(
+            current_organization,
+            create_params,
+          ).create_input,
         )
 
         if result.success?
@@ -45,10 +48,12 @@ module Api
       def update
         service = Subscriptions::UpdateService.new
 
-        result = service.update_from_api(
-          organization: current_organization,
-          external_id: params[:external_id],
-          params: update_params,
+        result = service.update(
+          subscription: current_organization.subscriptions.find_by(external_id: params[:external_id]),
+          args: SubscriptionLegacyInput.new(
+            current_organization,
+            update_params,
+          ).update_input,
         )
 
         if result.success?
@@ -86,11 +91,19 @@ module Api
 
       def create_params
         params.require(:subscription)
-          .permit(:external_customer_id, :plan_code, :name, :external_id, :billing_time, :subscription_date)
+          .permit(
+            :external_customer_id,
+            :plan_code,
+            :name,
+            :external_id,
+            :billing_time,
+            :subscription_date,
+            :subscription_at,
+          )
       end
 
       def update_params
-        params.require(:subscription).permit(:name, :subscription_date)
+        params.require(:subscription).permit(:name, :subscription_date, :subscription_at)
       end
     end
   end

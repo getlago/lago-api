@@ -13,6 +13,17 @@ class InvoiceSubscription < ApplicationRecord
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
+  scope :order_by_charges_to_datetime,
+        lambda {
+          condition = <<-SQL
+            COALESCE(
+              (invoice_subscriptions.properties->>\'to_datetime\')::timestamp, invoice_subscriptions.created_at
+            ) ASC
+          SQL
+
+          order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
+        }
+
   def fees
     @fees ||= Fee.where(
       subscription_id: subscription.id,
@@ -21,19 +32,19 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def from_datetime
-    fees_datetime('from_datetime')&.to_datetime
+    properties['from_datetime']&.to_datetime
   end
 
   def to_datetime
-    fees_datetime('to_datetime')&.to_datetime
+    properties['to_datetime']&.to_datetime
   end
 
   def charges_from_datetime
-    fees_datetime('charges_from_datetime')&.to_datetime
+    properties['charges_from_datetime']&.to_datetime
   end
 
   def charges_to_datetime
-    fees_datetime('charges_to_datetime')&.to_datetime
+    properties['charges_to_datetime']&.to_datetime
   end
 
   def charge_amount_cents
@@ -54,10 +65,4 @@ class InvoiceSubscription < ApplicationRecord
 
   alias charge_amount_currency total_amount_currency
   alias subscription_amount_currency total_amount_currency
-
-  def fees_datetime(field)
-    return if fees.empty?
-
-    fees.first.properties[field]
-  end
 end

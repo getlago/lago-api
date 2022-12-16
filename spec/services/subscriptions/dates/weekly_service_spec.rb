@@ -10,7 +10,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       :subscription,
       plan: plan,
       customer: customer,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
       billing_time: billing_time,
       started_at: started_at,
     )
@@ -20,9 +20,9 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
   let(:plan) { create(:plan, interval: :weekly, pay_in_advance: pay_in_advance) }
   let(:pay_in_advance) { false }
 
-  let(:subscription_date) { DateTime.parse('02 Feb 2021') }
+  let(:subscription_at) { DateTime.parse('02 Feb 2021') }
   let(:billing_at) { DateTime.parse('07 Mar 2022') }
-  let(:started_at) { subscription_date }
+  let(:started_at) { subscription_at }
   let(:timezone) { 'UTC' }
 
   describe 'from_datetime' do
@@ -87,7 +87,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
       it 'returns the previous week week day' do
         expect(result).to eq('2022-03-01 00:00:00 UTC')
-        expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
+        expect(Time.zone.parse(result).wday).to eq(subscription_at.wday)
       end
 
       context 'when date is before the start date' do
@@ -95,7 +95,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
         it 'returns the start date' do
           expect(result).to eq(started_at.utc.to_s)
-          expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
+          expect(Time.zone.parse(result).wday).to eq(subscription_at.wday)
         end
       end
 
@@ -104,7 +104,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
         it 'returns the previous week day' do
           expect(result).to eq('2022-03-08 00:00:00 UTC')
-          expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
+          expect(Time.zone.parse(result).wday).to eq(subscription_at.wday)
         end
 
         context 'when plan is pay in advance' do
@@ -112,7 +112,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
           it 'returns the current week week day' do
             expect(result).to eq('2022-03-08 00:00:00 UTC')
-            expect(Time.zone.parse(result).wday).to eq(subscription_date.wday)
+            expect(Time.zone.parse(result).wday).to eq(subscription_at.wday)
           end
         end
       end
@@ -218,6 +218,29 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
         it 'takes customer timezone into account' do
           expect(result).to eq(date_service.from_datetime.to_s)
+        end
+
+        context 'when timezone has changed' do
+          let(:billing_at) { DateTime.parse('08 Mar 2022') }
+
+          let(:previous_invoice_subscription) do
+            create(
+              :invoice_subscription,
+              subscription: subscription,
+              properties: {
+                charges_to_datetime: '2022-02-27T22:59:59Z',
+              },
+            )
+          end
+
+          before do
+            previous_invoice_subscription
+            subscription.customer.update!(timezone: 'America/Los_Angeles')
+          end
+
+          it 'takes previous invoice into account' do
+            expect(result).to match_datetime('2022-02-27 23:00:00')
+          end
         end
       end
 
@@ -364,7 +387,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-03-15 03:59:59 UTC')
+          expect(result).to eq('2022-03-14 03:59:59 UTC')
         end
       end
 
@@ -418,7 +441,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-02-22 05:00:00 UTC')
+          expect(result).to eq('2022-02-21 05:00:00 UTC')
         end
       end
 

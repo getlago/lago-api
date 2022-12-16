@@ -41,6 +41,7 @@ class Invoice < ApplicationRecord
   sequenced scope: ->(invoice) { invoice.customer.invoices }
 
   validates :issuing_date, presence: true
+  validates :timezone, timezone: true, allow_nil: true
 
   def file_url
     return if file.blank?

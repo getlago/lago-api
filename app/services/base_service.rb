@@ -118,7 +118,7 @@ class BaseService
     end
 
     def forbidden_failure!(code: 'feature_unavailable')
-      fail_with_error!(ServiceFailure.new(self, code: code))
+      fail_with_error!(ForbiddenFailure.new(self, code: code))
     end
 
     def throw_error

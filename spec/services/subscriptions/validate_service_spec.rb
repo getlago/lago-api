@@ -10,13 +10,13 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization: organization) }
   let(:plan) { create(:plan, organization: organization) }
-  let(:subscription_date) { '2022-07-07' }
+  let(:subscription_at) { '2022-07-07T00:00:00Z' }
 
   let(:args) do
     {
       customer: customer,
       plan: plan,
-      subscription_date: subscription_date,
+      subscription_at: subscription_at,
     }
   end
 
@@ -51,22 +51,22 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
       end
     end
 
-    context 'with invalid subscription_date' do
+    context 'with invalid subscription_at' do
       context 'when string cannot be parsed to date' do
-        let(:subscription_date) { 'invalid' }
+        let(:subscription_at) { 'invalid' }
 
         it 'returns false and result has errors' do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
+          expect(result.error.messages[:subscription_at]).to eq(['invalid_date'])
         end
       end
 
-      context 'when subscription_date is integer' do
-        let(:subscription_date) { 123 }
+      context 'when subscription_at is integer' do
+        let(:subscription_at) { 123 }
 
         it 'returns false and result has errors' do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:subscription_date]).to eq(['invalid_date'])
+          expect(result.error.messages[:subscription_at]).to eq(['invalid_date'])
         end
       end
     end

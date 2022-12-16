@@ -9,10 +9,10 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
 
   describe 'activate_all_expired' do
     let(:active_subscription) { create(:active_subscription) }
-    let(:pending_subscriptions) { create_list(:pending_subscription, 3, subscription_date: timestamp.to_date) }
+    let(:pending_subscriptions) { create_list(:pending_subscription, 3, subscription_at: timestamp) }
 
     let(:future_pending_subscriptions) do
-      create_list(:pending_subscription, 2, subscription_date: (timestamp + 10.days).to_date)
+      create_list(:pending_subscription, 2, subscription_at: (timestamp + 10.days))
     end
 
     before do
@@ -36,7 +36,7 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
         future_pending_subscriptions
 
         pending_subscription.customer.update!(timezone: 'America/New_York')
-        pending_subscription.update!(subscription_date: DateTime.parse('2022-10-21').to_date)
+        pending_subscription.update!(subscription_at: DateTime.parse('2022-10-21'))
       end
 
       it 'takes timezone into account' do
