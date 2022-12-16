@@ -45,6 +45,7 @@ module Invoices
     private
 
     attr_accessor :subscriptions, :timestamp, :customer, :currency
+    delegate :invoice, to: :result
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
@@ -66,8 +67,4 @@ module Invoices
       )
     end
   end
-
-  private
-
-  delegate :invoice, to: :resul
 end
