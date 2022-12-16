@@ -6,10 +6,11 @@ module Invoices
       new(...).call
     end
 
-    def initialize(invoice:, subscriptions:, timestamp:)
+    def initialize(invoice:, subscriptions:, timestamp:, invoice_source:)
       @invoice = invoice
       @subscriptions = subscriptions
       @timestamp = timestamp
+      @invoice_source = invoice_source
 
       super
     end
@@ -23,6 +24,7 @@ module Invoices
             invoice: invoice,
             subscription: subscription,
             properties: boundaries,
+            source: invoice_source,
           )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
@@ -47,7 +49,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscriptions, :timestamp
+    attr_accessor :invoice, :subscriptions, :timestamp, :invoice_source
 
     delegate :customer, :currency, to: :invoice
 

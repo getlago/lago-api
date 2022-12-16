@@ -4,5 +4,7 @@ FactoryBot.define do
   factory :invoice_subscription do
     subscription
     invoice
+
+    source { :initial }
   end
 end

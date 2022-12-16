@@ -2,9 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::CreateService, type: :service do
+RSpec.describe Invoices::SubscriptionService, type: :service do
   subject(:invoice_service) do
-    described_class.new(subscriptions: subscriptions, timestamp: timestamp.to_i)
+    described_class.new(
+      subscriptions: subscriptions,
+      timestamp: timestamp.to_i,
+      invoice_source: :initial,
+    )
   end
 
   describe 'create' do
