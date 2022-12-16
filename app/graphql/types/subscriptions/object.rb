@@ -17,7 +17,7 @@ module Types
       field :period_end_date, GraphQL::Types::ISO8601Date
 
       field :billing_time, Types::Subscriptions::BillingTimeEnum
-      field :subscription_date, GraphQL::Types::ISO8601Date
+      field :subscription_at, GraphQL::Types::ISO8601DateTime
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
@@ -46,8 +46,11 @@ module Types
           .next_end_of_period
       end
 
+      # NOTE: LEGACY FIELDS
+      field :subscription_date, GraphQL::Types::ISO8601Date
+
       def subscription_date
-        object.subscription_at.to_date
+        object.subscription_at&.to_date
       end
     end
   end

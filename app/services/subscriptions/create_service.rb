@@ -28,7 +28,7 @@ module Subscriptions
       @name = params[:name]&.strip
       @external_id = params[:external_id]&.strip
       @billing_time = params[:billing_time]
-      @subscription_at = params[:subscription_date] || Time.current
+      @subscription_at = params[:subscription_at] || Time.current
       @current_subscription = editable_subscriptions&.find_by(external_id: external_id)
 
       process_create
@@ -38,7 +38,7 @@ module Subscriptions
       e.result
     end
 
-    def create(**args)
+    def create(args)
       @current_customer = Customer.find_by(
         id: args[:customer_id],
         organization_id: args[:organization_id],
@@ -53,7 +53,7 @@ module Subscriptions
       @name = args[:name]&.strip
       @external_id = SecureRandom.uuid
       @billing_time = args[:billing_time]
-      @subscription_at = args[:subscription_date] || Time.current
+      @subscription_at = args[:subscription_at] || Time.current
       @current_subscription = editable_subscriptions&.find_by(id: args[:subscription_id])
 
       process_create
@@ -62,7 +62,7 @@ module Subscriptions
     private
 
     def process_create
-      return result unless valid?(customer: current_customer, plan: current_plan, subscription_date: subscription_at)
+      return result unless valid?(customer: current_customer, plan: current_plan, subscription_at: subscription_at)
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
