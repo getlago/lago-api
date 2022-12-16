@@ -3,6 +3,8 @@
 module Coupons
   class CreateService < BaseService
     def create(args)
+      return result unless valid?(args)
+
       reusable = args.key?(:reusable) ? args[:reusable] : true
 
       coupon = Coupon.create!(
@@ -39,6 +41,10 @@ module Coupons
           organization_id: coupon.organization_id,
         },
       )
+    end
+
+    def valid?(args)
+      Coupons::ValidateService.new(result, **args).valid?
     end
   end
 end

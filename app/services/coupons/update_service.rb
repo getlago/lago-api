@@ -33,6 +33,8 @@ module Coupons
       coupon = organization.coupons.find_by(code: code)
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
+      return result unless valid?(params)
+
       coupon.name = params[:name] if params.key?(:name)
       coupon.expiration = params[:expiration] if params.key?(:expiration)
       coupon.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
@@ -54,6 +56,12 @@ module Coupons
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    end
+
+    private
+
+    def valid?(args)
+      Coupons::ValidateService.new(result, **args).valid?
     end
   end
 end

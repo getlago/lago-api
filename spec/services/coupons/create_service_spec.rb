@@ -9,6 +9,7 @@ RSpec.describe Coupons::CreateService, type: :service do
   let(:organization) { membership.organization }
 
   describe 'create' do
+    let(:expiration_at) { (Time.current + 3.days).end_of_day }
     let(:create_args) do
       {
         name: 'Super Coupon',
@@ -20,7 +21,7 @@ RSpec.describe Coupons::CreateService, type: :service do
         amount_currency: 'EUR',
         expiration: 'time_limit',
         reusable: false,
-        expiration_at: (Time.current + 3.days).end_of_day,
+        expiration_at: expiration_at,
       }
     end
 
@@ -83,6 +84,20 @@ RSpec.describe Coupons::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:code]).to eq(['value_already_exist'])
+        end
+      end
+    end
+
+    context 'with invalid expiration_at' do
+      let(:expiration_at) { (Time.current - 3.days).end_of_day }
+
+      it 'returns an error' do
+        result = create_service.create(**create_args)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
         end
       end
     end
