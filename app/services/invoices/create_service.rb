@@ -32,12 +32,13 @@ module Invoices
           timestamp: timestamp,
         ).call
 
-        SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
 
         result
       end
+
+      SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
