@@ -5,7 +5,7 @@ Subscription.all.find_each do |subscription|
   Invoices::SubscriptionService.new(
     subscriptions: [subscription],
     timestamp: Time.zone.now - 2.months,
-    invoice_source: :initial,
+    recurring: true,
   ).create
 end
 

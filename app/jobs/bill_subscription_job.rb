@@ -5,11 +5,11 @@ class BillSubscriptionJob < ApplicationJob
 
   retry_on Sequenced::SequenceError
 
-  def perform(subscriptions, timestamp, invoice_source: :initial)
+  def perform(subscriptions, timestamp, recurring: false)
     result = Invoices::SubscriptionService.new(
       subscriptions: subscriptions,
       timestamp: timestamp,
-      invoice_source: invoice_source,
+      recurring: recurring,
     ).create
 
     result.throw_error unless result.success?

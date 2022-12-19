@@ -21,7 +21,7 @@ class BillingService
 
       BillSubscriptionJob
         .set(wait: rand(50).minutes)
-        .perform_later(billing_subscriptions, billing_timestamp, invoice_source: :recurring)
+        .perform_later(billing_subscriptions, billing_timestamp, recurring: true)
     end
   end
 
