@@ -8,11 +8,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       invoice: invoice,
       subscriptions: subscriptions,
       timestamp: timestamp.to_i,
-      invoice_source: invoice_source,
+      recurring: recurring,
     )
   end
 
-  let(:invoice_source) { :initial }
+  let(:recurring) { false }
 
   describe '#call' do
     let(:invoice) do
@@ -67,7 +67,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(result.invoice.fees.subscription_kind.count).to eq(0)
 
             expect(result.invoice.invoice_subscriptions.count).to eq(1)
-            expect(result.invoice.invoice_subscriptions.first).to be_initial
+            expect(result.invoice.invoice_subscriptions.first.recurring).to be_falsey
           end
         end
       end

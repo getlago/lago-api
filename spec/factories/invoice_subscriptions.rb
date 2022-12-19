@@ -5,6 +5,6 @@ FactoryBot.define do
     subscription
     invoice
 
-    source { :initial }
+    recurring { false }
   end
 end

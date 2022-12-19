@@ -2,10 +2,10 @@
 
 module Invoices
   class SubscriptionService < BaseService
-    def initialize(subscriptions:, timestamp:, invoice_source:)
+    def initialize(subscriptions:, timestamp:, recurring:)
       @subscriptions = subscriptions
       @timestamp = timestamp
-      @invoice_source = invoice_source
+      @recurring = recurring
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
 
@@ -34,7 +34,7 @@ module Invoices
           invoice: invoice,
           subscriptions: subscriptions,
           timestamp: timestamp,
-          invoice_source: invoice_source,
+          recurring: recurring,
         ).call
       end
 
@@ -49,7 +49,7 @@ module Invoices
 
     private
 
-    attr_accessor :subscriptions, :timestamp, :invoice_source, :customer, :currency
+    attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date

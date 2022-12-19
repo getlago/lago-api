@@ -11,7 +11,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
   it 'calls the invoices create service' do
     allow(Invoices::SubscriptionService).to receive(:new)
-      .with(subscriptions: [subscription], timestamp: timestamp, invoice_source: :initial)
+      .with(subscriptions: [subscription], timestamp: timestamp, recurring: false)
       .and_return(invoice_service)
     allow(invoice_service).to receive(:create)
       .and_return(result)
@@ -29,7 +29,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
     it 'raises an error' do
       allow(Invoices::SubscriptionService).to receive(:new)
-        .with(subscriptions: [subscription], timestamp: timestamp, invoice_source: :initial)
+        .with(subscriptions: [subscription], timestamp: timestamp, recurring: false)
         .and_return(invoice_service)
       allow(invoice_service).to receive(:create)
         .and_return(result)

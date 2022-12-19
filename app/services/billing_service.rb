@@ -21,7 +21,7 @@ class BillingService
 
       BillSubscriptionJob
         .set(wait: rand(50).minutes)
-        .perform_later(billing_subscriptions, billing_timestamp, invoice_source: :recurring)
+        .perform_later(billing_subscriptions, billing_timestamp, recurring: true)
     end
   end
 
@@ -165,8 +165,20 @@ class BillingService
   end
 
   def already_billed_filter_sql
+    # TODO: A migration to unify type of the timestamp property must performed
+    timestamp_condition = <<-SQL
+      CASE
+        WHEN invoice_subscriptions.properties->>'timestamp' ~ '^[0-9\.]+$'
+        THEN
+          to_timestamp((invoice_subscriptions.properties->>'timestamp')::integer)::timestamptz
+        ELSE
+          (invoice_subscriptions.properties->>'timestamp')::timestamptz
+      END
+    SQL
+
     InvoiceSubscription
-      .where("DATE(invoice_subscriptions.properties->>'timestamp') = DATE(?)", today.to_date)
+      .where("invoice_subscriptions.properties->>'timestamp' IS NOT NULL")
+      .where("DATE(#{Arel.sql(timestamp_condition)}) = DATE(?)", today.to_date)
       .recurring
       .group(:subscription_id)
       .select('invoice_subscriptions.subscription_id, COUNT(invoice_subscriptions.id) AS invoiced_count')

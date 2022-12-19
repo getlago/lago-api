@@ -7,7 +7,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     described_class.new(
       subscriptions: subscriptions,
       timestamp: timestamp.to_i,
-      invoice_source: :initial,
+      recurring: true,
     )
   end
 
