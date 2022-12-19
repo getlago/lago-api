@@ -367,6 +367,25 @@ RSpec.describe BillingService, type: :service do
           expect { billing_service.call }.not_to have_enqueued_job
         end
       end
+
+      context 'when timestamp is an integer' do
+        let(:invoice_subscription) do
+          create(
+            :invoice_subscription,
+            subscription: subscription,
+            recurring: true,
+            properties: {
+              timestamp: (subscription_at - 1.hour).to_i,
+            },
+          )
+        end
+
+        it 'does not enqueue a job' do
+          travel_to(subscription_at) do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
+      end
     end
   end
 end
