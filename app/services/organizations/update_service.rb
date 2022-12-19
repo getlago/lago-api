@@ -23,6 +23,9 @@ module Organizations
       organization.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
       organization.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
 
+      # TODO(:timezone): Timezone update is turned off for now
+      # organization.timezone = args[:timezone] if args.key?(:timezone)
+
       handle_base64_logo(args[:logo]) if args.key?(:logo)
 
       organization.save!
@@ -45,6 +48,9 @@ module Organizations
       organization.city = params[:city] if params.key?(:city)
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
+
+      # TODO(:timezone): Timezone update is turned off for now
+      # organization.timezone = params[:timezone] if params.key?(:timezone)
 
       if params.key?(:billing_configuration)
         billing = params[:billing_configuration]

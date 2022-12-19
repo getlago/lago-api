@@ -39,13 +39,6 @@ module Types
       def can_be_deleted
         object.deletable?
       end
-
-      # NOTE: Legacy fields, will be removed when releasing the timezone feature
-      field :expiration_date, GraphQL::Types::ISO8601Date, null: true
-
-      def expiration_date
-        object.expiration_at&.to_date
-      end
     end
   end
 end

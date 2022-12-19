@@ -3610,20 +3610,6 @@
               ]
             },
             {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "frequency",
               "description": null,
               "type": {
@@ -3995,20 +3981,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -4848,18 +4820,6 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -5212,6 +5172,18 @@
               "deprecationReason": null
             },
             {
+              "name": "timezone",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "TimezoneEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProvider",
               "description": null,
               "type": {
@@ -5357,18 +5329,6 @@
                   "name": "CurrencyEnum",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -5776,18 +5736,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "subscriptionDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "defaultValue": null,
@@ -8922,24 +8870,6 @@
               ]
             },
             {
-              "name": "fromDate",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601Date",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "fromDatetime",
               "description": null,
               "type": {
@@ -8959,24 +8889,6 @@
             },
             {
               "name": "issuingDate",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601Date",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "toDate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -9701,6 +9613,24 @@
               ]
             },
             {
+              "name": "customerTimezone",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "TimezoneEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "type": {
@@ -9841,39 +9771,7 @@
               ]
             },
             {
-              "name": "receivedAtInCustomerTimezone",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "timestamp",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "timestampInCustomerTimezone",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -11896,20 +11794,6 @@
               ]
             },
             {
-              "name": "fromDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "fromDatetime",
               "description": null,
               "type": {
@@ -11970,20 +11854,6 @@
                   "name": "Int",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "toDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -16862,20 +16732,6 @@
               ]
             },
             {
-              "name": "subscriptionDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "terminatedAt",
               "description": null,
               "type": {
@@ -18313,18 +18169,6 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -18633,6 +18477,18 @@
               "deprecationReason": null
             },
             {
+              "name": "timezone",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "TimezoneEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProvider",
               "description": null,
               "type": {
@@ -18764,18 +18620,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "defaultValue": null,
@@ -18967,6 +18811,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "timezone",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "TimezoneEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19225,18 +19081,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "subscriptionDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19686,20 +19530,6 @@
               ]
             },
             {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "id",
               "description": null,
               "type": {
@@ -20025,20 +19855,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "expirationDate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
                 "ofType": null
               },
               "isDeprecated": false,

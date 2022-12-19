@@ -33,6 +33,7 @@ module Api
           :city,
           :legal_name,
           :legal_number,
+          :timezone,
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,

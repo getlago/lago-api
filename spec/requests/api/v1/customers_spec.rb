@@ -10,6 +10,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         currency: 'EUR',
+        timezone: 'America/New_York',
       }
     end
 
@@ -24,6 +25,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:name]).to eq(create_params[:name])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(json[:customer][:timezone]).to eq(create_params[:timezone])
       end
     end
 
@@ -225,8 +228,12 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
       let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
       let(:aws_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: aws.id) }
-      let(:aws_france) { create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id) }
-      let(:google_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id) }
+      let(:aws_france) do
+        create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id)
+      end
+      let(:google_usa) do
+        create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id)
+      end
 
       let(:charge) do
         create(

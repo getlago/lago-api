@@ -21,6 +21,9 @@ module Customers
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
 
+        # TODO(:timezone): Timezone update is turned off for now
+        # customer.timezone = params[:timezone] if params.key?(:timezone)
+
         if params.key?(:currency)
           currency_result = Customers::UpdateService.new(nil).update_currency(
             customer: customer,
@@ -65,6 +68,9 @@ module Customers
         payment_provider: args[:payment_provider],
         currency: args[:currency],
       )
+      # TODO(:timezone): Timezone update is turned off for now
+      #   timezone: args[:timezone],
+      # )
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])

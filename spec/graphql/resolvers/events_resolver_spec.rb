@@ -8,19 +8,18 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       query {
         events(limit: 5) {
           collection {
-            id,
-            code,
-            externalCustomerId,
-            transactionId,
-            timestamp,
-            timestampInCustomerTimezone,
-            receivedAt,
-            receivedAtInCustomerTimezone,
-            ipAddress,
-            apiClient,
-            payload,
-            billableMetricName,
-            matchBillableMetric,
+            id
+            code
+            externalCustomerId
+            transactionId
+            timestamp
+            receivedAt
+            customerTimezone
+            ipAddress
+            apiClient
+            payload
+            billableMetricName
+            matchBillableMetric
             matchCustomField
           }
           metadata { currentPage, totalCount }
@@ -64,6 +63,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       expect(events_response['collection'].first['transactionId']).to eq(event.transaction_id)
       expect(events_response['collection'].first['timestamp']).to eq(event.timestamp.iso8601)
       expect(events_response['collection'].first['receivedAt']).to eq(event.created_at.iso8601)
+      expect(events_response['collection'].first['customerTimezone']).to eq('TZ_UTC')
       expect(events_response['collection'].first['ipAddress']).to eq(event.metadata['ip_address'])
       expect(events_response['collection'].first['apiClient']).to eq(event.metadata['user_agent'])
       expect(events_response['collection'].first['payload']).to be_present

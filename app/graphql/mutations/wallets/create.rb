@@ -17,9 +17,6 @@ module Mutations
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :currency, Types::CurrencyEnum, required: true
 
-      # NOTE: Legacy fields, will be removed when releasing the timezone feature
-      argument :expiration_date, GraphQL::Types::ISO8601Date, required: false
-
       type Types::Wallets::Object
 
       def resolve(**args)
@@ -28,13 +25,10 @@ module Mutations
         result = ::Wallets::CreateService
           .new(context[:current_user])
           .create(
-            WalletLegacyInput.new(
-              current_organization,
-              args
-                .merge(organization_id: current_organization.id)
-                .merge(customer: current_customer(args[:customer_id]))
-                .except(:customer_id),
-            ).create_input,
+            args
+              .merge(organization_id: current_organization.id)
+              .merge(customer: current_customer(args[:customer_id]))
+              .except(:customer_id),
           )
 
         result.success? ? result.wallet : result_error(result)

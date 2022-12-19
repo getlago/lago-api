@@ -45,13 +45,6 @@ module Types
         ::Subscriptions::DatesService.new_instance(object, Time.current)
           .next_end_of_period
       end
-
-      # NOTE: LEGACY FIELDS
-      field :subscription_date, GraphQL::Types::ISO8601Date
-
-      def subscription_date
-        object.subscription_at&.to_date
-      end
     end
   end
 end

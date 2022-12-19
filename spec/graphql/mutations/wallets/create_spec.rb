@@ -49,35 +49,6 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
     end
   end
 
-  context 'with expiration date' do
-    it 'create a wallet' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            name: 'First Wallet',
-            rateAmount: '1',
-            paidCredits: '0.00',
-            grantedCredits: '0.00',
-            expirationDate: expiration_at.to_date.iso8601,
-            currency: 'EUR',
-          },
-        },
-      )
-
-      result_data = result['data']['createCustomerWallet']
-
-      aggregate_failures do
-        expect(result_data['id']).to be_present
-        expect(result_data['name']).to eq('First Wallet')
-        expect(result_data['expirationAt']).to eq(expiration_at.end_of_day.iso8601)
-      end
-    end
-  end
-
   context 'when name is not present' do
     it 'creates a wallet' do
       result = execute_graphql(
@@ -91,7 +62,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             rateAmount: '1',
             paidCredits: '0.00',
             grantedCredits: '0.00',
-            expirationDate: (Time.zone.now + 1.year).to_date,
+            expirationAt: (Time.zone.now + 1.year).iso8601,
             currency: 'EUR',
           },
         },
@@ -118,7 +89,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             rateAmount: '1',
             paidCredits: '0.00',
             grantedCredits: '0.00',
-            expirationDate: (Time.zone.now + 1.year).to_date,
+            expirationAt: (Time.zone.now + 1.year).iso8601,
             currency: 'EUR',
           },
         },
@@ -140,7 +111,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             rateAmount: '1',
             paidCredits: '0.00',
             grantedCredits: '0.00',
-            expirationDate: (Time.zone.now + 1.year).to_date,
+            expirationAt: (Time.zone.now + 1.year).iso8601,
             currency: 'EUR',
           },
         },

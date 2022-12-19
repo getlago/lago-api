@@ -27,6 +27,9 @@ module Customers
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
 
+        # TODO(:timezone): Timezone update is turned off for now
+        # customer.timezone = args[:timezone] if args.key?(:timezone)
+
         # TODO: delete this when GraphQL will use billing_configuration.
         customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)

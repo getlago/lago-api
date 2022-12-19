@@ -58,41 +58,6 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
     end
   end
 
-  context 'with an expiration date' do
-    it 'updates a coupon' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: {
-          input: {
-            id: coupon.id,
-            name: 'New name',
-            couponType: 'fixed_amount',
-            frequency: 'once',
-            code: 'new_code',
-            amountCents: 123,
-            amountCurrency: 'USD',
-            expiration: 'time_limit',
-            expirationDate: expiration_at.to_date.iso8601,
-            reusable: false,
-          },
-        },
-      )
-
-      result_data = result['data']['updateCoupon']
-
-      aggregate_failures do
-        expect(result_data['name']).to eq('New name')
-        expect(result_data['code']).to eq('new_code')
-        expect(result_data['status']).to eq('active')
-        expect(result_data['amountCents']).to eq(123)
-        expect(result_data['amountCurrency']).to eq('USD')
-        expect(result_data['expiration']).to eq('time_limit')
-        expect(result_data['expirationAt']).to eq expiration_at.end_of_day.iso8601
-      end
-    end
-  end
-
   context 'without current_user' do
     it 'returns an error' do
       result = execute_graphql(
@@ -107,7 +72,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
             amountCents: 123,
             amountCurrency: 'USD',
             expiration: 'time_limit',
-            expirationDate: (Time.current + 33.days).to_date,
+            expirationAt: (Time.current + 33.days).iso8601,
           },
         },
       )

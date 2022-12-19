@@ -21,6 +21,7 @@ RSpec.describe Organizations::UpdateService do
         zipcode: 'FOO1234',
         city: 'Foobar',
         country: 'FR',
+        timezone: 'Europe/Paris',
         invoice_footer: 'invoice footer',
         invoice_grace_period: 3,
       )
@@ -37,6 +38,8 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.zipcode).to eq('FOO1234')
         expect(result.organization.city).to eq('Foobar')
         expect(result.organization.country).to eq('FR')
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(result.organization.timezone).to eq('Europe/Paris')
         expect(result.organization.invoice_footer).to eq('invoice footer')
         expect(result.organization.invoice_grace_period).to eq(3)
       end
@@ -74,6 +77,7 @@ RSpec.describe Organizations::UpdateService do
         city: 'test_city',
         legal_name: 'test1',
         legal_number: '123',
+        timezone: 'Europe/Paris',
         billing_configuration: {
           invoice_footer: 'footer',
           invoice_grace_period: 3,
@@ -83,7 +87,7 @@ RSpec.describe Organizations::UpdateService do
     end
 
     it 'updates an organization' do
-      result = subject.update_from_api(params: update_args)
+      result = organization_update_service.update_from_api(params: update_args)
 
       aggregate_failures do
         expect(result).to be_success
@@ -91,6 +95,8 @@ RSpec.describe Organizations::UpdateService do
         organization_response = result.organization
         expect(organization_response.name).to eq(organization.name)
         expect(organization_response.webhook_url).to eq(update_args[:webhook_url])
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(organization_response.timezone).to eq(update_args[:timezone])
 
         billing = update_args[:billing_configuration]
         expect(organization_response.invoice_footer).to eq(billing[:invoice_footer])
@@ -103,7 +109,7 @@ RSpec.describe Organizations::UpdateService do
       let(:country) { '---' }
 
       it 'returns an error' do
-        result = subject.update_from_api(params: update_args)
+        result = organization_update_service.update_from_api(params: update_args)
 
         aggregate_failures do
           expect(result).not_to be_success

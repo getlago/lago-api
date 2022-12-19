@@ -23,6 +23,7 @@ module Mutations
       argument :country, Types::CountryCodeEnum, required: false
       argument :invoice_footer, String, required: false
       argument :invoice_grace_period, Integer, required: false
+      argument :timezone, Types::TimezoneEnum, required: false
 
       type Types::OrganizationType
 

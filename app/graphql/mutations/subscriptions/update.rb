@@ -12,9 +12,6 @@ module Mutations
       argument :name, String, required: false
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
 
-      # NOTE: LEGACY FIELDS
-      argument :subscription_date, GraphQL::Types::ISO8601Date, required: false
-
       type Types::Subscriptions::Object
 
       def resolve(**args)
@@ -24,10 +21,7 @@ module Mutations
           .new(context[:current_user])
           .update(
             subscription: subscription,
-            args: SubscriptionLegacyInput.new(
-              subscription&.organization,
-              args,
-            ).update_input,
+            args: args,
           )
 
         result.success? ? result.subscription : result_error(result)

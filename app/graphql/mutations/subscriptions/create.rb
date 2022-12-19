@@ -16,9 +16,6 @@ module Mutations
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
 
-      # NOTE: LEGACY FIELDS
-      argument :subscription_date, GraphQL::Types::ISO8601Date, required: false
-
       type Types::Subscriptions::Object
 
       def resolve(**args)
@@ -26,12 +23,7 @@ module Mutations
 
         result = ::Subscriptions::CreateService
           .new
-          .create(
-            SubscriptionLegacyInput.new(
-              current_organization,
-              args.merge(organization_id: current_organization.id),
-            ).create_input,
-          )
+          .create(args.merge(organization_id: current_organization.id))
 
         result.success? ? result.subscription : result_error(result)
       end

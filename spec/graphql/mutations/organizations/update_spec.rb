@@ -45,6 +45,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode: 'FOO1234',
           city: 'Foobar',
           country: 'FR',
+          timezone: 'TZ_EUROPE_PARIS',
           invoiceFooter: 'invoice footer',
           invoiceGracePeriod: 3,
         },
@@ -67,7 +68,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['country']).to eq('FR')
       expect(result_data['invoiceFooter']).to eq('invoice footer')
       expect(result_data['invoiceGracePeriod']).to eq(3)
-      expect(result_data['timezone']).to eq('TZ_UTC')
+      # TODO(:timezone): Timezone update is turned off for now
+      # expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
     end
   end
 

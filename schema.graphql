@@ -1478,7 +1478,6 @@ type Coupon {
   customerCount: Int!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
@@ -1514,7 +1513,6 @@ type CouponDetails {
   customerCount: Int!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
@@ -1628,7 +1626,6 @@ input CreateCouponInput {
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   name: String!
@@ -1677,6 +1674,7 @@ input CreateCustomerInput {
   phone: String
   providerCustomer: ProviderCustomerInput
   state: String
+  timezone: TimezoneEnum
   url: String
   vatRate: Float
   zipcode: String
@@ -1693,7 +1691,6 @@ input CreateCustomerWalletInput {
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   grantedCredits: String!
   name: String
   paidCredits: String!
@@ -1760,7 +1757,6 @@ input CreateSubscriptionInput {
   name: String
   planId: ID!
   subscriptionAt: ISO8601DateTime
-  subscriptionDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -2680,10 +2676,8 @@ type CustomerUsage {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   chargesUsage: [ChargeUsage!]!
-  fromDate: ISO8601Date!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
-  toDate: ISO8601Date!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
   totalAmountCurrency: CurrencyEnum!
@@ -2849,6 +2843,7 @@ type Event {
   apiClient: String
   billableMetricName: String
   code: String!
+  customerTimezone: TimezoneEnum!
   externalCustomerId: String!
   externalSubscriptionId: String!
   id: ID!
@@ -2857,9 +2852,7 @@ type Event {
   matchCustomField: Boolean!
   payload: JSON!
   receivedAt: ISO8601DateTime!
-  receivedAtInCustomerTimezone: ISO8601DateTime!
   timestamp: ISO8601DateTime
-  timestampInCustomerTimezone: ISO8601DateTime
   transactionId: String
 }
 
@@ -3029,12 +3022,10 @@ enum InvoicePaymentStatusTypeEnum {
 type InvoiceSubscription {
   chargeAmountCents: Int!
   fees: [Fee!]
-  fromDate: ISO8601Date
   fromDatetime: ISO8601DateTime
   invoice: Invoice!
   subscription: Subscription!
   subscriptionAmountCents: Int!
-  toDate: ISO8601Date
   toDatetime: ISO8601DateTime
   totalAmountCents: Int!
 }
@@ -3983,7 +3974,6 @@ type Subscription {
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
   subscriptionAt: ISO8601DateTime
-  subscriptionDate: ISO8601Date
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
 }
@@ -4759,7 +4749,6 @@ input UpdateCouponInput {
   couponType: CouponTypeEnum!
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: String!
@@ -4806,6 +4795,7 @@ input UpdateCustomerInput {
   phone: String
   providerCustomer: ProviderCustomerInput
   state: String
+  timezone: TimezoneEnum
   url: String
   vatRate: Float
   zipcode: String
@@ -4832,7 +4822,6 @@ input UpdateCustomerWalletInput {
   """
   clientMutationId: String
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   id: ID!
   name: String
 }
@@ -4857,6 +4846,7 @@ input UpdateOrganizationInput {
   legalNumber: String
   logo: String
   state: String
+  timezone: TimezoneEnum
   vatRate: Float
   webhookUrl: String
   zipcode: String
@@ -4895,7 +4885,6 @@ input UpdateSubscriptionInput {
   id: ID!
   name: String
   subscriptionAt: ISO8601DateTime
-  subscriptionDate: ISO8601Date
 }
 
 type User {
@@ -4940,7 +4929,6 @@ type Wallet {
   currency: CurrencyEnum!
   customer: Customer
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
@@ -4965,7 +4953,6 @@ type WalletDetails {
   currency: CurrencyEnum!
   customer: Customer
   expirationAt: ISO8601DateTime
-  expirationDate: ISO8601Date
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime

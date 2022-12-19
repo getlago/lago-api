@@ -20,6 +20,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         id: customer.id,
         name: 'Updated customer name',
         external_id: external_id,
+        timezone: 'Europe/Paris',
         billing_configuration: {
           invoice_grace_period: 3,
           vat_rate: 20,
@@ -33,6 +34,8 @@ RSpec.describe Customers::UpdateService, type: :service do
       updated_customer = result.customer
       aggregate_failures do
         expect(updated_customer.name).to eq('Updated customer name')
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(updated_customer.timezone).to eq('Europe/Paris')
 
         billing = update_args[:billing_configuration]
         expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])

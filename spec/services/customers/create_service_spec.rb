@@ -15,6 +15,7 @@ RSpec.describe Customers::CreateService, type: :service do
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         currency: 'EUR',
+        timezone: 'Europe/Paris',
         billing_configuration: {
           invoice_grace_period: 3,
           vat_rate: 20,
@@ -42,6 +43,8 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq(create_args[:currency])
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(customer.timezone).to eq(create_args[:timezone])
 
         billing = create_args[:billing_configuration]
         expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
@@ -304,6 +307,7 @@ RSpec.describe Customers::CreateService, type: :service do
         name: 'Foo Bar',
         organization_id: organization.id,
         currency: 'EUR',
+        timezone: 'Europe/Paris',
         invoice_grace_period: 2,
       }
     end
@@ -325,6 +329,8 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq('EUR')
+        # TODO(:timezone): Timezone update is turned off for now
+        # expect(customer.timezone).to eq('Europe/Paris')
         expect(customer.invoice_grace_period).to eq(2)
       end
     end

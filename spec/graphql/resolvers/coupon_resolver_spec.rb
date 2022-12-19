@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     <<~GQL
       query($couponId: ID!) {
         coupon(id: $couponId) {
-          id name customerCount expirationDate
+          id name customerCount expirationAt
         }
       }
     GQL
