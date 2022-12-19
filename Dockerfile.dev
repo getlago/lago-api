@@ -1,4 +1,4 @@
-FROM ruby:3.0.1-alpine
+FROM ruby:3.1.3-alpine
 
 WORKDIR /app
 
@@ -12,11 +12,13 @@ RUN apk add --no-cache \
   libxml2-dev \
   libxslt-dev \
   nodejs \
-  python2 \
   tzdata \
   postgresql-dev \
   openssl \
   gcompat
+
+ENV BUNDLER_VERSION='2.3.26'
+RUN gem install bundler --no-document -v '2.3.26'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
  bundle install

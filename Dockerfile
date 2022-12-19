@@ -1,4 +1,4 @@
-FROM ruby:3.0.1-alpine as build
+FROM ruby:3.1.3-alpine as build
 
 WORKDIR /app
 
@@ -17,10 +17,13 @@ RUN apk add --no-cache \
   openssl \
   postgresql-dev
 
+ENV BUNDLER_VERSION='2.3.26'
+RUN gem install bundler --no-document -v '2.3.26'
+
 RUN bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3 --without development test
 
-FROM ruby:3.0.1-alpine
+FROM ruby:3.1.3-alpine
 
 WORKDIR /app
 
