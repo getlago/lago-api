@@ -67,7 +67,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(result.invoice.fees.subscription_kind.count).to eq(0)
 
             expect(result.invoice.invoice_subscriptions.count).to eq(1)
-            expect(result.invoice.invoice_subscriptions.first.recurring).to be_false
+            expect(result.invoice.invoice_subscriptions.first.recurring).to be_falsey
           end
         end
       end
