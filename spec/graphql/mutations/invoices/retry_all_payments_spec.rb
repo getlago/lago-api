@@ -61,7 +61,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
         )
 
         data = result['data']['retryAllPayments']
-        invoice_ids = data['collection'].map { |value| value['id']}
+        invoice_ids = data['collection'].map { |value| value['id'] }
 
         expect(invoice_ids).to include(invoice_first.id)
         expect(invoice_ids).to include(invoice_second.id)
