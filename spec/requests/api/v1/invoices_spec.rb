@@ -193,6 +193,39 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
+  describe 'PUT /invoices/:id/finalize' do
+    let(:invoice) { create(:invoice, customer:, status: :draft) }
+
+    context 'when invoice does not exist' do
+      it 'returns a not found error' do
+        put_with_token(organization, '/api/v1/invoices/555/finalize', {})
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when invoice is not draft' do
+      let(:invoice) { create(:invoice, customer:, status: :finalized) }
+
+      it 'returns a not found error' do
+        put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    it 'finalizes the invoice' do
+      expect {
+        put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
+      }.to change { invoice.reload.status }.from('draft').to('finalized')
+    end
+
+    it 'returns the invoice' do
+      put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice][:lago_id]).to eq(invoice.id)
+    end
+  end
+
   describe 'POST /invoices/:id/download' do
     let(:invoice) { create(:invoice, customer:, status: :draft) }
 
