@@ -159,7 +159,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is draft' do
-      let(:invoice) { create(:invoice, customer: customer, issuing_date: 2.days.ago) }
+      let(:invoice) { create(:invoice, customer:, issuing_date: 2.days.ago) }
 
       it 'updates the invoice' do
         expect {
@@ -176,7 +176,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is finalized' do
-      let(:invoice) { create(:invoice, customer: customer, status: :finalized) }
+      let(:invoice) { create(:invoice, customer:, status: :finalized) }
 
       it 'does not update the invoice' do
         expect {
