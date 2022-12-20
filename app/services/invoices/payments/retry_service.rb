@@ -18,7 +18,7 @@ module Invoices
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')
         end
 
-        webhook_type = invoice.invoice_type == 'subscription' ? :invoice : invoice.invoice_type.to_sym
+        webhook_type = invoice.invoice_type == 'subscription' ? (:invoice) : (invoice.invoice_type.to_sym)
 
         SendWebhookJob.perform_later(webhook_type, invoice) if customer&.organization&.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call

@@ -60,7 +60,7 @@ module Invoices
         invoice_payment_status = invoice_payment_status(status)
         payment.invoice.update!(
           payment_status: invoice_payment_status,
-          ready_for_payment_processing: invoice_payment_status != 'succeeded'
+          ready_for_payment_processing: invoice_payment_status != 'succeeded',
         )
         handle_prepaid_credits(payment.invoice, invoice_payment_status)
         track_payment_status_changed(payment.invoice)
