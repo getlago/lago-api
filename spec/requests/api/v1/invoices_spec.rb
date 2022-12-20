@@ -4,8 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:invoice) { create(:invoice, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice) { create(:invoice, customer:, status: :finalized) }
 
   describe 'UPDATE /invoices' do
     let(:update_params) do
@@ -189,6 +189,17 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:invoice][:lago_id]).to eq(invoice.id)
+      end
+    end
+  end
+
+  describe 'POST /invoices/:id/download' do
+    let(:invoice) { create(:invoice, customer:, status: :draft) }
+
+    context 'when invoice is draft' do
+      it 'returns not found' do
+        post_with_token(organization, "/api/v1/invoices/#{invoice.id}/download")
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

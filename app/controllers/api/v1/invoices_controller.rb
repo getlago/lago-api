@@ -49,7 +49,7 @@ module Api
       end
 
       def download
-        invoice = current_organization.invoices.find_by(id: params[:id])
+        invoice = current_organization.invoices.finalized.find_by(id: params[:id])
 
         return not_found_error(resource: 'invoice') unless invoice
 
