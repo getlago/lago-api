@@ -18,8 +18,8 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
-          customer: customer,
-          issuing_date: issuing_date,
+          customer:,
+          issuing_date:,
           invoice_type: :subscription,
 
           amount_currency: currency,
@@ -32,14 +32,11 @@ module Invoices
         )
 
         result = Invoices::CalculateFeesService.new(
-          invoice: invoice,
-          subscriptions: subscriptions,
-          timestamp: timestamp,
-          recurring: recurring,
+          invoice:, subscriptions:, timestamp:, recurring:,
         ).call
       end
 
-      result.throw_error unless result.success?
+      result.raise_if_error!
 
       if grace_period?
         SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?

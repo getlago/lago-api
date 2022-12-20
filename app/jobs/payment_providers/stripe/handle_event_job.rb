@@ -10,7 +10,7 @@ module PaymentProviders
           organization: organization,
           event_json: event,
         )
-        result.throw_error
+        result.raise_if_error!
       end
     end
   end

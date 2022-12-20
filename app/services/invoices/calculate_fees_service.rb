@@ -78,24 +78,19 @@ module Invoices
 
     def create_subscription_fee(subscription, boundaries)
       fee_result = Fees::SubscriptionService.new(
-        invoice: invoice,
-        subscription: subscription,
-        boundaries: boundaries,
+        invoice:, subscription:, boundaries:,
       ).create
 
-      fee_result.throw_error unless fee_result.success?
+      fee_result.raise_if_error!
     end
 
     def create_charges_fees(subscription, boundaries)
       subscription.plan.charges.each do |charge|
         fee_result = Fees::ChargeService.new(
-          invoice: invoice,
-          charge: charge,
-          subscription: subscription,
-          boundaries: boundaries,
+          invoice:, charge:, subscription:, boundaries:,
         ).create
 
-        fee_result.throw_error unless fee_result.success?
+        fee_result.raise_if_error!
       end
     end
 
@@ -172,10 +167,9 @@ module Invoices
 
     def create_credit_note_credit
       credit_result = Credits::CreditNoteService.new(
-        invoice: invoice,
-        credit_notes: credit_notes,
+        invoice:, credit_notes:,
       ).call
-      credit_result.throw_error unless credit_result.success?
+      credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents))
     end
@@ -187,10 +181,9 @@ module Invoices
         next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
 
         credit_result = Credits::AppliedCouponService.new(
-          invoice: invoice,
-          applied_coupon: applied_coupon,
+          invoice:, applied_coupon:,
         ).create
-        credit_result.throw_error unless credit_result.success?
+        credit_result.raise_if_error!
 
         refresh_amounts(credit_amount_cents: credit_result.credit.amount_cents)
       end
@@ -198,7 +191,7 @@ module Invoices
 
     def create_applied_prepaid_credit
       prepaid_credit_result = Credits::AppliedPrepaidCreditService.new(invoice: invoice, wallet: wallet).create
-      prepaid_credit_result.throw_error unless prepaid_credit_result.success?
+      prepaid_credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
@@ -218,7 +211,7 @@ module Invoices
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
-        timestamp: timestamp,
+        timestamp:,
       }
     end
   end

@@ -89,7 +89,7 @@ module Events
 
     def handle_persisted_event
       service_result = persisted_event_service.call
-      service_result.throw_error unless service_result.success?
+      service_result.raise_if_error!
     end
   end
 end
