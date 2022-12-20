@@ -49,6 +49,7 @@ module Types
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
 
     field :download_invoice, mutation: Mutations::Invoices::Download
+    field :retry_payment, mutation: Mutations::Invoices::RetryPayment
 
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :update_customer_wallet, mutation: Mutations::Wallets::Update

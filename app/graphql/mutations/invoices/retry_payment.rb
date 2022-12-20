@@ -1,0 +1,27 @@
+# frozen_string_literal: true
+
+module Mutations
+  module Invoices
+    class RetryPayment < BaseMutation
+      include AuthenticableApiUser
+      include RequiredOrganization
+
+      graphql_name 'RetryPayment'
+      description 'Retry payment'
+
+      argument :id, ID, required: true
+
+      type Types::Invoices::Object
+
+      def resolve(**args)
+        validate_organization!
+
+        invoice = current_organization.invoices.find_by(id: args[:id])
+
+        result = ::Invoices::Payments::RetryService.new(invoice: invoice).call
+
+        result.success? ? result.invoice : result_error(result)
+      end
+    end
+  end
+end

@@ -23,6 +23,8 @@ module Invoices
           return result
         end
 
+        increment_payment_attempts
+
         gocardless_result = create_gocardless_payment
 
         payment = Payment.new(
@@ -56,7 +58,10 @@ module Invoices
         payment.update!(status: status)
 
         invoice_payment_status = invoice_payment_status(status)
-        payment.invoice.update!(payment_status: invoice_payment_status)
+        payment.invoice.update!(
+          payment_status: invoice_payment_status,
+          ready_for_payment_processing: invoice_payment_status != 'succeeded'
+        )
         handle_prepaid_credits(payment.invoice, invoice_payment_status)
         track_payment_status_changed(payment.invoice)
 
@@ -121,7 +126,7 @@ module Invoices
             },
           },
           headers: {
-            'Idempotency-Key' => invoice.id,
+            'Idempotency-Key' => "#{invoice.id}-#{invoice.payment_attempts}",
           },
         )
       rescue GoCardlessPro::Error => e
@@ -142,7 +147,11 @@ module Invoices
       def update_invoice_payment_status(payment_status)
         return unless Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
 
-        invoice.update!(payment_status: payment_status)
+        invoice.update!(payment_status: payment_status, ready_for_payment_processing: false)
+      end
+
+      def increment_payment_attempts
+        invoice.update!(payment_attempts: invoice.payment_attempts + 1)
       end
 
       def handle_prepaid_credits(invoice, invoice_payment_status)

@@ -66,6 +66,18 @@ module Api
         head(:ok)
       end
 
+      def retry_payment
+        invoice = current_organization.invoices.find_by(id: params[:id])
+
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = Invoices::Payments::RetryService.new(invoice: invoice).call
+
+        return render_error_response(result) unless result.success?
+
+        head(:ok)
+      end
+
       private
 
       def update_params
