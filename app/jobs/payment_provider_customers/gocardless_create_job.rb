@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def perform(gocardless_customer)
       result = PaymentProviderCustomers::GocardlessService.new(gocardless_customer).create
-      result.throw_error
+      result.raise_if_error!
     end
   end
 end

@@ -112,7 +112,7 @@ module Customers
         payment_provider_id: customer.organization.stripe_payment_provider&.id,
         params: billing_configuration,
       )
-      return create_result.throw_error unless create_result.success?
+      create_result.raise_if_error!
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.stripe_customer&.reload
@@ -124,7 +124,7 @@ module Customers
         payment_provider_id: customer.organization.gocardless_payment_provider&.id,
         params: billing_configuration,
       )
-      return create_result.throw_error unless create_result.success?
+      create_result.raise_if_error!
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.gocardless_customer&.reload

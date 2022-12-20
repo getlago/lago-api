@@ -68,13 +68,10 @@ module Invoices
 
       query.each do |charge|
         fees_result = Fees::ChargeService.new(
-          invoice: invoice,
-          charge: charge,
-          subscription: subscription,
-          boundaries: boundaries,
+          invoice:, charge:, subscription:, boundaries:,
         ).current_usage
 
-        fees_result.throw_error unless fees_result.success?
+        fees_result.raise_if_error!
 
         invoice.fees << fees_result.fees
       end

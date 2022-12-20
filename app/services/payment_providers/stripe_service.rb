@@ -108,7 +108,7 @@ module PaymentProviders
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
           )
-        result.throw_error || result
+        result.raise_if_error! || result
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = event.type == 'payment_intent.succeeded' ? 'succeeded' : 'failed'
 
@@ -125,7 +125,7 @@ module PaymentProviders
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.id,
           )
-        result.throw_error || result
+        result.raise_if_error! || result
       when 'charge.refund.updated'
         CreditNotes::Refunds::StripeService
           .new.update_status(
