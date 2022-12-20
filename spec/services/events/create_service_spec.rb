@@ -111,6 +111,92 @@ RSpec.describe Events::CreateService, type: :service do
 
     before { subscription }
 
+    context 'when creating an event to a terminated subscription' do
+      let(:subscription) do
+        create(:subscription, customer:, organization:, status: :terminated, started_at: 1.month.ago)
+      end
+
+      let(:active_subscription) do
+        create(
+          :active_subscription,
+          customer:,
+          organization:,
+          started_at: 1.day.ago,
+          external_id: subscription.external_id,
+        )
+      end
+
+      let(:create_args) do
+        {
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          properties: { foo: 'bar' },
+          timestamp: 1.week.ago.to_i,
+        }
+      end
+
+      before { active_subscription }
+
+      it 'creates an event to the terminated subscription' do
+        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        expect(result).to be_success
+
+        event = result.event
+
+        aggregate_failures do
+          expect(event.customer_id).to eq(customer.id)
+          expect(event.organization_id).to eq(organization.id)
+          expect(event.code).to eq(billable_metric.code)
+          expect(event.subscription_id).to eq(subscription.id)
+          expect(event.timestamp).to be_a(Time)
+        end
+      end
+    end
+
+    context 'when creating an event to an active subscription with the same external id' do
+      let(:subscription) do
+        create(:subscription, customer:, organization:, status: :terminated, started_at: 1.month.ago)
+      end
+
+      let(:active_subscription) do
+        create(
+          :active_subscription,
+          customer:,
+          organization:,
+          started_at: 1.week.ago,
+          external_id: subscription.external_id,
+        )
+      end
+
+      let(:create_args) do
+        {
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          properties: { foo: 'bar' },
+          timestamp: 1.day.ago.to_i,
+        }
+      end
+
+      before { active_subscription }
+
+      it 'creates an event to the active subscription' do
+        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        expect(result).to be_success
+
+        event = result.event
+
+        aggregate_failures do
+          expect(event.customer_id).to eq(customer.id)
+          expect(event.organization_id).to eq(organization.id)
+          expect(event.code).to eq(billable_metric.code)
+          expect(event.subscription_id).to eq(active_subscription.id)
+          expect(event.timestamp).to be_a(Time)
+        end
+      end
+    end
+
     context 'when customer has only one active subscription and subscription is not given' do
       it 'creates a new event and assigns subscription' do
         result = create_service.call(

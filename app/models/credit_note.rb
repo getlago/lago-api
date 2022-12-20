@@ -10,7 +10,7 @@ class CreditNote < ApplicationRecord
 
   has_one :organization, through: :customer
 
-  has_many :items, class_name: 'CreditNoteItem'
+  has_many :items, class_name: 'CreditNoteItem', dependent: :destroy
   has_many :fees, through: :items
   has_many :refunds
 
