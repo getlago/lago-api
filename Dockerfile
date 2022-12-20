@@ -12,7 +12,6 @@ RUN apk add --no-cache \
   libxml2-dev \
   libxslt-dev \
   nodejs \
-  python2 \
   tzdata \
   openssl \
   postgresql-dev
