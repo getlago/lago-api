@@ -91,7 +91,7 @@ module Events
     end
 
     def customer_external_subscription_ids
-      @customer_external_subscription_ids ||= customer&.active_subscriptions&.pluck(:external_id)
+      @customer_external_subscription_ids ||= customer&.subscriptions&.pluck(:external_id)
     end
 
     def missing_subscription_error

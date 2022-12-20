@@ -135,6 +135,30 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
+      context 'when there is one active subscription with the same external_id' do
+        let(:subscription) do
+          create(:subscription, customer:, organization:, external_id:, status: :terminated)
+        end
+        let(:external_id) { SecureRandom.uuid }
+        let(:params) do
+          {
+            code: billable_metric.code,
+            external_subscription_id: external_id,
+            external_customer_id: customer.external_id,
+          }
+        end
+
+        before do
+          subscription
+          create(:active_subscription, customer:, organization:, external_id:)
+        end
+
+        it 'does not return any validation errors' do
+          expect(validate_event).to be_nil
+          expect(result).to be_success
+        end
+      end
+
       context 'when code does not exist' do
         let(:params) do
           { external_customer_id: customer.external_id, code: 'event_code' }
