@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::Invoices::Refresh, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:invoice) { create(:invoice, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice) { create(:invoice, customer:) }
 
   let(:mutation) do
     <<~GQL
