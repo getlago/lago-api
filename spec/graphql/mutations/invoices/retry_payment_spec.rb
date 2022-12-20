@@ -22,6 +22,11 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
   end
 
   describe 'retry payment mutation' do
+    before do
+      gocardless_payment_provider
+      gocardless_customer
+    end
+
     context 'with valid preconditions' do
       let(:invoice) do
         create(
