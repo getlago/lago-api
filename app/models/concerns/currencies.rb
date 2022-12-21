@@ -30,6 +30,7 @@ module Currencies
     CAD: 'Canadian Dollar',
     CDF: 'Congolese Franc',
     CHF: 'Swiss Franc',
+    CLF: 'Unidad de Fomento',
     CLP: 'Chilean Peso',
     CNY: 'Chinese Renminbi Yuan',
     COP: 'Colombian Peso',
