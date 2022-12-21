@@ -146,7 +146,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
 
       it 'returns invoices with correct payment status' do
-        get_with_token(organization, "/api/v1/invoices?payment_status=pending")
+        get_with_token(organization, '/api/v1/invoices?payment_status=pending')
 
         expect(response).to have_http_status(:success)
         expect(json[:invoices].count).to eq(1)

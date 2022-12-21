@@ -49,12 +49,12 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
   context 'when filtering by succeeded payment status' do
     let(:query) do
       <<~GQL
-      query {
-        invoices(limit: 5, paymentStatus: [succeeded]) {
-          collection { id }
-          metadata { currentPage, totalCount }
+        query {
+          invoices(limit: 5, paymentStatus: [succeeded]) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
         }
-      }
       GQL
     end
 
