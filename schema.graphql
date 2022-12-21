@@ -3000,6 +3000,11 @@ type Invoice {
   walletTransactionAmountCents: Int!
 }
 
+type InvoiceCollection {
+  collection: [Invoice!]!
+  metadata: CollectionMetadata!
+}
+
 """
 Invoice Item
 """
@@ -3816,6 +3821,19 @@ type Query {
     limit: Int
     page: Int
   ): CreditNoteCollection
+
+  """
+  Query invoices
+  """
+  invoices(
+    """
+    List of invoice IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    paymentStatus: [InvoicePaymentStatusTypeEnum!]
+  ): InvoiceCollection!
 
   """
   Query memberships of an organization
