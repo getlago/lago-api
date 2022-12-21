@@ -12,8 +12,12 @@ module Invoices
     end
 
     def call
+      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+
       ActiveRecord::Base.transaction do
         result = Invoices::RefreshDraftService.call(invoice:)
+        result.raise_if_error!
+
         invoice.finalized!
         SendWebhookJob.perform_later(:invoice, invoice) if invoice.organization.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call

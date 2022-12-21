@@ -21,10 +21,10 @@ module Invoices
           boundaries = calculate_boundaries(subscription)
 
           InvoiceSubscription.create!(
-            invoice: invoice,
-            subscription: subscription,
+            invoice:,
+            subscription:,
             properties: boundaries,
-            recurring: recurring,
+            recurring:,
           )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
