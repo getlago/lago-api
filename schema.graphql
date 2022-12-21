@@ -1841,192 +1841,197 @@ enum CreditNoteRefundStatusEnum {
 
 enum CurrencyEnum {
   """
-  United Arab Emirates dirham
+  United Arab Emirates Dirham
   """
   AED
 
   """
-  Afghan afghani
+  Afghan Afghani
   """
   AFN
 
   """
-  Albanian lek
+  Albanian Lek
   """
   ALL
 
   """
-  Armenian dram
+  Armenian Dram
   """
   AMD
 
   """
-  Netherlands Antillean guilder
+  Netherlands Antillean Gulden
   """
   ANG
 
   """
-  Angolan kwanza
+  Angolan Kwanza
   """
   AOA
 
   """
-  Argentine peso
+  Argentine Peso
   """
   ARS
 
   """
-  Australian dollar
+  Australian Dollar
   """
   AUD
 
   """
-  Aruban florin
+  Aruban Florin
   """
   AWG
 
   """
-  Azerbaijani manat
+  Azerbaijani Manat
   """
   AZN
 
   """
-  Bosnia and Herzegovina convertible mark
+  Bosnia and Herzegovina Convertible Mark
   """
   BAM
 
   """
-  Barbados dollar
+  Barbadian Dollar
   """
   BBD
 
   """
-  Bangladeshi taka
+  Bangladeshi Taka
   """
   BDT
 
   """
-  Bulgarian lev
+  Bulgarian Lev
   """
   BGN
 
   """
-  Bahraini dinar
+  Burundian Franc
   """
   BIF
 
   """
-  Burundian franc
+  Bermudian Dollar
   """
   BMD
 
   """
-  Bermudian dollar
+  Brunei Dollar
   """
   BND
 
   """
-  Brunei dollar
+  Bolivian Boliviano
   """
   BOB
 
   """
-  Boliviano
+  Brazilian Real
   """
   BRL
 
   """
-  Brazilian real
+  Bahamian Dollar
   """
   BSD
 
   """
-  Bahamian dollar
+  Botswana Pula
   """
   BWP
 
   """
-  Botswana pula
+  Belarusian Ruble
   """
   BYN
 
   """
-  Belarusian ruble
+  Belize Dollar
   """
   BZD
 
   """
-  Belize dollar
+  Canadian Dollar
   """
   CAD
 
   """
-  Canadian dollar
+  Congolese Franc
   """
   CDF
 
   """
-  Congolese franc
+  Swiss Franc
   """
   CHF
 
   """
-  Swiss franc
+  Unidad de Fomento
+  """
+  CLF
+
+  """
+  Chilean Peso
   """
   CLP
 
   """
-  Chilean peso
+  Chinese Renminbi Yuan
   """
   CNY
 
   """
-  Colombian peso
+  Colombian Peso
   """
   COP
 
   """
-  Costa Rican colon
+  Costa Rican Colón
   """
   CRC
 
   """
-  Cape Verdean escudo
+  Cape Verdean Escudo
   """
   CVE
 
   """
-  Czech koruna
+  Czech Koruna
   """
   CZK
 
   """
-  Djiboutian franc
+  Djiboutian Franc
   """
   DJF
 
   """
-  Danish krone
+  Danish Krone
   """
   DKK
 
   """
-  Dominican peso
+  Dominican Peso
   """
   DOP
 
   """
-  Algerian dinar
+  Algerian Dinar
   """
   DZD
 
   """
-  Egyptian pound
+  Egyptian Pound
   """
   EGP
 
   """
-  Ethiopian birr
+  Ethiopian Birr
   """
   ETB
 
@@ -2036,72 +2041,72 @@ enum CurrencyEnum {
   EUR
 
   """
-  Fiji dollar
+  Fijian Dollar
   """
   FJD
 
   """
-  Falkland Islands pound
+  Falkland Pound
   """
   FKP
 
   """
-  Pound sterling
+  British Pound
   """
   GBP
 
   """
-  Georgian lari
+  Georgian Lari
   """
   GEL
 
   """
-  Gibraltar pound
+  Gibraltar Pound
   """
   GIP
 
   """
-  Gambian dalasi
+  Gambian Dalasi
   """
   GMD
 
   """
-  Guinean franc
+  Guinean Franc
   """
   GNF
 
   """
-  Guatemalan quetzal
+  Guatemalan Quetzal
   """
   GTQ
 
   """
-  Guyanese dollar
+  Guyanese Dollar
   """
   GYD
 
   """
-  Hong Kong dollar
+  Hong Kong Dollar
   """
   HKD
 
   """
-  Honduran lempira
+  Honduran Lempira
   """
   HNL
 
   """
-  Croatian kuna
+  Croatian Kuna
   """
   HRK
 
   """
-  Haitian gourde
+  Haitian Gourde
   """
   HTG
 
   """
-  Hungarian forint
+  Hungarian Forint
   """
   HUF
 
@@ -2111,172 +2116,172 @@ enum CurrencyEnum {
   IDR
 
   """
-  Israeli new shekel
+  Israeli New Sheqel
   """
   ILS
 
   """
-  Indian rupee
+  Indian Rupee
   """
   INR
 
   """
-  Icelandic króna
+  Icelandic Króna
   """
   ISK
 
   """
-  Jamaican dollar
+  Jamaican Dollar
   """
   JMD
 
   """
-  Japanese yen
+  Japanese Yen
   """
   JPY
 
   """
-  Kenyan shilling
+  Kenyan Shilling
   """
   KES
 
   """
-  Kyrgyzstani som
+  Kyrgyzstani Som
   """
   KGS
 
   """
-  Cambodian riel
+  Cambodian Riel
   """
   KHR
 
   """
-  Comoro franc
+  Comorian Franc
   """
   KMF
 
   """
-  South Korean won
+  South Korean Won
   """
   KRW
 
   """
-  Cayman Islands dollar
+  Cayman Islands Dollar
   """
   KYD
 
   """
-  Kazakhstani tenge
+  Kazakhstani Tenge
   """
   KZT
 
   """
-  Lao kip
+  Lao Kip
   """
   LAK
 
   """
-  Lebanese pound
+  Lebanese Pound
   """
   LBP
 
   """
-  Sri Lankan rupee
+  Sri Lankan Rupee
   """
   LKR
 
   """
-  Liberian dollar
+  Liberian Dollar
   """
   LRD
 
   """
-  Lesotho loti
+  Lesotho Loti
   """
   LSL
 
   """
-  Moroccan dirham
+  Moroccan Dirham
   """
   MAD
 
   """
-  Moldovan leu
+  Moldovan Leu
   """
   MDL
 
   """
-  Malagasy ariary
+  Malagasy Ariary
   """
   MGA
 
   """
-  Macedonian denar
+  Macedonian Denar
   """
   MKD
 
   """
-  Myanmar kyat
+  Myanmar Kyat
   """
   MMK
 
   """
-  Mongolian tögrög
+  Mongolian Tögrög
   """
   MNT
 
   """
-  Macanese pataca
+  Macanese Pataca
   """
   MOP
 
   """
-  Mauritanian ouguiya
+  Mauritanian Ouguiya
   """
   MRO
 
   """
-  Mauritian rupee
+  Mauritian Rupee
   """
   MUR
 
   """
-  Maldivian rufiyaa
+  Maldivian Rufiyaa
   """
   MVR
 
   """
-  Malawian kwacha
+  Malawian Kwacha
   """
   MWK
 
   """
-  Mexican peso
+  Mexican Peso
   """
   MXN
 
   """
-  Malaysian ringgit
+  Malaysian Ringgit
   """
   MYR
 
   """
-  Mozambican metical
+  Mozambican Metical
   """
   MZN
 
   """
-  Namibian dollar
+  Namibian Dollar
   """
   NAD
 
   """
-  Nigerian naira
+  Nigerian Naira
   """
   NGN
 
   """
-  Nicaraguan córdoba
+  Nicaraguan Córdoba
   """
   NIO
 
@@ -2286,87 +2291,87 @@ enum CurrencyEnum {
   NOK
 
   """
-  Nepalese rupee
+  Nepalese Rupee
   """
   NPR
 
   """
-  New Zealand dollar
+  New Zealand Dollar
   """
   NZD
 
   """
-  Panamanian balboa
+  Panamanian Balboa
   """
   PAB
 
   """
-  Peruvian sol
+  Peruvian Sol
   """
   PEN
 
   """
-  Papua New Guinean kina
+  Papua New Guinean Kina
   """
   PGK
 
   """
-  Philippine peso
+  Philippine Peso
   """
   PHP
 
   """
-  Pakistani rupee
+  Pakistani Rupee
   """
   PKR
 
   """
-  Polish złoty
+  Polish Złoty
   """
   PLN
 
   """
-  Paraguayan guaraní
+  Paraguayan Guaraní
   """
   PYG
 
   """
-  Qatari riyal
+  Qatari Riyal
   """
   QAR
 
   """
-  Romanian leu
+  Romanian Leu
   """
   RON
 
   """
-  Serbian dinar
+  Serbian Dinar
   """
   RSD
 
   """
-  Russian ruble
+  Russian Ruble
   """
   RUB
 
   """
-  Rwandan franc
+  Rwandan Franc
   """
   RWF
 
   """
-  Saudi riyal
+  Saudi Riyal
   """
   SAR
 
   """
-  Solomon Islands dollar
+  Solomon Islands Dollar
   """
   SBD
 
   """
-  Seychelles rupee
+  Seychellois Rupee
   """
   SCR
 
@@ -2376,147 +2381,147 @@ enum CurrencyEnum {
   SEK
 
   """
-  Singapore dollar
+  Singapore Dollar
   """
   SGD
 
   """
-  Saint Helena pound
+  Saint Helenian Pound
   """
   SHP
 
   """
-  Sierra Leonean leone
+  Sierra Leonean Leone
   """
   SLL
 
   """
-  Somali shilling
+  Somali Shilling
   """
   SOS
 
   """
-  Surinamese dollar
+  Surinamese Dollar
   """
   SRD
 
   """
-  São Tomé and Príncipe dobra
+  São Tomé and Príncipe Dobra
   """
   STD
 
   """
-  Swazi lilangeni
+  Swazi Lilangeni
   """
   SZL
 
   """
-  Thai baht
+  Thai Baht
   """
   THB
 
   """
-  Tajikistani somoni
+  Tajikistani Somoni
   """
   TJS
 
   """
-  Tongan paʻanga
+  Tongan Paʻanga
   """
   TOP
 
   """
-  Turkish lira
+  Turkish Lira
   """
   TRY
 
   """
-  Trinidad and Tobago dollar
+  Trinidad and Tobago Dollar
   """
   TTD
 
   """
-  New Taiwan dollar
+  New Taiwan Dollar
   """
   TWD
 
   """
-  Tanzanian shilling
+  Tanzanian Shilling
   """
   TZS
 
   """
-  Ukrainian hryvnia
+  Ukrainian Hryvnia
   """
   UAH
 
   """
-  Ugandan shilling
+  Ugandan Shilling
   """
   UGX
 
   """
-  American Dollar
+  United States Dollar
   """
   USD
 
   """
-  Uruguayan peso
+  Uruguayan Peso
   """
   UYU
 
   """
-  Uzbekistan som
+  Uzbekistan Som
   """
   UZS
 
   """
-  Vietnamese đồng
+  Vietnamese Đồng
   """
   VND
 
   """
-  Vanuatu vatu
+  Vanuatu Vatu
   """
   VUV
 
   """
-  Samoan tala
+  Samoan Tala
   """
   WST
 
   """
-  CFA franc BEAC
+  Central African Cfa Franc
   """
   XAF
 
   """
-  East Caribbean dollar
+  East Caribbean Dollar
   """
   XCD
 
   """
-  CFA franc BCEAO
+  West African Cfa Franc
   """
   XOF
 
   """
-  CFP franc (franc Pacifique)
+  Cfp Franc
   """
   XPF
 
   """
-  Yemeni rial
+  Yemeni Rial
   """
   YER
 
   """
-  South African rand
+  South African Rand
   """
   ZAR
 
   """
-  Zambian kwacha
+  Zambian Kwacha
   """
   ZMW
 }
