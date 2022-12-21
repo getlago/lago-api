@@ -24,12 +24,12 @@ module Invoices
         invoice.invoice_subscriptions.destroy_all
 
         invoice.update!(
-          issuing_date: issuing_date,
+          issuing_date:,
           vat_rate: invoice.customer.applicable_vat_rate,
         )
 
         Invoices::CalculateFeesService.call(
-          invoice: invoice,
+          invoice:,
           subscriptions: Subscription.find(subscription_ids),
           timestamp: invoice.created_at.to_i,
         )

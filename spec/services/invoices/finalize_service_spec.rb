@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::FinalizeService, type: :service do
-  subject(:finalize_service) { described_class.new(invoice: invoice) }
+  subject(:finalize_service) { described_class.new(invoice:) }
 
   describe '#call' do
     let(:invoice) do
@@ -20,9 +20,9 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
+        plan:,
         subscription_at: started_at,
-        started_at: started_at,
+        started_at:,
         created_at: started_at,
       )
     end
@@ -96,9 +96,19 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       end
     end
 
+    context 'when invoice does not exist' do
+      let(:invoice) { nil }
+
+      it 'returns an error' do
+        result = finalize_service.call
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq('invoice_not_found')
+      end
+    end
+
     context 'when fees already exist' do
       it 'regenerates them' do
-        create(:fee, invoice: invoice)
+        create(:fee, invoice:)
         result = finalize_service.call
 
         aggregate_failures do
