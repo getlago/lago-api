@@ -134,5 +134,24 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
       end
     end
+
+    context 'with payment status param' do
+      let(:invoice) { create(:invoice, customer: customer, payment_status: :succeeded) }
+      let(:invoice2) { create(:invoice, customer: customer, payment_status: :failed) }
+      let(:invoice3) { create(:invoice, customer: customer, payment_status: :pending) }
+
+      before do
+        invoice2
+        invoice3
+      end
+
+      it 'returns invoices with correct payment status' do
+        get_with_token(organization, "/api/v1/invoices?payment_status=pending")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice3.id)
+      end
+    end
   end
 end
