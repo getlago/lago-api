@@ -16100,6 +16100,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "status",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "InvoiceStatusTypeEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "paymentStatus",
                   "description": null,
                   "type": {
