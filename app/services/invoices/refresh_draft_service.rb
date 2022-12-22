@@ -23,10 +23,7 @@ module Invoices
         invoice.fees.destroy_all
         invoice.invoice_subscriptions.destroy_all
 
-        invoice.update!(
-          issuing_date:,
-          vat_rate: invoice.customer.applicable_vat_rate,
-        )
+        invoice.update!(vat_rate: invoice.customer.applicable_vat_rate)
 
         Invoices::CalculateFeesService.call(
           invoice:,
@@ -39,9 +36,5 @@ module Invoices
     private
 
     attr_accessor :invoice, :subscription_ids
-
-    def issuing_date
-      @issuing_date ||= Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date
-    end
   end
 end

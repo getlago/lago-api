@@ -46,6 +46,15 @@ RSpec.describe Invoices::FinalizeService, type: :service do
         .to change(invoice, :status).from('draft').to('finalized')
     end
 
+    it 'updates the issuing date' do
+      invoice.customer.update(timezone: 'America/New_York')
+
+      freeze_time do
+        expect { finalize_service.call }
+          .to change { invoice.reload.issuing_date }.to(Time.current.to_date)
+      end
+    end
+
     it 'generates expected fees' do
       result = finalize_service.call
 
