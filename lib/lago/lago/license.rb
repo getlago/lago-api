@@ -4,13 +4,14 @@ module Lago
   class License
     def initialize(url)
       @url = url
+      @premium = false
     end
 
     def verify
-      return @premium = false unless ENV['LAGO_LICENSE']
+      return if ENV['LAGO_LICENSE'].blank?
 
-      http_client = LagoHttpClient.new("#{url}/verify/#{ENV['LAGO_LICENSE']}")
-      response = http_client.post
+      http_client = LagoHttpClient::Client.new("#{url}/verify/#{ENV['LAGO_LICENSE']}")
+      response = http_client.post({}, [])
 
       @premium = response['valid']
     end

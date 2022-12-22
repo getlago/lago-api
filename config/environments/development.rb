@@ -46,7 +46,7 @@ Rails.application.configure do
   config.hosts << 'api.lago.dev'
   config.hosts << 'api'
 
-  config.license_url = 'https://license.lago.dev'
+  config.license_url = 'http://license:3000'
 
   Dotenv.load
 end
