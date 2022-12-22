@@ -3883,6 +3883,19 @@ type Query {
   ): CreditNoteCollection
 
   """
+  Query invoices
+  """
+  invoices(
+    """
+    List of invoice IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    paymentStatus: [InvoicePaymentStatusTypeEnum!]
+  ): InvoiceCollection!
+
+  """
   Query memberships of an organization
   """
   memberships(limit: Int, page: Int): MembershipCollection!
