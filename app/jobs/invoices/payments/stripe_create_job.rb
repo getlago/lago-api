@@ -7,7 +7,7 @@ module Invoices
 
       def perform(invoice)
         result = Invoices::Payments::StripeService.new(invoice).create
-        result.throw_error unless result.success?
+        result.raise_if_error!
       end
     end
   end

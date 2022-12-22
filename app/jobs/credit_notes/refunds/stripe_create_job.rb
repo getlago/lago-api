@@ -7,7 +7,7 @@ module CreditNotes
 
       def perform(credit_note)
         result = CreditNotes::Refunds::StripeService.new(credit_note).create
-        result.throw_error unless result.success?
+        result.raise_if_error!
       end
     end
   end

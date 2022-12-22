@@ -30,15 +30,14 @@ module Events
         Customer.find_by(external_id: params[:external_customer_id], organization_id: organization.id)
       end
 
-      Events::ValidateCreationService.call(
-        organization: organization,
-        params: params,
-        customer: customer,
-        result: result,
-      )
+      Events::ValidateCreationService.call(organization:, params:, customer:, result:)
       return result unless result.success?
 
-      subscription = Subscription.find_by(external_id: params[:external_subscription_id]) || customer&.active_subscriptions&.first
+      subscription = Subscription
+        .where(external_id: params[:external_subscription_id])
+        .where('started_at <= ?', Time.zone.at(params[:timestamp]))
+        .order(started_at: :desc)
+        .first || customer&.active_subscriptions&.first
 
       ActiveRecord::Base.transaction do
         event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
@@ -89,7 +88,7 @@ module Events
 
     def handle_persisted_event
       service_result = persisted_event_service.call
-      service_result.throw_error unless service_result.success?
+      service_result.raise_if_error!
     end
   end
 end

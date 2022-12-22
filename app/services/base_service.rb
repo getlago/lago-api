@@ -121,7 +121,7 @@ class BaseService
       fail_with_error!(ForbiddenFailure.new(self, code: code))
     end
 
-    def throw_error
+    def raise_if_error!
       return if success?
 
       raise(error)

@@ -6,12 +6,12 @@ RSpec.describe Invoices::GenerateService, type: :service do
   subject(:invoice_generate_service) { described_class.new }
 
   let(:organization) { create(:organization, name: 'LAGO') }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-  let(:invoice) { create(:invoice, customer: customer) }
-  let(:credit) { create(:credit, invoice: invoice) }
-  let(:fees) { create_list(:fee, 3, invoice: invoice) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice: invoice, subscription: subscription) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, organization:, customer:) }
+  let(:invoice) { create(:invoice, customer:, status: :finalized) }
+  let(:credit) { create(:credit, invoice:) }
+  let(:fees) { create_list(:fee, 3, invoice:) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
   let(:pdf_content) do
     File.read(Rails.root.join('spec/fixtures/blank.pdf'))
   end
@@ -43,6 +43,18 @@ RSpec.describe Invoices::GenerateService, type: :service do
 
         expect(result.success).to be_falsey
         expect(result.error.error_code).to eq('invoice_not_found')
+      end
+    end
+
+    context 'when invoice is draft' do
+      let(:invoice) { create(:invoice, customer:, status: :draft) }
+
+      it 'returns a result with error' do
+        result = invoice_generate_service.generate(invoice_id: invoice.id)
+
+        expect(result.success).to be_falsey
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq('is_draft')
       end
     end
 

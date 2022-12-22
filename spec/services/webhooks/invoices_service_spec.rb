@@ -34,7 +34,7 @@ RSpec.describe Webhooks::InvoicesService do
       expect(lago_client).to have_received(:post)
     end
 
-    it 'builds payload with add_on.created webhook type' do
+    it 'builds payload with invoice.created webhook type' do
       webhook_invoice_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)

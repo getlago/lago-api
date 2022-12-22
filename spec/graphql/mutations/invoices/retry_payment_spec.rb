@@ -9,7 +9,15 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
   let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
   let(:gocardless_customer) { create(:gocardless_customer, customer: customer) }
   let(:user) { membership.user }
-
+  let(:invoice) do
+    create(
+      :invoice,
+      customer: customer,
+      status: 'finalized',
+      payment_status: 'failed',
+      ready_for_payment_processing: true,
+    )
+  end
   let(:mutation) do
     <<-GQL
       mutation($input: RetryPaymentInput!) {
@@ -21,36 +29,53 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
     GQL
   end
 
-  describe 'retry payment mutation' do
-    before do
-      gocardless_payment_provider
-      gocardless_customer
+  before do
+    gocardless_payment_provider
+    gocardless_customer
+  end
+
+  context 'with valid preconditions' do
+    it 'returns the invoice after payment retry' do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        query: mutation,
+        variables: {
+          input: { id: invoice.id },
+        },
+      )
+
+      data = result['data']['retryPayment']
+
+      expect(data['id']).to eq(invoice.id)
     end
+  end
 
-    context 'with valid preconditions' do
-      let(:invoice) do
-        create(
-          :invoice,
-          customer: customer,
-          payment_status: 'failed',
-          ready_for_payment_processing: true,
-        )
-      end
+  context 'without current user' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_organization: organization,
+        query: mutation,
+        variables: {
+          input: { id: invoice.id },
+        },
+      )
 
-      it 'returns the invoice after payment retry' do
-        result = execute_graphql(
-          current_organization: organization,
-          current_user: user,
-          query: mutation,
-          variables: {
-            input: { id: invoice.id },
-          },
-        )
+      expect_unauthorized_error(result)
+    end
+  end
 
-        data = result['data']['retryPayment']
+  context 'without current organization' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: user,
+        query: mutation,
+        variables: {
+          input: { id: invoice.id },
+        },
+      )
 
-        expect(data['id']).to eq(invoice.id)
-      end
+      expect_forbidden_error(result)
     end
   end
 end

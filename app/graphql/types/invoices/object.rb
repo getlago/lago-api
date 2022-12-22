@@ -20,6 +20,7 @@ module Types
       field :total_amount_cents, Integer, null: false
       field :total_amount_currency, Types::CurrencyEnum, null: false
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
+      field :status, Types::Invoices::StatusTypeEnum, null: false
       field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
       field :file_url, String, null: true
       field :vat_rate, Float, null: false

@@ -30,7 +30,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       create(
         :subscription,
         plan: plan,
-        subscription_at: started_at.to_date,
+        subscription_at: started_at,
         started_at: started_at,
         created_at: started_at,
       )
