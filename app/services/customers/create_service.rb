@@ -101,7 +101,9 @@ module Customers
       return unless params.key?(:billing_configuration)
 
       billing = params[:billing_configuration]
-      customer.invoice_grace_period = billing[:invoice_grace_period] if billing.key?(:invoice_grace_period)
+      if billing.key?(:invoice_grace_period)
+        Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
+      end
       customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
       if new_customer

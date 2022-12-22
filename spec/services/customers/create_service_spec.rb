@@ -136,6 +136,24 @@ RSpec.describe Customers::CreateService, type: :service do
           end
         end
       end
+
+      context 'when updating invoice grace period' do
+        let(:create_args) do
+          {
+            external_id: SecureRandom.uuid,
+            billing_configuration: { invoice_grace_period: 2 },
+          }
+        end
+
+        before do
+          allow(Customers::UpdateInvoiceGracePeriodService).to receive(:call)
+        end
+
+        it 'calls UpdateInvoiceGracePeriodService' do
+          customers_service.create_from_api(organization:, params: create_args)
+          expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
+        end
+      end
     end
 
     context 'with validation error' do
