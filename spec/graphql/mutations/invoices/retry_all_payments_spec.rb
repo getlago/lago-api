@@ -6,10 +6,10 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:user) { membership.user }
-  let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
-  let(:customer_first) { create(:customer, organization: organization, payment_provider: 'gocardless') }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
+  let(:customer_first) { create(:customer, organization:, payment_provider: 'gocardless') }
   let(:gocardless_customer_first) { create(:gocardless_customer, customer: customer_first) }
-  let(:customer_second) { create(:customer, organization: organization, payment_provider: 'gocardless') }
+  let(:customer_second) { create(:customer, organization:, payment_provider: 'gocardless') }
   let(:gocardless_customer_second) { create(:gocardless_customer, customer: customer_second) }
   let(:mutation) do
     <<-GQL

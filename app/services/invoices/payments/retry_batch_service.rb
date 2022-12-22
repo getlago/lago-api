@@ -10,7 +10,7 @@ module Invoices
       end
 
       def call
-        Invoices::Payments::RetryAllJob.perform_later(organization_id: organization_id, invoice_ids: invoices.ids)
+        Invoices::Payments::RetryAllJob.perform_later(organization_id:, invoice_ids: invoices.ids)
 
         result.invoices = invoices
 
@@ -20,7 +20,7 @@ module Invoices
       def retry_all(invoice_ids)
         processed_invoices = []
         Invoice.where(id: invoice_ids).each do |invoice|
-          result = Invoices::Payments::RetryService.new(invoice: invoice).call
+          result = Invoices::Payments::RetryService.new(invoice:).call
 
           return result unless result.success?
 

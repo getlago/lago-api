@@ -21,7 +21,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
     let(:invoice_first) do
       create(
         :invoice,
-        customer: customer,
+        customer:,
         status: 'finalized',
         payment_status: 'failed',
         ready_for_payment_processing: true,
@@ -30,7 +30,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
     let(:invoice_second) do
       create(
         :invoice,
-        customer: customer,
+        customer:,
         status: 'finalized',
         payment_status: 'failed',
         ready_for_payment_processing: true,
@@ -39,7 +39,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
     let(:invoice_third) do
       create(
         :invoice,
-        customer: customer,
+        customer:,
         status: 'draft',
         ready_for_payment_processing: true,
       )
@@ -68,7 +68,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
       let(:invoice_second) do
         create(
           :invoice,
-          customer: customer,
+          customer:,
           status: 'finalized',
           payment_status: 'failed',
           ready_for_payment_processing: false,
