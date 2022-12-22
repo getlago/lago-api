@@ -3890,6 +3890,7 @@ type Query {
     limit: Int
     page: Int
     paymentStatus: [InvoicePaymentStatusTypeEnum!]
+    status: InvoiceStatusTypeEnum
   ): InvoiceCollection!
 
   """
