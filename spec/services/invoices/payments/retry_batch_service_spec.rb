@@ -22,6 +22,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
       create(
         :invoice,
         customer: customer,
+        status: 'finalized',
         payment_status: 'failed',
         ready_for_payment_processing: true,
       )
@@ -30,7 +31,16 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
       create(
         :invoice,
         customer: customer,
+        status: 'finalized',
         payment_status: 'failed',
+        ready_for_payment_processing: true,
+      )
+    end
+    let(:invoice_third) do
+      create(
+        :invoice,
+        customer: customer,
+        status: 'draft',
         ready_for_payment_processing: true,
       )
     end
@@ -38,9 +48,10 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
     before do
       invoice_first
       invoice_second
+      invoice_third
     end
 
-    it 'returns processed invoices' do
+    it 'returns processed invoices that have correct status and payment status' do
       result = retry_batch_service.retry_all(invoice_ids)
 
       expect(result).to be_success
@@ -50,6 +61,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
 
       expect(processed_ids).to include(invoice_first.id)
       expect(processed_ids).to include(invoice_second.id)
+      expect(processed_ids).not_to include(invoice_third.id)
     end
 
     context 'when inner service passes error result' do
@@ -57,6 +69,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
         create(
           :invoice,
           customer: customer,
+          status: 'finalized',
           payment_status: 'failed',
           ready_for_payment_processing: false,
         )
