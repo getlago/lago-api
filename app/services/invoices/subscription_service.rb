@@ -18,8 +18,8 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
-          customer: customer,
-          issuing_date: issuing_date,
+          customer:,
+          issuing_date:,
           invoice_type: :subscription,
 
           amount_currency: currency,
@@ -28,19 +28,23 @@ module Invoices
           total_amount_currency: currency,
           vat_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
+          status: invoice_status,
         )
 
         result = Invoices::CalculateFeesService.new(
-          invoice: invoice,
-          subscriptions: subscriptions,
-          timestamp: timestamp,
-          recurring: recurring,
+          invoice:, subscriptions:, timestamp:, recurring:,
         ).call
       end
 
-      SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
-      Invoices::Payments::CreateService.new(invoice).call
-      track_invoice_created(invoice)
+      result.raise_if_error!
+
+      if grace_period?
+        SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
+      else
+        SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
+        Invoices::Payments::CreateService.new(invoice).call
+        track_invoice_created(invoice)
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -53,6 +57,14 @@ module Invoices
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def grace_period?
+      @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_status
+      grace_period? ? :draft : :finalized
     end
 
     def should_deliver_webhook?

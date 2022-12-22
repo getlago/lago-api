@@ -31,6 +31,12 @@ module Api
         if params[:external_customer_id]
           invoices = invoices.joins(:customer).where(customers: { external_id: params[:external_customer_id] })
         end
+
+        if valid_payment_status?(params[:payment_status])
+          invoices = invoices.where(payment_status: params[:payment_status])
+        end
+
+        invoices = invoices.where(status: params[:status]) if valid_status?(params[:status])
         invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
         invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
         invoices = invoices.order(created_at: :desc)
@@ -48,7 +54,7 @@ module Api
       end
 
       def download
-        invoice = current_organization.invoices.find_by(id: params[:id])
+        invoice = current_organization.invoices.finalized.find_by(id: params[:id])
 
         return not_found_error(resource: 'invoice') unless invoice
 
@@ -64,6 +70,30 @@ module Api
         Invoices::GenerateJob.perform_later(invoice)
 
         head(:ok)
+      end
+
+      def refresh
+        invoice = current_organization.invoices.find_by(id: params[:id])
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = Invoices::RefreshDraftService.call(invoice:)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def finalize
+        invoice = current_organization.invoices.draft.find_by(id: params[:id])
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = Invoices::FinalizeService.call(invoice:)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
       end
 
       def retry_payment
@@ -100,6 +130,14 @@ module Api
 
       def date_to_criteria
         { issuing_date: ..Date.strptime(params[:issuing_date_to]) }
+      end
+
+      def valid_status?(status)
+        Invoice.statuses.key?(status)
+      end
+
+      def valid_payment_status?(status)
+        Invoice.payment_statuses.key?(status)
       end
     end
   end

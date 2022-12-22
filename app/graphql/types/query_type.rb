@@ -22,6 +22,7 @@ module Types
     field :customer, resolver: Resolvers::CustomerResolver
     field :events, resolver: Resolvers::EventsResolver
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
+    field :customer_invoices, resolver: Resolvers::Customers::InvoicesResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :current_version, resolver: Resolvers::VersionResolver
@@ -31,6 +32,7 @@ module Types
     field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
+    field :invoices, resolver: Resolvers::InvoicesResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
   end

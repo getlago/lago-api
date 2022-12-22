@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def perform(stripe_customer)
       result = PaymentProviderCustomers::StripeService.new(stripe_customer).create
-      result.throw_error
+      result.raise_if_error!
     end
   end
 end

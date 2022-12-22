@@ -31,11 +31,11 @@ jobs:
       SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Ruby and gems
-        uses: ruby/setup-ruby@8f312efe1262fb463d906e9bf040319394c18d3e # v1.92
+        uses: ruby/setup-ruby@0a6498048c74682fe3bb5b3d6dec1f92be9297c8
         with:
-          ruby-version: 3.0.1
+          ruby-version: '3.1.3'
           bundler-cache: true
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh

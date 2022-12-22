@@ -11,6 +11,8 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           number
           refundableAmountCents
           creditableAmountCents
+          paymentStatus
+          status
           customer {
             id
             name
@@ -60,12 +62,16 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
     data = result['data']['invoice']
 
-    expect(data['id']).to eq(invoice.id)
-    expect(data['number']).to eq(invoice.number)
-    expect(data['customer']['id']).to eq(customer.id)
-    expect(data['customer']['name']).to eq(customer.name)
-    expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
-    expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
+    aggregate_failures do
+      expect(data['id']).to eq(invoice.id)
+      expect(data['number']).to eq(invoice.number)
+      expect(data['paymentStatus']).to eq(invoice.payment_status)
+      expect(data['status']).to eq(invoice.status)
+      expect(data['customer']['id']).to eq(customer.id)
+      expect(data['customer']['name']).to eq(customer.name)
+      expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
+      expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
+    end
   end
 
   it 'includes group for each fee' do

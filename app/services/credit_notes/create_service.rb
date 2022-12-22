@@ -43,7 +43,7 @@ module CreditNotes
         return result unless result.success?
 
         valid_credit_note?
-        result.throw_error unless result.success?
+        result.raise_if_error!
 
         credit_note.credit_status = 'available' if credit_note.credited?
         credit_note.refund_status = 'pending' if credit_note.refunded?

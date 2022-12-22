@@ -65,9 +65,9 @@ module Invoices
 
     def create_credit_fee(invoice)
       fee_result = Fees::PaidCreditService
-        .new(invoice: invoice, wallet_transaction: wallet_transaction, customer: customer).create
+        .new(invoice:, wallet_transaction:, customer:).create
 
-      raise(fee_result.throw_error) unless fee_result.success?
+      fee_result.raise_if_error!
     end
 
     def should_deliver_webhook?

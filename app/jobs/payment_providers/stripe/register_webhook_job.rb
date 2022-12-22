@@ -7,7 +7,7 @@ module PaymentProviders
 
       def perform(stripe_provider)
         result = PaymentProviders::StripeService.new.register_webhook(stripe_provider)
-        result.throw_error
+        result.raise_if_error!
       end
     end
   end
