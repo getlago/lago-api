@@ -18,8 +18,8 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer_first) { create(:customer, organization: organization) }
   let(:customer_second) { create(:customer, organization: organization) }
-  let(:invoice_first) { create(:invoice, customer: customer_first, payment_status: :pending) }
-  let(:invoice_second) { create(:invoice, customer: customer_second, payment_status: :succeeded) }
+  let(:invoice_first) { create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized) }
+  let(:invoice_second) { create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized) }
 
   before do
     invoice_first
@@ -72,6 +72,40 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
         expect(invoices_response['collection'].count).to eq(1)
         expect(returned_ids).not_to include(invoice_first.id)
         expect(returned_ids).to include(invoice_second.id)
+
+        expect(invoices_response['metadata']['currentPage']).to eq(1)
+        expect(invoices_response['metadata']['totalCount']).to eq(1)
+      end
+    end
+  end
+
+  context 'when filtering by draft status' do
+    let(:invoice_third) { create(:invoice, customer: customer_second, status: :draft) }
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, status: draft) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before { invoice_third }
+
+    it 'returns all draft invoices' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+      )
+
+      invoices_response = result['data']['invoices']
+
+      aggregate_failures do
+        expect(invoices_response['collection'].count).to eq(1)
+        expect(invoices_response['collection'].first['id']).to eq(invoice_third.id)
 
         expect(invoices_response['metadata']['currentPage']).to eq(1)
         expect(invoices_response['metadata']['totalCount']).to eq(1)
