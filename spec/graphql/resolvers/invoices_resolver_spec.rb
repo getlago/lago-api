@@ -98,7 +98,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
       )
 
       invoices_response = result['data']['invoices']

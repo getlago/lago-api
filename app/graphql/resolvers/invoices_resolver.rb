@@ -23,8 +23,8 @@ module Resolvers
         .page(page)
         .per(limit)
 
-      invoices = invoices.where(status: status) if status.present?
-      invoices = invoices.where(payment_status: payment_status) if payment_status.present?
+      invoices = invoices.where(status:) if status.present?
+      invoices = invoices.where(payment_status:) if payment_status.present?
       invoices = invoices.where(id: ids) if ids.present?
 
       invoices.order(payment_status: :asc, created_at: :desc)
