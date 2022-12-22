@@ -77,7 +77,7 @@ module Events
       return unless persisted_service.matching_billable_metric?
 
       service_result = persisted_service.call
-      service_result.throw_error unless service_result.success?
+      service_result.raise_if_error!
     end
   end
 end

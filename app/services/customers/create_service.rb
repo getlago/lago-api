@@ -133,7 +133,7 @@ module Customers
         async: !(billing_configuration || {})[:sync],
       )
 
-      create_result.throw_error unless create_result.success?
+      create_result.raise_if_error!
     end
 
     def track_customer_created(customer)

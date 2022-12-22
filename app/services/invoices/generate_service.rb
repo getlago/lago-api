@@ -11,11 +11,11 @@ module Invoices
     def generate(invoice_id:)
       invoice = Invoice.find_by(id: invoice_id)
       return result.not_found_failure!(resource: 'invoice') if invoice.blank?
+      return result.not_allowed_failure!(code: 'is_draft') if invoice.draft?
 
       generate_pdf(invoice) if invoice.file.blank?
 
       result.invoice = invoice
-
       result
     end
 

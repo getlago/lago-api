@@ -11,6 +11,6 @@ class BillAddOnJob < ApplicationJob
       datetime: Time.zone.at(timestamp),
     ).create
 
-    raise(result.throw_error) unless result.success?
+    result.raise_if_error!
   end
 end

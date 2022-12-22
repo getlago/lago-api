@@ -13,7 +13,7 @@ class WebhooksController < ApplicationController
         return head(:bad_request)
       end
 
-      result.throw_error
+      result.raise_if_error!
     end
 
     head(:ok)
@@ -31,7 +31,7 @@ class WebhooksController < ApplicationController
         return head(:bad_request)
       end
 
-      result.throw_error
+      result.raise_if_error!
     end
 
     head(:ok)

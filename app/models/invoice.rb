@@ -34,9 +34,11 @@ class Invoice < ApplicationRecord
 
   INVOICE_TYPES = %i[subscription add_on credit].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
+  STATUS = %i[draft finalized].freeze
 
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS
+  enum status: STATUS
 
   sequenced scope: ->(invoice) { invoice.customer.invoices }
 

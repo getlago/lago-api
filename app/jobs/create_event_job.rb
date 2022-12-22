@@ -11,6 +11,6 @@ class CreateEventJob < ApplicationJob
       metadata: metadata,
     )
 
-    result.throw_error unless result.success?
+    result.raise_if_error!
   end
 end

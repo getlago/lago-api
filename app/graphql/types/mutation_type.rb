@@ -18,6 +18,7 @@ module Types
     field :create_customer, mutation: Mutations::Customers::Create
     field :update_customer, mutation: Mutations::Customers::Update
     field :update_customer_vat_rate, mutation: Mutations::Customers::UpdateVatRate
+    field :update_customer_invoice_grace_period, mutation: Mutations::Customers::UpdateInvoiceGracePeriod
     field :destroy_customer, mutation: Mutations::Customers::Destroy
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
@@ -49,6 +50,8 @@ module Types
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
 
     field :download_invoice, mutation: Mutations::Invoices::Download
+    field :refresh_invoice, mutation: Mutations::Invoices::Refresh
+    field :finalize_invoice, mutation: Mutations::Invoices::Finalize
 
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :update_customer_wallet, mutation: Mutations::Wallets::Update

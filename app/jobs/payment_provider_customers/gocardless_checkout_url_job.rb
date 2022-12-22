@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def perform(gocardless_customer)
       result = PaymentProviderCustomers::GocardlessService.new(gocardless_customer).generate_checkout_url
-      result.throw_error
+      result.raise_if_error!
     end
   end
 end

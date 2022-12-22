@@ -12,6 +12,6 @@ class BillSubscriptionJob < ApplicationJob
       recurring: recurring,
     ).create
 
-    result.throw_error unless result.success?
+    result.raise_if_error!
   end
 end
