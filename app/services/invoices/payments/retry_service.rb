@@ -11,8 +11,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: 'invoice') if invoice.blank?
-        # TODO: Handle draft invoice when grace period feature is merged
-        return result.not_allowed_failure!(code: 'invalid_status') if invoice.succeeded?
+        return result.not_allowed_failure!(code: 'invalid_status') if invoice.draft? || invoice.succeeded?
 
         unless invoice.ready_for_payment_processing?
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')
