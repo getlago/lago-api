@@ -39,7 +39,7 @@ module Invoices
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.save!
 
-        result.invoice = invoice
+        result.invoice = invoice.reload
       end
 
       result
