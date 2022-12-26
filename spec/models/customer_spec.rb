@@ -118,7 +118,7 @@ RSpec.describe Customer, type: :model do
       let(:organization_invoice_grace_period) { 5 }
 
       before do
-        customer.invoice_grace_period = 0
+        customer.invoice_grace_period = nil
         organization.invoice_grace_period = organization_invoice_grace_period
       end
 

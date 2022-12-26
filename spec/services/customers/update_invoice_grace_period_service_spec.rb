@@ -26,7 +26,7 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
     end
 
     it 'updates invoice grace period on customer' do
-      expect { update_service.call }.to change { customer.reload.invoice_grace_period }.from(0).to(2)
+      expect { update_service.call }.to change { customer.reload.invoice_grace_period }.from(nil).to(2)
     end
 
     it 'finalizes corresponding draft invoices' do
