@@ -61,9 +61,8 @@ module Events
 
       return invalid_code_error unless valid_code?
 
-      invalid_persisted_event = persisted_event_validation(
-        customer.active_subscriptions.first || organization.subscriptions.find_by(id: params[:subscription_id]),
-      )
+      subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
+      invalid_persisted_event = persisted_event_validation(subscription || customer.active_subscriptions.first)
       return invalid_persisted_event_error(invalid_persisted_event) if invalid_persisted_event.present?
     end
 
