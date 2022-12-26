@@ -25,7 +25,7 @@ module Types
       field :legal_name, String, null: true
       field :legal_number, String, null: true
       field :vat_rate, Float, null: true
-      field :invoice_grace_period, Integer, null: false
+      field :invoice_grace_period, Integer, null: true
       field :currency, Types::CurrencyEnum, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :timezone, Types::TimezoneEnum, null: true

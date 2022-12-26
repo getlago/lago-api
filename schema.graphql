@@ -2576,7 +2576,7 @@ type Customer {
   """
   hasCreditNotes: Boolean!
   id: ID!
-  invoiceGracePeriod: Int!
+  invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -2648,7 +2648,7 @@ type CustomerDetails {
   """
   hasCreditNotes: Boolean!
   id: ID!
-  invoiceGracePeriod: Int!
+  invoiceGracePeriod: Int
   invoices: [Invoice!]
   legalName: String
   legalNumber: String

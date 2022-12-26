@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_22_164226) do
+ActiveRecord::Schema[7.0].define(version: 2022_12_26_091020) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -212,7 +212,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_22_164226) do
     t.string "slug"
     t.bigint "sequential_id"
     t.string "currency"
-    t.integer "invoice_grace_period", default: 0, null: false
+    t.integer "invoice_grace_period"
     t.string "timezone"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_customers_on_organization_id"
