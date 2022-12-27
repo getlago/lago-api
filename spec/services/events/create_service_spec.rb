@@ -111,6 +111,24 @@ RSpec.describe Events::CreateService, type: :service do
 
     before { subscription }
 
+    context 'when timestamp is not present in the payload' do
+      let(:create_args) do
+        {
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          properties: { foo: 'bar' },
+        }
+      end
+
+      it 'creates an event by setting the timestamp to the current datetime' do
+        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+
+        expect(result).to be_success
+        expect(result.event.timestamp).to eq(Time.zone.at(timestamp))
+      end
+    end
+
     context 'when creating an event to a terminated subscription' do
       let(:subscription) do
         create(:subscription, customer:, organization:, status: :terminated, started_at: 1.month.ago)
