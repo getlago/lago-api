@@ -23,6 +23,7 @@ module Types
     field :events, resolver: Resolvers::EventsResolver
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :customer_invoices, resolver: Resolvers::Customers::InvoicesResolver
+    field :organization, resolver: Resolvers::OrganizationResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :current_version, resolver: Resolvers::VersionResolver
