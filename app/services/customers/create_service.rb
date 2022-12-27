@@ -64,7 +64,7 @@ module Customers
         legal_name: args[:legal_name],
         legal_number: args[:legal_number],
         vat_rate: args[:vat_rate],
-        invoice_grace_period: args[:invoice_grace_period] || 0,
+        invoice_grace_period: args[:invoice_grace_period],
         payment_provider: args[:payment_provider],
         currency: args[:currency],
       )
