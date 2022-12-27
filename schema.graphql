@@ -3885,6 +3885,11 @@ type Query {
   memberships(limit: Int, page: Int): MembershipCollection!
 
   """
+  Query the current organization
+  """
+  organization: Organization
+
+  """
   Query a single plan of an organization
   """
   plan(
