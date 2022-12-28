@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::EventsController, type: :request do
   let(:organization) { create(:organization) }
+  let(:metric) { create(:billable_metric, organization:) }
 
   describe 'POST /events' do
     it 'returns a success' do
@@ -11,7 +12,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         organization,
         '/api/v1/events',
         event: {
-          code: 'event_code',
+          code: metric.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: SecureRandom.uuid,
           timestamp: Time.zone.now.to_i,

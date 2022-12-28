@@ -4,7 +4,10 @@ module Api
   module V1
     class EventsController < Api::BaseController
       def create
-        validate_result = Events::CreateService.new.validate_params(params: create_params)
+        validate_result = Events::CreateService.new.validate_params(
+          organization: current_organization,
+          params: create_params,
+        )
         return render_error_response(validate_result) unless validate_result.success?
 
         Events::CreateJob.perform_later(
