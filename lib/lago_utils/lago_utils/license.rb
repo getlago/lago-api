@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Lago
+module LagoUtils
   class License
     def initialize(url)
       @url = url

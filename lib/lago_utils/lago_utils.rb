@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
 require 'lago_http_client'
-require 'lago/license'
+require 'lago_utils/license'
 
-module Lago; end
+module LagoUtils; end
