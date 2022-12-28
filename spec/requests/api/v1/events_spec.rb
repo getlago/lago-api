@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::EventsController, type: :request do
   let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }
 
   describe 'POST /events' do
@@ -14,7 +15,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         event: {
           code: metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: SecureRandom.uuid,
+          external_customer_id: customer.external_id,
           timestamp: Time.zone.now.to_i,
           properties: {
             foo: 'bar',
@@ -31,7 +32,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/events',
-          event: { external_customer_id: SecureRandom.uuid },
+          event: { external_customer_id: customer.external_id },
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -49,7 +50,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         event: {
           code: 'event_code',
           transaction_id: SecureRandom.uuid,
-          external_customer_id: SecureRandom.uuid,
+          external_customer_id: customer.external_id,
           external_subscription_ids: %w[id1 id2],
           timestamp: Time.zone.now.to_i,
           properties: {
@@ -70,7 +71,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           event: {
             code: 'event_code',
             transaction_id: SecureRandom.uuid,
-            external_customer_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
             timestamp: Time.zone.now.to_i,
             properties: {
               foo: 'bar',

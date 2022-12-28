@@ -13,7 +13,7 @@ RSpec.describe Events::CreateService, type: :service do
     let(:params) do
       {
         transaction_id: SecureRandom.uuid,
-        external_customer_id: SecureRandom.uuid,
+        external_customer_id: customer.external_id,
         code: metric.code,
       }
     end
@@ -36,7 +36,7 @@ RSpec.describe Events::CreateService, type: :service do
 
     context 'with errors' do
       let(:params) do
-        { external_customer_id: SecureRandom.uuid, code: nil }
+        { external_customer_id: customer.external_id, code: nil }
       end
 
       it 'returns an error' do

@@ -16,7 +16,7 @@ RSpec.describe Events::Create::ValidateParamsService, type: :service do
   let(:params) do
     {
       transaction_id: SecureRandom.uuid,
-      external_customer_id: SecureRandom.uuid,
+      external_customer_id: customer.external_id,
       code: metric.code,
       properties:,
     }
@@ -30,7 +30,7 @@ RSpec.describe Events::Create::ValidateParamsService, type: :service do
     context 'when missing or nil arguments' do
       let(:params) do
         {
-          external_customer_id: SecureRandom.uuid,
+          external_customer_id: customer.external_id,
           code: nil,
         }
       end
@@ -49,6 +49,15 @@ RSpec.describe Events::Create::ValidateParamsService, type: :service do
       it 'returns an error on code' do
         params[:code] = 'unknown'
         expect(service.call).to eq({ code: ['metric_not_found'] })
+      end
+    end
+
+    context 'when customer is not found' do
+      it 'returns an error on customer' do
+        params[:external_customer_id] = 'unknown'
+        params[:external_subscription_id] = 'unknown'
+
+        expect(service.call).to eq({ external_id: ['customer_not_found'] })
       end
     end
 

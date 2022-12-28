@@ -18,6 +18,7 @@ module Events
       def call
         mandatory_params_errors
           .merge(metric_not_found_error)
+          .merge(customer_not_found_error)
           .merge(properties_not_valid_errors)
       end
 
@@ -56,6 +57,13 @@ module Events
         return {} if params[:code].blank? || metric
 
         { code: ['metric_not_found'] }
+      end
+
+      def customer_not_found_error
+        return {} if organization.subscriptions.find_by(external_id: params[:external_subscription_id])&.customer
+        return {} if Customer.find_by(external_id: params[:external_customer_id], organization_id: organization.id)
+
+        { external_id: ['customer_not_found'] }
       end
 
       def field_name
