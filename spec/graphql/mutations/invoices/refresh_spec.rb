@@ -13,7 +13,7 @@ RSpec.describe Mutations::Invoices::Refresh, type: :graphql do
       mutation($input: RefreshInvoiceInput!) {
         refreshInvoice(input: $input) {
           id
-          issuingDate
+          updatedAt
         }
       }
     GQL
@@ -34,7 +34,7 @@ RSpec.describe Mutations::Invoices::Refresh, type: :graphql do
 
       aggregate_failures do
         expect(result_data['id']).to be_present
-        expect(result_data['issuingDate']).to eq(Time.current.to_date.to_s)
+        expect(result_data['updatedAt']).to eq(Time.current.iso8601)
       end
     end
   end

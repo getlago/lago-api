@@ -18,7 +18,7 @@ module Invoices
         result = Invoices::RefreshDraftService.call(invoice:)
         result.raise_if_error!
 
-        invoice.finalized!
+        invoice.update!(status: :finalized, issuing_date:)
         SendWebhookJob.perform_later(:invoice, invoice) if invoice.organization.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
@@ -30,6 +30,10 @@ module Invoices
     private
 
     attr_accessor :invoice
+
+    def issuing_date
+      @issuing_date ||= Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date
+    end
 
     def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(

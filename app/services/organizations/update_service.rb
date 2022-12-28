@@ -21,7 +21,9 @@ module Organizations
       organization.city = args[:city] if args.key?(:city)
       organization.country = args[:country] if args.key?(:country)
       organization.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
-      organization.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
+      if args.key?(:invoice_grace_period)
+        Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: args[:invoice_grace_period])
+      end
 
       # TODO(:timezone): Timezone update is turned off for now
       # organization.timezone = args[:timezone] if args.key?(:timezone)
@@ -31,7 +33,6 @@ module Organizations
       organization.save!
 
       result.organization = organization
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -55,8 +56,10 @@ module Organizations
       if params.key?(:billing_configuration)
         billing = params[:billing_configuration]
         organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-        organization.invoice_grace_period = billing[:invoice_grace_period] if billing.key?(:invoice_grace_period)
         organization.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+        if billing.key?(:invoice_grace_period)
+          Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: billing[:invoice_grace_period])
+        end
       end
 
       organization.save!
