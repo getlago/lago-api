@@ -114,14 +114,14 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     end
 
     context 'with customer timezone' do
-      before { subscription.customer.update!(timezone: 'America/Los_Angeles') }
+      before { subscription.customer.update!(timezone: 'America/Los_Angeles', invoice_grace_period: 3) }
 
       let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
 
       it 'assigns the issuing date in the customer timezone' do
         result = invoice_service.create
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+        expect(result.invoice.issuing_date.to_s).to eq('2022-11-27')
       end
     end
 

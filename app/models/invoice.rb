@@ -42,6 +42,21 @@ class Invoice < ApplicationRecord
 
   sequenced scope: ->(invoice) { invoice.customer.invoices }
 
+  scope :ready_to_be_finalized,
+        lambda {
+          date = <<-SQL
+            (
+              invoices.created_at +
+              COALESCE(
+                NULLIF(customers.invoice_grace_period, 0),
+                organizations.invoice_grace_period
+              ) * INTERVAL '1 DAY'
+            )
+          SQL
+
+          draft.joins(customer: :organization).where("#{Arel.sql(date)} < ?", Time.current)
+        }
+
   validates :issuing_date, presence: true
   validates :timezone, timezone: true, allow_nil: true
 

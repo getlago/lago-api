@@ -35,7 +35,7 @@ class Customer < ApplicationRecord
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :currency, inclusion: { in: currency_list }, allow_nil: true
   validates :external_id, presence: true, uniqueness: { scope: :organization_id }
-  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
+  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
@@ -69,7 +69,7 @@ class Customer < ApplicationRecord
   end
 
   def applicable_invoice_grace_period
-    return invoice_grace_period if invoice_grace_period.positive?
+    return invoice_grace_period if invoice_grace_period.present?
 
     organization.invoice_grace_period
   end

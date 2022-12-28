@@ -227,6 +227,35 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           end
         end
       end
+
+      context 'when event belongs to a recurring persisted event and subscription is terminated' do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: 'recurring_count_agg',
+            field_name: 'item_id',
+          )
+        end
+
+        let(:subscription) { create(:subscription, customer:, organization:, status: :terminated) }
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => 'ext_1234',
+              'operation_type' => 'add',
+            },
+          }
+        end
+
+        it 'returns no error' do
+          validate_event
+
+          expect(result).to be_success
+        end
+      end
     end
 
     context 'when batch is true' do
