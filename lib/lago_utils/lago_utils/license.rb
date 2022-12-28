@@ -11,7 +11,7 @@ module LagoUtils
       return if ENV['LAGO_LICENSE'].blank?
 
       http_client = LagoHttpClient::Client.new("#{url}/verify/#{ENV['LAGO_LICENSE']}")
-      response = http_client.post({}, [])
+      response = http_client.get
 
       @premium = response['valid']
     end
