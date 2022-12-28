@@ -6,12 +6,13 @@ module Events
       new(...).call
     end
 
-    def initialize(organization:, params:, result:, customer:, batch: false)
+    def initialize(organization:, params:, result:, customer:, batch: false, send_webhook: true)
       @organization = organization
       @params = params
       @result = result
       @customer = customer
       @batch = batch
+      @send_webhook = send_webhook
     end
 
     def call
@@ -20,7 +21,7 @@ module Events
 
     private
 
-    attr_reader :organization, :params, :result, :customer, :batch
+    attr_reader :organization, :params, :result, :customer, :batch, :send_webhook
 
     def validate_create_batch
       return missing_subscription_error if params[:external_subscription_ids].blank?
@@ -33,7 +34,7 @@ module Events
       return invalid_code_error unless valid_code?
 
       invalid_persisted_events = params[:external_subscription_ids]
-        .map { |external_id| organization.subscriptions.find_by(external_id: external_id) }
+        .map { |external_id| organization.subscriptions.find_by(external_id:) }
         .each_with_object({}) do |subscription, errors|
           validation_result = persisted_event_validation(subscription)
           next errors if validation_result.blank?
@@ -75,6 +76,7 @@ module Events
     end
 
     def send_webhook_notice
+      return unless send_webhook
       return unless organization.webhook_url?
 
       status = result.error.is_a?(BaseService::NotFoundFailure) ? 404 : 422
@@ -82,7 +84,7 @@ module Events
       object = {
         input_params: params,
         error: result.error.to_s,
-        status: status,
+        status:,
         organization_id: organization.id,
       }
 
@@ -109,7 +111,7 @@ module Events
     end
 
     def invalid_persisted_event_error(errors)
-      result.validation_failure!(errors: errors)
+      result.validation_failure!(errors:)
       send_webhook_notice
     end
 
@@ -121,9 +123,9 @@ module Events
       return {} unless billable_metric.recurring_count_agg?
 
       validation_service = PersistedEvents::ValidateCreationService.new(
-        result: result,
-        subscription: subscription,
-        billable_metric: billable_metric,
+        result:,
+        subscription:,
+        billable_metric:,
         args: params,
       )
       return {} if validation_service.valid?

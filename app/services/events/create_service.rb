@@ -2,34 +2,19 @@
 
 module Events
   class CreateService < BaseService
-    ALL_REQUIRED_PARAMS = %i[transaction_id code].freeze
-    ONE_REQUIRED_PARAMS = %i[external_subscription_id external_customer_id].freeze
-
-    def validate_params(params:)
-      params_errors = ALL_REQUIRED_PARAMS.each_with_object({}) do |key, errors|
-        errors[key] = ['value_is_mandatory'] if params[key].blank?
-      end
-      params_errors[:base] = ['missing_external_identifier'] if ONE_REQUIRED_PARAMS.all? { |key| params[key].blank? }
-
-      # NOTE: In case of multiple subscriptions, we return an error if subscription_id is not given.
-      if params[:external_customer_id].present? && params[:external_subscription_id].blank?
-        customer = Customer.find_by(external_id: params[:external_customer_id])
-        subscriptions_count = customer ? customer.active_subscriptions.count : 0
-        params_errors[:external_subscription_id] = ['value_is_mandatory'] if subscriptions_count > 1
-      end
-
-      return result if params_errors.blank?
-
-      result.validation_failure!(errors: params_errors)
+    def validate_params(organization:, params:)
+      Events::ValidateCreationService.call(
+        organization:,
+        params:,
+        customer: customer(organization:, params:),
+        result:,
+        send_webhook: false,
+      )
+      result
     end
 
     def call(organization:, params:, timestamp:, metadata:)
-      customer = if params[:external_subscription_id]
-        organization.subscriptions.find_by(external_id: params[:external_subscription_id])&.customer
-      else
-        Customer.find_by(external_id: params[:external_customer_id], organization_id: organization.id)
-      end
-
+      customer = customer(organization:, params:)
       Events::ValidateCreationService.call(organization:, params:, customer:, result:)
       return result unless result.success?
 
@@ -75,6 +60,18 @@ module Events
       end
 
       result
+    end
+
+    private
+
+    def customer(organization:, params:)
+      return @customer if defined? @customer
+
+      @customer = if params[:external_subscription_id]
+        organization.subscriptions.find_by(external_id: params[:external_subscription_id])&.customer
+      else
+        Customer.find_by(external_id: params[:external_customer_id], organization_id: organization.id)
+      end
     end
 
     def persisted_event_service

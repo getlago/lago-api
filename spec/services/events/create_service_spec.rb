@@ -6,97 +6,57 @@ RSpec.describe Events::CreateService, type: :service do
   subject(:create_service) { described_class.new }
 
   let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:customer) { create(:customer, organization:) }
 
   describe '#validate_params' do
     let(:params) do
       {
         transaction_id: SecureRandom.uuid,
-        external_customer_id: SecureRandom.uuid,
-        code: 'foo',
+        external_customer_id: customer.external_id,
+        code: billable_metric.code,
       }
     end
 
+    before do
+      create(:active_subscription, customer:, organization:)
+      allow(Events::ValidateCreationService).to receive(:call).and_call_original
+    end
+
+    it 'delegates to ValidateParamsService' do
+      create_service.validate_params(organization:, params:)
+
+      expect(Events::ValidateCreationService).to have_received(:call).with(
+        organization:,
+        params:,
+        customer:,
+        result: kind_of(BaseService::Result),
+        send_webhook: false,
+      )
+    end
+
     it 'validates the presence of the mandatory arguments' do
-      result = create_service.validate_params(params: params)
+      result = create_service.validate_params(organization:, params:)
 
       expect(result).to be_success
     end
 
     context 'with missing or nil arguments' do
-      let(:params) do
-        {
-          external_customer_id: SecureRandom.uuid,
-          code: nil,
-        }
-      end
-
       it 'returns an error' do
-        result = create_service.validate_params(params: params)
+        params[:code] = nil
+        result = create_service.validate_params(organization:, params:)
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:transaction_id, :code])
-          expect(result.error.messages[:transaction_id]).to eq(['value_is_mandatory'])
-          expect(result.error.messages[:code]).to eq(['value_is_mandatory'])
-        end
-      end
-    end
-
-    context 'when external_customer_id and subscription_id but multiple subscriptions' do
-      let(:subscription) { create(:subscription, customer: customer) }
-      let(:params) do
-        {
-          transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
-          external_subscription_id: subscription.external_id,
-          code: 'code',
-        }
-      end
-
-      before do
-        create(:subscription, customer: customer)
-      end
-
-      it 'does not return any error' do
-        result = create_service.validate_params(params: params)
-
-        expect(result).to be_success
-      end
-    end
-
-    context 'when only external_customer_id but multiple subscriptions' do
-      let(:params) do
-        {
-          transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
-          code: 'code',
-        }
-      end
-
-      before do
-        create_list(:subscription, 2, customer: customer)
-      end
-
-      it 'returns an error' do
-        result = create_service.validate_params(params: params)
-
-        expect(result).not_to be_success
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:external_subscription_id])
-          expect(result.error.messages[:external_subscription_id]).to eq(['value_is_mandatory'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('billable_metric_not_found')
         end
       end
     end
   end
 
   describe '#call' do
-    let(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
+    let(:subscription) { create(:active_subscription, customer:, organization:) }
 
     let(:create_args) do
       {
@@ -218,9 +178,9 @@ RSpec.describe Events::CreateService, type: :service do
     context 'when customer has only one active subscription and subscription is not given' do
       it 'creates a new event and assigns subscription' do
         result = create_service.call(
-          organization: organization,
+          organization:,
           params: create_args,
-          timestamp: timestamp,
+          timestamp:,
           metadata: {},
         )
 
@@ -251,9 +211,9 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates a new event and assigns customer' do
         result = create_service.call(
-          organization: organization,
+          organization:,
           params: create_args,
-          timestamp: timestamp,
+          timestamp:,
           metadata: {},
         )
 
@@ -272,7 +232,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     context 'when customer has two active subscriptions' do
-      let(:subscription2) { create(:active_subscription, customer: customer, organization: organization) }
+      let(:subscription2) { create(:active_subscription, customer:, organization:) }
 
       let(:create_args) do
         {
@@ -288,9 +248,9 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates a new event for correct subscription' do
         result = create_service.call(
-          organization: organization,
+          organization:,
           params: create_args,
-          timestamp: timestamp,
+          timestamp:,
           metadata: {},
         )
 
@@ -308,7 +268,7 @@ RSpec.describe Events::CreateService, type: :service do
       let(:existing_event) do
         create(
           :event,
-          organization: organization,
+          organization:,
           transaction_id: create_args[:transaction_id],
           subscription_id: subscription.id,
         )
@@ -319,9 +279,9 @@ RSpec.describe Events::CreateService, type: :service do
       it 'returns existing event' do
         expect do
           create_service.call(
-            organization: organization,
+            organization:,
             params: create_args,
-            timestamp: timestamp,
+            timestamp:,
             metadata: {},
           )
         end.not_to change { organization.events.count }
@@ -340,9 +300,9 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates a new event' do
         result = create_service.call(
-          organization: organization,
+          organization:,
           params: create_args,
-          timestamp: timestamp,
+          timestamp:,
           metadata: {},
         )
 
@@ -388,9 +348,9 @@ RSpec.describe Events::CreateService, type: :service do
       it 'creates a persisted metric' do
         expect do
           create_service.call(
-            organization: organization,
+            organization:,
             params: create_args,
-            timestamp: timestamp,
+            timestamp:,
             metadata: {},
           )
         end.to change(PersistedEvent, :count).by(1)
@@ -415,9 +375,9 @@ RSpec.describe Events::CreateService, type: :service do
 
           expect do
             result = create_service.call(
-              organization: organization,
+              organization:,
               params: create_args,
-              timestamp: timestamp,
+              timestamp:,
               metadata: {},
             )
           end.to have_enqueued_job(SendWebhookJob)
