@@ -11,7 +11,7 @@ RSpec.describe LagoUtils::License do
     ENV['LAGO_LICENSE'] = 'test-license'
   end
 
-  describe '.verify' do
+  describe '#verify' do
     context 'when license is valid' do
       let(:response) do
         {
@@ -20,7 +20,7 @@ RSpec.describe LagoUtils::License do
       end
 
       before do
-        stub_request(:post, "#{url}/verify/test-license")
+        stub_request(:get, "#{url}/verify/test-license")
           .to_return(body: response, status: 200)
       end
 
@@ -51,7 +51,7 @@ RSpec.describe LagoUtils::License do
       end
 
       before do
-        stub_request(:post, "#{url}/verify/test-license")
+        stub_request(:get, "#{url}/verify/test-license")
           .to_return(body: response, status: 200)
       end
 
