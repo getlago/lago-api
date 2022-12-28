@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
-require 'lago'
+require 'lago_utils'
 
-License = Lago::License.new(Rails.application.config.license_url)
+unless Rails.env.test?
+  License = LagoUtils::License.new(Rails.application.config.license_url)
 
-License.verify
+  License.verify
+end
