@@ -23,7 +23,6 @@ RSpec.describe Organizations::UpdateService do
         country: 'FR',
         timezone: 'Europe/Paris',
         invoice_footer: 'invoice footer',
-        invoice_grace_period: 3,
       )
 
       aggregate_failures do
@@ -41,7 +40,6 @@ RSpec.describe Organizations::UpdateService do
         # TODO(:timezone): Timezone update is turned off for now
         # expect(result.organization.timezone).to eq('Europe/Paris')
         expect(result.organization.invoice_footer).to eq('invoice footer')
-        expect(result.organization.invoice_grace_period).to eq(3)
       end
     end
 
@@ -59,6 +57,36 @@ RSpec.describe Organizations::UpdateService do
         )
 
         expect(result.organization.logo.blob).not_to be_nil
+      end
+    end
+
+    context 'when updating invoice grace period' do
+      let(:customer) { create(:customer, organization:) }
+
+      let(:invoice_to_be_finalized) do
+        create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'))
+      end
+
+      let(:invoice_to_not_be_finalized) do
+        create(:invoice, status: :draft, customer:, created_at: DateTime.parse('21 Jun 2022'))
+      end
+
+      before do
+        invoice_to_be_finalized
+        invoice_to_not_be_finalized
+        allow(Invoices::FinalizeService).to receive(:call)
+      end
+
+      it 'finalizes corresponding draft invoices' do
+        current_date = DateTime.parse('22 Jun 2022')
+
+        travel_to(current_date) do
+          result = organization_update_service.update(invoice_grace_period: 2)
+
+          expect(result.organization.invoice_grace_period).to eq(2)
+          expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
+          expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
+        end
       end
     end
   end
@@ -80,7 +108,6 @@ RSpec.describe Organizations::UpdateService do
         timezone: 'Europe/Paris',
         billing_configuration: {
           invoice_footer: 'footer',
-          invoice_grace_period: 3,
           vat_rate: 20,
         },
       }
@@ -100,7 +127,6 @@ RSpec.describe Organizations::UpdateService do
 
         billing = update_args[:billing_configuration]
         expect(organization_response.invoice_footer).to eq(billing[:invoice_footer])
-        expect(organization_response.invoice_grace_period).to eq(billing[:invoice_grace_period])
         expect(organization_response.vat_rate).to eq(billing[:vat_rate])
       end
     end
@@ -115,6 +141,40 @@ RSpec.describe Organizations::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:country]).to eq(['not_a_valid_country_code'])
+        end
+      end
+    end
+
+    context 'when updating invoice grace period' do
+      let(:update_args) do
+        { billing_configuration: { invoice_grace_period: 2 } }
+      end
+
+      let(:customer) { create(:customer, organization:) }
+
+      let(:invoice_to_be_finalized) do
+        create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'))
+      end
+
+      let(:invoice_to_not_be_finalized) do
+        create(:invoice, status: :draft, customer:, created_at: DateTime.parse('21 Jun 2022'))
+      end
+
+      before do
+        invoice_to_be_finalized
+        invoice_to_not_be_finalized
+        allow(Invoices::FinalizeService).to receive(:call)
+      end
+
+      it 'finalizes corresponding draft invoices' do
+        current_date = DateTime.parse('22 Jun 2022')
+
+        travel_to(current_date) do
+          result = organization_update_service.update_from_api(params: update_args)
+
+          expect(result.organization.invoice_grace_period).to eq(2)
+          expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
+          expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
         end
       end
     end

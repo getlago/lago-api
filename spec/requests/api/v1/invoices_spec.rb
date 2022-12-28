@@ -178,12 +178,12 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is draft' do
-      let(:invoice) { create(:invoice, customer:, issuing_date: 2.days.ago) }
+      let(:invoice) { create(:invoice, customer:) }
 
       it 'updates the invoice' do
         expect {
           put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
-        }.to change { invoice.reload.issuing_date }
+        }.to change { invoice.reload.updated_at }
       end
 
       it 'returns the invoice' do
@@ -200,7 +200,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       it 'does not update the invoice' do
         expect {
           put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
-        }.not_to change { invoice.reload.issuing_date }
+        }.not_to change { invoice.reload.updated_at }
       end
 
       it 'returns the invoice' do

@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+# frozen_string_literal: true
 
 module Events
   class CreateService < BaseService
@@ -33,9 +33,10 @@ module Events
       Events::ValidateCreationService.call(organization:, params:, customer:, result:)
       return result unless result.success?
 
+      event_timestamp = Time.zone.at(params[:timestamp] || timestamp)
       subscription = Subscription
         .where(external_id: params[:external_subscription_id])
-        .where('started_at <= ?', Time.zone.at(params[:timestamp]))
+        .where('started_at <= ?', event_timestamp)
         .order(started_at: :desc)
         .first || customer&.active_subscriptions&.first
 
@@ -54,9 +55,7 @@ module Events
         event.subscription_id = subscription.id
         event.properties = params[:properties] || {}
         event.metadata = metadata || {}
-
-        event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
-        event.timestamp ||= timestamp
+        event.timestamp = event_timestamp
 
         event.save!
 

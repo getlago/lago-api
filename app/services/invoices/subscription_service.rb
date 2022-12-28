@@ -56,7 +56,10 @@ module Invoices
     attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency
 
     def issuing_date
-      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+      issuing_date = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+      return issuing_date unless grace_period?
+
+      issuing_date + customer.applicable_invoice_grace_period.days
     end
 
     def grace_period?
