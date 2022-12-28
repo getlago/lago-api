@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'RetryPayment'
-      description 'Retry payment'
+      graphql_name 'RetryInvoicePayment'
+      description 'Retry invoice payment'
 
       argument :id, ID, required: true
 

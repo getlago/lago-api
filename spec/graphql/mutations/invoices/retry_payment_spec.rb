@@ -20,8 +20,8 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
   end
   let(:mutation) do
     <<-GQL
-      mutation($input: RetryPaymentInput!) {
-        retryPayment(input: $input) {
+      mutation($input: RetryInvoicePaymentInput!) {
+        retryInvoicePayment(input: $input) {
           id
           paymentStatus
         }
@@ -40,7 +40,7 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
         },
       )
 
-      data = result['data']['retryPayment']
+      data = result['data']['retryInvoicePayment']
 
       expect(data['id']).to eq(invoice.id)
     end
