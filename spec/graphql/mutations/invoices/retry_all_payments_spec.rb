@@ -13,8 +13,8 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
   let(:gocardless_customer_second) { create(:gocardless_customer, customer: customer_second) }
   let(:mutation) do
     <<-GQL
-      mutation($input: RetryAllPaymentsInput!) {
-        retryAllPayments(input: $input) {
+      mutation($input: RetryAllInvoicePaymentsInput!) {
+        retryAllInvoicePayments(input: $input) {
           collection { id }
         }
       }
@@ -59,7 +59,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
         },
       )
 
-      data = result['data']['retryAllPayments']
+      data = result['data']['retryAllInvoicePayments']
       invoice_ids = data['collection'].map { |value| value['id'] }
 
       expect(invoice_ids).to include(invoice_first.id)
