@@ -214,7 +214,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             billing_configuration: {
               vat_rate: 28,
-              payment_provider: payment_provider,
+              payment_provider:,
               provider_customer_id: 'stripe_id',
             },
           }
@@ -222,7 +222,7 @@ RSpec.describe Customers::CreateService, type: :service do
         let(:customer) do
           create(
             :customer,
-            organization: organization,
+            organization:,
             external_id: create_args[:external_id],
             email: 'foo@bar.com',
           )
@@ -232,7 +232,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
         it 'updates the customer' do
           result = customers_service.create_from_api(
-            organization: organization,
+            organization:,
             params: create_args,
           )
 
@@ -251,12 +251,12 @@ RSpec.describe Customers::CreateService, type: :service do
           end
         end
 
-        context 'and payment_provider is invalid' do
+        context 'when payment_provider is invalid' do
           let(:payment_provider) { 'foo' }
 
           it 'updates the customer and reset payment_provider attribute' do
             result = customers_service.create_from_api(
-              organization: organization,
+              organization:,
               params: create_args,
             )
 
