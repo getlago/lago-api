@@ -53,6 +53,7 @@ module Events
       return invalid_customer_error unless customer
       return missing_subscription_error unless valid_subscription?
       return invalid_code_error unless valid_code?
+      return invalid_properties_error unless valid_properties?
 
       subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
       invalid_persisted_event = persisted_event_validation(subscription || customer.active_subscriptions.first)
@@ -77,6 +78,18 @@ module Events
 
     def valid_code?
       billable_metric.present?
+    end
+
+    def valid_properties?
+      return true unless billable_metric.max_agg? || billable_metric.sum_agg?
+
+      valid_number?(params[:properties][billable_metric.field_name.to_sym])
+    end
+
+    def valid_number?(value)
+      true if Float(value)
+    rescue ArgumentError
+      false
     end
 
     def send_webhook_notice
@@ -106,6 +119,11 @@ module Events
 
     def invalid_code_error
       result.not_found_failure!(resource: 'billable_metric')
+      send_webhook_notice
+    end
+
+    def invalid_properties_error
+      result.validation_failure!(errors: { properties: ['value_is_not_valid_number'] })
       send_webhook_notice
     end
 
