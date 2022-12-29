@@ -12,7 +12,6 @@ module LagoApi
     config.eager_load_paths += %W[
       #{config.root}/lib
       #{config.root}/lib/lago_http_client
-      #{config.root}/lib/lago_utils
     ]
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq

@@ -78,16 +78,6 @@ module LagoHttpClient
       response
     end
 
-    def get
-      req = Net::HTTP::Get.new(uri.path)
-
-      response = http_client.request(req)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-
-      JSON.parse(response.body&.presence || '{}')
-    end
-
     private
 
     attr_reader :uri, :http_client
