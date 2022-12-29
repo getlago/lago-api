@@ -205,6 +205,74 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(stripe_customer.provider_customer_id).to eq('stripe_id')
         end
       end
+
+      context 'when customer already exists' do
+        let(:payment_provider) { 'stripe' }
+        let(:create_args) do
+          {
+            external_id: SecureRandom.uuid,
+            name: 'Foo Bar',
+            billing_configuration: {
+              vat_rate: 28,
+              payment_provider:,
+              provider_customer_id: 'stripe_id',
+            },
+          }
+        end
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            external_id: create_args[:external_id],
+            email: 'foo@bar.com',
+          )
+        end
+
+        before { customer }
+
+        it 'updates the customer' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.customer).to eq(customer)
+
+            # NOTE: It should not erase exsting properties
+            expect(result.customer.vat_rate).to eq(28)
+            expect(result.customer.payment_provider).to eq('stripe')
+            expect(result.customer.stripe_customer).to be_present
+
+            stripe_customer = result.customer.stripe_customer
+            expect(stripe_customer.id).to be_present
+            expect(stripe_customer.provider_customer_id).to eq('stripe_id')
+          end
+        end
+
+        context 'when payment_provider is invalid' do
+          let(:payment_provider) { 'foo' }
+
+          it 'updates the customer and reset payment_provider attribute' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args,
+            )
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.customer).to eq(customer)
+
+              # NOTE: It should not erase existing properties
+              expect(result.customer.vat_rate).to eq(28)
+              expect(result.customer.payment_provider).to eq(nil)
+              expect(result.customer.stripe_customer).not_to be_present
+              expect(result.customer.gocardless_customer).not_to be_present
+            end
+          end
+        end
+      end
     end
 
     context 'with gocardless configuration' do

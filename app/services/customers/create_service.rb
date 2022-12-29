@@ -111,17 +111,22 @@ module Customers
         return
       end
 
-      unless %w[stripe gocardless].include?(billing[:payment_provider])
-        customer.update!(payment_provider: nil)
-        return
+      if billing.key?(:payment_provider)
+        customer.payment_provider = nil
+        if %w[stripe gocardless].include?(billing[:payment_provider])
+          customer.payment_provider = billing[:payment_provider]
+        end
       end
 
-      customer.update!(payment_provider: billing[:payment_provider])
+      customer.save!
+
+      return if customer.payment_provider.nil?
+
       create_or_update_provider_customer(customer, billing)
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      provider_class = case billing_configuration[:payment_provider]
+      provider_class = case billing_configuration[:payment_provider] || customer.payment_provider
                        when 'stripe'
                          PaymentProviderCustomers::StripeCustomer
                        when 'gocardless'
