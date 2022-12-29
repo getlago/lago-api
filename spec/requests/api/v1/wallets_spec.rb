@@ -202,5 +202,14 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:meta][:total_count]).to eq(2)
       end
     end
+
+    context 'when external_customer_id does not belong to the current organization' do
+      it 'returns a not found error' do
+        other_customer = create(:customer)
+        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{other_customer.external_id}")
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
   end
 end
