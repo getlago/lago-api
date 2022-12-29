@@ -40,8 +40,6 @@ Rails.application.configure do
 
   config.hosts << /[a-z0-9-]+\.staging\.getlago\.com/
 
-  config.license_url = 'https://license.staging.getlago.com'
-
   if ENV['LAGO_MEMCACHE_SERVERS'].present?
     config.cache_store = :mem_cache_store, ENV['LAGO_MEMCACHE_SERVERS'].split(',')
 
