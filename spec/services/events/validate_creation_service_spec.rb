@@ -180,13 +180,13 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       context 'when field_name value is not a number' do
-        let(:billable_metric) { create(:sum_billable_metric, organization: organization) }
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
         let(:params) do
           {
             code: billable_metric.code,
             external_customer_id: customer.external_id,
             properties: {
-              item_id: 'test'
+              item_id: 'test',
             },
           }
         end
