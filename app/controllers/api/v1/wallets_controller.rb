@@ -60,8 +60,7 @@ module Api
       end
 
       def index
-        customer = Customer.find_by(external_id: params[:external_customer_id])
-
+        customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
         return not_found_error(resource: 'customer') unless customer
 
         wallets = customer.wallets
