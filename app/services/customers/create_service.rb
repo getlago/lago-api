@@ -111,10 +111,11 @@ module Customers
         return
       end
 
-      if billing.key?(:payment_provider) && %w[stripe gocardless].include?(billing[:payment_provider])
-        customer.payment_provider = billing[:payment_provider]
-      elsif billing.key?(:payment_provider)
+      if billing.key?(:payment_provider)
         customer.payment_provider = nil
+        if %w[stripe gocardless].include?(billing[:payment_provider])
+          customer.payment_provider = billing[:payment_provider]
+        end
       end
 
       customer.save!
