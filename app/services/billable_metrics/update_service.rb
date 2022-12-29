@@ -16,7 +16,7 @@ module BillableMetrics
         metric.aggregation_type = args[:aggregation_type]&.to_sym
         metric.field_name = args[:field_name]
 
-        if args[:group].present?
+        if args.key?(:group)
           group_result = update_groups(metric, args[:group])
           return group_result if group_result.error
         end
@@ -42,7 +42,7 @@ module BillableMetrics
         metric.aggregation_type = params[:aggregation_type] if params.key?(:aggregation_type)
         metric.field_name = params[:field_name] if params.key?(:field_name)
 
-        if params[:group].present?
+        if params.key?(:group)
           group_result = update_groups(metric, params[:group])
           return group_result if group_result.error
         end
