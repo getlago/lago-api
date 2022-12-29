@@ -51,20 +51,24 @@ module Events
 
     def validate_create
       return invalid_customer_error unless customer
-
-      if customer_external_subscription_ids.count > 1
-        return missing_subscription_error if params[:external_subscription_id].blank? || !valid_subscription_id?
-      elsif params[:external_subscription_id]
-        return missing_subscription_error unless valid_subscription_id?
-      elsif customer_external_subscription_ids.blank?
-        return missing_subscription_error
-      end
-
+      return missing_subscription_error unless valid_subscription?
       return invalid_code_error unless valid_code?
 
       subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
       invalid_persisted_event = persisted_event_validation(subscription || customer.active_subscriptions.first)
       return invalid_persisted_event_error(invalid_persisted_event) if invalid_persisted_event.present?
+    end
+
+    def valid_subscription?
+      if customer.active_subscriptions.count > 1
+        return false if params[:external_subscription_id].blank? || !valid_subscription_id?
+      elsif params[:external_subscription_id]
+        return false unless valid_subscription_id?
+      elsif customer_external_subscription_ids.blank?
+        return false
+      end
+
+      true
     end
 
     def valid_subscription_id?
