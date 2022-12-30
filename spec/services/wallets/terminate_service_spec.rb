@@ -7,9 +7,9 @@ RSpec.describe Wallets::TerminateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
 
   describe 'terminate' do
     before do
@@ -18,7 +18,7 @@ RSpec.describe Wallets::TerminateService, type: :service do
     end
 
     it 'terminates the wallet' do
-      result = terminate_service.terminate(wallet.id)
+      result = terminate_service.terminate(organization:, id: wallet.id)
 
       expect(result).to be_success
       expect(result.wallet).to be_terminated
@@ -30,7 +30,7 @@ RSpec.describe Wallets::TerminateService, type: :service do
       it 'does not impact the wallet' do
         wallet.reload
         terminated_at = wallet.terminated_at
-        result = terminate_service.terminate(wallet.id)
+        result = terminate_service.terminate(organization:, id: wallet.id)
 
         expect(result).to be_success
         expect(result.wallet).to be_terminated
