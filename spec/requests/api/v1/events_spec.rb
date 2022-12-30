@@ -4,6 +4,12 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::EventsController, type: :request do
   let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:metric) { create(:billable_metric, organization:) }
+
+  before do
+    create(:active_subscription, customer:, organization:)
+  end
 
   describe 'POST /events' do
     it 'returns a success' do
@@ -11,9 +17,9 @@ RSpec.describe Api::V1::EventsController, type: :request do
         organization,
         '/api/v1/events',
         event: {
-          code: 'event_code',
+          code: metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: SecureRandom.uuid,
+          external_customer_id: customer.external_id,
           timestamp: Time.zone.now.to_i,
           properties: {
             foo: 'bar',
@@ -26,15 +32,14 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     context 'with missing arguments' do
-      it 'returns an unprocessable entity' do
+      it 'returns a not found response' do
         post_with_token(
           organization,
           '/api/v1/events',
-          event: { external_customer_id: SecureRandom.uuid },
+          event: { external_customer_id: customer.external_id },
         )
 
-        expect(response).to have_http_status(:unprocessable_entity)
-
+        expect(response).to have_http_status(:not_found)
         expect(Events::CreateJob).not_to have_been_enqueued
       end
     end
@@ -46,9 +51,9 @@ RSpec.describe Api::V1::EventsController, type: :request do
         organization,
         '/api/v1/events/batch',
         event: {
-          code: 'event_code',
+          code: metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: SecureRandom.uuid,
+          external_customer_id: customer.external_id,
           external_subscription_ids: %w[id1 id2],
           timestamp: Time.zone.now.to_i,
           properties: {
@@ -67,9 +72,9 @@ RSpec.describe Api::V1::EventsController, type: :request do
           organization,
           '/api/v1/events/batch',
           event: {
-            code: 'event_code',
+            code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
             timestamp: Time.zone.now.to_i,
             properties: {
               foo: 'bar',

@@ -20,39 +20,40 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
     GQL
   end
 
-  it 'updates a customer' do
-    result = execute_graphql(
-      current_user: membership.user,
-      query: mutation,
-      variables: {
-        input: {
-          id: customer.id,
-          invoiceGracePeriod: 12,
-        },
-      },
-    )
+  # TODO(:grace_period): Grace period update is turned off for now
+  # it 'updates a customer' do
+  #   result = execute_graphql(
+  #     current_user: membership.user,
+  #     query: mutation,
+  #     variables: {
+  #       input: {
+  #         id: customer.id,
+  #         invoiceGracePeriod: 12,
+  #       },
+  #     },
+  #   )
 
-    result_data = result['data']['updateCustomerInvoiceGracePeriod']
+  #   result_data = result['data']['updateCustomerInvoiceGracePeriod']
 
-    aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['invoiceGracePeriod']).to eq(12)
-    end
-  end
+  #   aggregate_failures do
+  #     expect(result_data['id']).to be_present
+  #     expect(result_data['invoiceGracePeriod']).to eq(12)
+  #   end
+  # end
 
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: customer.id,
-            invoiceGracePeriod: 12,
-          },
-        },
-      )
+  # context 'without current user' do
+  #   it 'returns an error' do
+  #     result = execute_graphql(
+  #       query: mutation,
+  #       variables: {
+  #         input: {
+  #           id: customer.id,
+  #           invoiceGracePeriod: 12,
+  #         },
+  #       },
+  #     )
 
-      expect_unauthorized_error(result)
-    end
-  end
+  #     expect_unauthorized_error(result)
+  #   end
+  # end
 end
