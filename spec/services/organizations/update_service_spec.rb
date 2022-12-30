@@ -60,35 +60,36 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context 'when updating invoice grace period' do
-      let(:customer) { create(:customer, organization:) }
+    # TODO(:grace_period): Grace period update is turned off for now
+    # context 'when updating invoice grace period' do
+    #   let(:customer) { create(:customer, organization:) }
 
-      let(:invoice_to_be_finalized) do
-        create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'))
-      end
+    #   let(:invoice_to_be_finalized) do
+    #     create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'))
+    #   end
 
-      let(:invoice_to_not_be_finalized) do
-        create(:invoice, status: :draft, customer:, created_at: DateTime.parse('21 Jun 2022'))
-      end
+    #   let(:invoice_to_not_be_finalized) do
+    #     create(:invoice, status: :draft, customer:, created_at: DateTime.parse('21 Jun 2022'))
+    #   end
 
-      before do
-        invoice_to_be_finalized
-        invoice_to_not_be_finalized
-        allow(Invoices::FinalizeService).to receive(:call)
-      end
+    #   before do
+    #     invoice_to_be_finalized
+    #     invoice_to_not_be_finalized
+    #     allow(Invoices::FinalizeService).to receive(:call)
+    #   end
 
-      it 'finalizes corresponding draft invoices' do
-        current_date = DateTime.parse('22 Jun 2022')
+    #   it 'finalizes corresponding draft invoices' do
+    #     current_date = DateTime.parse('22 Jun 2022')
 
-        travel_to(current_date) do
-          result = organization_update_service.update(invoice_grace_period: 2)
+    #     travel_to(current_date) do
+    #       result = organization_update_service.update(invoice_grace_period: 2)
 
-          expect(result.organization.invoice_grace_period).to eq(2)
-          expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
-          expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
-        end
-      end
-    end
+    #       expect(result.organization.invoice_grace_period).to eq(2)
+    #       expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
+    #       expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
+    #     end
+    #   end
+    # end
   end
 
   describe 'update_from_api' do
@@ -166,17 +167,18 @@ RSpec.describe Organizations::UpdateService do
         allow(Invoices::FinalizeService).to receive(:call)
       end
 
-      it 'finalizes corresponding draft invoices' do
-        current_date = DateTime.parse('22 Jun 2022')
+      # TODO(:grace_period): Grace period update is turned off for now
+      # it 'finalizes corresponding draft invoices' do
+      #   current_date = DateTime.parse('22 Jun 2022')
 
-        travel_to(current_date) do
-          result = organization_update_service.update_from_api(params: update_args)
+      #   travel_to(current_date) do
+      #     result = organization_update_service.update_from_api(params: update_args)
 
-          expect(result.organization.invoice_grace_period).to eq(2)
-          expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
-          expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
-        end
-      end
+      #     expect(result.organization.invoice_grace_period).to eq(2)
+      #     expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
+      #     expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
+      #   end
+      # end
     end
   end
 end

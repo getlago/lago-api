@@ -38,7 +38,8 @@ RSpec.describe Customers::UpdateService, type: :service do
         # expect(updated_customer.timezone).to eq('Europe/Paris')
 
         billing = update_args[:billing_configuration]
-        expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        # TODO(:grace_period): Grace period update is turned off for now
+        # expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         expect(updated_customer.vat_rate).to eq(billing[:vat_rate])
       end
     end
@@ -57,7 +58,8 @@ RSpec.describe Customers::UpdateService, type: :service do
       it 'updates billing information' do
         result = customers_service.update(**update_args)
 
-        expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
+        # TODO(:grace_period): Grace period update is turned off for now
+        # expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
         expect(result.customer.vat_rate).to eq(update_args[:vat_rate])
       end
     end

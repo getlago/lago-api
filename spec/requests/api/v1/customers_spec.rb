@@ -57,7 +57,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(billing).to be_present
           expect(billing[:payment_provider]).to eq('stripe')
           expect(billing[:provider_customer_id]).to eq('stripe_id')
-          expect(billing[:invoice_grace_period]).to eq(3)
+          # TODO(:grace_period): Grace period update is turned off for now
+          # expect(billing[:invoice_grace_period]).to eq(3)
           expect(billing[:vat_rate]).to eq(20)
         end
       end
