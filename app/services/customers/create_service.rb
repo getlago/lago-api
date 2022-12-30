@@ -64,13 +64,13 @@ module Customers
         legal_name: args[:legal_name],
         legal_number: args[:legal_number],
         vat_rate: args[:vat_rate],
-        invoice_grace_period: args[:invoice_grace_period],
         payment_provider: args[:payment_provider],
         currency: args[:currency],
       )
+      # TODO(:grace_period): Grace period update is turned off for now
+      # invoice_grace_period: args[:invoice_grace_period],
       # TODO(:timezone): Timezone update is turned off for now
-      #   timezone: args[:timezone],
-      # )
+      # timezone: args[:timezone],
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
@@ -101,9 +101,10 @@ module Customers
       return unless params.key?(:billing_configuration)
 
       billing = params[:billing_configuration]
-      if billing.key?(:invoice_grace_period)
-        Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
-      end
+      # TODO(:grace_period): Grace period update is turned off for now
+      # if billing.key?(:invoice_grace_period)
+      #   Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
+      # end
       customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
       if new_customer

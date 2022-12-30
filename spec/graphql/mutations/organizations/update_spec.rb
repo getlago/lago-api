@@ -67,7 +67,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['city']).to eq('Foobar')
       expect(result_data['country']).to eq('FR')
       expect(result_data['invoiceFooter']).to eq('invoice footer')
-      expect(result_data['invoiceGracePeriod']).to eq(3)
+      # TODO(:grace_period): Grace period update is turned off for now
+      # expect(result_data['invoiceGracePeriod']).to eq(3)
       # TODO(:timezone): Timezone update is turned off for now
       # expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
     end

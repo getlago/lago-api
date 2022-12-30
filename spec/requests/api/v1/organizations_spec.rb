@@ -45,7 +45,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
         billing = json[:organization][:billing_configuration]
         expect(billing[:invoice_footer]).to eq('footer')
-        expect(billing[:invoice_grace_period]).to eq(3)
+        # TODO(:grace_period): Grace period update is turned off for now
+        # expect(billing[:invoice_grace_period]).to eq(3)
         expect(billing[:vat_rate]).to eq(20)
       end
     end

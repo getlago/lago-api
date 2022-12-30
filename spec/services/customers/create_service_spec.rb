@@ -47,7 +47,8 @@ RSpec.describe Customers::CreateService, type: :service do
         # expect(customer.timezone).to eq(create_args[:timezone])
 
         billing = create_args[:billing_configuration]
-        expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        # TODO(:grace_period): Grace period update is turned off for now
+        # expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         expect(customer.vat_rate).to eq(billing[:vat_rate])
       end
     end
@@ -137,23 +138,24 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
 
-      context 'when updating invoice grace period' do
-        let(:create_args) do
-          {
-            external_id: SecureRandom.uuid,
-            billing_configuration: { invoice_grace_period: 2 },
-          }
-        end
+      # TODO(:grace_period): Grace period update is turned off for now
+      # context 'when updating invoice grace period' do
+      #   let(:create_args) do
+      #     {
+      #       external_id: SecureRandom.uuid,
+      #       billing_configuration: { invoice_grace_period: 2 },
+      #     }
+      #   end
 
-        before do
-          allow(Customers::UpdateInvoiceGracePeriodService).to receive(:call)
-        end
+      #   before do
+      #     allow(Customers::UpdateInvoiceGracePeriodService).to receive(:call)
+      #   end
 
-        it 'calls UpdateInvoiceGracePeriodService' do
-          customers_service.create_from_api(organization:, params: create_args)
-          expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
-        end
-      end
+      #   it 'calls UpdateInvoiceGracePeriodService' do
+      #     customers_service.create_from_api(organization:, params: create_args)
+      #     expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
+      #   end
+      # end
     end
 
     context 'with validation error' do
@@ -417,7 +419,8 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.currency).to eq('EUR')
         # TODO(:timezone): Timezone update is turned off for now
         # expect(customer.timezone).to eq('Europe/Paris')
-        expect(customer.invoice_grace_period).to eq(2)
+        # TODO(:grace_period): Grace period update is turned off for now
+        # expect(customer.invoice_grace_period).to eq(2)
       end
     end
 
