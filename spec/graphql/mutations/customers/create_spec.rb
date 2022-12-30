@@ -61,7 +61,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['currency']).to eq('EUR')
       # TODO(:timezone): Timezone update is turned off for now
       # expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
-      expect(result_data['invoiceGracePeriod']).to be_nil
+      # TODO(:grace_period): Grace period update is turned off for now
+      # expect(result_data['invoiceGracePeriod']).to be_nil
       expect(result_data['paymentProvider']).to eq('stripe')
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')

@@ -14,6 +14,7 @@ module Groups
     end
 
     def call
+      return result if group_params.empty?
       return result.validation_failure!(errors: { group: %w[value_is_invalid] }) unless valid_format?
 
       ActiveRecord::Base.transaction do
@@ -60,11 +61,7 @@ module Groups
 
     def create_groups(key, values, parent_group_id = nil)
       values.each do |value|
-        billable_metric.groups.create!(
-          key: key,
-          value: value,
-          parent_group_id: parent_group_id,
-        )
+        billable_metric.groups.create!(key:, value:, parent_group_id:)
       end
     end
 

@@ -40,7 +40,7 @@ module Api
 
       def terminate
         service = Wallets::TerminateService.new
-        result = service.terminate(params[:id])
+        result = service.terminate(organization: current_organization, id: params[:id])
 
         if result.success?
           render_wallet(result.wallet)
@@ -60,8 +60,7 @@ module Api
       end
 
       def index
-        customer = Customer.find_by(external_id: params[:external_customer_id])
-
+        customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
         return not_found_error(resource: 'customer') unless customer
 
         wallets = customer.wallets

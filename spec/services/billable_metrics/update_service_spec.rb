@@ -9,7 +9,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
   let(:organization) { membership.organization }
 
   describe 'update' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
     let(:update_args) do
       {
         id: billable_metric&.id,
@@ -46,11 +46,15 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it 'updates billable metric\'s group' do
-        create(:group, billable_metric: billable_metric)
+        create(:group, billable_metric:)
 
         expect do
-          update_service.update(**update_args.merge(group: group))
-        end.to change { billable_metric.active_groups.reload.count }.from(1).to(5)
+          update_service.update(**update_args.merge(group: {}))
+        end.to change { billable_metric.active_groups.reload.count }.from(1).to(0)
+
+        expect do
+          update_service.update(**update_args.merge(group:))
+        end.to change { billable_metric.active_groups.reload.count }.from(0).to(5)
       end
 
       it 'returns an error if group is invalid' do
@@ -99,11 +103,11 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
   end
 
   describe 'update_from_api' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
     let(:name) { 'New Metric' }
     let(:update_args) do
       {
-        name: name,
+        name:,
         code: 'new_metric',
         description: 'New metric description',
         aggregation_type: 'count_agg',
@@ -113,7 +117,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
     it 'updates the billable metric' do
       result = update_service.update_from_api(
-        organization: organization,
+        organization:,
         code: billable_metric.code,
         params: update_args,
       )
@@ -141,20 +145,24 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it 'updates billable metric\'s group' do
-        create(:group, billable_metric: billable_metric)
+        create(:group, billable_metric:)
 
         expect do
           update_service.update_from_api(
-            organization: organization,
+            organization:,
             code: billable_metric.code,
-            params: update_args.merge(group: group),
+            params: update_args.merge(group: {}),
           )
-        end.to change { billable_metric.active_groups.reload.count }.from(1).to(5)
+        end.to change { billable_metric.active_groups.reload.count }.from(1).to(0)
+
+        expect do
+          update_service.update_from_api(organization:, code: 'new_metric', params: update_args.merge(group:))
+        end.to change { billable_metric.active_groups.reload.count }.from(0).to(5)
       end
 
       it 'returns an error if group is invalid' do
         result = update_service.update_from_api(
-          organization: organization,
+          organization:,
           code: billable_metric.code,
           params: update_args.merge(group: { key: 1 }),
         )
@@ -172,7 +180,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
       it 'returns an error' do
         result = update_service.update_from_api(
-          organization: organization,
+          organization:,
           code: billable_metric.code,
           params: update_args,
         )
@@ -188,7 +196,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
     context 'when billable metric is not found' do
       it 'returns an error' do
         result = update_service.update_from_api(
-          organization: organization,
+          organization:,
           code: 'fake_code12345',
           params: update_args,
         )
