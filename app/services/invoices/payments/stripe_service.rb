@@ -107,7 +107,7 @@ module Invoices
           stripe_payment_payload,
           {
             api_key: stripe_api_key,
-            idempotency_key: "#{invoice.id}-#{invoice.payment_attempts}",
+            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}",
           },
         )
       rescue Stripe::CardError, Stripe::InvalidRequestError => e

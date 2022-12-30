@@ -143,7 +143,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   end
 
   describe 'terminate' do
-    let(:wallet) { create(:wallet, customer: customer) }
+    let(:wallet) { create(:wallet, customer:) }
 
     before { wallet }
 
@@ -164,6 +164,15 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     context 'when wallet does not exist' do
       it 'returns not_found error' do
         delete_with_token(organization, '/api/v1/wallets/invalid')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when wallet id does not belong to the current organization' do
+      it 'returns a not found error' do
+        other_wallet = create(:wallet)
+        delete_with_token(organization, "/api/v1/wallets/#{other_wallet.id}")
 
         expect(response).to have_http_status(:not_found)
       end
@@ -200,6 +209,15 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:meta][:prev_page]).to eq(nil)
         expect(json[:meta][:total_pages]).to eq(2)
         expect(json[:meta][:total_count]).to eq(2)
+      end
+    end
+
+    context 'when external_customer_id does not belong to the current organization' do
+      it 'returns a not found error' do
+        other_customer = create(:customer)
+        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{other_customer.external_id}")
+
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

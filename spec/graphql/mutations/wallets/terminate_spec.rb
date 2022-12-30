@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe Mutations::Wallets::Terminate, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
 
   let(:mutation) do
     <<-GQL
@@ -24,6 +24,7 @@ RSpec.describe Mutations::Wallets::Terminate, type: :graphql do
   it 'terminates a wallet' do
     result = execute_graphql(
       current_user: membership.user,
+      current_organization: organization,
       query: mutation,
       variables: {
         input: { id: wallet.id },

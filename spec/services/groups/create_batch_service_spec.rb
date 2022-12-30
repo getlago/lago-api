@@ -4,13 +4,18 @@ require 'rails_helper'
 
 RSpec.describe Groups::CreateBatchService, type: :service do
   subject(:create_batch_service) do
-    described_class.call(
-      billable_metric: billable_metric,
-      group_params: group_params,
-    )
+    described_class.call(billable_metric:, group_params:)
   end
 
   let(:billable_metric) { create(:billable_metric) }
+
+  context 'when group params is empty' do
+    let(:group_params) { {} }
+
+    it 'does not create any groups' do
+      expect { create_batch_service }.not_to change(Group, :count)
+    end
+  end
 
   context 'when format is not valid' do
     it 'returns an error' do
@@ -40,10 +45,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
     end
 
     def create_groups(group_params)
-      described_class.call(
-        billable_metric: billable_metric,
-        group_params: group_params,
-      )
+      described_class.call(billable_metric:, group_params:)
     end
   end
 
