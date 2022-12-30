@@ -83,8 +83,8 @@ RSpec.describe Subscriptions::TerminateService do
       let(:last_subscription_fee) do
         create(
           :fee,
-          subscription: subscription,
-          invoice: invoice,
+          subscription:,
+          invoice:,
           amount_cents: 100,
           vat_amount_cents: 20,
           invoiceable_type: 'Subscription',
