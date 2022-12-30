@@ -2,8 +2,8 @@
 
 module Wallets
   class TerminateService < BaseService
-    def terminate(id)
-      wallet = Wallet.find_by(id: id)
+    def terminate(organization:, id:)
+      wallet = organization.wallets.find_by(id:)
       return result.not_found_failure!(resource: 'wallet') unless wallet
 
       wallet.mark_as_terminated! if wallet.active?
