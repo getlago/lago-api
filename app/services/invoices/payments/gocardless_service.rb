@@ -126,7 +126,7 @@ module Invoices
             },
           },
           headers: {
-            'Idempotency-Key' => "#{invoice.id}-#{invoice.payment_attempts}",
+            'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}",
           },
         )
       rescue GoCardlessPro::Error => e
