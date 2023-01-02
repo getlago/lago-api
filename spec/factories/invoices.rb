@@ -8,5 +8,9 @@ FactoryBot.define do
     payment_status { 'pending' }
     amount_currency { 'EUR' }
     total_amount_currency { 'EUR' }
+
+    trait :draft do
+      status { :draft }
+    end
   end
 end
