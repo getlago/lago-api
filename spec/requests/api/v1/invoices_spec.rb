@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:, status: :finalized) }
+  let(:invoice) { create(:invoice, customer:) }
 
   describe 'UPDATE /invoices' do
     let(:update_params) do
@@ -68,7 +68,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'index' do
-    let(:invoice) { create(:invoice, customer: customer) }
+    let(:invoice) { create(:invoice, :draft, customer:) }
     let(:customer) { create(:customer, organization: organization) }
 
     before { invoice }
@@ -139,7 +139,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     context 'with status params' do
       it 'returns invoices for the given status' do
-        invoice = create(:invoice, customer: customer, status: :finalized)
+        invoice = create(:invoice, customer:)
 
         get_with_token(organization, '/api/v1/invoices?status=finalized')
 
@@ -159,7 +159,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is draft' do
-      let(:invoice) { create(:invoice, customer:) }
+      let(:invoice) { create(:invoice, :draft, customer:) }
 
       it 'updates the invoice' do
         expect {
@@ -194,7 +194,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'PUT /invoices/:id/finalize' do
-    let(:invoice) { create(:invoice, customer:, status: :draft) }
+    let(:invoice) { create(:invoice, :draft, customer:) }
 
     context 'when invoice does not exist' do
       it 'returns a not found error' do
@@ -227,7 +227,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'POST /invoices/:id/download' do
-    let(:invoice) { create(:invoice, customer:, status: :draft) }
+    let(:invoice) { create(:invoice, :draft, customer:) }
 
     context 'when invoice is draft' do
       it 'returns not found' do

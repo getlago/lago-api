@@ -40,6 +40,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         expect(result.invoice.vat_rate).to eq(0)
         expect(result.invoice.total_amount_cents).to eq(1500)
         expect(result.invoice.total_amount_currency).to eq('EUR')
+
+        expect(result.invoice).to be_finalized
       end
     end
 
