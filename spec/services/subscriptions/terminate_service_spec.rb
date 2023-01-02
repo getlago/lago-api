@@ -65,6 +65,51 @@ RSpec.describe Subscriptions::TerminateService do
         end
       end
     end
+
+    context 'when subscription was payed in advance' do
+      let(:invoice) do
+        create(
+          :invoice,
+          customer: subscription.customer,
+          amount_currency: 'EUR',
+          amount_cents: 100,
+          vat_amount_currency: 'EUR',
+          vat_amount_cents: 20,
+          total_amount_currency: 'EUR',
+          total_amount_cents: 120,
+        )
+      end
+
+      let(:last_subscription_fee) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 100,
+          vat_amount_cents: 20,
+          invoiceable_type: 'Subscription',
+          invoiceable_id: subscription.id,
+          vat_rate: 20,
+        )
+      end
+
+      before do
+        subscription.plan.update!(pay_in_advance: true)
+        subscription.update!(
+          billing_time: :anniversary,
+          started_at: Time.current - 40.days,
+          subscription_at: Time.current - 40.days,
+        )
+
+        last_subscription_fee
+      end
+
+      it 'creates a credit note for the remaining days' do
+        expect do
+          terminate_service.terminate(subscription.id)
+        end.to change(CreditNote, :count)
+      end
+    end
   end
 
   describe '.terminate_from_api' do

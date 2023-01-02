@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
+RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   subject(:create_service) { described_class.new(subscription: subscription) }
 
   let(:started_at) { Time.zone.parse('2022-09-01 10:00') }
@@ -71,6 +71,7 @@ RSpec.describe CreditNotes::CreateFromUpgrade, type: :service do
         expect(credit_note.credit_amount_currency).to eq('EUR')
         expect(credit_note.balance_amount_cents).to eq(20)
         expect(credit_note.balance_amount_currency).to eq('EUR')
+        expect(credit_note.reason).to eq('order_change')
 
         expect(credit_note.items.count).to eq(1)
       end
