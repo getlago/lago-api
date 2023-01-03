@@ -6,7 +6,7 @@ module PersistedEvents
       @subscription = subscription
       @billable_metric = billable_metric
 
-      super(result, **args.with_indifferent_access)
+      super(result, **args.to_h.with_indifferent_access)
     end
 
     def valid?

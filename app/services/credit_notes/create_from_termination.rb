@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 module CreditNotes
-  class CreateFromUpgrade < BaseService
-    def initialize(subscription:)
+  class CreateFromTermination < BaseService
+    def initialize(subscription:, reason: 'order_change')
       @subscription = subscription
+      @reason = reason
 
       super
     end
@@ -26,14 +27,14 @@ module CreditNotes
             amount_cents: amount,
           },
         ],
-        reason: :order_change,
+        reason: reason.to_sym,
         automatic: true,
       ).call
     end
 
     private
 
-    attr_accessor :subscription
+    attr_accessor :subscription, :reason
 
     delegate :plan, :terminated_at, to: :subscription
 

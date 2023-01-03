@@ -58,6 +58,16 @@ module Subscriptions
       elsif !subscription.terminated?
         subscription.mark_as_terminated!
 
+        if subscription.plan.pay_in_advance?
+          # NOTE: As subscription was payed in advance and terminated before the end of the period,
+          #       we have to create a credit note for the days that were not consumed
+          credit_note_result = CreditNotes::CreateFromTermination.new(
+            subscription:,
+            reason: 'order_cancellation',
+          ).call
+          credit_note_result.raise_if_error!
+        end
+
         BillSubscriptionJob.perform_later([subscription], subscription.terminated_at)
       end
 

@@ -9,6 +9,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     let(:invoice) do
       create(
         :invoice,
+        :draft,
         subscriptions: [subscription],
         amount_currency: 'EUR',
         vat_amount_currency: 'EUR',
