@@ -188,6 +188,27 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#issued_at' do
+    let(:customer) { create(:customer, timezone: 'America/Los_Angeles') }
+    let(:invoice) { create(:invoice, customer: customer, created_at: DateTime.parse('2022-11-17 23:34:23')) }
+
+    before { invoice }
+
+    context 'when grace period does not exist' do
+      it 'assigns the issuing date in the customer timezone' do
+        expect(invoice.issued_at).to eq('Sun, 17 Nov 2022 15:34:23.000000000 PST -08:00')
+      end
+    end
+
+    context 'when grace period is set to three' do
+      before { customer.update!(invoice_grace_period: 3) }
+
+      it 'assigns the issuing date in the customer timezone' do
+        expect(invoice.issued_at).to eq('Sun, 20 Nov 2022 15:34:23.000000000 PST -08:00')
+      end
+    end
+  end
+
   describe '#subtotal_before_prepaid_credits' do
     let(:customer) { create(:customer) }
     let(:invoice) { create(:invoice, customer: customer, amount_cents: 555) }

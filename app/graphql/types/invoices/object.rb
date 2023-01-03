@@ -26,6 +26,7 @@ module Types
       field :vat_rate, Float, null: false
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
+      field :issued_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

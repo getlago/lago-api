@@ -120,6 +120,14 @@ class Invoice < ApplicationRecord
     amount + wallet_transaction_amount
   end
 
+  def issued_at
+    issuing_time = created_at.in_time_zone(customer.applicable_timezone)
+
+    return issuing_time unless grace_period?
+
+    issuing_time + customer.applicable_invoice_grace_period.days
+  end
+
   def organization
     customer&.organization
   end
@@ -173,5 +181,9 @@ class Invoice < ApplicationRecord
     formatted_sequential_id = format('%03d', sequential_id)
 
     self.number = "#{customer.slug}-#{formatted_sequential_id}"
+  end
+
+  def grace_period?
+    customer.applicable_invoice_grace_period.positive?
   end
 end

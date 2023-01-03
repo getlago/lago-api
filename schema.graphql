@@ -2996,6 +2996,7 @@ type Invoice {
   id: ID!
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!
+  issuedAt: ISO8601DateTime!
   issuingDate: ISO8601Date!
   legacy: Boolean!
   number: String!
