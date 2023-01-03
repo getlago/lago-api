@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_26_091020) do
+ActiveRecord::Schema[7.0].define(version: 2023_01_02_150636) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -170,8 +170,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_26_091020) do
     t.string "refund_vat_amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
     t.string "vat_amount_currency"
-    t.date "issuing_date", null: false
     t.datetime "refunded_at"
+    t.date "issuing_date", null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
@@ -331,9 +331,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_26_091020) do
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
     t.float "vat_rate"
-    t.integer "status", default: 0, null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency"
+    t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end

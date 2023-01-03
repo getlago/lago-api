@@ -420,7 +420,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(:plan, interval: 'yearly')
       end
 
-      let(:timestamp) { Time.zone.now.end_of_year + 1.day }
+      let(:timestamp) { DateTime.parse(started_at.to_s).end_of_year + 1.day }
       let(:started_at) { Time.zone.today - 3.months }
       let(:subscription) do
         create(
