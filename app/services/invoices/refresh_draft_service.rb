@@ -25,12 +25,17 @@ module Invoices
 
         invoice.update!(vat_rate: invoice.customer.applicable_vat_rate)
 
-        Invoices::CalculateFeesService.call(
+        calculate_result = Invoices::CalculateFeesService.call(
           invoice:,
           subscriptions: Subscription.find(subscription_ids),
           timestamp: invoice.created_at.to_i,
         )
+        return calculate_result unless calculate_result.success?
+
+        invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
       end
+
+      result
     end
 
     private
