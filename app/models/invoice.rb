@@ -57,6 +57,12 @@ class Invoice < ApplicationRecord
           draft.joins(customer: :organization).where("#{Arel.sql(date)} < ?", Time.current)
         }
 
+  scope :created_before,
+        lambda { |invoice|
+          where.not(id: invoice.id)
+            .where('invoices.created_at < ?', invoice.created_at)
+        }
+
   validates :issuing_date, presence: true
   validates :timezone, timezone: true, allow_nil: true
 
