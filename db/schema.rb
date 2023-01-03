@@ -336,6 +336,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.string "credit_amount_currency"
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
+    t.integer "payment_attempts", default: 0, null: false
+    t.boolean "ready_for_payment_processing", default: true, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 
