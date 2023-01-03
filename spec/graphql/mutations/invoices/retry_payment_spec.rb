@@ -29,6 +29,11 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
     GQL
   end
 
+  before do
+    gocardless_payment_provider
+    gocardless_customer
+  end
+
   context 'with valid preconditions' do
     it 'returns the invoice after payment retry' do
       result = execute_graphql(
