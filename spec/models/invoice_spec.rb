@@ -190,7 +190,7 @@ RSpec.describe Invoice, type: :model do
 
   describe '#issued_at' do
     let(:customer) { create(:customer, timezone: 'America/Los_Angeles') }
-    let(:invoice) { create(:invoice, customer: customer, created_at: DateTime.parse('2022-11-17 23:34:23')) }
+    let(:invoice) { create(:invoice, customer:, created_at: DateTime.parse('2022-11-17 23:34:23')) }
 
     before { invoice }
 
