@@ -166,7 +166,7 @@ module Subscriptions
       if current_subscription.plan.pay_in_advance?
         # NOTE: As subscription was payed in advance and terminated before the end of the period,
         #       we have to create a credit note for the days that were not consumed
-        credit_note_result = CreditNotes::CreateFromUpgrade.new(subscription: current_subscription).call
+        credit_note_result = CreditNotes::CreateFromTermination.new(subscription: current_subscription).call
         credit_note_result.raise_if_error!
       end
 

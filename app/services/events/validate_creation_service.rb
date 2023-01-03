@@ -80,6 +80,8 @@ module Events
       billable_metric.present?
     end
 
+    # This validation checks only field_name value since it is important for aggregation DB query integrity.
+    # Other checks are performed later and presented in debugger
     def valid_properties?
       return true unless billable_metric.max_agg? || billable_metric.sum_agg?
 
@@ -87,7 +89,7 @@ module Events
     end
 
     def valid_number?(value)
-      true if Float(value)
+      true if value.nil? || Float(value)
     rescue ArgumentError
       false
     end

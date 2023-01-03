@@ -205,6 +205,24 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         it 'enqueues a SendWebhookJob' do
           expect { validate_event }.to have_enqueued_job(SendWebhookJob)
         end
+
+        context 'when field_name cannot be found' do
+          let(:params) do
+            {
+              code: billable_metric.code,
+              external_customer_id: customer.external_id,
+              properties: {
+                invalid_key: 'test',
+              },
+            }
+          end
+
+          it 'does not raise error' do
+            validate_event
+
+            expect(result).to be_success
+          end
+        end
       end
 
       context 'when event belongs to a recurring persisted event' do
