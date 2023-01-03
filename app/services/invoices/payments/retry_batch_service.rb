@@ -9,7 +9,7 @@ module Invoices
         super
       end
 
-      def call
+      def call_later
         Invoices::Payments::RetryAllJob.perform_later(organization_id:, invoice_ids: invoices.ids)
 
         result.invoices = invoices
@@ -17,7 +17,7 @@ module Invoices
         result
       end
 
-      def retry_all(invoice_ids)
+      def call(invoice_ids)
         processed_invoices = []
         Invoice.where(id: invoice_ids).each do |invoice|
           result = Invoices::Payments::RetryService.new(invoice:).call

@@ -8,15 +8,15 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
   let(:customer) { create(:customer, payment_provider: 'stripe') }
   let(:organization) { customer.organization }
 
-  describe '#call' do
+  describe '#call_later' do
     it 'enqueues a job to retry all payments' do
       expect do
-        retry_batch_service.call
+        retry_batch_service.call_later
       end.to have_enqueued_job(Invoices::Payments::RetryAllJob)
     end
   end
 
-  describe '#retry_all' do
+  describe '#call' do
     let(:invoice_ids) { [invoice_first.id, invoice_second.id] }
     let(:invoice_first) do
       create(
@@ -52,7 +52,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
     end
 
     it 'returns processed invoices that have correct status and payment status' do
-      result = retry_batch_service.retry_all(invoice_ids)
+      result = retry_batch_service.call(invoice_ids)
 
       expect(result).to be_success
       expect(result.invoices.count).to eq(2)
@@ -76,7 +76,7 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
       end
 
       it 'returns an error' do
-        result = retry_batch_service.retry_all(invoice_ids)
+        result = retry_batch_service.call(invoice_ids)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)

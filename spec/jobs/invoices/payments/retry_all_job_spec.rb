@@ -13,7 +13,7 @@ RSpec.describe Invoices::Payments::RetryAllJob, type: :job do
   before do
     allow(Invoices::Payments::RetryBatchService).to receive(:new)
       .and_return(retry_batch_service)
-    allow(retry_batch_service).to receive(:retry_all)
+    allow(retry_batch_service).to receive(:call)
       .and_return(result)
   end
 
@@ -21,6 +21,6 @@ RSpec.describe Invoices::Payments::RetryAllJob, type: :job do
     retry_all_job.perform_now(organization_id: organization.id, invoice_ids: [invoice.id])
 
     expect(Invoices::Payments::RetryBatchService).to have_received(:new)
-    expect(retry_batch_service).to have_received(:retry_all)
+    expect(retry_batch_service).to have_received(:call)
   end
 end
