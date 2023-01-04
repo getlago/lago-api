@@ -115,7 +115,7 @@ module Invoices
           params: {
             amount: invoice.total_amount_cents,
             currency: invoice.total_amount_currency.upcase,
-            retry_if_possible: true,
+            retry_if_possible: false,
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
