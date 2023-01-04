@@ -5037,6 +5037,7 @@ type User {
   email: String
   id: ID!
   organizations: [Organization!]
+  premium: Boolean!
   updatedAt: ISO8601DateTime!
 }
 
