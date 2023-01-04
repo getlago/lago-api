@@ -9,6 +9,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
         currentUser {
           id
           email
+          premium
           organizations {
             id
           }
@@ -28,6 +29,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
     aggregate_failures do
       expect(result['data']['currentUser']['email']).to eq(user.email)
       expect(result['data']['currentUser']['id']).to eq(user.id)
+      expect(result['data']['currentUser']['premium']).to be_falsey
     end
   end
 
