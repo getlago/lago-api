@@ -25,4 +25,5 @@ Rails.application.configure do
   Dotenv.load
 
   config.active_job.queue_adapter = :test
+  config.license_url = 'http://license.lago'
 end

@@ -7,6 +7,7 @@ module Types
       field :organization, Types::OrganizationType, null: false
       field :membership, Types::MembershipType, null: false
       field :token, String, null: false
+      field :premium, Boolean, null: false
     end
   end
 end
