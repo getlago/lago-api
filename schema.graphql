@@ -3069,7 +3069,6 @@ Represents untyped JSON
 scalar JSON
 
 type LoginUser {
-  premium: Boolean!
   token: String!
   user: User!
 }
@@ -3984,7 +3983,6 @@ input RefreshInvoiceInput {
 type RegisterUser {
   membership: Membership!
   organization: Organization!
-  premium: Boolean!
   token: String!
   user: User!
 }
