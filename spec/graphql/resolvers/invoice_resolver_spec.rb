@@ -43,11 +43,11 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice: create(:invoice, customer: customer)) }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice: create(:invoice, customer:)) }
   let(:invoice) { invoice_subscription.invoice }
   let(:subscription) { invoice_subscription.subscription }
-  let(:fee) { create(:fee, subscription: subscription, invoice: invoice, amount_cents: 10) }
+  let(:fee) { create(:fee, subscription:, invoice:, amount_cents: 10) }
 
   before { fee }
 
@@ -55,7 +55,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         id: invoice.id,
       },
@@ -84,7 +84,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: { id: invoice.id },
     )
 
@@ -97,39 +97,38 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
   context 'when invoice has credit notes' do
     before do
-      create(:credit_note, invoice: invoice)
+      create(:credit_note, invoice:)
     end
 
     it 'returns an error' do
       result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      query: query,
-      variables: { id: invoice.id },
-    )
-    
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: { id: invoice.id },
+      )
 
-    data = result['data']['invoice']
+      data = result['data']['invoice']
 
-    aggregate_failures do
-      expect(data['hasCreditNotes']).to be_truthy
-    end
+      aggregate_failures do
+        expect(data['hasCreditNotes']).to be_truthy
+      end
     end
   end
-  
+
   context 'when invoice is not found' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: invoice.organization,
-        query: query,
+        query:,
         variables: {
           id: 'foo',
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Resource not found',
       )
     end
