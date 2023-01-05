@@ -17,14 +17,15 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: invoice) unless invoice
-      return result.forbidden_failure! unless automatic
+      return result.not_found_failure!(resource: 'invoice') unless invoice
+      return result.forbidden_failure! unless should_create_credit_note?
+      return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.create!(
           customer: invoice.customer,
-          invoice: invoice,
-          issuing_date: issuing_date,
+          invoice:,
+          issuing_date:,
           total_amount_currency: invoice.amount_currency,
           vat_amount_currency: invoice.amount_currency,
           credit_amount_currency: invoice.amount_currency,
@@ -32,10 +33,10 @@ module CreditNotes
           refund_amount_currency: invoice.amount_currency,
           refund_vat_amount_currency: invoice.amount_currency,
           balance_amount_currency: invoice.amount_currency,
-          credit_amount_cents: credit_amount_cents,
-          refund_amount_cents: refund_amount_cents,
-          reason: reason,
-          description: description,
+          credit_amount_cents:,
+          refund_amount_cents:,
+          reason:,
+          description:,
           credit_status: 'available',
         )
 
@@ -80,6 +81,21 @@ module CreditNotes
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
+
+    def should_create_credit_note?
+      # NOTE: created from subscription termination
+      return true if automatic
+
+      # NOTE: credit note is a premium feature
+      License.premium?
+    end
+
+    def valid_type_or_status?
+      return false if invoice.draft?
+      return false if invoice.credit?
+
+      !invoice.legacy?
+    end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)
     def issuing_date
