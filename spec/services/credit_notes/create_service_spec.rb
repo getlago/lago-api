@@ -229,9 +229,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
 
       context 'with a valid license' do
-        before { License.instance_variable_set(:@premium, true) }
-
-        after { License.instance_variable_set(:@premium, false) }
+        around { |test| lago_premium!(&test) }
 
         it 'returns a success' do
           result = create_service.call
