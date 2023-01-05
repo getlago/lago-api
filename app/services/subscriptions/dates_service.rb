@@ -2,7 +2,7 @@
 
 module Subscriptions
   class DatesService
-    def self.new_instance(subscription, billing_at, current_usage: false)
+    def self.new_instance(subscription, billing_at, current_usage: false, refresh_or_finalize: false)
       klass = case subscription.plan.interval&.to_sym
               when :weekly
                 Subscriptions::Dates::WeeklyService
@@ -14,16 +14,17 @@ module Subscriptions
                 raise(NotImplementedError)
       end
 
-      klass.new(subscription, billing_at, current_usage)
+      klass.new(subscription, billing_at, current_usage, refresh_or_finalize:)
     end
 
-    def initialize(subscription, billing_at, current_usage)
+    def initialize(subscription, billing_at, current_usage, refresh_or_finalize: false)
       @subscription = subscription
 
       # NOTE: Billing time should usually be the end of the billing period + 1 day
       #       When subscription is terminated, it is the termination day
       @billing_at = billing_at
       @current_usage = current_usage
+      @refresh_or_finalize = refresh_or_finalize
     end
 
     def from_datetime
@@ -43,7 +44,10 @@ module Subscriptions
       return @to_datetime if @to_datetime
 
       @to_datetime = customer_timezone_shift(compute_to_date, end_of_day: true)
-      @to_datetime = subscription.terminated_at if subscription.terminated? && @to_datetime > subscription.terminated_at
+
+      if subscription.terminated? && @to_datetime > subscription.terminated_at && !refresh_or_finalize
+        @to_datetime = subscription.terminated_at
+      end
 
       @to_datetime
     end
@@ -99,7 +103,7 @@ module Subscriptions
 
     private
 
-    attr_accessor :subscription, :billing_at, :current_usage
+    attr_accessor :subscription, :billing_at, :current_usage, :refresh_or_finalize
 
     delegate :plan, :calendar?, :customer, to: :subscription
 

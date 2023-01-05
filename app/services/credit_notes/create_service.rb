@@ -91,6 +91,7 @@ module CreditNotes
     end
 
     def valid_type_or_status?
+      return true if automatic
       return false if invoice.draft?
       return false if invoice.credit?
 

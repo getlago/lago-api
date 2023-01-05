@@ -42,27 +42,15 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       expect { refresh_service.call }
         .to change { invoice.reload.fees.count }.from(1).to(2)
         .and change { invoice.fees.pluck(:id).include?(fee.id) }.from(true).to(false)
+        .and change { invoice.fees.pluck(:created_at).uniq }.to([invoice.created_at])
     end
 
-    it 'regenerates credits' do
-      create(:credit, invoice:)
+    it 'assigns credit notes to new created fee' do
+      credit_note = create(:credit_note, invoice:)
+      fee = create(:fee, invoice:, subscription:)
+      create(:credit_note_item, credit_note:, fee:)
 
-      expect { refresh_service.call }
-        .to change { invoice.reload.credits.count }.from(1).to(0)
-    end
-
-    it 'regenerates credit notes' do
-      create(:credit_note, invoice:)
-
-      expect { refresh_service.call }
-        .to change { invoice.reload.credit_notes.count }.from(1).to(0)
-    end
-
-    it 'regenerates wallet transactions' do
-      create(:wallet_transaction, invoice:)
-
-      expect { refresh_service.call }
-        .to change { invoice.reload.wallet_transactions.count }.from(1).to(0)
+      expect { refresh_service.call }.to change { credit_note.reload.items.pluck(:fee_id) }
     end
 
     it 'updates vat_rate' do
