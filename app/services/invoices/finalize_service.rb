@@ -15,7 +15,7 @@ module Invoices
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
 
       ActiveRecord::Base.transaction do
-        result = Invoices::RefreshDraftService.call(invoice:)
+        result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         result.raise_if_error!
 
         invoice.update!(status: :finalized, issuing_date:)

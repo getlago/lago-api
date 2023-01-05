@@ -6,11 +6,12 @@ module Invoices
       new(...).call
     end
 
-    def initialize(invoice:, subscriptions:, timestamp:, recurring: false)
+    def initialize(invoice:, subscriptions:, timestamp:, recurring: false, context: nil)
       @invoice = invoice
       @subscriptions = subscriptions
       @timestamp = timestamp
       @recurring = recurring
+      @context = context
 
       super
     end
@@ -49,7 +50,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscriptions, :timestamp, :recurring
+    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
 
     delegate :customer, :currency, to: :invoice
 
@@ -62,6 +63,7 @@ module Invoices
         subscription,
         Time.zone.at(timestamp),
         current_usage: subscription.terminated? && subscription.upgraded?,
+        refresh_or_finalize: refresh? || context == :finalize,
       )
     end
 
@@ -71,9 +73,9 @@ module Invoices
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
 
-      invoice.credit_amount_cents = 0
+      invoice.credit_amount_cents = 0 if invoice.credits.empty?
 
-      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
+      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents - invoice.credit_amount_cents
     end
 
     def create_subscription_fee(subscription, boundaries)
@@ -97,7 +99,9 @@ module Invoices
     def should_create_subscription_fee?(subscription)
       # NOTE: When plan is pay in advance we generate an invoice upon subscription creation
       # We want to prevent creating subscription fee if subscription creation already happened on billing day
-      fee_exists = subscription.fees.subscription_kind.where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
+      fee_exists = subscription.fees
+        .subscription_kind
+        .where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
         .where.not(invoice_id: invoice.id)
         .any?
 
@@ -107,7 +111,9 @@ module Invoices
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrear, otherwise this fee will never
       #       be created.
-      subscription.active? || (subscription.terminated? && subscription.plan.pay_in_arrear?)
+      subscription.active? ||
+        (subscription.terminated? && subscription.plan.pay_in_arrear?) ||
+        (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
     def should_create_yearly_subscription_fee?(subscription)
@@ -142,7 +148,7 @@ module Invoices
     end
 
     def credit_notes
-      @credit_notes ||= customer.credit_notes.available.order(created_at: :asc)
+      @credit_notes ||= customer.credit_notes.available.where.not(invoice_id: invoice.id).order(created_at: :asc)
     end
 
     def wallet
@@ -152,10 +158,13 @@ module Invoices
     end
 
     def should_create_credit_note_credit?
+      return false if refresh?
+
       credit_notes.any?
     end
 
     def should_create_coupon_credit?
+      return false if refresh?
       return false if applied_coupons.blank?
       return false unless invoice.amount_cents&.positive?
 
@@ -163,6 +172,7 @@ module Invoices
     end
 
     def should_create_applied_prepaid_credit?
+      return false if refresh?
       return false unless wallet&.active?
       return false unless invoice.total_amount_cents&.positive?
 
@@ -175,7 +185,7 @@ module Invoices
       ).call
       credit_result.raise_if_error!
 
-      refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents))
+      refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
     end
 
     def create_coupon_credit
@@ -217,6 +227,10 @@ module Invoices
         charges_to_datetime: date_service.charges_to_datetime,
         timestamp:,
       }
+    end
+
+    def refresh?
+      context == :refresh
     end
   end
 end
