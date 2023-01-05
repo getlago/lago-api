@@ -31,6 +31,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :legacy, Boolean, null: false
+      field :has_credit_notes, Boolean, null: false
 
       field :subscriptions, [Types::Subscriptions::Object]
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
@@ -48,6 +49,10 @@ module Types
 
       field :refundable_amount_cents, Integer, null: false
       field :creditable_amount_cents, Integer, null: false
+
+      def has_credit_notes
+        object.credit_notes.any?
+      end
     end
   end
 end

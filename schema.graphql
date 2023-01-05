@@ -2993,6 +2993,7 @@ type Invoice {
   customer: Customer!
   fees: [Fee!]
   fileUrl: String
+  hasCreditNotes: Boolean!
   id: ID!
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!

@@ -13,6 +13,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           creditableAmountCents
           paymentStatus
           status
+          hasCreditNotes
           customer {
             id
             name
@@ -69,6 +70,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       expect(data['status']).to eq(invoice.status)
       expect(data['customer']['id']).to eq(customer.id)
       expect(data['customer']['name']).to eq(customer.name)
+      expect(data['hasCreditNotes']).to be_falsey
       expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
       expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
     end
@@ -93,6 +95,28 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     expect(group['value']).to eq('usa')
   end
 
+  context 'when invoice has credit notes' do
+    before do
+      create(:credit_note, invoice: invoice)
+    end
+
+    it 'returns an error' do
+      result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      query: query,
+      variables: { id: invoice.id },
+    )
+    
+
+    data = result['data']['invoice']
+
+    aggregate_failures do
+      expect(data['hasCreditNotes']).to be_truthy
+    end
+    end
+  end
+  
   context 'when invoice is not found' do
     it 'returns an error' do
       result = execute_graphql(
