@@ -231,38 +231,39 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       }
     end
 
-    # TODO: credit note feature is diabled for now
-    # it 'creates a credit note' do
-    #   post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+    around { |test| lago_premium!(&test) }
 
-    #   aggregate_failures do
-    #     expect(response).to have_http_status(:success)
+    it 'creates a credit note' do
+      post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
 
-    #     expect(json[:credit_note][:lago_id]).to be_present
-    #     expect(json[:credit_note][:credit_status]).to eq('available')
-    #     expect(json[:credit_note][:refund_status]).to eq('pending')
-    #     expect(json[:credit_note][:reason]).to eq('duplicated_charge')
-    #     expect(json[:credit_note][:description]).to eq('Duplicated charge')
-    #     expect(json[:credit_note][:total_amount_cents]).to eq(15)
-    #     expect(json[:credit_note][:total_amount_currency]).to eq('EUR')
-    #     expect(json[:credit_note][:credit_amount_cents]).to eq(10)
-    #     expect(json[:credit_note][:credit_amount_currency]).to eq('EUR')
-    #     expect(json[:credit_note][:balance_amount_cents]).to eq(10)
-    #     expect(json[:credit_note][:balance_amount_currency]).to eq('EUR')
-    #     expect(json[:credit_note][:refund_amount_cents]).to eq(5)
-    #     expect(json[:credit_note][:refund_amount_currency]).to eq('EUR')
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
 
-    #     expect(json[:credit_note][:items][0][:lago_id]).to be_present
-    #     expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)
-    #     expect(json[:credit_note][:items][0][:amount_currency]).to eq('EUR')
-    #     expect(json[:credit_note][:items][0][:fee][:lago_id]).to eq(fee1.id)
+        expect(json[:credit_note][:lago_id]).to be_present
+        expect(json[:credit_note][:credit_status]).to eq('available')
+        expect(json[:credit_note][:refund_status]).to eq('pending')
+        expect(json[:credit_note][:reason]).to eq('duplicated_charge')
+        expect(json[:credit_note][:description]).to eq('Duplicated charge')
+        expect(json[:credit_note][:total_amount_cents]).to eq(15)
+        expect(json[:credit_note][:total_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:credit_amount_cents]).to eq(10)
+        expect(json[:credit_note][:credit_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:balance_amount_cents]).to eq(10)
+        expect(json[:credit_note][:balance_amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:refund_amount_cents]).to eq(5)
+        expect(json[:credit_note][:refund_amount_currency]).to eq('EUR')
 
-    #     expect(json[:credit_note][:items][1][:lago_id]).to be_present
-    #     expect(json[:credit_note][:items][1][:amount_cents]).to eq(5)
-    #     expect(json[:credit_note][:items][1][:amount_currency]).to eq('EUR')
-    #     expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
-    #   end
-    # end
+        expect(json[:credit_note][:items][0][:lago_id]).to be_present
+        expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)
+        expect(json[:credit_note][:items][0][:amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][0][:fee][:lago_id]).to eq(fee1.id)
+
+        expect(json[:credit_note][:items][1][:lago_id]).to be_present
+        expect(json[:credit_note][:items][1][:amount_cents]).to eq(5)
+        expect(json[:credit_note][:items][1][:amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
+      end
+    end
 
     context 'when invoice is not found' do
       let(:invoice_id) { 'foo_id' }

@@ -5,12 +5,12 @@ require 'rails_helper'
 RSpec.describe CreditNotes::CreateService, type: :service do
   subject(:create_service) do
     described_class.new(
-      invoice: invoice,
-      items: items,
+      invoice:,
+      items:,
       description: nil,
-      credit_amount_cents: credit_amount_cents,
-      refund_amount_cents: refund_amount_cents,
-      automatic: true, # TODO: credit note feature is diabled for now
+      credit_amount_cents:,
+      refund_amount_cents:,
+      automatic:,
     )
   end
 
@@ -25,6 +25,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     )
   end
 
+  let(:automatic) { true }
   let(:fee1) { create(:fee, invoice: invoice, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
   let(:fee2) { create(:fee, invoice: invoice, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
   let(:credit_amount_cents) { 12 }
@@ -193,6 +194,121 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           result = create_service.call
 
           expect(result.credit_note.issuing_date.to_s).to eq('2022-11-24')
+        end
+      end
+    end
+
+    context 'when invoice is not found' do
+      let(:invoice) { nil }
+      let(:items) { [] }
+
+      it 'returns a failure' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('invoice_not_found')
+        end
+      end
+    end
+
+    context 'when invoice is not automatic' do
+      let(:automatic) { false }
+
+      it 'returns a failure' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq('feature_unavailable')
+        end
+      end
+
+      context 'with a valid license' do
+        around { |test| lago_premium!(&test) }
+
+        it 'returns a success' do
+          result = create_service.call
+          expect(result).to be_success
+        end
+
+        context 'when invoice is draft' do
+          let(:invoice) do
+            create(
+              :invoice,
+              :draft,
+              amount_currency: 'EUR',
+              amount_cents: 20,
+              total_amount_cents: 24,
+              payment_status: :succeeded,
+              vat_rate: 20,
+            )
+          end
+
+          it 'returns a failure' do
+            result = create_service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+              expect(result.error.code).to eq('invalid_type_or_status')
+            end
+          end
+        end
+
+        context 'when invoice is a prepaid credit invoice' do
+          let(:invoice) do
+            create(
+              :invoice,
+              :credit,
+              amount_currency: 'EUR',
+              amount_cents: 20,
+              total_amount_cents: 24,
+              payment_status: :succeeded,
+              vat_rate: 20,
+            )
+          end
+
+          it 'returns a failure' do
+            result = create_service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+              expect(result.error.code).to eq('invalid_type_or_status')
+            end
+          end
+        end
+
+        context 'when invoice is legacy' do
+          let(:invoice) do
+            create(
+              :invoice,
+              amount_currency: 'EUR',
+              amount_cents: 20,
+              total_amount_cents: 24,
+              payment_status: :succeeded,
+              vat_rate: 20,
+              legacy: true,
+            )
+          end
+
+          it 'returns a failure' do
+            result = create_service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+              expect(result.error.code).to eq('invalid_type_or_status')
+            end
+          end
         end
       end
     end
