@@ -46,7 +46,7 @@ module Customers
     end
 
     def create(**args)
-      customer = Customer.create!(
+      customer = Customer.new(
         organization_id: args[:organization_id],
         external_id: args[:external_id],
         name: args[:name],
@@ -68,6 +68,7 @@ module Customers
       )
 
       assign_premium_attributes(customer, args)
+      customer.save!
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
