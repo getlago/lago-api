@@ -4,14 +4,14 @@ require 'rails_helper'
 
 RSpec.describe Queries::PlanQuery, type: :service do
   subject(:plan_query) do
-    described_class.new(organization: organization)
+    described_class.new(organization:)
   end
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan_first) { create(:plan, organization: organization, name: 'defgh') }
-  let(:plan_second) { create(:plan, organization: organization, name: 'abcde') }
-  let(:plan_third) { create(:plan, organization: organization, name: 'presuv') }
+  let(:plan_first) { create(:plan, organization:, name: 'defgh', code: '11') }
+  let(:plan_second) { create(:plan, organization:, name: 'abcde', code: '22') }
+  let(:plan_third) { create(:plan, organization:, name: 'presuv', code: '33') }
 
   before do
     plan_first
