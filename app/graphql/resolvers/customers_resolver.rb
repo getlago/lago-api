@@ -10,20 +10,24 @@ module Resolvers
     argument :ids, [String], required: false, description: 'List of customer Lago ID to fetch'
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :search_term, String, required: false
 
     type Types::Customers::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil)
+    def resolve(ids: nil, page: nil, limit: nil, search_term: nil)
       validate_organization!
 
-      customers = current_organization
-        .customers
-        .page(page)
-        .per(limit)
+      query = ::Queries::CustomerQuery.new(organization: current_organization)
+      result = query.call(
+        search_term:,
+        page:,
+        limit:,
+        filters: {
+          ids:,
+        },
+      )
 
-      customers = customers.where(id: ids) if ids.present?
-
-      customers
+      result.customers
     end
   end
 end

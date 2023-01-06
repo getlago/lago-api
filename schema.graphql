@@ -3835,6 +3835,7 @@ type Query {
     ids: [String!]
     limit: Int
     page: Int
+    searchTerm: String
   ): CustomerCollection!
 
   """
