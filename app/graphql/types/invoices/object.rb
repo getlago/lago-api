@@ -10,14 +10,14 @@ module Types
       field :id, ID, null: false
       field :sequential_id, ID, null: false
       field :number, String, null: false
-      field :charge_amount_cents, Integer, null: false
-      field :amount_cents, Integer, null: false
+      field :charge_amount_cents, GraphQL::Types::BigInt, null: false
+      field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
-      field :vat_amount_cents, Integer, null: false
+      field :vat_amount_cents, GraphQL::Types::BigInt, null: false
       field :vat_amount_currency, Types::CurrencyEnum, null: false
-      field :credit_amount_cents, Integer, null: false
+      field :credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_amount_currency, Types::CurrencyEnum, null: false
-      field :total_amount_cents, Integer, null: false
+      field :total_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_currency, Types::CurrencyEnum, null: false
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
       field :status, Types::Invoices::StatusTypeEnum, null: false
@@ -38,16 +38,16 @@ module Types
       field :plan, Types::Plans::Object
       field :credit_notes, [Types::CreditNotes::Object], null: true
 
-      field :wallet_transaction_amount_cents, Integer, null: false
+      field :wallet_transaction_amount_cents, GraphQL::Types::BigInt, null: false
       field :subtotal_before_prepaid_credits, String, null: false
 
-      field :sub_total_vat_excluded_amount_cents, Integer, null: false
-      field :sub_total_vat_included_amount_cents, Integer, null: false
-      field :coupon_total_amount_cents, Integer, null: false
-      field :credit_note_total_amount_cents, Integer, null: false
+      field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false
+      field :sub_total_vat_included_amount_cents, GraphQL::Types::BigInt, null: false
+      field :coupon_total_amount_cents, GraphQL::Types::BigInt, null: false
+      field :credit_note_total_amount_cents, GraphQL::Types::BigInt, null: false
 
-      field :refundable_amount_cents, Integer, null: false
-      field :creditable_amount_cents, Integer, null: false
+      field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
+      field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
     end
   end
 end

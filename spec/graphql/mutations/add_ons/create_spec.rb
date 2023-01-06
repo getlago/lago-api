@@ -42,7 +42,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
       expect(result_data['name']).to eq('Test Add-on')
       expect(result_data['code']).to eq('free-beer-for-us')
       expect(result_data['description']).to eq('some text')
-      expect(result_data['amountCents']).to eq(5000)
+      expect(result_data['amountCents']).to eq('5000')
       expect(result_data['amountCurrency']).to eq('EUR')
     end
   end

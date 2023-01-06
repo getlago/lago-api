@@ -42,7 +42,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
       expect(result_data['name']).to eq('New name')
       expect(result_data['code']).to eq('new_code')
       expect(result_data['description']).to eq('desc')
-      expect(result_data['amountCents']).to eq(123)
+      expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('USD')
     end
   end

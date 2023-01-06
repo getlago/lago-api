@@ -12,7 +12,7 @@ module Types
       field :code, String, null: true
       field :status, Types::Coupons::StatusEnum, null: false
       field :coupon_type, Types::Coupons::CouponTypeEnum, null: false
-      field :amount_cents, Integer, null: true
+      field :amount_cents, GraphQL::Types::BigInt, null: true
       field :amount_currency, Types::CurrencyEnum, null: true
       field :percentage_rate, Float, null: true
       field :frequency, Types::Coupons::FrequencyEnum, null: false

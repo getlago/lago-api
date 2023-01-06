@@ -12,7 +12,7 @@ module Types
       field :code, String, null: false
       field :interval, Types::Plans::IntervalEnum, null: false
       field :pay_in_advance, Boolean, null: false
-      field :amount_cents, Integer, null: false
+      field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
       field :trial_period, Float
       field :description, String

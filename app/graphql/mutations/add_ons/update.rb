@@ -12,7 +12,7 @@ module Mutations
       argument :name, String, required: true
       argument :code, String, required: true
       argument :description, String, required: false
-      argument :amount_cents, Integer, required: true
+      argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
 
       type Types::AddOns::Object

@@ -12,7 +12,7 @@ module Mutations
       argument :add_on_id, ID, required: true
       argument :customer_id, ID, required: true
 
-      argument :amount_cents, Integer, required: false
+      argument :amount_cents, GraphQL::Types::BigInt, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false
 
       type Types::AppliedAddOns::Object

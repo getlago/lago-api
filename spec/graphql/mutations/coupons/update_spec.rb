@@ -50,7 +50,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
       expect(result_data['name']).to eq('New name')
       expect(result_data['code']).to eq('new_code')
       expect(result_data['status']).to eq('active')
-      expect(result_data['amountCents']).to eq(123)
+      expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('USD')
       expect(result_data['expiration']).to eq('time_limit')
       expect(result_data['expirationAt']).to eq expiration_at.iso8601

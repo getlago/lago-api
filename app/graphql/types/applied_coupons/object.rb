@@ -8,7 +8,7 @@ module Types
       field :id, ID, null: false
       field :coupon, Types::Coupons::Object, null: false
 
-      field :amount_cents, Integer, null: true
+      field :amount_cents, GraphQL::Types::BigInt, null: true
       field :amount_currency, Types::CurrencyEnum, null: true
 
       field :percentage_rate, Float, null: true
