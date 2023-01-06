@@ -18,7 +18,7 @@ module Queries
     attr_reader :search_term
 
     def base_scope
-      Customer.where(organization: organization).ransack(search_params)
+      Customer.where(organization:).ransack(search_params)
     end
 
     def search_params

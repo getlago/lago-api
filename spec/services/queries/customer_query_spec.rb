@@ -4,14 +4,21 @@ require 'rails_helper'
 
 RSpec.describe Queries::CustomerQuery, type: :service do
   subject(:customer_query) do
-    described_class.new(organization: organization)
+    described_class.new(organization:)
   end
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer_first) { create(:customer, organization: organization, name: 'defgh') }
-  let(:customer_second) { create(:customer, organization: organization, name: 'abcde') }
-  let(:customer_third) { create(:customer, organization: organization, name: 'presuv') }
+
+  let(:customer_first) do
+    create(:customer, organization:, name: 'defgh', external_id: '11', email: '1@example.com')
+  end
+  let(:customer_second) do
+    create(:customer, organization:, name: 'abcde', external_id: '22', email: '2@example.com')
+  end
+  let(:customer_third) do
+    create(:customer, organization:, name: 'presuv', external_id: '33', email: '3@example.com')
+  end
 
   before do
     customer_first
