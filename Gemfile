@@ -22,6 +22,7 @@ gem 'pg'
 gem 'puma', '~> 5.6'
 gem 'rack-cors'
 gem 'rails', '~> 7.0.3.1'
+gem 'ransack'
 gem 'sidekiq'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 gem 'with_advisory_lock'
