@@ -27,7 +27,7 @@ module Resolvers
       invoices = invoices.where(payment_status:) if payment_status.present?
       invoices = invoices.where(id: ids) if ids.present?
 
-      invoices.order(payment_status: :asc, created_at: :desc)
+      invoices.order(issuing_date: :desc)
 
       invoices
     end
