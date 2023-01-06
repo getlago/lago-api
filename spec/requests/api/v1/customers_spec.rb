@@ -25,8 +25,28 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:name]).to eq(create_params[:name])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(json[:customer][:timezone]).to eq(create_params[:timezone])
+      end
+    end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          timezone: 'America/New_York',
+        }
+      end
+
+      it 'returns a success' do
+        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+
+        expect(response).to have_http_status(:success)
+
+        aggregate_failures do
+          expect(json[:customer][:timezone]).to eq(create_params[:timezone])
+        end
       end
     end
 

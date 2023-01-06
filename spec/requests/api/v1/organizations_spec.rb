@@ -50,5 +50,27 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         expect(billing[:vat_rate]).to eq(20)
       end
     end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      it 'updates an organization' do
+        put_with_token(
+          organization,
+          '/api/v1/organizations',
+          { organization: update_params },
+        )
+
+        expect(response).to have_http_status(:success)
+
+        aggregate_failures do
+          expect(json[:organization][:timezone]).to eq(update_params[:timezone])
+
+          # TODO(:grace_period): Grace period update is turned off for now
+          # billing = json[:organization][:billing_configuration]
+          # expect(billing[:invoice_grace_period]).to eq(3)
+        end
+      end
+    end
   end
 end

@@ -15,9 +15,7 @@ RSpec.describe Customers::CreateService, type: :service do
         external_id: SecureRandom.uuid,
         name: 'Foo Bar',
         currency: 'EUR',
-        timezone: 'Europe/Paris',
         billing_configuration: {
-          invoice_grace_period: 3,
           vat_rate: 20,
         },
       }
@@ -43,13 +41,11 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq(create_args[:currency])
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(customer.timezone).to eq(create_args[:timezone])
+        expect(customer.timezone).to be_nil
 
         billing = create_args[:billing_configuration]
-        # TODO(:grace_period): Grace period update is turned off for now
-        # expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         expect(customer.vat_rate).to eq(billing[:vat_rate])
+        expect(customer.invoice_grace_period).to be_nil
       end
     end
 
@@ -69,6 +65,39 @@ RSpec.describe Customers::CreateService, type: :service do
           organization_id: customer.organization_id,
         },
       )
+    end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      let(:create_args) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          timezone: 'Europe/Paris',
+          billing_configuration: {
+            invoice_grace_period: 3,
+          },
+        }
+      end
+
+      it 'creates a new customer' do
+        result = customers_service.create_from_api(
+          organization:,
+          params: create_args,
+        )
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          customer = result.customer
+          expect(customer.timezone).to eq(create_args[:timezone])
+
+          # TODO(:grace_period): Grace period update is turned off for now
+          # billing = create_args[:billing_configuration]
+          # expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        end
+      end
     end
 
     context 'when customer already exists' do
@@ -417,10 +446,8 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq('EUR')
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(customer.timezone).to eq('Europe/Paris')
-        # TODO(:grace_period): Grace period update is turned off for now
-        # expect(customer.invoice_grace_period).to eq(2)
+        expect(customer.timezone).to be_nil
+        expect(customer.invoice_grace_period).to be_nil
       end
     end
 
@@ -437,6 +464,34 @@ RSpec.describe Customers::CreateService, type: :service do
           organization_id: customer.organization_id,
         },
       )
+    end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      let(:create_args) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          organization_id: organization.id,
+          timezone: 'Europe/Paris',
+          invoice_grace_period: 2,
+        }
+      end
+
+      it 'creates a new customer' do
+        result = customers_service.create(**create_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.timezone).to eq('Europe/Paris')
+
+          # TODO(:grace_period): Grace period update is turned off for now
+          # expect(customer.invoice_grace_period).to eq(2)
+        end
+      end
     end
 
     context 'when customer already exists' do
