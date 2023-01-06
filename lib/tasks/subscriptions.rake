@@ -7,4 +7,28 @@ namespace :subscriptions do
       subscription.update!(unique_id: subscription.customer.customer_id)
     end
   end
+
+  # NOTE: Ability to create invoices in the future.
+  # How to use it: bundle exec rake "subscriptions:generate_invoice[timestamp, external_id1, external_id2, ...]"
+  # ie bundle exec rake "subscriptions:generate_invoice[1675267200, 3efd1e44-9877-43cd-a0ae-475693972871]"
+  desc 'Generate invoice for a specific timestamp'
+  task :generate_invoice, [:timestamp] => :environment do |_task, args|
+    abort "Missing timestamp and external subscription ids\n\n" unless args[:timestamp]
+    abort "Missing external subscription ids\n\n" if args.extras.blank?
+
+    subscriptions = Subscription.where(external_id: args.extras)
+
+    abort "External subscription ids not found\n\n" if subscriptions.blank?
+    abort "Subscriptions don't belong to the same customer\n\n" if subscriptions.pluck(:customer_id).uniq.count > 1
+
+    result = Invoices::SubscriptionService.new(subscriptions:, timestamp: args[:timestamp].to_i, recurring: false).create
+    invoice = result.invoice
+
+    # NOTE: Do not generate the PDF file if invoice is draft.
+    return if invoice.draft?
+
+    Invoices::GenerateService.new.generate(invoice_id: invoice.id)
+    invoice.update!(created_at: Time.zone.at(args[:timestamp].to_i))
+    invoice.fees.update_all(created_at: invoice.created_at + 1.second) # rubocop:disable Rails/SkipsModelValidations
+  end
 end
