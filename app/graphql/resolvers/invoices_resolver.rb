@@ -20,14 +20,13 @@ module Resolvers
 
       invoices = current_organization
         .invoices
+        .order(issuing_date: :desc)
         .page(page)
         .per(limit)
 
       invoices = invoices.where(status:) if status.present?
       invoices = invoices.where(payment_status:) if payment_status.present?
       invoices = invoices.where(id: ids) if ids.present?
-
-      invoices.order(issuing_date: :desc)
 
       invoices
     end
