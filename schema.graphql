@@ -3721,6 +3721,7 @@ type Query {
     ids: [ID!]
     limit: Int
     page: Int
+    searchTerm: String
   ): AddOnCollection!
 
   """
