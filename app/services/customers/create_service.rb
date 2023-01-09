@@ -25,7 +25,7 @@ module Customers
 
         if params.key?(:currency)
           currency_result = Customers::UpdateService.new(nil).update_currency(
-            customer: customer,
+            customer:,
             currency: params[:currency],
             customer_update: true,
           )
@@ -86,10 +86,8 @@ module Customers
     def assign_premium_attributes(customer, args)
       return unless License.premium?
 
-      # TODO(:grace_period): Grace period update is turned off for now
-      # invoice_grace_period: args[:invoice_grace_period],
-
       customer.timezone = args[:timezone] if args.key?(:timezone)
+      customer.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
     end
 
     def create_billing_configuration(customer, billing_configuration = {})
@@ -108,10 +106,11 @@ module Customers
       return unless params.key?(:billing_configuration)
 
       billing = params[:billing_configuration]
-      # TODO(:grace_period): Grace period update is turned off for now
-      # if billing.key?(:invoice_grace_period)
-      #   Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
-      # end
+
+      if License.premium? && billing.key?(:invoice_grace_period)
+        Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
+      end
+
       customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
       if new_customer

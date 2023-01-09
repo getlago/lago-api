@@ -90,10 +90,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       result_data = result['data']['updateOrganization']
 
       aggregate_failures do
-        # TODO(:grace_period): Grace period update is turned off for now
-        # expect(result_data['invoiceGracePeriod']).to eq(3)
-
         expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
+        expect(result_data['invoiceGracePeriod']).to eq(3)
       end
     end
   end
@@ -111,7 +109,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         },
       )
 
-      expect_graphql_error(result: result, message: :unprocessable_entity)
+      expect_graphql_error(result:, message: :unprocessable_entity)
     end
   end
 

@@ -24,10 +24,9 @@ module Organizations
 
       assign_premium_attributes(organization, args)
 
-      # TODO(:grace_period): Grace period update is turned off for now
-      # if args.key?(:invoice_grace_period)
-      #  Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: args[:invoice_grace_period])
-      # end
+      if License.premium? && args.key?(:invoice_grace_period)
+        Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: args[:invoice_grace_period])
+      end
 
       handle_base64_logo(args[:logo]) if args.key?(:logo)
 
@@ -58,10 +57,12 @@ module Organizations
         organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
         organization.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
-        # TODO(:grace_period): Grace period update is turned off for now
-        # if billing.key?(:invoice_grace_period)
-        #   Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: billing[:invoice_grace_period])
-        # end
+        if License.premium? && billing.key?(:invoice_grace_period)
+          Organizations::UpdateInvoiceGracePeriodService.call(
+            organization:,
+            grace_period: billing[:invoice_grace_period],
+          )
+        end
       end
 
       organization.save!

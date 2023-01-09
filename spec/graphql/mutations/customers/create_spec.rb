@@ -94,8 +94,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
 
       aggregate_failures do
         expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
-        # TODO(:grace_period): Grace period update is turned off for now
-        # expect(result_data['invoiceGracePeriod']).to be_nil
+        expect(result_data['invoiceGracePeriod']).to be_nil
       end
     end
   end
