@@ -19,6 +19,7 @@ module Invoices
         result.raise_if_error!
 
         invoice.update!(status: :finalized, issuing_date:)
+        invoice.credit_notes.each(&:finalized!)
         SendWebhookJob.perform_later(:invoice, invoice) if invoice.organization.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)

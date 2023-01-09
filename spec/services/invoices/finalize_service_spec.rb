@@ -32,11 +32,13 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:started_at) { Time.zone.now - 2.years }
     let(:credit_note) { create(:credit_note, :draft, invoice:) }
+    let(:fee) { create(:fee, invoice:, subscription:) }
 
     let(:plan) { create(:plan, interval: 'monthly') }
 
     before do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      create(:credit_note_item, credit_note:, fee:)
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
@@ -46,6 +48,11 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     it 'marks the invoice as finalized' do
       expect { finalize_service.call }
         .to change(invoice, :status).from('draft').to('finalized')
+    end
+
+    it 'marks the credit notes as finalized' do
+      expect { finalize_service.call }
+        .to change { credit_note.reload.status }.from('draft').to('finalized')
     end
 
     it 'updates the issuing date' do
@@ -108,10 +115,8 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     end
 
     context 'when invoice does not exist' do
-      let(:invoice) { nil }
-
       it 'returns an error' do
-        result = finalize_service.call
+        result = described_class.new(invoice: nil).call
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('invoice_not_found')
       end
