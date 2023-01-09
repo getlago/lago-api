@@ -112,16 +112,6 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'when credit note is draft' do
-      let(:credit_note) { create(:credit_note, :draft) }
-
-      it 'returns not found' do
-        put_with_token(organization, '/api/v1/credit_notes/555', credit_note: update_params)
-
-        expect(response).to have_http_status(:not_found)
-      end
-    end
-
     context 'when provided refund status is invalid' do
       let(:update_params) { { refund_status: 'foo_bar' } }
 
@@ -308,15 +298,6 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
-
-    context 'when invoice is draft' do
-      it 'returns not found' do
-        invoice.update!(status: :draft)
-        post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
-
-        expect(response).to have_http_status(:not_found)
-      end
-    end
   end
 
   describe 'PUT /credit_notes/:id/void' do
@@ -335,16 +316,6 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     context 'when credit note does not exist' do
       it 'returns a not found error' do
         put_with_token(organization, '/api/v1/credit_notes/555/void')
-
-        expect(response).to have_http_status(:not_found)
-      end
-    end
-
-    context 'when credit note is draft' do
-      let(:credit_note) { create(:credit_note, :draft) }
-
-      it 'returns not found' do
-        put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
 
         expect(response).to have_http_status(:not_found)
       end

@@ -10,7 +10,7 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'credit_note') if credit_note.nil?
+      return result.not_found_failure!(resource: 'credit_note') if credit_note.nil? || credit_note.draft?
 
       if params.key?(:refund_status)
         credit_note.refund_status = params[:refund_status]

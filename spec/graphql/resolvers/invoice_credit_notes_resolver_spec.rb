@@ -91,21 +91,4 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
       expect_graphql_error(result:, message: 'Resource not found')
     end
   end
-
-  context 'when invoice is draft' do
-    let(:invoice) { create(:invoice, :draft, customer:) }
-
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        query:,
-        variables: {
-          invoiceId: invoice.id,
-        },
-      )
-
-      expect_graphql_error(result:, message: 'Resource not found')
-    end
-  end
 end

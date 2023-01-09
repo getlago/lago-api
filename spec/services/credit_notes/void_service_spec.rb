@@ -35,6 +35,20 @@ RSpec.describe CreditNotes::VoidService, type: :service do
       end
     end
 
+    context 'when credit note is draft' do
+      let(:credit_note) { create(:credit_note, :draft) }
+
+      it 'returns a failure' do
+        result = void_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq('credit_note')
+        end
+      end
+    end
+
     context 'when the credit note is not voidable' do
       let(:credit_note) { create(:credit_note, credit_status: :voided) }
 

@@ -5,7 +5,7 @@ module Api
     class CreditNotesController < Api::BaseController
       def create
         service = CreditNotes::CreateService.new(
-          invoice: current_organization.invoices.finalized.find_by(id: input_params[:invoice_id]),
+          invoice: current_organization.invoices.find_by(id: input_params[:invoice_id]),
           **input_params,
         )
         result = service.call
@@ -37,7 +37,7 @@ module Api
       end
 
       def update
-        credit_note = current_organization.credit_notes.finalized.find_by(id: params[:id])
+        credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: 'credit_note') unless credit_note
 
         result = CreditNotes::UpdateService.new(credit_note:, **update_params).call
@@ -74,7 +74,7 @@ module Api
       end
 
       def void
-        credit_note = current_organization.credit_notes.finalized.find_by(id: params[:id])
+        credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: 'credit_note') unless credit_note
 
         result = CreditNotes::VoidService.new(credit_note:).call
