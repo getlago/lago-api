@@ -17,7 +17,7 @@ module Resolvers
     def resolve(ids: nil, page: nil, limit: nil, search_term: nil)
       validate_organization!
 
-      query = ::Queries::CustomerQuery.new(organization: current_organization)
+      query = CustomerQuery.new(organization: current_organization)
       result = query.call(
         search_term:,
         page:,

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Queries::PlanQuery, type: :service do
+RSpec.describe PlanQuery, type: :query do
   subject(:plan_query) do
     described_class.new(organization:)
   end
