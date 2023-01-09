@@ -38,6 +38,7 @@ module CreditNotes
           reason:,
           description:,
           credit_status: 'available',
+          status: invoice.status,
         )
 
         create_items
@@ -92,7 +93,6 @@ module CreditNotes
 
     def valid_type_or_status?
       return true if automatic
-      return false if invoice.draft?
       return false if invoice.credit?
 
       !invoice.legacy?

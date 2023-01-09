@@ -249,14 +249,12 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             )
           end
 
-          it 'returns a failure' do
+          it 'creates a draft credit note' do
             result = create_service.call
 
             aggregate_failures do
-              expect(result).not_to be_success
-
-              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              expect(result.error.code).to eq('invalid_type_or_status')
+              expect(result).to be_success
+              expect(result.credit_note).to be_draft
             end
           end
         end

@@ -50,24 +50,26 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
           .and change { subscription_invoice.reload.credit_notes.count }.from(0).to(1)
           .and change { subscription.invoices.count }.from(1).to(2)
 
-        # Credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.
+        # Draft credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.
         credit_note = subscription_invoice.credit_notes.first
+        expect(credit_note).to be_draft
         expect(credit_note.credit_amount_cents).to eq(425)
-        expect(credit_note.balance_amount_cents).to eq(0) # 425 - 600
+        expect(credit_note.balance_amount_cents).to eq(425)
+        expect(credit_note.total_amount_cents).to eq(425)
 
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first
 
-        # Total amount should reflect the credit note (720 - 425)
-        expect(termination_invoice.total_amount_cents).to eq(295)
-        expect(termination_invoice.credits.first.amount_cents).to eq(425)
+        # Total amount does not reflect the credit note as it's not finalized.
+        expect(termination_invoice.total_amount_cents).to eq(720)
+        expect(termination_invoice.credits.count).to eq(0)
         expect(termination_invoice.credit_notes.count).to eq(0)
 
         # Refresh pay in advance invoice
         expect {
           refresh_invoice(subscription_invoice)
         }.not_to change { subscription_invoice.reload.total_amount_cents }
-        expect(credit_note.reload.credit_amount_cents).to eq(425)
+        expect(credit_note.reload.total_amount_cents).to eq(425)
 
         # Refresh termination invoice
         expect {
@@ -78,6 +80,8 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         expect {
           finalize_invoice(subscription_invoice)
         }.to change { subscription_invoice.reload.status }.from('draft').to('finalized')
+          .and change { credit_note.reload.status }.from('draft').to('finalized')
+
         expect(subscription_invoice.total_amount_cents).to eq(658)
 
         # Finalize termination invoice
@@ -85,7 +89,7 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
           finalize_invoice(termination_invoice)
         }.to change { termination_invoice.reload.status }.from('draft').to('finalized')
 
-        # Total amount should reflect the credit note
+        # Total amount should reflect the credit note 720 - 425
         expect(termination_invoice.total_amount_cents).to eq(295)
       end
     end
@@ -132,14 +136,14 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         # Credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.
         credit_note = subscription_invoice.credit_notes.first
         expect(credit_note.credit_amount_cents).to eq(425)
-        expect(credit_note.balance_amount_cents).to eq(305) # 425 - 120
+        expect(credit_note.balance_amount_cents).to eq(425)
 
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first
 
-        # Total amount should reflect the credit note (120 - 425)
-        expect(termination_invoice.total_amount_cents).to eq(0)
-        expect(termination_invoice.credits.first.amount_cents).to eq(120)
+        # Total amount does not reflect the credit note as it's not finalized.
+        expect(termination_invoice.total_amount_cents).to eq(120)
+        expect(termination_invoice.credits.count).to eq(0)
         expect(termination_invoice.credit_notes.count).to eq(0)
 
         # Refresh pay in advance invoice
@@ -157,6 +161,8 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         expect {
           finalize_invoice(subscription_invoice)
         }.to change { subscription_invoice.reload.status }.from('draft').to('finalized')
+          .and change { credit_note.reload.status }.from('draft').to('finalized')
+
         expect(subscription_invoice.total_amount_cents).to eq(658)
 
         # Finalize termination invoice
