@@ -126,8 +126,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_06_152449) do
     t.decimal "percentage_rate", precision: 10, scale: 5
     t.integer "frequency", default: 0, null: false
     t.integer "frequency_duration"
-    t.boolean "reusable", default: true, null: false
     t.datetime "expiration_at"
+    t.boolean "reusable", default: true, null: false
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end
@@ -252,10 +252,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_06_152449) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
-    t.integer "events_count"
     t.integer "fee_type"
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
+    t.integer "events_count"
     t.uuid "group_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
@@ -335,8 +335,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_06_152449) do
     t.string "credit_amount_currency"
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
-    t.integer "payment_attempts", default: 0, null: false
-    t.boolean "ready_for_payment_processing", default: true, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
   end
 
@@ -443,11 +441,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_06_152449) do
     t.float "trial_period"
     t.boolean "pay_in_advance", default: false, null: false
     t.boolean "bill_charges_monthly"
-    t.uuid "overridden_plan_id"
     t.uuid "parent_id"
     t.index ["code", "organization_id"], name: "index_plans_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_plans_on_organization_id"
-    t.index ["overridden_plan_id"], name: "index_plans_on_overridden_plan_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end
 
@@ -569,7 +565,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_06_152449) do
   add_foreign_key "payments", "payment_providers"
   add_foreign_key "persisted_events", "customers"
   add_foreign_key "plans", "organizations"
-  add_foreign_key "plans", "plans", column: "overridden_plan_id"
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "refunds", "credit_notes"
   add_foreign_key "refunds", "payment_provider_customers"

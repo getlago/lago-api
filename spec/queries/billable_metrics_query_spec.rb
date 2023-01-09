@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe BillableMetricQuery, type: :query do
+RSpec.describe BillableMetricsQuery, type: :query do
   subject(:billable_metric_query) do
     described_class.new(organization:)
   end
