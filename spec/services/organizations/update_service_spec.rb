@@ -21,7 +21,6 @@ RSpec.describe Organizations::UpdateService do
         zipcode: 'FOO1234',
         city: 'Foobar',
         country: 'FR',
-        timezone: 'Europe/Paris',
         invoice_footer: 'invoice footer',
       )
 
@@ -37,9 +36,22 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.zipcode).to eq('FOO1234')
         expect(result.organization.city).to eq('Foobar')
         expect(result.organization.country).to eq('FR')
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(result.organization.timezone).to eq('Europe/Paris')
+        expect(result.organization.timezone).to eq('UTC')
         expect(result.organization.invoice_footer).to eq('invoice footer')
+      end
+    end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      it 'updates the organization' do
+        result = organization_update_service.update(
+          timezone: 'Europe/Paris',
+        )
+
+        aggregate_failures do
+          expect(result.organization.timezone).to eq('Europe/Paris')
+        end
       end
     end
 
@@ -106,7 +118,6 @@ RSpec.describe Organizations::UpdateService do
         city: 'test_city',
         legal_name: 'test1',
         legal_number: '123',
-        timezone: 'Europe/Paris',
         billing_configuration: {
           invoice_footer: 'footer',
           vat_rate: 20,
@@ -123,12 +134,31 @@ RSpec.describe Organizations::UpdateService do
         organization_response = result.organization
         expect(organization_response.name).to eq(organization.name)
         expect(organization_response.webhook_url).to eq(update_args[:webhook_url])
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(organization_response.timezone).to eq(update_args[:timezone])
 
         billing = update_args[:billing_configuration]
         expect(organization_response.invoice_footer).to eq(billing[:invoice_footer])
         expect(organization_response.vat_rate).to eq(billing[:vat_rate])
+      end
+    end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      let(:update_args) do
+        {
+          timezone: 'Europe/Paris',
+        }
+      end
+
+      it 'updates an organization' do
+        result = organization_update_service.update_from_api(params: update_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          organization_response = result.organization
+          expect(organization_response.timezone).to eq(update_args[:timezone])
+        end
       end
     end
 

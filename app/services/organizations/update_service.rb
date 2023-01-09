@@ -22,13 +22,12 @@ module Organizations
       organization.country = args[:country] if args.key?(:country)
       organization.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
 
+      assign_premium_attributes(organization, args)
+
       # TODO(:grace_period): Grace period update is turned off for now
       # if args.key?(:invoice_grace_period)
       #  Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: args[:invoice_grace_period])
       # end
-
-      # TODO(:timezone): Timezone update is turned off for now
-      # organization.timezone = args[:timezone] if args.key?(:timezone)
 
       handle_base64_logo(args[:logo]) if args.key?(:logo)
 
@@ -52,8 +51,7 @@ module Organizations
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
 
-      # TODO(:timezone): Timezone update is turned off for now
-      # organization.timezone = params[:timezone] if params.key?(:timezone)
+      assign_premium_attributes(organization, params)
 
       if params.key?(:billing_configuration)
         billing = params[:billing_configuration]
@@ -77,6 +75,12 @@ module Organizations
     private
 
     attr_reader :organization
+
+    def assign_premium_attributes(organization, args)
+      return unless License.premium?
+
+      organization.timezone = args[:timezone] if args.key?(:timezone)
+    end
 
     def handle_base64_logo(logo)
       return if logo.blank?

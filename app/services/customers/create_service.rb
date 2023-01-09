@@ -21,8 +21,7 @@ module Customers
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
 
-        # TODO(:timezone): Timezone update is turned off for now
-        # customer.timezone = params[:timezone] if params.key?(:timezone)
+        assign_premium_attributes(customer, params)
 
         if params.key?(:currency)
           currency_result = Customers::UpdateService.new(nil).update_currency(
@@ -47,7 +46,7 @@ module Customers
     end
 
     def create(**args)
-      customer = Customer.create!(
+      customer = Customer.new(
         organization_id: args[:organization_id],
         external_id: args[:external_id],
         name: args[:name],
@@ -67,10 +66,9 @@ module Customers
         payment_provider: args[:payment_provider],
         currency: args[:currency],
       )
-      # TODO(:grace_period): Grace period update is turned off for now
-      # invoice_grace_period: args[:invoice_grace_period],
-      # TODO(:timezone): Timezone update is turned off for now
-      # timezone: args[:timezone],
+
+      assign_premium_attributes(customer, args)
+      customer.save!
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
@@ -84,6 +82,15 @@ module Customers
     end
 
     private
+
+    def assign_premium_attributes(customer, args)
+      return unless License.premium?
+
+      # TODO(:grace_period): Grace period update is turned off for now
+      # invoice_grace_period: args[:invoice_grace_period],
+
+      customer.timezone = args[:timezone] if args.key?(:timezone)
+    end
 
     def create_billing_configuration(customer, billing_configuration = {})
       return if billing_configuration.blank?

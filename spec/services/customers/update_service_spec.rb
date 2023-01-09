@@ -19,10 +19,8 @@ RSpec.describe Customers::UpdateService, type: :service do
       {
         id: customer.id,
         name: 'Updated customer name',
-        external_id: external_id,
-        timezone: 'Europe/Paris',
+        external_id:,
         billing_configuration: {
-          invoice_grace_period: 3,
           vat_rate: 20,
         },
       }
@@ -34,13 +32,36 @@ RSpec.describe Customers::UpdateService, type: :service do
       updated_customer = result.customer
       aggregate_failures do
         expect(updated_customer.name).to eq('Updated customer name')
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(updated_customer.timezone).to eq('Europe/Paris')
 
         billing = update_args[:billing_configuration]
-        # TODO(:grace_period): Grace period update is turned off for now
-        # expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         expect(updated_customer.vat_rate).to eq(billing[:vat_rate])
+      end
+    end
+
+    context 'with premium features' do
+      around { |test| lago_premium!(&test) }
+
+      let(:update_args) do
+        {
+          id: customer.id,
+          timezone: 'Europe/Paris',
+          billing_configuration: {
+            invoice_grace_period: 3,
+          },
+        }
+      end
+
+      it 'updates a customer' do
+        result = customers_service.update(**update_args)
+
+        updated_customer = result.customer
+        aggregate_failures do
+          expect(updated_customer.timezone).to eq('Europe/Paris')
+
+          # TODO(:grace_period): Grace period update is turned off for now
+          # billing = update_args[:billing_configuration]
+          # expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        end
       end
     end
 

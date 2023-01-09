@@ -45,9 +45,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode: 'FOO1234',
           city: 'Foobar',
           country: 'FR',
-          timezone: 'TZ_EUROPE_PARIS',
           invoiceFooter: 'invoice footer',
-          invoiceGracePeriod: 3,
         },
       },
     )
@@ -67,10 +65,36 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['city']).to eq('Foobar')
       expect(result_data['country']).to eq('FR')
       expect(result_data['invoiceFooter']).to eq('invoice footer')
-      # TODO(:grace_period): Grace period update is turned off for now
-      # expect(result_data['invoiceGracePeriod']).to eq(3)
-      # TODO(:timezone): Timezone update is turned off for now
-      # expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
+      expect(result_data['invoiceGracePeriod']).to eq(0)
+      expect(result_data['timezone']).to eq('TZ_UTC')
+    end
+  end
+
+  context 'with premium features' do
+    around { |test| lago_premium!(&test) }
+
+    it 'updates an organization' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        variables: {
+          input: {
+            email: 'foo@bar.com',
+            timezone: 'TZ_EUROPE_PARIS',
+            invoiceGracePeriod: 3,
+          },
+        },
+      )
+
+      result_data = result['data']['updateOrganization']
+
+      aggregate_failures do
+        # TODO(:grace_period): Grace period update is turned off for now
+        # expect(result_data['invoiceGracePeriod']).to eq(3)
+
+        expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
+      end
     end
   end
 

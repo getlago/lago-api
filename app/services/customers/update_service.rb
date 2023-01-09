@@ -27,8 +27,7 @@ module Customers
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
 
-        # TODO(:timezone): Timezone update is turned off for now
-        # customer.timezone = args[:timezone] if args.key?(:timezone)
+        assign_premium_attributes(customer, args)
 
         # TODO: delete this when GraphQL will use billing_configuration.
         customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
@@ -92,6 +91,12 @@ module Customers
     end
 
     private
+
+    def assign_premium_attributes(customer, args)
+      return unless License.premium?
+
+      customer.timezone = args[:timezone] if args.key?(:timezone)
+    end
 
     def create_or_update_provider_customer(customer, payment_provider, billing_configuration = {})
       handle_provider_customer = customer.payment_provider.present?
