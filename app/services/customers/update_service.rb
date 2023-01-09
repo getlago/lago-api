@@ -8,7 +8,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if args.key?(:currency)
-          update_currency(customer: customer, currency: args[:currency], customer_update: true)
+          update_currency(customer:, currency: args[:currency], customer_update: true)
           return result unless result.success?
         end
         old_payment_provider = customer.payment_provider
@@ -34,20 +34,18 @@ module Customers
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
         customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
 
-        # TODO(:grace_period): Grace period update is turned off for now
-        # if args.key?(:invoice_grace_period)
-        #   Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: args[:invoice_grace_period])
-        # end
+        if License.premium? && args.key?(:invoice_grace_period)
+          Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: args[:invoice_grace_period])
+        end
 
         if args.key?(:billing_configuration)
           billing = args[:billing_configuration]
           customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
           customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
-          # TODO(:grace_period): Grace period update is turned off for now
-          # if billing.key?(:invoice_grace_period)
-          #   Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
-          # end
+          if License.premium? && billing.key?(:invoice_grace_period)
+            Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
+          end
         end
 
         # NOTE: external_id is not editable if customer is attached to subscriptions
