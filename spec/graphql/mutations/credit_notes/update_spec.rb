@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:credit_note) { create(:credit_note, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:credit_note) { create(:credit_note, customer:) }
 
   let(:mutation) do
     <<~GQL
@@ -36,6 +36,25 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to eq(credit_note.id)
       expect(result_data['refundStatus']).to eq('succeeded')
+    end
+  end
+
+  context 'when credit note is draft' do
+    let(:credit_note) { create(:credit_note, :draft, customer:) }
+
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: {
+            id: credit_note.id,
+            refundStatus: 'succeeded',
+          },
+        },
+      )
+
+      expect_not_found(result)
     end
   end
 

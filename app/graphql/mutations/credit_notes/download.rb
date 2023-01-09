@@ -16,6 +16,7 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
+        # TODO: Security issue here, we can download a credit note from another organization.
         result = ::CreditNotes::GenerateService.new.call(credit_note_id: args[:id])
 
         result.success? ? result.credit_note : result_error(result)

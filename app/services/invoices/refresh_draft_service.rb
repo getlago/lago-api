@@ -42,7 +42,7 @@ module Invoices
 
         return calculate_result unless calculate_result.success?
 
-        # In case of a refresh the same day of the termination
+        # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
       end
 
