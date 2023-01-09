@@ -9,15 +9,17 @@ RSpec.describe Api::BaseController, type: :controller do
     end
   end
 
+  let(:organization) { create(:organization) }
+
   it 'sets the context source to api' do
+    request.headers['Authorization'] = "Bearer #{organization.api_key}"
+
     get :index
 
     expect(CurrentContext.source).to eq 'api'
   end
 
   describe 'authenticate' do
-    let(:organization) { create(:organization) }
-
     it 'validates the organization api key' do
       request.headers['Authorization'] = "Bearer #{organization.api_key}"
 
