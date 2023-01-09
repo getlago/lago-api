@@ -133,32 +133,6 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
     end
   end
 
-  context 'when invoice is draft' do
-    let(:invoice) { create(:invoice, :draft) }
-
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        query: mutation,
-        variables: {
-          input: {
-            reason: 'duplicated_charge',
-            invoiceId: invoice.id,
-            items: [
-              {
-                feeId: fee1.id,
-                amountCents: 15,
-              },
-            ],
-          },
-        },
-      )
-
-      expect_not_found(result)
-    end
-  end
-
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(

@@ -31,6 +31,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:started_at) { Time.zone.now - 2.years }
+    let(:credit_note) { create(:credit_note, :draft, invoice:) }
 
     let(:plan) { create(:plan, interval: 'monthly') }
 

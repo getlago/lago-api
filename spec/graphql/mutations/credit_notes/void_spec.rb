@@ -55,22 +55,6 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
     end
   end
 
-  context 'when credit note is draft' do
-    let(:credit_note) { create(:credit_note, :draft, customer:) }
-
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: {
-          input: { id: credit_note.id },
-        },
-      )
-
-      expect_not_found(result)
-    end
-  end
-
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(

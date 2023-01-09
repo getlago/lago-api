@@ -16,7 +16,7 @@ module Resolvers
     def resolve(invoice_id: nil, page: nil, limit: nil)
       validate_organization!
 
-      Invoice.finalized.find(invoice_id)
+      Invoice.find(invoice_id)
         .credit_notes
         .finalized
         .order(created_at: :desc)
