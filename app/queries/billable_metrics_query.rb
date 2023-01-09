@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class BillableMetricQuery < BaseQuery
+class BillableMetricsQuery < BaseQuery
   def call(search_term:, page:, limit:, filters: {})
     @search_term = search_term
 
