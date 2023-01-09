@@ -3767,6 +3767,7 @@ type Query {
     ids: [ID!]
     limit: Int
     page: Int
+    searchTerm: String
     status: CouponStatusEnum
   ): CouponCollection!
 
