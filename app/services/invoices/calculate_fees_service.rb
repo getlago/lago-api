@@ -148,7 +148,11 @@ module Invoices
     end
 
     def credit_notes
-      @credit_notes ||= customer.credit_notes.available.where.not(invoice_id: invoice.id).order(created_at: :asc)
+      @credit_notes ||= customer.credit_notes
+        .finalized
+        .available
+        .where.not(invoice_id: invoice.id)
+        .order(created_at: :asc)
     end
 
     def wallet

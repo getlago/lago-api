@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:credit_note) { create(:credit_note, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:credit_note) { create(:credit_note, customer:) }
 
   let(:mutation) do
     <<~GQL
@@ -48,6 +48,22 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
           input: {
             id: 'foo_bar',
           },
+        },
+      )
+
+      expect_not_found(result)
+    end
+  end
+
+  context 'when credit note is draft' do
+    let(:credit_note) { create(:credit_note, :draft, customer:) }
+
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: { id: credit_note.id },
         },
       )
 

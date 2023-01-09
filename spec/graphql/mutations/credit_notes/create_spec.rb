@@ -3,11 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
-  let(:membership) { create(:membership, organization: organization) }
+  let(:membership) { create(:membership, organization:) }
   let(:organization) { invoice.organization }
 
-  let(:fee1) { create(:fee, invoice: invoice) }
-  let(:fee2) { create(:charge_fee, invoice: invoice) }
+  let(:fee1) { create(:fee, invoice:) }
+  let(:fee2) { create(:charge_fee, invoice:) }
 
   let(:invoice) do
     create(
@@ -119,6 +119,32 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
             invoiceId: 'foo_id',
             creditAmountCents: 10,
             refundAmountCents: 5,
+            items: [
+              {
+                feeId: fee1.id,
+                amountCents: 15,
+              },
+            ],
+          },
+        },
+      )
+
+      expect_not_found(result)
+    end
+  end
+
+  context 'when invoice is draft' do
+    let(:invoice) { create(:invoice, :draft) }
+
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: mutation,
+        variables: {
+          input: {
+            reason: 'duplicated_charge',
+            invoiceId: invoice.id,
             items: [
               {
                 feeId: fee1.id,

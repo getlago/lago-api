@@ -30,11 +30,11 @@ module CreditNotes
     end
 
     def refunded_invoice_amount_cents
-      invoice.credit_notes.where.not(id: credit_note.id).sum(:refund_amount_cents)
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:refund_amount_cents)
     end
 
     def credited_invoice_amount_cents
-      invoice.credit_notes.where.not(id: credit_note.id).sum(:credit_amount_cents)
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:credit_amount_cents)
     end
 
     def invoice_credit_note_total_amount_cents

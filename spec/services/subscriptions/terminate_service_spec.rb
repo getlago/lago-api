@@ -115,12 +115,12 @@ RSpec.describe Subscriptions::TerminateService do
   describe '.terminate_from_api' do
     let(:membership) { create(:membership) }
     let(:organization) { membership.organization }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, customer: customer) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
 
     it 'terminates a subscription' do
       result = terminate_service.terminate_from_api(
-        organization: organization,
+        organization:,
         external_id: subscription.external_id,
       )
 
@@ -134,7 +134,7 @@ RSpec.describe Subscriptions::TerminateService do
     it 'enqueues a BillSubscriptionJob' do
       expect do
         terminate_service.terminate_from_api(
-          organization: organization,
+          organization:,
           external_id: subscription.external_id,
         )
       end.to have_enqueued_job(BillSubscriptionJob)
@@ -143,8 +143,8 @@ RSpec.describe Subscriptions::TerminateService do
     context 'when subscription is not found' do
       it 'returns an error' do
         result = terminate_service.terminate_from_api(
-          organization: organization,
-          external_id: subscription.external_id + '123',
+          organization:,
+          external_id: "#{subscription.external_id}123",
         )
 
         expect(result.error.error_code).to eq('subscription_not_found')
@@ -156,7 +156,7 @@ RSpec.describe Subscriptions::TerminateService do
 
       it 'returns an error' do
         result = terminate_service.terminate_from_api(
-          organization: organization,
+          organization:,
           external_id: subscription.external_id,
         )
 
@@ -173,10 +173,7 @@ RSpec.describe Subscriptions::TerminateService do
     before { next_subscription }
 
     it 'terminates the subscription' do
-      result = terminate_service.terminate_and_start_next(
-        subscription: subscription,
-        timestamp: timestamp,
-      )
+      result = terminate_service.terminate_and_start_next(subscription:, timestamp:)
 
       aggregate_failures do
         expect(result).to be_success
@@ -185,10 +182,7 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     it 'starts the next subscription' do
-      result = terminate_service.terminate_and_start_next(
-        subscription: subscription,
-        timestamp: timestamp,
-      )
+      result = terminate_service.terminate_and_start_next(subscription:, timestamp:)
 
       aggregate_failures do
         expect(result).to be_success
@@ -202,10 +196,7 @@ RSpec.describe Subscriptions::TerminateService do
 
       it 'enqueues a job to bill the existing subscription' do
         expect do
-          terminate_service.terminate_and_start_next(
-            subscription: subscription,
-            timestamp: timestamp,
-          )
+          terminate_service.terminate_and_start_next(subscription:, timestamp:)
         end.to have_enqueued_job(BillSubscriptionJob)
       end
     end
@@ -216,7 +207,7 @@ RSpec.describe Subscriptions::TerminateService do
         create(
           :subscription,
           previous_subscription_id: subscription.id,
-          plan: plan,
+          plan:,
           status: :pending,
         )
       end
@@ -225,10 +216,7 @@ RSpec.describe Subscriptions::TerminateService do
 
       it 'enqueues a job to bill the existing subscription' do
         expect do
-          terminate_service.terminate_and_start_next(
-            subscription: subscription,
-            timestamp: timestamp,
-          )
+          terminate_service.terminate_and_start_next(subscription:, timestamp:)
         end.to have_enqueued_job(BillSubscriptionJob).twice
       end
     end

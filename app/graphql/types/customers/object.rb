@@ -66,7 +66,7 @@ module Types
       end
 
       def has_credit_notes
-        object.credit_notes.any?
+        object.credit_notes.finalized.any?
       end
 
       def active_subscription_count
@@ -87,11 +87,11 @@ module Types
       end
 
       def credit_notes_credits_available_count
-        object.credit_notes.where('credit_notes.credit_amount_cents > 0').count
+        object.credit_notes.finalized.where('credit_notes.credit_amount_cents > 0').count
       end
 
       def credit_notes_balance_amount_cents
-        object.credit_notes.sum('credit_notes.balance_amount_cents')
+        object.credit_notes.finalized.sum('credit_notes.balance_amount_cents')
       end
     end
   end

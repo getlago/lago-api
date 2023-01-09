@@ -24,14 +24,11 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         )
 
         create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
-
-        subscription_invoice = Invoice.order(created_at: :desc).first
-        expect(subscription_invoice).to be_draft
-        expect(subscription_invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
       end
 
-      subscription = Subscription.order(created_at: :desc).first
-      subscription_invoice = subscription.invoices.first
+      subscription_invoice = Invoice.draft.first
+      subscription = subscription_invoice.subscriptions.first
+      expect(subscription_invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
 
       ### 17 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 17)) do
@@ -107,14 +104,11 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         )
 
         create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
-
-        subscription_invoice = Invoice.order(created_at: :desc).first
-        expect(subscription_invoice).to be_draft
-        expect(subscription_invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
       end
 
-      subscription = Subscription.order(created_at: :desc).first
-      subscription_invoice = subscription.invoices.first
+      subscription_invoice = Invoice.draft.first
+      subscription = subscription_invoice.subscriptions.first
+      expect(subscription_invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
 
       ### 17 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 17)) do
@@ -189,13 +183,11 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         )
 
         create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
-
-        invoice = Invoice.order(created_at: :desc).first
-        expect(invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
       end
 
-      subscription = Subscription.order(created_at: :desc).first
-      invoice = subscription.invoices.first
+      invoice = Invoice.draft.first
+      subscription = invoice.subscriptions.first
+      expect(invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
 
       ### 16 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 16)) do

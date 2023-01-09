@@ -21,6 +21,7 @@ module Resolvers
 
       credit_notes = current_customer
         .credit_notes
+        .finalized
         .order(created_at: :desc)
         .page(page)
         .per(limit)

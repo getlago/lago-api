@@ -9,7 +9,7 @@ module CreditNotes
     end
 
     def call(credit_note_id:)
-      credit_note = CreditNote.find_by(id: credit_note_id)
+      credit_note = CreditNote.finalized.find_by(id: credit_note_id)
       return result.not_found_failure!(resource: 'credit_note') if credit_note.blank?
 
       generate_pdf(credit_note) if credit_note.file.blank?
