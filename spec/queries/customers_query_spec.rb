@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe CustomerQuery, type: :query do
+RSpec.describe CustomersQuery, type: :query do
   subject(:customer_query) do
     described_class.new(organization:)
   end
