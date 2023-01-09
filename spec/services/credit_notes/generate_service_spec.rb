@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe CreditNotes::GenerateService, type: :service do
-  subject(:credit_note_generate_service) { described_class.new }
+  subject(:credit_note_generate_service) { described_class.new(credit_note:, context:) }
 
   let(:organization) { create(:organization, name: 'LAGO') }
   let(:customer) { create(:customer, organization:) }
@@ -12,6 +12,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
   let(:fee) { create(:fee, invoice:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }
   let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+  let(:context) { nil }
 
   let(:pdf_content) do
     File.read(Rails.root.join('spec/fixtures/blank.pdf'))
@@ -32,14 +33,17 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
 
   describe '.call' do
     it 'generates the credit note synchronously' do
-      result = credit_note_generate_service.call(credit_note_id: credit_note.id)
+      result = credit_note_generate_service.call
 
       expect(result.credit_note.file).to be_present
     end
 
     context 'with not found credit_note' do
+      let(:credit_note) { nil }
+      let(:credit_note_item) { nil }
+
       it 'returns a result with error' do
-        result = credit_note_generate_service.call(credit_note_id: '123456')
+        result = credit_note_generate_service.call
 
         expect(result.success).to be_falsey
         expect(result.error.error_code).to eq('credit_note_not_found')
@@ -50,7 +54,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
       let(:credit_note) { create(:credit_note, :draft, invoice:, customer:) }
 
       it 'returns a not found error' do
-        result = credit_note_generate_service.call(credit_note_id: credit_note.id)
+        result = credit_note_generate_service.call
 
         expect(result.success).to be_falsey
         expect(result.error.error_code).to eq('credit_note_not_found')
@@ -69,24 +73,20 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
       it 'does not generate the pdf' do
         allow(LagoHttpClient::Client).to receive(:new)
 
-        credit_note_generate_service.call(credit_note_id: credit_note.id)
+        credit_note_generate_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
       end
     end
-  end
 
-  describe '.call_from_api' do
-    it 'generates the credit_note' do
-      credit_note_generate_service.call_from_api(credit_note:)
+    context 'when context is API' do
+      let(:context) { 'api' }
 
-      expect(credit_note.file).to be_present
-    end
-
-    it 'calls the SendWebhook job' do
-      expect do
-        credit_note_generate_service.call_from_api(credit_note:)
-      end.to have_enqueued_job(SendWebhookJob)
+      it 'calls the SendWebhook job' do
+        expect do
+          credit_note_generate_service.call
+        end.to have_enqueued_job(SendWebhookJob)
+      end
     end
   end
 end
