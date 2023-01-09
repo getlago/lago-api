@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
 
   let(:mutation) do
     <<~GQL
@@ -20,40 +20,41 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
     GQL
   end
 
-  # TODO(:grace_period): Grace period update is turned off for now
-  # it 'updates a customer' do
-  #   result = execute_graphql(
-  #     current_user: membership.user,
-  #     query: mutation,
-  #     variables: {
-  #       input: {
-  #         id: customer.id,
-  #         invoiceGracePeriod: 12,
-  #       },
-  #     },
-  #   )
+  around { |test| lago_premium!(&test) }
 
-  #   result_data = result['data']['updateCustomerInvoiceGracePeriod']
+  it 'updates a customer' do
+    result = execute_graphql(
+      current_user: membership.user,
+      query: mutation,
+      variables: {
+        input: {
+          id: customer.id,
+          invoiceGracePeriod: 12,
+        },
+      },
+    )
 
-  #   aggregate_failures do
-  #     expect(result_data['id']).to be_present
-  #     expect(result_data['invoiceGracePeriod']).to eq(12)
-  #   end
-  # end
+    result_data = result['data']['updateCustomerInvoiceGracePeriod']
 
-  # context 'without current user' do
-  #   it 'returns an error' do
-  #     result = execute_graphql(
-  #       query: mutation,
-  #       variables: {
-  #         input: {
-  #           id: customer.id,
-  #           invoiceGracePeriod: 12,
-  #         },
-  #       },
-  #     )
+    aggregate_failures do
+      expect(result_data['id']).to be_present
+      expect(result_data['invoiceGracePeriod']).to eq(12)
+    end
+  end
 
-  #     expect_unauthorized_error(result)
-  #   end
-  # end
+  context 'without current user' do
+    it 'returns an error' do
+      result = execute_graphql(
+        query: mutation,
+        variables: {
+          input: {
+            id: customer.id,
+            invoiceGracePeriod: 12,
+          },
+        },
+      )
+
+      expect_unauthorized_error(result)
+    end
+  end
 end

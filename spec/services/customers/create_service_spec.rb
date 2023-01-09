@@ -28,7 +28,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     it 'creates a new customer' do
       result = customers_service.create_from_api(
-        organization: organization,
+        organization:,
         params: create_args,
       )
 
@@ -51,7 +51,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     it 'calls SegmentTrackJob' do
       customer = customers_service.create_from_api(
-        organization: organization,
+        organization:,
         params: create_args,
       ).customer
 
@@ -93,9 +93,8 @@ RSpec.describe Customers::CreateService, type: :service do
           customer = result.customer
           expect(customer.timezone).to eq(create_args[:timezone])
 
-          # TODO(:grace_period): Grace period update is turned off for now
-          # billing = create_args[:billing_configuration]
-          # expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+          billing = create_args[:billing_configuration]
+          expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         end
       end
     end
@@ -104,7 +103,7 @@ RSpec.describe Customers::CreateService, type: :service do
       let!(:customer) do
         create(
           :customer,
-          organization: organization,
+          organization:,
           external_id: create_args[:external_id],
           email: 'foo@bar.com',
         )
@@ -112,7 +111,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       it 'updates the customer' do
         result = customers_service.create_from_api(
-          organization: organization,
+          organization:,
           params: create_args,
         )
 
@@ -148,13 +147,13 @@ RSpec.describe Customers::CreateService, type: :service do
         end
 
         before do
-          subscription = create(:subscription, customer: customer)
+          subscription = create(:subscription, customer:)
           customer.update!(currency: subscription.plan.amount_currency)
         end
 
         it 'fails is we change the subscription' do
           result = customers_service.create_from_api(
-            organization: organization,
+            organization:,
             params: create_args,
           )
 
@@ -167,24 +166,25 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
 
-      # TODO(:grace_period): Grace period update is turned off for now
-      # context 'when updating invoice grace period' do
-      #   let(:create_args) do
-      #     {
-      #       external_id: SecureRandom.uuid,
-      #       billing_configuration: { invoice_grace_period: 2 },
-      #     }
-      #   end
+      context 'when updating invoice grace period' do
+        around { |test| lago_premium!(&test) }
 
-      #   before do
-      #     allow(Customers::UpdateInvoiceGracePeriodService).to receive(:call)
-      #   end
+        let(:create_args) do
+          {
+            external_id: SecureRandom.uuid,
+            billing_configuration: { invoice_grace_period: 2 },
+          }
+        end
 
-      #   it 'calls UpdateInvoiceGracePeriodService' do
-      #     customers_service.create_from_api(organization:, params: create_args)
-      #     expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
-      #   end
-      # end
+        before do
+          allow(Customers::UpdateInvoiceGracePeriodService).to receive(:call)
+        end
+
+        it 'calls UpdateInvoiceGracePeriodService' do
+          customers_service.create_from_api(organization:, params: create_args)
+          expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
+        end
+      end
     end
 
     context 'with validation error' do
@@ -196,7 +196,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       it 'return a failed result' do
         result = customers_service.create_from_api(
-          organization: organization,
+          organization:,
           params: create_args,
         )
 
@@ -218,7 +218,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       it 'creates a stripe customer' do
         result = customers_service.create_from_api(
-          organization: organization,
+          organization:,
           params: create_args,
         )
 
@@ -320,7 +320,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       it 'creates a gocardless customer' do
         result = customers_service.create_from_api(
-          organization: organization,
+          organization:,
           params: create_args,
         )
 
@@ -353,7 +353,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       it 'does not create a payment provider customer' do
         result = customers_service.create_from_api(
-          organization: organization,
+          organization:,
           params: create_args,
         )
 
@@ -372,7 +372,7 @@ RSpec.describe Customers::CreateService, type: :service do
     context 'when billing configuration is not provided' do
       it 'creates a payment provider customer' do
         result = customers_service.create_from_api(
-          organization: organization,
+          organization:,
           params: create_args,
         )
 
@@ -391,7 +391,7 @@ RSpec.describe Customers::CreateService, type: :service do
         before do
           create(
             :customer,
-            organization: organization,
+            organization:,
             external_id: create_args[:external_id],
             email: 'foo@bar.com',
           )
@@ -399,7 +399,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
         it 'does not create a payment provider customer' do
           result = customers_service.create_from_api(
-            organization: organization,
+            organization:,
             params: create_args,
           )
 
@@ -487,9 +487,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
           customer = result.customer
           expect(customer.timezone).to eq('Europe/Paris')
-
-          # TODO(:grace_period): Grace period update is turned off for now
-          # expect(customer.invoice_grace_period).to eq(2)
+          expect(customer.invoice_grace_period).to eq(2)
         end
       end
     end

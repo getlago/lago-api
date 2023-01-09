@@ -12,7 +12,7 @@ RSpec.describe Customers::UpdateService, type: :service do
   describe 'update' do
     let(:user) { membership.user }
 
-    let(:customer) { create(:customer, organization: organization) }
+    let(:customer) { create(:customer, organization:) }
     let(:external_id) { SecureRandom.uuid }
 
     let(:update_args) do
@@ -58,9 +58,8 @@ RSpec.describe Customers::UpdateService, type: :service do
         aggregate_failures do
           expect(updated_customer.timezone).to eq('Europe/Paris')
 
-          # TODO(:grace_period): Grace period update is turned off for now
-          # billing = update_args[:billing_configuration]
-          # expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+          billing = update_args[:billing_configuration]
+          expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         end
       end
     end
@@ -70,7 +69,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         {
           id: customer.id,
           name: 'Updated customer name',
-          external_id: external_id,
+          external_id:,
           invoice_grace_period: 3,
           vat_rate: 20,
         }
@@ -79,8 +78,6 @@ RSpec.describe Customers::UpdateService, type: :service do
       it 'updates billing information' do
         result = customers_service.update(**update_args)
 
-        # TODO(:grace_period): Grace period update is turned off for now
-        # expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
         expect(result.customer.vat_rate).to eq(update_args[:vat_rate])
       end
     end
@@ -101,7 +98,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
     context 'when attached to a subscription' do
       before do
-        subscription = create(:subscription, customer: customer)
+        subscription = create(:subscription, customer:)
         customer.update!(currency: subscription.plan.amount_currency)
       end
 
@@ -141,7 +138,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         {
           id: customer.id,
           name: 'Updated customer name',
-          external_id: external_id,
+          external_id:,
           payment_provider: 'stripe',
         }
       end
@@ -196,7 +193,7 @@ RSpec.describe Customers::UpdateService, type: :service do
             }
           end
 
-          let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+          let(:stripe_customer) { create(:stripe_customer, customer:) }
 
           before do
             stripe_customer
