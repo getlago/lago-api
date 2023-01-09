@@ -29,5 +29,9 @@ FactoryBot.define do
         )
       end
     end
+
+    trait :draft do
+      status { :draft }
+    end
   end
 end
