@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Api::V1::CreditNotesController, type: :request do
   let(:organization) { invoice.organization }
   let(:customer) { invoice.customer }
-  let(:credit_note) { create(:credit_note, invoice: invoice, customer: customer) }
-  let(:credit_note_items) { create_list(:credit_note_item, 2, credit_note: credit_note) }
+  let(:credit_note) { create(:credit_note, invoice:, customer:) }
+  let(:credit_note_items) { create_list(:credit_note_item, 2, credit_note:) }
 
   let(:invoice) do
     create(
@@ -69,11 +69,23 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
+    context 'when credit note is draft' do
+      let(:credit_note) { create(:credit_note, :draft) }
+
+      it 'returns not found' do
+        get_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}")
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
     context 'when credit note belongs to another organization' do
       let(:wrong_credit_note) { create(:credit_note) }
 
       it 'returns not found' do
         get_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}")
+
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
@@ -94,6 +106,16 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
     context 'when credit note does not exist' do
       it 'returns a not found error' do
+        put_with_token(organization, '/api/v1/credit_notes/555', credit_note: update_params)
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when credit note is draft' do
+      let(:credit_note) { create(:credit_note, :draft) }
+
+      it 'returns not found' do
         put_with_token(organization, '/api/v1/credit_notes/555', credit_note: update_params)
 
         expect(response).to have_http_status(:not_found)
@@ -122,7 +144,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'when a file is attached to the credit note' do
-      let(:credit_note) { create(:credit_note, :with_file, invoice: invoice, customer: customer) }
+      let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
 
       it 'returns the credit note object' do
         post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
@@ -134,9 +156,19 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'when credit note does not exists' do
+    context 'when credit note does not exist' do
       it 'returns not found' do
         post_with_token(organization, '/api/v1/credit_notes/foo/download')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when credit note is draft' do
+      let(:credit_note) { create(:credit_note, :draft) }
+
+      it 'returns not found' do
+        post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
 
         expect(response).to have_http_status(:not_found)
       end
@@ -153,14 +185,16 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'GET /credits_notes' do
-    let(:second_customer) { create(:customer, organization: organization) }
+  describe 'GET /credit_notes' do
+    let(:second_customer) { create(:customer, organization:) }
     let(:second_invoice) { create(:invoice, customer: second_customer) }
     let(:second_credit_note) { create(:credit_note, invoice: second_invoice, customer: second_invoice.customer) }
+    let(:draft_credit_note) { create(:credit_note, :draft, customer: second_customer) }
 
     before do
       credit_note
       second_credit_note
+      draft_credit_note
     end
 
     it 'returns a list of credit_notes' do
@@ -206,14 +240,14 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
   end
 
   describe 'POST /credit_notes' do
-    let(:fee1) { create(:fee, invoice: invoice) }
-    let(:fee2) { create(:charge_fee, invoice: invoice) }
+    let(:fee1) { create(:fee, invoice:) }
+    let(:fee2) { create(:charge_fee, invoice:) }
 
     let(:invoice_id) { invoice.id }
 
     let(:create_params) do
       {
-        invoice_id: invoice_id,
+        invoice_id:,
         reason: 'duplicated_charge',
         description: 'Duplicated charge',
         credit_amount_cents: 10,
@@ -274,6 +308,15 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context 'when invoice is draft' do
+      it 'returns not found' do
+        invoice.update!(status: :draft)
+        post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
   end
 
   describe 'PUT /credit_notes/:id/void' do
@@ -292,6 +335,16 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     context 'when credit note does not exist' do
       it 'returns a not found error' do
         put_with_token(organization, '/api/v1/credit_notes/555/void')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when credit note is draft' do
+      let(:credit_note) { create(:credit_note, :draft) }
+
+      it 'returns not found' do
+        put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
 
         expect(response).to have_http_status(:not_found)
       end
