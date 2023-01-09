@@ -1,4 +1,4 @@
-# frozen_string_literal
+# frozen_string_literal: true
 
 module Resolvers
   class CouponsResolver < GraphQL::Schema::Resolver
@@ -11,22 +11,25 @@ module Resolvers
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
     argument :status, Types::Coupons::StatusEnum, required: false
+    argument :search_term, String, required: false
 
     type Types::Coupons::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, status: nil)
+    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)
       validate_organization!
 
-      coupons = current_organization
-        .coupons
-        .order_by_status_and_expiration
-        .page(page)
-        .per(limit)
+      query = CouponsQuery.new(organization: current_organization)
+      result = query.call(
+        search_term:,
+        page:,
+        limit:,
+        status:,
+        filters: {
+          ids:,
+        },
+      )
 
-      coupons = coupons.where(status: status) if status.present?
-      coupons = coupons.where(id: ids) if ids.present?
-
-      coupons
+      result.coupons
     end
   end
 end
