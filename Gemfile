@@ -6,6 +6,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '3.1.3'
 
 gem 'activejob-traceable'
+gem 'activejob-uniqueness', require: 'active_job/uniqueness/sidekiq_patch'
 gem 'analytics-ruby', '~> 2.4.0', require: 'segment/analytics'
 gem 'bcrypt'
 gem 'bootsnap', require: false
