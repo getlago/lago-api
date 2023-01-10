@@ -5,6 +5,49 @@ require 'rails_helper'
 describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
+  context 'when subscription is terminated with a grace period' do
+    let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+    let(:metric) { create(:billable_metric, organization:) }
+
+    it 'does not update the invoice amount on refresh' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Terminate subscription + refresh.
+      dec20 = DateTime.new(2022, 12, 20)
+
+      travel_to(dec20) do
+        expect {
+          terminate_subscription(subscription)
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.total_amount_cents).to eq(233) # 12 / 31 * 6
+
+        # Refresh invoice
+        expect {
+          refresh_invoice(invoice)
+        }.not_to change { invoice.reload.total_amount_cents }
+      end
+    end
+  end
+
   context 'when invoice is paid in advance and grace period' do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }

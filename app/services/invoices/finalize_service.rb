@@ -54,14 +54,6 @@ module Invoices
     end
 
     def track_credit_note_created(credit_note)
-      types = if credit_note.credited? && credit_note.refunded?
-        'both'
-      elsif credit_note.credited?
-        'credit'
-      elsif credit_note.refunded?
-        'refund'
-      end
-
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
         event: 'credit_note_issued',
@@ -69,7 +61,7 @@ module Invoices
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
-          credit_note_method: types,
+          credit_note_method: 'credit',
         },
       )
     end

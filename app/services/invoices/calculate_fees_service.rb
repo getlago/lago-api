@@ -63,7 +63,6 @@ module Invoices
         subscription,
         Time.zone.at(timestamp),
         current_usage: subscription.terminated? && subscription.upgraded?,
-        refresh_or_finalize: refresh? || context == :finalize,
       )
     end
 
@@ -162,13 +161,13 @@ module Invoices
     end
 
     def should_create_credit_note_credit?
-      return false if refresh?
+      return false if not_in_finalizing_process?
 
       credit_notes.any?
     end
 
     def should_create_coupon_credit?
-      return false if refresh?
+      return false if not_in_finalizing_process?
       return false if applied_coupons.blank?
       return false unless invoice.amount_cents&.positive?
 
@@ -176,7 +175,7 @@ module Invoices
     end
 
     def should_create_applied_prepaid_credit?
-      return false if refresh?
+      return false if not_in_finalizing_process?
       return false unless wallet&.active?
       return false unless invoice.total_amount_cents&.positive?
 
@@ -233,8 +232,8 @@ module Invoices
       }
     end
 
-    def refresh?
-      context == :refresh
+    def not_in_finalizing_process?
+      invoice.draft? && context != :finalize
     end
   end
 end
