@@ -35,6 +35,7 @@ Rails.application.routes.draw do
       resources :applied_add_ons, only: %i[create]
       resources :invoices, only: %i[update show index] do
         post :download, on: :member
+        post :retry_payment, on: :member
         put :refresh, on: :member
         put :finalize, on: :member
       end

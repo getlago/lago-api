@@ -18,6 +18,8 @@ module Invoices
           return result
         end
 
+        increment_payment_attempts
+
         stripe_result = create_stripe_payment
 
         payment = Payment.new(
@@ -48,7 +50,7 @@ module Invoices
         return result if payment.invoice.succeeded?
 
         payment.update!(status: status)
-        payment.invoice.update!(payment_status: status)
+        payment.invoice.update!(payment_status: status, ready_for_payment_processing: status != 'succeeded')
         handle_prepaid_credits(payment.invoice, status)
         track_payment_status_changed(payment.invoice)
 
@@ -105,7 +107,7 @@ module Invoices
           stripe_payment_payload,
           {
             api_key: stripe_api_key,
-            idempotency_key: invoice.id,
+            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}",
           },
         )
       rescue Stripe::CardError, Stripe::InvalidRequestError => e
@@ -137,7 +139,14 @@ module Invoices
       def update_invoice_payment_status(payment_status)
         return unless Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
 
-        invoice.update!(payment_status: payment_status)
+        invoice.update!(
+          payment_status:,
+          ready_for_payment_processing: payment_status.to_s == 'failed',
+        )
+      end
+
+      def increment_payment_attempts
+        invoice.update!(payment_attempts: invoice.payment_attempts + 1)
       end
 
       def handle_prepaid_credits(invoice, payment_status)

@@ -33,6 +33,7 @@ module Types
     field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
+    field :invoices, resolver: Resolvers::InvoicesResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
   end

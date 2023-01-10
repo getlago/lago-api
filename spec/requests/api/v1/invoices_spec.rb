@@ -148,6 +148,25 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
       end
     end
+
+    context 'with payment status param' do
+      let(:invoice) { create(:invoice, customer:, payment_status: :succeeded) }
+      let(:invoice2) { create(:invoice, customer:, payment_status: :failed) }
+      let(:invoice3) { create(:invoice, customer:, payment_status: :pending) }
+
+      before do
+        invoice2
+        invoice3
+      end
+
+      it 'returns invoices with correct payment status' do
+        get_with_token(organization, '/api/v1/invoices?payment_status=pending')
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice3.id)
+      end
+    end
   end
 
   describe 'PUT /invoices/:id/refresh' do
@@ -232,6 +251,42 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     context 'when invoice is draft' do
       it 'returns not found' do
         post_with_token(organization, "/api/v1/invoices/#{invoice.id}/download")
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe 'GET /invoices/:id/retry_payment' do
+    let(:retry_service) { instance_double(Invoices::Payments::RetryService) }
+
+    before do
+      allow(Invoices::Payments::RetryService).to receive(:new).and_return(retry_service)
+      allow(retry_service).to receive(:call).and_return(BaseService::Result.new)
+    end
+
+    it 'calls retry service' do
+      post_with_token(organization, "/api/v1/invoices/#{invoice.id}/retry_payment")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+        expect(retry_service).to have_received(:call)
+      end
+    end
+
+    context 'when invoice does not exist' do
+      it 'returns not found' do
+        get_with_token(organization, '/api/v1/invoices/555/retry_payment')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when invoices belongs to an other organization' do
+      let(:invoice) { create(:invoice) }
+
+      it 'returns not found' do
+        get_with_token(organization, "/api/v1/invoices/#{invoice.id}/retry_payment")
+
         expect(response).to have_http_status(:not_found)
       end
     end

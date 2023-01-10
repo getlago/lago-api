@@ -3,7 +3,7 @@
 module Invoices
   module Payments
     class GocardlessService < BaseService
-      PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed resubmission_requested]
+      PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
         .freeze
       SUCCESS_STATUSES = %w[paid_out].freeze
       FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
@@ -22,6 +22,8 @@ module Invoices
           update_invoice_payment_status(:succeeded)
           return result
         end
+
+        increment_payment_attempts
 
         gocardless_result = create_gocardless_payment
 
@@ -56,7 +58,10 @@ module Invoices
         payment.update!(status: status)
 
         invoice_payment_status = invoice_payment_status(status)
-        payment.invoice.update!(payment_status: invoice_payment_status)
+        payment.invoice.update!(
+          payment_status: invoice_payment_status,
+          ready_for_payment_processing: invoice_payment_status != 'succeeded',
+        )
         handle_prepaid_credits(payment.invoice, invoice_payment_status)
         track_payment_status_changed(payment.invoice)
 
@@ -110,7 +115,7 @@ module Invoices
           params: {
             amount: invoice.total_amount_cents,
             currency: invoice.total_amount_currency.upcase,
-            retry_if_possible: true,
+            retry_if_possible: false,
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
@@ -121,7 +126,7 @@ module Invoices
             },
           },
           headers: {
-            'Idempotency-Key' => invoice.id,
+            'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}",
           },
         )
       rescue GoCardlessPro::Error => e
@@ -142,7 +147,14 @@ module Invoices
       def update_invoice_payment_status(payment_status)
         return unless Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
 
-        invoice.update!(payment_status: payment_status)
+        invoice.update!(
+          payment_status:,
+          ready_for_payment_processing: payment_status.to_s == 'failed',
+        )
+      end
+
+      def increment_payment_attempts
+        invoice.update!(payment_attempts: invoice.payment_attempts + 1)
       end
 
       def handle_prepaid_credits(invoice, invoice_payment_status)

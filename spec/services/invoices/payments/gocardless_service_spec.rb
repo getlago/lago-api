@@ -20,6 +20,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       customer: customer,
       total_amount_cents: 200,
       total_amount_currency: 'EUR',
+      ready_for_payment_processing: true,
     )
   end
 
@@ -56,6 +57,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
       aggregate_failures do
         expect(result.invoice).to be_succeeded
+        expect(result.invoice.payment_attempts).to eq(1)
+        expect(result.invoice.ready_for_payment_processing).to eq(false)
 
         expect(result.payment.id).to be_present
         expect(result.payment.invoice).to eq(invoice)
@@ -234,6 +237,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       expect(result).to be_success
       expect(result.payment.status).to eq('paid_out')
       expect(result.invoice.payment_status).to eq('succeeded')
+      expect(result.invoice.ready_for_payment_processing).to eq(false)
     end
 
     it 'calls SegmentTrackJob' do
@@ -251,6 +255,20 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           payment_status: invoice.payment_status,
         },
       )
+    end
+
+    context 'when status is failed' do
+      it 'updates the payment and invoice status' do
+        result = gocardless_service.update_payment_status(
+          provider_payment_id: 'ch_123456',
+          status: 'failed',
+        )
+
+        expect(result).to be_success
+        expect(result.payment.status).to eq('failed')
+        expect(result.invoice.payment_status).to eq('failed')
+        expect(result.invoice.ready_for_payment_processing).to eq(true)
+      end
     end
 
     context 'when invoice is already succeeded' do
