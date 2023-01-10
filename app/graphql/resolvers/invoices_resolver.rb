@@ -20,7 +20,7 @@ module Resolvers
 
       invoices = current_organization
         .invoices
-        .order(issuing_date: :desc)
+        .order(issuing_date: :desc, created_at: :desc)
         .page(page)
         .per(limit)
 
