@@ -2,6 +2,7 @@
 
 class CreditNote < ApplicationRecord
   include Sequenced
+  include RansackUuidSearch
 
   before_save :ensure_number
 
