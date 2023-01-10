@@ -230,7 +230,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('02 Mar 2022'),
+            terminated_at: DateTime.parse('02 Jan 2022'),
           )
         end
 
