@@ -16,8 +16,8 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer_first) { create(:customer, organization: organization) }
-  let(:customer_second) { create(:customer, organization: organization) }
+  let(:customer_first) { create(:customer, organization:) }
+  let(:customer_second) { create(:customer, organization:) }
   let(:invoice_first) { create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized) }
   let(:invoice_second) { create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized) }
 
@@ -30,7 +30,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
     )
 
     invoices_response = result['data']['invoices']
@@ -62,7 +62,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
       )
 
       invoices_response = result['data']['invoices']
@@ -117,11 +117,11 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end
@@ -132,11 +132,11 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query,
+        query:,
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Not in organization',
       )
     end

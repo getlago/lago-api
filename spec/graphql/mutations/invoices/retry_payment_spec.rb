@@ -5,14 +5,14 @@ require 'rails_helper'
 RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization, payment_provider: 'gocardless') }
-  let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
-  let(:gocardless_customer) { create(:gocardless_customer, customer: customer) }
+  let(:customer) { create(:customer, organization:, payment_provider: 'gocardless') }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
+  let(:gocardless_customer) { create(:gocardless_customer, customer:) }
   let(:user) { membership.user }
   let(:invoice) do
     create(
       :invoice,
-      customer: customer,
+      customer:,
       status: 'finalized',
       payment_status: 'failed',
       ready_for_payment_processing: true,

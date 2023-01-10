@@ -148,8 +148,8 @@ module Invoices
         return unless Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
 
         invoice.update!(
-          payment_status: payment_status,
-          ready_for_payment_processing: payment_status.to_s == 'failed'
+          payment_status:,
+          ready_for_payment_processing: payment_status.to_s == 'failed',
         )
       end
 

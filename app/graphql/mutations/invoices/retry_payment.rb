@@ -17,8 +17,7 @@ module Mutations
         validate_organization!
 
         invoice = current_organization.invoices.find_by(id: args[:id])
-
-        result = ::Invoices::Payments::RetryService.new(invoice: invoice).call
+        result = ::Invoices::Payments::RetryService.new(invoice:).call
 
         result.success? ? result.invoice : result_error(result)
       end

@@ -150,9 +150,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'with payment status param' do
-      let(:invoice) { create(:invoice, customer: customer, payment_status: :succeeded) }
-      let(:invoice2) { create(:invoice, customer: customer, payment_status: :failed) }
-      let(:invoice3) { create(:invoice, customer: customer, payment_status: :pending) }
+      let(:invoice) { create(:invoice, customer:, payment_status: :succeeded) }
+      let(:invoice2) { create(:invoice, customer:, payment_status: :failed) }
+      let(:invoice3) { create(:invoice, customer:, payment_status: :pending) }
 
       before do
         invoice2
