@@ -257,6 +257,17 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               expect(result.credit_note).to be_draft
             end
           end
+
+          it 'does not deliver a webhook' do
+            create_service.call
+            expect(SendWebhookJob).not_to have_been_enqueued.with('credit_note.created', CreditNote)
+          end
+
+          it 'does not call SegmentTrackJob' do
+            allow(SegmentTrackJob).to receive(:perform_later)
+            create_service.call
+            expect(SegmentTrackJob).not_to have_received(:perform_later)
+          end
         end
 
         context 'when invoice is a prepaid credit invoice' do

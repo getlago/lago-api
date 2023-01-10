@@ -19,10 +19,15 @@ module Invoices
         result.raise_if_error!
 
         invoice.update!(status: :finalized, issuing_date:)
-        invoice.credit_notes.each(&:finalized!)
         SendWebhookJob.perform_later(:invoice, invoice) if invoice.organization.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
+
+        invoice.credit_notes.each do |credit_note|
+          credit_note.finalized!
+          track_credit_note_created(credit_note)
+          SendWebhookJob.perform_later('credit_note.created', credit_note)
+        end
 
         result
       end
@@ -44,6 +49,27 @@ module Invoices
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type,
+        },
+      )
+    end
+
+    def track_credit_note_created(credit_note)
+      types = if credit_note.credited? && credit_note.refunded?
+        'both'
+      elsif credit_note.credited?
+        'credit'
+      elsif credit_note.refunded?
+        'refund'
+      end
+
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'credit_note_issued',
+        properties: {
+          organization_id: credit_note.organization.id,
+          credit_note_id: credit_note.id,
+          invoice_id: credit_note.invoice_id,
+          credit_note_method: types,
         },
       )
     end
