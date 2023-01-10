@@ -11,24 +11,25 @@ module Resolvers
     argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :search_term, String, required: false
 
     type Types::CreditNotes::Object.collection_type, null: true
 
-    def resolve(customer_id: nil, ids: nil, page: nil, limit: nil)
+    def resolve(customer_id: nil, ids: nil, page: nil, limit: nil, search_term: nil)
       validate_organization!
 
-      current_customer = Customer.find(customer_id)
+      query = CustomerCreditNotesQuery.new(organization: current_organization)
+      result = query.call(
+        search_term:,
+        page:,
+        customer_id:,
+        limit:,
+        filters: {
+          ids:,
+        },
+      )
 
-      credit_notes = current_customer
-        .credit_notes
-        .finalized
-        .order(created_at: :desc)
-        .page(page)
-        .per(limit)
-
-      credit_notes = credit_notes.where(id: ids) if ids.present?
-
-      credit_notes
+      result.credit_notes
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'customer')
     end
