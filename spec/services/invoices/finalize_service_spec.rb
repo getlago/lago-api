@@ -31,14 +31,12 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:started_at) { Time.zone.now - 2.years }
-    let(:credit_note) { create(:credit_note, :draft, invoice:) }
     let(:fee) { create(:fee, invoice:, subscription:) }
-
     let(:plan) { create(:plan, interval: 'monthly') }
+    let(:credit_note) { create(:credit_note, :draft, invoice:) }
 
     before do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
-      create(:credit_note_item, credit_note:, fee:)
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
@@ -48,11 +46,6 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     it 'marks the invoice as finalized' do
       expect { finalize_service.call }
         .to change(invoice, :status).from('draft').to('finalized')
-    end
-
-    it 'marks the credit notes as finalized' do
-      expect { finalize_service.call }
-        .to change { credit_note.reload.status }.from('draft').to('finalized')
     end
 
     it 'updates the issuing date' do
@@ -132,6 +125,39 @@ RSpec.describe Invoices::FinalizeService, type: :service do
           expect(result.invoice.fees.charge_kind.count).to eq(1)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
         end
+      end
+    end
+
+    context 'with credit notes' do
+      before do
+        create(:credit_note_item, credit_note:, fee:)
+      end
+
+      it 'marks the credit notes as finalized' do
+        expect { finalize_service.call }
+          .to change { credit_note.reload.status }.from('draft').to('finalized')
+      end
+
+      it 'calls SegmentTrackJob' do
+        invoice = finalize_service.call.invoice
+        credit_note = invoice.credit_notes.first
+
+        expect(SegmentTrackJob).to have_received(:perform_later).with(
+          membership_id: CurrentContext.membership,
+          event: 'credit_note_issued',
+          properties: {
+            organization_id: credit_note.organization.id,
+            credit_note_id: credit_note.id,
+            invoice_id: credit_note.invoice_id,
+            credit_note_method: 'credit',
+          },
+        )
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          finalize_service.call
+        end.to have_enqueued_job(SendWebhookJob).with('credit_note.created', CreditNote)
       end
     end
   end

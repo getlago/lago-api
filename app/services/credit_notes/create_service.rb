@@ -57,9 +57,11 @@ module CreditNotes
         )
       end
 
-      track_credit_note_created
-      deliver_webhook
-      handle_refund if should_handle_refund?
+      if credit_note.finalized?
+        track_credit_note_created
+        deliver_webhook
+        handle_refund if should_handle_refund?
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
