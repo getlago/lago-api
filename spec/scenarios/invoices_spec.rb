@@ -292,6 +292,42 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         expect(new_invoice.total_amount_cents).to eq(1560)
       end
     end
+
+    context 'when upgrading from pay in arrear to pay in advance plan' do
+      let(:pay_in_arrear_plan) { create(:plan, organization:, amount_cents: 1000) }
+      let(:pay_in_advance_plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 1000) }
+
+      it 'creates two draft invoices' do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: pay_in_arrear_plan.code,
+          },
+        )
+
+        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
+
+        # Upgrade to pay in advance plan
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: pay_in_advance_plan.code,
+          },
+        )
+
+        expect(customer.invoices.draft.count).to eq(2)
+
+        pay_in_arrear_subscription = customer.subscriptions.terminated.first
+        pay_in_arrear_invoice = pay_in_arrear_subscription.invoices.first
+
+        # Paid in advance invoice amount does not change.
+        expect {
+          refresh_invoice(pay_in_arrear_invoice)
+        }.not_to change { pay_in_arrear_invoice.reload.total_amount_cents }
+      end
+    end
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.

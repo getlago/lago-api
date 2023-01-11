@@ -30,7 +30,7 @@ module Invoices
         calculate_result = Invoices::CalculateFeesService.call(
           invoice:,
           subscriptions: Subscription.find(subscription_ids),
-          timestamp: invoice.created_at.to_i,
+          timestamp: invoice.created_at.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
           context:,
         )
 

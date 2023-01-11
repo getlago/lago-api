@@ -176,7 +176,7 @@ module Subscriptions
       BillSubscriptionJob.set(wait: 2.seconds)
         .perform_later(
           [current_subscription],
-          Time.zone.now.to_i,
+          Time.zone.now.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
         )
 
       if current_plan.pay_in_advance?
@@ -186,7 +186,7 @@ module Subscriptions
           .set(wait: 2.seconds)
           .perform_later(
             [new_subscription],
-            Time.zone.now.to_i,
+            Time.zone.now.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
           )
       end
 
