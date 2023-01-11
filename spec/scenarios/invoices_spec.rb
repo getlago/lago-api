@@ -328,6 +328,37 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
         }.not_to change { pay_in_arrear_invoice.reload.total_amount_cents }
       end
     end
+
+    context 'when invoice grace period is removed' do
+      let(:organization) { create(:organization, webhook_url: nil, invoice_grace_period: 3) }
+      let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
+
+      around { |test| lago_premium!(&test) }
+
+      it 'finalizes draft invoices' do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
+
+        invoice = Invoice.draft.first
+
+        params = {
+          external_id: customer.external_id,
+          billing_configuration: { invoice_grace_period: 0 },
+        }
+
+        expect {
+          create_or_update_customer(params)
+        }.to change { customer.reload.invoice_grace_period }.from(3).to(0)
+          .and change { invoice.reload.status }.from('draft').to('finalized')
+      end
+    end
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.
@@ -360,6 +391,11 @@ describe 'Invoices Scenarios', :invoices_scenarios, type: :request do
 
   def terminate_subscription(subscription)
     delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
+    perform_all_enqueued_jobs
+  end
+
+  def create_or_update_customer(params)
+    post_with_token(organization, '/api/v1/customers', { customer: params })
     perform_all_enqueued_jobs
   end
 end
