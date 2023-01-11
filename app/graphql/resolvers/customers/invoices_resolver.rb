@@ -12,16 +12,23 @@ module Resolvers
       argument :status, Types::Invoices::StatusTypeEnum, required: false
       argument :page, Integer, required: false
       argument :limit, Integer, required: false
+      argument :search_term, String, required: false
 
       type Types::Invoices::Object.collection_type, null: false
 
-      def resolve(customer_id:, status: nil, page: nil, limit: nil)
+      def resolve(customer_id: nil, status: nil, page: nil, limit: nil, search_term: nil)
         validate_organization!
-        current_customer = Customer.find(customer_id)
 
-        invoices = current_customer.invoices
-        invoices = invoices.where(status: status) if status.present?
-        invoices.order(created_at: :desc).page(page).per(limit)
+        query = CustomerInvoicesQuery.new(organization: current_organization)
+        result = query.call(
+          search_term:,
+          customer_id:,
+          page:,
+          limit:,
+          status:,
+        )
+
+        result.invoices
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: 'customer')
       end
