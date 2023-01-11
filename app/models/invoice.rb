@@ -48,10 +48,7 @@ class Invoice < ApplicationRecord
           date = <<-SQL
             (
               invoices.created_at +
-              COALESCE(
-                NULLIF(customers.invoice_grace_period, 0),
-                organizations.invoice_grace_period
-              ) * INTERVAL '1 DAY'
+              COALESCE(customers.invoice_grace_period, organizations.invoice_grace_period) * INTERVAL '1 DAY'
             )
           SQL
 
