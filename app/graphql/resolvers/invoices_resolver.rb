@@ -12,23 +12,33 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :status, Types::Invoices::StatusTypeEnum, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
+    argument :search_term, String, required: false
 
     type Types::Invoices::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, payment_status: nil, status: nil)
+    def resolve( # rubocop:disable Metrics/ParameterLists
+      ids: nil,
+      page: nil,
+      limit: nil,
+      payment_status: nil,
+      status: nil,
+      search_term: nil
+    )
       validate_organization!
 
-      invoices = current_organization
-        .invoices
-        .order(issuing_date: :desc, created_at: :desc)
-        .page(page)
-        .per(limit)
+      query = InvoicesQuery.new(organization: current_organization)
+      result = query.call(
+        search_term:,
+        page:,
+        limit:,
+        payment_status:,
+        status:,
+        filters: {
+          ids:,
+        },
+      )
 
-      invoices = invoices.where(status:) if status.present?
-      invoices = invoices.where(payment_status:) if payment_status.present?
-      invoices = invoices.where(id: ids) if ids.present?
-
-      invoices
+      result.invoices
     end
   end
 end

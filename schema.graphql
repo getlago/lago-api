@@ -3915,6 +3915,7 @@ type Query {
     limit: Int
     page: Int
     paymentStatus: [InvoicePaymentStatusTypeEnum!]
+    searchTerm: String
     status: InvoiceStatusTypeEnum
   ): InvoiceCollection!
 
