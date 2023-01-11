@@ -277,6 +277,28 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is subscription.terminated' do
+    let(:webhook_service) { instance_double(Webhooks::Subscriptions::TerminatedService) }
+    let(:subscription) { create(:subscription) }
+
+    before do
+      allow(Webhooks::Subscriptions::TerminatedService).to receive(:new)
+        .with(subscription)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        'subscription.terminated',
+        subscription,
+      )
+
+      expect(Webhooks::Subscriptions::TerminatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
       expect { send_webhook_job.perform_now(:subscription, invoice) }

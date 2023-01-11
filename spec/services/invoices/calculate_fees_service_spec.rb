@@ -5,10 +5,10 @@ require 'rails_helper'
 RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
     described_class.new(
-      invoice: invoice,
-      subscriptions: subscriptions,
+      invoice:,
+      subscriptions:,
       timestamp: timestamp.to_i,
-      recurring: recurring,
+      recurring:,
     )
   end
 
@@ -29,9 +29,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
+        plan:,
         subscription_at: started_at,
-        started_at: started_at,
+        started_at:,
         created_at: started_at,
       )
     end
@@ -41,7 +41,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:started_at) { Time.zone.now - 2.years }
 
-    let(:plan) { create(:plan, interval: 'monthly', pay_in_advance: pay_in_advance) }
+    let(:plan) { create(:plan, interval: 'monthly', pay_in_advance:) }
     let(:pay_in_advance) { false }
 
     before do
@@ -57,7 +57,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:pay_in_advance) { true }
         let(:timestamp) { Time.current.to_i }
 
-        before { create(:fee, subscription: subscription) }
+        before { create(:fee, subscription:) }
 
         it 'does not create any subscription fees' do
           result = invoice_service.call
@@ -78,9 +78,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription) do
           create(
             :subscription,
-            plan: plan,
+            plan:,
             subscription_at: started_at.to_date,
-            started_at: started_at,
+            started_at:,
             created_at: timestamp,
           )
         end
@@ -116,9 +116,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription) do
           create(
             :subscription,
-            plan: plan,
-            subscription_at: subscription_at,
-            started_at: started_at,
+            plan:,
+            subscription_at:,
+            started_at:,
             billing_time: :anniversary,
             created_at: started_at,
           )
@@ -170,7 +170,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription2) do
         create(
           :subscription,
-          plan: plan,
+          plan:,
           customer: subscription.customer,
           subscription_at: (Time.zone.now - 2.years).to_date,
           started_at: Time.zone.now - 2.years,
@@ -206,9 +206,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          plan: plan,
+          plan:,
           subscription_at: started_at.to_date,
-          started_at: started_at,
+          started_at:,
           created_at: started_at,
         )
       end
@@ -238,7 +238,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_week }
 
       let(:plan) do
-        create(:plan, interval: 'weekly', pay_in_advance: pay_in_advance)
+        create(:plan, interval: 'weekly', pay_in_advance:)
       end
 
       it 'updates the invoice accordingly' do
@@ -265,9 +265,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription) do
           create(
             :subscription,
-            plan: plan,
-            subscription_at: subscription_at,
-            started_at: started_at,
+            plan:,
+            subscription_at:,
+            started_at:,
             billing_time: :anniversary,
             created_at: started_at,
           )
@@ -314,9 +314,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          plan: plan,
+          plan:,
           subscription_at: started_at.to_date,
-          started_at: started_at,
+          started_at:,
           created_at: started_at,
         )
       end
@@ -346,7 +346,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_year }
 
       let(:plan) do
-        create(:plan, interval: 'yearly', pay_in_advance: pay_in_advance)
+        create(:plan, interval: 'yearly', pay_in_advance:)
       end
 
       it 'updates the invoice accordingly' do
@@ -373,9 +373,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription) do
           create(
             :subscription,
-            plan: plan,
-            subscription_at: subscription_at,
-            started_at: started_at,
+            plan:,
+            subscription_at:,
+            started_at:,
             billing_time: :anniversary,
             created_at: started_at,
           )
@@ -425,9 +425,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          plan: plan,
+          plan:,
           subscription_at: started_at.to_date,
-          started_at: started_at,
+          started_at:,
           created_at: started_at,
         )
       end
@@ -459,11 +459,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          plan: plan,
+          plan:,
           subscription_at: started_at.to_date,
-          started_at: started_at,
+          started_at:,
           status: :terminated,
-          terminated_at: terminated_at,
+          terminated_at:,
           created_at: started_at,
         )
       end
@@ -488,12 +488,12 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription) do
           create(
             :subscription,
-            plan: plan,
-            subscription_at: subscription_at,
-            started_at: started_at,
+            plan:,
+            subscription_at:,
+            started_at:,
             status: :terminated,
             billing_time: :anniversary,
-            terminated_at: terminated_at,
+            terminated_at:,
             created_at: started_at,
           )
         end
@@ -527,17 +527,17 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           :subscription,
           plan: previous_plan,
           subscription_at: started_at.to_date,
-          started_at: started_at,
+          started_at:,
           status: :terminated,
-          terminated_at: terminated_at,
+          terminated_at:,
         )
       end
 
       let(:subscription) do
         create(
           :subscription,
-          plan: plan,
-          previous_subscription: previous_subscription,
+          plan:,
+          previous_subscription:,
           subscription_at: started_at.to_date,
           started_at: terminated_at + 1.day,
           created_at: terminated_at + 1.day,
@@ -585,11 +585,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          plan: plan,
+          plan:,
           subscription_at: started_at.to_date,
-          started_at: started_at,
+          started_at:,
           status: :terminated,
-          terminated_at: terminated_at,
+          terminated_at:,
           billing_time: :calendar,
         )
       end
@@ -597,7 +597,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:next_plan) { create(:plan, interval: :monthly, amount_cents: 2000) }
 
       let(:charge) do
-        create(:standard_charge, plan: plan, properties: { amount: 100 })
+        create(:standard_charge, plan:, properties: { amount: 100 })
       end
 
       before { next_subscription }
@@ -746,7 +746,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:applied_coupon) do
           create(
             :applied_coupon,
-            coupon: coupon,
+            coupon:,
             customer: subscription.customer,
             percentage_rate: 15.00,
           )

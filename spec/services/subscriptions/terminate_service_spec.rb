@@ -24,6 +24,12 @@ RSpec.describe Subscriptions::TerminateService do
       end.to have_enqueued_job(BillSubscriptionJob)
     end
 
+    it 'enqueues a SendWebhookJob' do
+      expect do
+        terminate_service.terminate(subscription.id)
+      end.to have_enqueued_job(SendWebhookJob)
+    end
+
     context 'when subscription is starting in the future' do
       let(:subscription) { create(:pending_subscription) }
 
@@ -140,6 +146,15 @@ RSpec.describe Subscriptions::TerminateService do
       end.to have_enqueued_job(BillSubscriptionJob)
     end
 
+    it 'enqueues a SendWebhookJob' do
+      expect do
+        terminate_service.terminate_from_api(
+          organization:,
+          external_id: subscription.external_id,
+        )
+      end.to have_enqueued_job(SendWebhookJob)
+    end
+
     context 'when subscription is not found' do
       it 'returns an error' do
         result = terminate_service.terminate_from_api(
@@ -189,6 +204,12 @@ RSpec.describe Subscriptions::TerminateService do
         expect(result.subscription.id).to eq(next_subscription.id)
         expect(result.subscription).to be_active
       end
+    end
+
+    it 'enqueues a SendWebhookJob' do
+      expect do
+        terminate_service.terminate_and_start_next(subscription:, timestamp:)
+      end.to have_enqueued_job(SendWebhookJob)
     end
 
     context 'when terminated subscription is payed in arrear' do

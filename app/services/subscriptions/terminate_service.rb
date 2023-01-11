@@ -37,6 +37,11 @@ module Subscriptions
         timestamp,
       )
 
+      SendWebhookJob.perform_later(
+        'subscription.terminated',
+        subscription,
+      )
+
       result.subscription = next_subscription
       return result unless next_subscription.plan.pay_in_advance?
 
@@ -73,6 +78,11 @@ module Subscriptions
 
       # NOTE: Pending next subscription should be canceled as well
       subscription.next_subscription&.mark_as_canceled!
+
+      SendWebhookJob.perform_later(
+        'subscription.terminated',
+        subscription,
+      )
 
       result.subscription = subscription
       result
