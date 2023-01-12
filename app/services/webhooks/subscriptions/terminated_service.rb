@@ -15,7 +15,7 @@ module Webhooks
       end
 
       def object_type
-        'invoice'
+        'subscription'
       end
     end
   end
