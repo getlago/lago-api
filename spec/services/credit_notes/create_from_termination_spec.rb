@@ -96,6 +96,49 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       end
     end
 
+    context 'when existing credit notes on the fee' do
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer: subscription.customer,
+          invoice: subscription_fee.invoice,
+          credit_amount_cents: 90,
+        )
+      end
+
+      let(:credit_note_item) do
+        create(
+          :credit_note_item,
+          credit_note:,
+          fee: subscription_fee,
+          amount_cents: 90,
+        )
+      end
+
+      before { credit_note_item }
+
+      it 'takes the remaining creditable amount' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to be_available
+          expect(credit_note).to be_order_change
+          expect(credit_note.total_amount_cents).to eq(12)
+          expect(credit_note.total_amount_currency).to eq('EUR')
+          expect(credit_note.credit_amount_cents).to eq(12)
+          expect(credit_note.credit_amount_currency).to eq('EUR')
+          expect(credit_note.balance_amount_cents).to eq(12)
+          expect(credit_note.balance_amount_currency).to eq('EUR')
+          expect(credit_note.reason).to eq('order_change')
+
+          expect(credit_note.items.count).to eq(1)
+        end
+      end
+    end
+
     context 'when plan has trial period ending after terminated_at' do
       let(:plan) do
         create(

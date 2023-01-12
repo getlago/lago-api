@@ -15,6 +15,11 @@ module CreditNotes
       amount = compute_amount
       return result unless amount.positive?
 
+      # NOTE: if credit notes were already issued on the fee,
+      #       we take the remaining creditable amount
+      amount = last_subscription_fee.creditable_amount_cents if amount > last_subscription_fee.creditable_amount_cents
+      return result if amount.zero?
+
       vat_amount = (amount * last_subscription_fee.vat_rate).fdiv(100).ceil
 
       CreditNotes::CreateService.new(
