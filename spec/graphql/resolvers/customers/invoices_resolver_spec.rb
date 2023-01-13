@@ -109,7 +109,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
   end
 
   context 'when customer does not exists' do
-    it 'returns an error' do
+    it 'returns no results' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -117,10 +117,9 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
         variables: { customerId: '123456' },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Resource not found',
-      )
+      invoices_response = result['data']['customerInvoices']
+
+      expect(invoices_response['collection'].count).to eq(0)
     end
   end
 end
