@@ -15,6 +15,11 @@ module CreditNotes
       amount = compute_amount
       return result unless amount.positive?
 
+      # NOTE: if credit notes were already issued on the fee,
+      #       we have to deduct them from the prorated amount
+      amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
+      return result unless amount.positive?
+
       vat_amount = (amount * last_subscription_fee.vat_rate).fdiv(100).ceil
 
       CreditNotes::CreateService.new(
@@ -36,7 +41,7 @@ module CreditNotes
 
     attr_accessor :subscription, :reason
 
-    delegate :plan, :terminated_at, to: :subscription
+    delegate :plan, :terminated_at, :customer, to: :subscription
 
     def last_subscription_fee
       @last_subscription_fee ||= subscription.fees.order(created_at: :desc).last
@@ -58,15 +63,19 @@ module CreditNotes
     end
 
     def to_date
-      date_service.next_end_of_period.to_date # TODO: deal with timezone
+      date_service.next_end_of_period.to_date
     end
 
     def day_price
       date_service.single_day_price(optional_from_date: from_date)
     end
 
+    def terminated_at_in_timezone
+      terminated_at.in_time_zone(customer.applicable_timezone)
+    end
+
     def remaining_duration
-      billed_from = terminated_at.to_date
+      billed_from = terminated_at_in_timezone.to_date
 
       if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > to_date
