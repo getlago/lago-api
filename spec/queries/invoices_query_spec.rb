@@ -17,6 +17,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'succeeded',
       customer: customer_first,
+      number: '1111111111',
     )
   end
   let(:invoice_second) do
@@ -25,6 +26,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'pending',
       customer: customer_second,
+      number: '2222222222',
     )
   end
   let(:invoice_third) do
@@ -33,6 +35,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'failed',
       customer: customer_first,
+      number: '3333333333',
     )
   end
   let(:invoice_fourth) do
@@ -41,6 +44,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'draft',
       payment_status: 'pending',
       customer: customer_second,
+      number: '4444444444',
     )
   end
   let(:invoice_fifth) do
@@ -49,6 +53,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'draft',
       payment_status: 'pending',
       customer: customer_first,
+      number: '5555555555',
     )
   end
 
@@ -264,6 +269,51 @@ RSpec.describe InvoicesQuery, type: :query do
         expect(returned_ids).not_to include(invoice_third.id)
         expect(returned_ids).to include(invoice_fourth.id)
         expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+  end
+
+  context 'when searching for /44444444/ term' do
+    it 'returns 1 invoices' do
+      result = invoice_query.call(
+        customer_id: customer_second.id,
+        search_term: '44444444',
+        status: nil,
+        page: 1,
+        limit: 10,
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(result.invoices.count).to eq(1)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+  end
+
+  context 'when searching for another customer with no invoice' do
+    it 'returns 0 invoices' do
+      result = invoice_query.call(
+        customer_id: create(:customer, organization:).id,
+        search_term: nil,
+        status: nil,
+        page: 1,
+        limit: 10,
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(result.invoices.count).to eq(0)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
       end
     end
   end

@@ -19,7 +19,7 @@ module Resolvers
       def resolve(customer_id: nil, status: nil, page: nil, limit: nil, search_term: nil)
         validate_organization!
 
-        query = CustomerInvoicesQuery.new(organization: current_organization)
+        query = InvoicesQuery.new(organization: current_organization)
         result = query.call(
           search_term:,
           customer_id:,

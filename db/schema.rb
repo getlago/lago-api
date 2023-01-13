@@ -170,8 +170,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.string "refund_vat_amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
     t.string "vat_amount_currency"
-    t.datetime "refunded_at"
     t.date "issuing_date", null: false
+    t.datetime "refunded_at"
     t.integer "status", default: 1, null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
@@ -332,9 +332,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
     t.float "vat_rate"
+    t.integer "status", default: 1, null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency"
-    t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
