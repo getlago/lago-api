@@ -5,31 +5,42 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '3.1.3'
 
-gem 'activejob-traceable'
+# Core
 gem 'activejob-uniqueness', require: 'active_job/uniqueness/sidekiq_patch'
-gem 'analytics-ruby', '~> 2.4.0', require: 'segment/analytics'
-gem 'bcrypt'
 gem 'bootsnap', require: false
 gem 'clockwork', require: false
-gem 'countries'
-gem 'gocardless_pro', '~> 2.34'
-gem 'graphql'
-gem 'graphql-pagination'
-gem 'jwt'
-gem 'kaminari-activerecord'
-gem 'money-rails'
-gem 'oauth2'
-gem 'pg'
 gem 'puma', '~> 5.6'
-gem 'rack-cors'
-gem 'rails', '~> 7.0.3.1'
-gem 'ransack'
+gem 'rails', '~> 7.0.4'
 gem 'sidekiq'
-gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
+
+# Security
+gem 'bcrypt'
+gem 'jwt'
+gem 'oauth2'
+gem 'rack-cors'
+
+# Database
+gem 'kaminari-activerecord'
+gem 'pg'
+gem 'ransack'
 gem 'with_advisory_lock'
 
+# Currencies, Countries, Timezones...
+gem 'countries'
+gem 'money-rails'
+gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
+
+# GraphQL
+gem 'graphql'
+gem 'graphql-pagination'
+
 # Payment processing
+gem 'gocardless_pro', '~> 2.34'
 gem 'stripe'
+
+# Analytics
+gem 'activejob-traceable'
+gem 'analytics-ruby', '~> 2.4.0', require: 'segment/analytics'
 
 # Logging
 gem 'lograge'
