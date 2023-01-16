@@ -45,7 +45,7 @@ RSpec.describe Mutations::AppliedAddOns::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['addOn']['id']).to eq(add_on.id)
       expect(result_data['addOn']['name']).to eq(add_on.name)
-      expect(result_data['amountCents']).to eq(123)
+      expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['createdAt']).to be_present
     end

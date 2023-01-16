@@ -159,7 +159,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(result_data['code']).to eq('new_plan')
       expect(result_data['interval']).to eq('monthly')
       expect(result_data['payInAdvance']).to eq(false)
-      expect(result_data['amountCents']).to eq(200)
+      expect(result_data['amountCents']).to eq('200')
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['charges'].count).to eq(5)
 

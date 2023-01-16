@@ -12,7 +12,7 @@ module Types
       field :code, String, null: false
       field :description, String, null: true
 
-      field :amount_cents, Integer, null: false
+      field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

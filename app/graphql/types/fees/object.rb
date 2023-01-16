@@ -18,7 +18,7 @@ module Types
 
       field :fee_type, Types::Fees::TypesEnum, null: false
 
-      field :creditable_amount_cents, Integer, null: false
+      field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
 
       def item_type
         object.fee_type
