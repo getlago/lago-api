@@ -5,6 +5,8 @@ module Invoices
     class StripeCreateJob < ApplicationJob
       queue_as 'providers'
 
+      unique :until_executed
+
       def perform(invoice)
         result = Invoices::Payments::StripeService.new(invoice).create
         result.raise_if_error!
