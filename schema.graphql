@@ -106,7 +106,7 @@ type AppliedAddOn {
 
 type AppliedCoupon {
   amountCents: BigInt
-  amountCentsRemaining: Int
+  amountCentsRemaining: BigInt
   amountCurrency: CurrencyEnum
   coupon: Coupon!
   createdAt: ISO8601DateTime!

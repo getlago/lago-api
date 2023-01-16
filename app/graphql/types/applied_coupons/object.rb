@@ -15,7 +15,7 @@ module Types
       field :frequency, Types::Coupons::FrequencyEnum, null: false
       field :frequency_duration, Integer, null: true
       field :frequency_duration_remaining, Integer, null: true
-      field :amount_cents_remaining, Integer, null: true
+      field :amount_cents_remaining, GraphQL::Types::BigInt, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: false
