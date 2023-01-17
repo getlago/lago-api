@@ -10,10 +10,10 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:wallet) { create(:wallet, customer: customer) }
-  let(:wallet_transaction_first) { create(:wallet_transaction, wallet: wallet) }
-  let(:wallet_transaction_second) { create(:wallet_transaction, wallet: wallet) }
-  let(:wallet_transaction_third) { create(:wallet_transaction, wallet: wallet) }
+  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet_transaction_first) { create(:wallet_transaction, wallet:) }
+  let(:wallet_transaction_second) { create(:wallet_transaction, wallet:) }
+  let(:wallet_transaction_third) { create(:wallet_transaction, wallet:) }
   let(:wallet_transaction_fourth) { create(:wallet_transaction) }
 
   before do
@@ -66,7 +66,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   end
 
   context 'when filtering by status' do
-    let(:wallet_transaction_third) { create(:wallet_transaction, wallet: wallet, status: 'pending') }
+    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, status: 'pending') }
 
     it 'returns only one wallet transaction' do
       result = wallet_transactions_query.call(
@@ -91,7 +91,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   end
 
   context 'when filtering by transaction type' do
-    let(:wallet_transaction_third) { create(:wallet_transaction, wallet: wallet, transaction_type: 'outbound') }
+    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
 
     it 'returns only one wallet transaction' do
       result = wallet_transactions_query.call(

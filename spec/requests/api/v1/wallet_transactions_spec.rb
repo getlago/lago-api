@@ -49,8 +49,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
   end
 
   describe 'index' do
-    let(:wallet_transaction_first) { create(:wallet_transaction, wallet: wallet) }
-    let(:wallet_transaction_second) { create(:wallet_transaction, wallet: wallet) }
+    let(:wallet_transaction_first) { create(:wallet_transaction, wallet:) }
+    let(:wallet_transaction_second) { create(:wallet_transaction, wallet:) }
     let(:wallet_transaction_third) { create(:wallet_transaction) }
 
     before do
@@ -84,7 +84,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     context 'with status param' do
-      let(:wallet_transaction_second) { create(:wallet_transaction, wallet: wallet, status: 'pending') }
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, status: 'pending') }
 
       it 'returns wallet transactions with correct status' do
         get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?status=pending")
@@ -96,7 +96,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     context 'with transaction type param' do
-      let(:wallet_transaction_second) { create(:wallet_transaction, wallet: wallet, transaction_type: 'outbound') }
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
 
       it 'returns wallet transactions with correct transaction type' do
         get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?transaction_type=outbound")
