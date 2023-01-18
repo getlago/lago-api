@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
 
   describe 'GET /groups' do
     before { billable_metric }
@@ -12,6 +12,15 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
     context 'when billable_metric_id does not exist' do
       it 'returns a not found error' do
         get_with_token(organization, '/api/v1/billable_metrics/unknown/groups')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when billable_metric_id is deleted' do
+      it 'returns a not found error' do
+        billable_metric.discard
+        get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
         expect(response).to have_http_status(:not_found)
       end
@@ -37,9 +46,9 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
 
     context 'when groups contain one dimension' do
       it 'returns all billable metric\'s active groups' do
-        one = create(:group, billable_metric: billable_metric)
-        second = create(:group, billable_metric: billable_metric)
-        create(:group, billable_metric: billable_metric, status: :inactive)
+        one = create(:group, billable_metric:)
+        second = create(:group, billable_metric:)
+        create(:group, billable_metric:, status: :inactive)
 
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
@@ -55,10 +64,10 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
 
     context 'when groups contain two dimensions' do
       it 'returns billable metric\'s active children groups' do
-        parent = create(:group, billable_metric: billable_metric)
-        children1 = create(:group, billable_metric: billable_metric, parent_group_id: parent.id)
-        children2 = create(:group, billable_metric: billable_metric, parent_group_id: parent.id)
-        create(:group, billable_metric: billable_metric, parent_group_id: parent.id, status: :inactive)
+        parent = create(:group, billable_metric:)
+        children1 = create(:group, billable_metric:, parent_group_id: parent.id)
+        children2 = create(:group, billable_metric:, parent_group_id: parent.id)
+        create(:group, billable_metric:, parent_group_id: parent.id, status: :inactive)
 
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
@@ -74,8 +83,8 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
 
     context 'with pagination' do
       it 'returns invoices with correct meta data' do
-        parent = create(:group, billable_metric: billable_metric)
-        create_list(:group, 2, billable_metric: billable_metric, parent_group_id: parent.id)
+        parent = create(:group, billable_metric:)
+        create_list(:group, 2, billable_metric:, parent_group_id: parent.id)
 
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups?page=1&per_page=1")
 

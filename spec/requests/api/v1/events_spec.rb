@@ -92,10 +92,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
     let(:event) { create(:event) }
 
     it 'returns an event' do
-      get_with_token(
-        event.organization,
-        '/api/v1/events/' + event.transaction_id
-      )
+      get_with_token(event.organization, "/api/v1/events/#{event.transaction_id}")
 
       expect(response).to have_http_status(:ok)
 
@@ -109,10 +106,16 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
     context 'with a non-existing transaction_id' do
       it 'returns not found' do
-        get_with_token(
-          organization,
-          "/api/v1/events/#{SecureRandom.uuid}",
-        )
+        get_with_token(organization, "/api/v1/events/#{SecureRandom.uuid}")
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when event is deleted' do
+      it 'returns not found' do
+        event.discard
+        get_with_token(event.organization, "/api/v1/events/#{event.transaction_id}")
 
         expect(response).to have_http_status(:not_found)
       end

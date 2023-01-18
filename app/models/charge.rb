@@ -2,6 +2,8 @@
 
 class Charge < ApplicationRecord
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :plan, touch: true
   belongs_to :billable_metric
@@ -26,6 +28,8 @@ class Charge < ApplicationRecord
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
 
   validate :validate_group_properties
+
+  default_scope -> { kept }
 
   def properties(group_id: nil)
     group_properties.find_by(group_id: group_id)&.values || read_attribute(:properties)
