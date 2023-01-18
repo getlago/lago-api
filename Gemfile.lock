@@ -132,6 +132,8 @@ GEM
     diff-lcs (1.5.0)
     digest-crc (0.6.4)
       rake (>= 12.0.0, < 14.0.0)
+    discard (1.2.1)
+      activerecord (>= 4.2, < 8)
     docile (1.4.0)
     dotenv (2.8.1)
     erubi (1.11.0)
@@ -447,6 +449,7 @@ DEPENDENCIES
   coffee-rails
   countries
   debug
+  discard (~> 1.2)
   dotenv
   factory_bot_rails
   faker

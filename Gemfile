@@ -20,6 +20,7 @@ gem 'oauth2'
 gem 'rack-cors'
 
 # Database
+gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'pg'
 gem 'ransack'

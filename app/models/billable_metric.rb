@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class BillableMetric < ApplicationRecord
+  include Discard::Model
+  self.discard_column = :deleted_at
+
   belongs_to :organization
 
   has_many :charges, dependent: :destroy
@@ -22,6 +25,8 @@ class BillableMetric < ApplicationRecord
   validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :field_name, presence: true, if: :should_have_field_name?
   validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.map(&:to_s) }
+
+  default_scope -> { kept }
 
   def attached_to_subscriptions?
     plans.joins(:subscriptions).exists?

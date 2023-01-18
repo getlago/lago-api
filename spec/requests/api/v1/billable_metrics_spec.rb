@@ -42,7 +42,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/billable_metrics',
-          { billable_metric: create_params.merge(group: group) },
+          { billable_metric: create_params.merge(group:) },
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
@@ -66,12 +66,12 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
   end
 
   describe 'update' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
     let(:code) { 'BM1_code' }
     let(:update_params) do
       {
         name: 'BM1',
-        code: code,
+        code:,
         description: 'description',
         aggregation_type: 'sum_agg',
         field_name: 'amount_sum',
@@ -92,12 +92,12 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
     context 'with group parameter' do
       it 'updates billable metric\'s group' do
-        create(:group, billable_metric: billable_metric)
+        create(:group, billable_metric:)
 
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params.merge(group: group) },
+          { billable_metric: update_params.merge(group:) },
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
@@ -128,7 +128,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'when billable metric code already exists in organization scope (validation error)' do
-      let(:billable_metric2) { create(:billable_metric, organization: organization) }
+      let(:billable_metric2) { create(:billable_metric, organization:) }
       let(:code) { billable_metric2.code }
 
       before { billable_metric2 }
@@ -146,13 +146,10 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
   end
 
   describe 'show' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
 
     it 'returns a billable metric' do
-      get_with_token(
-        organization,
-        "/api/v1/billable_metrics/#{billable_metric.code}",
-      )
+      get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
@@ -161,10 +158,16 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
     context 'when billable metric does not exist' do
       it 'returns not found' do
-        get_with_token(
-          organization,
-          '/api/v1/billable_metrics/555',
-        )
+        get_with_token(organization, '/api/v1/billable_metrics/555')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when billable metric is deleted' do
+      it 'returns not found' do
+        billable_metric.discard
+        get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
         expect(response).to have_http_status(:not_found)
       end
@@ -172,7 +175,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
   end
 
   describe 'destroy' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
 
     before { billable_metric }
 
@@ -199,8 +202,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
     context 'when billable metric is attached to active subscription' do
       let(:subscription) { create(:subscription) }
-      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
-      let(:billable_metric) { create(:billable_metric, organization: organization) }
+      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
 
       before do
         charge
@@ -221,7 +224,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
   end
 
   describe 'index' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
 
     before { billable_metric }
 
@@ -235,7 +238,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:billable_metric2) { create(:billable_metric, organization: organization) }
+      let(:billable_metric2) { create(:billable_metric, organization:) }
 
       before { billable_metric2 }
 
