@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
+ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -95,6 +95,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "field_name"
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
   end
@@ -107,7 +109,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.string "amount_currency"
     t.integer "charge_model", default: 0, null: false
     t.jsonb "properties", default: "{}", null: false
+    t.datetime "deleted_at"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
+    t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
 
@@ -231,7 +235,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.datetime "updated_at", null: false
     t.jsonb "metadata", default: {}, null: false
     t.uuid "subscription_id"
+    t.datetime "deleted_at"
     t.index ["customer_id"], name: "index_events_on_customer_id"
+    t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
     t.index ["organization_id"], name: "index_events_on_organization_id"
     t.index ["subscription_id", "code"], name: "index_events_on_subscription_id_and_code"
@@ -272,7 +278,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.jsonb "values", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
     t.index ["charge_id"], name: "index_group_properties_on_charge_id"
+    t.index ["deleted_at"], name: "index_group_properties_on_deleted_at"
     t.index ["group_id"], name: "index_group_properties_on_group_id"
   end
 
@@ -284,7 +292,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.integer "status", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
     t.index ["billable_metric_id"], name: "index_groups_on_billable_metric_id"
+    t.index ["deleted_at"], name: "index_groups_on_deleted_at"
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
   end
 
@@ -425,9 +435,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_09_095957) do
     t.datetime "updated_at", null: false
     t.uuid "billable_metric_id"
     t.jsonb "properties", default: {}, null: false
+    t.datetime "deleted_at"
     t.index ["billable_metric_id"], name: "index_persisted_events_on_billable_metric_id"
     t.index ["customer_id", "external_subscription_id", "billable_metric_id"], name: "index_search_persisted_events"
     t.index ["customer_id"], name: "index_persisted_events_on_customer_id"
+    t.index ["deleted_at"], name: "index_persisted_events_on_deleted_at"
     t.index ["external_id"], name: "index_persisted_events_on_external_id"
   end
 
