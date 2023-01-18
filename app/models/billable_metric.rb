@@ -22,9 +22,11 @@ class BillableMetric < ApplicationRecord
   enum aggregation_type: AGGREGATION_TYPES
 
   validates :name, presence: true
-  validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :field_name, presence: true, if: :should_have_field_name?
   validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.map(&:to_s) }
+  validates :code,
+            presence: true,
+            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
 
   default_scope -> { kept }
 

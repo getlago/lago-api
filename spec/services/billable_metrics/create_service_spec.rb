@@ -28,6 +28,19 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         .to change(BillableMetric, :count).by(1)
     end
 
+    context 'with code already used by a deleted metric' do
+      it 'creates a billable metric with the same code' do
+        create(:billable_metric, organization:, code: 'new_metric', deleted_at: Time.current)
+
+        expect { create_service.create(**create_args) }
+          .to change(BillableMetric, :count).by(1)
+
+        metrics = organization.billable_metrics.with_discarded
+        expect(metrics.count).to eq(2)
+        expect(metrics.pluck(:code).uniq).to eq(['new_metric'])
+      end
+    end
+
     context 'with group parameter' do
       let(:group) do
         {
@@ -41,7 +54,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
 
       it 'creates billable metric\'s groups' do
         expect do
-          create_service.create(**create_args.merge(group: group))
+          create_service.create(**create_args.merge(group:))
         end.to change(Group, :count).by(5)
       end
 

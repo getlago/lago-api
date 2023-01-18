@@ -97,7 +97,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.string "field_name"
     t.datetime "deleted_at"
     t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
-    t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true
+    t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
   end
 
@@ -174,8 +174,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.string "refund_vat_amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
     t.string "vat_amount_currency"
-    t.date "issuing_date", null: false
     t.datetime "refunded_at"
+    t.date "issuing_date", null: false
     t.integer "status", default: 1, null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
@@ -342,9 +342,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
     t.float "vat_rate"
-    t.integer "status", default: 1, null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency"
+    t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
