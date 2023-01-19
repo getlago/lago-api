@@ -73,6 +73,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
   context 'with premium features' do
     around { |test| lago_premium!(&test) }
 
+    let(:timezone) { 'TZ_EUROPE_PARIS' }
+
     it 'updates an organization' do
       result = execute_graphql(
         current_user: membership.user,
@@ -81,7 +83,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         variables: {
           input: {
             email: 'foo@bar.com',
-            timezone: 'TZ_EUROPE_PARIS',
+            timezone:,
             invoiceGracePeriod: 3,
           },
         },
@@ -90,8 +92,34 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       result_data = result['data']['updateOrganization']
 
       aggregate_failures do
-        expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
+        expect(result_data['timezone']).to eq(timezone)
         expect(result_data['invoiceGracePeriod']).to eq(3)
+      end
+    end
+
+    context 'with Etc/GMT+12 timezone' do
+      let(:timezone) { 'TZ_ETC_GMT_12' }
+
+      it 'updates an organization' do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          query: mutation,
+          variables: {
+            input: {
+              email: 'foo@bar.com',
+              timezone:,
+              invoiceGracePeriod: 3,
+            },
+          },
+        )
+
+        result_data = result['data']['updateOrganization']
+
+        aggregate_failures do
+          expect(result_data['timezone']).to eq(timezone)
+          expect(result_data['invoiceGracePeriod']).to eq(3)
+        end
       end
     end
   end

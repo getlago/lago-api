@@ -18084,6 +18084,18 @@
               "deprecationReason": null
             },
             {
+              "name": "TZ_ETC_GMT_12",
+              "description": "Etc/GMT+12",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ_UTC",
+              "description": "UTC",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "TZ_EUROPE_AMSTERDAM",
               "description": "Europe/Amsterdam",
               "isDeprecated": false,
@@ -18300,12 +18312,6 @@
               "deprecationReason": null
             },
             {
-              "name": "TZ_GMT_12",
-              "description": "GMT+12",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "TZ_PACIFIC_APIA",
               "description": "Pacific/Apia",
               "isDeprecated": false,
@@ -18386,12 +18392,6 @@
             {
               "name": "TZ_PACIFIC_TONGATAPU",
               "description": "Pacific/Tongatapu",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "TZ_UTC",
-              "description": "UTC",
               "isDeprecated": false,
               "deprecationReason": null
             }
