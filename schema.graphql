@@ -4579,6 +4579,11 @@ enum TimezoneEnum {
   TZ_AUSTRALIA_SYDNEY
 
   """
+  Etc/GMT+12
+  """
+  TZ_ETC_GMT_12
+
+  """
   Europe/Amsterdam
   """
   TZ_EUROPE_AMSTERDAM
@@ -4757,11 +4762,6 @@ enum TimezoneEnum {
   Europe/Zurich
   """
   TZ_EUROPE_ZURICH
-
-  """
-  GMT+12
-  """
-  TZ_GMT_12
 
   """
   Pacific/Apia
