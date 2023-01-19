@@ -546,7 +546,7 @@ html
                       td width="70%"
                         .body-1 = fee.billable_metric.name
                         .body-3
-                          - if fee.charge.billable_metric.recurring_count_agg?
+                          - if fee.billable_metric.recurring_count_agg?
                             | See breakdown for total unit
                           - elsif fee.charge.percentage?
                             | Total unit: #{fees.sum(&:events_count)} events for #{fees.sum(&:units)}
@@ -558,7 +558,7 @@ html
                       tr
                         td width="70%" style="padding-left: 16px;"
                           .body-1 = fee.group.name
-                          - unless fee.charge.billable_metric.recurring_count_agg?
+                          - unless fee.billable_metric.recurring_count_agg?
                             .body-3
                               - if fee.charge.percentage?
                                 | Total unit: #{fee.events_count} events for #{fee.units}
