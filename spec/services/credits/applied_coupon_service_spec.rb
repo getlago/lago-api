@@ -182,7 +182,7 @@ RSpec.describe Credits::AppliedCouponService do
       let(:applied_coupon) do
         create(
           :applied_coupon,
-          coupon: coupon,
+          coupon:,
           frequency: 'forever',
           frequency_duration: 0,
           frequency_duration_remaining: 0,
