@@ -26,7 +26,7 @@ module V1
     private
 
     def amount_cents_remaining
-      return nil if model.recurring?
+      return nil if model.recurring? || model.forever?
       return nil if model.coupon.percentage?
 
       model.amount_cents - model.credits.sum(:amount_cents)
