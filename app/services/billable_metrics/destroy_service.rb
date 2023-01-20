@@ -14,6 +14,9 @@ module BillableMetrics
     def call
       return result.not_found_failure!(resource: 'billable_metric') unless metric
 
+      draft_invoice_ids = Invoice.draft.joins(plans: [:billable_metrics])
+        .where(billable_metrics: { id: metric.id }).distinct.pluck(:id)
+
       ActiveRecord::Base.transaction do
         metric.discard!
         metric.charges.discard_all
@@ -27,6 +30,11 @@ module BillableMetrics
       BillableMetrics::DeleteEventsJob.perform_later(metric)
 
       track_billable_metric_deleted
+
+      # NOTE: Refresh all invoices linked to the billable metric.
+      Invoice.find(draft_invoice_ids).each do |invoice|
+        ::Invoices::RefreshDraftService.call(invoice:)
+      end
 
       result.billable_metric = metric
       result
