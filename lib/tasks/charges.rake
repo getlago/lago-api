@@ -7,7 +7,7 @@ namespace :charges do
     # created containing a fixed_amount. All existing charges have fixed_amount
     # and fixed_amount_target with a null value.
 
-    Charge.percentage.where("properties -> 'fixed_amount_target' IS NOT NULL").find_each do |charge|
+    Charge.unscoped.percentage.where("properties -> 'fixed_amount_target' IS NOT NULL").find_each do |charge|
       charge.properties.delete('fixed_amount_target')
       charge.properties['free_units_per_events'] = nil
       charge.properties['free_units_per_total_aggregation'] = nil
@@ -18,13 +18,13 @@ namespace :charges do
   desc 'Set graduated properties to hash and rename volume ranges'
   task update_graduated_properties_to_hash: :environment do
     # Rename existing volume ranges from `ranges: []` to `volume_ranges: []`
-    Charge.volume.find_each do |charge|
+    Charge.unscoped.volume.find_each do |charge|
       charge.properties['volume_ranges'] = charge.properties.delete('ranges')
       charge.save!
     end
 
     # Update graduated charges from array `[]` to hash `graduated_ranges: []`
-    Charge.graduated.find_each do |charge|
+    Charge.unscoped.graduated.find_each do |charge|
       charge.properties = { graduated_ranges: charge.properties }
       charge.save!
     end
