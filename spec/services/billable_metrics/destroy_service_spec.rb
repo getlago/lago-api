@@ -19,6 +19,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
 
     allow(SegmentTrackJob).to receive(:perform_later)
     allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
+    allow(Invoices::RefreshDraftService).to receive(:call)
   end
 
   describe '#call' do
@@ -62,6 +63,15 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
           organization_id: billable_metric.organization_id,
         },
       )
+    end
+
+    it 'refreshes linked draft invoices' do
+      invoice = create(:invoice, :draft)
+      create(:invoice_subscription, subscription:, invoice:)
+      subscription.invoices << invoice
+
+      destroy_service.call
+      expect(::Invoices::RefreshDraftService).to have_received(:call).with(invoice:)
     end
 
     context 'when billable metric is not found' do
