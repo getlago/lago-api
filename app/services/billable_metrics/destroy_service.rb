@@ -14,7 +14,18 @@ module BillableMetrics
     def call
       return result.not_found_failure!(resource: 'billable_metric') unless metric
 
-      metric.destroy!
+      ActiveRecord::Base.transaction do
+        metric.discard!
+        metric.charges.discard_all
+        metric.groups.each do |group|
+          group.discard!
+          group.properties.discard_all
+        end
+      end
+
+      # NOTE: Discard all related events asynchronously.
+      BillableMetrics::DeleteEventsJob.perform_later(metric)
+
       result.billable_metric = metric
       result
     end
