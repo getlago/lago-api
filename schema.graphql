@@ -125,11 +125,13 @@ exceed the size of a 32-bit integer, it's encoded as a string.
 scalar BigInt
 
 type BillableMetric {
+  activeSubscriptionsCount: Int!
   aggregationType: AggregationTypeEnum!
   code: String!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
   description: String
+  draftInvoicesCount: Int!
   fieldName: String
   flatGroups: [Group!]
   group: JSON
@@ -145,11 +147,13 @@ type BillableMetricCollection {
 }
 
 type BillableMetricDetail {
+  activeSubscriptionsCount: Int!
   aggregationType: AggregationTypeEnum!
   code: String!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
   description: String
+  draftInvoicesCount: Int!
   fieldName: String
   flatGroups: [Group!]
   group: JSON
