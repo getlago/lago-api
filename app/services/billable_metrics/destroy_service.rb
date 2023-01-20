@@ -26,6 +26,8 @@ module BillableMetrics
       # NOTE: Discard all related events asynchronously.
       BillableMetrics::DeleteEventsJob.perform_later(metric)
 
+      track_billable_metric_deleted
+
       result.billable_metric = metric
       result
     end
@@ -33,5 +35,20 @@ module BillableMetrics
     private
 
     attr_reader :metric
+
+    def track_billable_metric_deleted
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'billable_metric_deleted',
+        properties: {
+          code: metric.code,
+          name: metric.name,
+          description: metric.description,
+          aggregation_type: metric.aggregation_type,
+          aggregation_property: metric.field_name,
+          organization_id: metric.organization_id,
+        },
+      )
+    end
   end
 end
