@@ -20,14 +20,6 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
 
-      field :can_be_deleted, Boolean, null: false do
-        description 'Check if billable metric is deletable'
-      end
-
-      def can_be_deleted
-        object.deletable?
-      end
-
       def group
         object.active_groups_as_tree
       end

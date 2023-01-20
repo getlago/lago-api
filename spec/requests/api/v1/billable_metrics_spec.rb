@@ -199,28 +199,6 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
-
-    context 'when billable metric is attached to active subscription' do
-      let(:subscription) { create(:subscription) }
-      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
-      let(:billable_metric) { create(:billable_metric, organization:) }
-
-      before do
-        charge
-        subscription
-      end
-
-      it 'returns forbidden error' do
-        delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
-
-        aggregate_failures do
-          expect(response).to have_http_status(:method_not_allowed)
-          expect(json[:status]).to eq(405)
-          expect(json[:error]).to eq('Method Not Allowed')
-          expect(json[:code]).to eq('attached_to_an_active_subscription')
-        end
-      end
-    end
   end
 
   describe 'index' do

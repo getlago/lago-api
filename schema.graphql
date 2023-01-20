@@ -126,11 +126,6 @@ scalar BigInt
 
 type BillableMetric {
   aggregationType: AggregationTypeEnum!
-
-  """
-  Check if billable metric is deletable
-  """
-  canBeDeleted: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
@@ -151,11 +146,6 @@ type BillableMetricCollection {
 
 type BillableMetricDetail {
   aggregationType: AggregationTypeEnum!
-
-  """
-  Check if billable metric is deletable
-  """
-  canBeDeleted: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
