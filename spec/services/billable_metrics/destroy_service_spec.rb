@@ -9,18 +9,18 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
   let(:organization) { membership.organization }
 
   describe 'destroy' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    before { billable_metric }
 
     it 'destroys the billable metric' do
-      id = billable_metric.id
-
-      expect { destroy_service.destroy(id) }
+      expect { destroy_service.destroy(metric: billable_metric) }
         .to change(BillableMetric, :count).by(-1)
     end
 
     context 'when billable metric is not found' do
       it 'returns an error' do
-        result = destroy_service.destroy(nil)
+        result = destroy_service.destroy(metric: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('billable_metric_not_found')
@@ -31,44 +31,11 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       let(:subscription) { create(:subscription) }
 
       before do
-        create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric)
+        create(:standard_charge, plan: subscription.plan, billable_metric:)
       end
 
       it 'returns an error' do
-        result = destroy_service.destroy(billable_metric.id)
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq('attached_to_an_active_subscription')
-      end
-    end
-  end
-
-  describe 'destroy_from_api' do
-    let(:billable_metric) { create(:billable_metric, organization: organization) }
-
-    it 'destroys the billable metric' do
-      code = billable_metric.code
-
-      expect { destroy_service.destroy_from_api(organization: organization, code: code) }
-        .to change(BillableMetric, :count).by(-1)
-    end
-
-    context 'when billable metric is not found' do
-      it 'returns an error' do
-        result = destroy_service.destroy_from_api(organization: organization, code: 'invalid12345')
-
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq('billable_metric_not_found')
-      end
-    end
-
-    context 'when billable metric is attached to subscription' do
-      let(:subscription) { create(:subscription) }
-
-      before { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
-
-      it 'returns an error' do
-        result = destroy_service.destroy_from_api(organization: organization, code: billable_metric.code)
+        result = destroy_service.destroy(metric: billable_metric)
 
         expect(result).not_to be_success
         expect(result.error.code).to eq('attached_to_an_active_subscription')
