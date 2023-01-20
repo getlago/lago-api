@@ -6,10 +6,9 @@ RSpec.describe ::V1::BillableMetricSerializer do
   subject(:serializer) { described_class.new(billable_metric, root_name: 'billable_metric') }
 
   let(:billable_metric) { create(:billable_metric) }
+  let(:result) { JSON.parse(serializer.to_json) }
 
   it 'serializes the object' do
-    result = JSON.parse(serializer.to_json)
-
     aggregate_failures do
       expect(result['billable_metric']['lago_id']).to eq(billable_metric.id)
       expect(result['billable_metric']['name']).to eq(billable_metric.name)
@@ -19,6 +18,34 @@ RSpec.describe ::V1::BillableMetricSerializer do
       expect(result['billable_metric']['field_name']).to eq(billable_metric.field_name)
       expect(result['billable_metric']['created_at']).to eq(billable_metric.created_at.iso8601)
       expect(result['billable_metric']['group']).to eq({})
+      expect(result['billable_metric']['active_subscriptions_count']).to eq(0)
+      expect(result['billable_metric']['draft_invoices_count']).to eq(0)
     end
+  end
+
+  it 'returns the count number of active subscriptions' do
+    terminated_subscription = create(:terminated_subscription)
+    create(:standard_charge, plan: terminated_subscription.plan, billable_metric:)
+
+    subscription = create(:subscription)
+    create(:standard_charge, plan: subscription.plan, billable_metric:)
+
+    expect(result['billable_metric']['active_subscriptions_count']).to eq(1)
+  end
+
+  it 'returns the count number of draft invoices' do
+    customer = create(:customer, organization: billable_metric.organization)
+    subscription = create(:subscription)
+    subscription2 = create(:subscription)
+    create(:standard_charge, plan: subscription.plan, billable_metric:)
+    create(:standard_charge, plan: subscription2.plan, billable_metric:)
+
+    invoice = create(:invoice, customer:)
+    create(:invoice_subscription, subscription:, invoice:)
+    draft_invoice = create(:invoice, :draft, customer:)
+    create(:invoice_subscription, subscription:, invoice: draft_invoice)
+    create(:invoice_subscription, subscription: subscription2, invoice: draft_invoice)
+
+    expect(result['billable_metric']['draft_invoices_count']).to eq(1)
   end
 end
