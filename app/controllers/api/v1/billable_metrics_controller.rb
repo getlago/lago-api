@@ -45,10 +45,8 @@ module Api
       end
 
       def destroy
-        service = ::BillableMetrics::DestroyService.new
-        result = service.destroy_from_api(
-          organization: current_organization,
-          code: params[:code],
+        result = ::BillableMetrics::DestroyService.call(
+          metric: current_organization.billable_metrics.find_by(code: params[:code]),
         )
 
         if result.success?

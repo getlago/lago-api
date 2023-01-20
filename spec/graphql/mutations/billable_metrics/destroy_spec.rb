@@ -21,9 +21,7 @@ RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
-      variables: {
-        input: { id: billable_metric.id }
-      }
+      variables: { input: { id: billable_metric.id } },
     )
 
     data = result['data']['destroyBillableMetric']
@@ -34,9 +32,7 @@ RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         query: mutation,
-        variables: {
-          input: { id: billable_metric.id }
-        }
+        variables: { input: { id: billable_metric.id } },
       )
 
       expect_unauthorized_error(result)
