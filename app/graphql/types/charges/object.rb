@@ -13,6 +13,18 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def billable_metric
+        return object.billable_metric unless object.discarded?
+
+        BillableMetric.with_discarded.find_by(id: object.billable_metric_id)
+      end
+
+      def group_properties
+        scope = object.group_properties
+        scope = scope.with_discarded if object.discarded?
+        scope
+      end
     end
   end
 end

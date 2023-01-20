@@ -25,7 +25,11 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             }
             fees {
               id
+              itemType
+              itemCode
+              itemName
               group { id key value }
+              charge { id billableMetric { code } }
             }
           }
           subscriptions {
@@ -34,6 +38,11 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           fees {
             id
             creditableAmountCents
+            charge {
+              id
+              billableMetric { code group flatGroups { id key } }
+              groupProperties { groupId }
+            }
           }
         }
       }
@@ -108,6 +117,49 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         result: result,
         message: 'Resource not found',
       )
+    end
+  end
+
+  context 'with a deleted billable metric' do
+    let(:billable_metric) { create(:billable_metric, :discarded) }
+    let(:group) { create(:group, :discarded, billable_metric:) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, group:, charge:, amount_cents: 10) }
+
+    let(:group_property) do
+      build(
+        :group_property,
+        :discarded,
+        group:,
+        values: { amount: '10', amount_currency: 'EUR' },
+      )
+    end
+
+    let(:charge) do
+      create(:standard_charge, :discarded, billable_metric:, group_properties: [group_property])
+    end
+
+    it 'returns the invoice with the deleted resources' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {
+          id: invoice.id,
+        },
+      )
+
+      data = result['data']['invoice']
+
+      aggregate_failures do
+        expect(data['id']).to eq(invoice.id)
+        expect(data['number']).to eq(invoice.number)
+        expect(data['paymentStatus']).to eq(invoice.payment_status)
+        expect(data['status']).to eq(invoice.status)
+        expect(data['customer']['id']).to eq(customer.id)
+        expect(data['customer']['name']).to eq(customer.name)
+        expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
+        expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
+      end
     end
   end
 end
