@@ -17,6 +17,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
     charge
     group_property
 
+    allow(SegmentTrackJob).to receive(:perform_later)
     allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
   end
 
@@ -44,6 +45,23 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       expect do
         destroy_service.call
       end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
+    end
+
+    it 'calls SegmentTrackJob' do
+      destroy_service.call
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'billable_metric_deleted',
+        properties: {
+          code: billable_metric.code,
+          name: billable_metric.name,
+          description: billable_metric.description,
+          aggregation_type: billable_metric.aggregation_type,
+          aggregation_property: billable_metric.field_name,
+          organization_id: billable_metric.organization_id,
+        },
+      )
     end
 
     context 'when billable metric is not found' do
