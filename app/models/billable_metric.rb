@@ -34,10 +34,6 @@ class BillableMetric < ApplicationRecord
     plans.joins(:subscriptions).exists?
   end
 
-  def deletable?
-    !attached_to_subscriptions?
-  end
-
   def aggregation_type=(value)
     AGGREGATION_TYPES.include?(value&.to_sym) ? super : nil
   end

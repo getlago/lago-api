@@ -15,15 +15,13 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:billable_metric) do
-    create(:billable_metric, organization: organization)
-  end
+  let(:billable_metric) { create(:billable_metric, organization:) }
 
   it 'returns a single billable metric' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         billableMetricId: billable_metric.id,
       },
@@ -40,16 +38,13 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
         variables: {
           billableMetricId: billable_metric.id,
         },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Missing organization id',
-      )
+      expect_graphql_error(result:, message: 'Missing organization id')
     end
   end
 
@@ -58,16 +53,13 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           billableMetricId: 'foo',
         },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Resource not found',
-      )
+      expect_graphql_error(result:, message: 'Resource not found')
     end
   end
 end
