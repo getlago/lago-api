@@ -5,16 +5,6 @@ FactoryBot.define do
     billable_metric
     plan
 
-    trait :with_group do
-      after(:build) do |charge|
-        create(
-          :group_property,
-          charge: charge,
-          values: charge.properties,
-        )
-      end
-    end
-
     factory :standard_charge do
       charge_model { 'standard' }
       properties do

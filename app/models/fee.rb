@@ -4,15 +4,15 @@ class Fee < ApplicationRecord
   include Currencies
 
   belongs_to :invoice
-  belongs_to :charge, optional: true
+  belongs_to :charge, -> { with_discarded }, optional: true
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
-  belongs_to :group, optional: true
+  belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
 
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
-  has_one :billable_metric, through: :charge
+  has_one :billable_metric, -> { with_discarded }, through: :charge
   has_one :add_on, through: :applied_add_on
 
   has_many :credit_note_items

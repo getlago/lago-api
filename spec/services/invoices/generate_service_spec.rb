@@ -75,6 +75,31 @@ RSpec.describe Invoices::GenerateService, type: :service do
         expect(LagoHttpClient::Client).not_to have_received(:new)
       end
     end
+
+    context 'when a billable metric is discarded' do
+      let(:billable_metric) { create(:billable_metric, :discarded) }
+      let(:group) { create(:group, :discarded, billable_metric:) }
+      let(:fees) { [create(:charge_fee, subscription:, invoice:, group:, charge:, amount_cents: 10)] }
+
+      let(:group_property) do
+        build(
+          :group_property,
+          :discarded,
+          group:,
+          values: { amount: '10', amount_currency: 'EUR' },
+        )
+      end
+
+      let(:charge) do
+        create(:standard_charge, :discarded, billable_metric:, group_properties: [group_property])
+      end
+
+      it 'generates the invoice synchronously' do
+        result = invoice_generate_service.generate(invoice_id: invoice.id)
+
+        expect(result.invoice.file).to be_present
+      end
+    end
   end
 
   describe '.generate_from_api' do
