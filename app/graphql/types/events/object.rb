@@ -12,6 +12,7 @@ module Types
 
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
       field :received_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :customer_timezone, Types::TimezoneEnum, null: false
 
       field :api_client, String, null: true

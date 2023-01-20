@@ -133,6 +133,7 @@ type BillableMetric {
   canBeDeleted: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
+  deletedAt: ISO8601DateTime
   description: String
   fieldName: String
   flatGroups: [Group!]
@@ -157,6 +158,7 @@ type BillableMetricDetail {
   canBeDeleted: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
+  deletedAt: ISO8601DateTime
   description: String
   fieldName: String
   flatGroups: [Group!]
@@ -176,6 +178,7 @@ type Charge {
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
+  deletedAt: ISO8601DateTime
   groupProperties: [GroupProperties!]
   id: ID!
   properties: Properties
@@ -2849,6 +2852,7 @@ type Event {
   billableMetricName: String
   code: String!
   customerTimezone: TimezoneEnum!
+  deletedAt: ISO8601DateTime
   externalCustomerId: String!
   externalSubscriptionId: String!
   id: ID!
@@ -2924,12 +2928,14 @@ input GraduatedRangeInput {
 }
 
 type Group {
+  deletedAt: ISO8601DateTime
   id: ID!
   key: String
   value: String!
 }
 
 type GroupProperties {
+  deletedAt: ISO8601DateTime
   groupId: ID!
   values: Properties!
 }

@@ -15,8 +15,10 @@ module Types
       field :field_name, String, null: true
       field :group, GraphQL::Types::JSON, null: true
       field :flat_groups, [Types::Groups::Object], null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :can_be_deleted, Boolean, null: false do
         description 'Check if billable metric is deletable'
