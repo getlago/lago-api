@@ -58,6 +58,16 @@ RSpec.describe BillableMetric, type: :model do
         expect(metric.selectable_groups).to match_array([one, second, third])
       end
     end
+
+    context 'when billable metric and group are deleted' do
+      it 'returns all groups' do
+        metric.discard!
+        one = create(:group, :deleted, billable_metric: metric, key: 'country', value: 'france')
+        second = create(:group, :deleted, billable_metric: metric, key: 'country', value: 'italy')
+
+        expect(metric.selectable_groups).to match_array([one, second])
+      end
+    end
   end
 
   describe '#active_groups_as_tree' do

@@ -76,22 +76,22 @@ RSpec.describe Invoices::GenerateService, type: :service do
       end
     end
 
-    context 'when a billable metric is discarded' do
-      let(:billable_metric) { create(:billable_metric, :discarded) }
-      let(:group) { create(:group, :discarded, billable_metric:) }
+    context 'when a billable metric is deleted' do
+      let(:billable_metric) { create(:billable_metric, :deleted) }
+      let(:group) { create(:group, :deleted, billable_metric:) }
       let(:fees) { [create(:charge_fee, subscription:, invoice:, group:, charge:, amount_cents: 10)] }
 
       let(:group_property) do
         build(
           :group_property,
-          :discarded,
+          :deleted,
           group:,
           values: { amount: '10', amount_currency: 'EUR' },
         )
       end
 
       let(:charge) do
-        create(:standard_charge, :discarded, billable_metric:, group_properties: [group_property])
+        create(:standard_charge, :deleted, billable_metric:, group_properties: [group_property])
       end
 
       it 'generates the invoice synchronously' do

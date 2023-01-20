@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        lago_group_id: model.group&.id,
+        lago_group_id: model.group_id,
         item: {
           type: model.fee_type,
           code: model.item_code,

@@ -65,6 +65,50 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context 'when invoice has a fee for a deleted billable metric' do
+      let(:billable_metric) { create(:billable_metric, :deleted) }
+      let(:group) { create(:group, :deleted, billable_metric:) }
+      let(:fee) { create(:charge_fee, invoice:, group:, charge:) }
+
+      let(:group_property) do
+        build(
+          :group_property,
+          :deleted,
+          group:,
+          values: { amount: '10', amount_currency: 'EUR' },
+        )
+      end
+
+      let(:charge) do
+        create(:standard_charge, :deleted, billable_metric:, group_properties: [group_property])
+      end
+
+      before do
+        charge
+        fee
+      end
+
+      it 'returns the invoice with the deleted resources' do
+        get_with_token(organization, "/api/v1/invoices/#{invoice.id}")
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:lago_id]).to eq(invoice.id)
+          expect(json[:invoice][:payment_status]).to eq(invoice.payment_status)
+          expect(json[:invoice][:status]).to eq(invoice.status)
+          expect(json[:invoice][:customer]).not_to be_nil
+          expect(json[:invoice][:subscriptions]).not_to be_nil
+          expect(json[:invoice][:credits]).not_to be_nil
+
+          json_fee = json[:invoice][:fees].first
+          expect(json_fee[:lago_group_id]).to eq(group.id)
+          expect(json_fee[:item][:type]).to eq('charge')
+          expect(json_fee[:item][:code]).to eq(billable_metric.code)
+          expect(json_fee[:item][:name]).to eq(billable_metric.name)
+        end
+      end
+    end
   end
 
   describe 'GET /invoices' do
