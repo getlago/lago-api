@@ -187,7 +187,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             .to match_datetime((timestamp - 1.day).end_of_day)
           expect(result.invoice.fees.first.properties['from_datetime'])
             .to match_datetime((timestamp - 1.month).beginning_of_day)
-          expect(result.invoice.subscriptions).to eq(subscriptions)
+          expect(result.invoice.subscriptions.to_a).to match_array(subscriptions)
           expect(result.invoice.payment_status).to eq('pending')
           expect(result.invoice.fees.subscription_kind.count).to eq(2)
           expect(result.invoice.fees.charge_kind.count).to eq(2)
