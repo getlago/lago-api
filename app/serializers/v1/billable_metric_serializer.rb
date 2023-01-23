@@ -24,8 +24,8 @@ module V1
     end
 
     def draft_invoices_count
-      model.plans
-        .joins(subscriptions: [:invoices])
+      model.charges
+        .joins(fees: [:invoice])
         .merge(Invoice.draft)
         .select(:invoice_id)
         .distinct
