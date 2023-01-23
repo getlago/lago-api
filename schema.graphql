@@ -1534,6 +1534,7 @@ enum CouponExpiration {
 }
 
 enum CouponFrequency {
+  forever
   once
   recurring
 }

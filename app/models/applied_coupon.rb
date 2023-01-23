@@ -16,6 +16,7 @@ class AppliedCoupon < ApplicationRecord
   FREQUENCIES = [
     :once,
     :recurring,
+    :forever,
   ].freeze
 
   enum status: STATUSES

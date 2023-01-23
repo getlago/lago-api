@@ -51,7 +51,7 @@ module Credits
         return (discounted_value >= invoice.total_amount_cents) ? invoice.total_amount_cents : discounted_value.round
       end
 
-      if applied_coupon.recurring?
+      if applied_coupon.recurring? || applied_coupon.forever?
         return invoice.total_amount_cents if applied_coupon.amount_cents > invoice.total_amount_cents
 
         applied_coupon.amount_cents
@@ -70,6 +70,8 @@ module Credits
     end
 
     def should_terminate_applied_coupon?(credit_amount)
+      return false if applied_coupon.forever?
+
       if applied_coupon.once?
         applied_coupon.coupon.percentage? || credit_amount >= remaining_amount
       else
