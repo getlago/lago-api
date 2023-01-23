@@ -42,10 +42,20 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       end
     end
 
-    it 'enqueues a DeleteEventsJob' do
+    it 'enqueues a BillableMetrics::DeleteEventsJob' do
       expect do
         destroy_service.call
       end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
+    end
+
+    it 'enqueues a Invoices::RefreshBatchJob' do
+      invoice = create(:invoice, :draft)
+      create(:invoice_subscription, subscription:, invoice:)
+      subscription.invoices << invoice
+
+      expect do
+        destroy_service.call
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
     end
 
     it 'calls SegmentTrackJob' do
@@ -63,15 +73,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
           organization_id: billable_metric.organization_id,
         },
       )
-    end
-
-    it 'refreshes linked draft invoices' do
-      invoice = create(:invoice, :draft)
-      create(:invoice_subscription, subscription:, invoice:)
-      subscription.invoices << invoice
-
-      destroy_service.call
-      expect(::Invoices::RefreshDraftService).to have_received(:call).with(invoice:)
     end
 
     context 'when billable metric is not found' do

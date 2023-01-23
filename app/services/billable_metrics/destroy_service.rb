@@ -29,12 +29,10 @@ module BillableMetrics
       # NOTE: Discard all related events asynchronously.
       BillableMetrics::DeleteEventsJob.perform_later(metric)
 
-      track_billable_metric_deleted
+      # NOTE: Refresh all draft invoices asynchronously.
+      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
 
-      # NOTE: Refresh all invoices linked to the billable metric.
-      Invoice.find(draft_invoice_ids).each do |invoice|
-        ::Invoices::RefreshDraftService.call(invoice:)
-      end
+      track_billable_metric_deleted
 
       result.billable_metric = metric
       result
