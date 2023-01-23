@@ -34,8 +34,8 @@ module Types
       end
 
       def draft_invoices_count
-        object.plans
-          .joins(subscriptions: [:invoices])
+        object.charges
+          .joins(fees: [:invoice])
           .merge(Invoice.draft)
           .select(:invoice_id)
           .distinct

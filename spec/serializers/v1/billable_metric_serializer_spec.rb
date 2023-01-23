@@ -37,14 +37,15 @@ RSpec.describe ::V1::BillableMetricSerializer do
     customer = create(:customer, organization: billable_metric.organization)
     subscription = create(:subscription)
     subscription2 = create(:subscription)
-    create(:standard_charge, plan: subscription.plan, billable_metric:)
-    create(:standard_charge, plan: subscription2.plan, billable_metric:)
+    charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
+    charge2 = create(:standard_charge, plan: subscription2.plan, billable_metric:)
 
     invoice = create(:invoice, customer:)
-    create(:invoice_subscription, subscription:, invoice:)
+    create(:fee, invoice:, charge:)
+
     draft_invoice = create(:invoice, :draft, customer:)
-    create(:invoice_subscription, subscription:, invoice: draft_invoice)
-    create(:invoice_subscription, subscription: subscription2, invoice: draft_invoice)
+    create(:fee, invoice: draft_invoice, charge: charge2)
+    create(:fee, invoice: draft_invoice, charge: charge2)
 
     expect(result['billable_metric']['draft_invoices_count']).to eq(1)
   end
