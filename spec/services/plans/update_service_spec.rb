@@ -175,10 +175,8 @@ RSpec.describe Plans::UpdateService, type: :service do
         create(
           :standard_charge,
           plan_id: plan.id,
-          billable_metric_id: billable_metrics.first.id,
-          properties: {
-            amount: '300',
-          },
+          billable_metric_id: billable_metric.id,
+          properties: { amount: '300' },
         )
       end
 
@@ -195,11 +193,27 @@ RSpec.describe Plans::UpdateService, type: :service do
         }
       end
 
-      before { charge }
+      let(:billable_metric) { billable_metrics.first }
+      let(:group_property) { create(:group_property, group:, charge:) }
+      let(:group) { create(:group, billable_metric:) }
 
-      it 'destroys the unattached charge' do
-        expect { plans_service.call }
-          .to change { plan.charges.count }.by(-1)
+      before do
+        charge
+        group_property
+      end
+
+      it 'discards the charge' do
+        freeze_time do
+          expect { plans_service.call }
+            .to change { charge.reload.deleted_at }.from(nil).to(Time.current)
+        end
+      end
+
+      it 'discards group properties related to the charge' do
+        freeze_time do
+          expect { plans_service.call }
+            .to change { group_property.reload.deleted_at }.from(nil).to(Time.current)
+        end
       end
     end
 
