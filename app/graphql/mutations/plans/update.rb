@@ -25,8 +25,9 @@ module Mutations
 
       def resolve(**args)
         args[:charges].map!(&:to_h)
+        plan = context[:current_user].plans.find_by(id: args[:id])
 
-        result = ::Plans::UpdateService.new(context[:current_user]).update(**args)
+        result = ::Plans::UpdateService.call(plan:, params: args)
         result.success? ? result.plan : result_error(result)
       end
     end
