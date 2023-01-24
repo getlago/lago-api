@@ -100,13 +100,18 @@ module Plans
     def sanitize_charges(plan, args_charges, created_charges_ids)
       args_charges_ids = args_charges.reject { |c| c[:id].nil? }.map { |c| c[:id] }
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
-      charges_ids.each { |id| discard_charge!(id) }
+      charges_ids.each { |id| discard_charge!(Charge.find_by(id:)) }
     end
 
-    def discard_charge!(id)
-      charge = Charge.find_by(id:)
+    def discard_charge!(charge)
+      draft_invoice_ids = Invoice.draft.joins(plans: [:charges])
+        .where(charges: { id: charge.id }).distinct.pluck(:id)
+
       charge.discard!
       charge.group_properties.discard_all
+
+      # NOTE: Refresh all draft invoices asynchronously.
+      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
     end
   end
 end
