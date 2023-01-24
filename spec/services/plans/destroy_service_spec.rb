@@ -12,7 +12,7 @@ RSpec.describe Plans::DestroyService, type: :service do
 
   before { plan }
 
-  describe 'destroy' do
+  describe '#call' do
     it 'destroys the plan' do
       expect { plans_service.call }
         .to change(Plan, :count).by(-1)
