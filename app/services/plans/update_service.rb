@@ -100,9 +100,13 @@ module Plans
     def sanitize_charges(plan, args_charges, created_charges_ids)
       args_charges_ids = args_charges.reject { |c| c[:id].nil? }.map { |c| c[:id] }
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
-      charges_ids.each do |charge_id|
-        Charge.find_by(id: charge_id).destroy!
-      end
+      charges_ids.each { |id| discard_charge!(id) }
+    end
+
+    def discard_charge!(id)
+      charge = Charge.find_by(id:)
+      charge.discard!
+      charge.group_properties.discard_all
     end
   end
 end

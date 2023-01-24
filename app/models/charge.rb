@@ -32,7 +32,7 @@ class Charge < ApplicationRecord
   default_scope -> { kept }
 
   def properties(group_id: nil)
-    group_properties.find_by(group_id: group_id)&.values || read_attribute(:properties)
+    group_properties.find_by(group_id:)&.values || read_attribute(:properties)
   end
 
   private
