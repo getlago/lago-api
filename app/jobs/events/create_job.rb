@@ -5,12 +5,14 @@ module Events
     queue_as :default
 
     def perform(organization, params, timestamp, metadata)
-      Events::CreateService.new.call(
-        organization: organization,
-        params: params,
+      result = Events::CreateService.new.call(
+        organization:,
+        params:,
         timestamp: Time.zone.at(timestamp),
-        metadata: metadata,
+        metadata:,
       )
+
+      result.raise_if_error!
     end
   end
 end
