@@ -38,9 +38,9 @@ module Resolvers
         },
       )
 
+      return result_error(result) unless result.success?
+
       result.wallet_transactions
-    rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'wallet')
     end
   end
 end

@@ -37,6 +37,8 @@ module Api
           },
         )
 
+        return render_error_response(result) unless result.success?
+
         render(
           json: ::CollectionSerializer.new(
             result.wallet_transactions,
@@ -45,8 +47,6 @@ module Api
             meta: pagination_metadata(result.wallet_transactions),
           ),
         )
-      rescue ActiveRecord::RecordNotFound
-        not_found_error(resource: 'wallet')
       end
 
       private

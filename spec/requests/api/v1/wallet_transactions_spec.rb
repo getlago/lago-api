@@ -106,5 +106,15 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
         expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_second.id)
       end
     end
+
+    context 'when wallet does not exist' do
+      let(:wallet_id) { "#{wallet.id}abc" }
+
+      it 'returns not_found error' do
+        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions")
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
   end
 end

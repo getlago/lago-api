@@ -2,7 +2,10 @@
 
 class WalletTransactionsQuery < BaseQuery
   def call(wallet_id:, page:, limit:, filters: {})
-    wallet_transactions = base_scope(wallet_id:)
+    wallet = organization.wallets.find_by(id: wallet_id)
+    return result.not_found_failure!(resource: 'wallet') unless wallet
+
+    wallet_transactions = wallet.wallet_transactions
 
     if valid_transaction_type?(filters[:transaction_type])
       wallet_transactions = wallet_transactions.where(transaction_type: filters[:transaction_type])
@@ -16,10 +19,6 @@ class WalletTransactionsQuery < BaseQuery
   end
 
   private
-
-  def base_scope(wallet_id:)
-    Wallet.find(wallet_id).wallet_transactions
-  end
 
   def valid_status?(status)
     WalletTransaction.statuses.key?(status)

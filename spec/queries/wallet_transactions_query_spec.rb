@@ -23,7 +23,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     wallet_transaction_fourth
   end
 
-  it 'returns all wallet_transaction for a certain wallet' do
+  it 'returns all wallet transactions for a certain wallet' do
     result = wallet_transactions_query.call(
       wallet_id: wallet.id,
       page: 1,
@@ -111,6 +111,23 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         expect(returned_ids).not_to include(wallet_transaction_second.id)
         expect(returned_ids).to include(wallet_transaction_third.id)
         expect(returned_ids).not_to include(wallet_transaction_fourth.id)
+      end
+    end
+  end
+
+  context 'when wallet is not found' do
+    it 'returns not found error' do
+      result = wallet_transactions_query.call(
+        wallet_id: wallet.id + 'abc',
+        page: 1,
+        limit: 10,
+        filters: {},
+      )
+
+      aggregate_failures do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq('wallet_not_found')
       end
     end
   end
