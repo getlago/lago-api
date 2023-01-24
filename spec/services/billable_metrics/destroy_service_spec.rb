@@ -51,7 +51,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
     it 'enqueues a Invoices::RefreshBatchJob' do
       invoice = create(:invoice, :draft)
       create(:invoice_subscription, subscription:, invoice:)
-      subscription.invoices << invoice
 
       expect do
         destroy_service.call

@@ -171,6 +171,7 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context 'with charge to delete' do
+      let(:subscription) { create(:subscription, plan:) }
       let(:charge) do
         create(
           :standard_charge,
@@ -198,6 +199,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       let(:group) { create(:group, billable_metric:) }
 
       before do
+        subscription
         charge
         group_property
       end
@@ -214,6 +216,15 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect { plans_service.call }
             .to change { group_property.reload.deleted_at }.from(nil).to(Time.current)
         end
+      end
+
+      it 'enqueues a Invoices::RefreshBatchJob' do
+        invoice = create(:invoice, :draft)
+        create(:invoice_subscription, subscription:, invoice:)
+
+        expect do
+          plans_service.call
+        end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
       end
     end
 
