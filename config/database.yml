@@ -20,4 +20,4 @@ staging:
 production:
   <<: *default
   url: <%= ENV['DATABASE_URL'] %>
-  pool: <%= ENV.fetch['DATABASE_POOL'] { 10 } %>
+  pool: <%= ENV.fetch('DATABASE_POOL') { 10 } %>
