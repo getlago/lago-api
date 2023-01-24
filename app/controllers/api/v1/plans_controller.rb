@@ -31,11 +31,8 @@ module Api
       end
 
       def destroy
-        service = Plans::DestroyService.new
-        result = service.destroy_from_api(
-          organization: current_organization,
-          code: params[:code],
-        )
+        plan = current_organization.plans.find_by(code: params[:code])
+        result = Plans::DestroyService.call(plan:)
 
         if result.success?
           render_plan(result.plan)

@@ -2,8 +2,16 @@
 
 module Plans
   class DestroyService < BaseService
-    def destroy(id)
-      plan = result.user.plans.find_by(id: id)
+    def self.call(...)
+      new(...).call
+    end
+
+    def initialize(plan:)
+      @plan = plan
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'plan') unless plan
       return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless plan.deletable?
 
@@ -13,15 +21,8 @@ module Plans
       result
     end
 
-    def destroy_from_api(organization:, code:)
-      plan = organization.plans.find_by(code: code)
-      return result.not_found_failure!(resource: 'plan') unless plan
-      return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless plan.deletable?
+    private
 
-      plan.destroy!
-
-      result.plan = plan
-      result
-    end
+    attr_reader :plan
   end
 end
