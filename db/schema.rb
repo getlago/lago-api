@@ -16,6 +16,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
   enable_extension "plpgsql"
   enable_extension "unaccent"
 
+  create_table "_sqlx_migrations", primary_key: "version", id: :bigint, default: nil, force: :cascade do |t|
+    t.text "description", null: false
+    t.timestamptz "installed_on", default: -> { "now()" }, null: false
+    t.boolean "success", null: false
+    t.binary "checksum", null: false
+    t.bigint "execution_time", null: false
+  end
+
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -54,6 +62,23 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.datetime "updated_at", null: false
     t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true
     t.index ["organization_id"], name: "index_add_ons_on_organization_id"
+  end
+
+  create_table "application", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "updated_at", null: false
+    t.string "org_id", null: false, collation: "C"
+    t.string "uid", collation: "C"
+    t.string "name", null: false
+    t.integer "rate_limit"
+    t.boolean "deleted", null: false
+    t.index ["org_id", "uid"], name: "ix_application_unique_uid_per_org_cond", unique: true, where: "(uid IS NOT NULL)"
+  end
+
+  create_table "applicationmetadata", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "updated_at", null: false
+    t.jsonb "data", null: false
   end
 
   create_table "applied_add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -224,6 +249,32 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
   end
 
+  create_table "endpoint", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "updated_at", null: false
+    t.string "app_id", null: false, collation: "C"
+    t.binary "key", null: false
+    t.string "url", null: false
+    t.string "description", null: false
+    t.jsonb "event_types_ids"
+    t.integer "version", null: false
+    t.integer "rate_limit"
+    t.boolean "deleted", null: false
+    t.boolean "disabled", null: false
+    t.timestamptz "first_failure_at"
+    t.string "uid", collation: "C"
+    t.jsonb "old_keys"
+    t.jsonb "channels"
+    t.jsonb "headers"
+    t.index ["app_id", "uid"], name: "ix_endpoint_uid_unique_app_cond", unique: true, where: "(uid IS NOT NULL)"
+  end
+
+  create_table "endpointmetadata", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "updated_at", null: false
+    t.jsonb "data", null: false
+  end
+
   create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "customer_id", null: false
@@ -245,6 +296,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.index ["subscription_id"], name: "index_events_on_subscription_id"
   end
 
+  create_table "eventtype", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "updated_at", null: false
+    t.string "org_id", null: false, collation: "C"
+    t.string "description", null: false
+    t.boolean "deleted", null: false
+    t.json "schemas"
+    t.string "name", null: false, collation: "C"
+    t.index ["org_id", "name"], name: "ix_event_type_unique_org", unique: true
+  end
+
   create_table "fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id"
     t.uuid "charge_id"
@@ -259,10 +321,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
+    t.integer "events_count"
     t.integer "fee_type"
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
-    t.integer "events_count"
     t.uuid "group_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
@@ -361,6 +423,46 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
     t.datetime "revoked_at"
     t.index ["organization_id"], name: "index_memberships_on_organization_id"
     t.index ["user_id"], name: "index_memberships_on_user_id"
+  end
+
+  create_table "message", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.string "org_id", null: false, collation: "C"
+    t.string "app_id", null: false, collation: "C"
+    t.string "event_type", null: false, collation: "C"
+    t.string "uid", collation: "C"
+    t.jsonb "payload"
+    t.jsonb "channels"
+    t.timestamptz "expiration", default: -> { "(now() + 'P90D'::interval)" }, null: false
+    t.index ["app_id", "id"], name: "ix_message_per_app", order: { id: :desc }
+    t.index ["app_id", "uid"], name: "ix_message_uid_unique_app_cond", unique: true, where: "(uid IS NOT NULL)"
+    t.index ["expiration"], name: "message_payload_not_null_pidx", where: "(payload IS NOT NULL)"
+  end
+
+  create_table "messageattempt", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.string "msg_id", null: false, collation: "C"
+    t.string "msg_dest_id", null: false, collation: "C"
+    t.string "endp_id", null: false, collation: "C"
+    t.string "url", null: false
+    t.integer "status", limit: 2, null: false
+    t.integer "response_status_code", limit: 2, null: false
+    t.text "response", default: "", null: false
+    t.timestamptz "ended_at"
+    t.integer "trigger_type", limit: 2, null: false
+    t.index ["msg_id", "id"], name: "ix_messageattempt_per_msg_no_status", order: { id: :desc }
+  end
+
+  create_table "messagedestination", id: { type: :string, collation: "C" }, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "updated_at", null: false
+    t.string "msg_id", null: false, collation: "C"
+    t.string "endp_id", null: false, collation: "C"
+    t.integer "status", limit: 2, null: false
+    t.timestamptz "next_attempt"
+    t.index ["endp_id", "id"], name: "ix_messagedestination_per_endp_no_status", order: { id: :desc }
+    t.index ["endp_id", "status", "id"], name: "ix_messagedestination_per_endp_with_status", order: { id: :desc }
+    t.index ["msg_id"], name: "ix_messagedestination_per_msg_no_status"
   end
 
   create_table "organizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -554,6 +656,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
   add_foreign_key "credits", "credit_notes"
   add_foreign_key "credits", "invoices"
   add_foreign_key "customers", "organizations"
+  add_foreign_key "endpoint", "application", column: "app_id", name: "fk_endpoint_app_id_application", on_delete: :cascade
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
   add_foreign_key "events", "subscriptions"
@@ -573,6 +676,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_18_100324) do
   add_foreign_key "invoices", "customers"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "message", "application", column: "app_id", name: "fk_message_app_id_application", on_delete: :cascade
+  add_foreign_key "messageattempt", "messagedestination", column: "msg_dest_id", name: "fk_messageattempt_msg_dest_id_messagedestination", on_delete: :cascade
+  add_foreign_key "messagedestination", "endpoint", column: "endp_id", name: "fk_messagedestination_endp_id_endpoint", on_delete: :cascade
+  add_foreign_key "messagedestination", "message", column: "msg_id", name: "fk_messagedestination_msg_id_message", on_delete: :cascade
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
