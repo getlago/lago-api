@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateCouponPlans < ActiveRecord::Migration[7.0]
   def change
     create_table :coupon_plans, id: :uuid do |t|
