@@ -299,6 +299,28 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook type is invoice.payment_status_updated' do
+    let(:webhook_service) { instance_double(Webhooks::Invoices::PaymentStatusUpdatedService) }
+    let(:invoice) { create(:invoice) }
+
+    before do
+      allow(Webhooks::Invoices::PaymentStatusUpdatedService).to receive(:new)
+        .with(invoice)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        'invoice.payment_status_updated',
+        invoice,
+      )
+
+      expect(Webhooks::Invoices::PaymentStatusUpdatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'with not implemented webhook type' do
     it 'raises a NotImplementedError' do
       expect { send_webhook_job.perform_now(:subscription, invoice) }
