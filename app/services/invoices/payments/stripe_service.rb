@@ -52,6 +52,8 @@ module Invoices
         payment.update!(status: status)
         payment.invoice.update!(payment_status: status, ready_for_payment_processing: status != 'succeeded')
         handle_prepaid_credits(payment.invoice, status)
+
+        SendWebhookJob.perform_later('invoice.payment_status_updated', payment.invoice)
         track_payment_status_changed(payment.invoice)
 
         result
