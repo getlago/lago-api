@@ -25,8 +25,10 @@ class Plan < ApplicationRecord
   monetize :amount_cents
 
   validates :name, presence: true
-  validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :amount_currency, inclusion: { in: currency_list }
+  validates :code,
+            presence: true,
+            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
 
   default_scope -> { kept }
 

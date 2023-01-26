@@ -93,6 +93,18 @@ RSpec.describe Plans::CreateService, type: :service do
       )
     end
 
+    context 'with code already used by a deleted plan' do
+      it 'creates a plan with the same code' do
+        create(:plan, organization:, code: 'new_plan', deleted_at: Time.current)
+
+        expect { plans_service.create(**create_args) }.to change(Plan, :count).by(1)
+
+        plans = organization.plans.with_discarded
+        expect(plans.count).to eq(2)
+        expect(plans.pluck(:code).uniq).to eq(['new_plan'])
+      end
+    end
+
     context 'with validation error' do
       let(:plan_name) { nil }
 

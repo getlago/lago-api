@@ -14,15 +14,14 @@ module Plans
     def call
       return result.not_found_failure!(resource: 'plan') unless plan
 
-      draft_invoice_ids = Invoice.draft.joins(:plans)
-        .where(plans: { id: plan.id }).distinct.pluck(:id)
+      draft_invoice_ids = Invoice.draft.joins(:plans).where(plans: { id: plan.id }).distinct.pluck(:id)
+
+      # NOTE: Terminate active subscriptions.
+      plan.subscriptions.active.each do |subscription|
+        Subscriptions::TerminateService.new.terminate(subscription.id)
+      end
 
       plan.discard!
-
-      # NOTE: Terminate active subscriptions asynchronously.
-      plan.subscriptions.active do |subscription|
-        Subscriptions::TerminateJob.perform_later(subscription, Time.current.to_i)
-      end
 
       # NOTE: Refresh all draft invoices asynchronously.
       Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
