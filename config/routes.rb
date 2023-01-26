@@ -3,7 +3,7 @@
 require 'sidekiq/web'
 
 Rails.application.routes.draw do
-  mount Sidekiq::Web => '/sidekiq' if ENV['LAGO_SIDEKIQ_WEB']
+  mount Sidekiq::Web => '/sidekiq' if ENV['LAGO_SIDEKIQ_WEB'] == 'true'
 
   mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
 
