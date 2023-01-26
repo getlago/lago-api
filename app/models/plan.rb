@@ -2,6 +2,8 @@
 
 class Plan < ApplicationRecord
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :organization
   belongs_to :parent, class_name: 'Plan', optional: true
@@ -25,6 +27,8 @@ class Plan < ApplicationRecord
   validates :name, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :amount_currency, inclusion: { in: currency_list }
+
+  default_scope -> { kept }
 
   def pay_in_arrear?
     !pay_in_advance
