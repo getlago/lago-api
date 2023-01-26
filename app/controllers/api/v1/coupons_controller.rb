@@ -105,6 +105,7 @@ module Api
           json: ::V1::CouponSerializer.new(
             coupon,
             root_name: 'coupon',
+            includes: %i[plans],
           ),
         )
       end

@@ -3,9 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::CouponSerializer do
-  subject(:serializer) { described_class.new(coupon, root_name: 'coupon') }
+  subject(:serializer) { described_class.new(coupon, root_name: 'coupon', includes: %i[plans]) }
 
-  let(:coupon) { create(:coupon) }
+  let(:coupon_plan) { create(:coupon_plan) }
+  let(:coupon) { coupon_plan.coupon }
+
+  before { coupon_plan }
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -16,9 +19,11 @@ RSpec.describe ::V1::CouponSerializer do
       expect(result['coupon']['code']).to eq(coupon.code)
       expect(result['coupon']['amount_cents']).to eq(coupon.amount_cents)
       expect(result['coupon']['amount_currency']).to eq(coupon.amount_currency)
+      expect(result['coupon']['limited_plans']).to eq(coupon.limited_plans)
       expect(result['coupon']['expiration']).to eq(coupon.expiration)
       expect(result['coupon']['expiration_at']).to eq(coupon.expiration_at&.iso8601)
       expect(result['coupon']['created_at']).to eq(coupon.created_at.iso8601)
+      expect(result['coupon']['plans'].first['lago_id']).to eq(coupon_plan.plan.id)
     end
   end
 
