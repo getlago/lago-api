@@ -25,9 +25,9 @@ module PaymentProviderCustomers
     end
 
     def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
-      stripe_customer = PaymentProviderCustomers::StripeCustomer
+      @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: organization_id })
+        .where(customers: { organization_id: })
         .find_by(provider_customer_id: stripe_customer_id)
       return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer
 
@@ -43,9 +43,9 @@ module PaymentProviderCustomers
     end
 
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
-      stripe_customer = PaymentProviderCustomers::StripeCustomer
+      @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: organization_id })
+        .where(customers: { organization_id: })
         .find_by(provider_customer_id: stripe_customer_id)
       return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer
 

@@ -75,8 +75,10 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   end
 
   describe '.update_payment_method' do
+    subject(:stripe_service) { described_class.new }
+
     let(:stripe_customer) do
-      create(:stripe_customer, customer: customer, provider_customer_id: 'cus_123456')
+      create(:stripe_customer, customer:, provider_customer_id: 'cus_123456')
     end
 
     it 'updates the customer payment method' do
@@ -96,7 +98,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       let(:invoice) do
         create(
           :invoice,
-          customer: customer,
+          customer:,
           total_amount_cents: 200,
           total_amount_currency: 'EUR',
         )
@@ -122,6 +124,8 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   end
 
   describe '.delete_payment_method' do
+    subject(:stripe_service) { described_class.new }
+
     let(:payment_method_id) { 'card_12345' }
 
     let(:stripe_customer) do
