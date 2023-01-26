@@ -80,13 +80,13 @@ class CreditNote < ApplicationRecord
   def subscription_item(subscription_id)
     items.joins(:fee)
       .merge(Fee.subscription)
-      .find_by(fees: { subscription_id: subscription_id }) || Fee.new(amount_cents: 0)
+      .find_by(fees: { subscription_id: }) || Fee.new(amount_cents: 0, amount_currency: currency)
   end
 
   def subscription_charge_items(subscription_id)
     items.joins(:fee)
       .merge(Fee.charge)
-      .where(fees: { subscription_id: subscription_id })
+      .where(fees: { subscription_id: })
       .includes(:fee)
   end
 
