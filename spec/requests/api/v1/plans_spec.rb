@@ -322,25 +322,6 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
-
-    context 'when plan is attached to active subscription' do
-      let(:subscription) { create(:subscription, plan: plan) }
-      let(:plan) { create(:plan, organization: organization) }
-
-      before { subscription }
-
-      it 'returns forbidden error' do
-        delete_with_token(organization, "/api/v1/plans/#{plan.code}")
-
-        aggregate_failures do
-          expect(response).to have_http_status(:method_not_allowed)
-
-          expect(json[:status]).to eq(405)
-          expect(json[:error]).to eq('Method Not Allowed')
-          expect(json[:code]).to eq('attached_to_an_active_subscription')
-        end
-      end
-    end
   end
 
   describe 'index' do

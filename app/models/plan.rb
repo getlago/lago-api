@@ -38,10 +38,6 @@ class Plan < ApplicationRecord
     subscriptions.exists?
   end
 
-  def deletable?
-    !attached_to_subscriptions?
-  end
-
   def has_trial?
     trial_period.present? && trial_period.positive?
   end

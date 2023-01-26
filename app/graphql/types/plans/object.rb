@@ -29,20 +29,12 @@ module Types
       field :active_subscriptions_count, Integer, null: false
       field :draft_invoices_count, Integer, null: false
 
-      field :can_be_deleted, Boolean, null: false do
-        description 'Check if plan is deletable'
-      end
-
       def charge_count
         object.charges.count
       end
 
       def customer_count
         object.subscriptions.active.select(:customer_id).distinct.count
-      end
-
-      def can_be_deleted
-        object.deletable?
       end
 
       def active_subscriptions_count

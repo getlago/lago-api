@@ -3611,11 +3611,6 @@ type Plan {
   billChargesMonthly: Boolean
 
   """
-  Check if plan is deletable
-  """
-  canBeDeleted: Boolean!
-
-  """
   Number of charges attached to a plan
   """
   chargeCount: Int!
@@ -3649,11 +3644,6 @@ type PlanDetails {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
-
-  """
-  Check if plan is deletable
-  """
-  canBeDeleted: Boolean!
 
   """
   Number of charges attached to a plan
