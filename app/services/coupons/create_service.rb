@@ -27,8 +27,6 @@ module Coupons
       )
 
       if plan_identifiers.present?
-        plans = fetch_plans
-
         return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
       end
 
@@ -63,16 +61,22 @@ module Coupons
 
     def plan_identifiers
       if api_context?
-        limitations[:plan_codes]&.uniq
+        limitations[:plan_codes]&.compact&.uniq
       else
-        limitations[:plan_ids]&.uniq
+        limitations[:plan_ids]&.compact&.uniq
       end
     end
 
-    def fetch_plans
-      return Plan.where(code: plan_identifiers, organization_id:) if api_context?
+    def plans
+      return @plans if defined? @plans
 
-      Plan.where(id: plan_identifiers, organization_id:)
+      @plans = if api_context? && plan_identifiers.present?
+        Plan.where(code: plan_identifiers, organization_id:)
+      elsif plan_identifiers.present?
+        Plan.where(id: plan_identifiers, organization_id:)
+      else
+        []
+      end
     end
 
     def valid?(args)

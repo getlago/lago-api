@@ -3,14 +3,20 @@
 module Coupons
   class UpdateService < BaseService
     def update(args)
-      coupon = result.user.coupons.find_by(id: args[:id])
+      @coupon = result.user.coupons.find_by(id: args[:id])
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
       coupon.name = args[:name]
       coupon.expiration = args[:expiration]&.to_sym
       coupon.expiration_at = args[:expiration_at]
 
+      @limitations = args[:applies_to]&.deep_symbolize_keys || {}
+
       unless coupon.attached_to_customers?
+        unless plan_identifiers.nil?
+          return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
+        end
+
         coupon.code = args[:code]
         coupon.coupon_type = args[:coupon_type]
         coupon.amount_cents = args[:amount_cents]
@@ -21,7 +27,11 @@ module Coupons
         coupon.reusable = args[:reusable]
       end
 
-      coupon.save!
+      ActiveRecord::Base.transaction do
+        coupon.save!
+
+        process_plans unless plan_identifiers.nil? || coupon.attached_to_customers?
+      end
 
       result.coupon = coupon
       result
@@ -30,7 +40,7 @@ module Coupons
     end
 
     def update_from_api(organization:, code:, params:)
-      coupon = organization.coupons.find_by(code: code)
+      @coupon = organization.coupons.find_by(code: code)
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
       return result unless valid?(params)
@@ -39,7 +49,13 @@ module Coupons
       coupon.expiration = params[:expiration] if params.key?(:expiration)
       coupon.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
 
+      @limitations = params[:applies_to]&.deep_symbolize_keys || {}
+
       unless coupon.attached_to_customers?
+        unless plan_identifiers.nil?
+          return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
+        end
+
         coupon.code = params[:code] if params.key?(:code)
         coupon.coupon_type = params[:coupon_type] if params.key?(:coupon_type)
         coupon.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
@@ -50,7 +66,11 @@ module Coupons
         coupon.reusable = params[:reusable] if params.key?(:reusable)
       end
 
-      coupon.save!
+      ActiveRecord::Base.transaction do
+        coupon.save!
+
+        process_plans unless plan_identifiers.nil? || coupon.attached_to_customers?
+      end
 
       result.coupon = coupon
       result
@@ -59,6 +79,48 @@ module Coupons
     end
 
     private
+
+    attr_reader :coupon, :limitations
+
+    def plan_identifiers
+      if api_context?
+        limitations[:plan_codes]&.compact&.uniq
+      else
+        limitations[:plan_ids]&.compact&.uniq
+      end
+    end
+
+    def plans
+      return @plans if defined? @plans
+
+      @plans = if api_context? && plan_identifiers.present?
+        Plan.where(code: plan_identifiers, organization_id: coupon.organization_id)
+      elsif plan_identifiers.present?
+        Plan.where(id: plan_identifiers, organization_id: coupon.organization_id)
+      else
+        []
+      end
+    end
+
+    def process_plans
+      existing_coupon_plan_ids = coupon.coupon_plans.pluck(:plan_id)
+
+      plans.each do |plan|
+        next if existing_coupon_plan_ids.include?(plan.id)
+
+        CouponPlan.create!(coupon:, plan:)
+      end
+
+      sanitize_coupon_plans
+    end
+
+    def sanitize_coupon_plans
+      not_needed_coupon_plan_ids = coupon.coupon_plans.pluck(:plan_id) - plans.pluck(:id)
+
+      not_needed_coupon_plan_ids.each do |coupon_plan_id|
+        CouponPlan.find_by(coupon:, plan_id: coupon_plan_id).destroy!
+      end
+    end
 
     def valid?(args)
       Coupons::ValidateService.new(result, **args).valid?
