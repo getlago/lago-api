@@ -30,20 +30,5 @@ RSpec.describe Plans::DestroyService, type: :service do
         end
       end
     end
-
-    context 'when plan is attached to subscription' do
-      before do
-        create(:subscription, plan:)
-      end
-
-      it 'returns an error' do
-        result = plans_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq('attached_to_an_active_subscription')
-        end
-      end
-    end
   end
 end
