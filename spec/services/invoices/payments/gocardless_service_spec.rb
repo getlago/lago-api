@@ -225,6 +225,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 
@@ -254,6 +255,18 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           invoice_id: invoice.id,
           payment_status: invoice.payment_status,
         },
+      )
+    end
+
+    it 'calls SendWebhookJob' do
+      invoice = gocardless_service.update_payment_status(
+        provider_payment_id: 'ch_123456',
+        status: 'paid_out',
+      ).payment.invoice
+
+      expect(SendWebhookJob).to have_received(:perform_later).with(
+        'invoice.payment_status_updated',
+        invoice,
       )
     end
 
