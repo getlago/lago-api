@@ -295,7 +295,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         provider_payment_id: 'ch_123456',
         status: 'succeeded',
       ).payment.invoice
-      
+
       expect(SendWebhookJob).to have_received(:perform_later).with(
         'invoice.payment_status_updated',
         invoice,

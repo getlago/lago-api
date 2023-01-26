@@ -6,10 +6,10 @@ RSpec.describe Webhooks::Invoices::PaymentStatusUpdatedService do
   subject(:webhook_service) { described_class.new(invoice) }
 
   let(:webhook_url) { 'http://foo.bar' }
-  let(:organization) { create(:organization, webhook_url: webhook_url) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-  let(:invoice) { create(:invoice, customer: customer) }
+  let(:organization) { create(:organization, webhook_url:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, organization:, customer:) }
+  let(:invoice) { create(:invoice, customer:) }
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
