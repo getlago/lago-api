@@ -3605,6 +3605,7 @@ type Organization {
 }
 
 type Plan {
+  activeSubscriptionsCount: Int!
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
@@ -3627,6 +3628,7 @@ type Plan {
   """
   customerCount: Int!
   description: String
+  draftInvoicesCount: Int!
   id: ID!
   interval: PlanInterval!
   name: String!
@@ -3643,6 +3645,7 @@ type PlanCollection {
 }
 
 type PlanDetails {
+  activeSubscriptionsCount: Int!
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
@@ -3665,6 +3668,7 @@ type PlanDetails {
   """
   customerCount: Int!
   description: String
+  draftInvoicesCount: Int!
   id: ID!
   interval: PlanInterval!
   name: String!

@@ -6,7 +6,7 @@ RSpec.describe ::V1::PlanSerializer do
   subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges]) }
 
   let(:plan) { create(:plan) }
-  let(:charge) { create(:standard_charge, plan: plan) }
+  let(:charge) { create(:standard_charge, plan:) }
 
   before { charge }
 
@@ -25,6 +25,8 @@ RSpec.describe ::V1::PlanSerializer do
       expect(result['plan']['trial_period']).to eq(plan.trial_period)
       expect(result['plan']['pay_in_advance']).to eq(plan.pay_in_advance)
       expect(result['plan']['bill_charges_monthly']).to eq(plan.bill_charges_monthly)
+      expect(result['plan']['active_subscriptions_count']).to eq(0)
+      expect(result['plan']['draft_invoices_count']).to eq(0)
       expect(result['plan']['charges'].first['lago_id']).to eq(charge.id)
       expect(result['plan']['charges'].first['group_properties']).to eq([])
     end
