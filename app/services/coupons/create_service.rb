@@ -5,10 +5,13 @@ module Coupons
     def create(args)
       return result unless valid?(args)
 
+      @limitations = args[:applies_to]&.deep_symbolize_keys || {}
+      @organization_id = args[:organization_id]
+
       reusable = args.key?(:reusable) ? args[:reusable] : true
 
-      coupon = Coupon.create!(
-        organization_id: args[:organization_id],
+      coupon = Coupon.new(
+        organization_id: organization_id,
         name: args[:name],
         code: args[:code],
         coupon_type: args[:coupon_type],
@@ -19,8 +22,21 @@ module Coupons
         frequency_duration: args[:frequency_duration],
         expiration: args[:expiration]&.to_sym,
         expiration_at: args[:expiration_at],
+        limited_plans: plan_identifiers.present?,
         reusable: reusable,
       )
+
+      if plan_identifiers.present?
+        plans = fetch_plans
+
+        return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
+      end
+
+      ActiveRecord::Base.transaction do
+        coupon.save!
+
+        plans.each { |plan| CouponPlan.create!(coupon:, plan:) } if plan_identifiers.present?
+      end
 
       result.coupon = coupon
       track_coupon_created(result.coupon)
@@ -31,6 +47,8 @@ module Coupons
 
     private
 
+    attr_reader :limitations, :organization_id
+
     def track_coupon_created(coupon)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
@@ -38,9 +56,23 @@ module Coupons
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,
-          organization_id: coupon.organization_id,
+          organization_id:,
         },
       )
+    end
+
+    def plan_identifiers
+      if api_context?
+        limitations[:plan_codes]&.uniq
+      else
+        limitations[:plan_ids]&.uniq
+      end
+    end
+
+    def fetch_plans
+      return Plan.where(code: plan_identifiers, organization_id:) if api_context?
+
+      Plan.where(id: plan_identifiers, organization_id:)
     end
 
     def valid?(args)
