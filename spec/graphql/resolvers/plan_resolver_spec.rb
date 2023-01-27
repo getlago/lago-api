@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+# frozen_string_literal: true
 
 require 'rails_helper'
 
@@ -7,7 +7,11 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
     <<~GQL
       query($planId: ID!) {
         plan(id: $planId) {
-          id name customerCount
+          id
+          name
+          customerCount
+          activeSubscriptionsCount
+          draftInvoicesCount
         }
       }
     GQL
@@ -15,24 +19,19 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:plan) do
-    create(:plan, organization: organization)
-  end
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
 
   before do
     customer
-
-    2.times do
-      create(:subscription, customer: customer, plan: plan)
-    end
+    create_list(:subscription, 2, customer:, plan:)
   end
 
   it 'returns a single plan' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         planId: plan.id,
       },
@@ -57,7 +56,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end
@@ -68,14 +67,14 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           planId: 'foo',
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Resource not found',
       )
     end
