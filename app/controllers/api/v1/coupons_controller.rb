@@ -96,7 +96,7 @@ module Api
           :reusable,
           applies_to: [
             plan_codes: [],
-          ]
+          ],
         )
       end
 

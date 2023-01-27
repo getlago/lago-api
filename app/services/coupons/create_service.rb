@@ -11,7 +11,7 @@ module Coupons
       reusable = args.key?(:reusable) ? args[:reusable] : true
 
       coupon = Coupon.new(
-        organization_id: organization_id,
+        organization_id:,
         name: args[:name],
         code: args[:code],
         coupon_type: args[:coupon_type],
@@ -26,8 +26,8 @@ module Coupons
         reusable: reusable,
       )
 
-      if plan_identifiers.present?
-        return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
+      if plan_identifiers.present? && plans.count != plan_identifiers.count
+        return result.not_found_failure!(resource: 'plans')
       end
 
       ActiveRecord::Base.transaction do

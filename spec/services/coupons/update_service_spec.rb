@@ -208,7 +208,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
       let(:update_args) do
         {
-          name: name,
+          name:,
           code: 'coupon1_code',
           coupon_type: 'fixed_amount',
           frequency: 'once',
@@ -245,7 +245,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
       let(:update_args) do
         {
-          name: name,
+          name:,
           code: 'coupon1_code',
           coupon_type: 'fixed_amount',
           frequency: 'once',

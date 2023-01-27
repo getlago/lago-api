@@ -13,8 +13,8 @@ module Coupons
       @limitations = args[:applies_to]&.deep_symbolize_keys || {}
 
       unless coupon.attached_to_customers?
-        unless plan_identifiers.nil?
-          return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
+        if !plan_identifiers.nil? && plans.count != plan_identifiers.count
+          return result.not_found_failure!(resource: 'plans')
         end
 
         coupon.code = args[:code]
@@ -40,7 +40,7 @@ module Coupons
     end
 
     def update_from_api(organization:, code:, params:)
-      @coupon = organization.coupons.find_by(code: code)
+      @coupon = organization.coupons.find_by(code:)
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
       return result unless valid?(params)
@@ -52,8 +52,8 @@ module Coupons
       @limitations = params[:applies_to]&.deep_symbolize_keys || {}
 
       unless coupon.attached_to_customers?
-        unless plan_identifiers.nil?
-          return result.not_found_failure!(resource: 'plans') if plans.count != plan_identifiers.count
+        if !plan_identifiers.nil? && plans.count != plan_identifiers.count
+          return result.not_found_failure!(resource: 'plans')
         end
 
         coupon.code = params[:code] if params.key?(:code)
