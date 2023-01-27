@@ -115,7 +115,8 @@ module PaymentProviders
         Invoices::Payments::StripeService
           .new.update_payment_status(
             provider_payment_id: event.data.object.id,
-            status: status,
+            status:,
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
       when 'payment_method.detached'
         result = PaymentProviderCustomers::StripeService
