@@ -345,5 +345,37 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         end
       end
     end
+
+    context 'when payment is not found' do
+      let(:payment) { nil }
+
+      it 'returns an empty result' do
+        result = stripe_service.update_payment_status(
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context 'with invoice id in metadata' do
+        it 'returns a not found failure' do
+          result = stripe_service.update_payment_status(
+            provider_payment_id: 'ch_123456',
+            status: 'succeeded',
+            metadata: { lago_invoice_id: SecureRandom.uuid },
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('stripe_payment_not_found')
+          end
+        end
+      end
+    end
   end
 end

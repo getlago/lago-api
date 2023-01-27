@@ -241,6 +241,13 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(Invoices::Payments::StripeService).to have_received(:new)
         expect(payment_service).to have_received(:update_payment_status)
+          .with(
+            provider_payment_id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
+            status: 'succeeded',
+            metadata: {
+              lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f',
+            },
+          )
       end
     end
 
