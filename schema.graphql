@@ -1481,6 +1481,7 @@ type Coupon {
   name: String!
   organization: Organization
   percentageRate: Float
+  plans: [Plan!]
   reusable: Boolean!
   status: CouponStatusEnum!
   terminatedAt: ISO8601DateTime
@@ -1516,6 +1517,7 @@ type CouponDetails {
   name: String!
   organization: Organization
   percentageRate: Float
+  plans: [Plan!]
   reusable: Boolean!
   status: CouponStatusEnum!
   terminatedAt: ISO8601DateTime
