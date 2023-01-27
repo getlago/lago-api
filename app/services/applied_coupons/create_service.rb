@@ -49,6 +49,7 @@ module AppliedCoupons
     def check_preconditions
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'coupon') unless coupon
+      return result.not_allowed_failure!(code: 'plan_overlapping') if plan_limitation_overlapping?
       return if reusable_coupon?
 
       result.single_validation_failure!(field: 'coupon', error_code: 'coupon_is_not_reusable')
@@ -94,6 +95,16 @@ module AppliedCoupons
       return true if coupon.reusable?
 
       customer.applied_coupons.where(coupon_id: coupon.id).none?
+    end
+
+    def plan_limitation_overlapping?
+      return false unless coupon.limited_plans?
+
+      related_plans = coupon.coupon_plans.pluck(:plan_id)
+
+      active_coupons_ids = customer.applied_coupons.active.pluck(:coupon_id)
+
+      CouponPlan.where(coupon_id: active_coupons_ids, plan_id: related_plans).exists?
     end
 
     def track_applied_coupon_created(applied_coupon)
