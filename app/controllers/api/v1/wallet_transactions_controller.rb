@@ -25,6 +25,30 @@ module Api
         end
       end
 
+      def index
+        query = WalletTransactionsQuery.new(organization: current_organization)
+        result = query.call(
+          wallet_id: params[:id],
+          page: params[:page],
+          limit: params[:per_page] || PER_PAGE,
+          filters: {
+            status: params[:status],
+            transaction_type: params[:transaction_type],
+          },
+        )
+
+        return render_error_response(result) unless result.success?
+
+        render(
+          json: ::CollectionSerializer.new(
+            result.wallet_transactions,
+            ::V1::WalletTransactionSerializer,
+            collection_name: 'wallet_transactions',
+            meta: pagination_metadata(result.wallet_transactions),
+          ),
+        )
+      end
+
       private
 
       def input_params
