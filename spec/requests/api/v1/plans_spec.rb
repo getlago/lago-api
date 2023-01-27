@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::PlansController, type: :request do
   let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
 
   describe 'create' do
     let(:create_params) do
@@ -91,7 +91,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
 
     context 'with group properties on charges' do
-      let(:group) { create(:group, billable_metric: billable_metric) }
+      let(:group) { create(:group, billable_metric:) }
       let(:create_params) do
         {
           name: 'P1',
@@ -164,12 +164,12 @@ RSpec.describe Api::V1::PlansController, type: :request do
   end
 
   describe 'update' do
-    let(:plan) { create(:plan, organization: organization) }
+    let(:plan) { create(:plan, organization:) }
     let(:code) { 'plan_code' }
     let(:update_params) do
       {
         name: 'P1',
-        code: code,
+        code:,
         interval: 'weekly',
         description: 'description',
         amount_cents: 100,
@@ -209,7 +209,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
 
     context 'when plan code already exists in organization scope (validation error)' do
-      let(:plan2) { create(:plan, organization: organization) }
+      let(:plan2) { create(:plan, organization:) }
       let(:code) { plan2.code }
 
       before { plan2 }
@@ -226,7 +226,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
 
     context 'with group properties on charges' do
-      let(:group) { create(:group, billable_metric: billable_metric) }
+      let(:group) { create(:group, billable_metric:) }
       let(:update_params) do
         {
           name: 'P1',
@@ -272,7 +272,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
   end
 
   describe 'show' do
-    let(:plan) { create(:plan, organization: organization) }
+    let(:plan) { create(:plan, organization:) }
 
     it 'returns a plan' do
       get_with_token(
@@ -298,13 +298,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
   end
 
   describe 'destroy' do
-    let(:plan) { create(:plan, organization: organization) }
+    let(:plan) { create(:plan, organization:) }
 
-    before { plan }
-
-    it 'deletes a plan' do
+    it 'marks plan as pending_deletion' do
       expect { delete_with_token(organization, "/api/v1/plans/#{plan.code}") }
-        .to change(Plan, :count).by(-1)
+        .to change { plan.reload.pending_deletion }.from(false).to(true)
     end
 
     it 'returns deleted plan' do
@@ -325,7 +323,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
   end
 
   describe 'index' do
-    let(:plan) { create(:plan, organization: organization) }
+    let(:plan) { create(:plan, organization:) }
 
     before { plan }
 
@@ -340,7 +338,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
 
     context 'with pagination' do
-      let(:plan2) { create(:plan, organization: organization) }
+      let(:plan2) { create(:plan, organization:) }
 
       before { plan2 }
 

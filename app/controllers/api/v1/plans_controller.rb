@@ -32,7 +32,7 @@ module Api
 
       def destroy
         plan = current_organization.plans.find_by(code: params[:code])
-        result = Plans::DestroyService.call(plan:)
+        result = Plans::PrepareDestroyService.call(plan:)
 
         if result.success?
           render_plan(result.plan)
