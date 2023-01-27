@@ -6,6 +6,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization: membership.organization) }
   let(:expiration_at) { Time.current + 3.days }
+  let(:plan) { create(:plan, organization: membership.organization) }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateCouponInput!) {
@@ -18,6 +19,10 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
           amountCurrency,
           expiration,
           expirationAt,
+          limitedPlans,
+          plans {
+            id
+          },
           reusable
         }
       }
@@ -40,6 +45,9 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
           expiration: 'time_limit',
           expirationAt: expiration_at.iso8601,
           reusable: false,
+          appliesTo: {
+            planIds: [plan.id],
+          },
         },
       },
     )
@@ -55,6 +63,8 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
       expect(result_data['expiration']).to eq('time_limit')
       expect(result_data['expirationAt']).to eq expiration_at.iso8601
       expect(result_data['reusable']).to eq(false)
+      expect(result_data['limitedPlans']).to eq(true)
+      expect(result_data['plans'].first['id']).to eq(plan.id)
     end
   end
 

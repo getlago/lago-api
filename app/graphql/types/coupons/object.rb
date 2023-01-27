@@ -22,6 +22,7 @@ module Types
       field :expiration, Types::Coupons::ExpirationEnum, null: false
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
 
+      field :limited_plans, Boolean, null: false
       field :plans, [Types::Plans::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

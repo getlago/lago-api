@@ -5,7 +5,7 @@ module Coupons
     def create(args)
       return result unless valid?(args)
 
-      @limitations = args[:applies_to]&.deep_symbolize_keys || {}
+      @limitations = args[:applies_to]&.to_h&.deep_symbolize_keys || {}
       @organization_id = args[:organization_id]
 
       reusable = args.key?(:reusable) ? args[:reusable] : true

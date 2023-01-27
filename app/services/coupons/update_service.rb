@@ -10,7 +10,7 @@ module Coupons
       coupon.expiration = args[:expiration]&.to_sym
       coupon.expiration_at = args[:expiration_at]
 
-      @limitations = args[:applies_to]&.deep_symbolize_keys || {}
+      @limitations = args[:applies_to]&.to_h&.deep_symbolize_keys || {}
 
       unless coupon.attached_to_customers?
         if !plan_identifiers.nil? && plans.count != plan_identifiers.count
@@ -50,7 +50,7 @@ module Coupons
       coupon.expiration = params[:expiration] if params.key?(:expiration)
       coupon.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
 
-      @limitations = params[:applies_to]&.deep_symbolize_keys || {}
+      @limitations = params[:applies_to]&.to_h&.deep_symbolize_keys || {}
 
       unless coupon.attached_to_customers?
         if !plan_identifiers.nil? && plans.count != plan_identifiers.count
