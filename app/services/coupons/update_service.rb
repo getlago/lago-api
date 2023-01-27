@@ -25,6 +25,7 @@ module Coupons
         coupon.frequency = args[:frequency]
         coupon.frequency_duration = args[:frequency_duration]
         coupon.reusable = args[:reusable]
+        coupon.limited_plans = plan_identifiers.present? unless plan_identifiers.nil?
       end
 
       ActiveRecord::Base.transaction do
@@ -64,6 +65,7 @@ module Coupons
         coupon.frequency = params[:frequency] if params.key?(:frequency)
         coupon.frequency_duration = params[:frequency_duration] if params.key?(:frequency_duration)
         coupon.reusable = params[:reusable] if params.key?(:reusable)
+        coupon.limited_plans = plan_identifiers.present? unless plan_identifiers.nil?
       end
 
       ActiveRecord::Base.transaction do
