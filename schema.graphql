@@ -3001,7 +3001,6 @@ type Invoice {
   legacy: Boolean!
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
-  plan: Plan
   refundableAmountCents: BigInt!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!

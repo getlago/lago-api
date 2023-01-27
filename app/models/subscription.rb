@@ -2,7 +2,7 @@
 
 class Subscription < ApplicationRecord
   belongs_to :customer
-  belongs_to :plan
+  belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: 'Subscription', optional: true
 
   has_one :organization, through: :customer
