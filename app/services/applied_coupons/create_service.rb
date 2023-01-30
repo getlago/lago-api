@@ -100,11 +100,12 @@ module AppliedCoupons
     def plan_limitation_overlapping?
       return false unless coupon.limited_plans?
 
-      related_plans = coupon.coupon_plans.pluck(:plan_id)
-
-      active_coupons_ids = customer.applied_coupons.active.pluck(:coupon_id)
-
-      CouponPlan.where(coupon_id: active_coupons_ids, plan_id: related_plans).exists?
+      customer
+        .applied_coupons
+        .active
+        .joins(coupon: :coupon_plans)
+        .where(coupon_plans: { plan_id: coupon.coupon_plans.select(:plan_id) })
+        .exists?
     end
 
     def track_applied_coupon_created(applied_coupon)
