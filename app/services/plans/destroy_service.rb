@@ -23,6 +23,7 @@ module Plans
       invoices = Invoice.draft.joins(:plans).where(plans: { id: plan.id }).distinct
       invoices.each { |invoice| Invoices::FinalizeService.call(invoice:) }
 
+      plan.pending_deletion = false
       plan.discard!
       track_plan_deleted
 

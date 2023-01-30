@@ -8,7 +8,7 @@ RSpec.describe Plans::DestroyService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, organization:, pending_deletion: true) }
 
   before { plan }
 
@@ -16,6 +16,10 @@ RSpec.describe Plans::DestroyService, type: :service do
     it 'destroys the plan' do
       expect { plans_service.call }
         .to change(Plan, :count).by(-1)
+    end
+
+    it 'sets pending_deletion to false' do
+      expect { plans_service.call }.to change { plan.reload.pending_deletion }.from(true).to(false)
     end
 
     context 'when plan is not found' do
