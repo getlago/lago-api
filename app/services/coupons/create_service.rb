@@ -68,7 +68,7 @@ module Coupons
       return @plans if defined? @plans
       return [] if plan_identifiers.blank?
 
-      finder  = api_context? ? :code : :id
+      finder = api_context? ? :code : :id
       @plans = Plan.where(finder => plan_identifiers, organization_id:)
     end
 
