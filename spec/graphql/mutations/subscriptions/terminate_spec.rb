@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
   let(:membership) { create(:membership) }
-  let(:subscription) { create(:subscription) }
+  let(:subscription) { create(:subscription, organization: membership.organization) }
   let(:mutation) do
     <<~GQL
       mutation($input: TerminateSubscriptionInput!) {

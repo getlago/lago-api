@@ -16,7 +16,8 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = ::Subscriptions::TerminateService.new.terminate(args[:id])
+        subscription = current_organization.subscriptions.find_by(id: args[:id])
+        result = ::Subscriptions::TerminateService.call(subscription:)
 
         result.success? ? result.subscription : result_error(result)
       end
