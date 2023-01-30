@@ -6,8 +6,9 @@ module Subscriptions
       new(...).call
     end
 
-    def initialize(subscription:)
+    def initialize(subscription:, async: true)
       @subscription = subscription
+      @async = async
 
       super
     end
@@ -30,7 +31,7 @@ module Subscriptions
           credit_note_result.raise_if_error!
         end
 
-        BillSubscriptionJob.perform_later([subscription], subscription.terminated_at)
+        bill_subscription
       end
 
       # NOTE: Pending next subscription should be canceled as well
@@ -86,6 +87,14 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription
+    attr_reader :subscription, :async
+
+    def bill_subscription
+      if async
+        BillSubscriptionJob.perform_later([subscription], subscription.terminated_at)
+      else
+        BillSubscriptionJob.perform_now([subscription], subscription.terminated_at)
+      end
+    end
   end
 end
