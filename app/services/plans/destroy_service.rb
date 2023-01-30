@@ -16,7 +16,7 @@ module Plans
 
       # NOTE: Terminate active subscriptions.
       plan.subscriptions.active.each do |subscription|
-        Subscriptions::TerminateService.new.terminate(subscription.id, async: false)
+        Subscriptions::TerminateService.call(subscription:, async: false)
       end
 
       # NOTE: Finalize all draft invoices.
