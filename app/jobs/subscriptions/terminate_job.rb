@@ -5,10 +5,8 @@ module Subscriptions
     queue_as 'billing'
 
     def perform(subscription, timestamp)
-      result = Subscriptions::TerminateService.new.terminate_and_start_next(
-        subscription: subscription,
-        timestamp: timestamp,
-      )
+      result = Subscriptions::TerminateService.new(subscription:)
+        .terminate_and_start_next(timestamp:)
 
       result.raise_if_error!
     end

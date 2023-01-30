@@ -10,9 +10,11 @@ RSpec.describe Subscriptions::TerminateJob, type: :job do
   let(:result) { BaseService::Result.new }
 
   it 'calls the subscription service' do
-    allow(Subscriptions::TerminateService).to receive(:new).and_return(subscription_service)
+    allow(Subscriptions::TerminateService).to receive(:new)
+      .with(subscription:)
+      .and_return(subscription_service)
     allow(subscription_service).to receive(:terminate_and_start_next)
-      .with(subscription: subscription, timestamp: timestamp)
+      .with(timestamp:)
       .and_return(result)
 
     described_class.perform_now(subscription, timestamp)
@@ -27,9 +29,11 @@ RSpec.describe Subscriptions::TerminateJob, type: :job do
     end
 
     it 'raises an error' do
-      allow(Subscriptions::TerminateService).to receive(:new).and_return(subscription_service)
+      allow(Subscriptions::TerminateService).to receive(:new)
+        .with(subscription:)
+        .and_return(subscription_service)
       allow(subscription_service).to receive(:terminate_and_start_next)
-        .with(subscription: subscription, timestamp: timestamp)
+        .with(timestamp:)
         .and_return(result)
 
       expect do
