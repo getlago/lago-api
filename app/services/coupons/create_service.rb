@@ -60,23 +60,16 @@ module Coupons
     end
 
     def plan_identifiers
-      if api_context?
-        limitations[:plan_codes]&.compact&.uniq
-      else
-        limitations[:plan_ids]&.compact&.uniq
-      end
+      key = api_context? ? :plan_codes : :plan_ids
+      limitations[key]&.compact&.uniq
     end
 
     def plans
       return @plans if defined? @plans
+      return [] if plan_identifiers.blank?
 
-      @plans = if api_context? && plan_identifiers.present?
-        Plan.where(code: plan_identifiers, organization_id:)
-      elsif plan_identifiers.present?
-        Plan.where(id: plan_identifiers, organization_id:)
-      else
-        []
-      end
+      finder  = api_context? ? :code : :id
+      @plans = Plan.where(finder => plan_identifiers, organization_id:)
     end
 
     def valid?(args)
