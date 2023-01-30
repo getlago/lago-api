@@ -30,5 +30,72 @@ RSpec.describe Plans::DestroyService, type: :service do
         end
       end
     end
+
+    it 'calls SegmentTrackJob' do
+      allow(SegmentTrackJob).to receive(:perform_later)
+
+      plans_service.call
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'plan_deleted',
+        properties: {
+          code: plan.code,
+          name: plan.name,
+          description: plan.description,
+          plan_interval: plan.interval,
+          plan_amount_cents: plan.amount_cents,
+          plan_period: 'arrears',
+          trial: plan.trial_period,
+          nb_charges: plan.charges.count,
+          nb_standard_charges: 0,
+          nb_percentage_charges: 0,
+          nb_graduated_charges: 0,
+          nb_package_charges: 0,
+          organization_id: plan.organization_id,
+        },
+      )
+    end
+
+    context 'with active subscriptions' do
+      let(:subscriptions) { create_list(:active_subscription, 2, plan:) }
+
+      before { subscriptions }
+
+      it 'terminates the subscriptions' do
+        result = plans_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          subscriptions.each do |subscription|
+            expect(subscription.reload).to be_terminated
+          end
+        end
+      end
+    end
+
+    context 'with draft invoices' do
+      let(:subscription) { create(:active_subscription, plan:) }
+      let(:invoices) { create_list(:invoice, 2, :draft) }
+
+      before do
+        invoices.each do |invoice|
+          create(:invoice_subscription, invoice:, subscription:)
+        end
+      end
+
+      it 'finalizes draft invoices' do
+        result = plans_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          invoices.each do |invoice|
+            expect(invoice.reload).to be_finalized
+          end
+        end
+      end
+    end
   end
 end
