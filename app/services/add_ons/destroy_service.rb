@@ -2,8 +2,17 @@
 
 module AddOns
   class DestroyService < BaseService
-    def destroy(id)
-      add_on = result.user.add_ons.find_by(id: id)
+    def self.call(...)
+      new(...).call
+    end
+
+    def initialize(add_on:)
+      @add_on = add_on
+
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'add_on') unless add_on
 
       add_on.destroy!
@@ -12,14 +21,8 @@ module AddOns
       result
     end
 
-    def destroy_from_api(organization:, code:)
-      add_on = organization.add_ons.find_by(code: code)
-      return result.not_found_failure!(resource: 'add_on') unless add_on
+    private
 
-      add_on.destroy!
-
-      result.add_on = add_on
-      result
-    end
+    attr_reader :add_on
   end
 end

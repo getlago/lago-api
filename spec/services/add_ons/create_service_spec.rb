@@ -7,12 +7,13 @@ RSpec.describe AddOns::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:add_on_code) { 'free-beer-for-us' }
 
   describe 'create' do
     let(:create_args) do
       {
         name: 'Super Add-on',
-        code: 'free-beer-for-us',
+        code: add_on_code,
         description: 'This is description',
         organization_id: organization.id,
         amount_cents: 100,
@@ -41,6 +42,18 @@ RSpec.describe AddOns::CreateService, type: :service do
           organization_id: add_on.organization_id,
         },
       )
+    end
+
+    context 'with code already used by a deleted add_on' do
+      it 'creates an add_on with the same code' do
+        create(:add_on, :deleted, organization:, code: add_on_code)
+
+        expect { create_service.create(**create_args) }.to change(AddOn, :count).by(1)
+
+        add_ons = organization.add_ons.with_discarded
+        expect(add_ons.count).to eq(2)
+        expect(add_ons.pluck(:code).uniq).to eq([add_on_code])
+      end
     end
 
     context 'with validation error' do

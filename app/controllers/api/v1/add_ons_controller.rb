@@ -35,11 +35,8 @@ module Api
       end
 
       def destroy
-        service = AddOns::DestroyService.new
-        result = service.destroy_from_api(
-          organization: current_organization,
-          code: params[:code],
-        )
+        add_on = current_organization.add_ons.find_by(code: params[:code])
+        result = AddOns::DestroyService.call(add_on:)
 
         if result.success?
           render_add_on(result.add_on)
