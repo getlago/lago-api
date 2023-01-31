@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_01_25_104957) do
+ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -467,7 +467,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_25_104957) do
     t.boolean "pay_in_advance", default: false, null: false
     t.boolean "bill_charges_monthly"
     t.uuid "parent_id"
-    t.index ["code", "organization_id"], name: "index_plans_on_code_and_organization_id", unique: true
+    t.datetime "deleted_at"
+    t.boolean "pending_deletion", default: false, null: false
+    t.index ["deleted_at"], name: "index_plans_on_deleted_at"
+    t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end

@@ -18,7 +18,7 @@ module Events
       Events::ValidateCreationService.call(organization:, params:, customer:, result:)
       return result unless result.success?
 
-      event_timestamp = Time.zone.at(params[:timestamp] || timestamp)
+      event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_i : timestamp)
       subscription = Subscription
         .where(external_id: params[:external_subscription_id])
         .where('started_at <= ?', event_timestamp)

@@ -257,6 +257,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 
@@ -286,6 +287,18 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           invoice_id: invoice.id,
           payment_status: invoice.payment_status,
         },
+      )
+    end
+
+    it 'calls the SendWebhook job' do
+      invoice = stripe_service.update_payment_status(
+        provider_payment_id: 'ch_123456',
+        status: 'succeeded',
+      ).payment.invoice
+
+      expect(SendWebhookJob).to have_received(:perform_later).with(
+        'invoice.payment_status_updated',
+        invoice,
       )
     end
 
@@ -329,6 +342,38 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages.keys).to include(:payment_status)
           expect(result.error.messages[:payment_status]).to include('value_is_invalid')
+        end
+      end
+    end
+
+    context 'when payment is not found' do
+      let(:payment) { nil }
+
+      it 'returns an empty result' do
+        result = stripe_service.update_payment_status(
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context 'with invoice id in metadata' do
+        it 'returns a not found failure' do
+          result = stripe_service.update_payment_status(
+            provider_payment_id: 'ch_123456',
+            status: 'succeeded',
+            metadata: { lago_invoice_id: SecureRandom.uuid },
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('stripe_payment_not_found')
+          end
         end
       end
     end

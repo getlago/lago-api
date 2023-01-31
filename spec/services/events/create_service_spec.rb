@@ -89,6 +89,16 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
+    context 'when timestamp is given as string' do
+      it 'creates an event by setting timestamp' do
+        create_args[:timestamp] = create_args[:timestamp].to_s
+
+        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        expect(result).to be_success
+        expect(result.event.timestamp).to eq(Time.zone.at(create_args[:timestamp].to_i))
+      end
+    end
+
     context 'when creating an event to a terminated subscription' do
       let(:subscription) do
         create(:subscription, customer:, organization:, status: :terminated, started_at: 1.month.ago)

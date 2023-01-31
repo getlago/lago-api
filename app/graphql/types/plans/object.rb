@@ -26,10 +26,8 @@ module Types
 
       field :charge_count, Integer, null: false, description: 'Number of charges attached to a plan'
       field :customer_count, Integer, null: false, description: 'Number of customers attached to a plan'
-
-      field :can_be_deleted, Boolean, null: false do
-        description 'Check if plan is deletable'
-      end
+      field :active_subscriptions_count, Integer, null: false
+      field :draft_invoices_count, Integer, null: false
 
       def charge_count
         object.charges.count
@@ -39,8 +37,16 @@ module Types
         object.subscriptions.active.select(:customer_id).distinct.count
       end
 
-      def can_be_deleted
-        object.deletable?
+      def active_subscriptions_count
+        object.subscriptions.active.count
+      end
+
+      def draft_invoices_count
+        object.subscriptions.joins(:invoices)
+          .merge(Invoice.draft)
+          .select(:invoice_id)
+          .distinct
+          .count
       end
     end
   end

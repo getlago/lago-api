@@ -3,7 +3,7 @@
 require 'sidekiq/web'
 
 Rails.application.routes.draw do
-  mount Sidekiq::Web => '/sidekiq' if ENV['LAGO_SIDEKIQ_WEB']
+  mount Sidekiq::Web => '/sidekiq' if ENV['LAGO_SIDEKIQ_WEB'] == 'true'
 
   mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
 
@@ -41,6 +41,7 @@ Rails.application.routes.draw do
       end
       resources :plans, param: :code
       resources :wallet_transactions, only: :create
+      get '/wallets/:id/wallet_transactions', to: 'wallet_transactions#index'
       resources :wallets, only: %i[create update show index]
       delete '/wallets/:id', to: 'wallets#terminate'
       post '/events/batch', to: 'events#batch'

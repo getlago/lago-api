@@ -17,7 +17,7 @@ class PlansQuery < BaseQuery
   attr_reader :search_term
 
   def base_scope
-    Plan.where(organization:).ransack(search_params)
+    Plan.where(organization:).where(pending_deletion: false).ransack(search_params)
   end
 
   def search_params

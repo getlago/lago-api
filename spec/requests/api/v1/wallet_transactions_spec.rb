@@ -47,4 +47,74 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
   end
+
+  describe 'index' do
+    let(:wallet_transaction_first) { create(:wallet_transaction, wallet:) }
+    let(:wallet_transaction_second) { create(:wallet_transaction, wallet:) }
+    let(:wallet_transaction_third) { create(:wallet_transaction) }
+
+    before do
+      wallet_transaction_first
+      wallet_transaction_second
+      wallet_transaction_third
+    end
+
+    it 'returns wallet transactions' do
+      get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions")
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet_transactions].count).to eq(2)
+      expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_second.id)
+      expect(json[:wallet_transactions].last[:lago_id]).to eq(wallet_transaction_first.id)
+    end
+
+    context 'with pagination' do
+      it 'returns wallet transactions with correct meta data' do
+        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?page=1&per_page=1")
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:wallet_transactions].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
+      end
+    end
+
+    context 'with status param' do
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, status: 'pending') }
+
+      it 'returns wallet transactions with correct status' do
+        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?status=pending")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(1)
+        expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_second.id)
+      end
+    end
+
+    context 'with transaction type param' do
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
+
+      it 'returns wallet transactions with correct transaction type' do
+        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?transaction_type=outbound")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(1)
+        expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_second.id)
+      end
+    end
+
+    context 'when wallet does not exist' do
+      let(:wallet_id) { "#{wallet.id}abc" }
+
+      it 'returns not_found error' do
+        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions")
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end

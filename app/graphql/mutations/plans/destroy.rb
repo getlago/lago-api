@@ -14,7 +14,7 @@ module Mutations
 
       def resolve(id:)
         plan = context[:current_user].plans.find_by(id:)
-        result = ::Plans::DestroyService.call(plan:)
+        result = ::Plans::PrepareDestroyService.call(plan:)
 
         result.success? ? result.plan : result_error(result)
       end

@@ -27,11 +27,8 @@ module Api
 
       # NOTE: We can't destroy a subscription, it will terminate it
       def terminate
-        result = Subscriptions::TerminateService.new
-          .terminate_from_api(
-            organization: current_organization,
-            external_id: params[:external_id],
-          )
+        subscription = current_organization.subscriptions.active.find_by(external_id: params[:external_id])
+        result = Subscriptions::TerminateService.call(subscription:)
 
         if result.success?
           render(

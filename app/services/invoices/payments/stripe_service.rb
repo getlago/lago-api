@@ -41,17 +41,24 @@ module Invoices
         result
       end
 
-      def update_payment_status(provider_payment_id:, status:)
-        payment = Payment.find_by(provider_payment_id: provider_payment_id)
-        return result.not_found_failure!(resource: 'stripe_payment') unless payment
+      def update_payment_status(provider_payment_id:, status:, metadata: {})
+        payment = Payment.find_by(provider_payment_id:)
+        unless payment
+          # NOTE: Payment was not initiated by lago
+          return result unless metadata&.key?(:lago_invoice_id)
+
+          return result.not_found_failure!(resource: 'stripe_payment')
+        end
 
         result.payment = payment
         result.invoice = payment.invoice
         return result if payment.invoice.succeeded?
 
-        payment.update!(status: status)
+        payment.update!(status:)
         payment.invoice.update!(payment_status: status, ready_for_payment_processing: status != 'succeeded')
         handle_prepaid_credits(payment.invoice, status)
+
+        SendWebhookJob.perform_later('invoice.payment_status_updated', payment.invoice)
         track_payment_status_changed(payment.invoice)
 
         result

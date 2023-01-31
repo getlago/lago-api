@@ -3006,7 +3006,6 @@ type Invoice {
   legacy: Boolean!
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
-  plan: Plan
   refundableAmountCents: BigInt!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
@@ -3614,14 +3613,10 @@ type Organization {
 }
 
 type Plan {
+  activeSubscriptionsCount: Int!
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
-
-  """
-  Check if plan is deletable
-  """
-  canBeDeleted: Boolean!
 
   """
   Number of charges attached to a plan
@@ -3636,6 +3631,7 @@ type Plan {
   """
   customerCount: Int!
   description: String
+  draftInvoicesCount: Int!
   id: ID!
   interval: PlanInterval!
   name: String!
@@ -3652,14 +3648,10 @@ type PlanCollection {
 }
 
 type PlanDetails {
+  activeSubscriptionsCount: Int!
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
-
-  """
-  Check if plan is deletable
-  """
-  canBeDeleted: Boolean!
 
   """
   Number of charges attached to a plan
@@ -3674,6 +3666,7 @@ type PlanDetails {
   """
   customerCount: Int!
   description: String
+  draftInvoicesCount: Int!
   id: ID!
   interval: PlanInterval!
   name: String!

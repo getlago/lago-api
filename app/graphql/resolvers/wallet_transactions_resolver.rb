@@ -26,21 +26,21 @@ module Resolvers
     )
       validate_organization!
 
-      current_wallet = Wallet.find(wallet_id)
+      query = WalletTransactionsQuery.new(organization: current_organization)
+      result = query.call(
+        wallet_id:,
+        page:,
+        limit:,
+        filters: {
+          ids:,
+          status:,
+          transaction_type:,
+        },
+      )
 
-      wallet_transactions = current_wallet
-        .wallet_transactions
-        .order(created_at: :desc)
-        .page(page)
-        .per(limit)
+      return result_error(result) unless result.success?
 
-      wallet_transactions = wallet_transactions.where(transaction_type: transaction_type) if transaction_type.present?
-      wallet_transactions = wallet_transactions.where(status: status) if status.present?
-      wallet_transactions = wallet_transactions.where(id: ids) if ids.present?
-
-      wallet_transactions
-    rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'wallet')
+      result.wallet_transactions
     end
   end
 end

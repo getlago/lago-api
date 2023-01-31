@@ -2,6 +2,8 @@
 
 class Plan < ApplicationRecord
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :organization
   belongs_to :parent, class_name: 'Plan', optional: true
@@ -25,8 +27,12 @@ class Plan < ApplicationRecord
   monetize :amount_cents
 
   validates :name, presence: true
-  validates :code, presence: true, uniqueness: { scope: :organization_id }
   validates :amount_currency, inclusion: { in: currency_list }
+  validates :code,
+            presence: true,
+            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+
+  default_scope -> { kept }
 
   def pay_in_arrear?
     !pay_in_advance
@@ -34,10 +40,6 @@ class Plan < ApplicationRecord
 
   def attached_to_subscriptions?
     subscriptions.exists?
-  end
-
-  def deletable?
-    !attached_to_subscriptions?
   end
 
   def has_trial?

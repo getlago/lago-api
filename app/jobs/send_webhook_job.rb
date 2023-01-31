@@ -44,6 +44,8 @@ class SendWebhookJob < ApplicationJob
       Webhooks::Invoices::GeneratedService.new(object).call
     when 'invoice.drafted'
       Webhooks::Invoices::DraftedService.new(object).call
+    when 'invoice.payment_status_updated'
+      Webhooks::Invoices::PaymentStatusUpdatedService.new(object).call
     when 'subscription.terminated'
       Webhooks::Subscriptions::TerminatedService.new(object).call
     else

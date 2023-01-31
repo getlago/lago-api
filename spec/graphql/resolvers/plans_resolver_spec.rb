@@ -7,7 +7,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     <<~GQL
       query {
         plans(limit: 5) {
-          collection { id chargeCount customerCount canBeDeleted }
+          collection { id chargeCount customerCount }
           metadata { currentPage, totalCount }
         }
       }
@@ -15,16 +15,16 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
   end
 
   let(:membership) { create(:membership) }
-  let(:plan) { create(:plan, organization: organization) }
+  let(:plan) { create(:plan, organization:) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
 
   before do
     plan
     customer
 
     2.times do
-      create(:subscription, customer: customer, plan: plan)
+      create(:subscription, customer:, plan:)
     end
   end
 
@@ -32,7 +32,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
     )
 
     plans_response = result['data']['plans']
@@ -40,7 +40,6 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     aggregate_failures do
       expect(plans_response['collection'].count).to eq(organization.plans.count)
       expect(plans_response['collection'].first['id']).to eq(plan.id)
-      expect(plans_response['collection'].first['canBeDeleted']).to be_falsey
       expect(plans_response['collection'].first['customerCount']).to eq(1)
 
       expect(plans_response['metadata']['currentPage']).to eq(1)
@@ -50,12 +49,9 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
 
   context 'without current organization' do
     it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query: query)
+      result = execute_graphql(current_user: membership.user, query:)
 
-      expect_graphql_error(
-        result: result,
-        message: 'Missing organization id',
-      )
+      expect_graphql_error(result:, message: 'Missing organization id')
     end
   end
 
@@ -64,13 +60,10 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query,
+        query:,
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Not in organization',
-      )
+      expect_graphql_error(result:, message: 'Not in organization')
     end
   end
 end

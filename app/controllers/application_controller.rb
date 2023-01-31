@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class ApplicationController < ActionController::API
+  wrap_parameters false
+
   include ApiResponses
 
   rescue_from ActionController::RoutingError, with: :not_found

@@ -34,7 +34,9 @@
       "invoice": null,
       "last_payment_error": null,
       "livemode": false,
-      "metadata": {},
+      "metadata": {
+        "lago_invoice_id": "a587e552-36bc-4334-81f2-abcbf034ad3f"
+      },
       "next_action": null,
       "on_behalf_of": null,
       "payment_method": null,
