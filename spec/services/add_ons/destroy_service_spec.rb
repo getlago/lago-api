@@ -13,9 +13,13 @@ RSpec.describe AddOns::DestroyService, type: :service do
   describe 'destroy' do
     before { add_on }
 
-    it 'destroys the add-on' do
-      expect { destroy_service.call }
-        .to change(AddOn, :count).by(-1)
+    it 'soft deletes the add-on' do
+      aggregate_failures do
+        expect { destroy_service.call }
+          .to change(AddOn, :count).by(-1)
+
+        expect(add_on.reload.deleted_at).to be_present
+      end
     end
 
     context 'when add-on is not found' do

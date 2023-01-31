@@ -37,6 +37,9 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           }
           fees {
             id
+            itemType
+            itemCode
+            itemName
             creditableAmountCents
             charge {
               id
@@ -159,6 +162,67 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         expect(data['customer']['name']).to eq(customer.name)
         expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
         expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
+      end
+    end
+  end
+
+  context 'with an add on invoice' do
+    let(:invoice) { create(:invoice, customer:) }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
+    let(:fee) { create(:add_on_fee, invoice:, applied_add_on:) }
+
+    it 'returns a single invoice' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {
+          id: invoice.id,
+        },
+      )
+
+      data = result['data']['invoice']
+
+      aggregate_failures do
+        expect(data['id']).to eq(invoice.id)
+        expect(data['number']).to eq(invoice.number)
+        expect(data['paymentStatus']).to eq(invoice.payment_status)
+        expect(data['status']).to eq(invoice.status)
+        expect(data['customer']['id']).to eq(customer.id)
+        expect(data['customer']['name']).to eq(customer.name)
+        expect(data['fees'].first['itemType']).to eq('add_on')
+        expect(data['fees'].first['itemCode']).to eq(add_on.code)
+        expect(data['fees'].first['itemName']).to eq(add_on.name)
+      end
+    end
+
+    context 'with a deleted add_on' do
+      let(:add_on) { create(:add_on, :deleted, organization:) }
+
+      it 'returns the invoice with the deleted resources' do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          query:,
+          variables: {
+            id: invoice.id,
+          },
+        )
+
+        data = result['data']['invoice']
+
+        aggregate_failures do
+          expect(data['id']).to eq(invoice.id)
+          expect(data['number']).to eq(invoice.number)
+          expect(data['paymentStatus']).to eq(invoice.payment_status)
+          expect(data['status']).to eq(invoice.status)
+          expect(data['customer']['id']).to eq(customer.id)
+          expect(data['customer']['name']).to eq(customer.name)
+          expect(data['fees'].first['itemType']).to eq('add_on')
+          expect(data['fees'].first['itemCode']).to eq(add_on.code)
+          expect(data['fees'].first['itemName']).to eq(add_on.name)
+        end
       end
     end
   end

@@ -15,7 +15,7 @@ module AddOns
     def call
       return result.not_found_failure!(resource: 'add_on') unless add_on
 
-      add_on.destroy!
+      add_on.discard!
 
       result.add_on = add_on
       result
