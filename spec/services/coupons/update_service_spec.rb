@@ -69,6 +69,72 @@ RSpec.describe Coupons::UpdateService, type: :service do
         end
       end
     end
+
+    context 'with new plan limitations' do
+      let(:plan) { create(:plan, organization:) }
+      let(:plan_second) { create(:plan, organization:) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+      let(:update_args) do
+        {
+          id: coupon.id,
+          name: 'new name',
+          coupon_type: 'fixed_amount',
+          frequency: 'once',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          expiration: 'time_limit',
+          reusable: false,
+          expiration_at:,
+          applies_to: {
+            plan_ids: [plan.id, plan_second.id],
+          },
+        }
+      end
+
+      before do
+        CurrentContext.source = 'graphql'
+
+        plan_second
+        coupon_plan
+      end
+
+      it 'creates new coupon plans' do
+        expect { update_service.update(**update_args) }
+          .to change(CouponPlan, :count).by(1)
+      end
+    end
+
+    context 'with coupon plans to delete' do
+      let(:plan) { create(:plan, organization:) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+      let(:update_args) do
+        {
+          id: coupon.id,
+          name: 'new name',
+          coupon_type: 'fixed_amount',
+          frequency: 'once',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          expiration: 'time_limit',
+          reusable: false,
+          expiration_at:,
+          applies_to: {
+            plan_ids: [],
+          },
+        }
+      end
+
+      before do
+        CurrentContext.source = 'graphql'
+
+        coupon_plan
+      end
+
+      it 'deletes a coupon plan' do
+        expect { update_service.update(**update_args) }
+          .to change(CouponPlan, :count).by(-1)
+      end
+    end
   end
 
   describe 'update_from_api' do
@@ -133,6 +199,80 @@ RSpec.describe Coupons::UpdateService, type: :service do
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('coupon_not_found')
+      end
+    end
+
+    context 'with new plan limitations' do
+      let(:plan) { create(:plan, organization:) }
+      let(:plan_second) { create(:plan, organization:) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+      let(:update_args) do
+        {
+          name:,
+          code: 'coupon1_code',
+          coupon_type: 'fixed_amount',
+          frequency: 'once',
+          amount_cents: 123,
+          amount_currency: 'EUR',
+          expiration: 'time_limit',
+          expiration_at: Time.current + 15.days,
+          applies_to: {
+            plan_codes: [plan.code, plan_second.code],
+          },
+        }
+      end
+
+      before do
+        CurrentContext.source = 'api'
+
+        plan_second
+        coupon_plan
+      end
+
+      it 'creates a new coupon plan' do
+        expect do
+          update_service.update_from_api(
+            organization:,
+            code: coupon.code,
+            params: update_args,
+          )
+        end.to change(CouponPlan, :count).by(1)
+      end
+    end
+
+    context 'with coupon plans to delete' do
+      let(:plan) { create(:plan, organization:) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+      let(:update_args) do
+        {
+          name:,
+          code: 'coupon1_code',
+          coupon_type: 'fixed_amount',
+          frequency: 'once',
+          amount_cents: 123,
+          amount_currency: 'EUR',
+          expiration: 'time_limit',
+          expiration_at: Time.current + 15.days,
+          applies_to: {
+            plan_codes: [],
+          },
+        }
+      end
+
+      before do
+        CurrentContext.source = 'api'
+
+        coupon_plan
+      end
+
+      it 'deletes a coupon plan' do
+        expect do
+          update_service.update_from_api(
+            organization:,
+            code: coupon.code,
+            params: update_args,
+          )
+        end.to change(CouponPlan, :count).by(-1)
       end
     end
   end

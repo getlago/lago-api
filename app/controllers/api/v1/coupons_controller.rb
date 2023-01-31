@@ -94,6 +94,9 @@ module Api
           # NOTE: Legacy field
           :expiration_date,
           :reusable,
+          applies_to: [
+            plan_codes: [],
+          ],
         )
       end
 
