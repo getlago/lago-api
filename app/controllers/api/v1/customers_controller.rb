@@ -73,6 +73,22 @@ module Api
         )
       end
 
+      def destroy
+        customer = current_organization.customers.find_by(external_id: params[:external_id])
+        result = Customers::DestroyService.call(customer:)
+
+        if result.success?
+          render(
+            json: ::V1::CustomerSerializer.new(
+              result.customer,
+              root_name: 'customer',
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
