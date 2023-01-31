@@ -3,95 +3,45 @@
 require 'rails_helper'
 
 RSpec.describe Coupons::DestroyService, type: :service do
-  subject(:destroy_service) { described_class.new(membership.user) }
+  subject(:destroy_service) { described_class.new(coupon:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:coupon) { create(:coupon, organization: organization) }
+  let(:coupon) { create(:coupon, organization:) }
 
-  describe 'destroy' do
+  describe '#call' do
     before { coupon }
 
     it 'destroys the coupon' do
-      expect { destroy_service.destroy(coupon.id) }
-        .to change(Coupon, :count).by(-1)
+      expect { destroy_service.call }.to change(Coupon, :count).by(-1)
     end
 
     context 'when coupon is not found' do
-      it 'returns an error' do
-        result = destroy_service.destroy(nil)
+      let(:coupon) { nil }
 
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq('coupon_not_found')
+      it 'returns an error' do
+        result = destroy_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq('coupon_not_found')
+        end
       end
     end
 
     context 'when coupon is attached to customer' do
-      let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+      let(:applied_coupon) { create(:applied_coupon, coupon:) }
 
       before { applied_coupon }
 
       it 'returns an error' do
-        result = destroy_service.destroy(coupon.id)
+        result = destroy_service.call
 
-        expect(result).not_to be_success
-        expect(result.error.code).to eq('attached_to_an_active_customer')
-      end
-    end
-  end
-
-  describe 'destroy_from_api' do
-    let(:coupon) { create(:coupon, organization: organization) }
-
-    it 'destroys the coupon' do
-      code = coupon.code
-
-      expect { destroy_service.destroy_from_api(organization: organization, code: code) }
-        .to change(Coupon, :count).by(-1)
-    end
-
-    context 'when coupon is not found' do
-      it 'returns an error' do
-        result = destroy_service.destroy_from_api(organization: organization, code: 'invalid12345')
-
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq('coupon_not_found')
-      end
-    end
-
-    context 'when coupon is attached to customer' do
-      let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
-
-      before { applied_coupon }
-
-      it 'returns an error' do
-        result = destroy_service.destroy_from_api(organization: organization, code: coupon.code)
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq('attached_to_an_active_customer')
-      end
-    end
-  end
-
-  describe 'terminate' do
-    it 'terminates the coupon' do
-      result = destroy_service.terminate(coupon.id)
-
-      expect(result).to be_success
-      expect(result.coupon).to be_terminated
-    end
-
-    context 'when coupon is already terminated' do
-      before { coupon.mark_as_terminated! }
-
-      it 'does not impact the coupon' do
-        terminated_at = coupon.terminated_at
-        result = destroy_service.terminate(coupon.id)
-
-        expect(result).to be_success
-        expect(result.coupon).to be_terminated
-        expect(result.coupon.terminated_at).to eq(terminated_at)
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.code).to eq('attached_to_an_active_customer')
+        end
       end
     end
   end

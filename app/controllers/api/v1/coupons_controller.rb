@@ -38,11 +38,8 @@ module Api
       end
 
       def destroy
-        service = Coupons::DestroyService.new
-        result = service.destroy_from_api(
-          organization: current_organization,
-          code: params[:code],
-        )
+        coupon = current_organization.coupons.find_by(code: params[:code])
+        result = Coupons::DestroyService.call(coupon:)
 
         if result.success?
           render_coupon(result.coupon)
