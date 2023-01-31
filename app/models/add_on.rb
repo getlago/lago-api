@@ -2,6 +2,8 @@
 
 class AddOn < ApplicationRecord
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :organization
 
@@ -12,10 +14,13 @@ class AddOn < ApplicationRecord
   monetize :amount_cents
 
   validates :name, presence: true
-  validates :code, uniqueness: { scope: :organization_id, allow_nil: false }
+  validates :code,
+            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
 
   validates :amount_cents, numericality: { greater_than: 0 }
   validates :amount_currency, inclusion: { in: currency_list }
+
+  default_scope -> { kept }
 
   def attached_to_customers?
     applied_add_ons.exists?
