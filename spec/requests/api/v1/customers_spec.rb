@@ -398,4 +398,35 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
   end
+
+  describe 'DELETE /customers/:customer_id' do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    before { customer }
+
+    it 'deletes a customer' do
+      expect { delete_with_token(organization, "/api/v1/customers/#{customer.external_id}") }
+        .to change(Customer, :count).by(-1)
+    end
+
+    it 'returns deleted customer' do
+      delete_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:customer][:lago_id]).to eq(customer.id)
+        expect(json[:customer][:external_id]).to eq(customer.external_id)
+      end
+    end
+
+    context 'when customer does not exist' do
+      it 'returns not_found error' do
+        delete_with_token(organization, '/api/v1/customers/invalid')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
