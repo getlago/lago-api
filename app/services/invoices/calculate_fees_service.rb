@@ -266,7 +266,7 @@ module Invoices
 
       # In some cases when credit note is already applied sum from above
       # can be greater than invoice total_amount_cents
-      total_fees_amount_cents > invoice.total_amount_cents ? invoice.total_amount_cents : total_fees_amount_cents
+      (total_fees_amount_cents > invoice.total_amount_cents) ? invoice.total_amount_cents : total_fees_amount_cents
     end
   end
 end
