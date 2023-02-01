@@ -13,6 +13,8 @@ class Plan < ApplicationRecord
   has_many :subscriptions
   has_many :customers, through: :subscriptions
   has_many :children, class_name: 'Plan', foreign_key: :parent_id
+  has_many :coupon_plans
+  has_many :coupons, through: :coupon_plans
 
   INTERVALS = %i[
     weekly
