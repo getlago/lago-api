@@ -29,7 +29,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     end
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-    let(:timestamp) { Time.zone.now.beginning_of_month }
+    let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
     let(:fee) { create(:fee, invoice:, subscription:) }
     let(:plan) { create(:plan, interval: 'monthly') }
