@@ -117,6 +117,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_31_152047) do
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
 
+  create_table "coupon_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "coupon_id", null: false
+    t.uuid "plan_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["coupon_id"], name: "index_coupon_plans_on_coupon_id"
+    t.index ["plan_id"], name: "index_coupon_plans_on_plan_id"
+  end
+
   create_table "coupons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "name", null: false
@@ -134,6 +143,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_31_152047) do
     t.integer "frequency_duration"
     t.datetime "expiration_at"
     t.boolean "reusable", default: true, null: false
+    t.boolean "limited_plans", default: false, null: false
     t.datetime "deleted_at"
     t.index ["deleted_at"], name: "index_coupons_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
@@ -553,6 +563,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_31_152047) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
+  add_foreign_key "coupon_plans", "coupons"
+  add_foreign_key "coupon_plans", "plans"
   add_foreign_key "credit_note_items", "credit_notes"
   add_foreign_key "credit_note_items", "fees"
   add_foreign_key "credit_notes", "customers"
