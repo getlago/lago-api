@@ -10,6 +10,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
           id
           name
           customerCount
+          subscriptionsCount
           activeSubscriptionsCount
           draftInvoicesCount
         }
@@ -32,15 +33,14 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {
-        planId: plan.id,
-      },
+      variables: { planId: plan.id },
     )
 
     plan_response = result['data']['plan']
 
     aggregate_failures do
       expect(plan_response['id']).to eq(plan.id)
+      expect(plan_response['subscriptionsCount']).to eq(2)
       expect(plan_response['customerCount']).to eq(1)
     end
   end
@@ -49,10 +49,8 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
-        variables: {
-          planId: plan.id,
-        },
+        query:,
+        variables: { planId: plan.id },
       )
 
       expect_graphql_error(
@@ -68,9 +66,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: {
-          planId: 'foo',
-        },
+        variables: { planId: 'foo' },
       )
 
       expect_graphql_error(

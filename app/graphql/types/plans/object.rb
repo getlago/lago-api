@@ -26,6 +26,7 @@ module Types
 
       field :charge_count, Integer, null: false, description: 'Number of charges attached to a plan'
       field :customer_count, Integer, null: false, description: 'Number of customers attached to a plan'
+      field :subscriptions_count, Integer, null: false
       field :active_subscriptions_count, Integer, null: false
       field :draft_invoices_count, Integer, null: false
 
@@ -35,6 +36,10 @@ module Types
 
       def customer_count
         object.subscriptions.active.select(:customer_id).distinct.count
+      end
+
+      def subscriptions_count
+        object.subscriptions.count
       end
 
       def active_subscriptions_count
