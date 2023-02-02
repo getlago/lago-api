@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     <<~GQL
       query($couponId: ID!) {
         coupon(id: $couponId) {
-          id name customerCount expirationAt
+          id name customerCount appliedCouponsCount expirationAt
         }
       }
     GQL
@@ -15,16 +15,16 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:coupon) { create(:coupon, organization: organization) }
-  let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+  let(:customer) { create(:customer, organization:) }
+  let(:coupon) { create(:coupon, organization:) }
+  let(:applied_coupon) { create(:applied_coupon, coupon:) }
 
   before do
     customer
     applied_coupon
 
     2.times do
-      create(:subscription, customer: customer)
+      create(:subscription, customer:)
     end
   end
 
@@ -32,10 +32,8 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
-      variables: {
-        couponId: coupon.id,
-      },
+      query:,
+      variables: { couponId: coupon.id },
     )
 
     coupon_response = result['data']['coupon']
@@ -43,6 +41,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     aggregate_failures do
       expect(coupon_response['id']).to eq(coupon.id)
       expect(coupon_response['customerCount']).to eq(1)
+      expect(coupon_response['appliedCouponsCount']).to eq(1)
     end
   end
 
@@ -50,16 +49,11 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
-        variables: {
-          couponId: coupon.id,
-        },
+        query:,
+        variables: { couponId: coupon.id },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Missing organization id',
-      )
+      expect_graphql_error(result:, message: 'Missing organization id')
     end
   end
 
@@ -68,16 +62,11 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
-        variables: {
-          couponId: 'foo',
-        },
+        query:,
+        variables: { couponId: 'foo' },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Resource not found',
-      )
+      expect_graphql_error(result:, message: 'Resource not found')
     end
   end
 end
