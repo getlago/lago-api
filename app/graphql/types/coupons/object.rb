@@ -28,16 +28,8 @@ module Types
 
       field :customer_count, Integer, null: false, description: 'Number of customers using this coupon'
 
-      field :can_be_deleted, Boolean, null: false do
-        description 'Check if coupon is deletable'
-      end
-
       def customer_count
         object.applied_coupons.active.select(:customer_id).distinct.count
-      end
-
-      def can_be_deleted
-        object.deletable?
       end
     end
   end

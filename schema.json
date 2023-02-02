@@ -161,24 +161,6 @@
               ]
             },
             {
-              "name": "canBeDeleted",
-              "description": "Check if add-on is deletable",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "code",
               "description": null,
               "type": {
@@ -411,24 +393,6 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "canBeDeleted",
-              "description": "Check if add-on is deletable",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
                   "ofType": null
                 }
               },
@@ -3606,24 +3570,6 @@
               ]
             },
             {
-              "name": "canBeDeleted",
-              "description": "Check if coupon is deletable",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "code",
               "description": null,
               "type": {
@@ -3978,24 +3924,6 @@
                 "kind": "ENUM",
                 "name": "CurrencyEnum",
                 "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "canBeDeleted",
-              "description": "Check if coupon is deletable",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
               },
               "isDeprecated": false,
               "deprecationReason": null,

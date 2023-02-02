@@ -30,11 +30,6 @@ input AddGocardlessPaymentProviderInput {
 type AddOn {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
-
-  """
-  Check if add-on is deletable
-  """
-  canBeDeleted: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
 
@@ -57,11 +52,6 @@ type AddOnCollection {
 type AddOnDetails {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
-
-  """
-  Check if add-on is deletable
-  """
-  canBeDeleted: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
 
@@ -1462,11 +1452,6 @@ enum CountryCode {
 type Coupon {
   amountCents: BigInt
   amountCurrency: CurrencyEnum
-
-  """
-  Check if coupon is deletable
-  """
-  canBeDeleted: Boolean!
   code: String
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
@@ -1497,11 +1482,6 @@ type CouponCollection {
 type CouponDetails {
   amountCents: BigInt
   amountCurrency: CurrencyEnum
-
-  """
-  Check if coupon is deletable
-  """
-  canBeDeleted: Boolean!
   code: String
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
