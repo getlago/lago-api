@@ -138,6 +138,7 @@ type BillableMetric {
   id: ID!
   name: String!
   organization: Organization
+  subscriptionsCount: Int!
   updatedAt: ISO8601DateTime!
 }
 
@@ -160,6 +161,7 @@ type BillableMetricDetail {
   id: ID!
   name: String!
   organization: Organization
+  subscriptionsCount: Int!
   updatedAt: ISO8601DateTime!
 }
 
@@ -3629,6 +3631,7 @@ type Plan {
   organization: Organization
   parentId: ID
   payInAdvance: Boolean!
+  subscriptionsCount: Int!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
 }
@@ -3664,6 +3667,7 @@ type PlanDetails {
   organization: Organization
   parentId: ID
   payInAdvance: Boolean!
+  subscriptionsCount: Int!
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
 }
