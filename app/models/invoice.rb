@@ -6,7 +6,7 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_number
 
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
 
   has_many :fees
   has_many :credits
