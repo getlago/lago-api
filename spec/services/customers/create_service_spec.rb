@@ -8,11 +8,12 @@ RSpec.describe Customers::CreateService, type: :service do
   let(:user) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:external_id) { SecureRandom.uuid }
 
   describe 'create_from_api' do
     let(:create_args) do
       {
-        external_id: SecureRandom.uuid,
+        external_id:,
         name: 'Foo Bar',
         currency: 'EUR',
         billing_configuration: {
@@ -65,6 +66,21 @@ RSpec.describe Customers::CreateService, type: :service do
           organization_id: customer.organization_id,
         },
       )
+    end
+
+    context 'with external_id already used by a deleted customer' do
+      it 'creates a customer with the same external_id' do
+        create(:customer, :deleted, organization:, external_id:)
+
+        aggregate_failures do
+          expect { customers_service.create_from_api(organization:, params: create_args) }
+            .to change(Customer, :count).by(1)
+
+          customers = organization.customers.with_discarded
+          expect(customers.count).to eq(2)
+          expect(customers.pluck(:external_id).uniq).to eq([external_id])
+        end
+      end
     end
 
     context 'with premium features' do

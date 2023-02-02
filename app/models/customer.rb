@@ -5,6 +5,9 @@ class Customer < ApplicationRecord
   include Currencies
   include CustomerTimezone
   include OrganizationTimezone
+  include Discard::Model
+
+  self.discard_column = :deleted_at
 
   before_save :ensure_slug
 
@@ -30,11 +33,14 @@ class Customer < ApplicationRecord
 
   PAYMENT_PROVIDERS = %w[stripe gocardless].freeze
 
-  sequenced scope: ->(customer) { customer.organization.customers }
+  default_scope -> { kept }
+  sequenced scope: ->(customer) { customer.organization.customers.with_discarded }
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :currency, inclusion: { in: currency_list }, allow_nil: true
-  validates :external_id, presence: true, uniqueness: { scope: :organization_id }
+  validates :external_id,
+            presence: true,
+            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
