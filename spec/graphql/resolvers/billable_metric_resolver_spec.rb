@@ -18,6 +18,7 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
         billableMetric(id: $billableMetricId) {
           id
           name
+          subscriptionsCount
           activeSubscriptionsCount
           draftInvoicesCount
         }
@@ -34,6 +35,7 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
 
     aggregate_failures do
       expect(metric_response['id']).to eq(billable_metric.id)
+      expect(metric_response['subscriptionsCount']).to eq(0)
       expect(metric_response['activeSubscriptionsCount']).to eq(0)
       expect(metric_response['draftInvoicesCount']).to eq(0)
     end
@@ -47,6 +49,7 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     create(:standard_charge, plan: subscription.plan, billable_metric:)
 
     metric_response = graphql_request['data']['billableMetric']
+    expect(metric_response['subscriptionsCount']).to eq(2)
     expect(metric_response['activeSubscriptionsCount']).to eq(1)
   end
 
