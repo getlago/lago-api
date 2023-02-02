@@ -13,7 +13,7 @@ class AddIndexToPaymentProviderCustomers < ActiveRecord::Migration[7.0]
           customers = PaymentProviderCustomers::BaseCustomer.where(
             customer_id: payment_customer.customer_id,
             type: payment_customer.type,
-          ).order(updated_at: :desc)
+          ).order('payment_provider_id ASC NULLS LAST, updated_at desc')
 
           customers[1..].each(&:destroy)
         end
