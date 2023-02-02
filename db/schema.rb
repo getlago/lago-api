@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_01_31_152047) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_02_110407) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -409,7 +409,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_31_152047) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customer_id"], name: "index_payment_provider_customers_on_customer_id"
+    t.index ["customer_id", "type"], name: "index_payment_provider_customers_on_customer_id_and_type", unique: true
     t.index ["payment_provider_id"], name: "index_payment_provider_customers_on_payment_provider_id"
     t.index ["provider_customer_id"], name: "index_payment_provider_customers_on_provider_customer_id"
   end
