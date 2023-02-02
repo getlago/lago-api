@@ -21,12 +21,4 @@ class AddOn < ApplicationRecord
   validates :amount_currency, inclusion: { in: currency_list }
 
   default_scope -> { kept }
-
-  def attached_to_customers?
-    applied_add_ons.exists?
-  end
-
-  def deletable?
-    !attached_to_customers?
-  end
 end
