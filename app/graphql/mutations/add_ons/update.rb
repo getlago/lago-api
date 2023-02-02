@@ -18,8 +18,8 @@ module Mutations
       type Types::AddOns::Object
 
       def resolve(**args)
-        result = ::AddOns::UpdateService.new(context[:current_user])
-          .update(**args)
+        add_on = context[:current_user].add_ons.find_by(id: args[:id])
+        result = ::AddOns::UpdateService.call(add_on:, params: args)
 
         result.success? ? result.add_on : result_error(result)
       end
