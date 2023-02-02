@@ -7,7 +7,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     <<~GQL
       query($addOnId: ID!) {
         addOn(id: $addOnId) {
-          id, name, customerCount
+          id name customerCount appliedAddOnsCount
         }
       }
     GQL
@@ -15,11 +15,11 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:add_on) { create(:add_on, organization: organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:customer2) { create(:customer, organization: organization) }
-  let(:applied_add_on_list) { create_list(:applied_add_on, 3, add_on: add_on, customer: customer) }
-  let(:applied_add_on) { create(:applied_add_on, add_on: add_on, customer: customer2) }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:customer2) { create(:customer, organization:) }
+  let(:applied_add_on_list) { create_list(:applied_add_on, 3, add_on:, customer:) }
+  let(:applied_add_on) { create(:applied_add_on, add_on:, customer: customer2) }
 
   before do
     customer
@@ -28,7 +28,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     applied_add_on
 
     3.times do
-      create(:subscription, customer: customer)
+      create(:subscription, customer:)
     end
   end
 
@@ -36,10 +36,8 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
-      variables: {
-        addOnId: add_on.id,
-      },
+      query:,
+      variables: { addOnId: add_on.id },
     )
 
     add_on_response = result['data']['addOn']
@@ -48,6 +46,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
       expect(add_on_response['id']).to eq(add_on.id)
       expect(add_on_response['name']).to eq(add_on.name)
       expect(add_on_response['customerCount']).to eq(2)
+      expect(add_on_response['appliedAddOnsCount']).to eq(4)
     end
   end
 
@@ -55,16 +54,11 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
-        variables: {
-          addOnId: add_on.id,
-        },
+        query:,
+        variables: { addOnId: add_on.id },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Missing organization id',
-        )
+      expect_graphql_error(result:, message: 'Missing organization id')
     end
   end
 
@@ -73,16 +67,11 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
-        variables: {
-          addOnId: 'invalid',
-        },
+        query:,
+        variables: { addOnId: 'invalid' },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Resource not found',
-      )
+      expect_graphql_error(result:, message: 'Resource not found')
     end
   end
 end

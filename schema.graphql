@@ -30,6 +30,7 @@ input AddGocardlessPaymentProviderInput {
 type AddOn {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  appliedAddOnsCount: Int!
   code: String!
   createdAt: ISO8601DateTime!
 
@@ -52,6 +53,7 @@ type AddOnCollection {
 type AddOnDetails {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  appliedAddOnsCount: Int!
   code: String!
   createdAt: ISO8601DateTime!
 
@@ -1452,6 +1454,7 @@ enum CountryCode {
 type Coupon {
   amountCents: BigInt
   amountCurrency: CurrencyEnum
+  appliedCouponsCount: Int!
   code: String
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
@@ -1482,6 +1485,7 @@ type CouponCollection {
 type CouponDetails {
   amountCents: BigInt
   amountCurrency: CurrencyEnum
+  appliedCouponsCount: Int!
   code: String
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
