@@ -27,6 +27,18 @@ RSpec.describe Coupons::DestroyService, type: :service do
       end
     end
 
+    context 'with applied coupons' do
+      it 'terminates applied coupons' do
+        applied_coupon = create(:applied_coupon, coupon:)
+        result = destroy_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(applied_coupon.reload).to be_terminated
+        end
+      end
+    end
+
     context 'when coupon is not found' do
       let(:coupon) { nil }
 
