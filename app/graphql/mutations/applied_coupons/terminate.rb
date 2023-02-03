@@ -13,9 +13,11 @@ module Mutations
       type Types::AppliedCoupons::Object
 
       def resolve(id:)
-        result = ::AppliedCoupons::TerminateService
-          .new(context[:current_user])
-          .terminate(id)
+        applied_coupon = AppliedCoupon.joins(coupon: :organization)
+          .where(organizations: { id: context[:current_user].organization_ids })
+          .find_by(id:)
+
+        result = ::AppliedCoupons::TerminateService.call(applied_coupon:)
 
         result.success? ? result.applied_coupon : result_error(result)
       end

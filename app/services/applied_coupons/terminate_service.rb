@@ -2,12 +2,16 @@
 
 module AppliedCoupons
   class TerminateService < BaseService
-    def terminate(id)
-      applied_coupon = AppliedCoupon
-        .joins(coupon: :organization)
-        .where(organizations: { id: result.user.organization_ids })
-        .find_by(id: id)
+    def self.call(...)
+      new(...).call
+    end
 
+    def initialize(applied_coupon:)
+      @applied_coupon = applied_coupon
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'applied_coupon') unless applied_coupon
 
       applied_coupon.mark_as_terminated! unless applied_coupon.terminated?
@@ -17,5 +21,9 @@ module AppliedCoupons
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
+
+    private
+
+    attr_reader :applied_coupon
   end
 end

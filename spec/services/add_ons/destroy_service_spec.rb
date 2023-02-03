@@ -9,7 +9,7 @@ RSpec.describe AddOns::DestroyService, type: :service do
   let(:organization) { membership.organization }
   let(:add_on) { create(:add_on, organization:) }
 
-  describe 'destroy' do
+  describe '#call' do
     before { add_on }
 
     it 'soft deletes the add-on' do
