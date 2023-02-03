@@ -3,30 +3,31 @@
 require 'rails_helper'
 
 RSpec.describe Plans::DestroyService, type: :service do
-  subject(:plans_service) { described_class.new(plan:) }
+  subject(:destroy_service) { described_class.new(plan:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:plan) { create(:plan, organization:, pending_deletion: true) }
 
   before { plan }
 
   describe '#call' do
-    it 'destroys the plan' do
-      expect { plans_service.call }
-        .to change(Plan, :count).by(-1)
+    it 'soft deletes the plan' do
+      freeze_time do
+        expect { destroy_service.call }.to change(Plan, :count).by(-1)
+          .and change { plan.reload.deleted_at }.from(nil).to(Time.current)
+      end
     end
 
     it 'sets pending_deletion to false' do
-      expect { plans_service.call }.to change { plan.reload.pending_deletion }.from(true).to(false)
+      expect { destroy_service.call }.to change { plan.reload.pending_deletion }.from(true).to(false)
     end
 
     context 'when plan is not found' do
       let(:plan) { nil }
 
       it 'returns an error' do
-        result = plans_service.call
+        result = destroy_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -38,7 +39,7 @@ RSpec.describe Plans::DestroyService, type: :service do
     it 'calls SegmentTrackJob' do
       allow(SegmentTrackJob).to receive(:perform_later)
 
-      plans_service.call
+      destroy_service.call
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -67,7 +68,7 @@ RSpec.describe Plans::DestroyService, type: :service do
       before { subscriptions }
 
       it 'terminates the subscriptions' do
-        result = plans_service.call
+        result = destroy_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -90,7 +91,7 @@ RSpec.describe Plans::DestroyService, type: :service do
       end
 
       it 'finalizes draft invoices' do
-        result = plans_service.call
+        result = destroy_service.call
 
         aggregate_failures do
           expect(result).to be_success

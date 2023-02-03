@@ -14,7 +14,10 @@ module Coupons
     def call
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
-      coupon.discard!
+      ActiveRecord::Base.transaction do
+        coupon.discard!
+        coupon.coupon_plans.discard_all
+      end
 
       result.coupon = coupon
       result

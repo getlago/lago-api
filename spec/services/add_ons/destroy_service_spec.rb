@@ -7,7 +7,6 @@ RSpec.describe AddOns::DestroyService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:add_on) { create(:add_on, organization:) }
 
   describe 'destroy' do

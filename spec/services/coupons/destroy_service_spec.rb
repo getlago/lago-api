@@ -8,14 +8,22 @@ RSpec.describe Coupons::DestroyService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:coupon) { create(:coupon, organization:) }
+  let(:coupon_plan) { create(:coupon_plan, coupon:) }
 
   describe '#call' do
     before { coupon }
 
     it 'soft deletes the coupon' do
-      aggregate_failures do
+      freeze_time do
         expect { destroy_service.call }.to change(Coupon, :count).by(-1)
-          .and change { coupon.reload.deleted_at }.from(nil)
+          .and change { coupon.reload.deleted_at }.from(nil).to(Time.current)
+      end
+    end
+
+    it 'soft deletes all the related coupon_plans' do
+      freeze_time do
+        expect { destroy_service.call }.to change { coupon_plan.reload.deleted_at }
+          .from(nil).to(Time.current)
       end
     end
 
