@@ -38,6 +38,7 @@ FactoryBot.define do
 
   factory :add_on_fee, class: 'Fee' do
     invoice
+    applied_add_on
     fee_type { 'add_on' }
 
     amount_cents { 200 }

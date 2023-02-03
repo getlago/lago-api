@@ -13,7 +13,7 @@ class Fee < ApplicationRecord
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
   has_one :billable_metric, -> { with_discarded }, through: :charge
-  has_one :add_on, through: :applied_add_on
+  has_one :add_on, -> { with_discarded }, through: :applied_add_on
 
   has_many :credit_note_items
   has_many :credit_notes, through: :credit_note_items
