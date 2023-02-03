@@ -16,14 +16,27 @@ module Customers
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless customer.deletable?
 
-      customer.destroy!
+      customer.discard!
 
       result.customer = customer
+      track_customer_deleted
       result
     end
 
     private
 
     attr_reader :customer
+
+    def track_customer_deleted
+      SegmentTrackJob.perform_later(
+        membership_id: CurrentContext.membership,
+        event: 'customer_deleted',
+        properties: {
+          customer_id: customer.id,
+          organization_id: customer.organization_id,
+          deleted_at: customer.deleted_at,
+        },
+      )
+    end
   end
 end

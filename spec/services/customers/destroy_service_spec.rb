@@ -3,29 +3,43 @@
 require 'rails_helper'
 
 RSpec.describe Customers::DestroyService, type: :service do
-  subject(:customers_service) { described_class.new(customer:) }
+  subject(:destroy_service) { described_class.new(customer:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:customer) { create(:customer, organization:) }
 
-  describe 'destroy' do
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:customer) { create(:customer, organization:) }
+  before { customer }
 
-    before { customer }
+  describe '#call' do
+    it 'soft deletes the customer' do
+      freeze_time do
+        expect { destroy_service.call }.to change(Customer, :count).by(-1)
+          .and change { customer.reload.deleted_at }.from(nil).to(Time.current)
+      end
+    end
 
-    it 'destroys the customer' do
-      expect do
-        customers_service.call
-      end.to change(Customer, :count).by(-1)
+    it 'calls SegmentTrackJob' do
+      allow(SegmentTrackJob).to receive(:perform_later)
+
+      customer = destroy_service.call.customer
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'customer_deleted',
+        properties: {
+          customer_id: customer.id,
+          deleted_at: customer.deleted_at,
+          organization_id: customer.organization_id,
+        },
+      )
     end
 
     context 'when customer is not found' do
       let(:customer) { nil }
 
       it 'returns an error' do
-        result = customers_service.call
+        result = destroy_service.call
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('customer_not_found')
@@ -38,7 +52,7 @@ RSpec.describe Customers::DestroyService, type: :service do
       end
 
       it 'returns an error' do
-        result = customers_service.call
+        result = destroy_service.call
 
         expect(result).not_to be_success
         expect(result.error.code).to eq('attached_to_an_active_subscription')
