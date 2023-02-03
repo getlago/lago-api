@@ -16,10 +16,13 @@ module AddOns
       return result.not_found_failure!(resource: 'add_on') unless add_on
 
       add_on.name = params[:name]
-      add_on.code = params[:code]
       add_on.description = params[:description]
-      add_on.amount_cents = params[:amount_cents]
-      add_on.amount_currency = params[:amount_currency]
+
+      unless add_on.applied_add_ons.exists?
+        add_on.code = params[:code]
+        add_on.amount_cents = params[:amount_cents]
+        add_on.amount_currency = params[:amount_currency]
+      end
 
       add_on.save!
 
