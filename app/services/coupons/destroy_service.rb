@@ -13,7 +13,6 @@ module Coupons
 
     def call
       return result.not_found_failure!(resource: 'coupon') unless coupon
-      return result.not_allowed_failure!(code: 'attached_to_an_active_customer') unless coupon.deletable?
 
       coupon.destroy!
 

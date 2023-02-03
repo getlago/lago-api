@@ -29,20 +29,5 @@ RSpec.describe Coupons::DestroyService, type: :service do
         end
       end
     end
-
-    context 'when coupon is attached to customer' do
-      let(:applied_coupon) { create(:applied_coupon, coupon:) }
-
-      before { applied_coupon }
-
-      it 'returns an error' do
-        result = destroy_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq('attached_to_an_active_customer')
-        end
-      end
-    end
   end
 end
