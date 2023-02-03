@@ -23,19 +23,20 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
   end
 
   describe '#call' do
-    it 'discards the billable metric' do
+    it 'soft deletes the billable metric' do
       freeze_time do
-        expect { destroy_service.call }.to change { billable_metric.reload.deleted_at }.from(nil).to(Time.current)
+        expect { destroy_service.call }.to change(BillableMetric, :count).by(-1)
+          .and change { billable_metric.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
-    it 'discards all the related charges' do
+    it 'soft deletes all the related charges' do
       freeze_time do
         expect { destroy_service.call }.to change { charge.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
-    it 'discards all the related groups' do
+    it 'soft deletes all the related groups' do
       freeze_time do
         expect { destroy_service.call }.to change { group.reload.deleted_at }.from(nil).to(Time.current)
           .and change { group_property.reload.deleted_at }.from(nil).to(Time.current)
