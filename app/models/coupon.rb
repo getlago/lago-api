@@ -62,14 +62,6 @@ class Coupon < ApplicationRecord
 
   scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
 
-  def attached_to_customers?
-    applied_coupons.exists?
-  end
-
-  def deletable?
-    !attached_to_customers?
-  end
-
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
