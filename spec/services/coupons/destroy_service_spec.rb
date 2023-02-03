@@ -7,14 +7,16 @@ RSpec.describe Coupons::DestroyService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:coupon) { create(:coupon, organization:) }
 
   describe '#call' do
     before { coupon }
 
-    it 'destroys the coupon' do
-      expect { destroy_service.call }.to change(Coupon, :count).by(-1)
+    it 'soft deletes the coupon' do
+      aggregate_failures do
+        expect { destroy_service.call }.to change(Coupon, :count).by(-1)
+          .and change { coupon.reload.deleted_at }.from(nil)
+      end
     end
 
     context 'when coupon is not found' do

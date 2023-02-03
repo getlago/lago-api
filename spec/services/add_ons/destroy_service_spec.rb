@@ -15,10 +15,8 @@ RSpec.describe AddOns::DestroyService, type: :service do
 
     it 'soft deletes the add-on' do
       aggregate_failures do
-        expect { destroy_service.call }
-          .to change(AddOn, :count).by(-1)
-
-        expect(add_on.reload.deleted_at).to be_present
+        expect { destroy_service.call }.to change(AddOn, :count).by(-1)
+          .and change { add_on.reload.deleted_at }.from(nil)
       end
     end
 

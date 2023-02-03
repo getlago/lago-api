@@ -14,7 +14,7 @@ module Coupons
     def call
       return result.not_found_failure!(resource: 'coupon') unless coupon
 
-      coupon.destroy!
+      coupon.discard!
 
       result.coupon = coupon
       result
