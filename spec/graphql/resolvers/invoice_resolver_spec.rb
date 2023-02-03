@@ -56,12 +56,12 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice: create(:invoice, customer:)) }
-  let(:invoice) { invoice_subscription.invoice }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
   let(:subscription) { invoice_subscription.subscription }
   let(:fee) { create(:fee, subscription:, invoice:, amount_cents: 10) }
 
-  before { fee }
+  before { fee and invoice }
 
   it 'returns a single invoice' do
     result = execute_graphql(
@@ -168,13 +168,13 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   end
 
   context 'with an add on invoice' do
-    let(:invoice) { create(:invoice, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
     let(:add_on) { create(:add_on, organization:) }
     let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
     let(:fee) { create(:add_on_fee, invoice:, applied_add_on:) }
 
     it 'returns a single invoice' do
-      esult = execute_graphql(
+      result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,

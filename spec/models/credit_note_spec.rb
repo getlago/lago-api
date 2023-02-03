@@ -8,7 +8,7 @@ RSpec.describe CreditNote, type: :model do
     let(:customer) { invoice.customer }
 
     let(:credit_note) do
-      build(:credit_note, invoice: invoice, customer: customer)
+      build(:credit_note, invoice:, customer:)
     end
 
     it 'assigns a sequential_id is present' do

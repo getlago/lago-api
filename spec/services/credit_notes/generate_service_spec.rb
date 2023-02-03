@@ -7,7 +7,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
 
   let(:organization) { create(:organization, name: 'LAGO') }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
   let(:fee) { create(:fee, invoice:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }

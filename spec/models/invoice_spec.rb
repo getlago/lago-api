@@ -95,10 +95,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#sub_total_vat_excluded_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer, amount_currency: 'EUR') }
-    let(:fees) { create_list(:fee, 3, invoice: invoice, amount_cents: 300) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, amount_currency: 'EUR', organization:) }
+    let(:fees) { create_list(:fee, 3, invoice:, amount_cents: 300) }
 
     before { fees }
 
@@ -109,10 +109,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#sub_total_vat_included_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization, vat_rate: 20) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer, amount_currency: 'EUR', vat_amount_cents: 180) }
-    let(:fees) { create_list(:fee, 3, invoice: invoice, amount_cents: 300) }
+    let(:customer) { create(:customer, organization:, vat_rate: 20) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, amount_currency: 'EUR', vat_amount_cents: 180, organization:) }
+    let(:fees) { create_list(:fee, 3, invoice:, amount_cents: 300) }
 
     before { fees }
 
@@ -123,10 +123,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#coupon_total_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:credit) { create(:credit, invoice: invoice) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:credit) { create(:credit, invoice:) }
 
     before { credit }
 
@@ -137,10 +137,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#credit_note_total_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:credit) { create(:credit_note_credit, invoice: invoice) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:credit) { create(:credit_note_credit, invoice:) }
 
     before { credit }
 
@@ -151,10 +151,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#charge_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:fees) { create_list(:fee, 3, invoice: invoice) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:fees) { create_list(:fee, 3, invoice:) }
 
     it 'returns the charges amount' do
       expect(invoice.charge_amount.to_s).to eq('0.00')
@@ -163,10 +163,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#credit_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:credit) { create(:credit, invoice: invoice) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:credit) { create(:credit, invoice:) }
 
     it 'returns the credits amount' do
       expect(invoice.credit_amount.to_s).to eq('0.00')
@@ -175,10 +175,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#wallet_transaction_amount' do
     let(:customer) { create(:customer) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
+    let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
+    let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, invoice: invoice, wallet: wallet, amount: 1, credit_amount: 1)
+      create(:wallet_transaction, invoice:, wallet:, amount: 1, credit_amount: 1)
     end
 
     before { wallet_transaction }
@@ -190,10 +190,10 @@ RSpec.describe Invoice, type: :model do
 
   describe '#subtotal_before_prepaid_credits' do
     let(:customer) { create(:customer) }
-    let(:invoice) { create(:invoice, customer: customer, amount_cents: 555) }
-    let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
+    let(:invoice) { create(:invoice, customer:, amount_cents: 555, organization: customer.organization) }
+    let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, invoice: invoice, wallet: wallet, amount: 1, credit_amount: 1)
+      create(:wallet_transaction, invoice:, wallet:, amount: 1, credit_amount: 1)
     end
 
     before { wallet_transaction }
@@ -213,9 +213,9 @@ RSpec.describe Invoice, type: :model do
 
   describe '#fee_total_amount_cents' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:fees) { create_list(:fee, 2, invoice: invoice, amount_cents: 100, vat_amount_cents: 20) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100, vat_amount_cents: 20) }
 
     before { fees }
 
@@ -226,15 +226,15 @@ RSpec.describe Invoice, type: :model do
 
   describe '#subscription_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { create(:invoice, customer: customer) }
-    let(:fees) { create_list(:fee, 2, invoice: invoice) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:fees) { create_list(:fee, 2, invoice:) }
 
     it 'returns the subscriptions amount' do
-      create(:fee, invoice: invoice, amount_cents: 200)
-      create(:fee, invoice: invoice, amount_cents: 100)
-      create(:fee, invoice: invoice, charge_id: create(:standard_charge).id, fee_type: 'charge')
+      create(:fee, invoice:, amount_cents: 200)
+      create(:fee, invoice:, amount_cents: 100)
+      create(:fee, invoice:, charge_id: create(:standard_charge).id, fee_type: 'charge')
 
       expect(invoice.subscription_amount.to_s).to eq('3.00')
     end

@@ -5,15 +5,15 @@ require 'rails_helper'
 RSpec.describe Webhooks::Invoices::DraftedService do
   subject(:webhook_invoice_service) { described_class.new(invoice) }
 
-  let(:organization) { create(:organization, webhook_url: webhook_url) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, organization: organization) }
-  let(:invoice) { create(:invoice, customer: customer) }
+  let(:organization) { create(:organization, webhook_url:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, organization:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
   let(:webhook_url) { 'http://foo.bar' }
 
   before do
-    create_list(:fee, 2, invoice: invoice)
-    create_list(:credit, 2, invoice: invoice)
+    create_list(:fee, 2, invoice:)
+    create_list(:credit, 2, invoice:)
   end
 
   describe '.call' do

@@ -8,7 +8,7 @@ RSpec.describe Invoices::Payments::RetryAllJob, type: :job do
   let(:retry_batch_service) { instance_double(Invoices::Payments::RetryBatchService) }
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, organization:) }
 
   before do
     allow(Invoices::Payments::RetryBatchService).to receive(:new)

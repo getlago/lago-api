@@ -22,7 +22,7 @@ RSpec.describe Fees::SubscriptionService do
       amount_currency: 'EUR',
     )
   end
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, organization: customer.organization) }
   let(:boundaries) do
     {
       from_datetime: Time.zone.parse('2022-03-01 00:00:00'),
@@ -640,8 +640,8 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     before do
-      other_invoice = create(:invoice)
-      create(:fee, subscription: subscription, invoice: other_invoice)
+      other_invoice = create(:invoice, organization: customer.organization)
+      create(:fee, subscription:, invoice: other_invoice)
     end
 
     it 'creates a fee with full period amount' do

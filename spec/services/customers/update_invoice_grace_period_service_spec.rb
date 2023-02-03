@@ -12,11 +12,11 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
 
   describe '#call' do
     let(:invoice_to_be_finalized) do
-      create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'))
+      create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'), organization:)
     end
 
     let(:invoice_to_not_be_finalized) do
-      create(:invoice, status: :draft, customer:, created_at: DateTime.parse('21 Jun 2022'))
+      create(:invoice, status: :draft, customer:, created_at: DateTime.parse('21 Jun 2022'), organization:)
     end
 
     before do

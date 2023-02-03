@@ -3,8 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
+  let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
-  let(:organization) { invoice.organization }
+  let(:customer) { create(:customer, organization:) }
 
   let(:fee1) { create(:fee, invoice:) }
   let(:fee2) { create(:charge_fee, invoice:) }
@@ -12,6 +13,8 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
   let(:invoice) do
     create(
       :invoice,
+      customer:,
+      organization:,
       payment_status: 'succeeded',
       amount_cents: 100,
       amount_currency: 'EUR',

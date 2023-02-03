@@ -18,6 +18,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
+          organization: customer.organization,
           customer:,
           issuing_date:,
           invoice_type: :subscription,

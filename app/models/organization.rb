@@ -9,7 +9,7 @@ class Organization < ApplicationRecord
   has_many :plans
   has_many :customers
   has_many :subscriptions, through: :customers
-  has_many :invoices, through: :customers
+  has_many :invoices
   has_many :credit_notes, through: :customers
   has_many :events
   has_many :coupons
