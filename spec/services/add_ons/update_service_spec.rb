@@ -56,5 +56,27 @@ RSpec.describe AddOns::UpdateService, type: :service do
         end
       end
     end
+
+    context 'when attached to an applied add on' do
+      let(:update_args) do
+        {
+          id: add_on.id,
+          name: 'new name',
+          description: 'new desc',
+          code: 'new code',
+        }
+      end
+
+      it 'updates only name and description' do
+        create(:applied_add_on, add_on:)
+        result = add_ons_service.call
+
+        aggregate_failures do
+          expect(result.add_on.name).to eq('new name')
+          expect(result.add_on.description).to eq('new desc')
+          expect(result.add_on.code).not_to eq('new code')
+        end
+      end
+    end
   end
 end
