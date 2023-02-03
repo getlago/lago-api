@@ -3,17 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe AppliedCoupons::TerminateService, type: :service do
-  subject(:terminate_service) { described_class.new(membership.user) }
+  subject(:terminate_service) { described_class.new(applied_coupon:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:coupon) { create(:coupon, status: 'active', organization:) }
+  let(:applied_coupon) { create(:applied_coupon, coupon:) }
 
-  let(:coupon) { create(:coupon, status: 'active', organization: organization) }
-  let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
-
-  describe 'terminate' do
+  describe '#call' do
     it 'terminates the applied coupon' do
-      result = terminate_service.terminate(applied_coupon.id)
+      result = terminate_service.call
 
       expect(result).to be_success
       expect(result.applied_coupon).to be_terminated
@@ -24,7 +23,7 @@ RSpec.describe AppliedCoupons::TerminateService, type: :service do
 
       it 'does not impact the applied coupon' do
         terminated_at = applied_coupon.reload.terminated_at
-        result = terminate_service.terminate(applied_coupon.id)
+        result = terminate_service.call
 
         expect(result).to be_success
         expect(result.applied_coupon).to be_terminated
