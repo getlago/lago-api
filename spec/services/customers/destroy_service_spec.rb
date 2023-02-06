@@ -19,6 +19,13 @@ RSpec.describe Customers::DestroyService, type: :service do
       end
     end
 
+    it 'enqueues a job to terminates the customer resources' do
+      destroy_service.call
+
+      expect(Customers::TerminateRelationsJob).to have_been_enqueued
+        .with(customer_id: customer.id)
+    end
+
     it 'calls SegmentTrackJob' do
       allow(SegmentTrackJob).to receive(:perform_later)
 

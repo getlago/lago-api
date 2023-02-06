@@ -39,8 +39,8 @@ module Api
       end
 
       def terminate
-        service = Wallets::TerminateService.new
-        result = service.terminate(organization: current_organization, id: params[:id])
+        wallet = current_organization.wallets.find_by(id: params[:id])
+        result = Wallets::TerminateService.call(wallet:)
 
         if result.success?
           render_wallet(result.wallet)

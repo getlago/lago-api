@@ -2,8 +2,16 @@
 
 module Wallets
   class TerminateService < BaseService
-    def terminate(organization:, id:)
-      wallet = organization.wallets.find_by(id:)
+    def self.call(...)
+      new(...).call
+    end
+
+    def initialize(wallet:)
+      @wallet = wallet
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'wallet') unless wallet
 
       wallet.mark_as_terminated! if wallet.active?
@@ -17,5 +25,9 @@ module Wallets
     def terminate_all_expired
       Wallet.active.expired.find_each(&:mark_as_terminated!)
     end
+
+    private
+
+    attr_reader :wallet
   end
 end

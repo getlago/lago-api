@@ -17,9 +17,11 @@ module Customers
       return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless customer.deletable?
 
       customer.discard!
+      track_customer_deleted
+
+      Customers::TerminateRelationsJob.perform_later(customer_id: customer.id)
 
       result.customer = customer
-      track_customer_deleted
       result
     end
 
