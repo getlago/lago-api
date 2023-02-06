@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
 require 'faker'
+require 'factory_bot_rails'
 
 # NOTE: create a user and an organization
 user = User.create_with(password: 'ILoveLago')
   .find_or_create_by(email: 'gavin@hooli.com')
 
 organization = Organization.find_or_create_by!(name: 'Hooli')
-Membership.find_or_create_by!(user: user, organization: organization, role: :admin)
+Membership.find_or_create_by!(user:, organization:, role: :admin)
 
 # NOTE: define a billing model
 billable_metric = BillableMetric.find_or_create_by!(
-  organization: organization,
+  organization:,
   aggregation_type: 'sum_agg',
   name: 'Sum BM',
   code: 'sum_bm',
@@ -24,7 +25,7 @@ plan = Plan.create_with(
   amount_cents: 100,
   amount_currency: 'EUR',
 ).find_or_create_by!(
-  organization: organization,
+  organization:,
   name: 'Standard Plan',
   code: 'standard_plan',
 )
@@ -36,8 +37,8 @@ Charge.create_with(
     amount: Faker::Number.between(from: 100, to: 500).to_s,
   },
 ).find_or_create_by!(
-  plan: plan,
-  billable_metric: billable_metric,
+  plan:,
+  billable_metric:,
 )
 
 # NOTE: define customers
@@ -58,7 +59,7 @@ Charge.create_with(
     legal_number: Faker::Company.duns_number,
     currency: 'EUR',
   ).find_or_create_by!(
-    organization: organization,
+    organization:,
     external_id: "cust_#{i + 1}",
   )
 
@@ -67,9 +68,9 @@ Charge.create_with(
     subscription_at: Time.current - 3.months,
     status: :active,
   ).find_or_create_by!(
-    customer: customer,
+    customer:,
     external_id: SecureRandom.uuid,
-    plan: plan,
+    plan:,
   )
 
   next if customer.events.exists?
@@ -79,9 +80,9 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer: customer,
+      customer:,
       subscription: sub,
-      organization: organization,
+      organization:,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..12).seconds,
       created_at: time,
@@ -101,9 +102,9 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer: customer,
+      customer:,
       subscription: sub,
-      organization: organization,
+      organization:,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
       created_at: time,
@@ -121,9 +122,9 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer: customer,
+      customer:,
       subscription: sub,
-      organization: organization,
+      organization:,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
       created_at: time,
@@ -163,7 +164,7 @@ Wallet.create!(
 
 3.times do
   WalletTransaction.create!(
-    wallet: wallet,
+    wallet:,
     transaction_type: :outbound,
     status: :settled,
     amount: BigDecimal('10.00'),
@@ -178,9 +179,9 @@ organization.customers.find_each do |customer|
     time = Time.zone.now
 
     Event.create!(
-      customer: customer,
+      customer:,
       subscription: customer.active_subscriptions&.first,
-      organization: organization,
+      organization:,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..24).hours,
       created_at: time,
