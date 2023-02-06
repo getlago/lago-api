@@ -16,6 +16,10 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :customers, param: :external_id, only: %i[create index show destroy] do
         get :current_usage
+
+        scope module: :customers do
+          resources :applied_coupons, param: :coupon_code, only: %i[destroy]
+        end
       end
 
       resources :subscriptions, only: %i[create update index], param: :external_id
