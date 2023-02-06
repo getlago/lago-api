@@ -5,7 +5,9 @@ module Clock
     queue_as 'clock'
 
     def perform
-      Wallets::TerminateService.new.terminate_all_expired
+      Wallet.active.expired.find_each do |wallet|
+        Wallets::TerminateService.call(wallet:)
+      end
     end
   end
 end
