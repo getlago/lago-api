@@ -6,9 +6,10 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
   subject(:gocardless_service) { described_class.new(credit_note) }
 
   let(:customer) { create(:customer) }
+  let(:invoice) { create(:invoice, organization:, customer:) }
   let(:organization) { customer.organization }
-  let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
-  let(:gocardless_customer) { create(:gocardless_customer, customer: customer) }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
+  let(:gocardless_customer) { create(:gocardless_customer, customer:) }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_refunds_service) { instance_double(GoCardlessPro::Services::RefundsService) }
   let(:payment) do
@@ -25,7 +26,8 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
   let(:credit_note) do
     create(
       :credit_note,
-      customer: customer,
+      customer:,
+      invoice:,
       refund_amount_cents: 134,
       refund_amount_currency: 'CHF',
       refund_status: :pending,

@@ -53,7 +53,7 @@ class Invoice < ApplicationRecord
             )
           SQL
 
-          draft.joins(customer: :organization).where("#{Arel.sql(date)} < ?", Time.current)
+          draft.joins(:customer, :organization).where("#{Arel.sql(date)} < ?", Time.current)
         }
 
   scope :created_before,

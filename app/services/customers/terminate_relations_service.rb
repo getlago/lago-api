@@ -16,7 +16,7 @@ module Customers
 
       # NOTE: Terminate active subscriptions.
       customer.subscriptions.active.each do |subscription|
-        Subscriptions::TerminateService.call(subscription:)
+        Subscriptions::TerminateService.call(subscription:, async: false)
       end
 
       # NOTE: Cancel pending subscriptions
