@@ -6,7 +6,8 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:credit_note) { create(:credit_note, customer:) }
+  let(:invoice) { create(:invoice, organization:, customer:) }
+  let(:credit_note) { create(:credit_note, customer:, invoice:) }
 
   let(:mutation) do
     <<~GQL

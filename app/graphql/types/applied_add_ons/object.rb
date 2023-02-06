@@ -12,6 +12,10 @@ module Types
       field :amount_currency, Types::CurrencyEnum, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def add_on
+        AddOn.with_discarded.find(object.add_on_id)
+      end
     end
   end
 end

@@ -44,13 +44,14 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
   let(:membership) { create(:membership) }
 
   let(:customer) { create(:customer, organization: membership.organization) }
-  let(:credit_note) { create(:credit_note, customer: customer) }
+  let(:invoice) { create(:invoice, organization: membership.organization, customer:) }
+  let(:credit_note) { create(:credit_note, customer:, invoice:) }
 
   it 'returns a single credit note' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: customer.organization,
-      query: query,
+      query:,
       variables: {
         creditNoteId: credit_note.id,
       },

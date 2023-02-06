@@ -7,8 +7,9 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
-  let(:stripe_payment_provider) { create(:stripe_provider, organization: organization) }
-  let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:stripe_payment_provider) { create(:stripe_provider, organization:) }
+  let(:stripe_customer) { create(:stripe_customer, customer:) }
   let(:payment) do
     create(
       :payment,
@@ -23,7 +24,8 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
   let(:credit_note) do
     create(
       :credit_note,
-      customer: customer,
+      customer:,
+      invoice:,
       refund_amount_cents: 134,
       refund_amount_currency: 'CHF',
       refund_status: :pending,
