@@ -4,7 +4,7 @@ module Api
   module V1
     class CustomersController < Api::BaseController
       def create
-        service = Customers::CreateService.new
+        service = ::Customers::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
           params: create_params,
@@ -23,7 +23,7 @@ module Api
       end
 
       def current_usage
-        service = Invoices::CustomerUsageService
+        service = ::Invoices::CustomerUsageService
           .new(
             nil,
             customer_id: params[:customer_external_id],
@@ -75,7 +75,7 @@ module Api
 
       def destroy
         customer = current_organization.customers.find_by(external_id: params[:external_id])
-        result = Customers::DestroyService.call(customer:)
+        result = ::Customers::DestroyService.call(customer:)
 
         if result.success?
           render(
