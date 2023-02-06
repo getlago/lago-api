@@ -5,6 +5,8 @@ module Credits
     def initialize(invoice:, applied_coupon:, base_amount_cents:)
       @invoice = invoice
       @applied_coupon = applied_coupon
+      # base_amount_cents represents maximum value that can be credited. It is either equal to invoice
+      # total_amount_cents or sum of the fees related to some plan (for coupons with plan limitations)
       @base_amount_cents = base_amount_cents
 
       super(nil)
