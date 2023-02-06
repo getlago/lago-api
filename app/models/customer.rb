@@ -47,14 +47,6 @@ class Customer < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
 
-  def attached_to_subscriptions?
-    subscriptions.exists?
-  end
-
-  def deletable?
-    !attached_to_subscriptions? && applied_add_ons.none? && applied_coupons.none? && wallets.none?
-  end
-
   def active_subscription
     subscriptions.active.order(started_at: :desc).first
   end
@@ -82,7 +74,7 @@ class Customer < ApplicationRecord
   end
 
   def editable?
-    !attached_to_subscriptions? &&
+    subscriptions.none? &&
       applied_add_ons.none? &&
       applied_coupons.where.not(amount_currency: nil).none? &&
       wallets.none?

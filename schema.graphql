@@ -2530,11 +2530,6 @@ type Customer {
   applicableTimezone: TimezoneEnum!
 
   """
-  Check if customer is deletable
-  """
-  canBeDeleted: Boolean!
-
-  """
   Check if customer attributes are editable
   """
   canEditAttributes: Boolean!
@@ -2600,11 +2595,6 @@ type CustomerDetails {
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
-
-  """
-  Check if customer is deletable
-  """
-  canBeDeleted: Boolean!
 
   """
   Check if customer attributes are editable

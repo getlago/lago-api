@@ -50,16 +50,8 @@ module Types
             null: false,
             description: 'Credit notes credits balance available per customer'
 
-      field :can_be_deleted, Boolean, null: false do
-        description 'Check if customer is deletable'
-      end
-
       field :can_edit_attributes, Boolean, null: false do
         description 'Check if customer attributes are editable'
-      end
-
-      def can_be_deleted
-        object.deletable?
       end
 
       def has_active_wallet
