@@ -8,7 +8,7 @@ RSpec.describe Fees::PaidCreditService do
   end
 
   let(:customer) { create(:customer) }
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, organization: customer.organization) }
   let(:subscription) { create(:subscription, customer: customer) }
   let(:wallet) { create(:wallet, customer: customer) }
   let(:wallet_transaction) do

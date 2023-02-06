@@ -8,7 +8,7 @@ RSpec.describe Invoices::GenerateService, type: :service do
   let(:organization) { create(:organization, name: 'LAGO') }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
-  let(:invoice) { create(:invoice, customer:, status: :finalized) }
+  let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
   let(:credit) { create(:credit, invoice:) }
   let(:fees) { create_list(:fee, 3, invoice:) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
@@ -47,7 +47,7 @@ RSpec.describe Invoices::GenerateService, type: :service do
     end
 
     context 'when invoice is draft' do
-      let(:invoice) { create(:invoice, customer:, status: :draft) }
+      let(:invoice) { create(:invoice, customer:, status: :draft, organization:) }
 
       it 'returns a result with error' do
         result = invoice_generate_service.generate(invoice_id: invoice.id)

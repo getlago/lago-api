@@ -18,8 +18,8 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, organization:) }
-  let(:draft_invoice) { create(:invoice, :draft, customer:) }
-  let(:finalized_invoice) { create(:invoice, customer:) }
+  let(:draft_invoice) { create(:invoice, :draft, customer:, organization:) }
+  let(:finalized_invoice) { create(:invoice, customer:, organization:) }
 
   before do
     subscription

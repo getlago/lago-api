@@ -17,7 +17,7 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
   let(:subscription) { create(:subscription, customer:, organization:) }
   let(:credit_note) { create(:credit_note, organization:, customer:, invoice:) }
 

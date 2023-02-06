@@ -7,13 +7,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
-  let(:stripe_payment_provider) { create(:stripe_provider, organization: organization) }
-  let(:stripe_customer) { create(:stripe_customer, customer: customer, payment_method_id: 'pm_123456') }
+  let(:stripe_payment_provider) { create(:stripe_provider, organization:) }
+  let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: 'pm_123456') }
 
   let(:invoice) do
     create(
       :invoice,
-      customer: customer,
+      organization:,
+      customer:,
       total_amount_cents: 200,
       total_amount_currency: 'EUR',
       ready_for_payment_processing: true,
@@ -137,7 +138,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       let(:invoice) do
         create(
           :invoice,
-          customer: customer,
+          organization:,
+          customer:,
           total_amount_cents: 0,
           total_amount_currency: 'EUR',
         )

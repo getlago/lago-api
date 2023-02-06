@@ -6,7 +6,8 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_number
 
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
+  belongs_to :organization
 
   has_many :fees
   has_many :credits
@@ -122,10 +123,6 @@ class Invoice < ApplicationRecord
     return amount unless wallet_transactions.exists?
 
     amount + wallet_transaction_amount
-  end
-
-  def organization
-    customer&.organization
   end
 
   def invoice_subscription(subscription_id)

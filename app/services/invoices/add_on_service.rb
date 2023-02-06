@@ -13,8 +13,9 @@ module Invoices
     def create
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
-          customer: customer,
-          issuing_date: issuing_date,
+          organization: customer.organization,
+          customer:,
+          issuing_date:,
           invoice_type: :add_on,
           payment_status: :pending,
           amount_currency: currency,

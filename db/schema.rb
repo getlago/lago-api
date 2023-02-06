@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_02_150407) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_02_163249) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -364,7 +364,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_02_150407) do
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
+    t.uuid "organization_id", null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
+    t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -592,6 +594,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_02_150407) do
   add_foreign_key "invoice_subscriptions", "invoices"
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
+  add_foreign_key "invoices", "organizations"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "payment_provider_customers", "customers"

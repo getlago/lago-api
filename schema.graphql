@@ -2547,6 +2547,7 @@ type Customer {
   """
   creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
+  deletedAt: ISO8601DateTime
   email: String
   externalId: String!
 
@@ -2619,6 +2620,7 @@ type CustomerDetails {
   """
   creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
+  deletedAt: ISO8601DateTime
   email: String
   externalId: String!
 

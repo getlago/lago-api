@@ -18,8 +18,12 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer_first) { create(:customer, organization:) }
   let(:customer_second) { create(:customer, organization:) }
-  let(:invoice_first) { create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized) }
-  let(:invoice_second) { create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized) }
+  let(:invoice_first) do
+    create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized, organization:)
+  end
+  let(:invoice_second) do
+    create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized, organization:)
+  end
 
   before do
     invoice_first
@@ -80,7 +84,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
   end
 
   context 'when filtering by draft status' do
-    let(:invoice_third) { create(:invoice, customer: customer_second, status: :draft) }
+    let(:invoice_third) { create(:invoice, customer: customer_second, status: :draft, organization:) }
     let(:query) do
       <<~GQL
         query {

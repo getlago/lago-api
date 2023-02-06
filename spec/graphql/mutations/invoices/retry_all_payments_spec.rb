@@ -25,6 +25,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
     let(:invoice_first) do
       create(
         :invoice,
+        organization:,
         customer: customer_first,
         status: 'finalized',
         payment_status: 'failed',
@@ -34,6 +35,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
     let(:invoice_second) do
       create(
         :invoice,
+        organization:,
         customer: customer_second,
         status: 'finalized',
         payment_status: 'failed',

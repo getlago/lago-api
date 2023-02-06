@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Invoices::Payments::CreateService, type: :service do
   subject(:create_service) { described_class.new(invoice) }
 
-  let(:invoice) { create(:invoice, customer: customer) }
-  let(:customer) { create(:customer, payment_provider: payment_provider) }
+  let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
+  let(:customer) { create(:customer, payment_provider:) }
   let(:payment_provider) { 'stripe' }
 
   describe '#call' do

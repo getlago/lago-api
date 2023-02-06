@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :invoice do
     customer
+    organization
 
     issuing_date { Time.zone.now - 1.day }
     payment_status { 'pending' }

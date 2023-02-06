@@ -14,6 +14,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_first) do
     create(
       :invoice,
+      organization:,
       status: 'finalized',
       payment_status: 'succeeded',
       customer: customer_first,
@@ -23,6 +24,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_second) do
     create(
       :invoice,
+      organization:,
       status: 'finalized',
       payment_status: 'pending',
       customer: customer_second,
@@ -32,6 +34,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_third) do
     create(
       :invoice,
+      organization:,
       status: 'finalized',
       payment_status: 'failed',
       customer: customer_first,
@@ -41,6 +44,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_fourth) do
     create(
       :invoice,
+      organization:,
       status: 'draft',
       payment_status: 'pending',
       customer: customer_second,
@@ -50,6 +54,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_fifth) do
     create(
       :invoice,
+      organization:,
       status: 'draft',
       payment_status: 'pending',
       customer: customer_first,

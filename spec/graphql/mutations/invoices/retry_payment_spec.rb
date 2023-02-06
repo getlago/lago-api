@@ -12,6 +12,7 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
   let(:invoice) do
     create(
       :invoice,
+      organization:,
       customer:,
       status: 'finalized',
       payment_status: 'failed',

@@ -3,14 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::CreditNotesController, type: :request do
-  let(:organization) { invoice.organization }
-  let(:customer) { invoice.customer }
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
   let(:credit_note_items) { create_list(:credit_note_item, 2, credit_note:) }
 
   let(:invoice) do
     create(
       :invoice,
+      organization:,
+      customer:,
       payment_status: 'succeeded',
       amount_cents: 100,
       amount_currency: 'EUR',
@@ -177,7 +179,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
   describe 'GET /credit_notes' do
     let(:second_customer) { create(:customer, organization:) }
-    let(:second_invoice) { create(:invoice, customer: second_customer) }
+    let(:second_invoice) { create(:invoice, customer: second_customer, organization:) }
     let(:second_credit_note) { create(:credit_note, invoice: second_invoice, customer: second_invoice.customer) }
     let(:draft_credit_note) { create(:credit_note, :draft, customer: second_customer) }
 
