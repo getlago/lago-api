@@ -228,7 +228,7 @@ RSpec.describe CreditNote, type: :model do
 
     before { credit_note_item }
 
-    it 'returns the item for ad on' do
+    it 'returns items of the add-on' do
       expect(credit_note.add_on_items).to eq([credit_note_item])
     end
   end
