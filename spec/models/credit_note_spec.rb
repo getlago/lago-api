@@ -218,6 +218,21 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
+  describe '#add_on_items' do
+    let(:credit_note) { create(:credit_note) }
+    let(:invoice) { credit_note.invoice }
+    let(:add_on) { create(:add_on, organization: credit_note.organization) }
+    let(:applied_add_on) { create(:applied_add_on, add_on:) }
+    let(:credit_note_item) { create(:credit_note_item, credit_note:, fee: add_on_fee) }
+    let(:add_on_fee) { create(:add_on_fee, invoice:, applied_add_on:) }
+
+    before { credit_note_item }
+
+    it 'returns items of the add-on' do
+      expect(credit_note.add_on_items).to eq([credit_note_item])
+    end
+  end
+
   describe '#voidable?' do
     let(:credit_note) do
       create(:credit_note, balance_amount_cents: balance_amount_cents, credit_status: credit_status)

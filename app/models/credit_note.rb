@@ -90,6 +90,12 @@ class CreditNote < ApplicationRecord
       .includes(:fee)
   end
 
+  def add_on_items
+    items.joins(:fee)
+      .merge(Fee.add_on)
+      .includes(:fee)
+  end
+
   def voidable?
     return false if voided?
 

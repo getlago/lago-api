@@ -350,9 +350,10 @@ html
                   td.body-1 width="30%" style="text-align: right;"
                     = item.amount.format
             - else
-              - subscription_charge_items(nil).each do |item|
+              - add_on_items.each do |item|
                 tr
-                  td.body-1 = item.fee.item_name
+                  td.body-1
+                    | Add-on - #{item.fee.item_name}
                   td.body-1 width="30%" style="text-align: right;"
                     = item.amount.format
 
