@@ -22,10 +22,6 @@ module Wallets
       result.record_validation_failure!(record: e.record)
     end
 
-    def terminate_all_expired
-      Wallet.active.expired.find_each(&:mark_as_terminated!)
-    end
-
     private
 
     attr_reader :wallet
