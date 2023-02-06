@@ -795,6 +795,129 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.credits.count).to be_zero
         end
       end
+
+      context 'when both coupons have plan limitations which are not applicable' do
+        let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+        let(:coupon_plan) { create(:coupon_plan, coupon:, plan: create(:plan)) }
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            coupon:,
+            customer: subscription.customer,
+            amount_cents: 10,
+            amount_currency: plan.amount_currency,
+          )
+        end
+        let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+        let(:coupon_plan_latest) { create(:coupon_plan, coupon: coupon_latest, plan: create(:plan)) }
+        let(:applied_coupon_latest) do
+          create(
+            :applied_coupon,
+            coupon: coupon_latest,
+            customer: subscription.customer,
+            amount_cents: 20,
+            amount_currency: plan.amount_currency,
+            created_at: applied_coupon.created_at + 1.day,
+          )
+        end
+
+        before do
+          coupon_plan
+          coupon_plan_latest
+        end
+
+        it 'ignores coupons' do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.total_amount_cents).to eq(120)
+          expect(result.invoice.credits.count).to be_zero
+        end
+      end
+
+      context 'when only one coupon is applicable due to plan limitations' do
+        let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+        let(:coupon_plan) { create(:coupon_plan, coupon:, plan: create(:plan)) }
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            coupon:,
+            customer: subscription.customer,
+            amount_cents: 10,
+            amount_currency: plan.amount_currency,
+          )
+        end
+        let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+        let(:coupon_plan_latest) { create(:coupon_plan, coupon: coupon_latest, plan:) }
+        let(:applied_coupon_latest) do
+          create(
+            :applied_coupon,
+            coupon: coupon_latest,
+            customer: subscription.customer,
+            amount_cents: 20,
+            amount_currency: plan.amount_currency,
+            created_at: applied_coupon.created_at + 1.day,
+          )
+        end
+
+        before do
+          coupon_plan
+          coupon_plan_latest
+        end
+
+        it 'ignores only one coupon and applies the other one' do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.total_amount_cents).to eq(100)
+          expect(result.invoice.credits.count).to eq(1)
+        end
+      end
+
+      context 'when both coupons are applicable due to plan limitations' do
+        let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+        let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            coupon:,
+            customer: subscription.customer,
+            amount_cents: 10,
+            amount_currency: plan.amount_currency,
+          )
+        end
+        let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+        let(:coupon_plan_latest) { create(:coupon_plan, coupon: coupon_latest, plan:) }
+        let(:applied_coupon_latest) do
+          create(
+            :applied_coupon,
+            coupon: coupon_latest,
+            customer: subscription.customer,
+            amount_cents: 20,
+            amount_currency: plan.amount_currency,
+            created_at: applied_coupon.created_at + 1.day,
+          )
+        end
+
+        before do
+          coupon_plan
+          coupon_plan_latest
+        end
+
+        it 'applies two coupons' do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.vat_amount_cents).to eq(20)
+          expect(result.invoice.total_amount_cents).to eq(90)
+          expect(result.invoice.credits.count).to eq(2)
+        end
+      end
     end
 
     context 'with applied prepaid credits' do

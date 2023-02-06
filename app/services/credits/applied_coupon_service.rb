@@ -2,9 +2,12 @@
 
 module Credits
   class AppliedCouponService < BaseService
-    def initialize(invoice:, applied_coupon:)
+    def initialize(invoice:, applied_coupon:, base_amount_cents:)
       @invoice = invoice
       @applied_coupon = applied_coupon
+      # base_amount_cents represents maximum value that can be credited. It is either equal to invoice
+      # total_amount_cents or sum of the fees related to some plan (for coupons with plan limitations)
+      @base_amount_cents = base_amount_cents
 
       super(nil)
     end
@@ -36,7 +39,7 @@ module Credits
 
     private
 
-    attr_accessor :invoice, :applied_coupon
+    attr_accessor :invoice, :applied_coupon, :base_amount_cents
 
     delegate :coupon, to: :applied_coupon
 
@@ -46,17 +49,17 @@ module Credits
 
     def compute_amount
       if applied_coupon.coupon.percentage?
-        discounted_value = invoice.total_amount_cents * applied_coupon.percentage_rate.fdiv(100)
+        discounted_value = base_amount_cents * applied_coupon.percentage_rate.fdiv(100)
 
-        return (discounted_value >= invoice.total_amount_cents) ? invoice.total_amount_cents : discounted_value.round
+        return (discounted_value >= base_amount_cents) ? base_amount_cents : discounted_value.round
       end
 
       if applied_coupon.recurring? || applied_coupon.forever?
-        return invoice.total_amount_cents if applied_coupon.amount_cents > invoice.total_amount_cents
+        return base_amount_cents if applied_coupon.amount_cents > base_amount_cents
 
         applied_coupon.amount_cents
       else
-        return invoice.total_amount_cents if remaining_amount > invoice.total_amount_cents
+        return base_amount_cents if remaining_amount > base_amount_cents
 
         remaining_amount
       end
