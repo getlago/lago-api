@@ -20,12 +20,8 @@ module Api
       end
 
       def update
-        service = AddOns::UpdateService.new
-        result = service.update_from_api(
-          organization: current_organization,
-          code: params[:code],
-          params: input_params,
-        )
+        add_on = current_organization.add_ons.find_by(code: params[:code])
+        result = AddOns::UpdateService.call(add_on:, params: input_params)
 
         if result.success?
           render_add_on(result.add_on)
@@ -35,11 +31,8 @@ module Api
       end
 
       def destroy
-        service = AddOns::DestroyService.new
-        result = service.destroy_from_api(
-          organization: current_organization,
-          code: params[:code],
-        )
+        add_on = current_organization.add_ons.find_by(code: params[:code])
+        result = AddOns::DestroyService.call(add_on:)
 
         if result.success?
           render_add_on(result.add_on)

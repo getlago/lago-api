@@ -7,13 +7,14 @@ RSpec.describe Coupons::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:coupon_code) { 'free-beer' }
 
   describe 'create' do
     let(:expiration_at) { (Time.current + 3.days).end_of_day }
     let(:create_args) do
       {
         name: 'Super Coupon',
-        code: 'free-beer',
+        code: coupon_code,
         organization_id: organization.id,
         coupon_type: 'fixed_amount',
         frequency: 'once',
@@ -21,7 +22,7 @@ RSpec.describe Coupons::CreateService, type: :service do
         amount_currency: 'EUR',
         expiration: 'time_limit',
         reusable: false,
-        expiration_at: expiration_at,
+        expiration_at:,
       }
     end
 
@@ -48,6 +49,18 @@ RSpec.describe Coupons::CreateService, type: :service do
       )
     end
 
+    context 'with code already used by a deleted coupon' do
+      it 'creates an coupon with the same code' do
+        create(:coupon, :deleted, organization:, code: coupon_code)
+
+        expect { create_service.create(**create_args) }.to change(Coupon, :count).by(1)
+
+        coupons = organization.coupons.with_discarded
+        expect(coupons.count).to eq(2)
+        expect(coupons.pluck(:code).uniq).to eq([coupon_code])
+      end
+    end
+
     context 'when coupon type is percentage' do
       let(:create_args) do
         {
@@ -70,11 +83,7 @@ RSpec.describe Coupons::CreateService, type: :service do
 
     context 'with validation error' do
       before do
-        create(
-          :coupon,
-          organization: organization,
-          code: 'free-beer',
-        )
+        create(:coupon, organization:, code: coupon_code)
       end
 
       it 'returns an error' do

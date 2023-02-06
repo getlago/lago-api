@@ -13,7 +13,8 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        result = ::AddOns::DestroyService.new(context[:current_user]).destroy(id)
+        add_on = context[:current_user].add_ons.find_by(id:)
+        result = ::AddOns::DestroyService.call(add_on:)
 
         result.success? ? result.add_on : result_error(result)
       end

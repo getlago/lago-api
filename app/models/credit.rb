@@ -7,7 +7,7 @@ class Credit < ApplicationRecord
   belongs_to :applied_coupon, optional: true
   belongs_to :credit_note, optional: true
 
-  has_one :coupon, through: :applied_coupon
+  has_one :coupon, -> { with_discarded }, through: :applied_coupon
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 

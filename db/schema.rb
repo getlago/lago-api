@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_03_132157) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -52,7 +52,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_add_ons_on_deleted_at"
+    t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_add_ons_on_organization_id"
   end
 
@@ -120,7 +122,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
     t.uuid "plan_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
     t.index ["coupon_id"], name: "index_coupon_plans_on_coupon_id"
+    t.index ["deleted_at"], name: "index_coupon_plans_on_deleted_at"
     t.index ["plan_id"], name: "index_coupon_plans_on_plan_id"
   end
 
@@ -142,7 +146,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
     t.datetime "expiration_at"
     t.boolean "reusable", default: true, null: false
     t.boolean "limited_plans", default: false, null: false
-    t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(code IS NOT NULL)"
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_coupons_on_deleted_at"
+    t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end
 
@@ -229,7 +235,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
     t.string "currency"
     t.integer "invoice_grace_period"
     t.string "timezone"
-    t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_customers_on_deleted_at"
+    t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
     t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
   end
@@ -358,7 +366,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
+    t.uuid "organization_id", null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
+    t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -405,7 +415,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customer_id"], name: "index_payment_provider_customers_on_customer_id"
+    t.index ["customer_id", "type"], name: "index_payment_provider_customers_on_customer_id_and_type", unique: true
     t.index ["payment_provider_id"], name: "index_payment_provider_customers_on_payment_provider_id"
     t.index ["provider_customer_id"], name: "index_payment_provider_customers_on_provider_customer_id"
   end
@@ -586,6 +596,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_27_140904) do
   add_foreign_key "invoice_subscriptions", "invoices"
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
+  add_foreign_key "invoices", "organizations"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "payment_provider_customers", "customers"

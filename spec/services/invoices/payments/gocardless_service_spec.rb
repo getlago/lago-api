@@ -7,8 +7,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
-  let(:gocardless_payment_provider) { create(:gocardless_provider, organization: organization) }
-  let(:gocardless_customer) { create(:gocardless_customer, customer: customer) }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
+  let(:gocardless_customer) { create(:gocardless_customer, customer:) }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
   let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
@@ -17,7 +17,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
   let(:invoice) do
     create(
       :invoice,
-      customer: customer,
+      organization:,
+      customer:,
       total_amount_cents: 200,
       total_amount_currency: 'EUR',
       ready_for_payment_processing: true,
@@ -138,7 +139,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       let(:invoice) do
         create(
           :invoice,
-          customer: customer,
+          organization:,
+          customer:,
           total_amount_cents: 0,
           total_amount_currency: 'EUR',
         )

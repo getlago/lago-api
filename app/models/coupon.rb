@@ -2,12 +2,14 @@
 
 class Coupon < ApplicationRecord
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :organization
 
   has_many :applied_coupons
   has_many :customers, through: :applied_coupons
-  has_many :coupon_plans, dependent: :destroy
+  has_many :coupon_plans
   has_many :plans, through: :coupon_plans
 
   STATUSES = [
@@ -39,11 +41,12 @@ class Coupon < ApplicationRecord
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
   validates :name, presence: true
-  validates :code, uniqueness: { scope: :organization_id, allow_nil: true }
+  validates :code, uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
 
   validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: true
   validates :amount_currency, inclusion: { in: currency_list }, allow_nil: true
 
+  default_scope -> { kept }
   scope :order_by_status_and_expiration,
         lambda {
           order(
@@ -58,14 +61,6 @@ class Coupon < ApplicationRecord
         }
 
   scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
-
-  def attached_to_customers?
-    applied_coupons.exists?
-  end
-
-  def deletable?
-    !attached_to_customers?
-  end
 
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp

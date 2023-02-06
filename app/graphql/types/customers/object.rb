@@ -36,6 +36,7 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
       field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'

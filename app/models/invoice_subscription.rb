@@ -18,7 +18,7 @@ class InvoiceSubscription < ApplicationRecord
           condition = <<-SQL
             COALESCE(
               (invoice_subscriptions.properties->>\'to_datetime\')::timestamp, invoice_subscriptions.created_at
-            ) ASC
+            ) DESC
           SQL
 
           order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))

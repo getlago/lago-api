@@ -6,7 +6,7 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, :draft, customer:) }
+  let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
   let(:mutation) do
     <<~GQL

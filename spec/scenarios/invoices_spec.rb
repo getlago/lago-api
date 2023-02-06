@@ -93,12 +93,12 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription_invoice.reload.credit_notes.count }.from(0).to(1)
           .and change { subscription.invoices.count }.from(1).to(2)
 
-        # Draft credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.
+        # Draft credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.5 rounded at 426
         credit_note = subscription_invoice.credit_notes.first
         expect(credit_note).to be_draft
-        expect(credit_note.credit_amount_cents).to eq(425)
-        expect(credit_note.balance_amount_cents).to eq(425)
-        expect(credit_note.total_amount_cents).to eq(425)
+        expect(credit_note.credit_amount_cents).to eq(426)
+        expect(credit_note.balance_amount_cents).to eq(426)
+        expect(credit_note.total_amount_cents).to eq(426)
 
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first
@@ -112,7 +112,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         expect {
           refresh_invoice(subscription_invoice)
         }.not_to change { subscription_invoice.reload.total_amount_cents }
-        expect(credit_note.reload.total_amount_cents).to eq(425)
+        expect(credit_note.reload.total_amount_cents).to eq(426)
 
         # Refresh termination invoice
         expect {
@@ -132,8 +132,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           finalize_invoice(termination_invoice)
         }.to change { termination_invoice.reload.status }.from('draft').to('finalized')
 
-        # Total amount should reflect the credit note 720 - 425
-        expect(termination_invoice.total_amount_cents).to eq(295)
+        # Total amount should reflect the credit note 720 - 426
+        expect(termination_invoice.total_amount_cents).to eq(294)
       end
     end
 
@@ -176,10 +176,10 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription_invoice.reload.credit_notes.count }.from(0).to(1)
           .and change { subscription.invoices.count }.from(1).to(2)
 
-        # Credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.
+        # Credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.5 rounded at 426
         credit_note = subscription_invoice.credit_notes.first
-        expect(credit_note.credit_amount_cents).to eq(425)
-        expect(credit_note.balance_amount_cents).to eq(425)
+        expect(credit_note.credit_amount_cents).to eq(426)
+        expect(credit_note.balance_amount_cents).to eq(426)
 
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first
@@ -193,7 +193,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         expect {
           refresh_invoice(subscription_invoice)
         }.not_to change { subscription_invoice.reload.total_amount_cents }
-        expect(credit_note.reload.credit_amount_cents).to eq(425)
+        expect(credit_note.reload.credit_amount_cents).to eq(426)
 
         # Refresh termination invoice
         expect {

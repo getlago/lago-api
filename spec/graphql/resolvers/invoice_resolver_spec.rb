@@ -16,6 +16,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           customer {
             id
             name
+            deletedAt
           }
           invoiceSubscriptions {
             fromDatetime
@@ -37,6 +38,9 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           }
           fees {
             id
+            itemType
+            itemCode
+            itemName
             creditableAmountCents
             charge {
               id
@@ -51,13 +55,13 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice: create(:invoice, customer: customer)) }
-  let(:invoice) { invoice_subscription.invoice }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
   let(:subscription) { invoice_subscription.subscription }
-  let(:fee) { create(:fee, subscription: subscription, invoice: invoice, amount_cents: 10) }
+  let(:fee) { create(:fee, subscription:, invoice:, amount_cents: 10) }
 
-  before { fee }
+  before { fee and invoice }
 
   it 'returns a single invoice' do
     result = execute_graphql(
@@ -159,6 +163,94 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         expect(data['customer']['name']).to eq(customer.name)
         expect(data['invoiceSubscriptions'][0]['subscription']['id']).to eq(subscription.id)
         expect(data['invoiceSubscriptions'][0]['fees'][0]['id']).to eq(fee.id)
+      end
+    end
+  end
+
+  context 'with an add on invoice' do
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
+    let(:fee) { create(:add_on_fee, invoice:, applied_add_on:) }
+
+    it 'returns a single invoice' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {
+          id: invoice.id,
+        },
+      )
+
+      data = result['data']['invoice']
+
+      aggregate_failures do
+        expect(data['id']).to eq(invoice.id)
+        expect(data['number']).to eq(invoice.number)
+        expect(data['paymentStatus']).to eq(invoice.payment_status)
+        expect(data['status']).to eq(invoice.status)
+        expect(data['customer']['id']).to eq(customer.id)
+        expect(data['customer']['name']).to eq(customer.name)
+        expect(data['fees'].first['itemType']).to eq('add_on')
+        expect(data['fees'].first['itemCode']).to eq(add_on.code)
+        expect(data['fees'].first['itemName']).to eq(add_on.name)
+      end
+    end
+
+    context 'with a deleted add_on' do
+      let(:add_on) { create(:add_on, :deleted, organization:) }
+
+      it 'returns the invoice with the deleted resources' do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          query:,
+          variables: {
+            id: invoice.id,
+          },
+        )
+
+        data = result['data']['invoice']
+
+        aggregate_failures do
+          expect(data['id']).to eq(invoice.id)
+          expect(data['number']).to eq(invoice.number)
+          expect(data['paymentStatus']).to eq(invoice.payment_status)
+          expect(data['status']).to eq(invoice.status)
+          expect(data['customer']['id']).to eq(customer.id)
+          expect(data['customer']['name']).to eq(customer.name)
+          expect(data['fees'].first['itemType']).to eq('add_on')
+          expect(data['fees'].first['itemCode']).to eq(add_on.code)
+          expect(data['fees'].first['itemName']).to eq(add_on.name)
+        end
+      end
+    end
+  end
+
+  context 'with a deleted customer' do
+    let(:customer) { create(:customer, :deleted, organization:) }
+
+    it 'returns the invoice with the deleted customer' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {
+          id: invoice.id,
+        },
+      )
+
+      data = result['data']['invoice']
+
+      aggregate_failures do
+        expect(data['id']).to eq(invoice.id)
+        expect(data['number']).to eq(invoice.number)
+        expect(data['paymentStatus']).to eq(invoice.payment_status)
+        expect(data['status']).to eq(invoice.status)
+        expect(data['customer']['id']).to eq(customer.id)
+        expect(data['customer']['name']).to eq(customer.name)
+        expect(data['customer']['deletedAt']).to eq(customer.deleted_at.iso8601)
       end
     end
   end

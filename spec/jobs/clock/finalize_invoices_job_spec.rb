@@ -8,10 +8,22 @@ describe Clock::FinalizeInvoicesJob, job: true do
   describe '.perform' do
     let(:customer) { create(:customer, invoice_grace_period: 3) }
     let(:draft_invoice) do
-      create(:invoice, status: :draft, created_at: DateTime.parse('20 Jun 2022'), customer:)
+      create(
+        :invoice,
+        status: :draft,
+        created_at: DateTime.parse('20 Jun 2022'),
+        customer:,
+        organization: customer.organization,
+      )
     end
     let(:finalized_invoice) do
-      create(:invoice, status: :finalized, created_at: DateTime.parse('20 Jun 2022'), customer:)
+      create(
+        :invoice,
+        status: :finalized,
+        created_at: DateTime.parse('20 Jun 2022'),
+        customer:,
+        organization: customer.organization,
+      )
     end
 
     before do

@@ -161,14 +161,14 @@
               ]
             },
             {
-              "name": "canBeDeleted",
-              "description": "Check if add-on is deletable",
+              "name": "appliedAddOnsCount",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Boolean",
+                  "name": "Int",
                   "ofType": null
                 }
               },
@@ -421,14 +421,14 @@
               ]
             },
             {
-              "name": "canBeDeleted",
-              "description": "Check if add-on is deletable",
+              "name": "appliedAddOnsCount",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Boolean",
+                  "name": "Int",
                   "ofType": null
                 }
               },
@@ -1194,6 +1194,24 @@
               ]
             },
             {
+              "name": "subscriptionsCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "updatedAt",
               "description": null,
               "type": {
@@ -1492,6 +1510,24 @@
                 "kind": "OBJECT",
                 "name": "Organization",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "subscriptionsCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -3570,14 +3606,14 @@
               ]
             },
             {
-              "name": "canBeDeleted",
-              "description": "Check if coupon is deletable",
+              "name": "appliedCouponsCount",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Boolean",
+                  "name": "Int",
                   "ofType": null
                 }
               },
@@ -3990,14 +4026,14 @@
               ]
             },
             {
-              "name": "canBeDeleted",
-              "description": "Check if coupon is deletable",
+              "name": "appliedCouponsCount",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Boolean",
+                  "name": "Int",
                   "ofType": null
                 }
               },
@@ -7904,6 +7940,20 @@
               ]
             },
             {
+              "name": "deletedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "email",
               "description": null,
               "type": {
@@ -8571,6 +8621,20 @@
               "type": {
                 "kind": "ENUM",
                 "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "deletedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -14672,6 +14736,24 @@
               ]
             },
             {
+              "name": "subscriptionsCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "trialPeriod",
               "description": null,
               "type": {
@@ -15058,6 +15140,24 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "subscriptionsCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
                   "ofType": null
                 }
               },

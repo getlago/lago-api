@@ -40,10 +40,10 @@ RSpec.describe ::V1::BillableMetricSerializer do
     charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
     charge2 = create(:standard_charge, plan: subscription2.plan, billable_metric:)
 
-    invoice = create(:invoice, customer:)
+    invoice = create(:invoice, customer:, organization: billable_metric.organization)
     create(:fee, invoice:, charge:)
 
-    draft_invoice = create(:invoice, :draft, customer:)
+    draft_invoice = create(:invoice, :draft, customer:, organization: billable_metric.organization)
     create(:fee, invoice: draft_invoice, charge: charge2)
     create(:fee, invoice: draft_invoice, charge: charge2)
 

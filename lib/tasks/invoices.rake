@@ -60,4 +60,11 @@ namespace :invoices do
       )
     end
   end
+
+  desc 'Fill invoice organization from customers'
+  task fill_organization: :environment do
+    Invoice.where(organization_id: nil).find_each do |invoice|
+      invoice.update!(organization_id: invoice.customer.organization_id)
+    end
+  end
 end

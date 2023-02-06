@@ -9,7 +9,7 @@ RSpec.describe SendWebhookJob, type: :job do
   let(:webhook_add_on_service) { instance_double(Webhooks::AddOnService) }
   let(:webhook_event_service) { instance_double(Webhooks::EventService) }
   let(:organization) { create(:organization, webhook_url: 'http://foo.bar') }
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, organization:) }
 
   context 'when webhook_type is invoice' do
     before do
@@ -257,7 +257,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
   context 'when webhook_type is invoice.drafted' do
     let(:webhook_service) { instance_double(Webhooks::Invoices::DraftedService) }
-    let(:invoice) { create(:invoice) }
+    let(:invoice) { create(:invoice, organization:) }
 
     before do
       allow(Webhooks::Invoices::DraftedService).to receive(:new)
@@ -301,7 +301,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
   context 'when webhook type is invoice.payment_status_updated' do
     let(:webhook_service) { instance_double(Webhooks::Invoices::PaymentStatusUpdatedService) }
-    let(:invoice) { create(:invoice) }
+    let(:invoice) { create(:invoice, organization:) }
 
     before do
       allow(Webhooks::Invoices::PaymentStatusUpdatedService).to receive(:new)

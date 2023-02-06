@@ -13,7 +13,8 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        result = ::Coupons::DestroyService.new(context[:current_user]).destroy(id)
+        coupon = context[:current_user].coupons.find_by(id:)
+        result = ::Coupons::DestroyService.call(coupon:)
 
         result.success? ? result.coupon : result_error(result)
       end

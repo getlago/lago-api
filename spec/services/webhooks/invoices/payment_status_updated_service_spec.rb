@@ -9,7 +9,7 @@ RSpec.describe Webhooks::Invoices::PaymentStatusUpdatedService do
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
-  let(:invoice) { create(:invoice, customer:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }

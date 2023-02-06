@@ -15,6 +15,7 @@ module Types
       field :field_name, String, null: true
       field :group, GraphQL::Types::JSON, null: true
       field :flat_groups, [Types::Groups::Object], null: true
+      field :subscriptions_count, Integer, null: false
       field :active_subscriptions_count, Integer, null: false
       field :draft_invoices_count, Integer, null: false
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -27,6 +28,10 @@ module Types
 
       def flat_groups
         object.selectable_groups
+      end
+
+      def subscriptions_count
+        object.plans.joins(:subscriptions).count
       end
 
       def active_subscriptions_count

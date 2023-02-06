@@ -30,17 +30,14 @@ module Types
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :customer_count, Integer, null: false, description: 'Number of customers using this coupon'
-
-      field :can_be_deleted, Boolean, null: false do
-        description 'Check if coupon is deletable'
-      end
+      field :applied_coupons_count, Integer, null: false
 
       def customer_count
         object.applied_coupons.active.select(:customer_id).distinct.count
       end
 
-      def can_be_deleted
-        object.deletable?
+      def applied_coupons_count
+        object.applied_coupons.count
       end
     end
   end

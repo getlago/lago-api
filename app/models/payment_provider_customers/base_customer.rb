@@ -10,6 +10,8 @@ module PaymentProviderCustomers
     has_many :payments
     has_many :refunds, foreign_key: :payment_provider_customer_id
 
+    validates :customer_id, uniqueness: { scope: :type }
+
     def push_to_settings(key:, value:)
       self.settings ||= {}
       settings[key] = value

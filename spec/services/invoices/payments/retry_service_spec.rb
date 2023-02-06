@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Invoices::Payments::RetryService, type: :service do
   subject(:retry_service) { described_class.new(invoice:) }
 
-  let(:invoice) { create(:invoice, customer:, status: 'finalized') }
+  let(:invoice) { create(:invoice, customer:, status: 'finalized', organization: customer.organization) }
   let(:customer) { create(:customer, payment_provider:) }
   let(:payment_provider) { 'stripe' }
 
@@ -44,7 +44,15 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
     end
 
     context 'when invoice payment status is already succeeded' do
-      let(:invoice) { create(:invoice, customer:, status: 'finalized', payment_status: 'succeeded') }
+      let(:invoice) do
+        create(
+          :invoice,
+          customer:,
+          status: 'finalized',
+          payment_status: 'succeeded',
+          organization: customer.organization,
+        )
+      end
 
       it 'returns an error' do
         result = retry_service.call
@@ -56,7 +64,9 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
     end
 
     context 'when invoice status is draft' do
-      let(:invoice) { create(:invoice, customer:, payment_status: 'pending', status: 'draft') }
+      let(:invoice) do
+        create(:invoice, customer:, payment_status: 'pending', status: 'draft', organization: customer.organization)
+      end
 
       it 'returns an error' do
         result = retry_service.call

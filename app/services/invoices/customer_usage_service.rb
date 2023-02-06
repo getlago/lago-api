@@ -35,6 +35,7 @@ module Invoices
     def compute_usage
       Rails.cache.fetch(current_cache_key, expires_in: cache_expiration) do
         @invoice = Invoice.new(
+          organization: subscription.organization,
           customer: subscription.customer,
           issuing_date: boundaries[:issuing_date],
           amount_currency: plan.amount_currency,

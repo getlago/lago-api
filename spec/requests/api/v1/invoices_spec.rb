@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
 
   describe 'UPDATE /invoices' do
     let(:update_params) do
@@ -112,7 +112,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'GET /invoices' do
-    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:invoice) { create(:invoice, :draft, customer:, organization:) }
     let(:customer) { create(:customer, organization:) }
 
     before { invoice }
@@ -128,7 +128,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'with pagination' do
-      let(:invoice2) { create(:invoice, customer:) }
+      let(:invoice2) { create(:invoice, customer:, organization:) }
 
       before { invoice2 }
 
@@ -147,9 +147,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'with issuing_date params' do
-      let(:invoice) { create(:invoice, customer:, issuing_date: 5.days.ago.to_date) }
-      let(:invoice2) { create(:invoice, customer:, issuing_date: 3.days.ago.to_date) }
-      let(:invoice3) { create(:invoice, customer:, issuing_date: 1.day.ago.to_date) }
+      let(:invoice) { create(:invoice, customer:, issuing_date: 5.days.ago.to_date, organization:) }
+      let(:invoice2) { create(:invoice, customer:, issuing_date: 3.days.ago.to_date, organization:) }
+      let(:invoice3) { create(:invoice, customer:, issuing_date: 1.day.ago.to_date, organization:) }
 
       before do
         invoice2
@@ -171,7 +171,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     context 'with external_customer_id params' do
       it 'returns invoices of the customer' do
         second_customer = create(:customer, organization:)
-        invoice = create(:invoice, customer: second_customer)
+        invoice = create(:invoice, customer: second_customer, organization:)
 
         get_with_token(organization, "/api/v1/invoices?external_customer_id=#{second_customer.external_id}")
 
@@ -183,7 +183,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     context 'with status params' do
       it 'returns invoices for the given status' do
-        invoice = create(:invoice, customer:)
+        invoice = create(:invoice, customer:, organization:)
 
         get_with_token(organization, '/api/v1/invoices?status=finalized')
 
@@ -194,9 +194,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'with payment status param' do
-      let(:invoice) { create(:invoice, customer:, payment_status: :succeeded) }
-      let(:invoice2) { create(:invoice, customer:, payment_status: :failed) }
-      let(:invoice3) { create(:invoice, customer:, payment_status: :pending) }
+      let(:invoice) { create(:invoice, customer:, payment_status: :succeeded, organization:) }
+      let(:invoice2) { create(:invoice, customer:, payment_status: :failed, organization:) }
+      let(:invoice3) { create(:invoice, customer:, payment_status: :pending, organization:) }
 
       before do
         invoice2
@@ -222,7 +222,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is draft' do
-      let(:invoice) { create(:invoice, :draft, customer:) }
+      let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
       it 'updates the invoice' do
         expect {
@@ -239,7 +239,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is finalized' do
-      let(:invoice) { create(:invoice, customer:) }
+      let(:invoice) { create(:invoice, customer:, organization:) }
 
       it 'does not update the invoice' do
         expect {
@@ -257,7 +257,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'PUT /invoices/:id/finalize' do
-    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
     context 'when invoice does not exist' do
       it 'returns a not found error' do
@@ -267,7 +267,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is not draft' do
-      let(:invoice) { create(:invoice, customer:, status: :finalized) }
+      let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
 
       it 'returns a not found error' do
         put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
@@ -290,7 +290,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'POST /invoices/:id/download' do
-    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
     context 'when invoice is draft' do
       it 'returns not found' do
@@ -326,7 +326,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoices belongs to an other organization' do
-      let(:invoice) { create(:invoice) }
+      let(:invoice) { create(:invoice, organization:) }
 
       it 'returns not found' do
         get_with_token(organization, "/api/v1/invoices/#{invoice.id}/retry_payment")

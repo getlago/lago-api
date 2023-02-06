@@ -12,7 +12,7 @@ module Coupons
 
       @limitations = args[:applies_to]&.to_h&.deep_symbolize_keys || {}
 
-      unless coupon.attached_to_customers?
+      unless coupon.applied_coupons.exists?
         if !plan_identifiers.nil? && plans.count != plan_identifiers.count
           return result.not_found_failure!(resource: 'plans')
         end
@@ -31,7 +31,7 @@ module Coupons
       ActiveRecord::Base.transaction do
         coupon.save!
 
-        process_plans unless plan_identifiers.nil? || coupon.attached_to_customers?
+        process_plans unless plan_identifiers.nil? || coupon.applied_coupons.exists?
       end
 
       result.coupon = coupon
@@ -52,7 +52,7 @@ module Coupons
 
       @limitations = params[:applies_to]&.to_h&.deep_symbolize_keys || {}
 
-      unless coupon.attached_to_customers?
+      unless coupon.applied_coupons.exists?
         if !plan_identifiers.nil? && plans.count != plan_identifiers.count
           return result.not_found_failure!(resource: 'plans')
         end
@@ -71,7 +71,7 @@ module Coupons
       ActiveRecord::Base.transaction do
         coupon.save!
 
-        process_plans unless plan_identifiers.nil? || coupon.attached_to_customers?
+        process_plans unless plan_identifiers.nil? || coupon.applied_coupons.exists?
       end
 
       result.coupon = coupon

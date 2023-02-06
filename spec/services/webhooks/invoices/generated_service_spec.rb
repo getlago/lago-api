@@ -5,10 +5,10 @@ require 'rails_helper'
 RSpec.describe Webhooks::Invoices::GeneratedService do
   subject(:webhook_service) { described_class.new(invoice) }
 
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-  let(:invoice) { create(:invoice, customer: customer) }
-  let(:organization) { create(:organization, webhook_url: webhook_url) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, organization:, customer:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:organization) { create(:organization, webhook_url:) }
   let(:webhook_url) { 'http://foo.bar' }
 
   describe '.call' do
