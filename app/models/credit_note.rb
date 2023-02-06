@@ -6,7 +6,7 @@ class CreditNote < ApplicationRecord
 
   before_save :ensure_number
 
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   belongs_to :invoice
 
   has_one :organization, through: :customer
