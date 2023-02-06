@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Subscription < ApplicationRecord
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: 'Subscription', optional: true
 

@@ -34,5 +34,9 @@ module Customers
       result.customer = customer
       result
     end
+
+    private
+
+    attr_reader :customer
   end
 end
