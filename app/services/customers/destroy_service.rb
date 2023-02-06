@@ -14,7 +14,6 @@ module Customers
 
     def call
       return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_allowed_failure!(code: 'attached_to_an_active_subscription') unless customer.deletable?
 
       customer.discard!
       track_customer_deleted

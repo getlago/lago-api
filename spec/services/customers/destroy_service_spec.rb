@@ -52,18 +52,5 @@ RSpec.describe Customers::DestroyService, type: :service do
         expect(result.error.error_code).to eq('customer_not_found')
       end
     end
-
-    context 'when customer is attached to subscription' do
-      before do
-        create(:subscription, customer:)
-      end
-
-      it 'returns an error' do
-        result = destroy_service.call
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq('attached_to_an_active_subscription')
-      end
-    end
   end
 end
