@@ -3993,6 +3993,11 @@ type Query {
     page: Int
     status: WalletStatusEnum
   ): WalletCollection!
+
+  """
+  Query Webhooks
+  """
+  webhooks(limit: Int, page: Int, status: WebhookStatusEnum): WebhookCollection!
 }
 
 """
@@ -5144,4 +5149,31 @@ enum WalletTransactionStatusEnum {
 enum WalletTransactionTransactionTypeEnum {
   inbound
   outbound
+}
+
+type Webhook {
+  createdAt: ISO8601DateTime!
+  endpoint: String!
+  httpStatus: Int
+  id: ID!
+  lastRetriedAt: ISO8601DateTime
+  objectType: String!
+  organization: Organization
+  payload: String
+  response: String
+  retries: Int!
+  status: WebhookStatusEnum!
+  updatedAt: ISO8601DateTime!
+  webhookType: String!
+}
+
+type WebhookCollection {
+  collection: [Webhook!]!
+  metadata: CollectionMetadata!
+}
+
+enum WebhookStatusEnum {
+  failed
+  pending
+  succeeded
 }
