@@ -110,5 +110,71 @@ RSpec.describe Coupons::CreateService, type: :service do
         end
       end
     end
+
+    context 'with plan limitations in graphql context' do
+      let(:plan) { create(:plan, organization:) }
+      let(:create_args) do
+        {
+          name: 'Super Coupon',
+          code: 'free-beer',
+          organization_id: organization.id,
+          coupon_type: 'fixed_amount',
+          frequency: 'once',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          expiration: 'time_limit',
+          reusable: false,
+          expiration_at:,
+          applies_to: {
+            plan_ids: [plan.id],
+          },
+        }
+      end
+
+      before { CurrentContext.source = 'graphql' }
+
+      it 'creates a coupon' do
+        expect { create_service.create(**create_args) }
+          .to change(Coupon, :count).by(1)
+      end
+
+      it 'creates a coupon plan' do
+        expect { create_service.create(**create_args) }
+          .to change(CouponPlan, :count).by(1)
+      end
+    end
+
+    context 'with plan limitations in api context' do
+      let(:plan) { create(:plan, organization:) }
+      let(:create_args) do
+        {
+          name: 'Super Coupon',
+          code: 'free-beer',
+          organization_id: organization.id,
+          coupon_type: 'fixed_amount',
+          frequency: 'once',
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          expiration: 'time_limit',
+          reusable: false,
+          expiration_at:,
+          applies_to: {
+            plan_codes: [plan.code],
+          },
+        }
+      end
+
+      before { CurrentContext.source = 'api' }
+
+      it 'creates a coupon' do
+        expect { create_service.create(**create_args) }
+          .to change(Coupon, :count).by(1)
+      end
+
+      it 'creates a coupon plan' do
+        expect { create_service.create(**create_args) }
+          .to change(CouponPlan, :count).by(1)
+      end
+    end
   end
 end

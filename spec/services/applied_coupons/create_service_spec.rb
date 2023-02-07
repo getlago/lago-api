@@ -177,6 +177,28 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       end
     end
 
+    context 'when coupon is already applied with the same plan limitation' do
+      let(:plan) { create(:plan, organization:) }
+      let(:coupon_old) { create(:coupon, status: 'active', organization:, limited_plans: true) }
+      let(:coupon) { create(:coupon, status: 'active', organization:, limited_plans: true) }
+      let(:coupon_plan_old) { create(:coupon_plan, coupon: coupon_old, plan:) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+
+      before do
+        coupon_plan_old
+        coupon_plan
+        create(:applied_coupon, customer:, coupon: coupon_old)
+      end
+
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(create_result.error.code).to eq('plan_overlapping')
+        end
+      end
+    end
+
     context 'when coupon is inactive' do
       before { coupon.terminated! }
 
@@ -325,6 +347,28 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           expect(create_result.error).to be_a(BaseService::ValidationFailure)
           expect(create_result.error.messages.keys).to include(:coupon)
           expect(create_result.error.messages[:coupon]).to include('coupon_is_not_reusable')
+        end
+      end
+    end
+
+    context 'when coupon is already applied with the same plan limitation' do
+      let(:plan) { create(:plan, organization:) }
+      let(:coupon_old) { create(:coupon, status: 'active', organization:, limited_plans: true) }
+      let(:coupon) { create(:coupon, status: 'active', organization:, limited_plans: true) }
+      let(:coupon_plan_old) { create(:coupon_plan, coupon: coupon_old, plan:) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+
+      before do
+        coupon_plan_old
+        coupon_plan
+        create(:applied_coupon, customer:, coupon: coupon_old)
+      end
+
+      it 'fails' do
+        aggregate_failures do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(create_result.error.code).to eq('plan_overlapping')
         end
       end
     end

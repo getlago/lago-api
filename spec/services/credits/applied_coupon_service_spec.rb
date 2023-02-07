@@ -3,18 +3,21 @@
 require 'rails_helper'
 
 RSpec.describe Credits::AppliedCouponService do
-  subject(:credit_service) { described_class.new(invoice: invoice, applied_coupon: applied_coupon) }
+  subject(:credit_service) do
+    described_class.new(invoice:, applied_coupon:, base_amount_cents:)
+  end
 
   let(:invoice) do
     create(
       :invoice,
-      amount_cents: amount_cents,
+      amount_cents:,
       amount_currency: 'EUR',
       total_amount_cents: amount_cents,
       total_amount_currency: 'EUR',
     )
   end
   let(:amount_cents) { 123 }
+  let(:base_amount_cents) { invoice.total_amount_cents }
 
   let(:applied_coupon) { create(:applied_coupon, amount_cents: 12) }
 
@@ -60,8 +63,8 @@ RSpec.describe Credits::AppliedCouponService do
       before do
         create(
           :credit,
-          invoice: invoice,
-          applied_coupon: applied_coupon,
+          invoice:,
+          applied_coupon:,
           amount_cents: 12,
           amount_currency: 'EUR',
         )
@@ -77,7 +80,7 @@ RSpec.describe Credits::AppliedCouponService do
       before do
         create(
           :credit,
-          applied_coupon: applied_coupon,
+          applied_coupon:,
           amount_cents: 10,
         )
       end
@@ -106,7 +109,7 @@ RSpec.describe Credits::AppliedCouponService do
       let(:coupon) { create(:coupon, coupon_type: 'percentage') }
 
       let(:applied_coupon) do
-        create(:applied_coupon, coupon: coupon, percentage_rate: 20.00)
+        create(:applied_coupon, coupon:, percentage_rate: 20.00)
       end
 
       it 'creates a credit' do
@@ -135,7 +138,7 @@ RSpec.describe Credits::AppliedCouponService do
       let(:applied_coupon) do
         create(
           :applied_coupon,
-          coupon: coupon,
+          coupon:,
           frequency: 'recurring',
           frequency_duration: 3,
           frequency_duration_remaining: 3,
@@ -229,7 +232,7 @@ RSpec.describe Credits::AppliedCouponService do
       let(:applied_coupon) do
         create(
           :applied_coupon,
-          coupon: coupon,
+          coupon:,
           frequency: 'recurring',
           frequency_duration: 3,
           frequency_duration_remaining: 3,
@@ -262,7 +265,7 @@ RSpec.describe Credits::AppliedCouponService do
         let(:applied_coupon) do
           create(
             :applied_coupon,
-            coupon: coupon,
+            coupon:,
             frequency: 'recurring',
             frequency_duration: 3,
             frequency_duration_remaining: 1,

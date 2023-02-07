@@ -19,6 +19,8 @@ module Mutations
       argument :frequency_duration, Integer, required: false
       argument :reusable, Boolean, required: false
 
+      argument :applies_to, Types::Coupons::LimitationInput, required: false
+
       argument :expiration, Types::Coupons::ExpirationEnum, required: true
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
 

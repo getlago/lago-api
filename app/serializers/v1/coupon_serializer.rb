@@ -14,6 +14,8 @@ module V1
         frequency: model.frequency,
         frequency_duration: model.frequency_duration,
         reusable: model.reusable,
+        limited_plans: model.limited_plans,
+        plan_codes: model.plans.pluck(:code),
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
         expiration_at: model.expiration_at&.iso8601,

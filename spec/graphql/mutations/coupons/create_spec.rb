@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::Coupons::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:expiration_at) { Time.current + 3.days }
+  let(:plan) { create(:plan, organization: membership.organization) }
   let(:mutation) do
     <<-GQL
       mutation($input: CreateCouponInput!) {
@@ -17,6 +18,10 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           expiration,
           expirationAt,
           status,
+          limitedPlans,
+          plans {
+            id
+          },
           reusable
         }
       }
@@ -39,6 +44,9 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           expiration: 'time_limit',
           expirationAt: expiration_at.iso8601,
           reusable: false,
+          appliesTo: {
+            planIds: [plan.id],
+          },
         },
       },
     )
@@ -55,6 +63,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['expirationAt']).to eq expiration_at.iso8601
       expect(result_data['status']).to eq('active')
       expect(result_data['reusable']).to eq(false)
+      expect(result_data['limitedPlans']).to eq(true)
+      expect(result_data['plans'].first['id']).to eq(plan.id)
     end
   end
 
