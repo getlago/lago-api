@@ -179,6 +179,21 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].count).to eq(1)
         expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
       end
+
+      context 'with deleted customer' do
+        let(:customer) { create(:customer, :deleted, organization:) }
+
+        it 'returns the invoices of the customer' do
+          get_with_token(organization, "/api/v1/invoices?external_customer_id=#{customer.external_id}")
+
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(json[:invoices].count).to eq(1)
+            expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
+            expect(json[:invoices].first[:customer][:lago_id]).to eq(customer.id)
+          end
+        end
+      end
     end
 
     context 'with status params' do
