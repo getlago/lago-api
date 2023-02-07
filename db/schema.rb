@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_06_143214) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -236,6 +236,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_06_143214) do
     t.integer "invoice_grace_period"
     t.string "timezone"
     t.datetime "deleted_at"
+    t.string "document_locale"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -403,6 +404,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_06_143214) do
     t.text "invoice_footer"
     t.integer "invoice_grace_period", default: 0, null: false
     t.string "timezone", default: "UTC", null: false
+    t.string "document_locale", default: "en", null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end

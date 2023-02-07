@@ -28,6 +28,7 @@ class Organization < ApplicationRecord
   before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
+  validates :document_locale, language_code: true
   validates :email, email: true, if: :email?
   validates :invoice_footer, length: { maximum: 600 }
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }

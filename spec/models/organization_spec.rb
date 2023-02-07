@@ -57,6 +57,20 @@ RSpec.describe Organization, type: :model do
       expect(organization).not_to be_valid
     end
 
+    it 'validates the language code' do
+      organization.document_locale = nil
+      expect(organization).not_to be_valid
+
+      organization.document_locale = 'en'
+      expect(organization).to be_valid
+
+      organization.document_locale = 'foo'
+      expect(organization).not_to be_valid
+
+      organization.document_locale = ''
+      expect(organization).not_to be_valid
+    end
+
     it 'is invalid with invalid invoice footer' do
       organization.invoice_footer = SecureRandom.alphanumeric(601)
 

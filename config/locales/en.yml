@@ -4,6 +4,7 @@ en:
       messages:
         blank: value_is_mandatory
         country_code_invalid: not_a_valid_country_code
+        language_code_invalid: not_a_valid_language_code
         invalid_email_format: invalid_email_format
         inclusion: value_is_invalid
         invalid_date_range: invalid_date_range
