@@ -8,8 +8,8 @@ class CreateWebhooks < ActiveRecord::Migration[7.0]
       t.uuid :object_id, null: false
       t.string :object_type, null: false
 
-      t.integer :status, default: 0
-      t.integer :retries, default: 0
+      t.integer :status, default: 0, null: false
+      t.integer :retries, default: 0, null: false
       t.integer :http_status
 
       t.string :endpoint

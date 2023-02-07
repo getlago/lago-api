@@ -565,8 +565,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_06_143214) do
     t.bigint "organization_id"
     t.uuid "object_id", null: false
     t.string "object_type", null: false
-    t.integer "status", default: 0
-    t.integer "retries", default: 0
+    t.integer "status", default: 0, null: false
+    t.integer "retries", default: 0, null: false
     t.integer "http_status"
     t.string "endpoint"
     t.string "webhook_type"
