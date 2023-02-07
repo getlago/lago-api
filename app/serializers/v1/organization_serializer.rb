@@ -22,6 +22,7 @@ module V1
           invoice_footer: model.invoice_footer,
           invoice_grace_period: model.invoice_grace_period,
           vat_rate: model.vat_rate,
+          document_locale: model.document_locale,
         },
       }
     end

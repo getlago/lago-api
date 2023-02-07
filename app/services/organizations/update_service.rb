@@ -56,6 +56,7 @@ module Organizations
         billing = params[:billing_configuration]
         organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
         organization.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+        organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
         if License.premium? && billing.key?(:invoice_grace_period)
           Organizations::UpdateInvoiceGracePeriodService.call(
