@@ -27,6 +27,8 @@ class Organization < ApplicationRecord
 
   before_create :generate_api_key
 
+  enum document_locale: I18n.available_locales
+
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :email, email: true, if: :email?
   validates :invoice_footer, length: { maximum: 600 }
