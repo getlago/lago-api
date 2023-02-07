@@ -17,6 +17,7 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :customer_count, Integer, null: false, description: 'Number of customers using this add-on'
       field :applied_add_ons_count, Integer, null: false

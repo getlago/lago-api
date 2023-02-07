@@ -38,6 +38,7 @@ type AddOn {
   Number of customers using this add-on
   """
   customerCount: Int!
+  deletedAt: ISO8601DateTime
   description: String
   id: ID!
   name: String!
@@ -61,6 +62,7 @@ type AddOnDetails {
   Number of customers using this add-on
   """
   customerCount: Int!
+  deletedAt: ISO8601DateTime
   description: String
   id: ID!
   name: String!
