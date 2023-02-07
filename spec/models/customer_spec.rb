@@ -28,6 +28,20 @@ RSpec.describe Customer, type: :model do
       expect(customer).not_to be_valid
     end
 
+    it 'validates the language code' do
+      customer.document_locale = nil
+      expect(customer).to be_valid
+
+      customer.document_locale = 'en'
+      expect(customer).to be_valid
+
+      customer.document_locale = 'foo'
+      expect(customer).not_to be_valid
+
+      customer.document_locale = ''
+      expect(customer).not_to be_valid
+    end
+
     it 'validates the timezone' do
       expect(customer).to be_valid
 
