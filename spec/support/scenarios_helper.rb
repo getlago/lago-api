@@ -8,6 +8,10 @@ module ScenariosHelper
     perform_all_enqueued_jobs
   end
 
+  def delete_customer(customer)
+    delete_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+  end
+
   ### Plans
 
   def delete_plan(plan)
@@ -34,6 +38,22 @@ module ScenariosHelper
 
   def finalize_invoice(invoice)
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
+  end
+
+  ### Coupons
+
+  def create_coupon(params)
+    post_with_token(organization, '/api/v1/coupons', { coupon: params })
+  end
+
+  def apply_coupon(params)
+    post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
+  end
+
+  ### Wallets
+
+  def create_wallet(params)
+    post_with_token(organization, '/api/v1/wallets', { wallet: params })
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.
