@@ -49,6 +49,7 @@ module Api
             ::V1::InvoiceSerializer,
             collection_name: 'invoices',
             meta: pagination_metadata(invoices),
+            includes: %i[customer],
           ),
         )
       end
