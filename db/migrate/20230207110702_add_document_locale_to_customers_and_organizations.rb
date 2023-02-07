@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddDocumentLocaleToCustomersAndOrganizations < ActiveRecord::Migration[7.0]
   def change
     add_column :organizations, :document_locale, :integer, default: 0, null: false
