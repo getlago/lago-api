@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_03_132157) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_06_143214) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -559,6 +559,23 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_03_132157) do
     t.datetime "updated_at", null: false
     t.decimal "consumed_amount", precision: 30, scale: 5, default: "0.0"
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
+  end
+
+  create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "organization_id"
+    t.uuid "object_id", null: false
+    t.string "object_type", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "retries", default: 0, null: false
+    t.integer "http_status"
+    t.string "endpoint"
+    t.string "webhook_type"
+    t.json "payload"
+    t.json "response"
+    t.datetime "last_retried_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_webhooks_on_organization_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
