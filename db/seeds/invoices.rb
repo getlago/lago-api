@@ -16,7 +16,7 @@ Invoice.all.find_each do |invoice|
 
   credit_note = CreditNote.create!(
     customer: invoice.customer,
-    invoice: invoice,
+    invoice:,
     credit_amount_cents: amount,
     credit_amount_currency: fee.amount_currency,
     credit_status: :available,
@@ -31,7 +31,7 @@ Invoice.all.find_each do |invoice|
   )
 
   credit_note.items.create!(
-    fee: fee,
+    fee:,
     amount_cents: amount,
     amount_currency: fee.amount_currency,
   )
