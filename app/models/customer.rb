@@ -36,8 +36,6 @@ class Customer < ApplicationRecord
   default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded }
 
-  enum document_locale: I18n.available_locales
-
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :currency, inclusion: { in: currency_list }, allow_nil: true
   validates :external_id,
