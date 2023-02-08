@@ -36,6 +36,7 @@ module V1
         invoice_grace_period: model.invoice_grace_period,
         payment_provider: model.payment_provider,
         vat_rate: model.vat_rate,
+        document_locale: model.document_locale,
       }
 
       if model.payment_provider&.to_sym == :stripe
