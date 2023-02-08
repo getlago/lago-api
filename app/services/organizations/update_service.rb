@@ -23,6 +23,10 @@ module Organizations
       organization.city = args[:city] if args.key?(:city)
       organization.country = args[:country] if args.key?(:country)
 
+      if billing_configuration.key?(:document_locale)
+        organization.document_locale = billing_configuration[:document_locale]
+      end
+
       if billing_configuration.key?(:invoice_footer)
         organization.invoice_footer = billing_configuration[:invoice_footer]
       end

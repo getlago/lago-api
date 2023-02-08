@@ -3591,6 +3591,7 @@ type Organization {
 }
 
 type OrganizationBillingConfiguration {
+  documentLocale: String
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
@@ -3598,6 +3599,7 @@ type OrganizationBillingConfiguration {
 }
 
 input OrganizationBillingConfigurationInput {
+  documentLocale: String
   invoiceFooter: String
   invoiceGracePeriod: Int
   vatRate: Float
