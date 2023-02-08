@@ -10,7 +10,6 @@ module Mutations
       description 'Updates an Organization'
 
       argument :webhook_url, String, required: false
-      argument :vat_rate, Float, required: false
       argument :logo, String, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
@@ -21,9 +20,8 @@ module Mutations
       argument :zipcode, String, required: false
       argument :city, String, required: false
       argument :country, Types::CountryCodeEnum, required: false
-      argument :invoice_footer, String, required: false
-      argument :invoice_grace_period, Integer, required: false
       argument :timezone, Types::TimezoneEnum, required: false
+      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false
 
       type Types::OrganizationType
 
