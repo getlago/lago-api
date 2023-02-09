@@ -36,5 +36,6 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
+    field :webhooks, resolver: Resolvers::WebhooksResolver
   end
 end

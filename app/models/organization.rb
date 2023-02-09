@@ -19,6 +19,7 @@ class Organization < ApplicationRecord
   has_many :payment_providers
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
+  has_many :webhooks
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
   has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
