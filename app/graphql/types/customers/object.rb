@@ -31,6 +31,8 @@ module Types
       field :timezone, Types::TimezoneEnum, null: true
       field :applicable_timezone, Types::TimezoneEnum, null: false
 
+      field :billing_configuration, Types::Customers::BillingConfiguration, null: true
+
       field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
       field :subscriptions, [Types::Subscriptions::Object]
 
@@ -85,6 +87,13 @@ module Types
 
       def credit_notes_balance_amount_cents
         object.credit_notes.finalized.sum('credit_notes.balance_amount_cents')
+      end
+
+      def billing_configuration
+        {
+          id: "#{object&.id}-c0nf",
+          document_locale: object&.document_locale,
+        }
       end
     end
   end

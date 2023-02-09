@@ -22,6 +22,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           timezone
           canEditAttributes
           invoiceGracePeriod
+          billingConfiguration { documentLocale }
         }
       }
     GQL
@@ -45,6 +46,9 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           providerCustomer: {
             providerCustomerId: 'cu_12345',
           },
+          billingConfiguration: {
+            documentLocale: 'fr',
+          },
         },
       },
     )
@@ -61,6 +65,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['paymentProvider']).to eq('stripe')
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
+      expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
     end
   end
 

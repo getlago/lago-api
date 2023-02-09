@@ -7,6 +7,7 @@ module Customers
       return result.not_found_failure!(resource: 'customer') unless customer
 
       ActiveRecord::Base.transaction do
+        billing_configuration = args[:billing_configuration]&.to_h || {}
         if args.key?(:currency)
           update_currency(customer:, currency: args[:currency], customer_update: true)
           return result unless result.success?
@@ -33,6 +34,10 @@ module Customers
         customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
         customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
+
+        if billing_configuration.key?(:document_locale)
+          customer.document_locale = billing_configuration[:document_locale]
+        end
 
         if License.premium? && args.key?(:invoice_grace_period)
           Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: args[:invoice_grace_period])

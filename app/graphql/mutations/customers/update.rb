@@ -31,6 +31,8 @@ module Mutations
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false
 
+      argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
+
       type Types::Customers::Object
 
       def resolve(**args)
