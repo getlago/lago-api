@@ -3591,6 +3591,7 @@ type Organization {
 }
 
 type OrganizationBillingConfiguration {
+  id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
   vatRate: Float!
