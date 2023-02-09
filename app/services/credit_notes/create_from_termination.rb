@@ -58,16 +58,12 @@ module CreditNotes
       )
     end
 
-    def from_date
-      date_service.previous_beginning_of_period(current_period: true)
-    end
-
     def to_date
       date_service.next_end_of_period.to_date
     end
 
     def day_price
-      date_service.single_day_price(optional_from_date: from_date)
+      date_service.single_day_price
     end
 
     def terminated_at_in_timezone
