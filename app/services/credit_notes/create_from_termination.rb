@@ -71,7 +71,7 @@ module CreditNotes
     end
 
     def remaining_duration
-      billed_from = terminated_at_in_timezone.to_date
+      billed_from = terminated_at_in_timezone.end_of_day.utc.to_date
 
       if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > to_date
