@@ -38,6 +38,7 @@ module Api
             :invoice_footer,
             :invoice_grace_period,
             :vat_rate,
+            :document_locale,
           ],
         )
       end

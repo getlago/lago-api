@@ -23,6 +23,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
           invoice_footer: 'footer',
           invoice_grace_period: 3,
           vat_rate: 20,
+          document_locale: 'fr',
         },
       }
     end
@@ -45,6 +46,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
         billing = json[:organization][:billing_configuration]
         expect(billing[:invoice_footer]).to eq('footer')
+        expect(billing[:document_locale]).to eq('fr')
         expect(billing[:vat_rate]).to eq(20)
       end
     end

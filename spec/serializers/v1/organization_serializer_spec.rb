@@ -26,6 +26,7 @@ RSpec.describe ::V1::OrganizationSerializer do
       expect(result['organization']['billing_configuration']['invoice_footer']).to eq(org.invoice_footer)
       expect(result['organization']['billing_configuration']['invoice_grace_period']).to eq(org.invoice_grace_period)
       expect(result['organization']['billing_configuration']['vat_rate']).to eq(org.vat_rate)
+      expect(result['organization']['billing_configuration']['document_locale']).to eq(org.document_locale)
       expect(result['organization']['timezone']).to eq(org.timezone)
     end
   end
