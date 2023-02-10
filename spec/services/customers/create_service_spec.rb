@@ -18,6 +18,7 @@ RSpec.describe Customers::CreateService, type: :service do
         currency: 'EUR',
         billing_configuration: {
           vat_rate: 20,
+          document_locale: 'fr',
         },
       }
     end
@@ -46,6 +47,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
         billing = create_args[:billing_configuration]
         expect(customer.vat_rate).to eq(billing[:vat_rate])
+        expect(customer.document_locale).to eq(billing[:document_locale])
         expect(customer.invoice_grace_period).to be_nil
       end
     end

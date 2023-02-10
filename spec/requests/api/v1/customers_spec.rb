@@ -62,6 +62,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             payment_provider: 'stripe',
             provider_customer_id: 'stripe_id',
             vat_rate: 20,
+            document_locale: 'fr',
           },
         }
       end
@@ -81,6 +82,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(billing[:provider_customer_id]).to eq('stripe_id')
           expect(billing[:invoice_grace_period]).to eq(3)
           expect(billing[:vat_rate]).to eq(20)
+          expect(billing[:document_locale]).to eq('fr')
         end
       end
     end

@@ -112,6 +112,7 @@ module Customers
       end
 
       customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+      customer.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
       if new_customer
         create_billing_configuration(customer, billing)
