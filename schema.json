@@ -5446,6 +5446,18 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "billingConfiguration",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "CustomerBillingConfigurationInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "enumValues": null
@@ -7836,6 +7848,20 @@
               ]
             },
             {
+              "name": "billingConfiguration",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "CustomerBillingConfiguration",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "canEditAttributes",
               "description": "Check if customer attributes are editable",
               "type": {
@@ -8313,6 +8339,74 @@
         },
         {
           "kind": "OBJECT",
+          "name": "CustomerBillingConfiguration",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "documentLocale",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "CustomerBillingConfigurationInput",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "documentLocale",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
           "name": "CustomerCollection",
           "description": null,
           "interfaces": [
@@ -8478,6 +8572,20 @@
                     "ofType": null
                   }
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "billingConfiguration",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "CustomerBillingConfiguration",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -19705,6 +19813,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "ProviderCustomerInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingConfiguration",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "CustomerBillingConfigurationInput",
                 "ofType": null
               },
               "defaultValue": null,

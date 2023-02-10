@@ -46,6 +46,8 @@ module Customers
     end
 
     def create(**args)
+      billing_configuration = args[:billing_configuration]&.to_h || {}
+
       customer = Customer.new(
         organization_id: args[:organization_id],
         external_id: args[:external_id],
@@ -65,6 +67,7 @@ module Customers
         vat_rate: args[:vat_rate],
         payment_provider: args[:payment_provider],
         currency: args[:currency],
+        document_locale: billing_configuration[:document_locale],
       )
 
       assign_premium_attributes(customer, args)
