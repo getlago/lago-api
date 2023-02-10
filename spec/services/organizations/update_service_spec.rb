@@ -11,7 +11,6 @@ RSpec.describe Organizations::UpdateService do
     it 'updates the organization' do
       result = organization_update_service.update(
         webhook_url: 'http://foo.bar',
-        vat_rate: 12.5,
         legal_name: 'Foobar',
         legal_number: '1234',
         email: 'foo@bar.com',
@@ -21,7 +20,11 @@ RSpec.describe Organizations::UpdateService do
         zipcode: 'FOO1234',
         city: 'Foobar',
         country: 'FR',
-        invoice_footer: 'invoice footer',
+        billing_configuration: {
+          vat_rate: 12.5,
+          invoice_footer: 'invoice footer',
+          document_locale: 'fr',
+        },
       )
 
       aggregate_failures do
@@ -38,6 +41,7 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.country).to eq('FR')
         expect(result.organization.timezone).to eq('UTC')
         expect(result.organization.invoice_footer).to eq('invoice footer')
+        expect(result.organization.document_locale).to eq('fr')
       end
     end
 
@@ -75,7 +79,11 @@ RSpec.describe Organizations::UpdateService do
           current_date = DateTime.parse('22 Jun 2022')
 
           travel_to(current_date) do
-            result = organization_update_service.update(invoice_grace_period: 2)
+            result = organization_update_service.update(
+              billing_configuration: {
+                invoice_grace_period: 2,
+              },
+            )
 
             expect(result.organization.invoice_grace_period).to eq(2)
             expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)

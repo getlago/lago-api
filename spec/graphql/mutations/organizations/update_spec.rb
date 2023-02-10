@@ -9,7 +9,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       mutation($input: UpdateOrganizationInput!) {
         updateOrganization(input: $input) {
           webhookUrl
-          vatRate
           legalNumber
           legalName
           email
@@ -19,9 +18,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode
           city
           country
-          invoiceFooter
-          invoiceGracePeriod
           timezone
+          billingConfiguration { vatRate, invoiceFooter, invoiceGracePeriod, documentLocale }
         }
       }
     GQL
@@ -35,7 +33,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       variables: {
         input: {
           webhookUrl: 'http://foo.bar',
-          vatRate: 12.5,
           legalNumber: '1234',
           legalName: 'Foobar',
           email: 'foo@bar.com',
@@ -45,7 +42,11 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode: 'FOO1234',
           city: 'Foobar',
           country: 'FR',
-          invoiceFooter: 'invoice footer',
+          billingConfiguration: {
+            vatRate: 12.5,
+            invoiceFooter: 'invoice footer',
+            documentLocale: 'fr',
+          },
         },
       },
     )
@@ -54,7 +55,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
 
     aggregate_failures do
       expect(result_data['webhookUrl']).to eq('http://foo.bar')
-      expect(result_data['vatRate']).to eq(12.5)
       expect(result_data['legalNumber']).to eq('1234')
       expect(result_data['legalName']).to eq('Foobar')
       expect(result_data['email']).to eq('foo@bar.com')
@@ -64,8 +64,10 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['zipcode']).to eq('FOO1234')
       expect(result_data['city']).to eq('Foobar')
       expect(result_data['country']).to eq('FR')
-      expect(result_data['invoiceFooter']).to eq('invoice footer')
-      expect(result_data['invoiceGracePeriod']).to eq(0)
+      expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')
+      expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(0)
+      expect(result_data['billingConfiguration']['vatRate']).to eq(12.5)
+      expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
       expect(result_data['timezone']).to eq('TZ_UTC')
     end
   end
@@ -84,7 +86,9 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           input: {
             email: 'foo@bar.com',
             timezone:,
-            invoiceGracePeriod: 3,
+            billingConfiguration: {
+              invoiceGracePeriod: 3,
+            },
           },
         },
       )
@@ -93,7 +97,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
 
       aggregate_failures do
         expect(result_data['timezone']).to eq(timezone)
-        expect(result_data['invoiceGracePeriod']).to eq(3)
+        expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(3)
       end
     end
 
@@ -109,7 +113,9 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             input: {
               email: 'foo@bar.com',
               timezone:,
-              invoiceGracePeriod: 3,
+              billingConfiguration: {
+                invoiceGracePeriod: 3,
+              },
             },
           },
         )
@@ -118,7 +124,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
 
         aggregate_failures do
           expect(result_data['timezone']).to eq(timezone)
-          expect(result_data['invoiceGracePeriod']).to eq(3)
+          expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(3)
         end
       end
     end

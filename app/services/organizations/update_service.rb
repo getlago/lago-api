@@ -9,7 +9,9 @@ module Organizations
     end
 
     def update(**args)
-      organization.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
+      billing_configuration = args[:billing_configuration]&.to_h || {}
+
+      organization.vat_rate = billing_configuration[:vat_rate] if billing_configuration.key?(:vat_rate)
       organization.webhook_url = args[:webhook_url] if args.key?(:webhook_url)
       organization.legal_name = args[:legal_name] if args.key?(:legal_name)
       organization.legal_number = args[:legal_number] if args.key?(:legal_number)
@@ -20,12 +22,22 @@ module Organizations
       organization.zipcode = args[:zipcode] if args.key?(:zipcode)
       organization.city = args[:city] if args.key?(:city)
       organization.country = args[:country] if args.key?(:country)
-      organization.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
+
+      if billing_configuration.key?(:document_locale)
+        organization.document_locale = billing_configuration[:document_locale]
+      end
+
+      if billing_configuration.key?(:invoice_footer)
+        organization.invoice_footer = billing_configuration[:invoice_footer]
+      end
 
       assign_premium_attributes(organization, args)
 
-      if License.premium? && args.key?(:invoice_grace_period)
-        Organizations::UpdateInvoiceGracePeriodService.call(organization:, grace_period: args[:invoice_grace_period])
+      if License.premium? && billing_configuration.key?(:invoice_grace_period)
+        Organizations::UpdateInvoiceGracePeriodService.call(
+          organization:,
+          grace_period: billing_configuration[:invoice_grace_period],
+        )
       end
 
       handle_base64_logo(args[:logo]) if args.key?(:logo)
