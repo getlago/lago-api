@@ -23,6 +23,7 @@ RSpec.describe Organizations::UpdateService do
         billing_configuration: {
           vat_rate: 12.5,
           invoice_footer: 'invoice footer',
+          document_locale: 'fr',
         },
       )
 
@@ -40,6 +41,7 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.country).to eq('FR')
         expect(result.organization.timezone).to eq('UTC')
         expect(result.organization.invoice_footer).to eq('invoice footer')
+        expect(result.organization.document_locale).to eq('fr')
       end
     end
 
