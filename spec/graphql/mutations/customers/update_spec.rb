@@ -64,7 +64,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
-      expect(result_data['billingConfiguration']['id']).to be
+      expect(result_data['billingConfiguration']['id']).to eq("#{customer.id}-c0nf")
     end
   end
 
