@@ -189,26 +189,53 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:started_at) { Time.zone.parse('2022-09-01 12:00') }
       let(:terminated_at) { Time.zone.parse('2022-10-15 01:00') }
 
-      before { subscription.customer.update!(timezone: 'America/Los_Angeles') }
+      context 'when timezone shift is UTC -' do
+        before { subscription.customer.update!(timezone: 'America/Los_Angeles') }
 
-      it 'takes the timezone into account' do
-        result = create_service.call
+        it 'takes the timezone into account' do
+          result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+          aggregate_failures do
+            expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to be_available
-          expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(22)
-          expect(credit_note.total_amount_currency).to eq('EUR')
-          expect(credit_note.credit_amount_cents).to eq(22)
-          expect(credit_note.credit_amount_currency).to eq('EUR')
-          expect(credit_note.balance_amount_cents).to eq(22)
-          expect(credit_note.balance_amount_currency).to eq('EUR')
-          expect(credit_note.reason).to eq('order_change')
+            credit_note = result.credit_note
+            expect(credit_note).to be_available
+            expect(credit_note).to be_order_change
+            expect(credit_note.total_amount_cents).to eq(21)
+            expect(credit_note.total_amount_currency).to eq('EUR')
+            expect(credit_note.credit_amount_cents).to eq(21)
+            expect(credit_note.credit_amount_currency).to eq('EUR')
+            expect(credit_note.balance_amount_cents).to eq(21)
+            expect(credit_note.balance_amount_currency).to eq('EUR')
+            expect(credit_note.reason).to eq('order_change')
 
-          expect(credit_note.items.count).to eq(1)
+            expect(credit_note.items.count).to eq(1)
+          end
+        end
+      end
+
+      context 'when timezone shift is UTC +' do
+        before { subscription.customer.update!(timezone: 'Europe/Paris') }
+
+        it 'takes the timezone into account' do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            credit_note = result.credit_note
+            expect(credit_note).to be_available
+            expect(credit_note).to be_order_change
+            expect(credit_note.total_amount_cents).to eq(20)
+            expect(credit_note.total_amount_currency).to eq('EUR')
+            expect(credit_note.credit_amount_cents).to eq(20)
+            expect(credit_note.credit_amount_currency).to eq('EUR')
+            expect(credit_note.balance_amount_cents).to eq(20)
+            expect(credit_note.balance_amount_currency).to eq('EUR')
+            expect(credit_note.reason).to eq('order_change')
+
+            expect(credit_note.items.count).to eq(1)
+          end
         end
       end
     end

@@ -58,16 +58,12 @@ module CreditNotes
       )
     end
 
-    def from_date
-      date_service.previous_beginning_of_period(current_period: true)
-    end
-
     def to_date
       date_service.next_end_of_period.to_date
     end
 
     def day_price
-      date_service.single_day_price(optional_from_date: from_date)
+      date_service.single_day_price
     end
 
     def terminated_at_in_timezone
@@ -75,7 +71,7 @@ module CreditNotes
     end
 
     def remaining_duration
-      billed_from = terminated_at_in_timezone.to_date
+      billed_from = terminated_at_in_timezone.end_of_day.utc.to_date
 
       if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > to_date
