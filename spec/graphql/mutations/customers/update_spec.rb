@@ -21,7 +21,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           canEditAttributes
           invoiceGracePeriod
           providerCustomer { id, providerCustomerId }
-          billingConfiguration { documentLocale }
+          billingConfiguration { id, documentLocale }
         }
       }
     GQL
@@ -64,6 +64,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
+      expect(result_data['billingConfiguration']['id']).to be
     end
   end
 
