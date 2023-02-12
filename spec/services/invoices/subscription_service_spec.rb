@@ -100,7 +100,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     it 'enqueues a SendWebhookJob' do
       expect do
         invoice_service.create
-      end.to have_enqueued_job(SendWebhookJob).with(:invoice, Invoice)
+      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
     context 'when organization does not have a webhook url' do

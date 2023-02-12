@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::AddOnService do
-  subject(:webhook_add_on_service) { described_class.new(invoice) }
+RSpec.describe Webhooks::Invoices::AddOnAddedService do
+  subject(:invoice_add_on_added_service) { described_class.new(invoice) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }
@@ -22,7 +22,7 @@ RSpec.describe Webhooks::AddOnService do
     end
 
     it 'calls the organization webhook url' do
-      webhook_add_on_service.call
+      invoice_add_on_added_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
@@ -30,7 +30,7 @@ RSpec.describe Webhooks::AddOnService do
     end
 
     it 'builds payload with invoice.add_on_added webhook type' do
-      webhook_add_on_service.call
+      invoice_add_on_added_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
@@ -44,7 +44,7 @@ RSpec.describe Webhooks::AddOnService do
       let(:webhook_url) { nil }
 
       it 'does not call the organization webhook url' do
-        webhook_add_on_service.call
+        invoice_add_on_added_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
         expect(lago_client).not_to have_received(:post)
@@ -62,13 +62,13 @@ RSpec.describe Webhooks::AddOnService do
     end
 
     it 'generates the query headers' do
-      headers = webhook_add_on_service.__send__(:generate_headers, payload)
+      headers = invoice_add_on_added_service.__send__(:generate_headers, payload)
 
       expect(headers).to include(have_key('X-Lago-Signature'))
     end
 
     it 'generates a correct signature' do
-      signature = webhook_add_on_service.__send__(:generate_signature, payload)
+      signature = invoice_add_on_added_service.__send__(:generate_signature, payload)
 
       decoded_signature = JWT.decode(
         signature,

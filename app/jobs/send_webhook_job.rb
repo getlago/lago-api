@@ -13,10 +13,10 @@ class SendWebhookJob < ApplicationJob
 
   def perform(webhook_type, object, options = {})
     case webhook_type
-    when :invoice
-      Webhooks::InvoicesService.new(object).call
-    when :add_on
-      Webhooks::AddOnService.new(object).call
+    when 'invoice.created'
+      Webhooks::Invoices::CreatedService.new(object).call
+    when 'invoice.add_on_added'
+      Webhooks::Invoices::AddOnAddedService.new(object).call
     when :credit
       Webhooks::PaidCreditService.new(object).call
     when :event

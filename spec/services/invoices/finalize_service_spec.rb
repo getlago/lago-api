@@ -70,7 +70,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     it 'enqueues a SendWebhookJob' do
       expect do
         finalize_service.call
-      end.to have_enqueued_job(SendWebhookJob).with(:invoice, Invoice)
+      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
     it 'calls SegmentTrackJob' do
