@@ -5,45 +5,65 @@ require 'rails_helper'
 RSpec.describe SendWebhookJob, type: :job do
   subject(:send_webhook_job) { described_class }
 
-  let(:invoice_created_service) { instance_double(Webhooks::Invoices::CreatedService) }
-  let(:invoice_add_on_added_service) { instance_double(Webhooks::Invoices::AddOnAddedService) }
-  let(:webhook_event_service) { instance_double(Webhooks::EventService) }
   let(:organization) { create(:organization, webhook_url: 'http://foo.bar') }
   let(:invoice) { create(:invoice, organization:) }
 
   context 'when webhook_type is invoice.created' do
+    let(:webhook_service) { instance_double(Webhooks::Invoices::CreatedService) }
+
     before do
       allow(Webhooks::Invoices::CreatedService).to receive(:new)
         .with(invoice)
-        .and_return(invoice_created_service)
-      allow(invoice_created_service).to receive(:call)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
     end
 
     it 'calls the webhook invoice service' do
       send_webhook_job.perform_now('invoice.created', invoice)
 
       expect(Webhooks::Invoices::CreatedService).to have_received(:new)
-      expect(invoice_created_service).to have_received(:call)
+      expect(webhook_service).to have_received(:call)
     end
   end
 
   context 'when webhook_type is invoice.add_on_added' do
+    let(:webhook_service) { instance_double(Webhooks::Invoices::AddOnAddedService) }
+
     before do
       allow(Webhooks::Invoices::AddOnAddedService).to receive(:new)
         .with(invoice)
-        .and_return(invoice_add_on_added_service)
-      allow(invoice_add_on_added_service).to receive(:call)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
     end
 
     it 'calls the webhook invoice service' do
       send_webhook_job.perform_now('invoice.add_on_added', invoice)
 
       expect(Webhooks::Invoices::AddOnAddedService).to have_received(:new)
-      expect(invoice_add_on_added_service).to have_received(:call)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is invoice.paid_credit_added' do
+    let(:webhook_service) { instance_double(Webhooks::Invoices::PaidCreditAddedService) }
+
+    before do
+      allow(Webhooks::Invoices::PaidCreditAddedService).to receive(:new)
+        .with(invoice)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook invoice paid credit added service' do
+      send_webhook_job.perform_now('invoice.paid_credit_added', invoice)
+
+      expect(Webhooks::Invoices::PaidCreditAddedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
     end
   end
 
   context 'when webhook_type is event' do
+    let(:webhook_service) { instance_double(Webhooks::Events::ErrorService) }
     let(:object) do
       {
         input_params: {
@@ -57,17 +77,17 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     before do
-      allow(Webhooks::EventService).to receive(:new)
+      allow(Webhooks::Events::ErrorService).to receive(:new)
         .with(object)
-        .and_return(webhook_event_service)
-      allow(webhook_event_service).to receive(:call)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
     end
 
     it 'calls the webhook event service' do
-      send_webhook_job.perform_now(:event, object)
+      send_webhook_job.perform_now('event.error', object)
 
-      expect(Webhooks::EventService).to have_received(:new)
-      expect(webhook_event_service).to have_received(:call)
+      expect(Webhooks::Events::ErrorService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
     end
   end
 

@@ -17,10 +17,11 @@ class SendWebhookJob < ApplicationJob
       Webhooks::Invoices::CreatedService.new(object).call
     when 'invoice.add_on_added'
       Webhooks::Invoices::AddOnAddedService.new(object).call
-    when :credit
-      Webhooks::PaidCreditService.new(object).call
-    when :event
-      Webhooks::EventService.new(object).call
+    when 'invoice.paid_credit_added'
+      Webhooks::Invoices::PaidCreditAddedService.new(object).call
+
+    when 'event.error'
+      Webhooks::Events::ErrorService.new(object).call
 
     # NOTE: Payment provider related webhooks
     when :payment_provider_invoice_payment_error

@@ -39,7 +39,7 @@ module Invoices
         result.invoice = invoice
       end
 
-      SendWebhookJob.perform_later(:credit, result.invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice) if should_deliver_webhook?
       create_payment(result.invoice)
 
       result
