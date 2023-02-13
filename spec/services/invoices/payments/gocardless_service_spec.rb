@@ -203,7 +203,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            'invoice.payment_provider_payment_failure',
+            'invoice.payment_failure',
             invoice,
             provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {

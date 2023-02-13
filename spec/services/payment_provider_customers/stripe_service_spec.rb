@@ -34,7 +34,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       expect(Stripe::Customer).to have_received(:create)
 
       expect(SendWebhookJob).to have_been_enqueued
-        .with(:payment_provider_customer_created, customer)
+        .with('customer.payment_provider_created', customer)
     end
 
     context 'when customer already have a stripe customer id' do
@@ -63,7 +63,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            :payment_provider_customer_error,
+            'customer.payment_provider_error',
             customer,
             provider_error: {
               message: 'error',

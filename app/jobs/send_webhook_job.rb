@@ -26,19 +26,19 @@ class SendWebhookJob < ApplicationJob
       Webhooks::Invoices::DraftedService.new(object).call
     when 'invoice.payment_status_updated'
       Webhooks::Invoices::PaymentStatusUpdatedService.new(object).call
-    when 'invoice.payment_provider_payment_failure'
+    when 'invoice.payment_failure'
       Webhooks::PaymentProviders::InvoicePaymentFailureService.new(object, options).call
 
     # NOTE: Event related webhooks
     when 'event.error'
       Webhooks::Events::ErrorService.new(object).call
 
-    # NOTE: Payment Provider related webhooks
-    when :payment_provider_customer_created
+    # NOTE: Customer Related Webhooks
+    when 'customer.payment_provider_created'
       Webhooks::PaymentProviders::CustomerCreatedService.new(object).call
-    when :payment_provider_customer_error
+    when 'customer.payment_provider_error'
       Webhooks::PaymentProviders::CustomerErrorService.new(object, options).call
-    when :payment_provider_customer_checkout_url
+    when 'customer.checkout_url_generated'
       Webhooks::PaymentProviders::CustomerCheckoutService.new(object, options).call
 
     # NOTE: Credit Note related webhooks

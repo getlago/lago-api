@@ -91,7 +91,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
-  context 'when webhook_type is payment_provider_invoice_payment_errors' do
+  context 'when webhook_type is event.error' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::InvoicePaymentFailureService) }
 
     let(:webhook_options) do
@@ -112,7 +112,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     it 'calls the webhook event service' do
       send_webhook_job.perform_now(
-        'invoice.payment_provider_payment_failure',
+        'invoice.payment_failure',
         invoice,
         webhook_options,
       )
@@ -122,7 +122,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
-  context 'when webhook_type is payment_provider_customer_created' do
+  context 'when webhook_type is customer.payment_provider_created' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerCreatedService) }
     let(:customer) { create(:customer) }
 
@@ -135,7 +135,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     it 'calls the webhook event service' do
       send_webhook_job.perform_now(
-        :payment_provider_customer_created,
+        'customer.payment_provider_created',
         customer,
       )
 
@@ -144,7 +144,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
-  context 'when webhook_type is payment_provider_customer_checkout_url' do
+  context 'when webhook_type is customer.checkout_url_generated' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerCheckoutService) }
     let(:customer) { create(:customer) }
 
@@ -157,7 +157,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
-        :payment_provider_customer_checkout_url,
+        'customer.checkout_url_generated',
         customer,
         checkout_url: 'https://example.com',
       )
@@ -167,7 +167,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
-  context 'when webhook_type is payment_provider_customer_error' do
+  context 'when webhook_type is customer.payment_provider_error' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerErrorService) }
     let(:customer) { create(:customer) }
 
@@ -189,7 +189,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     it 'calls the webhook event service' do
       send_webhook_job.perform_now(
-        :payment_provider_customer_error,
+        'customer.payment_provider_error',
         customer,
         webhook_options,
       )
