@@ -32,9 +32,9 @@ module Invoices
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
         end
 
-        compute_amounts
+        Invoices::ComputeAmountsFromFees.call(invoice:)
         create_credit_note_credit if should_create_credit_note_credit?
-        create_coupon_credit if should_create_coupon_credit?
+        Credits::AppliedCouponsService.new(invoice:).create if should_create_coupon_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
@@ -66,24 +66,14 @@ module Invoices
       )
     end
 
-    def compute_amounts
-      Invoices::ComputeAmountsFromFees.call(invoice:)
-    end
-
     def create_subscription_fee(subscription, boundaries)
-      fee_result = Fees::SubscriptionService.new(
-        invoice:, subscription:, boundaries:,
-      ).create
-
+      fee_result = Fees::SubscriptionService.new(invoice:, subscription:, boundaries:).create
       fee_result.raise_if_error!
     end
 
     def create_charges_fees(subscription, boundaries)
       subscription.plan.charges.each do |charge|
-        fee_result = Fees::ChargeService.new(
-          invoice:, charge:, subscription:, boundaries:,
-        ).create
-
+        fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
         fee_result.raise_if_error!
       end
     end
@@ -133,17 +123,6 @@ module Invoices
       true
     end
 
-    def applied_coupons
-      return @applied_coupons if @applied_coupons
-
-      with_plan_limit = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_plans: true })
-        .order(created_at: :asc)
-      applied_to_all = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_plans: false })
-        .order(created_at: :asc)
-
-      @applied_coupons = with_plan_limit + applied_to_all
-    end
-
     def credit_notes
       @credit_notes ||= customer.credit_notes
         .finalized
@@ -166,7 +145,6 @@ module Invoices
 
     def should_create_coupon_credit?
       return false if not_in_finalizing_process?
-      return false if applied_coupons.blank?
       return false unless invoice.amount_cents&.positive?
 
       true
@@ -181,46 +159,27 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(
-        invoice:, credit_notes:,
-      ).call
+      credit_result = Credits::CreditNoteService.new(invoice:, credit_notes:).call
       credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
     end
 
-    def create_coupon_credit
-      applied_coupons.each do |applied_coupon|
-        break unless invoice.amount_cents&.positive?
+    def create_applied_coupons_credit
+      credits_result = Credits::AppliedCouponsService.new(invoice:).create
+      credits_result.raise_if_error!
 
-        next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
-
-        base_amount_cents = if applied_coupon.coupon.limited_plans?
-          coupon_related_fees = coupon_fees(applied_coupon)
-
-          next unless coupon_related_fees.exists?
-
-          coupon_base_amount_cents(coupon_related_fees:)
-        else
-          invoice.total_amount_cents
-        end
-
-        credit_result = Credits::AppliedCouponService.new(invoice:, applied_coupon:, base_amount_cents:).create
-        credit_result.raise_if_error!
-
-        refresh_amounts(credit_amount_cents: credit_result.credit.amount_cents)
-      end
+      refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.new(invoice: invoice, wallet: wallet).create
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.new(invoice:, wallet:).create
       prepaid_credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
-    # NOTE: Since credit impact the invoice amount, we need to recompute the amount and
-    #       the VAT amount
+    # NOTE: Since credit impact the invoice amount, we need to recompute the amount and the VAT amount
     def refresh_amounts(credit_amount_cents:)
       invoice.credit_amount_cents += credit_amount_cents
       invoice.total_amount_cents -= credit_amount_cents
@@ -240,26 +199,6 @@ module Invoices
 
     def not_in_finalizing_process?
       invoice.draft? && context != :finalize
-    end
-
-    def coupon_fees(applied_coupon)
-      invoice
-        .fees
-        .joins(subscription: :plan)
-        .where(plan: { id: applied_coupon.coupon.coupon_plans.select(:plan_id) })
-    end
-
-    def coupon_base_amount_cents(coupon_related_fees:)
-      fee_amounts = coupon_related_fees.select(:amount_cents, :vat_amount_cents)
-
-      fees_amount_cents = fee_amounts.sum(&:amount_cents)
-      fees_vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-
-      total_fees_amount_cents = fees_amount_cents + fees_vat_amount_cents
-
-      # In some cases when credit note is already applied sum from above
-      # can be greater than invoice total_amount_cents
-      (total_fees_amount_cents > invoice.total_amount_cents) ? invoice.total_amount_cents : total_fees_amount_cents
     end
   end
 end
