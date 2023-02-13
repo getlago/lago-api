@@ -152,8 +152,6 @@ RSpec.describe BillingService, type: :service do
       let(:interval) { :weekly }
       let(:billing_time) { :anniversary }
 
-      let(:subscription_at) { DateTime.now.prev_occurring(DateTime.now.strftime('%A').downcase.to_sym) }
-
       let(:current_date) do
         DateTime.parse('20 Jun 2022').prev_occurring(subscription_at.strftime('%A').downcase.to_sym)
       end
