@@ -28,7 +28,7 @@ module Invoices
         invoice.update!(vat_rate: invoice.customer.applicable_vat_rate)
 
         calculate_result = Invoices::CalculateFeesService.call(
-          invoice:,
+          invoice: invoice.reload,
           subscriptions: Subscription.find(subscription_ids),
           timestamp: invoice.created_at.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
           context:,

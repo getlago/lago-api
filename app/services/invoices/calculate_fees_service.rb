@@ -67,14 +67,7 @@ module Invoices
     end
 
     def compute_amounts
-      fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
-
-      invoice.amount_cents = fee_amounts.sum(&:amount_cents)
-      invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-
-      invoice.credit_amount_cents = 0 if invoice.credits.empty?
-
-      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents - invoice.credit_amount_cents
+      Invoices::ComputeAmountsFromFees.call(invoice:)
     end
 
     def create_subscription_fee(subscription, boundaries)
