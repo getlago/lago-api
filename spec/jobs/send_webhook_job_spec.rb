@@ -112,7 +112,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     it 'calls the webhook event service' do
       send_webhook_job.perform_now(
-        :payment_provider_invoice_payment_error,
+        'invoice.payment_provider_payment_failure',
         invoice,
         webhook_options,
       )

@@ -13,19 +13,27 @@ class SendWebhookJob < ApplicationJob
 
   def perform(webhook_type, object, options = {})
     case webhook_type
+    # NOTE: Invoice related webhooks
     when 'invoice.created'
       Webhooks::Invoices::CreatedService.new(object).call
     when 'invoice.add_on_added'
       Webhooks::Invoices::AddOnAddedService.new(object).call
     when 'invoice.paid_credit_added'
       Webhooks::Invoices::PaidCreditAddedService.new(object).call
+    when 'invoice.generated'
+      Webhooks::Invoices::GeneratedService.new(object).call
+    when 'invoice.drafted'
+      Webhooks::Invoices::DraftedService.new(object).call
+    when 'invoice.payment_status_updated'
+      Webhooks::Invoices::PaymentStatusUpdatedService.new(object).call
+    when 'invoice.payment_provider_payment_failure'
+      Webhooks::PaymentProviders::InvoicePaymentFailureService.new(object, options).call
 
+    # NOTE: Event related webhooks
     when 'event.error'
       Webhooks::Events::ErrorService.new(object).call
 
-    # NOTE: Payment provider related webhooks
-    when :payment_provider_invoice_payment_error
-      Webhooks::PaymentProviders::InvoicePaymentFailureService.new(object, options).call
+    # NOTE: Payment Provider related webhooks
     when :payment_provider_customer_created
       Webhooks::PaymentProviders::CustomerCreatedService.new(object).call
     when :payment_provider_customer_error
@@ -33,20 +41,15 @@ class SendWebhookJob < ApplicationJob
     when :payment_provider_customer_checkout_url
       Webhooks::PaymentProviders::CustomerCheckoutService.new(object, options).call
 
-    # NOTE: This add the new way of managing webhooks
-    # A refact has to be done to improve webhooks management internally
+    # NOTE: Credit Note related webhooks
     when 'credit_note.created'
       Webhooks::CreditNotes::CreatedService.new(object).call
     when 'credit_note.generated'
       Webhooks::CreditNotes::GeneratedService.new(object).call
     when 'credit_note.provider_refund_failure'
       Webhooks::CreditNotes::PaymentProviderRefundFailureService.new(object, options).call
-    when 'invoice.generated'
-      Webhooks::Invoices::GeneratedService.new(object).call
-    when 'invoice.drafted'
-      Webhooks::Invoices::DraftedService.new(object).call
-    when 'invoice.payment_status_updated'
-      Webhooks::Invoices::PaymentStatusUpdatedService.new(object).call
+
+    # NOTE: Subscription related webhooks
     when 'subscription.terminated'
       Webhooks::Subscriptions::TerminatedService.new(object).call
     else
