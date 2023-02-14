@@ -72,7 +72,9 @@ class Invoice < ApplicationRecord
   end
 
   def fee_total_amount_cents
-    fees.sum(:amount_cents) + fees.sum(:vat_amount_cents)
+    amount_cents = fees.sum(:amount_cents)
+    vat_amount_cents = fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).ceil
+    amount_cents + vat_amount_cents
   end
 
   def currency

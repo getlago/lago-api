@@ -215,7 +215,7 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
-    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100, vat_amount_cents: 20) }
+    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20) }
 
     before { fees }
 
