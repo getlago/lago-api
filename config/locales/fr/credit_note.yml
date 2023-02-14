@@ -1,0 +1,18 @@
+fr:
+  credit_note:
+    document_name: Avoir
+    credit_note_number: Nº d'avoir
+    invoice_number: Nº de facture
+    issue_date: Date d'émission
+    credit_from: De
+    credit_to: Crédité à
+    refunded_notice: Remboursé le %{issuing_date}
+    credited_notice: Crédité sur le solde du client le %{issuing_date}
+    credited_refunded_notice: Crédité sur le solde du client et remboursée le %{issuing_date}
+    subscription: Souscription
+    sub_total_without_tax: Sous total (HT)
+    tax: Taxe
+    credited_on_customer_balance: Crédit sur le solde du client
+    refunded: Remboursement
+    total_due: Total dû
+    powered_by: Généré par

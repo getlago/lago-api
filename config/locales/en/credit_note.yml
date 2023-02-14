@@ -1,0 +1,18 @@
+en:
+  credit_note:
+    document_name: Credit note
+    credit_note_number: Credit note number
+    invoice_number: Invoice number
+    issue_date: Issue date
+    credit_from: From
+    credit_to: Credit to
+    refunded_notice: Refunded on %{issuing_date}
+    credited_notice: Credited on customer balance on %{issuing_date}
+    credited_refunded_notice: Credited on customer balance and refunded on %{issuing_date}
+    subscription: Subscription
+    sub_total_without_tax: Sub total (excl. tax)
+    tax: Tax
+    credited_on_customer_balance: Credited on customer balance
+    refunded: Refunded
+    total_due: Total due
+    powered_by: Powered by

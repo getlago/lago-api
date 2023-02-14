@@ -1,4 +1,9 @@
 en:
+  money:
+    format: '%u%n'
+  date:
+    formats:
+      default: '%b %d, %Y'
   activerecord:
     errors:
       messages:
