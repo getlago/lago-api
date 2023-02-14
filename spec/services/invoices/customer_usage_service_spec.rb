@@ -69,7 +69,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       end.to change { cache.exist?(key) }.from(false).to(true)
     end
 
-    it 'initialize an invoice' do
+    it 'initializes an invoice' do
       result = usage_service.usage
 
       aggregate_failures do
