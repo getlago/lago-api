@@ -41,6 +41,12 @@ module CreditNotes
       credited_invoice_amount_cents + refunded_invoice_amount_cents
     end
 
+    def total_items_amount_cents
+      credit_note.items.sum do |item|
+        item.amount_cents + (item.amount_cents * item.fee.vat_rate).fdiv(100)
+      end.ceil
+    end
+
     def valid_invoice_status?
       if credit_note.refund_amount_cents.positive?
         return true if invoice.succeeded?
@@ -61,7 +67,7 @@ module CreditNotes
 
     # NOTE: Check if total amount matched the items amount
     def valid_items_amount?
-      return true if total_amount_cents == credit_note.items.sum(&:total_amount_cents)
+      return true if total_amount_cents == total_items_amount_cents
 
       add_error(field: :base, error_code: 'does_not_match_item_amounts')
     end

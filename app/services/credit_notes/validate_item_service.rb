@@ -42,6 +42,10 @@ module CreditNotes
       credited_invoice_amount_cents + refunded_invoice_amount_cents
     end
 
+    def total_item_amount_cents
+      (item.amount_cents + (item.amount_cents * fee.vat_rate).fdiv(100)).ceil
+    end
+
     def valid_fee?
       return true if item.fee.present?
 
@@ -66,7 +70,7 @@ module CreditNotes
 
     # NOTE: Check if item amount is less than or equal to invoice remaining creditable amount
     def valid_global_amount?
-      return true if item.total_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
+      return true if total_item_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
 
       add_error(field: :amount_cents, error_code: 'higher_than_remaining_invoice_amount')
     end
