@@ -122,7 +122,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         )
       end
 
-      it 'initialize an invoice' do
+      it 'initializes an invoice' do
         travel_to(current_date) do
           result = usage_service.usage
 
