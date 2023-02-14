@@ -88,7 +88,7 @@ RSpec.describe Customer, type: :model do
   describe 'preferred_document_locale' do
     subject(:customer) do
       described_class.new(
-        organization: organization,
+        organization:,
         document_locale: 'en',
       )
     end

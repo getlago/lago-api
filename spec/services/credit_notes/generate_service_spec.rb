@@ -43,7 +43,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
 
       it 'sets the correct document locale' do
         expect { credit_note_generate_service.call }
-          .to change { I18n.locale }.from(:en).to(:fr)
+          .to change(I18n, :locale).from(:en).to(:fr)
       end
     end
 
