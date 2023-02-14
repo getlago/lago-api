@@ -576,7 +576,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_14_100638) do
     t.datetime "last_retried_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "organization_id", null: false
+    t.uuid "organization_id"
     t.index ["organization_id"], name: "index_webhooks_on_organization_id"
   end
 
