@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_14_100638) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_14_145444) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -272,7 +272,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_14_100638) do
     t.string "amount_currency", null: false
     t.bigint "vat_amount_cents", null: false
     t.string "vat_amount_currency", null: false
-    t.float "vat_rate"
+    t.float "vat_rate", default: 0.0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false
@@ -360,7 +360,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_14_100638) do
     t.string "file"
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
-    t.float "vat_rate"
+    t.float "vat_rate", default: 0.0, null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency"
     t.integer "status", default: 1, null: false
