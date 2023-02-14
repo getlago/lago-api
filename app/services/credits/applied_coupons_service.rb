@@ -29,6 +29,9 @@ module Credits
         invoice.credit_amount_cents += credit_result.credit.amount_cents
         invoice.total_amount_cents -= credit_result.credit.amount_cents
       end
+
+      result.invoice = invoice
+      result
     end
 
     private
@@ -36,14 +39,6 @@ module Credits
     attr_reader :invoice
 
     delegate :customer, :currency, to: :invoice
-
-    def should_create_coupon_credit?
-      return false if not_in_finalizing_process?
-      return false if applied_coupons.blank?
-      return false unless invoice.amount_cents&.positive?
-
-      true
-    end
 
     def applied_coupons
       return @applied_coupons if @applied_coupons
@@ -57,8 +52,7 @@ module Credits
     end
 
     def coupon_fees(applied_coupon)
-      invoice.fees.joins(subscription: :plan)
-        .where(plan: { id: applied_coupon.coupon.coupon_plans.select(:plan_id) })
+      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_plans.select(:plan_id) })
     end
 
     def coupon_base_amount_cents(coupon_related_fees:)
