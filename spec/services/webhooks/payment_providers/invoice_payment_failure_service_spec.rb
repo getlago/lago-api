@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::PaymentProviders::InvoicePaymentFailureService do
-  subject(:webhook_service) { described_class.new(invoice, webhook_options) }
+  subject(:webhook_service) { described_class.new(object: invoice, options: webhook_options) }
 
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:customer) { create(:customer, organization:) }

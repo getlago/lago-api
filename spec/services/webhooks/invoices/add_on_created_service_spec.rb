@@ -2,19 +2,14 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::Invoices::DraftedService do
-  subject(:webhook_invoice_service) { described_class.new(object: invoice) }
+RSpec.describe Webhooks::Invoices::AddOnCreatedService do
+  subject(:webhook_service) { described_class.new(object: invoice) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:webhook_url) { 'http://foo.bar' }
-
-  before do
-    create_list(:fee, 2, invoice:)
-    create_list(:credit, 2, invoice:)
-  end
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -27,31 +22,21 @@ RSpec.describe Webhooks::Invoices::DraftedService do
     end
 
     it 'calls the organization webhook url' do
-      webhook_invoice_service.call
+      webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post)
     end
 
-    it 'builds payload with invoice.drafted webhook type' do
-      webhook_invoice_service.call
+    it 'builds payload with invoice.add_on_added webhook type' do
+      webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
       expect(lago_client).to have_received(:post) do |payload|
-        expect(payload[:webhook_type]).to eq('invoice.drafted')
+        expect(payload[:webhook_type]).to eq('invoice.add_on_added')
         expect(payload[:object_type]).to eq('invoice')
-      end
-    end
-
-    it 'builds payload with the object type root key' do
-      webhook_invoice_service.call
-
-      expect(LagoHttpClient::Client).to have_received(:new)
-        .with(organization.webhook_url)
-      expect(lago_client).to have_received(:post) do |payload|
-        expect(payload['invoice']).to be_present
       end
     end
 
@@ -59,7 +44,7 @@ RSpec.describe Webhooks::Invoices::DraftedService do
       let(:webhook_url) { nil }
 
       it 'does not call the organization webhook url' do
-        webhook_invoice_service.call
+        webhook_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
         expect(lago_client).not_to have_received(:post)
@@ -72,18 +57,18 @@ RSpec.describe Webhooks::Invoices::DraftedService do
       ::V1::InvoiceSerializer.new(
         invoice,
         root_name: 'invoice',
-        includes: %i[customer subscription fees],
-      ).serialize.merge(webook_type: 'invoice.drafted')
+        includes: %i[customer subscriptions],
+      ).serialize.merge(webook_type: 'add_on.created')
     end
 
     it 'generates the query headers' do
-      headers = webhook_invoice_service.__send__(:generate_headers, payload)
+      headers = webhook_service.__send__(:generate_headers, payload)
 
       expect(headers).to include(have_key('X-Lago-Signature'))
     end
 
     it 'generates a correct signature' do
-      signature = webhook_invoice_service.__send__(:generate_signature, payload)
+      signature = webhook_service.__send__(:generate_signature, payload)
 
       decoded_signature = JWT.decode(
         signature,

@@ -3,10 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::PaymentProviders::CustomerCheckoutService do
-  subject(:webhook_service) { described_class.new(customer) }
+  subject(:webhook_service) { described_class.new(object: customer) }
 
-  let(:customer) { create(:customer, organization: organization) }
-  let(:organization) { create(:organization, webhook_url: webhook_url) }
+  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization, webhook_url:) }
   let(:webhook_url) { 'http://foo.bar' }
 
   describe '.call' do

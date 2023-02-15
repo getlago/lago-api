@@ -123,7 +123,7 @@ module PaymentProviderCustomers
       return unless customer.organization.webhook_url?
 
       SendWebhookJob.perform_later(
-        :payment_provider_customer_created,
+        'customer.payment_provider_created',
         customer,
       )
     end
@@ -132,7 +132,7 @@ module PaymentProviderCustomers
       return unless customer.organization.webhook_url?
 
       SendWebhookJob.perform_later(
-        :payment_provider_customer_error,
+        'customer.payment_provider_error',
         customer,
         provider_error: {
           message: stripe_error.message,

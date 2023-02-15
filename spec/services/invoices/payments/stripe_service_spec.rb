@@ -236,7 +236,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            :payment_provider_invoice_payment_error,
+            'invoice.payment_failure',
             invoice,
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {

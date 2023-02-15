@@ -2,20 +2,20 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::EventService do
-  subject(:webhook_event_service) { described_class.new(object) }
+RSpec.describe Webhooks::Events::ErrorService do
+  subject(:webhook_service) { described_class.new(object:) }
 
-  let(:organization) { create(:organization, webhook_url: webhook_url) }
+  let(:organization) { create(:organization, webhook_url:) }
   let(:webhook_url) { 'http://foo.bar' }
   let(:object) do
     {
       input_params: {
         external_customer_id: 'customer',
         transaction_id: SecureRandom.uuid,
-        code: 'code'
+        code: 'code',
       },
       error: 'Code does not exist',
-      organization_id: organization.id
+      organization_id: organization.id,
     }
   end
 
@@ -30,7 +30,7 @@ RSpec.describe Webhooks::EventService do
     end
 
     it 'calls the organization webhook url' do
-      webhook_event_service.call
+      webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
@@ -38,7 +38,7 @@ RSpec.describe Webhooks::EventService do
     end
 
     it 'builds payload with event.error webhook type' do
-      webhook_event_service.call
+      webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
@@ -52,7 +52,7 @@ RSpec.describe Webhooks::EventService do
       let(:webhook_url) { nil }
 
       it 'does not call the organization webhook url' do
-        webhook_event_service.call
+        webhook_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
         expect(lago_client).not_to have_received(:post)
@@ -69,13 +69,13 @@ RSpec.describe Webhooks::EventService do
     end
 
     it 'generates the query headers' do
-      headers = webhook_event_service.__send__(:generate_headers, payload)
+      headers = webhook_service.__send__(:generate_headers, payload)
 
       expect(headers).to include(have_key('X-Lago-Signature'))
     end
 
     it 'generates a correct signature' do
-      signature = webhook_event_service.__send__(:generate_signature, payload)
+      signature = webhook_service.__send__(:generate_signature, payload)
 
       decoded_signature = JWT.decode(
         signature,

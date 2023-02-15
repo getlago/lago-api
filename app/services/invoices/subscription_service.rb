@@ -42,7 +42,7 @@ module Invoices
       if grace_period?
         SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
       else
-        SendWebhookJob.perform_later(:invoice, invoice) if should_deliver_webhook?
+        SendWebhookJob.perform_later('invoice.created', invoice) if should_deliver_webhook?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
       end

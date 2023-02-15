@@ -30,7 +30,7 @@ module PaymentProviderCustomers
       billing_request_flow = create_billing_request_flow(billing_request.id)
 
       SendWebhookJob.perform_later(
-        :payment_provider_customer_checkout_url,
+        'customer.checkout_url_generated',
         customer,
         checkout_url: billing_request_flow.authorisation_url,
       )
@@ -77,7 +77,7 @@ module PaymentProviderCustomers
       return unless organization.webhook_url?
 
       SendWebhookJob.perform_later(
-        :payment_provider_customer_created,
+        'customer.payment_provider_created',
         customer,
       )
     end
@@ -86,7 +86,7 @@ module PaymentProviderCustomers
       return unless organization.webhook_url?
 
       SendWebhookJob.perform_later(
-        :payment_provider_customer_error,
+        'customer.payment_provider_error',
         customer,
         provider_error: {
           message: gocardless_error.message,

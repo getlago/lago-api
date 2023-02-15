@@ -37,7 +37,7 @@ module Invoices
         result.invoice = invoice
       end
 
-      SendWebhookJob.perform_later(:add_on, result.invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
       create_payment(result.invoice)
 
       result

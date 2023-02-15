@@ -107,7 +107,7 @@ module Events
         organization_id: organization.id,
       }
 
-      SendWebhookJob.perform_later(:event, object)
+      SendWebhookJob.perform_later('event.error', object)
     end
 
     def customer_external_subscription_ids
