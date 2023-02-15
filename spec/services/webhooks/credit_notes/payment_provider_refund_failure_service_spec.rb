@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::CreditNotes::PaymentProviderRefundFailureService do
-  subject(:webhook_service) { described_class.new(credit_note, webhook_options) }
+  subject(:webhook_service) { described_class.new(object: credit_note, options: webhook_options) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }

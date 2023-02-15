@@ -3,10 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::PaymentProviders::CustomerErrorService do
-  subject(:webhook_service) { described_class.new(customer, webhook_options) }
+  subject(:webhook_service) { described_class.new(object: customer, options: webhook_options) }
 
-  let(:customer) { create(:customer, organization: organization) }
-  let(:organization) { create(:organization, webhook_url: webhook_url) }
+  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization, webhook_url:) }
   let(:webhook_url) { 'http://foo.bar' }
 
   let(:webhook_options) { { provider_error: { message: 'message', error_code: 'code' } } }

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::CreditNotes::GeneratedService do
-  subject(:webhook_service) { described_class.new(credit_note) }
+  subject(:webhook_service) { described_class.new(object: credit_note) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }

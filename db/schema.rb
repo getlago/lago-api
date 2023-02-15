@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_14_100638) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -564,7 +564,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
   end
 
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "organization_id"
     t.uuid "object_id", null: false
     t.string "object_type", null: false
     t.integer "status", default: 0, null: false
@@ -577,6 +576,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
     t.datetime "last_retried_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "organization_id", null: false
     t.index ["organization_id"], name: "index_webhooks_on_organization_id"
   end
 

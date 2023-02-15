@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::Invoices::AddOnAddedService do
-  subject(:invoice_add_on_added_service) { described_class.new(invoice) }
+  subject(:invoice_add_on_added_service) { described_class.new(object: invoice) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }

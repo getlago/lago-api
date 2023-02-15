@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::Invoices::PaidCreditAddedService do
-  subject(:webhook_service) { described_class.new(invoice) }
+  subject(:webhook_service) { described_class.new(object: invoice) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:customer) { create(:customer, organization:) }

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::Events::ErrorService do
-  subject(:webhook_service) { described_class.new(object) }
+  subject(:webhook_service) { described_class.new(object:) }
 
   let(:organization) { create(:organization, webhook_url:) }
   let(:webhook_url) { 'http://foo.bar' }

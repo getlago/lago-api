@@ -5,7 +5,7 @@ require 'lago_http_client'
 module Webhooks
   # NOTE: Abstract Service, should not be used directly
   class BaseService
-    def initialize(object, options = {})
+    def initialize(object:, options: {})
       @object = object
       @options = options&.with_indifferent_access
     end
@@ -14,8 +14,8 @@ module Webhooks
       return unless current_organization&.webhook_url?
 
       payload = {
-        webhook_type: webhook_type,
-        object_type: object_type,
+        webhook_type:,
+        object_type:,
         object_type => object_serializer.serialize,
       }
 
