@@ -27,10 +27,10 @@ RSpec.describe SendWebhookJob, type: :job do
   end
 
   context 'when webhook_type is invoice.add_on_added' do
-    let(:webhook_service) { instance_double(Webhooks::Invoices::AddOnAddedService) }
+    let(:webhook_service) { instance_double(Webhooks::Invoices::AddOnCreatedService) }
 
     before do
-      allow(Webhooks::Invoices::AddOnAddedService).to receive(:new)
+      allow(Webhooks::Invoices::AddOnCreatedService).to receive(:new)
         .with(object: invoice, options: {})
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
@@ -39,7 +39,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook invoice service' do
       send_webhook_job.perform_now('invoice.add_on_added', invoice)
 
-      expect(Webhooks::Invoices::AddOnAddedService).to have_received(:new)
+      expect(Webhooks::Invoices::AddOnCreatedService).to have_received(:new)
       expect(webhook_service).to have_received(:call)
     end
   end

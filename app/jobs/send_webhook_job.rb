@@ -11,9 +11,9 @@ class SendWebhookJob < ApplicationJob
     attempts: ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i,
   )
 
-  WEBHOOKS_CLASSES = {
+  WEBHOOK_SERVICES = {
     'invoice.created' => Webhooks::Invoices::CreatedService,
-    'invoice.add_on_added' => Webhooks::Invoices::AddOnAddedService,
+    'invoice.add_on_added' => Webhooks::Invoices::AddOnCreatedService,
     'invoice.paid_credit_added' => Webhooks::Invoices::PaidCreditAddedService,
     'invoice.generated' => Webhooks::Invoices::GeneratedService,
     'invoice.drafted' => Webhooks::Invoices::DraftedService,
@@ -30,8 +30,8 @@ class SendWebhookJob < ApplicationJob
   }.freeze
 
   def perform(webhook_type, object, options = {})
-    raise(NotImplementedError) unless WEBHOOKS_CLASSES.include?(webhook_type)
+    raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
-    WEBHOOKS_CLASSES[webhook_type].new(object:, options:).call
+    WEBHOOK_SERVICES.fetch(webhook_type).new(object:, options:).call
   end
 end

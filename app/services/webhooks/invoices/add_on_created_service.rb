@@ -2,7 +2,7 @@
 
 module Webhooks
   module Invoices
-    class AddOnAddedService < Webhooks::BaseService
+    class AddOnCreatedService < Webhooks::BaseService
       private
 
       def current_organization
