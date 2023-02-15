@@ -13,7 +13,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Invoices::CreatedService).to receive(:new)
-        .with(object: invoice, options: {})
+        .with(object: invoice, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -31,7 +31,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Invoices::AddOnCreatedService).to receive(:new)
-        .with(object: invoice, options: {})
+        .with(object: invoice, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -49,7 +49,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Invoices::PaidCreditAddedService).to receive(:new)
-        .with(object: invoice, options: {})
+        .with(object: invoice, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -78,7 +78,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Events::ErrorService).to receive(:new)
-        .with(object:, options: {})
+        .with(object:, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -105,7 +105,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::PaymentProviders::InvoicePaymentFailureService).to receive(:new)
-        .with(object: invoice, options: webhook_options)
+        .with(object: invoice, options: webhook_options, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -128,7 +128,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::PaymentProviders::CustomerCreatedService).to receive(:new)
-        .with(object: customer, options: {})
+        .with(object: customer, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -150,7 +150,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::PaymentProviders::CustomerCheckoutService).to receive(:new)
-        .with(object: customer, options: { checkout_url: 'https://example.com' })
+        .with(object: customer, options: { checkout_url: 'https://example.com' }, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -182,7 +182,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::PaymentProviders::CustomerErrorService).to receive(:new)
-        .with(object: customer, options: webhook_options)
+        .with(object: customer, options: webhook_options, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -205,7 +205,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::CreditNotes::CreatedService).to receive(:new)
-        .with(object: credit_note, options: {})
+        .with(object: credit_note, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -227,7 +227,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::CreditNotes::GeneratedService).to receive(:new)
-        .with(object: credit_note, options: {})
+        .with(object: credit_note, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -258,7 +258,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::CreditNotes::PaymentProviderRefundFailureService).to receive(:new)
-        .with(object: credit_note, options: webhook_options)
+        .with(object: credit_note, options: webhook_options, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -281,7 +281,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Invoices::DraftedService).to receive(:new)
-        .with(object: invoice, options: {})
+        .with(object: invoice, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -303,7 +303,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Subscriptions::TerminatedService).to receive(:new)
-        .with(object: subscription, options: {})
+        .with(object: subscription, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
@@ -325,7 +325,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Invoices::PaymentStatusUpdatedService).to receive(:new)
-        .with(object: invoice, options: {})
+        .with(object: invoice, options: {}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end

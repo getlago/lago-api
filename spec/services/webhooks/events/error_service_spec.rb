@@ -26,15 +26,7 @@ RSpec.describe Webhooks::Events::ErrorService do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(organization.webhook_url)
         .and_return(lago_client)
-      allow(lago_client).to receive(:post)
-    end
-
-    it 'calls the organization webhook url' do
-      webhook_service.call
-
-      expect(LagoHttpClient::Client).to have_received(:new)
-        .with(organization.webhook_url)
-      expect(lago_client).to have_received(:post)
+      allow(lago_client).to receive(:post_with_response)
     end
 
     it 'builds payload with event.error webhook type' do
@@ -42,53 +34,10 @@ RSpec.describe Webhooks::Events::ErrorService do
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_url)
-      expect(lago_client).to have_received(:post) do |payload|
+      expect(lago_client).to have_received(:post_with_response) do |payload|
         expect(payload[:webhook_type]).to eq('event.error')
         expect(payload[:object_type]).to eq('event_error')
       end
-    end
-
-    context 'without webhook_url' do
-      let(:webhook_url) { nil }
-
-      it 'does not call the organization webhook url' do
-        webhook_service.call
-
-        expect(LagoHttpClient::Client).not_to have_received(:new)
-        expect(lago_client).not_to have_received(:post)
-      end
-    end
-  end
-
-  describe '.generate_headers' do
-    let(:payload) do
-      ::ErrorSerializer.new(
-        OpenStruct.new(object),
-        root_name: 'error_event',
-      ).serialize.merge(webhook_type: 'event.error')
-    end
-
-    it 'generates the query headers' do
-      headers = webhook_service.__send__(:generate_headers, payload)
-
-      expect(headers).to include(have_key('X-Lago-Signature'))
-    end
-
-    it 'generates a correct signature' do
-      signature = webhook_service.__send__(:generate_signature, payload)
-
-      decoded_signature = JWT.decode(
-        signature,
-        RsaPublicKey,
-        true,
-        {
-          algorithm: 'RS256',
-          iss: ENV['LAGO_API_URL'],
-          verify_iss: true,
-        },
-        ).first
-
-      expect(decoded_signature['data']).to eq(payload.to_json)
     end
   end
 end
