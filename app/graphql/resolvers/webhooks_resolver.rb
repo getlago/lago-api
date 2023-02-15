@@ -10,19 +10,22 @@ module Resolvers
     argument :page, Integer, required: false
     argument :limit, Integer, required: false
     argument :status, Types::Webhooks::StatusEnum, required: false
+    argument :search_term, String, required: false
 
     type Types::Webhooks::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, status: nil)
+    def resolve(page: nil, limit: nil, status: nil, search_term: nil)
       validate_organization!
 
-      webhooks = current_organization.webhooks
-        .page(page)
-        .per(limit)
+      query = WebhooksQuery.new(organization: current_organization)
+      result = query.call(
+        search_term:,
+        page:,
+        limit:,
+        status:,
+      )
 
-      webhooks = webhooks.where(status:) if status.present?
-
-      webhooks.order(updated_at: :desc)
+      result.webhooks
     end
   end
 end

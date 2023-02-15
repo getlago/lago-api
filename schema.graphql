@@ -4032,7 +4032,7 @@ type Query {
   """
   Query Webhooks
   """
-  webhooks(limit: Int, page: Int, status: WebhookStatusEnum): WebhookCollection!
+  webhooks(limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum): WebhookCollection!
 }
 
 """
