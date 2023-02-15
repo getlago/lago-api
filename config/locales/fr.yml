@@ -1,6 +1,8 @@
 fr:
   money:
     format: '%n %u'
+    decimal_mark: ','
+    thousands_separator: ' '
   date:
     abbr_day_names:
       - Dim

@@ -312,6 +312,10 @@ html
       .charge-details .total-table tr td {
         text-align: right;
       }
+      .charge-details-resume .total-table tr td:first-of-type {
+        text-align: left;
+        padding-left: 50%;
+      }
 
       .breakdown-details table {
         border-collapse: collapse;
@@ -406,7 +410,7 @@ html
           .body-2 = customer.email
 
       .mb-24
-        h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'))
+        h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
         .body-1 = I18n.t('invoice.due_date', date: I18n.l(issuing_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
@@ -424,68 +428,68 @@ html
                   = I18n.t('invoice.all_subscriptions')
             - if add_on? || credit?
               td.body-1 style="text-align: right;" width="30%"
-                = fees.first&.amount&.format(format: I18n.t('money.format'))
+                = fees.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - elsif subscription?
               td.body-1 style="text-align: right;" width="30%"
-                = subscription_amount.format(format: I18n.t('money.format'))
+                = subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - if fees.charge_kind.any?
             tr
               td width="70%"
                 .body-1 = I18n.t('invoice.all_usage_based_fees')
               td.body-1 style="text-align: right;" width="30%"
-                = charge_amount.format(format: I18n.t('money.format'))
+                = charge_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - if legacy? && credits.coupon_kind.any?
             - credits.coupon_kind.order(created_at: :asc).each do |credit|
               tr
                 td width="70%"
                   .body-1 #{credit.invoice_coupon_display_name}
                 td.body-1 style="text-align: right; color: #008559;" width="30%"
-                  = credit.amount.format(format: I18n.t('money.format'))
+                  = credit.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
         table.total-table width="100%"
           - if legacy?
             tr
               td.body-2 width="70%" = I18n.t('invoice.sub_total')
-              td.body-2 width="30%" = subtotal_before_prepaid_credits.format(format: I18n.t('money.format'))
+              td.body-2 width="30%" = subtotal_before_prepaid_credits.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - if subscription? && wallet_transactions.exists?
               tr
                 td.body-2 width="70%" = I18n.t('invoice.prepaid_credits')
-                td.prepaid-amount width="30%" = wallet_transaction_amount.format(format: I18n.t('money.format'))
+                td.prepaid-amount width="30%" = wallet_transaction_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2 = I18n.t('invoice.tax')
-              td.body-2 = vat_amount.format(format: I18n.t('money.format'))
+              td.body-2 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-1 = I18n.t('invoice.total_due')
-              td.body-1 = total_amount.format(format: I18n.t('money.format'))
+              td.body-1 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - else
             - unless credit?
               tr
                 td.body-2 width="70%" = I18n.t('invoice.sub_total_without_tax')
-                td.body-2 width="30%" = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'))
+                td.body-2 width="30%" = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
               tr
                 td.body-2 #{I18n.t('invoice.tax')} (#{vat_rate || 0})%
-                td.body-2 = vat_amount.format(format: I18n.t('money.format'))
+                td.body-2 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
               tr
                 td.body-2 = I18n.t('invoice.sub_total_with_tax')
-                td.body-2 = sub_total_vat_included_amount.format(format: I18n.t('money.format'))
+                td.body-2 = sub_total_vat_included_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - if credits.credit_note_kind.any?
               tr
                 td.body-2 = I18n.t('invoice.credit_notes')
                 td.body-2 style="text-align: right; color: #008559;"
-                  = credit_note_total_amount.format(format: I18n.t('money.format'))
+                  = credit_note_total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - if credits.coupon_kind.any?
               - credits.coupon_kind.order(created_at: :asc).each do |credit|
                 tr
                   td.body-2 #{credit.invoice_coupon_display_name}
                   td.body-2 style="text-align: right; color: #008559;"
-                    = credit.amount.format(format: I18n.t('money.format'))
+                    = credit.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - if subscription? && wallet_transactions.exists?
               tr
                 td.body-2 width="70%" = I18n.t('invoice.prepaid_credits')
-                td.prepaid-amount width="30%" = wallet_transaction_amount.format(format: I18n.t('money.format'))
+                td.prepaid-amount width="30%" = wallet_transaction_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-1 = I18n.t('invoice.total_due')
-              td.body-1 = total_amount.format(format: I18n.t('money.format'))
+              td.body-1 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
 
       p.body-3.mb-24 = organization.invoice_footer
@@ -526,16 +530,16 @@ html
                   .body-1
                     = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.name)
                 td.body-1 style="text-align: right;" width="30%"
-                  = subscription_fees(subscription.id).subscription_kind.first&.amount&.format(format: I18n.t('money.format'))
+                  = subscription_fees(subscription.id).subscription_kind.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             table.total-table width="100%"
               tr
                 td.body-2 width="70%" = I18n.t('invoice.sub_total')
-                td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format(format: I18n.t('money.format'))
+                td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
           - if subscription? && subscription_fees(subscription.id).charge_kind.any?
             .body-1 = I18n.t('invoice.usage_based_fees')
             .mb-24.body-3
-              = I18n.t('invoice.list_of_charges', from: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone, format: :default), to: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone, format: :default))
+              = I18n.t('invoice.list_of_charges', from: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
             .charge-details.mb-24
               table.charge-details-table width="100%"
                 - subscription_fees(subscription.id).charge_kind.group_by(&:charge_id).each do |_charge_id, fees|
@@ -563,7 +567,7 @@ html
                                 = I18n.t('invoice.total_unit_interval', events_count: fee.events_count, units: fee.units)
                               - else
                                 = I18n.t('invoice.total_unit', units: fee.units)
-                        td.body-1 width="30%" = fee.amount.format(format: I18n.t('money.format'))
+                        td.body-1 width="30%" = fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
                   - else
                     tr
                       td width="70%"
@@ -575,16 +579,17 @@ html
                             = I18n.t('invoice.total_unit_interval', events_count: fees.sum(&:events_count), units: fees.sum(&:units))
                           - else
                             = I18n.t('invoice.total_unit', units: fees.sum(&:units))
-                      td.body-1 width="30%" = fees.sum(&:amount).format(format: I18n.t('money.format'))
+                      td.body-1 width="30%" = fees.sum(&:amount).format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
-              table.total-table width="100%"
-                tr
-                  td.body-2 width="70%" = I18n.t('invoice.sub_total')
-                  td.body-1 width="30%" = invoice_subscription(subscription.id).charge_amount.format(format: I18n.t('money.format'))
-              table.total-table width="100%"
-                tr
-                  td.body-2 width="70%" = I18n.t('invoice.total')
-                  td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format(format: I18n.t('money.format'))
+              .charge-details-resume
+                table.total-table width="100%"
+                  tr
+                    td.body-2 width="70%" = I18n.t('invoice.sub_total')
+                    td.body-1 width="30%" = invoice_subscription(subscription.id).charge_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+                table.total-table width="100%"
+                  tr
+                    td.body-2 width="70%" = I18n.t('invoice.total')
+                    td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
             - recurring_fees(subscription.id).group_by(&:charge_id).each do |_charge_id, fees|
               - if fees.sum(&:units) > 0
@@ -601,7 +606,7 @@ html
                       table.breakdown-details-table width="100%"
                         - recurring_breakdown(fee).each do |breakdown|
                           tr
-                            td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
+                            td.body-3 width="15%" = I18n.l(breakdown.date, format: :default)
                             td.body-1 width="65%"
                               - if breakdown.action.to_sym == :add
                                 | +#{breakdown.count} #{fee.item_name}

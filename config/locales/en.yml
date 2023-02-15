@@ -1,6 +1,8 @@
 en:
   money:
     format: '%u%n'
+    decimal_mark: '.'
+    thousands_separator: ','
   date:
     formats:
       default: '%b %d, %Y'

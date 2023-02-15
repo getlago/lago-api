@@ -32,7 +32,7 @@ fr:
     usage_based_fees: Frais de consommation
     list_of_charges: Liste des frais de consommation du %{from} au %{to}
     see_breakdown: Consultez le détails ci-après
-    total_unit_interval: "Nombre total d'unités: %{events_count} événements pour %{units}"
+    total_unit_interval: "Nombre total d'unités: %{events_count} événement(s) pour %{units}"
     total_unit: "Nombre total d'unités: %{units}"
     total: Total
     breakdown: Détails de consommation

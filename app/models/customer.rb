@@ -81,9 +81,9 @@ class Customer < ApplicationRecord
   end
 
   def preferred_document_locale
-    return document_locale&.to_sym if document_locale.present?
+    return document_locale.to_sym if document_locale?
 
-    organization.document_locale&.to_sym
+    organization.document_locale.to_sym
   end
 
   private
