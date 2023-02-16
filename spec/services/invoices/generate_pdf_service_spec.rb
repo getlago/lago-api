@@ -2,9 +2,10 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::GenerateService, type: :service do
-  subject(:invoice_generate_service) { described_class.new }
+RSpec.describe Invoices::GeneratePdfService, type: :service do
+  subject(:invoice_generate_service) { described_class.new(invoice:, context:) }
 
+  let(:context) { 'graphql' }
   let(:organization) { create(:organization, name: 'LAGO') }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
@@ -30,16 +31,19 @@ RSpec.describe Invoices::GenerateService, type: :service do
       .and_return(pdf_response)
   end
 
-  describe '.generate' do
+  describe '#call' do
     it 'generates the invoice synchronously' do
-      result = invoice_generate_service.generate(invoice_id: invoice.id)
+      result = invoice_generate_service.call
 
       expect(result.invoice.file).to be_present
     end
 
     context 'with not found invoice' do
+      let(:invoice_subscription) { nil }
+      let(:invoice) { nil }
+
       it 'returns a result with error' do
-        result = invoice_generate_service.generate(invoice_id: '123456')
+        result = invoice_generate_service.call
 
         expect(result.success).to be_falsey
         expect(result.error.error_code).to eq('invoice_not_found')
@@ -50,7 +54,7 @@ RSpec.describe Invoices::GenerateService, type: :service do
       let(:invoice) { create(:invoice, customer:, status: :draft, organization:) }
 
       it 'returns a result with error' do
-        result = invoice_generate_service.generate(invoice_id: invoice.id)
+        result = invoice_generate_service.call
 
         expect(result.success).to be_falsey
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
@@ -70,7 +74,7 @@ RSpec.describe Invoices::GenerateService, type: :service do
       it 'does not generate the pdf' do
         allow(LagoHttpClient::Client).to receive(:new)
 
-        invoice_generate_service.generate(invoice_id: invoice.id)
+        invoice_generate_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
       end
@@ -95,24 +99,18 @@ RSpec.describe Invoices::GenerateService, type: :service do
       end
 
       it 'generates the invoice synchronously' do
-        result = invoice_generate_service.generate(invoice_id: invoice.id)
+        result = invoice_generate_service.call
 
         expect(result.invoice.file).to be_present
       end
     end
-  end
 
-  describe '.generate_from_api' do
-    it 'generates the invoice' do
-      invoice_generate_service.generate_from_api(invoice)
+    context 'when in API context' do
+      let(:context) { 'api' }
 
-      expect(invoice.file).to be_present
-    end
-
-    it 'calls the SendWebhook job' do
-      expect do
-        invoice_generate_service.generate_from_api(invoice)
-      end.to have_enqueued_job(SendWebhookJob)
+      it 'calls the SendWebhook job' do
+        expect { invoice_generate_service.call }.to have_enqueued_job(SendWebhookJob)
+      end
     end
   end
 end
