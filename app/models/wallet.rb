@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Wallet < ApplicationRecord
+  include PaperTrailTraceable
+
   belongs_to :customer
 
   has_one :organization, through: :customer

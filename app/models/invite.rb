@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invite < ApplicationRecord
+  include PaperTrailTraceable
+
   belongs_to :organization
   belongs_to :recipient, class_name: 'Membership', foreign_key: :membership_id, optional: true
 

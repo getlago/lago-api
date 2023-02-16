@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 class Customer < ApplicationRecord
+  include PaperTrailTraceable
   include Sequenced
   include Currencies
   include CustomerTimezone
   include OrganizationTimezone
   include Discard::Model
-
   self.discard_column = :deleted_at
 
   before_save :ensure_slug

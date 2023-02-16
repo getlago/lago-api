@@ -542,6 +542,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_21_102035) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "versions", force: :cascade do |t|
+    t.string "item_type", null: false
+    t.string "item_id", null: false
+    t.string "event", null: false
+    t.string "whodunnit"
+    t.jsonb "object"
+    t.jsonb "object_changes"
+    t.datetime "created_at"
+    t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
+  end
+
   create_table "wallet_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "wallet_id", null: false
     t.integer "transaction_type", null: false

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class AppliedAddOn < ApplicationRecord
+  include PaperTrailTraceable
   include Currencies
 
   belongs_to :add_on

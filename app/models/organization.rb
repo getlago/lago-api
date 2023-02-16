@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Organization < ApplicationRecord
+  include PaperTrailTraceable
   include OrganizationTimezone
 
   has_many :memberships

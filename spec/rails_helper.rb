@@ -20,8 +20,9 @@ SimpleCov.start do
 end
 
 # Prevent database truncation if the environment is production
-abort("The Rails environment is running in production mode!") if Rails.env.production?
+abort('The Rails environment is running in production mode!') if Rails.env.production?
 require 'rspec/rails'
+require 'paper_trail/frameworks/rspec'
 require 'sidekiq/testing'
 Sidekiq::Testing.fake!
 ActiveJob::Uniqueness.test_mode!

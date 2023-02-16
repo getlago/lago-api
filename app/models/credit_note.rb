@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class CreditNote < ApplicationRecord
+  include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
 

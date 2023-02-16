@@ -12,6 +12,8 @@ RSpec.describe Organization, type: :model do
     )
   end
 
+  it_behaves_like 'paper_trail traceable'
+
   describe 'Validations' do
     it 'is valid with valid attributes' do
       expect(organization).to be_valid

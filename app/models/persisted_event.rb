@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class PersistedEvent < ApplicationRecord
+  include PaperTrailTraceable
   include Discard::Model
   self.discard_column = :deleted_at
 

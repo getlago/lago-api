@@ -3,14 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe Customer, type: :model do
+  subject(:customer) { create(:customer) }
+
   let(:organization) { create(:organization) }
+
+  it_behaves_like 'paper_trail traceable'
 
   describe 'validations' do
     subject(:customer) do
-      described_class.new(
-        organization: organization,
-        external_id: external_id,
-      )
+      described_class.new(organization:, external_id:)
     end
 
     let(:external_id) { SecureRandom.uuid }
@@ -55,10 +56,7 @@ RSpec.describe Customer, type: :model do
 
   describe 'applicable_vat_rate' do
     subject(:customer) do
-      described_class.new(
-        organization: organization,
-        vat_rate: 12,
-      )
+      described_class.new(organization:, vat_rate: 12)
     end
 
     it 'returns the customer vat_rate' do
@@ -111,10 +109,7 @@ RSpec.describe Customer, type: :model do
 
   describe '#applicable_timezone' do
     subject(:customer) do
-      described_class.new(
-        organization: organization,
-        timezone: 'Europe/Paris',
-      )
+      described_class.new(organization:, timezone: 'Europe/Paris')
     end
 
     it 'returns the customer timezone' do
@@ -145,7 +140,7 @@ RSpec.describe Customer, type: :model do
 
   describe '#applicable_invoice_grace_period' do
     subject(:customer) do
-      described_class.new(organization: organization, invoice_grace_period: 3)
+      described_class.new(organization:, invoice_grace_period: 3)
     end
 
     it 'returns the customer invoice_grace_period' do
@@ -178,7 +173,7 @@ RSpec.describe Customer, type: :model do
     subject(:customer) do
       build(
         :customer,
-        organization: organization,
+        organization:,
         timezone: 'Europe/Paris',
         created_at: DateTime.parse('2022-11-17 23:34:23'),
       )
@@ -199,10 +194,7 @@ RSpec.describe Customer, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
 
     let(:customer) do
-      build(
-        :customer,
-        organization: organization,
-      )
+      build(:customer, organization:)
     end
 
     it 'assigns a sequential id and a slug to a new customer' do
