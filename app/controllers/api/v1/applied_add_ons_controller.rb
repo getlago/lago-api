@@ -4,11 +4,17 @@ module Api
   module V1
     class AppliedAddOnsController < Api::BaseController
       def create
-        service = AppliedAddOns::CreateService.new
-        result = service.create_from_api(
-          organization: current_organization,
-          args: create_params,
+        customer = Customer.find_by(
+          external_id: create_params[:external_customer_id],
+          organization_id: current_organization.id,
         )
+
+        add_on = AddOn.find_by(
+          code: create_params[:add_on_code],
+          organization_id: current_organization.id,
+        )
+
+        result = AppliedAddOns::CreateService.call(customer:, add_on:, params: create_params)
 
         if result.success?
           render(
