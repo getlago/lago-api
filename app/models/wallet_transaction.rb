@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class WalletTransaction < ApplicationRecord
+  include PaperTrailTraceable
+
   belongs_to :wallet
   belongs_to :invoice, optional: true
 

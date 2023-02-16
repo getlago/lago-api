@@ -3,9 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Plan, type: :model do
-  describe '.has_trial?' do
-    let(:plan) { build(:plan, trial_period: 3) }
+  subject(:plan) { build(:plan, trial_period: 3) }
 
+  it_behaves_like 'paper_trail traceable'
+
+  describe '.has_trial?' do
     it 'returns true when trial_period' do
       expect(plan).to have_trial
     end

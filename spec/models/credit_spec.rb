@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe Credit, type: :model do
   describe 'invoice item' do
     context 'when credit is a coupon' do
-      subject(:credit) { create(:credit, applied_coupon: applied_coupon) }
+      subject(:credit) { create(:credit, applied_coupon:) }
 
-      let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+      let(:applied_coupon) { create(:applied_coupon, coupon:) }
       let(:coupon) do
         create(
           :coupon,

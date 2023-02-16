@@ -284,6 +284,9 @@ GEM
       snaky_hash (~> 2.0)
       version_gem (~> 1.1)
     os (1.1.4)
+    paper_trail (14.0.0)
+      activerecord (>= 6.0)
+      request_store (~> 1.4)
     pg (1.4.1)
     public_suffix (4.0.7)
     puma (5.6.4)
@@ -467,6 +470,7 @@ DEPENDENCIES
   multipart-post
   newrelic_rpm
   oauth2
+  paper_trail
   pg
   puma (~> 5.6)
   rack-cors

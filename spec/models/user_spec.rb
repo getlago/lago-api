@@ -5,6 +5,8 @@ require 'rails_helper'
 RSpec.describe User, type: :model do
   subject { described_class.new(email: 'gavin@hooli.com', password: 'f**k_piedpiper') }
 
+  it_behaves_like 'paper_trail traceable'
+
   describe 'Validations' do
     it 'is valid with valid attributes' do
       expect(subject).to be_valid
