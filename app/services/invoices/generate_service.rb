@@ -22,7 +22,7 @@ module Invoices
     private
 
     def generate_pdf(invoice)
-      I18n.locale = invoice&.customer&.preferred_document_locale
+      I18n.locale = invoice.customer.preferred_document_locale
 
       pdf_service = Utils::PdfGenerator.new(template: 'invoice', context: invoice)
       pdf_result = pdf_service.call
