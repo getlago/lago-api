@@ -23,10 +23,17 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = ::AppliedCoupons::CreateService
-          .new(context[:current_user])
-          .create(**args.merge(organization_id: current_organization.id))
+        customer = Customer.find_by(
+          id: args[:customer_id],
+          organization_id: current_organization.id,
+        )
 
+        coupon = Coupon.find_by(
+          id: args[:coupon_id],
+          organization_id: current_organization.id,
+        )
+
+        result = ::AppliedCoupons::CreateService.call(customer:, coupon:, params: args)
         result.success? ? result.applied_coupon : result_error(result)
       end
     end

@@ -2,79 +2,38 @@
 
 module AppliedCoupons
   class CreateService < BaseService
-    def create(**args)
-      @customer = Customer.find_by(
-        id: args[:customer_id],
-        organization_id: args[:organization_id],
-      )
-
-      @coupon = Coupon.active.find_by(
-        id: args[:coupon_id],
-        organization_id: args[:organization_id],
-      )
-
-      process_creation(
-        amount_cents: args[:amount_cents] || coupon&.amount_cents,
-        amount_currency: args[:amount_currency] || coupon&.amount_currency,
-        percentage_rate: args[:percentage_rate] || coupon&.percentage_rate,
-        frequency: args[:frequency] || coupon&.frequency,
-        frequency_duration: args[:frequency_duration] || coupon&.frequency_duration,
-      )
+    def self.call(...)
+      new(...).call
     end
 
-    def create_from_api(organization:, args:)
-      @customer = Customer.find_by(
-        external_id: args[:external_customer_id],
-        organization_id: organization.id,
-      )
+    def initialize(customer:, coupon:, params:)
+      @customer = customer
+      @coupon = coupon
+      @params = params
 
-      @coupon = Coupon.active.find_by(
-        code: args[:coupon_code],
-        organization_id: organization.id,
-      )
-
-      process_creation(
-        amount_cents: args[:amount_cents] || coupon&.amount_cents,
-        amount_currency: args[:amount_currency] || coupon&.amount_currency,
-        percentage_rate: args[:percentage_rate] || coupon&.percentage_rate,
-        frequency: args[:frequency] || coupon&.frequency,
-        frequency_duration: args[:frequency_duration] || coupon&.frequency_duration,
-      )
+      super
     end
 
-    private
-
-    attr_reader :customer, :coupon
-
-    def check_preconditions
-      return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'coupon') unless coupon
-      return result.not_allowed_failure!(code: 'plan_overlapping') if plan_limitation_overlapping?
-      return if reusable_coupon?
-
-      result.single_validation_failure!(field: 'coupon', error_code: 'coupon_is_not_reusable')
-    end
-
-    def process_creation(applied_coupon_attributes)
+    def call
       check_preconditions
       return result if result.error
 
       applied_coupon = AppliedCoupon.new(
-        customer: customer,
-        coupon: coupon,
-        amount_cents: applied_coupon_attributes[:amount_cents],
-        amount_currency: applied_coupon_attributes[:amount_currency],
-        percentage_rate: applied_coupon_attributes[:percentage_rate],
-        frequency: applied_coupon_attributes[:frequency],
-        frequency_duration: applied_coupon_attributes[:frequency_duration],
-        frequency_duration_remaining: applied_coupon_attributes[:frequency_duration],
+        customer:,
+        coupon:,
+        amount_cents: params[:amount_cents] || coupon.amount_cents,
+        amount_currency: params[:amount_currency] || coupon.amount_currency,
+        percentage_rate: params[:percentage_rate] || coupon.percentage_rate,
+        frequency: params[:frequency] || coupon.frequency,
+        frequency_duration: params[:frequency_duration] || coupon.frequency_duration,
+        frequency_duration_remaining: params[:frequency_duration] || coupon.frequency_duration,
       )
 
       if coupon.fixed_amount?
         ActiveRecord::Base.transaction do
           currency_result = Customers::UpdateService.new(nil).update_currency(
-            customer: customer,
-            currency: applied_coupon_attributes[:amount_currency],
+            customer:,
+            currency: params[:amount_currency] || coupon.amount_currency,
           )
           return currency_result unless currency_result.success?
 
@@ -89,6 +48,19 @@ module AppliedCoupons
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    end
+
+    private
+
+    attr_reader :customer, :coupon, :params
+
+    def check_preconditions
+      return result.not_found_failure!(resource: 'customer') unless customer
+      return result.not_found_failure!(resource: 'coupon') unless coupon&.active?
+      return result.not_allowed_failure!(code: 'plan_overlapping') if plan_limitation_overlapping?
+      return if reusable_coupon?
+
+      result.single_validation_failure!(field: 'coupon', error_code: 'coupon_is_not_reusable')
     end
 
     def reusable_coupon?

@@ -3,38 +3,36 @@
 require 'rails_helper'
 
 RSpec.describe AppliedCoupons::CreateService, type: :service do
-  subject(:create_service) { described_class.new(membership.user) }
+  subject(:create_service) do
+    described_class.new(customer:, coupon:, params:)
+  end
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:customer) { create(:customer, organization: organization) }
-  let(:customer_id) { customer.id }
-
-  let(:coupon) { create(:coupon, status: 'active', organization: organization) }
-  let(:coupon_id) { coupon.id }
+  let(:customer) { create(:customer, organization:) }
+  let(:coupon) { create(:coupon, status: 'active', organization:) }
 
   let(:amount_cents) { nil }
   let(:amount_currency) { nil }
+  let(:percentage_rate) { nil }
+
+  let(:params) do
+    {
+      amount_cents:,
+      amount_currency:,
+      percentage_rate:,
+    }
+  end
 
   let(:create_subscription) { customer.present? }
 
   before do
-    create(:active_subscription, customer_id: customer_id) if create_subscription
+    create(:active_subscription, customer:) if create_subscription
   end
 
   describe 'create' do
-    let(:create_args) do
-      {
-        coupon_id: coupon_id,
-        customer_id: customer_id,
-        amount_cents: amount_cents,
-        amount_currency: amount_currency,
-        organization_id: organization.id,
-      }
-    end
-
-    let(:create_result) { create_service.create(**create_args) }
+    let(:create_result) { create_service.call }
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -69,20 +67,13 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
         create(
           :coupon,
           status: 'active',
-          organization: organization,
+          organization:,
           coupon_type: 'percentage',
           percentage_rate: 10.00,
         )
       end
 
-      let(:create_args) do
-        {
-          coupon_id: coupon_id,
-          customer_id: customer_id,
-          percentage_rate: 20.00,
-          organization_id: organization.id,
-        }
-      end
+      let(:percentage_rate) { 20.00 }
 
       before { customer.update!(currency: nil) }
 
@@ -100,9 +91,9 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     end
 
     context 'when an other coupon is already applied to the customer' do
-      let(:other_coupon) { create(:coupon, status: 'active', organization: organization) }
+      let(:other_coupon) { create(:coupon, status: 'active', organization:) }
 
-      before { create(:applied_coupon, customer: customer, coupon: other_coupon) }
+      before { create(:applied_coupon, customer:, coupon:) }
 
       it 'applied the coupon to the customer' do
         expect { create_result }.to change(AppliedCoupon, :count).by(1)
@@ -139,7 +130,6 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
     context 'when customer is not found' do
       let(:customer) { nil }
-      let(:customer_id) { 'foo' }
 
       it 'returns a not found error' do
         aggregate_failures do
@@ -151,7 +141,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     end
 
     context 'when coupon is not found' do
-      let(:coupon_id) { 'foo' }
+      let(:coupon) { nil }
 
       it 'returns a not found error' do
         aggregate_failures do
@@ -163,9 +153,9 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     end
 
     context 'when coupon is already applied to the customer and is not reusable' do
-      let(:coupon) { create(:coupon, status: 'active', organization: organization, reusable: false) }
+      let(:coupon) { create(:coupon, status: 'active', organization:, reusable: false) }
 
-      before { create(:applied_coupon, customer: customer, coupon: coupon) }
+      before { create(:applied_coupon, customer:, coupon:) }
 
       it 'fails' do
         aggregate_failures do
@@ -212,181 +202,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
     end
 
     context 'when currency of coupon does not match customer currency' do
-      let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
-
-      before { customer.update!(currency: 'EUR') }
-
-      it 'fails' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:currency)
-          expect(create_result.error.messages[:currency]).to include('currencies_does_not_match')
-        end
-      end
-    end
-  end
-
-  describe 'create_from_api' do
-    let(:coupon_code) { coupon&.code }
-    let(:external_customer_id) { customer&.external_id }
-
-    let(:create_args) do
-      {
-        coupon_code: coupon_code,
-        external_customer_id: external_customer_id,
-        amount_cents: amount_cents,
-        amount_currency: amount_currency,
-      }
-    end
-
-    let(:create_result) do
-      create_service.create_from_api(
-        organization: organization,
-        args: create_args,
-      )
-    end
-
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
-    it 'applies the coupon to the customer' do
-      expect { create_result }.to change(AppliedCoupon, :count).by(1)
-
-      expect(create_result.applied_coupon.customer).to eq(customer)
-      expect(create_result.applied_coupon.coupon).to eq(coupon)
-      expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
-      expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
-    end
-
-    it 'calls SegmentTrackJob' do
-      applied_coupon = create_result.applied_coupon
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'applied_coupon_created',
-        properties: {
-          customer_id: applied_coupon.customer.id,
-          coupon_code: applied_coupon.coupon.code,
-          coupon_name: applied_coupon.coupon.name,
-          organization_id: applied_coupon.coupon.organization_id,
-        },
-      )
-    end
-
-    context 'when coupon is already applied to the customer' do
-      before { create(:applied_coupon, customer: customer, coupon: coupon) }
-
-      it 'applies the coupon to the customer' do
-        expect { create_result }.to change(AppliedCoupon, :count).by(1)
-
-        expect(create_result.applied_coupon.customer).to eq(customer)
-        expect(create_result.applied_coupon.coupon).to eq(coupon)
-        expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
-        expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
-      end
-    end
-
-    context 'with overridden amount' do
-      let(:amount_cents) { 123 }
-      let(:amount_currency) { 'EUR' }
-
-      it { expect(create_result.applied_coupon.amount_cents).to eq(123) }
-      it { expect(create_result.applied_coupon.amount_currency).to eq('EUR') }
-
-      context 'when currency does not match' do
-        let(:amount_currency) { 'NOK' }
-
-        before { customer.update!(currency: 'EUR') }
-
-        it 'fails' do
-          aggregate_failures do
-            expect(create_result).not_to be_success
-            expect(create_result.error).to be_a(BaseService::ValidationFailure)
-            expect(create_result.error.messages.keys).to include(:currency)
-            expect(create_result.error.messages[:currency]).to include('currencies_does_not_match')
-          end
-        end
-      end
-    end
-
-    context 'when customer is not found' do
-      let(:customer) { nil }
-      let(:external_customer_id) { 'foo' }
-
-      it 'returns a not found error' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(create_result.error.message).to eq('customer_not_found')
-        end
-      end
-    end
-
-    context 'when coupon is not found' do
-      let(:coupon_code) { 'foo' }
-
-      it 'returns a not found error' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(create_result.error.message).to eq('coupon_not_found')
-        end
-      end
-    end
-
-    context 'when coupon is already applied and is not reusable' do
-      let(:coupon) { create(:coupon, status: 'active', organization: organization, reusable: false) }
-
-      before { create(:applied_coupon, customer: customer, coupon: coupon) }
-
-      it 'returns a not found error' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:coupon)
-          expect(create_result.error.messages[:coupon]).to include('coupon_is_not_reusable')
-        end
-      end
-    end
-
-    context 'when coupon is already applied with the same plan limitation' do
-      let(:plan) { create(:plan, organization:) }
-      let(:coupon_old) { create(:coupon, status: 'active', organization:, limited_plans: true) }
-      let(:coupon) { create(:coupon, status: 'active', organization:, limited_plans: true) }
-      let(:coupon_plan_old) { create(:coupon_plan, coupon: coupon_old, plan:) }
-      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-
-      before do
-        coupon_plan_old
-        coupon_plan
-        create(:applied_coupon, customer:, coupon: coupon_old)
-      end
-
-      it 'fails' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(create_result.error.code).to eq('plan_overlapping')
-        end
-      end
-    end
-
-    context 'when coupon is inactive' do
-      before { coupon.terminated! }
-
-      it 'returns a not found error' do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(create_result.error.message).to eq('coupon_not_found')
-        end
-      end
-    end
-
-    context 'when currency of coupon does not match customer currency' do
-      let(:coupon) { create(:coupon, status: 'active', organization: organization, amount_currency: 'NOK') }
+      let(:coupon) { create(:coupon, status: 'active', organization:, amount_currency: 'NOK') }
 
       before { customer.update!(currency: 'EUR') }
 
