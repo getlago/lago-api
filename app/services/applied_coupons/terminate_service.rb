@@ -2,10 +2,6 @@
 
 module AppliedCoupons
   class TerminateService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(applied_coupon:)
       @applied_coupon = applied_coupon
       super

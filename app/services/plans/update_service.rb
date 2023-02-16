@@ -2,10 +2,6 @@
 
 module Plans
   class UpdateService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(plan:, params:)
       @plan = plan
       @params = params

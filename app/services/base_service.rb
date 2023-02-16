@@ -132,10 +132,18 @@ class BaseService
     attr_accessor :failure
   end
 
+  def self.call(...)
+    new(...).call
+  end
+
   def initialize(current_user = nil)
     @result = Result.new
     @source = CurrentContext&.source
     result.user = current_user
+  end
+
+  def call
+    raise NotImplementedError
   end
 
   private

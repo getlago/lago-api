@@ -2,10 +2,6 @@
 
 module Invoices
   class CalculateFeesService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(invoice:, subscriptions:, timestamp:, recurring: false, context: nil)
       @invoice = invoice
       @subscriptions = subscriptions
