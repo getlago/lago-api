@@ -1,25 +1,29 @@
 # frozen_string_literal: true
 
 module Invoices
-  class GenerateService < BaseService
-    def generate_from_api(invoice)
-      generate_pdf(invoice)
+  class GeneratePdfService < BaseService
+    def initialize(invoice:, context: nil)
+      @invoice = invoice
+      @context = context
 
-      SendWebhookJob.perform_later('invoice.generated', invoice)
+      super
     end
 
-    def generate(invoice_id:)
-      invoice = Invoice.find_by(id: invoice_id)
+    def call
       return result.not_found_failure!(resource: 'invoice') if invoice.blank?
       return result.not_allowed_failure!(code: 'is_draft') if invoice.draft?
 
       generate_pdf(invoice) if invoice.file.blank?
+
+      SendWebhookJob.perform_later('invoice.generated', invoice) if should_send_webhook?
 
       result.invoice = invoice
       result
     end
 
     private
+
+    attr_reader :invoice, :context
 
     def generate_pdf(invoice)
       pdf_service = Utils::PdfGenerator.new(template: 'invoice', context: invoice)
@@ -32,6 +36,10 @@ module Invoices
       )
 
       invoice.save!
+    end
+
+    def should_send_webhook?
+      context == 'api'
     end
   end
 end
