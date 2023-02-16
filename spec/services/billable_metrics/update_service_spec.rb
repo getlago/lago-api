@@ -3,25 +3,25 @@
 require 'rails_helper'
 
 RSpec.describe BillableMetrics::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(membership.user) }
+  subject(:update_service) { described_class.new(billable_metric:, params:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe 'update' do
-    let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:update_args) do
-      {
-        id: billable_metric&.id,
-        name: 'New Metric',
-        code: 'new_metric',
-        description: 'New metric description',
-        aggregation_type: 'count_agg',
-      }
-    end
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:params) do
+    {
+      name: 'New Metric',
+      code: 'new_metric',
+      description: 'New metric description',
+      aggregation_type: 'count_agg',
+    }.tap { |p| p[:group] = group unless group.nil? }
+  end
+  let(:group) { nil }
 
+  describe '#call' do
     it 'updates the billable metric' do
-      result = update_service.update(**update_args)
+      result = update_service.call
 
       aggregate_failures do
         expect(result).to be_success
@@ -46,32 +46,37 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it 'updates billable metric\'s group' do
-        create(:group, billable_metric:)
-
-        expect do
-          update_service.update(**update_args.merge(group: {}))
-        end.to change { billable_metric.active_groups.reload.count }.from(1).to(0)
-
-        expect do
-          update_service.update(**update_args.merge(group:))
-        end.to change { billable_metric.active_groups.reload.count }.from(0).to(5)
+        expect { update_service.call }.to change { billable_metric.active_groups.reload.count }.from(0).to(5)
       end
 
-      it 'returns an error if group is invalid' do
-        result = update_service.update(**update_args.merge(group: { key: 1 }))
+      context 'with empty group' do
+        let(:group) { {} }
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+        before { create(:group, billable_metric:) }
+
+        it 'updates billable metric\'s group' do
+          expect { update_service.call }.to change { billable_metric.active_groups.reload.count }.from(1).to(0)
+        end
+      end
+
+      context 'with invalid group' do
+        let(:group) { { key: 1 } }
+
+        it 'returns an error if group is invalid' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+          end
         end
       end
     end
 
     context 'with validation errors' do
-      let(:update_args) do
+      let(:params) do
         {
-          id: billable_metric.id,
           name: nil,
           code: 'new_metric',
           description: 'New metric description',
@@ -80,7 +85,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it 'returns an error' do
-        result = update_service.update(**update_args)
+        result = update_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -94,115 +99,13 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       let(:billable_metric) { nil }
 
       it 'returns an error' do
-        result = update_service.update(**update_args)
-
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq('billable_metric_not_found')
-      end
-    end
-  end
-
-  describe 'update_from_api' do
-    let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:name) { 'New Metric' }
-    let(:update_args) do
-      {
-        name:,
-        code: 'new_metric',
-        description: 'New metric description',
-        aggregation_type: 'count_agg',
-        field_name: 'amount_sum',
-      }
-    end
-
-    it 'updates the billable metric' do
-      result = update_service.update_from_api(
-        organization:,
-        code: billable_metric.code,
-        params: update_args,
-      )
-
-      aggregate_failures do
-        expect(result).to be_success
-
-        metric = result.billable_metric
-        expect(metric.id).to eq(billable_metric.id)
-        expect(metric.name).to eq(update_args[:name])
-        expect(metric.code).to eq(update_args[:code])
-        expect(metric.aggregation_type).to eq(update_args[:aggregation_type])
-      end
-    end
-
-    context 'with group parameter' do
-      let(:group) do
-        {
-          key: 'cloud',
-          values: [
-            { name: 'AWS', key: 'region', values: %w[usa europe] },
-            { name: 'Google', key: 'region', values: ['usa'] },
-          ],
-        }
-      end
-
-      it 'updates billable metric\'s group' do
-        create(:group, billable_metric:)
-
-        expect do
-          update_service.update_from_api(
-            organization:,
-            code: billable_metric.code,
-            params: update_args.merge(group: {}),
-          )
-        end.to change { billable_metric.active_groups.reload.count }.from(1).to(0)
-
-        expect do
-          update_service.update_from_api(organization:, code: 'new_metric', params: update_args.merge(group:))
-        end.to change { billable_metric.active_groups.reload.count }.from(0).to(5)
-      end
-
-      it 'returns an error if group is invalid' do
-        result = update_service.update_from_api(
-          organization:,
-          code: billable_metric.code,
-          params: update_args.merge(group: { key: 1 }),
-        )
+        result = update_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:group]).to eq(['value_is_invalid'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq('billable_metric_not_found')
         end
-      end
-    end
-
-    context 'with validation errors' do
-      let(:name) { nil }
-
-      it 'returns an error' do
-        result = update_service.update_from_api(
-          organization:,
-          code: billable_metric.code,
-          params: update_args,
-        )
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
-        end
-      end
-    end
-
-    context 'when billable metric is not found' do
-      it 'returns an error' do
-        result = update_service.update_from_api(
-          organization:,
-          code: 'fake_code12345',
-          params: update_args,
-        )
-
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq('billable_metric_not_found')
       end
     end
   end
