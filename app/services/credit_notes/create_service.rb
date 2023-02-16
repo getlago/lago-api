@@ -52,7 +52,7 @@ module CreditNotes
 
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
-          vat_amount_cents: credit_note.items.sum(&:vat_amount_cents),
+          vat_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.vat_rate }.fdiv(100).ceil,
           balance_amount_cents: credit_note.credit_amount_cents,
         )
       end
