@@ -2,10 +2,6 @@
 
 module Coupons
   class DestroyService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(coupon:)
       @coupon = coupon
       super

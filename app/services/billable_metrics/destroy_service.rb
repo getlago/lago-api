@@ -2,10 +2,6 @@
 
 module BillableMetrics
   class DestroyService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(metric:)
       @metric = metric
       super

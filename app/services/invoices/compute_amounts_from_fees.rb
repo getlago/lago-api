@@ -2,10 +2,6 @@
 
 module Invoices
   class ComputeAmountsFromFees < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(invoice:)
       @invoice = invoice
       super

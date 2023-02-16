@@ -2,10 +2,6 @@
 
 module Plans
   class PrepareDestroyService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(plan:)
       @plan = plan
       super

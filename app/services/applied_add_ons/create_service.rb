@@ -2,10 +2,6 @@
 
 module AppliedAddOns
   class CreateService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(customer:, add_on:, params:)
       @customer = customer
       @add_on = add_on
