@@ -20,10 +20,17 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = ::AppliedAddOns::CreateService
-          .new(context[:current_user])
-          .create(**args.merge(organization_id: current_organization.id))
+        customer = Customer.find_by(
+          id: args[:customer_id],
+          organization_id: current_organization.id,
+        )
 
+        add_on = AddOn.find_by(
+          id: args[:add_on_id],
+          organization_id: current_organization.id,
+        )
+
+        result = ::AppliedAddOns::CreateService.call(customer:, add_on:, params: args)
         result.success? ? result.applied_add_on : result_error(result)
       end
     end
