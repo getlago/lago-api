@@ -2,52 +2,19 @@
 
 module Coupons
   class UpdateService < BaseService
-    def update(args)
-      @coupon = result.user.coupons.find_by(id: args[:id])
-      return result.not_found_failure!(resource: 'coupon') unless coupon
+    def initialize(coupon:, params:)
+      @coupon = coupon
+      @params = params
 
-      coupon.name = args[:name]
-      coupon.expiration = args[:expiration]&.to_sym
-      coupon.expiration_at = args[:expiration_at]
-
-      @limitations = args[:applies_to]&.to_h&.deep_symbolize_keys || {}
-
-      unless coupon.applied_coupons.exists?
-        if !plan_identifiers.nil? && plans.count != plan_identifiers.count
-          return result.not_found_failure!(resource: 'plans')
-        end
-
-        coupon.code = args[:code]
-        coupon.coupon_type = args[:coupon_type]
-        coupon.amount_cents = args[:amount_cents]
-        coupon.amount_currency = args[:amount_currency]
-        coupon.percentage_rate = args[:percentage_rate]
-        coupon.frequency = args[:frequency]
-        coupon.frequency_duration = args[:frequency_duration]
-        coupon.reusable = args[:reusable]
-        coupon.limited_plans = plan_identifiers.present? unless plan_identifiers.nil?
-      end
-
-      ActiveRecord::Base.transaction do
-        coupon.save!
-
-        process_plans unless plan_identifiers.nil? || coupon.applied_coupons.exists?
-      end
-
-      result.coupon = coupon
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      super
     end
 
-    def update_from_api(organization:, code:, params:)
-      @coupon = organization.coupons.find_by(code:)
+    def call
       return result.not_found_failure!(resource: 'coupon') unless coupon
-
       return result unless valid?(params)
 
       coupon.name = params[:name] if params.key?(:name)
-      coupon.expiration = params[:expiration] if params.key?(:expiration)
+      coupon.expiration = params[:expiration]&.to_sym if params.key?(:expiration)
       coupon.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
 
       @limitations = params[:applies_to]&.to_h&.deep_symbolize_keys || {}
@@ -82,7 +49,7 @@ module Coupons
 
     private
 
-    attr_reader :coupon, :limitations
+    attr_reader :coupon, :params, :limitations
 
     def plan_identifiers
       key = api_context? ? :plan_codes : :plan_ids

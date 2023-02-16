@@ -20,10 +20,10 @@ module Api
       end
 
       def update
-        service = Coupons::UpdateService.new
-        result = service.update_from_api(
-          organization: current_organization,
-          code: params[:code],
+        coupon = current_organization.coupons.find_by(code: params[:code])
+
+        result = Coupons::UpdateService.call(
+          coupon:,
           params: CouponLegacyInput.new(
             current_organization,
             input_params,

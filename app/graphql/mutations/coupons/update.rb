@@ -27,9 +27,8 @@ module Mutations
       type Types::Coupons::Object
 
       def resolve(**args)
-        result = ::Coupons::UpdateService.new(context[:current_user])
-          .update(args)
-
+        coupon = context[:current_user].coupons.find_by(id: args[:id])
+        result = ::Coupons::UpdateService.call(coupon:, params: args)
         result.success? ? result.coupon : result_error(result)
       end
     end
