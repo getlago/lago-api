@@ -108,7 +108,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
         before { customer.update!(document_locale: 'fr') }
 
         it 'sets the correct document locale' do
-          expect { invoice_generate_service.generate(invoice_id: invoice.id) }
+          expect { invoice_generate_service.call }
             .to change(I18n, :locale).from(:en).to(:fr)
         end
       end
