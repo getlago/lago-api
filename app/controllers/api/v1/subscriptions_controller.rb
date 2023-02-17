@@ -4,9 +4,19 @@ module Api
   module V1
     class SubscriptionsController < Api::BaseController
       def create
-        subscription_service = Subscriptions::CreateService.new
-        result = subscription_service.create_from_api(
-          organization: current_organization,
+        customer = Customer.find_or_initialize_by(
+          external_id: create_params[:external_customer_id]&.strip,
+          organization_id: current_organization.id,
+        )
+
+        plan = Plan.find_by(
+          code: create_params[:plan_code],
+          organization_id: current_organization.id,
+        )
+
+        result = Subscriptions::CreateService.call(
+          customer:,
+          plan:,
           params: SubscriptionLegacyInput.new(
             current_organization,
             create_params,
