@@ -18,7 +18,7 @@ Rails.application.routes.draw do
         get :current_usage
 
         scope module: :customers do
-          resources :applied_coupons, param: :coupon_code, only: %i[destroy]
+          resources :applied_coupons, only: %i[destroy]
         end
       end
 
