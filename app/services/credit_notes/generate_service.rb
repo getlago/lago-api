@@ -26,6 +26,8 @@ module CreditNotes
     attr_reader :credit_note, :context
 
     def generate_pdf(credit_note)
+      I18n.locale = credit_note.customer.preferred_document_locale
+
       pdf_service = Utils::PdfGenerator.new(template: 'credit_note', context: credit_note)
       pdf_result = pdf_service.call
 

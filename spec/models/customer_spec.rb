@@ -85,6 +85,30 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe 'preferred_document_locale' do
+    subject(:customer) do
+      described_class.new(
+        organization:,
+        document_locale: 'en',
+      )
+    end
+
+    it 'returns the customer document_locale' do
+      expect(customer.preferred_document_locale).to eq(:en)
+    end
+
+    context 'when customer does not have a document_locale' do
+      before do
+        customer.document_locale = nil
+        customer.organization.document_locale = 'fr'
+      end
+
+      it 'returns the organization document_locale' do
+        expect(customer.preferred_document_locale).to eq(:fr)
+      end
+    end
+  end
+
   describe '#applicable_timezone' do
     subject(:customer) do
       described_class.new(

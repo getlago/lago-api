@@ -38,6 +38,15 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
       expect(result.credit_note.file).to be_present
     end
 
+    context 'with preferred locale' do
+      before { customer.update!(document_locale: 'fr') }
+
+      it 'sets the correct document locale' do
+        expect { credit_note_generate_service.call }
+          .to change(I18n, :locale).from(:en).to(:fr)
+      end
+    end
+
     context 'with not found credit_note' do
       let(:credit_note) { nil }
       let(:credit_note_item) { nil }

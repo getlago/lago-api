@@ -1,0 +1,43 @@
+en:
+  invoice:
+    document_name: Invoice
+    invoice_number: Invoice Number
+    issue_date: Issue Date
+    bill_from: From
+    bill_to: Bill to
+    due_date: Due %{date}
+    total_credits_with_value: "Total credits: %{credit_amount} credits"
+    all_subscriptions: All Subscriptions
+    all_usage_based_fees: All usage based fees
+    sub_total_without_tax: Sub total (excl. tax)
+    tax: Tax
+    sub_total_with_tax: Sub total (incl. tax)
+    credit_notes: Credit Notes
+    coupons: Coupons
+    prepaid_credits: Prepaid credits
+    prepaid_credits_with_value: Prepaid credits - %{wallet_name}
+    total_due: Total due
+    powered_by: Powered by
+
+    details: "%{resource} details"
+    subscription: Subscription
+    date_from: From
+    date_to: to
+    monthly: Monthly
+    yearly: Yearly
+    weekly: Weekly
+    sub_total: Sub total
+    subscription_interval: "%{plan_interval} subscription - %{plan_name}"
+
+    usage_based_fees: Usage based fees
+    list_of_charges: List of charges used from %{from} to %{to}
+    see_breakdown: See breakdown for total unit
+    total_unit_interval: "Total unit: %{events_count} events for %{units}"
+    total_unit: "Total unit: %{units}"
+    total: Total
+    breakdown: Breakdown
+    breakdown_for_days: "%{breakdown_duration} of %{breakdown_total_duration} days"
+    breakdown_of: "%{breakdown} of %{fee_group_name}"
+    notice: For example, if a unit is added with 15 days left in your monthly plan, we multiply the price by 15/31 (days remaining divided by the total number of days in your plan) to calculate the prorated price. Same logic when removing a unit used during 10 days, we multiply the price by 10/31.
+
+    total_credits: Total credits

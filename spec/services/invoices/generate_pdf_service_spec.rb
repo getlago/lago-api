@@ -103,6 +103,15 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
 
         expect(result.invoice.file).to be_present
       end
+
+      context 'with preferred locale' do
+        before { customer.update!(document_locale: 'fr') }
+
+        it 'sets the correct document locale' do
+          expect { invoice_generate_service.call }
+            .to change(I18n, :locale).from(:en).to(:fr)
+        end
+      end
     end
 
     context 'when in API context' do

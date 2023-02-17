@@ -80,6 +80,12 @@ class Customer < ApplicationRecord
       wallets.none?
   end
 
+  def preferred_document_locale
+    return document_locale.to_sym if document_locale?
+
+    organization.document_locale.to_sym
+  end
+
   private
 
   def ensure_slug

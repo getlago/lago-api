@@ -269,7 +269,7 @@ html
 
     .wrapper
       .mb-24
-        h1.credit-note-title Credit note
+        h1.credit-note-title = I18n.t('credit_note.document_name')
         - if organization.logo.present?
           img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
 
@@ -277,18 +277,18 @@ html
         .credit-note-information-column
           table.credit-note-information-table
             tr
-              td.body-1 Credit note number
+              td.body-1 = I18n.t('credit_note.credit_note_number')
               td.body-2 = number
             tr
-              td.body-1 Invoice number
+              td.body-1 = I18n.t('credit_note.invoice_number')
               td.body-2 = invoice.number
             tr
-              td.body-1 Issue date
-              td.body-2 = issuing_date.strftime('%b %d, %Y')
+              td.body-1 = I18n.t('credit_note.issue_date')
+              td.body-2 = I18n.l(issuing_date, format: :default)
 
       .mb-24.overflow-auto
         .billing-information-column
-          .body-1 From
+          .body-1 = I18n.t('credit_note.credit_from')
           .body-2
             - if organization.legal_name.present?
               = organization.legal_name
@@ -309,7 +309,7 @@ html
           .body-2 = ISO3166::Country.new(customer.country)&.common_name
           .body-2 = organization.email
         .billing-information-column
-          .body-1 Credit to
+          .body-1 = I18n.t('credit_note.credit_to')
           .body-2 = customer.name
           .body-2 = customer.address_line1
           .body-2 = customer.address_line2
@@ -326,14 +326,14 @@ html
           .body-2 = customer.email
 
       .mb-24
-        h2.title-2.mb-8 = total_amount.format
+        h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
         .body-1
           - if credited? && refunded?
-            | Credited on customer balance and refunded on #{issuing_date.strftime('%b %d, %Y')}
+            = I18n.t('credit_note.credited_refunded_notice', issuing_date: I18n.l(issuing_date, format: :default))
           - elsif credited?
-            | Credited on customer balance on #{issuing_date.strftime('%b %d, %Y')}
+            = I18n.t('credit_note.credited_notice', issuing_date: I18n.l(issuing_date, format: :default))
           - else
-            | Refunded on #{issuing_date.strftime('%b %d, %Y')}
+            = I18n.t('credit_note.refunded_notice', issuing_date: I18n.l(issuing_date, format: :default))
 
       .credit-note-resume.mb-24.overflow-auto
         table.credit-note-resume-table width="100%"
@@ -341,46 +341,46 @@ html
             - if subscription_id.present?
               tr
                 td.body-1 width="70%"
-                  | Subscription - #{Subscription.find_by(id: subscription_id)&.display_name}
+                  | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
                 td.body-1 width="30%" style="text-align: right;"
-                  = subscription_item(subscription_id).amount.format
+                  = subscription_item(subscription_id).amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
               - subscription_charge_items(subscription_id).each do |item|
                 tr
                   td.body-1 = item.fee.item_name
                   td.body-1 width="30%" style="text-align: right;"
-                    = item.amount.format
+                    = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - else
               - add_on_items.each do |item|
                 tr
                   td.body-1
-                    | Add-on - #{item.fee.item_name}
+                    | #{item.fee.item_name}
                   td.body-1 width="30%" style="text-align: right;"
-                    = item.amount.format
+                    = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
         table.total-table width="100%"
           tr
-            td.body-2 width="70%" Sub total
-            td.body-1 width="30%" = sub_total_vat_excluded_amount.format
+            td.body-2 width="70%" = I18n.t('credit_note.sub_total_without_tax')
+            td.body-1 width="30%" = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           tr
-            td.body-2 Tax
-            td.body-1 = vat_amount.format
+            td.body-2 = I18n.t('credit_note.tax')
+            td.body-1 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - if credited?
             tr
-              td.body-2 Credited on customer balance
-              td.body-1 = credit_amount.format
+              td.body-2 = I18n.t('credit_note.credited_on_customer_balance')
+              td.body-1 = credit_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - if refunded?
             tr
-              td.body-2 Refunded
-              td.body-1 = refund_amount.format
+              td.body-2 = I18n.t('credit_note.refunded')
+              td.body-1 = refund_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           tr
-            td.body-1 Total due
-            td.body-1 = total_amount.format
+            td.body-1 = I18n.t('credit_note.total_due')
+            td.body-1 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
       p.body-3.mb-24 = organization.invoice_footer
 
       .powered-by
         span.body-2
-          | Powered by &nbsp;
+          | #{I18n.t('credit_note.powered_by')} &nbsp;
         svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 37 11"
           g fill="#8C95A6" clip-path="url(#a)"
             path d="M32.306 8.324a2.546 2.546 0 0 1-1.075-1.066c-.258-.46-.379-.99-.379-1.587 0-.599.129-1.128.379-1.588.25-.46.613-.813 1.075-1.066a3.442 3.442 0 0 1 1.62-.375c.613 0 1.15.122 1.62.375.47.253.826.606 1.075 1.066.25.46.379.99.379 1.588 0 .605-.129 1.134-.379 1.595-.257.46-.613.812-1.075 1.058a3.442 3.442 0 0 1-1.62.375c-.613 0-1.158-.122-1.62-.375Zm2.68-1.419c.257-.314.394-.728.394-1.227 0-.506-.129-.912-.394-1.227-.265-.314-.613-.475-1.06-.475-.44 0-.787.16-1.052.475-.265.315-.394.721-.394 1.227 0 .506.129.92.394 1.227.265.314.613.476 1.052.476.447 0 .795-.162 1.06-.476ZM30.3 2.718v5.736c0 .775-.258 1.396-.758 1.856-.507.46-1.294.69-2.362.69-.825 0-1.491-.184-1.999-.552-.507-.368-.78-.89-.817-1.564h1.612c.076.283.227.498.447.651.22.154.515.23.878.23.455 0 .81-.115 1.06-.345.25-.23.379-.575.379-1.02v-.62c-.424.544-1.03.812-1.802.812a2.64 2.64 0 0 1-1.386-.368 2.548 2.548 0 0 1-.961-1.043c-.235-.444-.349-.974-.349-1.572 0-.59.114-1.112.349-1.564.227-.452.552-.798.969-1.043a2.667 2.667 0 0 1 1.393-.368c.765 0 1.37.3 1.817.897l.136-.813H30.3Zm-1.962 4.118c.258-.307.387-.705.387-1.196 0-.498-.13-.905-.387-1.22-.257-.314-.605-.467-1.037-.467-.431 0-.78.153-1.037.468-.265.306-.394.713-.394 1.211 0 .499.129.905.394 1.212.265.307.606.46 1.037.46.432-.008.78-.161 1.038-.468ZM23.69 2.718V8.63h-1.424l-.136-.828c-.462.59-1.068.882-1.817.882a2.64 2.64 0 0 1-1.386-.368 2.544 2.544 0 0 1-.961-1.058c-.235-.46-.349-.99-.349-1.603 0-.598.114-1.127.349-1.587.227-.46.552-.813.969-1.066a2.672 2.672 0 0 1 1.393-.376c.394 0 .742.077 1.045.23.303.154.552.368.75.63l.158-.783h1.409v.015Zm-1.961 4.195c.257-.307.386-.721.386-1.227 0-.514-.129-.928-.386-1.242-.258-.315-.606-.476-1.038-.476-.431 0-.78.161-1.037.476-.265.314-.394.728-.394 1.242 0 .506.13.912.394 1.227.265.314.606.467 1.037.467.432 0 .78-.16 1.038-.467ZM12.719 8.63V.58h1.703V7.15h3.157v1.48h-4.86Z"
