@@ -4,11 +4,17 @@ module Api
   module V1
     class AppliedCouponsController < Api::BaseController
       def create
-        service = AppliedCoupons::CreateService.new
-        result = service.create_from_api(
-          organization: current_organization,
-          args: create_params,
+        customer = Customer.find_by(
+          external_id: create_params[:external_customer_id],
+          organization_id: current_organization.id,
         )
+
+        coupon = Coupon.find_by(
+          code: create_params[:coupon_code],
+          organization_id: current_organization.id,
+        )
+
+        result = AppliedCoupons::CreateService.call(customer:, coupon:, params: create_params)
 
         if result.success?
           render(

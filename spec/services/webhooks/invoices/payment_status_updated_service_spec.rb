@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::Invoices::PaymentStatusUpdatedService do
-  subject(:webhook_service) { described_class.new(invoice) }
+  subject(:webhook_service) { described_class.new(object: invoice) }
 
   let(:webhook_url) { 'http://foo.bar' }
   let(:organization) { create(:organization, webhook_url:) }

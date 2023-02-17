@@ -2,10 +2,6 @@
 
 module Groups
   class CreateBatchService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(billable_metric:, group_params:)
       @billable_metric = billable_metric
       @group_params = group_params

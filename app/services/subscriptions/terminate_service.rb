@@ -2,10 +2,6 @@
 
 module Subscriptions
   class TerminateService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(subscription:, async: true)
       @subscription = subscription
       @async = async

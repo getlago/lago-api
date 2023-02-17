@@ -19,8 +19,8 @@ module Mutations
       type Types::BillableMetrics::Object
 
       def resolve(**args)
-        result = ::BillableMetrics::UpdateService.new(context[:current_user]).update(**args)
-
+        billable_metric = context[:current_user].billable_metrics.find_by(id: args[:id])
+        result = ::BillableMetrics::UpdateService.call(billable_metric:, params: args)
         result.success? ? result.billable_metric : result_error(result)
       end
     end

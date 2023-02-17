@@ -7,34 +7,36 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
   let(:result) { BaseService::Result.new }
   let(:amount_cents) { 10 }
-  let(:credit_amount_cents) { 10 }
+  let(:credit_amount_cents) { 12 }
+  let(:item_amount_cents) { 10 }
   let(:refund_amount_cents) { 0 }
   let(:credit_note) do
     create(
       :credit_note,
-      invoice: invoice,
-      customer: customer,
-      credit_amount_cents: credit_amount_cents,
-      refund_amount_cents: refund_amount_cents,
+      invoice:,
+      customer:,
+      credit_amount_cents:,
+      refund_amount_cents:,
     )
   end
   let(:item) do
     create(
       :credit_note_item,
-      credit_note: credit_note,
-      amount_cents: amount_cents,
-      fee: fee,
+      credit_note:,
+      amount_cents:,
+      fee:,
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 100, amount_cents: 100) }
+  let(:invoice) { create(:invoice, total_amount_cents: 120, amount_cents: 100) }
   let(:customer) { invoice.customer }
 
   let(:fee) do
     create(
       :fee,
-      invoice: invoice,
+      invoice:,
       amount_cents: 100,
+      vat_rate: 20,
     )
   end
 
@@ -76,7 +78,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:credit_amount_cents) { 250 }
 
       before do
-        create(:fee, invoice: invoice, amount_cents: 100, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -94,7 +96,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
       before do
         invoice.succeeded!
-        create(:fee, invoice: invoice, amount_cents: 100, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -109,7 +111,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
     context 'when reaching invoice creditable amount' do
       before do
-        create(:credit_note, invoice: invoice, total_amount_cents: 99)
+        create(:credit_note, invoice:, total_amount_cents: 99)
       end
 
       it 'fails the validation' do
@@ -125,7 +127,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
     context 'when reaching invoice refundable amount' do
       before do
         invoice.succeeded!
-        create(:credit_note, invoice: invoice, total_amount_cents: 99, refund_amount_cents: 99, credit_amount_cents: 0)
+        create(:credit_note, invoice:, total_amount_cents: 119, refund_amount_cents: 199, credit_amount_cents: 0)
       end
 
       let(:credit_amount_cents) { 0 }
@@ -145,10 +147,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       before do
         create(
           :credit_note,
-          invoice: invoice,
-          credit_amount_cents: 66,
+          invoice:,
+          credit_amount_cents: 86,
           refund_amount_cents: 33,
-          total_amount_cents: 99,
+          total_amount_cents: 119,
         )
       end
 

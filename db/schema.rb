@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_14_145444) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -272,7 +272,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
     t.string "amount_currency", null: false
     t.bigint "vat_amount_cents", null: false
     t.string "vat_amount_currency", null: false
-    t.float "vat_rate"
+    t.float "vat_rate", default: 0.0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false
@@ -360,7 +360,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
     t.string "file"
     t.uuid "customer_id"
     t.boolean "legacy", default: false, null: false
-    t.float "vat_rate"
+    t.float "vat_rate", default: 0.0, null: false
     t.bigint "credit_amount_cents", default: 0, null: false
     t.string "credit_amount_currency"
     t.integer "status", default: 1, null: false
@@ -564,7 +564,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
   end
 
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "organization_id"
     t.uuid "object_id", null: false
     t.string "object_type", null: false
     t.integer "status", default: 0, null: false
@@ -577,6 +576,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_07_110702) do
     t.datetime "last_retried_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "organization_id", null: false
     t.index ["organization_id"], name: "index_webhooks_on_organization_id"
   end
 

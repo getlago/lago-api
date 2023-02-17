@@ -68,7 +68,7 @@ module Api
           )
         end
 
-        Invoices::GenerateJob.perform_later(invoice)
+        Invoices::GeneratePdfJob.perform_later(invoice)
 
         head(:ok)
       end

@@ -39,7 +39,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
 
       expect(gocardless_customers_service).to have_received(:create)
       expect(SendWebhookJob).to have_been_enqueued
-        .with(:payment_provider_customer_created, customer)
+        .with('customer.payment_provider_created', customer)
     end
 
     it 'triggers checkout job' do
@@ -72,7 +72,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            :payment_provider_customer_error,
+            'customer.payment_provider_error',
             customer,
             provider_error: {
               message: 'error',
@@ -114,7 +114,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
         expect(gocardless_billing_request_service).to have_received(:create)
         expect(gocardless_billing_request_flow_service).to have_received(:create)
         expect(SendWebhookJob).to have_been_enqueued
-          .with(:payment_provider_customer_checkout_url, customer, checkout_url: 'https://example.com')
+          .with('customer.checkout_url_generated', customer, checkout_url: 'https://example.com')
       end
     end
   end

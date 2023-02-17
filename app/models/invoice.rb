@@ -72,7 +72,9 @@ class Invoice < ApplicationRecord
   end
 
   def fee_total_amount_cents
-    fees.sum(:amount_cents) + fees.sum(:vat_amount_cents)
+    amount_cents = fees.sum(:amount_cents)
+    vat_amount_cents = fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).ceil
+    amount_cents + vat_amount_cents
   end
 
   def currency
@@ -155,8 +157,8 @@ class Invoice < ApplicationRecord
 
     fees.map do |fee|
       creditable = fee.creditable_amount_cents
-      creditable + (creditable * (fee.vat_rate || 0)).fdiv(100).ceil
-    end.sum
+      creditable + (creditable * (fee.vat_rate || 0)).fdiv(100)
+    end.sum.ceil
   end
 
   def refundable_amount_cents

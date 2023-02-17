@@ -18,6 +18,7 @@ module Resolvers
       current_organization
         .invites
         .pending
+        .order(created_at: :desc)
         .page(page)
         .per(limit)
     end

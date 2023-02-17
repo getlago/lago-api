@@ -57,7 +57,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       invoice.customer.update(vat_rate: 15)
 
       expect { refresh_service.call }
-        .to change { invoice.reload.vat_rate }.from(nil).to(15)
+        .to change { invoice.reload.vat_rate }.from(0.0).to(15)
     end
   end
 end

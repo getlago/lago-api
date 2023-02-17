@@ -2,10 +2,6 @@
 
 module AddOns
   class UpdateService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(add_on:, params:)
       @add_on = add_on
       @params = params

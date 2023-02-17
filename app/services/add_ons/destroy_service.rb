@@ -2,13 +2,8 @@
 
 module AddOns
   class DestroyService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(add_on:)
       @add_on = add_on
-
       super
     end
 

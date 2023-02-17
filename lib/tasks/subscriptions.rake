@@ -28,6 +28,6 @@ namespace :subscriptions do
     invoice.fees.update_all(created_at: invoice.created_at + 1.second) # rubocop:disable Rails/SkipsModelValidations
 
     # NOTE: Do not generate the PDF file if invoice is draft.
-    Invoices::GenerateService.new.generate(invoice_id: invoice.id) if invoice.finalized?
+    Invoices::GeneratePdfService.call(invoice:) if invoice.finalized?
   end
 end

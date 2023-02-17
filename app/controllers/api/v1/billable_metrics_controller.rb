@@ -25,12 +25,12 @@ module Api
       end
 
       def update
-        service = ::BillableMetrics::UpdateService.new
-        result = service.update_from_api(
-          organization: current_organization,
+        billable_metric = BillableMetric.find_by(
           code: params[:code],
-          params: input_params.to_h,
+          organization_id: current_organization.id,
         )
+
+        result = ::BillableMetrics::UpdateService.call(billable_metric:, params: input_params.to_h)
 
         if result.success?
           render(

@@ -167,7 +167,7 @@ module Invoices
         return unless invoice.organization.webhook_url?
 
         SendWebhookJob.perform_later(
-          :payment_provider_invoice_payment_error,
+          'invoice.payment_failure',
           invoice,
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {

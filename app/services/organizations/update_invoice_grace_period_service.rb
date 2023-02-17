@@ -2,10 +2,6 @@
 
 module Organizations
   class UpdateInvoiceGracePeriodService < BaseService
-    def self.call(...)
-      new(...).call
-    end
-
     def initialize(organization:, grace_period:)
       @organization = organization
       @grace_period = grace_period
