@@ -28,10 +28,7 @@ module Mutations
       def resolve(**args)
         validate_organization!
 
-        result = ::Organizations::UpdateService
-          .new(current_organization)
-          .update(**args)
-
+        result = ::Organizations::UpdateService.call(organization: current_organization, params: args)
         result.success? ? result.organization : result_error(result)
       end
     end

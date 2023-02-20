@@ -4,8 +4,7 @@ module Api
   module V1
     class OrganizationsController < Api::BaseController
       def update
-        service = Organizations::UpdateService.new(current_organization)
-        result = service.update_from_api(params: input_params)
+        result = Organizations::UpdateService.call(organization: current_organization, params: input_params)
 
         if result.success?
           render(
