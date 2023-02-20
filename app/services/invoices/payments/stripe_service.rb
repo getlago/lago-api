@@ -43,12 +43,7 @@ module Invoices
 
       def update_payment_status(provider_payment_id:, status:, metadata: {})
         payment = Payment.find_by(provider_payment_id:)
-        unless payment
-          # NOTE: Payment was not initiated by lago
-          return result unless metadata&.key?(:lago_invoice_id)
-
-          return result.not_found_failure!(resource: 'stripe_payment')
-        end
+        return handle_missing_payment(metadata) unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
@@ -187,6 +182,16 @@ module Invoices
             payment_status: invoice.payment_status,
           },
         )
+      end
+
+      def handle_missing_payment(metadata)
+        # NOTE: Payment was not initiated by lago
+        return result unless metadata&.key?(:lago_invoice_id)
+
+        # NOTE: Invoice does not belong to this lago instance
+        return result if Invoice.find_by(id: metadata[:lago_invoice_id]).nil?
+
+        result.not_found_failure!(resource: 'stripe_payment')
       end
     end
   end
