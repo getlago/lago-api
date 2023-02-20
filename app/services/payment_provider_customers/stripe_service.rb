@@ -24,12 +24,12 @@ module PaymentProviderCustomers
       result
     end
 
-    def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
+    def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
         .where(customers: { organization_id: })
         .find_by(provider_customer_id: stripe_customer_id)
-      return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer
+      return handle_missing_customer(metadata) unless stripe_customer
 
       stripe_customer.payment_method_id = payment_method_id
       stripe_customer.save!
@@ -42,12 +42,12 @@ module PaymentProviderCustomers
       result.record_validation_failure!(record: e.record)
     end
 
-    def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
+    def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
         .where(customers: { organization_id: })
         .find_by(provider_customer_id: stripe_customer_id)
-      return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer
+      return handle_missing_customer(metadata) unless stripe_customer
 
       # NOTE: check if payment_method was the default one
       stripe_customer.payment_method_id = nil if stripe_customer.payment_method_id == payment_method_id
@@ -145,6 +145,16 @@ module PaymentProviderCustomers
       customer.invoices.pending.find_each do |invoice|
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
       end
+    end
+
+    def handle_missing_customer(metadata)
+      # NOTE: Stripe customer was not created from lago
+      return result unless metadata&.key?(:lago_customer_id)
+
+      # NOTE: Customer does not belong to this lago instance
+      return result if Customer.find_by(id: metadata[:lago_customer_id]).nil?
+
+      result.not_found_failure!(resource: 'stripe_customer')
     end
   end
 end

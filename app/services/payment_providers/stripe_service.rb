@@ -107,6 +107,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
         result.raise_if_error! || result
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
@@ -125,6 +126,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.id,
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
         result.raise_if_error! || result
       when 'charge.refund.updated'

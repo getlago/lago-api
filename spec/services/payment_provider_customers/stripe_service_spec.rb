@@ -121,6 +121,58 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         end
       end
     end
+
+    context 'when customer is not found' do
+      it 'returns an empty result' do
+        result = stripe_service.update_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: 'cus_InvaLid',
+          payment_method_id: 'pm_123456',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.stripe_customer).to be_nil
+        end
+      end
+
+      context 'when customer in metadata is not found' do
+        it 'returns an empty response' do
+          result = stripe_service.update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_InvaLid',
+            payment_method_id: 'pm_123456',
+            metadata: {
+              lago_customer_id: SecureRandom.uuid,
+            },
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.stripe_customer).to be_nil
+          end
+        end
+      end
+
+      context 'when customer in metadata exists' do
+        it 'returns a not found error' do
+          result = stripe_service.update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_InvaLid',
+            payment_method_id: 'pm_123456',
+            metadata: {
+              lago_customer_id: customer.id,
+            },
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('stripe_customer_not_found')
+          end
+        end
+      end
+    end
   end
 
   describe '.delete_payment_method' do
@@ -161,6 +213,58 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
+        end
+      end
+    end
+
+    context 'when customer is not found' do
+      it 'returns an empty result' do
+        result = stripe_service.delete_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: 'cus_InvaLid',
+          payment_method_id: 'pm_123456',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.stripe_customer).to be_nil
+        end
+      end
+
+      context 'when customer in metadata is not found' do
+        it 'returns an empty response' do
+          result = stripe_service.delete_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_InvaLid',
+            payment_method_id: 'pm_123456',
+            metadata: {
+              lago_customer_id: SecureRandom.uuid,
+            },
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.stripe_customer).to be_nil
+          end
+        end
+      end
+
+      context 'when customer in metadata exists' do
+        it 'returns a not found error' do
+          result = stripe_service.delete_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_InvaLid',
+            payment_method_id: 'pm_123456',
+            metadata: {
+              lago_customer_id: customer.id,
+            },
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('stripe_customer_not_found')
+          end
         end
       end
     end
