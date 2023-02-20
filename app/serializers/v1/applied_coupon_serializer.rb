@@ -3,7 +3,7 @@
 module V1
   class AppliedCouponSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         lago_coupon_id: model.coupon.id,
         coupon_code: model.coupon.code,
@@ -20,7 +20,12 @@ module V1
         expiration_at: model.coupon.expiration_at&.iso8601,
         created_at: model.created_at.iso8601,
         terminated_at: model.terminated_at&.iso8601,
-      }.merge(legacy_values)
+      }
+
+      payload = payload.merge(legacy_values)
+      payload = payload.merge(credits) if include?(:credits)
+
+      payload
     end
 
     private
@@ -30,6 +35,10 @@ module V1
       return nil if model.coupon.percentage?
 
       model.amount_cents - model.credits.sum(:amount_cents)
+    end
+
+    def credits
+      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credits').serialize
     end
 
     def legacy_values

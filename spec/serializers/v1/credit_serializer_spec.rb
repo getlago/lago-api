@@ -18,6 +18,8 @@ RSpec.describe ::V1::CreditSerializer do
       expect(result['credit']['item']['type']).to eq(credit.item_type)
       expect(result['credit']['item']['code']).to eq(credit.item_code)
       expect(result['credit']['item']['name']).to eq(credit.item_name)
+      expect(result['credit']['invoice']['payment_status']).to eq(credit.invoice.payment_status)
+      expect(result['credit']['invoice']['lago_id']).to eq(credit.invoice.id)
     end
   end
 end
