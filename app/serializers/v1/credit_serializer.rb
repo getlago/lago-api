@@ -16,7 +16,7 @@ module V1
         invoice: {
           lago_id: model.invoice_id,
           payment_status: model.invoice.payment_status,
-        }
+        },
       }
     end
   end
