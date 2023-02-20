@@ -3,64 +3,52 @@
 require 'rails_helper'
 
 RSpec.describe Coupons::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(membership.user) }
+  subject(:update_service) { described_class.new(coupon:, params:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:coupon) { create(:coupon, organization: organization) }
+  let(:coupon) { create(:coupon, organization:) }
 
+  let(:params) do
+    {
+      name:,
+      coupon_type: 'fixed_amount',
+      frequency: 'once',
+      amount_cents: 100,
+      amount_currency: 'EUR',
+      expiration: 'time_limit',
+      reusable: false,
+      expiration_at:,
+      applies_to:,
+    }
+  end
+
+  let(:name) { 'new name' }
   let(:expiration_at) { Time.current + 30.days }
+  let(:applies_to) { nil }
 
-  describe 'update' do
-    before { coupon }
-
-    let(:update_args) do
-      {
-        id: coupon.id,
-        name: 'new name',
-        coupon_type: 'fixed_amount',
-        frequency: 'once',
-        amount_cents: 100,
-        amount_currency: 'EUR',
-        expiration: 'time_limit',
-        reusable: false,
-        expiration_at: expiration_at,
-      }
-    end
-
+  describe '#call' do
     it 'updates the coupon' do
-      result = update_service.update(**update_args)
-
-      expect(result).to be_success
+      result = update_service.call
 
       aggregate_failures do
+        expect(result).to be_success
+
         expect(result.coupon.name).to eq('new name')
         expect(result.coupon.amount_cents).to eq(100)
         expect(result.coupon.amount_currency).to eq('EUR')
         expect(result.coupon.expiration).to eq('time_limit')
         expect(result.coupon.reusable).to eq(false)
-        expect(result.coupon.expiration_at.to_s).to eq((Time.current + 30.days).to_s)
+        expect(result.coupon.expiration_at.to_s).to eq(expiration_at.to_s)
       end
     end
 
     context 'with validation error' do
-      let(:update_args) do
-        {
-          id: coupon.id,
-          name: nil,
-          coupon_type: 'fixed_amount',
-          frequency: 'once',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          reusable: false,
-          expiration: 'time_limit',
-          expiration_at: Time.current + 30.days,
-        }
-      end
+      let(:name) { nil }
 
       it 'returns an error' do
-        result = update_service.update(**update_args)
+        result = update_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -74,22 +62,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       let(:plan) { create(:plan, organization:) }
       let(:plan_second) { create(:plan, organization:) }
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-      let(:update_args) do
-        {
-          id: coupon.id,
-          name: 'new name',
-          coupon_type: 'fixed_amount',
-          frequency: 'once',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          expiration: 'time_limit',
-          reusable: false,
-          expiration_at:,
-          applies_to: {
-            plan_ids: [plan.id, plan_second.id],
-          },
-        }
-      end
+      let(:applies_to) { { plan_ids: [plan.id, plan_second.id] } }
 
       before do
         CurrentContext.source = 'graphql'
@@ -99,30 +72,24 @@ RSpec.describe Coupons::UpdateService, type: :service do
       end
 
       it 'creates new coupon plans' do
-        expect { update_service.update(**update_args) }
-          .to change(CouponPlan, :count).by(1)
+        expect { update_service.call }.to change(CouponPlan, :count).by(1)
+      end
+
+      context 'with API context' do
+        before { CurrentContext.source = 'api' }
+
+        let(:applies_to) { { plan_codes: [plan.code, plan_second.code] } }
+
+        it 'creates new coupon plans using plan code' do
+          expect { update_service.call }.to change(CouponPlan, :count).by(1)
+        end
       end
     end
 
     context 'with coupon plans to delete' do
       let(:plan) { create(:plan, organization:) }
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-      let(:update_args) do
-        {
-          id: coupon.id,
-          name: 'new name',
-          coupon_type: 'fixed_amount',
-          frequency: 'once',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          expiration: 'time_limit',
-          reusable: false,
-          expiration_at:,
-          applies_to: {
-            plan_ids: [],
-          },
-        }
-      end
+      let(:applies_to) { { plan_ids: [] } }
 
       before do
         CurrentContext.source = 'graphql'
@@ -131,148 +98,21 @@ RSpec.describe Coupons::UpdateService, type: :service do
       end
 
       it 'deletes a coupon plan' do
-        expect { update_service.update(**update_args) }
-          .to change(CouponPlan, :count).by(-1)
-      end
-    end
-  end
-
-  describe 'update_from_api' do
-    let(:coupon) { create(:coupon, organization: organization) }
-    let(:name) { 'New Coupon' }
-    let(:update_args) do
-      {
-        name: name,
-        code: 'coupon1_code',
-        coupon_type: 'fixed_amount',
-        frequency: 'once',
-        amount_cents: 123,
-        amount_currency: 'EUR',
-        expiration: 'time_limit',
-        expiration_at: Time.current + 15.days,
-      }
-    end
-
-    it 'updates the coupon' do
-      result = update_service.update_from_api(
-        organization: organization,
-        code: coupon.code,
-        params: update_args,
-      )
-
-      aggregate_failures do
-        expect(result).to be_success
-
-        coupon_result = result.coupon
-        expect(coupon_result.id).to eq(coupon.id)
-        expect(coupon_result.name).to eq(update_args[:name])
-        expect(coupon_result.code).to eq(update_args[:code])
-        expect(coupon_result.expiration).to eq(update_args[:expiration])
-      end
-    end
-
-    context 'with validation errors' do
-      let(:name) { nil }
-
-      it 'returns an error' do
-        result = update_service.update_from_api(
-          organization: organization,
-          code: coupon.code,
-          params: update_args,
-        )
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
-        end
+        expect { update_service.call }.to change(CouponPlan, :count).by(-1)
       end
     end
 
     context 'when coupon is not found' do
+      let(:coupon) { nil }
+
       it 'returns an error' do
-        result = update_service.update_from_api(
-          organization: organization,
-          code: 'fake_code12345',
-          params: update_args,
-        )
+        result = update_service.call
 
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq('coupon_not_found')
-      end
-    end
-
-    context 'with new plan limitations' do
-      let(:plan) { create(:plan, organization:) }
-      let(:plan_second) { create(:plan, organization:) }
-      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-      let(:update_args) do
-        {
-          name:,
-          code: 'coupon1_code',
-          coupon_type: 'fixed_amount',
-          frequency: 'once',
-          amount_cents: 123,
-          amount_currency: 'EUR',
-          expiration: 'time_limit',
-          expiration_at: Time.current + 15.days,
-          applies_to: {
-            plan_codes: [plan.code, plan_second.code],
-          },
-        }
-      end
-
-      before do
-        CurrentContext.source = 'api'
-
-        plan_second
-        coupon_plan
-      end
-
-      it 'creates a new coupon plan' do
-        expect do
-          update_service.update_from_api(
-            organization:,
-            code: coupon.code,
-            params: update_args,
-          )
-        end.to change(CouponPlan, :count).by(1)
-      end
-    end
-
-    context 'with coupon plans to delete' do
-      let(:plan) { create(:plan, organization:) }
-      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-      let(:update_args) do
-        {
-          name:,
-          code: 'coupon1_code',
-          coupon_type: 'fixed_amount',
-          frequency: 'once',
-          amount_cents: 123,
-          amount_currency: 'EUR',
-          expiration: 'time_limit',
-          expiration_at: Time.current + 15.days,
-          applies_to: {
-            plan_codes: [],
-          },
-        }
-      end
-
-      before do
-        CurrentContext.source = 'api'
-
-        coupon_plan
-      end
-
-      it 'deletes a coupon plan' do
-        expect do
-          update_service.update_from_api(
-            organization:,
-            code: coupon.code,
-            params: update_args,
-          )
-        end.to change(CouponPlan, :count).by(-1)
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq('coupon_not_found')
+        end
       end
     end
   end
