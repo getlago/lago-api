@@ -13,10 +13,8 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
   end
 
   describe 'key validations' do
-    context 'when uniqueness condition is valid' do
-      it 'validates the key' do
-        expect(metadata).to be_valid
-      end
+    context 'when uniqueness condition is satisfied', :tag do
+      it { expect(metadata).to be_valid }
     end
 
     context 'when key is not unique' do
@@ -24,39 +22,29 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
 
       before { old_metadata }
 
-      it 'validates the key' do
-        expect(metadata).not_to be_valid
-      end
+      it { expect(metadata).not_to be_valid }
     end
 
-    context 'when length constraint is satisfied' do
-      it 'validates the key' do
-        expect(metadata).to be_valid
-      end
+    context 'when length constraint is satisfied', :tag do
+      it { expect(metadata).to be_valid }
     end
 
     context 'when key length is invalid' do
       let(:key) { 'hello-hello-hello-hello-hello' }
 
-      it 'validates the key' do
-        expect(metadata).not_to be_valid
-      end
+      it { expect(metadata).not_to be_valid }
     end
   end
 
   describe 'value validations' do
-    context 'when length constraint is satisfied' do
-      it 'validates the key' do
-        expect(metadata).to be_valid
-      end
+    context 'when length constraint is satisfied', :tag do
+      it { expect(metadata).to be_valid }
     end
 
     context 'when value length is invalid' do
       let(:value) { 'abcde-abcde-abcde-abcde-abcde-abcde' }
 
-      it 'validates the key' do
-        expect(metadata).to be_valid
-      end
+      it { expect(metadata).to be_valid }
     end
   end
 end
