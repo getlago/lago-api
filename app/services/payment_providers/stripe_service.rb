@@ -153,7 +153,7 @@ module PaymentProviders
       Rails.logger.error(e.message)
       Rails.logger.error(e.backtrace.join("\n"))
 
-      Sentry.capture_exception(error)
+      Sentry.capture_exception(e)
     end
 
     def reattach_provider_customers(organization_id:, stripe_provider:)
