@@ -760,7 +760,7 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 1 * 1,
-            vat_amount_cents: 1,
+            vat_amount_cents: 0,
             units: 1,
           )
           expect(created_fees.third).to have_attributes(

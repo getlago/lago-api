@@ -215,12 +215,12 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
-    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20) }
-
-    before { fees }
 
     it 'returns the fee amount vat included' do
-      expect(invoice.fee_total_amount_cents).to eq(240)
+      create(:fee, invoice:, amount_cents: 100, vat_rate: 20)
+      create(:fee, invoice:, amount_cents: 133, vat_rate: 20)
+
+      expect(invoice.fee_total_amount_cents).to eq(120 + 160)
     end
   end
 
@@ -286,6 +286,40 @@ RSpec.describe Invoice, type: :model do
 
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.recurring_breakdown(fee)).to eq([])
+    end
+  end
+
+  describe '#creditable_amount_cents' do
+    context 'when legacy' do
+      it 'returns 0' do
+        invoice = build(:invoice, legacy: true)
+        expect(invoice.creditable_amount_cents).to eq(0)
+      end
+    end
+
+    context 'when credit' do
+      it 'returns 0' do
+        invoice = build(:invoice, :credit)
+        expect(invoice.creditable_amount_cents).to eq(0)
+      end
+    end
+
+    context 'when draft' do
+      it 'returns 0' do
+        invoice = build(:invoice, :draft)
+        expect(invoice.creditable_amount_cents).to eq(0)
+      end
+    end
+
+    it 'returns the expected creditable amoutn in cents' do
+      invoice_subscription = create(:invoice_subscription)
+      invoice = invoice_subscription.invoice
+      subscription = invoice_subscription.subscription
+      billable_metric = create(:recurring_billable_metric, organization: subscription.organization)
+      charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
+      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, vat_rate: 20)
+
+      expect(invoice.creditable_amount_cents).to eq(160)
     end
   end
 end

@@ -210,7 +210,7 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(71)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
-            expect(created_fee.vat_amount_cents).to eq(15)
+            expect(created_fee.vat_amount_cents).to eq(14)
             expect(created_fee.vat_rate).to eq(20.0)
             expect(created_fee.units).to eq(1)
           end
