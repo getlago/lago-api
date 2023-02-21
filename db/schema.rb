@@ -217,6 +217,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_21_070501) do
     t.boolean "display_in_invoice", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["customer_id", "key"], name: "index_customer_metadata_on_customer_id_and_key", unique: true
     t.index ["customer_id"], name: "index_customer_metadata_on_customer_id"
   end
 

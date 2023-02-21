@@ -10,6 +10,8 @@ class CreateCustomerMetadata < ActiveRecord::Migration[7.0]
       t.boolean :display_in_invoice, default: false, null: false
 
       t.timestamps
+
+      t.index %w[customer_id key], name: 'index_customer_metadata_on_customer_id_and_key', unique: true
     end
   end
 end
