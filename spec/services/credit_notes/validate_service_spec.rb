@@ -24,6 +24,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       :credit_note_item,
       credit_note:,
       amount_cents:,
+      precise_amount_cents: amount_cents,
       fee:,
     )
   end
