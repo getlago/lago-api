@@ -5,6 +5,7 @@ FactoryBot.define do
     credit_note
     fee
     amount_cents { 100 }
+    precise_amount_cents { 100 }
     amount_currency { 'EUR' }
   end
 end

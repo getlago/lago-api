@@ -107,9 +107,12 @@ module CreditNotes
 
     def create_items
       items_attr.each do |item_attr|
+        amount_cents = item_attr[:amount_cents] || 0
+
         item = credit_note.items.new(
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
-          amount_cents: item_attr[:amount_cents] || 0,
+          amount_cents: amount_cents.round,
+          precise_amount_cents: amount_cents,
           amount_currency: invoice.amount_currency,
         )
         break unless valid_item?(item)
