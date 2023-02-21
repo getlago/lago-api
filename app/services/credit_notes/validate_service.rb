@@ -44,7 +44,7 @@ module CreditNotes
     def total_items_amount_cents
       credit_note.items.sum do |item|
         item.amount_cents + (item.amount_cents * item.fee.vat_rate).fdiv(100)
-      end.ceil
+      end.round
     end
 
     def valid_invoice_status?

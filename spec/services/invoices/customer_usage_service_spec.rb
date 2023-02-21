@@ -83,9 +83,9 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
         expect(result.usage.amount_cents).to eq(2532) # 1266 * 2
         expect(result.usage.amount_currency).to eq('EUR')
-        expect(result.usage.vat_amount_cents).to eq(507) # 1266 * 2 * 0.2 = 506.4
+        expect(result.usage.vat_amount_cents).to eq(506) # 1266 * 2 * 0.2 = 506.4
         expect(result.usage.vat_amount_currency).to eq('EUR')
-        expect(result.usage.total_amount_cents).to eq(3039)
+        expect(result.usage.total_amount_cents).to eq(3038)
         expect(result.usage.total_amount_currency).to eq('EUR')
       end
     end
@@ -137,9 +137,9 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
             expect(result.usage.amount_cents).to eq(2532) # 1266 * 2
             expect(result.usage.amount_currency).to eq('EUR')
-            expect(result.usage.vat_amount_cents).to eq(507) # 1266 * 2 * 0.2 = 506.4
+            expect(result.usage.vat_amount_cents).to eq(506) # 1266 * 2 * 0.2 = 506.4
             expect(result.usage.vat_amount_currency).to eq('EUR')
-            expect(result.usage.total_amount_cents).to eq(3039)
+            expect(result.usage.total_amount_cents).to eq(3038)
             expect(result.usage.total_amount_currency).to eq('EUR')
           end
         end

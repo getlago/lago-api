@@ -12,7 +12,7 @@ module CreditNotes
     def call
       return result if (last_subscription_fee&.amount_cents || 0).zero?
 
-      amount = compute_amount.ceil
+      amount = compute_amount.round
       return result unless amount.positive?
 
       # NOTE: if credit notes were already issued on the fee,
@@ -20,7 +20,7 @@ module CreditNotes
       amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
       return result unless amount.positive?
 
-      vat_amount = (amount * last_subscription_fee.vat_rate).fdiv(100).ceil
+      vat_amount = (amount * last_subscription_fee.vat_rate).fdiv(100).round
 
       CreditNotes::CreateService.new(
         invoice: last_subscription_fee.invoice,

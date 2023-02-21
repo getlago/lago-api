@@ -35,7 +35,7 @@ class Fee < ApplicationRecord
   scope :charge_kind, -> { where(fee_type: :charge) }
 
   def compute_vat
-    self.vat_amount_cents = (amount_cents * vat_rate).fdiv(100).ceil
+    self.vat_amount_cents = (amount_cents * vat_rate).fdiv(100).round
     self.vat_amount_currency = amount_currency
   end
 
