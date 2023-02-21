@@ -13,7 +13,7 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
   end
 
   describe 'key validations' do
-    context 'when uniqueness is satisfied' do
+    context 'when uniqueness condition is valid' do
       it 'validates the key' do
         expect(metadata).to be_valid
       end
