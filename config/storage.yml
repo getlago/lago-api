@@ -20,6 +20,7 @@ amazon_compatible_endpoint:
   endpoint: <%= ENV['LAGO_AWS_S3_ENDPOINT'] %>
   bucket: <%= ENV['LAGO_AWS_S3_BUCKET'] %>
   region: <%= ENV['LAGO_AWS_S3_REGION'] %>
+  force_path_style: <%= ENV.fetch('LAGO_AWS_S3_PATH_STYLE', false) %>
 
 google:
   service: GCS
