@@ -510,6 +510,40 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
+    context 'with metadata' do
+      let(:create_args) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          organization_id: organization.id,
+          currency: 'EUR',
+          metadata: [
+            {
+              key: 'manager name',
+              value: 'John',
+              display_in_invoice: true,
+            },
+            {
+              key: 'manager address',
+              value: 'Test',
+              display_in_invoice: false,
+            },
+          ],
+        }
+      end
+
+      it 'creates customer with metadata' do
+        result = customers_service.create(**create_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.metadata.count).to eq(2)
+        end
+      end
+    end
+
     context 'when customer already exists' do
       let(:customer) do
         create(:customer, organization: organization, external_id: create_args[:external_id])

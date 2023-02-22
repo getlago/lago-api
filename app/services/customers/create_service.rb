@@ -71,7 +71,12 @@ module Customers
       )
 
       assign_premium_attributes(customer, args)
-      customer.save!
+
+      ActiveRecord::Base.transaction do
+        customer.save!
+
+        args[:metadata].each { |m| create_metadata(customer, m) } if args[:metadata].present?
+      end
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
@@ -85,6 +90,14 @@ module Customers
     end
 
     private
+
+    def create_metadata(customer, args)
+      customer.metadata.create!(
+        key: args[:key],
+        value: args[:value],
+        display_in_invoice: args[:display_in_invoice],
+      )
+    end
 
     def assign_premium_attributes(customer, args)
       return unless License.premium?
