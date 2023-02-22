@@ -13,6 +13,10 @@ module V1
           code: model.item_code,
           name: model.item_name,
         },
+        invoice: {
+          lago_id: model.invoice_id,
+          payment_status: model.invoice.payment_status,
+        },
       }
     end
   end

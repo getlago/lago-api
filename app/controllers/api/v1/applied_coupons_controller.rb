@@ -45,6 +45,7 @@ module Api
             ::V1::AppliedCouponSerializer,
             collection_name: 'applied_coupons',
             meta: pagination_metadata(applied_coupons),
+            includes: %i[credits],
           ),
         )
       end
