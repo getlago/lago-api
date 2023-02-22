@@ -17,6 +17,7 @@ class Customer < ApplicationRecord
   has_many :events
   has_many :invoices
   has_many :applied_coupons
+  has_many :metadata, class_name: 'Metadata::CustomerMetadata', dependent: :destroy
   has_many :coupons, through: :applied_coupons
   has_many :credit_notes
   has_many :applied_add_ons
