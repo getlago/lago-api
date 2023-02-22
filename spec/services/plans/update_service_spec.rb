@@ -69,6 +69,32 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
+    context 'when charges are not passed' do
+      let(:charge) { create(:standard_charge, plan:) }
+      let(:update_args) do
+        {
+          name: plan_name,
+          code: 'new_plan',
+          interval: 'monthly',
+          pay_in_advance: false,
+          amount_cents: 200,
+          amount_currency: 'EUR',
+        }
+      end
+
+      before { charge }
+
+      it 'does not sanitize charges' do
+        result = plans_service.call
+
+        updated_plan = result.plan
+        aggregate_failures do
+          expect(updated_plan.name).to eq('Updated plan name')
+          expect(plan.charges.count).to eq(1)
+        end
+      end
+    end
+
     context 'when plan is not found' do
       let(:plan) { nil }
 
