@@ -85,12 +85,6 @@ RSpec.describe Customers::UpdateService, type: :service do
     context 'with metadata' do
       let(:customer_metadata) { create(:customer_metadata, customer:) }
       let(:another_customer_metadata) { create(:customer_metadata, customer:, key: 'test', value: '1') }
-
-      before do
-        customer_metadata
-        another_customer_metadata
-      end
-
       let(:update_args) do
         {
           id: customer.id,
@@ -109,6 +103,11 @@ RSpec.describe Customers::UpdateService, type: :service do
             },
           ],
         }
+      end
+
+      before do
+        customer_metadata
+        another_customer_metadata
       end
 
       it 'updates metadata' do
