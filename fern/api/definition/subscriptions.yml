@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: commons.yml
+
+service:
+  display-name: Subscriptions Service
+  auth: true
+  base-path: /subscriptions
+  endpoints:
+    create:
+      path: ""
+      method: POST
+      docs: Assign a plan to a customer
+      display-name: Assign a plan to a customer
+      request: SubscriptionCreateInput
+      response: Subscription
+
+    update:
+      path: /{external_id}
+      method: PUT
+      docs: Update an existing subscription by external ID
+      display-name: Update an existing subscription
+      path-parameters:
+        external_id:
+          docs: External ID of the existing subscription
+          type: string
+      request: SubscriptionUpdateInput
+      response: Subscription
+
+    delete:
+      path: /{external_id}
+      method: DELETE
+      docs: Terminate a subscription
+      display-name: Terminate a subscription
+      path-parameters:
+        external_id:
+          docs: External ID of the existing subscription
+          type: string
+      response: Subscription
+
+    find:
+      path: ""
+      method: GET
+      docs: Find all suscriptions for certain customer
+      display-name: Find subscriptions
+      request:
+        name: FindAllSubscriptionsInput
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+          external_customer_id:
+            docs: External customer ID
+            type: string
+      response: Subscriptions
+
+types:
+  SubscriptionCreateInput:
+    properties:
+      subscription: optional<SubscriptionCreateInputObject>
+
+  SubscriptionCreateInputObject:
+    properties:
+      external_customer_id: optional<string>
+      plan_code: optional<string>
+      name: optional<string>
+      external_id: optional<string>
+      billing_time: optional<commons.BillingTime>
+      subscription_at: optional<string>
+
+  SubscriptionUpdateInput:
+    properties:
+      subscription: optional<SubscriptionUpdateInputObject>
+
+  SubscriptionUpdateInputObject:
+    properties:
+      name: optional<string>
+      subscription_at: optional<string>
+
+  Subscriptions:
+    properties:
+      subscriptions: optional<list<SubscriptionObject>>
+
+  Subscription:
+    properties:
+      subscription: optional<SubscriptionObject>
+
+  SubscriptionObject:
+    properties:
+      lago_id: optional<string>
+      external_id: optional<string>
+      lago_customer_id: optional<string>
+      external_customer_id: optional<string>
+      name: optional<string>
+      plan_code: optional<string>
+      status: optional<SubscriptionStatus>
+      billing_time: optional<commons.BillingTime>
+      subscription_at: optional<string>
+      started_at: optional<string>
+      terminated_at: optional<string>
+      canceled_at: optional<string>
+      created_at: optional<string>
+      previous_plan_code: optional<string>
+      next_plan_code: optional<string>
+      downgrade_plan_date: optional<string>
+
+  SubscriptionStatus:
+    enum:
+      - active
+      - pending
+      - terminated
+      - canceled

@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+service:
+  display-name: Organizations Service
+  auth: true
+  base-path: /organizations
+  endpoints:
+    update:
+      path: ""
+      method: PUT
+      docs: Update an existing organization
+      display-name: Update an existing Organization
+      request:
+        body: OrganizationInput
+      response: Organization
+
+types:
+  OrganizationInput:
+    properties:
+      organization: optional<OrganizationInputObject>
+
+  OrganizationInputObject:
+    properties:
+      webhook_url: optional<string>
+      country: optional<string>
+      address_line1: optional<string>
+      address_line2: optional<string>
+      state: optional<string>
+      zipode: optional<string>
+      email: optional<string>
+      city: optional<string>
+      legal_name: optional<string>
+      legal_number: optional<string>
+      timezone: optional<string>
+      billing_configuration: optional<BillingConfigurationOrganization>
+
+  Organization:
+    properties:
+      organization: optional<OrganizationObject>
+
+  OrganizationObject:
+    properties:
+      lago_id: optional<string>
+      name: optional<string>
+      created_at: optional<string>
+      webhook_url: optional<string>
+      country: optional<string>
+      address_line1: optional<string>
+      address_line2: optional<string>
+      state: optional<string>
+      zipode: optional<string>
+      email: optional<string>
+      city: optional<string>
+      legal_name: optional<string>
+      legal_number: optional<string>
+      timezone: optional<string>
+      billing_configuration: optional<BillingConfigurationOrganization>
+
+  BillingConfigurationOrganization:
+    properties:
+      invoice_footer: optional<string>
+      invoice_grace_period: optional<integer>
+      vat_rate: optional<double>

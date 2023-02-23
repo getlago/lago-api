@@ -1,0 +1,179 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: commons.yml
+
+service:
+  display-name: Customers Service
+  auth: true
+  base-path: /customers
+  endpoints:
+    create:
+      path: ""
+      method: POST
+      docs: Create a new customer
+      display-name: Create a customer
+      request:
+        name: CreateCustomerRequest
+        body: CustomerInput
+      response: Customer
+
+    get:
+      path: /{external_id}
+      method: GET
+      docs: Return a single customer
+      display-name: Find customer by external ID
+      path-parameters:
+        external_id:
+          docs: External ID of the existing customer
+          type: string
+      response: Customer
+
+    getCurrentUsage:
+      path: /{customer_external_id}/current_usage
+      method: GET
+      docs: Return a customer current usage
+      display-name: Find customer current usage
+      path-parameters:
+        customer_external_id:
+          docs: External ID of the existing customer
+          type: string
+      request:
+        name: FindCustomerCurrentUsageInput
+        query-parameters:
+          external_subscription_id:
+            docs: External subscription ID
+            type: string
+      response: CustomerUsage
+
+    find:
+      path: ""
+      method: GET
+      docs: Find all customers in certain organisation
+      display-name: Find customers
+      request:
+        name: FindAllCustomersInput
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+      response: Customers
+
+types:
+  CustomerInput:
+    properties:
+      customer: optional<CustomerInputObject>
+
+  CustomerInputObject:
+    properties:
+      external_id: optional<string>
+      name: optional<string>
+      country: optional<string>
+      address_line1: optional<string>
+      address_line2: optional<string>
+      state: optional<string>
+      zipode: optional<string>
+      email: optional<string>
+      city: optional<string>
+      url: optional<string>
+      phone: optional<string>
+      lago_url: optional<string>
+      legal_name: optional<string>
+      legal_number: optional<string>
+      currency: optional<string>
+      timezone: optional<string>
+      billing_configuration: optional<BillingConfigurationCustomer>
+
+  CustomerUsage:
+    properties:
+      customer_usage: optional<CustomerUsageObject>
+
+  Customers:
+    properties:
+      customers: optional<list<CustomerObject>>
+
+  Customer:
+    properties:
+      customer: optional<CustomerObject>
+
+  BillingConfigurationCustomer: map<string, unknown>
+
+  CustomerObject:
+    properties:
+      lago_id: optional<string>
+      external_id: optional<string>
+      name: optional<string>
+      sequential_id: optional<integer>
+      slug: optional<string>
+      created_at: optional<string>
+      country: optional<string>
+      address_line1: optional<string>
+      address_line2: optional<string>
+      state: optional<string>
+      zipode: optional<string>
+      email: optional<string>
+      city: optional<string>
+      url: optional<string>
+      phone: optional<string>
+      lago_url: optional<string>
+      legal_name: optional<string>
+      legal_number: optional<string>
+      currency: optional<string>
+      timezone: optional<string>
+      applicable_timezone: optional<string>
+      billing_configuration: optional<BillingConfigurationCustomer>
+
+  CustomerUsageObject:
+    properties:
+      from_datetime: optional<string>
+      to_datetime: optional<string>
+      issuing_date: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      total_amount_cents: optional<integer>
+      total_amount_currency: optional<string>
+      vat_amount_cents: optional<integer>
+      vat_amount_currency: optional<string>
+      charges_usage: optional<list<ChargeUsageObject>>
+
+  ChargeUsageObject:
+    properties:
+      units: optional<double>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      charge: optional<Charge>
+      billable_metric: optional<ChargeBillableMetric>
+      groups: optional<list<Group>>
+
+  ChargeModelType:
+    enum:
+      - standard
+      - graduated
+      - package
+      - percentage
+      - volume
+
+  Charge:
+    properties:
+      lago_id: optional<string>
+      charge_model:
+        docs: Charge model type
+        type: optional<ChargeModelType>
+
+  ChargeBillableMetric:
+    properties:
+      lago_id: optional<string>
+      name: optional<string>
+      code: optional<string>
+      aggregation_type: optional<commons.AggregationType>
+
+  Group:
+    properties:
+      lago_id: optional<string>
+      key: optional<string>
+      value: optional<string>
+      units: optional<double>
+      amount_cents: optional<integer>
