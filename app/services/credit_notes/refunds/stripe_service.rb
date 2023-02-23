@@ -34,15 +34,15 @@ module CreditNotes
         result
       end
 
-      def update_status(provider_refund_id:, status:)
-        refund = Refund.find_by(provider_refund_id: provider_refund_id)
-        return result.not_found_failure!(resource: 'stripe_refund') unless refund
+      def update_status(provider_refund_id:, status:, metadata: {})
+        refund = Refund.find_by(provider_refund_id:)
+        return handle_missing_refund(metadata) unless refund
 
         result.refund = refund
         @credit_note = result.credit_note = refund.credit_note
         return result if refund.credit_note.succeeded?
 
-        refund.update!(status: status)
+        refund.update!(status:)
         update_credit_note_status(status)
         track_refund_status_changed(status)
 
@@ -146,6 +146,16 @@ module CreditNotes
             refund_status: status,
           },
         )
+      end
+
+      def handle_missing_refund(metadata)
+        # NOTE: Refund was not initiated by lago
+        return result unless metadata&.key?(:lago_invoice_id)
+
+        # NOTE: Invoice does not belongs to this lago instance
+        return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
+
+        result.not_found_failure!(resource: 'stripe_refund')
       end
     end
   end

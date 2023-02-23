@@ -192,17 +192,50 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
     end
 
     context 'when refund is not found' do
-      it 'fails' do
+      let(:refund) { nil }
+
+      it 'returns an empty result' do
         result = stripe_service.update_status(
           provider_refund_id: 'foo',
           status: 'succeeded',
         )
 
         aggregate_failures do
-          expect(result).not_to be_success
+          expect(result).to be_success
+          expect(result.refund).to be_nil
+        end
+      end
 
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq('stripe_refund')
+      context 'with invoice id in metadata' do
+        it 'returns an empty result' do
+          result = stripe_service.update_status(
+            provider_refund_id: 'foo',
+            status: 'succeeded',
+            metadata: { lago_invoice_id: SecureRandom.uuid },
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.refund).to be_nil
+          end
+        end
+
+        context 'when invoice belongs to lago' do
+          let(:invoice) { create(:invoice) }
+
+          it 'returns a not found failure' do
+            result = stripe_service.update_status(
+              provider_refund_id: 're_123456',
+              status: 'succeeded',
+              metadata: { lago_invoice_id: invoice.id },
+            )
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.message).to eq('stripe_refund_not_found')
+            end
+          end
         end
       end
     end
