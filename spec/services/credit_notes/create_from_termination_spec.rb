@@ -53,7 +53,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     )
   end
 
-  describe '.call' do
+  describe '#call' do
     before { subscription_fee }
 
     it 'creates a credit note' do
@@ -93,6 +93,50 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
       it 'does not create a credit note' do
         expect { create_service.call }.not_to change(CreditNote, :count)
+      end
+    end
+
+    context 'when multiple fees' do
+      let(:subscription_fee) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 20,
+          vat_amount_cents: 4,
+          invoiceable_type: 'Subscription',
+          invoiceable_id: subscription.id,
+          vat_rate: 20,
+          created_at: Time.current - 2.months,
+        )
+      end
+
+      let(:fee2) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 20,
+          vat_amount_cents: 4,
+          invoiceable_type: 'Subscription',
+          invoiceable_id: subscription.id,
+          vat_rate: 20,
+          created_at: Time.current - 1.month,
+        )
+      end
+
+      before { fee2 }
+
+      it 'takes the last fee as reference' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note.items.count).to eq(1)
+          expect(credit_note.items.first.fee).to eq(fee2)
+        end
       end
     end
 
