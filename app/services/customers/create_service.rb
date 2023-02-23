@@ -75,7 +75,7 @@ module Customers
       ActiveRecord::Base.transaction do
         customer.save!
 
-        args[:metadata].each { |m| create_metadata(customer, m) } if args[:metadata].present?
+        args[:metadata].each { |m| create_metadata(customer:, args: m) } if args[:metadata].present?
       end
 
       # NOTE: handle configuration for configured payment providers
@@ -91,7 +91,7 @@ module Customers
 
     private
 
-    def create_metadata(customer, args)
+    def create_metadata(customer:, args:)
       customer.metadata.create!(
         key: args[:key],
         value: args[:value],
