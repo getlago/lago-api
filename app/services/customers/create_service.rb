@@ -32,7 +32,15 @@ module Customers
           return currency_result unless currency_result.success?
         end
 
-        customer.save!
+        ActiveRecord::Base.transaction do
+          customer.save!
+
+          if new_customer && params[:metadata]
+            params[:metadata].each { |m| create_metadata(customer:, args: m) }
+          elsif params[:metadata]
+            Customers::Metadata::UpdateService.new(customer:).call(params: params[:metadata])
+          end
+        end
       end
 
       # NOTE: handle configuration for configured payment providers

@@ -3,7 +3,7 @@
 module V1
   class CustomerSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         external_id: model.external_id,
         name: model.name,
@@ -27,9 +27,21 @@ module V1
         applicable_timezone: model.applicable_timezone,
         billing_configuration: billing_configuration,
       }
+
+      payload = payload.merge(metadata) if include?(:metadata)
+
+      payload
     end
 
     private
+
+    def metadata
+      ::CollectionSerializer.new(
+        model.metadata,
+        ::V1::Customers::MetadataSerializer,
+        collection_name: 'metadata',
+      ).serialize
+    end
 
     def billing_configuration
       configuration = {

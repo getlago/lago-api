@@ -7,16 +7,11 @@ module Api
         service = ::Customers::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
-          params: create_params,
+          params: create_params.to_h.deep_symbolize_keys,
         )
 
         if result.success?
-          render(
-            json: ::V1::CustomerSerializer.new(
-              result.customer,
-              root_name: 'customer',
-            ),
-          )
+          render_customer(result.customer)
         else
           render_error_response(result)
         end
@@ -56,6 +51,7 @@ module Api
             ::V1::CustomerSerializer,
             collection_name: 'customers',
             meta: pagination_metadata(customers),
+            includes: %i[metadata],
           ),
         )
       end
@@ -65,12 +61,7 @@ module Api
 
         return not_found_error(resource: 'customer') unless customer
 
-        render(
-          json: ::V1::CustomerSerializer.new(
-            customer,
-            root_name: 'customer',
-          ),
-        )
+        render_customer(customer)
       end
 
       def destroy
@@ -78,12 +69,7 @@ module Api
         result = ::Customers::DestroyService.call(customer:)
 
         if result.success?
-          render(
-            json: ::V1::CustomerSerializer.new(
-              result.customer,
-              root_name: 'customer',
-            ),
-          )
+          render_customer(result.customer)
         else
           render_error_response(result)
         end
@@ -118,6 +104,22 @@ module Api
             :vat_rate,
             :document_locale,
           ],
+          metadata: [
+            :id,
+            :key,
+            :value,
+            :display_in_invoice,
+          ],
+        )
+      end
+
+      def render_customer(customer)
+        render(
+          json: ::V1::CustomerSerializer.new(
+            customer,
+            root_name: 'customer',
+            includes: %i[metadata],
+          ),
         )
       end
     end

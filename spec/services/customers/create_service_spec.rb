@@ -85,6 +85,46 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
+    context 'with metadata' do
+      let(:create_args) do
+        {
+          external_id:,
+          name: 'Foo Bar',
+          currency: 'EUR',
+          billing_configuration: {
+            vat_rate: 20,
+            document_locale: 'fr',
+          },
+          metadata: [
+            {
+              key: 'manager name',
+              value: 'John',
+              display_in_invoice: true,
+            },
+            {
+              key: 'manager address',
+              value: 'Test',
+              display_in_invoice: false,
+            },
+          ],
+        }
+      end
+
+      it 'creates customer with metadata' do
+        result = customers_service.create_from_api(
+          organization:,
+          params: create_args,
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.metadata.count).to eq(2)
+        end
+      end
+    end
+
     context 'with premium features' do
       around { |test| lago_premium!(&test) }
 
@@ -118,14 +158,16 @@ RSpec.describe Customers::CreateService, type: :service do
     end
 
     context 'when customer already exists' do
-      let!(:customer) do
+      let(:customer) do
         create(
           :customer,
           organization:,
-          external_id: create_args[:external_id],
+          external_id:,
           email: 'foo@bar.com',
         )
       end
+
+      before { customer }
 
       it 'updates the customer' do
         result = customers_service.create_from_api(
@@ -155,10 +197,59 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
 
+      context 'with metadata' do
+        let(:customer_metadata) { create(:customer_metadata, customer:) }
+        let(:another_customer_metadata) { create(:customer_metadata, customer:, key: 'test', value: '1') }
+        let(:create_args) do
+          {
+            external_id:,
+            name: 'Foo Bar',
+            currency: 'EUR',
+            billing_configuration: {
+              vat_rate: 20,
+              document_locale: 'fr',
+            },
+            metadata: [
+              {
+                id: customer_metadata.id,
+                key: 'new key',
+                value: 'new value',
+                display_in_invoice: true,
+              },
+              {
+                key: 'Added key',
+                value: 'Added value',
+                display_in_invoice: true,
+              },
+            ],
+          }
+        end
+
+        before do
+          customer_metadata
+          another_customer_metadata
+        end
+
+        it 'updates metadata' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
+
+          metadata_keys = result.customer.metadata.pluck(:key)
+          metadata_ids = result.customer.metadata.pluck(:id)
+
+          expect(result.customer.metadata.count).to eq(2)
+          expect(metadata_keys).to eq(['new key', 'Added key'])
+          expect(metadata_ids).to include(customer_metadata.id)
+          expect(metadata_ids).not_to include(another_customer_metadata.id)
+        end
+      end
+
       context 'when attached to a subscription' do
         let(:create_args) do
           {
-            external_id: SecureRandom.uuid,
+            external_id:,
             name: 'Foo Bar',
             currency: 'CAD',
           }
@@ -189,7 +280,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
         let(:create_args) do
           {
-            external_id: SecureRandom.uuid,
+            external_id:,
             billing_configuration: { invoice_grace_period: 2 },
           }
         end
