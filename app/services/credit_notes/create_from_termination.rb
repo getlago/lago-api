@@ -44,7 +44,7 @@ module CreditNotes
     delegate :plan, :terminated_at, :customer, to: :subscription
 
     def last_subscription_fee
-      @last_subscription_fee ||= subscription.fees.order(created_at: :desc).last
+      @last_subscription_fee ||= subscription.fees.order(created_at: :desc).first
     end
 
     def compute_amount
