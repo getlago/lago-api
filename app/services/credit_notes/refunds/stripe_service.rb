@@ -153,7 +153,7 @@ module CreditNotes
         return result unless metadata&.key?(:lago_invoice_id)
 
         # NOTE: Invoice does not belongs to this lago instance
-        return result if Invoice.find_by(id: metadata[:lago_invoice_id]).nil?
+        return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
 
         result.not_found_failure!(resource: 'stripe_refund')
       end
