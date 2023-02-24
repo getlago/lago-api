@@ -38,7 +38,7 @@ module Customers
           if new_customer && params[:metadata]
             params[:metadata].each { |m| create_metadata(customer:, args: m) }
           elsif params[:metadata]
-            Customers::Metadata::UpdateService.new(customer:).call(params: params[:metadata])
+            Customers::Metadata::UpdateService.call(customer:, params: params[:metadata])
           end
         end
       end
