@@ -6,7 +6,7 @@ module Invoices
       WEBHOOK_TYPE = {
         'subscription' => 'invoice.created',
         'credit' => 'invoice.paid_credit_added',
-        'add_on' => 'invoice.add_on_added'
+        'add_on' => 'invoice.add_on_added',
       }.freeze
 
       def initialize(invoice:)
@@ -23,7 +23,9 @@ module Invoices
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')
         end
 
-        SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice) if customer&.organization&.webhook_url?
+        if customer&.organization&.webhook_url?
+          SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice)
+        end
         Invoices::Payments::CreateService.new(invoice).call
 
         result.invoice = invoice
