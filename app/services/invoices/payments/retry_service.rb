@@ -37,8 +37,6 @@ module Invoices
 
       delegate :customer, to: :invoice
 
-      private
-
       def deliver_webhook
         SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice)
       end
