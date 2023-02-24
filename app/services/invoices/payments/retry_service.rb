@@ -3,6 +3,12 @@
 module Invoices
   module Payments
     class RetryService < BaseService
+      WEBHOOK_TYPE = {
+        'subscription' => 'invoice.created',
+        'credit' => 'invoice.paid_credit_added',
+        'add_on' => 'invoice.add_on_added'
+      }.freeze
+
       def initialize(invoice:)
         @invoice = invoice
 
@@ -17,7 +23,7 @@ module Invoices
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')
         end
 
-        SendWebhookJob.perform_later(webhook_type, invoice) if customer&.organization&.webhook_url?
+        SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice) if customer&.organization&.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call
 
         result.invoice = invoice
@@ -30,17 +36,6 @@ module Invoices
       attr_reader :invoice
 
       delegate :customer, to: :invoice
-
-      def webhook_type
-        case invoice.invoice_type
-        when 'subscription'
-          'invoice.created'
-        when 'credit'
-          'invoice.paid_credit_added'
-        when 'add_on'
-          'invoice.add_on_added'
-        end
-      end
     end
   end
 end

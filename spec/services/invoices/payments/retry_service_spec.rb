@@ -19,7 +19,7 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
     it 'enqueues a SendWebhookJob' do
       expect do
         retry_service.call
-      end.to have_enqueued_job(SendWebhookJob).with(:invoice, Invoice)
+      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
     context 'with gocardless payment provider' do
