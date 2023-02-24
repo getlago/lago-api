@@ -32,9 +32,14 @@ module Invoices
       delegate :customer, to: :invoice
 
       def webhook_type
-        return :invoice if invoice.invoice_type == 'subscription'
-
-        invoice.invoice_type.to_sym
+        case invoice.invoice_type
+        when 'subscription'
+          'invoice.created'
+        when 'credit'
+          'invoice.paid_credit_added'
+        when 'add_on'
+          'invoice.add_on_added'
+        end
       end
     end
   end
