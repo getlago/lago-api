@@ -23,9 +23,7 @@ module Invoices
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')
         end
 
-        if customer&.organization&.webhook_url?
-          SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice)
-        end
+        deliver_webhook if customer&.organization&.webhook_url?
         Invoices::Payments::CreateService.new(invoice).call
 
         result.invoice = invoice
@@ -38,6 +36,12 @@ module Invoices
       attr_reader :invoice
 
       delegate :customer, to: :invoice
+
+      private
+
+      def deliver_webhook
+        SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice)
+      end
     end
   end
 end
