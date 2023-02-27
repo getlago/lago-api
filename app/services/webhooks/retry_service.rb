@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Webhooks
-  class ResendService < ::BaseService
+  class RetryService < ::BaseService
     def initialize(webhook:)
       @webhook = webhook
 

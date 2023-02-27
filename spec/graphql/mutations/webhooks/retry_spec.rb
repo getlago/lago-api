@@ -2,15 +2,15 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Webhooks::Resend, type: :graphql do
+RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:webhook) { create(:webhook, :failed, organization:) }
 
   let(:mutation) do
     <<-GQL
-      mutation($input: ResendWebhookInput!) {
-        resendWebhook(input: $input) {
+      mutation($input: RetryWebhookInput!) {
+        retryWebhook(input: $input) {
           id,
         }
       }
@@ -19,7 +19,7 @@ RSpec.describe Mutations::Webhooks::Resend, type: :graphql do
 
   before { webhook }
 
-  it 'resends a webhook' do
+  it 'retries a webhook' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -31,7 +31,7 @@ RSpec.describe Mutations::Webhooks::Resend, type: :graphql do
       },
     )
 
-    result_data = result['data']['resendWebhook']
+    result_data = result['data']['retryWebhook']
 
     aggregate_failures do
       expect(result_data['id']).to eq(webhook.id)

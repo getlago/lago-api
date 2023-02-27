@@ -2,12 +2,12 @@
 
 module Mutations
   module Webhooks
-    class Resend < BaseMutation
+    class Retry < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'ResendWebhook'
-      description 'Resend a Webhook'
+      graphql_name 'RetryWebhook'
+      description 'Retry a Webhook'
 
       argument :id, ID, required: true
 
@@ -17,7 +17,7 @@ module Mutations
         validate_organization!
 
         webhook = current_organization.webhooks.find_by(id:)
-        result = ::Webhooks::ResendService.new(webhook:).call
+        result = ::Webhooks::RetryService.call(webhook:)
 
         result.success? ? result.webhook : result_error(result)
       end

@@ -67,6 +67,6 @@ module Types
     field :revoke_invite, mutation: Mutations::Invites::Revoke
     field :revoke_membership, mutation: Mutations::Memberships::Revoke
 
-    field :resend_webhook, mutation: Mutations::Webhooks::Resend
+    field :retry_webhook, mutation: Mutations::Webhooks::Retry
   end
 end

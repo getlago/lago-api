@@ -2,13 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::ResendService, type: :service do
-  subject(:resend_service) { described_class.new(webhook:) }
+RSpec.describe Webhooks::RetryService, type: :service do
+  subject(:retry_service) { described_class.new(webhook:) }
 
   let(:webhook) { create(:webhook, :failed) }
 
   it 'enqueues a SendWebhookJob' do
-    expect { resend_service.call }.to have_enqueued_job(SendWebhookJob)
+    expect { retry_service.call }.to have_enqueued_job(SendWebhookJob)
       .with(
         webhook.webhook_type,
         nil,
@@ -21,7 +21,7 @@ RSpec.describe Webhooks::ResendService, type: :service do
     let(:webhook) { nil }
 
     it 'returns an error' do
-      result = resend_service.call
+      result = retry_service.call
 
       expect(result).not_to be_success
       expect(result.error.error_code).to eq('webhook_not_found')
@@ -32,7 +32,7 @@ RSpec.describe Webhooks::ResendService, type: :service do
     let(:webhook) { create(:webhook, :succeeded) }
 
     it 'returns an error' do
-      result = resend_service.call
+      result = retry_service.call
 
       expect(result).not_to be_success
       expect(result.error.code).to eq('is_succeeded')
