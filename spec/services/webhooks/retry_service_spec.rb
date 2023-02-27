@@ -17,6 +17,12 @@ RSpec.describe Webhooks::RetryService, type: :service do
       )
   end
 
+  it 'assigns webhook to result' do
+    result = retry_service.call
+
+    expect(result.webhook.id).to eq(webhook.id)
+  end
+
   context 'when webhook is not found' do
     let(:webhook) { nil }
 
