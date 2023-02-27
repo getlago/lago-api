@@ -23,6 +23,7 @@ en:
         greater_than: value_is_out_of_range
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
+        invalid_aggregation_type_or_charge_model: invalid_aggregation_type_or_charge_model
         invalid_amount: invalid_amount
         invalid_flat_amount: invalid_flat_amount
         invalid_per_unit_amount: invalid_per_unit_amount
