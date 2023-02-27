@@ -10,7 +10,7 @@ groups:
           password: ${MAVEN_PASSWORD}
         github:
           repository: fern-lago/lago-java-client
-      - name: getlago/fern-postman
+      - name: fernapi/fern-postman
         version: 0.0.40
         output:
           location: postman
