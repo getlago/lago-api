@@ -24,6 +24,29 @@ RSpec.describe Credit, type: :model do
           expect(credit.item_name).to eq('Coupon name')
         end
       end
+
+      context 'when coupon is deleted' do
+        let(:coupon) do
+          create(
+            :coupon,
+            :deleted,
+            code: 'coupon_code',
+            name: 'Coupon name',
+            amount_cents: 200,
+            amount_currency: 'EUR',
+          )
+        end
+
+        it 'returns coupon details' do
+          aggregate_failures do
+            expect(credit.item_id).to eq(coupon.id)
+            expect(credit.item_type).to eq('coupon')
+            expect(credit.item_code).to eq('coupon_code')
+            expect(credit.item_name).to eq('Coupon name')
+            expect(credit.invoice_coupon_display_name).to eq('Coupon name (€2.00)')
+          end
+        end
+      end
     end
 
     context 'when credit is a credit note' do

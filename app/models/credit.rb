@@ -44,7 +44,6 @@ class Credit < ApplicationRecord
   def invoice_coupon_display_name
     return nil if applied_coupon.blank?
 
-    coupon = applied_coupon.coupon
     suffix = if coupon.percentage?
       "#{format('%.2f', applied_coupon.percentage_rate)}%"
     else
