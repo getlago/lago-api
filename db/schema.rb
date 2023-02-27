@@ -587,8 +587,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_21_102035) do
   end
 
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "object_id", null: false
-    t.string "object_type", null: false
+    t.uuid "object_id"
+    t.string "object_type"
     t.integer "status", default: 0, null: false
     t.integer "retries", default: 0, null: false
     t.integer "http_status"
