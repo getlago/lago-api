@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class AppliedCoupon < ApplicationRecord
+  include PaperTrailTraceable
   include Currencies
 
   belongs_to :coupon

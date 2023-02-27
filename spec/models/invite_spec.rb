@@ -3,9 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Invite, type: :model do
-  describe '#mark_as_revoked' do
-    let(:invite) { create(:invite) }
+  subject(:invite) { create(:invite) }
 
+  it_behaves_like 'paper_trail traceable'
+
+  describe '#mark_as_revoked' do
     it 'revokes the invite with a Time' do
       freeze_time do
         expect { invite.mark_as_revoked! }
@@ -16,8 +18,6 @@ RSpec.describe Invite, type: :model do
   end
 
   describe '#mark_as_accepted' do
-    let(:invite) { create(:invite) }
-
     it 'accepts the invite with a Time' do
       freeze_time do
         expect { invite.mark_as_accepted! }

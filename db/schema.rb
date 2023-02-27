@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_21_070501) do
+ActiveRecord::Schema[7.0].define(version: 2023_02_21_102035) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -159,6 +159,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_21_070501) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "precise_amount_cents", precision: 30, scale: 5, null: false
     t.index ["credit_note_id"], name: "index_credit_note_items_on_credit_note_id"
     t.index ["fee_id"], name: "index_credit_note_items_on_fee_id"
   end
@@ -541,6 +542,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_21_070501) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "versions", force: :cascade do |t|
+    t.string "item_type", null: false
+    t.string "item_id", null: false
+    t.string "event", null: false
+    t.string "whodunnit"
+    t.jsonb "object"
+    t.jsonb "object_changes"
+    t.datetime "created_at"
+    t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
+  end
+
   create_table "wallet_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "wallet_id", null: false
     t.integer "transaction_type", null: false
@@ -575,8 +587,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_21_070501) do
   end
 
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "object_id", null: false
-    t.string "object_type", null: false
+    t.uuid "object_id"
+    t.string "object_type"
     t.integer "status", default: 0, null: false
     t.integer "retries", default: 0, null: false
     t.integer "http_status"

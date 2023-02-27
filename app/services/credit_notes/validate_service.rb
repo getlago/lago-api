@@ -43,7 +43,7 @@ module CreditNotes
 
     def total_items_amount_cents
       credit_note.items.sum do |item|
-        item.amount_cents + (item.amount_cents * item.fee.vat_rate).fdiv(100)
+        item.precise_amount_cents + (item.precise_amount_cents * item.fee.vat_rate).fdiv(100)
       end.round
     end
 

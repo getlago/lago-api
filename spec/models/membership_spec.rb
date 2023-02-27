@@ -3,7 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe Membership, type: :model do
-  let(:membership) { create(:membership) }
+  subject(:membership) { create(:membership) }
+
+  it_behaves_like 'paper_trail traceable'
 
   describe '#mark_as_revoked' do
     it 'revokes the membership with a Time' do

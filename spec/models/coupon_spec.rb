@@ -3,9 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Coupon, type: :model do
-  describe '.mark_as_terminated' do
-    let(:coupon) { create(:coupon) }
+  subject(:coupon) { create(:coupon) }
 
+  it_behaves_like 'paper_trail traceable'
+
+  describe '.mark_as_terminated' do
     it 'terminates the coupon' do
       coupon.mark_as_terminated!
 

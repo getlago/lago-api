@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Membership < ApplicationRecord
+  include PaperTrailTraceable
+
   belongs_to :organization
   belongs_to :user
 

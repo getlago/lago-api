@@ -3,20 +3,20 @@
 require 'rails_helper'
 
 RSpec.describe Charge, type: :model do
+  subject(:charge) { create(:standard_charge) }
+
+  it_behaves_like 'paper_trail traceable'
+
   describe '#properties' do
     context 'with group properties' do
       it 'returns the group properties' do
-        charge = create(:standard_charge)
-        property = create(:group_property, charge: charge, values: { foo: 'bar' })
-
+        property = create(:group_property, charge:, values: { foo: 'bar' })
         expect(charge.properties(group_id: property.group_id)).to eq(property.values)
       end
     end
 
     context 'without group properties' do
       it 'returns the charge properties' do
-        charge = create(:standard_charge)
-
         expect(charge.properties).to eq(charge.properties)
       end
     end
@@ -55,8 +55,7 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages[:properties]).to include('invalid_amount')
         expect(charge.errors.messages[:properties]).to include('invalid_graduated_ranges')
 
-        expect(Charges::Validators::GraduatedService).to have_received(:new)
-          .with(charge: charge)
+        expect(Charges::Validators::GraduatedService).to have_received(:new).with(charge:)
         expect(validation_service).to have_received(:valid?)
         expect(validation_service).to have_received(:result)
       end
@@ -111,8 +110,7 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages.keys).to include(:properties)
         expect(charge.errors.messages[:properties]).to include('invalid_amount')
 
-        expect(Charges::Validators::StandardService).to have_received(:new)
-          .with(charge: charge)
+        expect(Charges::Validators::StandardService).to have_received(:new).with(charge:)
         expect(validation_service).to have_received(:valid?)
         expect(validation_service).to have_received(:result)
       end
@@ -171,8 +169,7 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages[:properties]).to include('invalid_free_units')
         expect(charge.errors.messages[:properties]).to include('invalid_package_size')
 
-        expect(Charges::Validators::PackageService).to have_received(:new)
-          .with(charge: charge)
+        expect(Charges::Validators::PackageService).to have_received(:new).with(charge:)
         expect(validation_service).to have_received(:valid?)
         expect(validation_service).to have_received(:result)
       end
@@ -231,8 +228,7 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages[:properties]).to include('invalid_free_units_per_events')
         expect(charge.errors.messages[:properties]).to include('invalid_free_units_per_total_aggregation')
 
-        expect(Charges::Validators::PercentageService).to have_received(:new)
-          .with(charge: charge)
+        expect(Charges::Validators::PercentageService).to have_received(:new).with(charge:)
         expect(validation_service).to have_received(:valid?)
         expect(validation_service).to have_received(:result)
       end
@@ -288,8 +284,7 @@ RSpec.describe Charge, type: :model do
         expect(charge.errors.messages[:properties]).to include('invalid_amount')
         expect(charge.errors.messages[:properties]).to include('invalid_volume_ranges')
 
-        expect(Charges::Validators::VolumeService).to have_received(:new)
-          .with(charge: charge)
+        expect(Charges::Validators::VolumeService).to have_received(:new).with(charge:)
         expect(validation_service).to have_received(:valid?)
         expect(validation_service).to have_received(:result)
       end
@@ -324,7 +319,6 @@ RSpec.describe Charge, type: :model do
 
     context 'with group properties missing for some groups' do
       it 'returns an error' do
-        charge = create(:standard_charge)
         create(:group, billable_metric: charge.billable_metric)
 
         expect(charge).not_to be_valid
@@ -342,7 +336,7 @@ RSpec.describe Charge, type: :model do
           :standard_charge,
           billable_metric: metric,
           properties: {},
-          group_properties: [build(:group_property, group: group)],
+          group_properties: [build(:group_property, group:)],
         )
 
         expect(charge).to be_valid

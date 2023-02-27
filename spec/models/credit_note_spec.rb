@@ -3,13 +3,14 @@
 require 'rails_helper'
 
 RSpec.describe CreditNote, type: :model do
+  subject(:credit_note) { create(:credit_note) }
+
+  it_behaves_like 'paper_trail traceable'
+
   describe 'sequential_id' do
     let(:invoice) { create(:invoice) }
     let(:customer) { invoice.customer }
-
-    let(:credit_note) do
-      build(:credit_note, invoice:, customer:)
-    end
+    let(:credit_note) { build(:credit_note, invoice:, customer:) }
 
     it 'assigns a sequential_id is present' do
       credit_note.save
@@ -35,11 +36,7 @@ RSpec.describe CreditNote, type: :model do
 
     context 'when credit note already exists' do
       before do
-        create(
-          :credit_note,
-          invoice: invoice,
-          sequential_id: 5,
-        )
+        create(:credit_note, invoice:, sequential_id: 5)
       end
 
       it 'takes the next available id' do
@@ -54,10 +51,7 @@ RSpec.describe CreditNote, type: :model do
 
     context 'with credit note on other invoice' do
       before do
-        create(
-          :credit_note,
-          sequential_id: 1,
-        )
+        create(:credit_note, sequential_id: 1)
       end
 
       it 'scopes the sequence to the invoice' do
@@ -74,7 +68,7 @@ RSpec.describe CreditNote, type: :model do
   describe 'number' do
     let(:invoice) { create(:invoice, number: 'CUST-001') }
     let(:customer) { invoice.customer }
-    let(:credit_note) { build(:credit_note, invoice: invoice, customer: customer) }
+    let(:credit_note) { build(:credit_note, invoice:, customer:) }
 
     it 'generates the credit_note_number' do
       credit_note.save
@@ -114,17 +108,15 @@ RSpec.describe CreditNote, type: :model do
   end
 
   describe '#subscription_ids' do
-    let(:credit_note) { create(:credit_note) }
     let(:invoice) { credit_note.invoice }
-
-    let(:subscription_fee) { create(:fee, invoice: invoice) }
+    let(:subscription_fee) { create(:fee, invoice:) }
     let(:credit_note_item1) do
-      create(:credit_note_item, credit_note: credit_note, fee: subscription_fee)
+      create(:credit_note_item, credit_note:, fee: subscription_fee)
     end
 
-    let(:charge_fee) { create(:charge_fee, invoice: invoice) }
+    let(:charge_fee) { create(:charge_fee, invoice:) }
     let(:credit_note_item2) do
-      create(:credit_note_item, credit_note: credit_note, fee: charge_fee)
+      create(:credit_note_item, credit_note:, fee: charge_fee)
     end
 
     before do
@@ -137,9 +129,9 @@ RSpec.describe CreditNote, type: :model do
     end
 
     context 'with add_on fee' do
-      let(:add_on_fee) { create(:add_on_fee, invoice: invoice) }
+      let(:add_on_fee) { create(:add_on_fee, invoice:) }
       let(:credit_note_item3) do
-        create(:credit_note_item, credit_note: credit_note, fee: add_on_fee)
+        create(:credit_note_item, credit_note:, fee: add_on_fee)
       end
 
       before { credit_note_item3 }
@@ -156,19 +148,16 @@ RSpec.describe CreditNote, type: :model do
     end
 
     describe '#subscription_item' do
-      let(:credit_note) { create(:credit_note) }
       let(:invoice) { credit_note.invoice }
-
-      let(:subscription_fee) { create(:fee, invoice: invoice) }
+      let(:subscription_fee) { create(:fee, invoice:) }
       let(:credit_note_item1) do
-        create(:credit_note_item, credit_note: credit_note, fee: subscription_fee)
+        create(:credit_note_item, credit_note:, fee: subscription_fee)
       end
 
       let(:subscription) { subscription_fee.subscription }
-
-      let(:charge_fee) { create(:charge_fee, invoice: invoice, subscription: subscription) }
+      let(:charge_fee) { create(:charge_fee, invoice:, subscription:) }
       let(:credit_note_item2) do
-        create(:credit_note_item, credit_note: credit_note, fee: charge_fee)
+        create(:credit_note_item, credit_note:, fee: charge_fee)
       end
 
       before do
@@ -192,19 +181,17 @@ RSpec.describe CreditNote, type: :model do
     end
 
     describe '#subscription_charge_items' do
-      let(:credit_note) { create(:credit_note) }
       let(:invoice) { credit_note.invoice }
-
-      let(:subscription_fee) { create(:fee, invoice: invoice) }
+      let(:subscription_fee) { create(:fee, invoice:) }
       let(:credit_note_item1) do
-        create(:credit_note_item, credit_note: credit_note, fee: subscription_fee)
+        create(:credit_note_item, credit_note:, fee: subscription_fee)
       end
 
       let(:subscription) { subscription_fee.subscription }
 
-      let(:charge_fee) { create(:charge_fee, invoice: invoice, subscription: subscription) }
+      let(:charge_fee) { create(:charge_fee, invoice:, subscription:) }
       let(:credit_note_item2) do
-        create(:credit_note_item, credit_note: credit_note, fee: charge_fee)
+        create(:credit_note_item, credit_note:, fee: charge_fee)
       end
 
       before do
@@ -219,7 +206,6 @@ RSpec.describe CreditNote, type: :model do
   end
 
   describe '#add_on_items' do
-    let(:credit_note) { create(:credit_note) }
     let(:invoice) { credit_note.invoice }
     let(:add_on) { create(:add_on, organization: credit_note.organization) }
     let(:applied_add_on) { create(:applied_add_on, add_on:) }
@@ -234,10 +220,7 @@ RSpec.describe CreditNote, type: :model do
   end
 
   describe '#voidable?' do
-    let(:credit_note) do
-      create(:credit_note, balance_amount_cents: balance_amount_cents, credit_status: credit_status)
-    end
-
+    let(:credit_note) { create(:credit_note, balance_amount_cents:, credit_status:) }
     let(:balance_amount_cents) { 10 }
     let(:credit_status) { :available }
 
@@ -257,8 +240,6 @@ RSpec.describe CreditNote, type: :model do
   end
 
   describe ' #sub_total_vat_exclueded_amount_cents' do
-    let(:credit_note) { create(:credit_note) }
-
     it 'returs the total amount without the vat' do
       expect(credit_note.sub_total_vat_excluded_amount_cents)
         .to eq(credit_note.total_amount_cents - credit_note.vat_amount_cents)

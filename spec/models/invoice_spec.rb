@@ -3,15 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Invoice, type: :model do
+  subject(:invite) { create(:invite) }
+
+  it_behaves_like 'paper_trail traceable'
+
   describe 'sequential_id' do
     let(:customer) { create(:customer) }
-
-    let(:invoice) do
-      build(
-        :invoice,
-        customer: customer,
-      )
-    end
+    let(:invoice) { build(:invoice, customer:) }
 
     it 'assigns a sequential id to a new invoice' do
       invoice.save
@@ -37,11 +35,7 @@ RSpec.describe Invoice, type: :model do
 
     context 'when invoice alrady exists' do
       before do
-        create(
-          :invoice,
-          customer: customer,
-          sequential_id: 5,
-        )
+        create(:invoice, customer:, sequential_id: 5)
       end
 
       it 'takes the next available id' do
@@ -56,10 +50,7 @@ RSpec.describe Invoice, type: :model do
 
     context 'with invoices on other organization' do
       before do
-        create(
-          :invoice,
-          sequential_id: 1,
-        )
+        create(:invoice, sequential_id: 1)
       end
 
       it 'scopes the sequence to the organization' do
@@ -75,9 +66,9 @@ RSpec.describe Invoice, type: :model do
 
   describe 'number' do
     let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization: organization) }
-    let(:subscription) { create(:subscription, organization: organization, customer: customer) }
-    let(:invoice) { build(:invoice, customer: customer) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:invoice) { build(:invoice, customer:) }
 
     it 'generates the invoice number' do
       invoice.save

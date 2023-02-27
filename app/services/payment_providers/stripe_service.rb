@@ -134,6 +134,7 @@ module PaymentProviders
           .new.update_status(
             provider_refund_id: event.data.object.id,
             status: event.data.object.status,
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
       end
     end

@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe Credit, type: :model do
   describe 'invoice item' do
     context 'when credit is a coupon' do
-      subject(:credit) { create(:credit, applied_coupon: applied_coupon) }
+      subject(:credit) { create(:credit, applied_coupon:) }
 
-      let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+      let(:applied_coupon) { create(:applied_coupon, coupon:) }
       let(:coupon) do
         create(
           :coupon,
@@ -22,6 +22,29 @@ RSpec.describe Credit, type: :model do
           expect(credit.item_type).to eq('coupon')
           expect(credit.item_code).to eq('coupon_code')
           expect(credit.item_name).to eq('Coupon name')
+        end
+      end
+
+      context 'when coupon is deleted' do
+        let(:coupon) do
+          create(
+            :coupon,
+            :deleted,
+            code: 'coupon_code',
+            name: 'Coupon name',
+            amount_cents: 200,
+            amount_currency: 'EUR',
+          )
+        end
+
+        it 'returns coupon details' do
+          aggregate_failures do
+            expect(credit.item_id).to eq(coupon.id)
+            expect(credit.item_type).to eq('coupon')
+            expect(credit.item_code).to eq('coupon_code')
+            expect(credit.item_name).to eq('Coupon name')
+            expect(credit.invoice_coupon_display_name).to eq('Coupon name (€2.00)')
+          end
         end
       end
     end
