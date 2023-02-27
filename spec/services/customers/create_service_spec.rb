@@ -244,6 +244,66 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(metadata_ids).to include(customer_metadata.id)
           expect(metadata_ids).not_to include(another_customer_metadata.id)
         end
+
+        context 'when more than five metadata objects are provided' do
+          let(:create_args) do
+            {
+              external_id:,
+              name: 'Foo Bar',
+              currency: 'EUR',
+              billing_configuration: {
+                vat_rate: 20,
+                document_locale: 'fr',
+              },
+              metadata: [
+                {
+                  id: customer_metadata.id,
+                  key: 'new key',
+                  value: 'new value',
+                  display_in_invoice: true,
+                },
+                {
+                  key: 'Added key1',
+                  value: 'Added value1',
+                  display_in_invoice: true,
+                },
+                {
+                  key: 'Added key2',
+                  value: 'Added value2',
+                  display_in_invoice: true,
+                },
+                {
+                  key: 'Added key3',
+                  value: 'Added value3',
+                  display_in_invoice: true,
+                },
+                {
+                  key: 'Added key4',
+                  value: 'Added value4',
+                  display_in_invoice: true,
+                },
+                {
+                  key: 'Added key5',
+                  value: 'Added value5',
+                  display_in_invoice: true,
+                },
+              ],
+            }
+          end
+
+          it 'fails to create customer with metadata' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args,
+            )
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+              expect(result.error.code).to eq('invalid_number_of_metadata')
+            end
+          end
+        end
       end
 
       context 'when attached to a subscription' do

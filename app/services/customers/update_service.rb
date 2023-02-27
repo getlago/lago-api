@@ -6,6 +6,10 @@ module Customers
       customer = result.user.customers.find_by(id: args[:id])
       return result.not_found_failure!(resource: 'customer') unless customer
 
+      unless valid_metadata_count?(metadata: args[:metadata])
+        return result.not_allowed_failure!(code: 'invalid_number_of_metadata')
+      end
+
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         if args.key?(:currency)
@@ -99,6 +103,13 @@ module Customers
     end
 
     private
+
+    def valid_metadata_count?(metadata:)
+      return true if metadata.blank?
+      return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
+
+      false
+    end
 
     def assign_premium_attributes(customer, args)
       return unless License.premium?

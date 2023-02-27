@@ -6,6 +6,10 @@ module Customers
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
 
+      unless valid_metadata_count?(metadata: params[:metadata])
+        return result.not_allowed_failure!(code: 'invalid_number_of_metadata')
+      end
+
       ActiveRecord::Base.transaction do
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
@@ -56,6 +60,10 @@ module Customers
     def create(**args)
       billing_configuration = args[:billing_configuration]&.to_h || {}
 
+      unless valid_metadata_count?(metadata: args[:metadata])
+        return result.not_allowed_failure!(code: 'invalid_number_of_metadata')
+      end
+
       customer = Customer.new(
         organization_id: args[:organization_id],
         external_id: args[:external_id],
@@ -98,6 +106,13 @@ module Customers
     end
 
     private
+
+    def valid_metadata_count?(metadata:)
+      return true if metadata.blank?
+      return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
+
+      false
+    end
 
     def create_metadata(customer:, args:)
       customer.metadata.create!(
