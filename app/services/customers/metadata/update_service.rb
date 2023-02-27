@@ -27,7 +27,7 @@ module Customers
         end
 
         # NOTE: Delete metadata that are no more linked to the customer
-        sanitize_charges(hash_metadata, created_metadata_ids)
+        sanitize_metadata(hash_metadata, created_metadata_ids)
 
         result.customer = customer
         result
@@ -45,7 +45,7 @@ module Customers
         )
       end
 
-      def sanitize_charges(args_metadata, created_metadata_ids)
+      def sanitize_metadata(args_metadata, created_metadata_ids)
         updated_metadata_ids = args_metadata.reject { |m| m[:id].nil? }.map { |m| m[:id] }
         not_needed_ids = customer.metadata.pluck(:id) - updated_metadata_ids - created_metadata_ids
 
