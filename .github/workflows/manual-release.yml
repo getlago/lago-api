@@ -53,3 +53,25 @@ jobs:
             GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
             GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
             LAGO_OAUTH_URL=https://proxy.getlago.com
+  
+  fern-generate:
+    name: Fern Generate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+      
+      - name: Download Fern
+        run: npm install -g fern-api
+
+      - name: Generate Postman, Java SDK, and Docs
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          POSTMAN_WORKSPACE_ID: ${{ secrets.POSTMAN_WORKSPACE_ID }}
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
+        run: fern generate --group publish --version ${{ github.event.inputs.version }} --log-level debug
