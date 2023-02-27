@@ -343,4 +343,45 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '#validate_instant' do
+    it 'does not return an error' do
+      expect(build(:standard_charge)).to be_valid
+    end
+
+    context 'when billable metric is recurring_count_agg' do
+      it 'returns an error' do
+        billable_metric = create(:recurring_billable_metric)
+        charge = build(:standard_charge, :instant, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:instant]).to include('invalid_aggregation_type_or_charge_model')
+        end
+      end
+    end
+
+    context 'when billable metric is max_agg' do
+      it 'returns an error' do
+        billable_metric = create(:max_billable_metric)
+        charge = build(:standard_charge, :instant, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:instant]).to include('invalid_aggregation_type_or_charge_model')
+        end
+      end
+    end
+
+    context 'when charge model is volume' do
+      it 'returns an error' do
+        charge = build(:volume_charge, :instant)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:instant]).to include('invalid_aggregation_type_or_charge_model')
+        end
+      end
+    end
+  end
 end

@@ -29,6 +29,7 @@ class Charge < ApplicationRecord
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
 
   validate :validate_group_properties
+  validate :validate_instant
 
   default_scope -> { kept }
 
@@ -73,5 +74,15 @@ class Charge < ApplicationRecord
     gp_group_ids = group_properties.map { |gp| gp[:group_id] }.compact.sort
 
     errors.add(:group_properties, :values_not_all_present) if bm_group_ids != gp_group_ids
+  end
+
+  # NOTE: An instant charge cannot be created in the following cases:
+  # - billable metric aggregation type is max_agg or recurring_count_agg
+  # - charge model is volume
+  def validate_instant
+    return unless instant?
+    return unless billable_metric.recurring_count_agg? || billable_metric.max_agg? || volume?
+
+    errors.add(:instant, :invalid_aggregation_type_or_charge_model)
   end
 end

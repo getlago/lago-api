@@ -51,5 +51,9 @@ FactoryBot.define do
         }
       end
     end
+
+    trait :instant do
+      instant { true }
+    end
   end
 end
