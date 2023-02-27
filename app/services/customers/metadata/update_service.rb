@@ -3,12 +3,13 @@
 module Customers
   module Metadata
     class UpdateService < BaseService
-      def initialize(customer:)
+      def initialize(customer:, params:)
         @customer = customer
+        @params = params
         super
       end
 
-      def call(params:)
+      def call
         created_metadata_ids = []
 
         hash_metadata = params.map { |m| m.to_h.deep_symbolize_keys }
@@ -34,13 +35,13 @@ module Customers
 
       private
 
-      attr_reader :customer
+      attr_reader :customer, :params
 
-      def create_metadata(params)
+      def create_metadata(payload)
         customer.metadata.create!(
-          key: params[:key],
-          value: params[:value],
-          display_in_invoice: params[:display_in_invoice],
+          key: payload[:key],
+          value: payload[:value],
+          display_in_invoice: payload[:display_in_invoice],
         )
       end
 

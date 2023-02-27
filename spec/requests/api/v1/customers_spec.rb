@@ -87,6 +87,39 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context 'with metadata' do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          metadata: [
+            {
+              key: 'Hello',
+              value: 'Hi',
+              display_in_invoice: true,
+            },
+          ],
+        }
+      end
+
+      it 'returns a success' do
+        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:customer][:lago_id]).to be_present
+        expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+
+        metadata = json[:customer][:metadata]
+        aggregate_failures do
+          expect(metadata).to be_present
+          expect(metadata.first[:key]).to eq('Hello')
+          expect(metadata.first[:value]).to eq('Hi')
+          expect(metadata.first[:display_in_invoice]).to eq(true)
+        end
+      end
+    end
+
     context 'with invalid params' do
       let(:create_params) do
         { name: 'Foo Bar', currency: 'invalid' }

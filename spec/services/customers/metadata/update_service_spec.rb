@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Customers::Metadata::UpdateService do
-  subject(:update_service) { described_class.new(customer:) }
+  subject(:update_service) { described_class.new(customer:, params:) }
 
   let(:customer) { create(:customer) }
   let(:customer_metadata) { create(:customer_metadata, customer:) }
@@ -31,7 +31,7 @@ RSpec.describe Customers::Metadata::UpdateService do
     end
 
     it 'updates existing metadata' do
-      result = update_service.call(params:)
+      result = update_service.call
 
       metadata_keys = result.customer.metadata.pluck(:key)
       metadata_ids = result.customer.metadata.pluck(:id)
@@ -42,7 +42,7 @@ RSpec.describe Customers::Metadata::UpdateService do
     end
 
     it 'adds new metadata' do
-      result = update_service.call(params:)
+      result = update_service.call
 
       metadata_keys = result.customer.metadata.pluck(:key)
 
@@ -51,7 +51,7 @@ RSpec.describe Customers::Metadata::UpdateService do
     end
 
     it 'sanitizes not needed metadata' do
-      result = update_service.call(params:)
+      result = update_service.call
 
       metadata_ids = result.customer.metadata.pluck(:id)
 

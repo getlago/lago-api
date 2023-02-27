@@ -59,7 +59,7 @@ module Customers
         ActiveRecord::Base.transaction do
           customer.save!
 
-          Customers::Metadata::UpdateService.new(customer:).call(params: args[:metadata]) if args[:metadata]
+          Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
         end
 
         # NOTE: if payment provider is updated, we need to create/update the provider customer
