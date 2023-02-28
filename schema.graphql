@@ -171,6 +171,7 @@ type Charge {
   deletedAt: ISO8601DateTime
   groupProperties: [GroupProperties!]
   id: ID!
+  instant: Boolean!
   properties: Properties
   updatedAt: ISO8601DateTime!
 }
@@ -180,6 +181,7 @@ input ChargeInput {
   chargeModel: ChargeModelEnum!
   groupProperties: [GroupPropertiesInput!]
   id: ID
+  instant: Boolean
   properties: PropertiesInput
 }
 
