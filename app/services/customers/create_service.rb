@@ -118,7 +118,7 @@ module Customers
       customer.metadata.create!(
         key: args[:key],
         value: args[:value],
-        display_in_invoice: args[:display_in_invoice],
+        display_in_invoice: args[:display_in_invoice] || false,
       )
     end
 
