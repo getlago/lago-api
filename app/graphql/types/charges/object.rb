@@ -8,6 +8,7 @@ module Types
       field :id, ID, null: false
       field :billable_metric, Types::BillableMetrics::Object, null: false
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
+      field :instant, Boolean, null: false
       field :properties, Types::Charges::Properties, null: true
       field :group_properties, [Types::Charges::GroupProperties], null: true
 
