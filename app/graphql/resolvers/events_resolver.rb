@@ -15,11 +15,11 @@ module Resolvers
     def resolve(page: nil, limit: nil)
       validate_organization!
 
-      current_organization
-        .events
+      current_organization.events
         .order(timestamp: :desc)
         .includes(:customer)
         .joins('LEFT OUTER JOIN billable_metrics ON billable_metrics.code = events.code')
+        .where(billable_metrics: { deleted_at: nil })
         .where(
           [
             'billable_metrics.organization_id = ?',
