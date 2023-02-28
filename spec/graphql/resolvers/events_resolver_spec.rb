@@ -31,14 +31,14 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
 
   let(:event) do
     create(
       :event,
       code: billable_metric.code,
-      organization: organization,
-      timestamp: Time.zone.now - 2.days,
+      organization:,
+      timestamp: 2.days.ago,
       properties: { foo_bar: 1234 },
       metadata: { user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11' },
     )
@@ -50,7 +50,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
     )
 
     events_response = result['data']['events']
@@ -73,13 +73,33 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
     end
   end
 
+  context 'with a deleted billable metric' do
+    it 'does not return duplicated events' do
+      billable_metric.discard!
+      create(:billable_metric, organization:, code: billable_metric.code)
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+      )
+
+      events_response = result['data']['events']
+
+      aggregate_failures do
+        expect(events_response['collection'].count).to eq(organization.events.count)
+        expect(events_response['collection'].first['id']).to eq(event.id)
+      end
+    end
+  end
+
   context 'with missing billable_metric' do
     let(:event) do
       create(
         :event,
         code: 'foo',
-        organization: organization,
-        timestamp: Time.zone.now - 2.days,
+        organization:,
+        timestamp: 2.days.ago,
         properties: { foo_bar: 1234 },
       )
     end
@@ -89,7 +109,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
       )
 
       events_response = result['data']['events']
@@ -98,14 +118,14 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
   end
 
   context 'with missing custom field' do
-    let(:billable_metric) { create(:billable_metric, organization: organization, field_name: 'mandatory') }
+    let(:billable_metric) { create(:billable_metric, organization:, field_name: 'mandatory') }
 
     it 'returns a list of events' do
       event
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
       )
 
       events_response = result['data']['events']
