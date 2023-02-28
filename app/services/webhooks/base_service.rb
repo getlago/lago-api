@@ -12,6 +12,7 @@ module Webhooks
     end
 
     def call
+      return resend if webhook_id.present?
       return unless current_organization&.webhook_url?
 
       payload = {
@@ -22,19 +23,19 @@ module Webhooks
 
       preprocess_webhook(current_webhook, payload)
 
-      http_client = LagoHttpClient::Client.new(current_organization.webhook_url)
-      headers = generate_headers(payload)
-      response = http_client.post_with_response(payload, headers)
+      send_webhook(current_organization.webhook_url, payload)
+    end
 
-      succeed_webhook(current_webhook, response)
-    rescue LagoHttpClient::HttpError => e
-      fail_webhook(current_webhook, e)
+    def resend
+      return if current_webhook.blank?
+      return unless current_webhook.organization.webhook_url?
 
-      # NOTE: By default, Lago is retrying 3 times a webhook
-      return if current_webhook.retries == ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i
+      current_webhook.retries += 1 if current_webhook.failed?
+      current_webhook.last_retried_at = Time.zone.now if current_webhook.retries.positive?
+      current_webhook.endpoint = current_webhook.organization.webhook_url
 
-      SendWebhookJob.set(wait: wait_value)
-        .perform_later(webhook_type, object, options, current_webhook.id)
+      payload = JSON.parse(current_webhook.payload)
+      send_webhook(current_webhook.organization.webhook_url, payload)
     end
 
     private
@@ -55,6 +56,22 @@ module Webhooks
 
     def object_type
       # Empty
+    end
+
+    def send_webhook(url, payload)
+      http_client = LagoHttpClient::Client.new(url)
+      headers = generate_headers(payload)
+      response = http_client.post_with_response(payload, headers)
+
+      succeed_webhook(current_webhook, response)
+    rescue LagoHttpClient::HttpError => e
+      fail_webhook(current_webhook, e)
+
+      # NOTE: By default, Lago is retrying 3 times a webhook
+      return if current_webhook.retries >= ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i
+
+      SendWebhookJob.set(wait: wait_value)
+        .perform_later(webhook_type, object, options, current_webhook.id)
     end
 
     def generate_headers(payload)
@@ -79,12 +96,13 @@ module Webhooks
     end
 
     def current_webhook
-      @current_webhook ||= current_organization.webhooks.find_or_initialize_by(
+      @current_webhook ||= Webhook.find_or_initialize_by(
         id: webhook_id,
       )
     end
 
     def preprocess_webhook(webhook, payload)
+      webhook.organization_id = current_organization.id
       webhook.webhook_type = webhook_type
       webhook.endpoint = current_organization.webhook_url
       webhook.object_id = object.is_a?(Hash) ? object.fetch(:id, nil) : object&.id
