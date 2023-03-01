@@ -13,7 +13,7 @@ RSpec.describe Metadata::InvoiceMetadata, type: :model do
   end
 
   describe 'validations' do
-    context 'when uniqueness condition is satisfied', :tag do
+    context 'when uniqueness condition is satisfied' do
       it { expect(metadata).to be_valid }
     end
 
@@ -25,7 +25,7 @@ RSpec.describe Metadata::InvoiceMetadata, type: :model do
       it { expect(metadata).not_to be_valid }
     end
 
-    context 'when length constraint passes', :tag do
+    context 'when length constraint passes' do
       it { expect(metadata).to be_valid }
     end
 
