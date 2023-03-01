@@ -7,7 +7,7 @@ describe Clock::WebhooksCleanupJob, job: true do
 
   describe '.perform' do
     before do
-      create(:webhook, :succeeded, updated_at: 95.days.ago)
+      create(:webhook, :succeeded, updated_at: 100.days.ago)
     end
 
     it 'removes all old webhooks' do

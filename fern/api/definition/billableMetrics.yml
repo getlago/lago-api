@@ -1,0 +1,222 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: commons.yml
+
+service:
+  display-name: Billable Metrics Service
+  auth: true
+  base-path: /billable_metrics
+  endpoints:
+    create:
+      path: ""
+      method: POST
+      docs: Create a new billable metric
+      display-name: Create a new billable metric
+      request: BillableMetricInput
+      response: BillableMetric
+      examples: 
+        - request: $BillableMetricInput.Example0
+          response: 
+            body: $BillableMetric.Example0
+
+    get:
+      path: /{code}
+      method: GET
+      docs: Return a single billable metric
+      display-name: Find billable metric by code
+      path-parameters:
+        code:
+          docs: Code of the existing billable metric
+          type: string
+      response: BillableMetric
+      examples: 
+        - path-parameters:
+            code: code
+          response: 
+            body: $BillableMetric.Example0
+
+    update:
+      path: /{code}
+      method: PUT
+      docs: Update an existing billable metric by code
+      display-name: Update an existing billable metric
+      path-parameters:
+        code:
+          docs: Code of the existing billable metric
+          type: string
+      request: BillableMetricInput
+      response: BillableMetric
+      examples: 
+        - path-parameters:
+            code: code
+          request: $BillableMetricInput.Example0
+          response: 
+            body: $BillableMetric.Example0
+
+    destroy:
+      path: /{code}
+      method: DELETE
+      docs: Delete a billable metric
+      display-name: Delete a billable metric
+      path-parameters:
+        code:
+          docs: Code of the existing billable metric
+          type: string
+      response: BillableMetric
+      examples: 
+        - path-parameters:
+            code: code
+          response: 
+            body: $BillableMetric.Example0
+
+    getAll:
+      path: ""
+      method: GET
+      docs: Get all billable metrics in certain organisation
+      display-name: Find Billable metrics
+      request:
+        name: FindAllBillableMetricsInput
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+      response: BillableMetrics
+      examples: 
+        - query-parameters:
+            page: 3
+            per_page: 2
+          response: 
+            body: $BillableMetrics.Example0
+
+    findMetricGroups:
+      path: /{code}/groups
+      method: GET
+      docs: Find all billable metric groups in certain organisation
+      display-name: Find Billable metric groups
+      path-parameters:
+        code:
+          docs: Code of the existing billable metric
+          type: string
+      request:
+        name: FindAllBillableMetricGroupsInput
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+      response: Groups
+      examples: 
+        - path-parameters:
+            code: code
+          query-parameters:
+            page: 3
+            per_page: 2
+          response: 
+            body: $Groups.Example0
+
+types:
+  BillableMetrics:
+    properties:
+      billable_metrics: optional<list<BillableMetricObject>>
+    examples: 
+      - name: Example0
+        value: 
+          billable_metrics: 
+            - $BillableMetricObject.Example0
+
+  Groups:
+    properties:
+      groups: optional<list<GroupObject>>
+    examples: 
+      - name: Example0
+        value: 
+          groups: 
+            - $GroupObject.Example0
+
+  GroupObject:
+    properties:
+      key: optional<string>
+      value: optional<string>
+      lago_id: optional<string>
+    examples: 
+      - name: Example0
+        value: 
+          lago_id: b7ab2926-1de8-4428-9bcd-779314ac129b
+          key: group_key
+          value: group_value
+
+  BillableMetricInput:
+    properties:
+      billable_metric: optional<BillableMetricInputObject>
+    examples: 
+      - name: Example0
+        value: 
+          billable_metric: $BillableMetricInputObject.Example0
+
+  BillableMetricInputObject:
+    properties:
+      name: optional<string>
+      code: optional<string>
+      description: optional<string>
+      field_name: optional<string>
+      aggregation_type: optional<commons.AggregationType>
+      group: optional<BillableMetricGroup>
+    examples: 
+      - name: Example0
+        value: 
+          name: bm_name
+          code: bm_code
+          description: description
+          aggregation_type: sum_agg
+          field_name: amount_sum
+          group:
+            key: country
+            values:
+            - france
+            - italy
+            - spain
+
+  BillableMetric:
+    properties:
+      billable_metric: optional<BillableMetricObject>
+    examples: 
+      - name: Example0
+        value: 
+          billable_metric: $BillableMetricObject.Example0
+
+  BillableMetricGroup:
+    properties:
+      key: optional<string>
+      values: optional<list<unknown>>
+
+  BillableMetricObject:
+    properties:
+      lago_id: optional<string>
+      name: optional<string>
+      code: optional<string>
+      description: optional<string>
+      created_at: optional<string>
+      field_name: optional<string>
+      aggregation_type: optional<commons.AggregationType>
+      group: optional<BillableMetricGroup>
+      active_subscriptions_count: optional<integer>
+      draft_invoices_count: optional<integer>
+    examples: 
+      - name: Example0 
+        value: 
+          lago_id: b7ab2926-1de8-4428-9bcd-779314ac129b
+          name: bm_name
+          code: bm_code
+          description: description
+          aggregation_type: sum_agg
+          field_name: amount_sum
+          created_at: '2022-04-29T08:59:51Z'
+          group: {}
+          active_subscriptions_count: 0
+          draft_invoices_count: 0

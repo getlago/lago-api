@@ -1,0 +1,151 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  customers: customers.yml
+
+service:
+  display-name: Plans Service
+  auth: true
+  base-path: /plans
+  endpoints:
+    create:
+      path: ""
+      method: POST
+      docs: Create a new plan
+      display-name: Create a new plan
+      request: PlanInput
+      response: Plan
+
+    get:
+      path: /{code}
+      method: GET
+      docs: Return a single plan
+      display-name: Fin plan by code
+      path-parameters:
+        code:
+          docs: Code of the existing plan
+          type: string
+      response: Plan
+
+    update:
+      path: /{code}
+      method: PUT
+      docs: Update an existing plan by code
+      display-name: Update an existing plan
+      path-parameters:
+        code:
+          docs: Code of the existing plan
+          type: string
+      request: PlanInput
+      response: Plan
+
+    destroy:
+      path: /{code}
+      method: DELETE
+      docs: Delete a plan
+      display-name: Delete a plan
+      path-parameters:
+        code:
+          docs: Code of the existing plan
+          type: string
+      response: Plan
+
+    find:
+      path: ""
+      method: GET
+      docs: Find all plans in certain organisation
+      display-name: Find plans
+      request:
+        name: FindAllPlansInput
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+      response: Plans
+
+types:
+  Plans:
+    properties:
+      plans: optional<list<PlanObject>>
+
+  PlanInputObject:
+    properties:
+      name: optional<string>
+      code: optional<string>
+      interval:
+        docs: Plan interval
+        type: optional<PlanInterval>
+      description: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      trial_period: optional<double>
+      pay_in_advance: optional<boolean>
+      bill_charges_monthly: optional<boolean>
+      charges: optional<list<Charges>>
+
+  Plan:
+    properties:
+      plan: optional<PlanObject>
+
+  PlanObject:
+    properties:
+      lago_id: optional<string>
+      name: optional<string>
+      created_at: optional<string>
+      code: optional<string>
+      interval: optional<PlanInterval>
+      description: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      trial_period: optional<double>
+      pay_in_advance: optional<boolean>
+      bill_charges_monthly: optional<boolean>
+      charges: optional<list<ChargeObject>>
+
+  ChargeObject:
+    properties:
+      lago_id: optional<string>
+      lago_billable_metric_id: optional<string>
+      created_at: optional<string>
+      charge_model: optional<customers.ChargeModelType>
+      properties: optional<map<string, unknown>>
+      group_properties: optional<list<GroupPropertiesObject>>
+
+  GroupPropertiesObject:
+    properties:
+      group_id: optional<string>
+      values: optional<map<string, unknown>>
+
+  PlanInput:
+    properties:
+      plan: optional<PlanInputObject>
+
+  PlanInterval:
+    enum:
+      - weekly
+      - monthly
+      - yearly
+
+  ChargeModel:
+    enum:
+      - standard
+      - graduated
+      - package
+      - percentage
+      - volume
+
+  GroupProperties:
+    properties:
+      group_id: optional<string>
+      values: optional<map<string, unknown>>
+
+  Charges:
+    properties:
+      id: optional<string>
+      billable_metric_id: optional<string>
+      charge_model: optional<ChargeModel>
+      properties: optional<map<string, unknown>>
+      group_properties: optional<list<GroupProperties>>

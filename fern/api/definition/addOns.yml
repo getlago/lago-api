@@ -1,0 +1,213 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+service:
+  display-name: Add-ons Service
+  auth: true
+  base-path: ""
+  endpoints:
+    create:
+      path: /add_ons
+      method: POST
+      docs: Create a new add-on
+      display-name: Create a new add-on
+      request: AddOnInput
+      response: AddOn
+      examples: 
+        - request: $AddOnInput.Example0
+          response: 
+            body: $AddOn.Example0
+
+    get:
+      path: /add_ons/{code}
+      method: GET
+      docs: Return a single add-on
+      display-name: Find add-on by code
+      path-parameters:
+        code:
+          docs: Code of the existing add-on
+          type: string
+      response: AddOn
+      examples: 
+        - path-parameters: 
+            code: code
+          response: 
+            body: $AddOn.Example0
+
+    update:
+      path: /add_ons/{code}
+      method: PUT
+      docs: Update an existing add-on by code
+      display-name: Update an existing add-on
+      path-parameters:
+        code:
+          docs: Code of the existing add-on
+          type: string
+      request: AddOnInput
+      response: AddOn
+      examples: 
+        - path-parameters: 
+            code: code
+          request: $AddOnInput.Example0
+          response: 
+            body: $AddOn.Example0
+
+    destroy:
+      path: /add_ons/{code}
+      method: DELETE
+      docs: Delete an add-on
+      display-name: Delete an add-on
+      path-parameters:
+        code:
+          docs: Code of the existing add-on
+          type: string
+      response: AddOn
+      examples: 
+        - path-parameters: 
+            code: code
+          response: 
+            body: $AddOn.Example0
+
+    find:
+      path: /add_ons
+      method: GET
+      docs: Get all add-ons in certain organisation
+      display-name: Find add-ons
+      request:
+        name: FindAllAddOnsInput
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+      response: AddOns
+      examples: 
+        - query-parameters: 
+            page: 1
+            per_page: 2
+          response: 
+            body: $AddOns.Example0
+
+    apply:
+      path: /applied_add_ons
+      method: POST
+      docs: Apply an add-on to a customer
+      display-name: Apply an add-on to a customer
+      request:
+        name: ApplyAddOnInput
+        body:
+          properties:
+            applied_add_on: optional<AppliedAddOnInputObject>
+      response: AppliedAddOn
+      examples: 
+        - request: 
+            applied_add_on: $AppliedAddOnInputObject.Example0
+          response: 
+            body: $AppliedAddOn.Example0
+
+types:
+  AddOns:
+    properties:
+      add_ons: optional<list<AddOnObject>>
+    examples: 
+      - name: Example0
+        value: 
+          add_ons: 
+            - $AddOnObject.Example0
+
+  AppliedAddOnInputObject:
+    properties:
+      external_customer_id: optional<string>
+      add_on_code: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+    examples: 
+      - name: Example0
+        value: 
+          external_customer_id: 5eb02857-a71e-4ea2-bcf9-57d3a41bc6ba
+          add_on_code: code
+          amount_cents: 123
+          amount_currency: EUR
+
+  AddOnInput:
+    properties:
+      add_on: optional<AddOnInputObject>
+    examples: 
+      - name: Example0
+        value: 
+          add_on: $AddOnInputObject.Example0
+
+  AddOnInputObject:
+    properties:
+      name: optional<string>
+      code: optional<string>
+      description: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+    examples: 
+      - name: Example0
+        value: 
+          name: add_on_name
+          code: add_on_code
+          amount_cents: 5000
+          amount_currency: USD
+          description: desc
+
+  AddOn:
+    properties:
+      add_on: optional<AddOnObject>
+    examples: 
+      - name: Example0
+        value: 
+          add_on: $AddOnObject.Example0
+
+  AddOnObject:
+    properties:
+      lago_id: optional<string>
+      name: optional<string>
+      code: optional<string>
+      description: optional<string>
+      created_at: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+    examples: 
+      - name: Example0
+        value: 
+          lago_id: b7ab2926-1de8-4428-9bcd-779314ac129b
+          name: add_on_name
+          code: add_on_code
+          amount_cents: 5000
+          amount_currency: USD
+          description: description
+          created_at: '2022-04-29T08:59:51Z'
+
+  AppliedAddOn:
+    properties:
+      applied_add_on: optional<AppliedAddOnObject>
+    examples: 
+      - name: Example0
+        value: 
+          applied_add_on: $AppliedAddOnObject.Example0
+
+  AppliedAddOnObject:
+    properties:
+      lago_id: optional<string>
+      lago_add_on_id: optional<string>
+      add_on_code: optional<string>
+      lago_customer_id: optional<string>
+      external_customer_id: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      created_at: optional<string>
+    examples:
+      - name: Example0
+        value: 
+          lago_id: b7ab2926-1de8-4428-9bcd-779314ac129b
+          lago_add_on_id: b7ab2926-1de8-4428-9bcd-779314ac129b
+          add_on_code: add-on-code
+          external_customer_id: 5eb02857-a71e-4ea2-bcf9-57d3a41bc6ba
+          lago_customer_id: 99a6094e-199b-4101-896a-54e927ce7bd7
+          amount_cents: 123
+          amount_currency: EUR
+          created_at: '2022-04-29T08:59:51Z'

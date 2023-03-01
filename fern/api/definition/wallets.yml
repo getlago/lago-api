@@ -1,0 +1,194 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+service:
+  display-name: Wallets Service
+  auth: true
+  base-path: ""
+  endpoints:
+    create:
+      path: /wallets
+      method: POST
+      docs: Create a new wallet
+      display-name: Create a new wallet
+      request:
+        body: WalletInput
+      response: Wallet
+
+    get:
+      path: /wallets/{id}
+      method: GET
+      docs: Return a wallet
+      display-name: Find wallet
+      path-parameters:
+        id:
+          docs: Lago ID of the existing wallet
+          type: string
+      response: Wallet
+
+    update:
+      path: /wallets/{id}
+      method: PUT
+      docs: Update an existing wallet
+      display-name: Update an existing wallet
+      path-parameters:
+        id:
+          docs: Lago ID of the existing wallet
+          type: string
+      request: WalletUpdateInput
+      response: Wallet
+
+    destroy:
+      path: /wallets/{id}
+      method: DELETE
+      docs: Delete a wallet
+      display-name: Delete a wallet
+      path-parameters:
+        id:
+          docs: Lago ID of the existing wallet
+          type: string
+      response: Wallet
+
+    find:
+      path: /wallets
+      method: GET
+      docs: Find all wallets for certain customer
+      display-name: Find wallets
+      request:
+        name: FindAllWalletsRequest
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+          external_customer_id:
+            docs: External customer ID
+            type: string
+      response: Wallets
+
+    createWalletTransaction:
+      path: /wallet_transactions
+      method: POST
+      docs: Create a new wallet transaction
+      display-name: Create a new wallet transaction
+      request:
+        name: CreateWalletTransactionRequest
+        body: WalletTransactionInput
+      response: WalletTransactions
+
+    findWalletTransactions:
+      path: /wallets/{id}/wallet_transactions
+      method: GET
+      docs: Find all wallet transactions for certain wallet
+      display-name: Find wallet transactions
+      path-parameters:
+        id:
+          docs: Lago ID of the existing wallet
+          type: string
+      request:
+        name: FindAllWalletTransactionsRequest
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+          status:
+            docs: Status (pending or settled)
+            type: optional<string>
+          transaction_type:
+            docs: Transaction Type (inbound or outbound)
+            type: optional<string>
+      response: WalletTransactions
+
+types:
+  WalletInput:
+    properties:
+      wallet: optional<WalletInputObject>
+
+  WalletInputObject:
+    properties:
+      name: optional<string>
+      rate_amount: optional<double>
+      currency: optional<string>
+      paid_credits: optional<double>
+      granted_credits: optional<double>
+      external_customer_id: optional<string>
+      expiration_at: optional<string>
+
+  WalletUpdateInput:
+    properties:
+      wallet: optional<WalletUpdateInputObject>
+
+  WalletUpdateInputObject:
+    properties:
+      name: optional<string>
+      expiration_at: optional<string>
+
+  Wallets:
+    properties:
+      wallets: optional<list<WalletObject>>
+
+  WalletTransactionInput:
+    properties:
+      wallet_transaction: optional<WalletTransactionInputObject>
+
+  WalletTransactionInputObject:
+    properties:
+      wallet_id: optional<string>
+      paid_credits: optional<double>
+      granted_credits: optional<double>
+
+  Wallet:
+    properties:
+      wallet: optional<WalletObject>
+
+  WalletObject:
+    properties:
+      lago_id: optional<string>
+      lago_customer_id: optional<string>
+      external_customer_id: optional<string>
+      status: optional<WalletStatus>
+      currency: optional<string>
+      name: optional<string>
+      rate_amount: optional<double>
+      credits_balance: optional<double>
+      balance: optional<double>
+      consumed_credits: optional<double>
+      created_at: optional<string>
+      expiration_at: optional<string>
+      last_balance_sync_at: optional<string>
+      last_consumed_credit_at: optional<string>
+      terminated_at: optional<string>
+
+  WalletStatus:
+    enum:
+      - active
+      - terminated
+
+  WalletTransactions:
+    properties:
+      wallet_transactions: optional<list<WalletTransactionObject>>
+
+  WalletTransactionObject:
+    properties:
+      lago_id: optional<string>
+      lago_wallet_id: optional<string>
+      status: optional<TransactionStatus>
+      transaction_type: optional<TransactionType>
+      amount: optional<double>
+      credit_amount: optional<double>
+      settled_at: optional<string>
+      created_at: optional<string>
+
+  TransactionStatus:
+    enum:
+      - pending
+      - settled
+
+  TransactionType:
+    enum:
+      - inbound
+      - outbound
