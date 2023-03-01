@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateInvoiceMetadata < ActiveRecord::Migration[7.0]
   def change
     create_table :invoice_metadata, id: :uuid do |t|
