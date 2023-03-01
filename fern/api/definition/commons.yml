@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+types:
+  BillingTime:
+    enum:
+      - calendar
+      - anniversary
+
+  FeeObject:
+    properties:
+      lago_id: optional<string>
+      lago_group_id: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      vat_amount_cents: optional<integer>
+      vat_amount_currency: optional<string>
+      units: optional<double>
+      events_count: optional<integer>
+      item: optional<FeeItem>
+
+  FeeItem:
+    properties:
+      type: optional<BillingTime>
+      code: optional<string>
+      name: optional<string>
+
+  AggregationType:
+    enum:
+      - count_agg
+      - sum_agg
+      - max_agg
+      - unique_count_agg
+      - recurring_count_agg

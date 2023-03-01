@@ -1,0 +1,166 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  customers: customers.yml
+  commons: commons.yml
+  subscriptions: subscriptions.yml
+
+service:
+  display-name: Invoices Service
+  auth: true
+  base-path: /invoices
+  endpoints:
+    get:
+      path: /{id}
+      method: GET
+      docs: Return a single invoice
+      display-name: Find invoice by ID
+      path-parameters:
+        id:
+          docs: ID of the existing Lago Invoice
+          type: string
+      response: Invoice
+
+    update:
+      path: /{id}
+      method: PUT
+      docs: Update an existing invoice
+      display-name: Update an existing invoice status
+      path-parameters:
+        id:
+          docs: ID of the existing Lago Invoice
+          type: string
+      request: InvoiceInput
+      response: Invoice
+
+    download:
+      path: /{id}/download
+      method: POST
+      docs: Download an existing invoice
+      display-name: Download an existing invoice
+      path-parameters:
+        id:
+          docs: ID of the existing Lago Invoice
+          type: string
+      response: Invoice
+
+    retryPayment:
+      path: /{id}/retry_payment
+      method: POST
+      docs: Retry invoice payment
+      display-name: Retry invoice payment
+      path-parameters:
+        id:
+          docs: ID of the existing Lago Invoice
+          type: string
+
+    refreshInvoice:
+      path: /{id}/refresh
+      method: PUT
+      docs: Refresh a draft invoice
+      display-name: Refresh a draft invoice
+      path-parameters:
+        id:
+          docs: ID of the existing Lago Invoice
+          type: string
+      response: Invoice
+
+    finalize:
+      path: /{id}/finalize
+      method: PUT
+      docs: Finalize a draft invoice
+      display-name: Finalize a draft invoice
+      path-parameters:
+        id:
+          docs: ID of the draft Lago Invoice
+          type: string
+      response: Invoice
+
+    find:
+      path: ""
+      method: GET
+      docs: Find all invoices in certain organisation
+      display-name: Find all invoices
+      request:
+        name: FindAllInvoicesRequest
+        query-parameters:
+          page:
+            docs: Number of page
+            type: optional<integer>
+          per_page:
+            docs: Number of records per page
+            type: optional<integer>
+          external_customer_id: optional<string>
+          issuing_date_from: optional<string>
+          issuing_date_to: optional<string>
+          status: optional<InvoiceStatus>
+      response: Invoices
+
+types:
+  InvoiceInput:
+    properties:
+      invoice: optional<InvoiceObject>
+
+  Invoices:
+    properties:
+      invoices: optional<list<InvoiceObject>>
+
+  Invoice:
+    properties:
+      invoice: optional<InvoiceObject>
+
+  InvoiceObject:
+    properties:
+      lago_id: optional<string>
+      sequential_id: optional<integer>
+      number: optional<string>
+      issuing_date: optional<string>
+      invoice_type: optional<InvoiceType>
+      status: optional<InvoiceStatus>
+      payment_status: optional<PaymentStatus>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      vat_amount_cents: optional<integer>
+      vat_amount_currency: optional<string>
+      credit_amount_cents: optional<integer>
+      credit_amount_currency: optional<string>
+      total_amount_cents: optional<integer>
+      total_amount_currency: optional<string>
+      legacy: optional<boolean>
+      file_url: optional<string>
+      customer: optional<customers.CustomerObject>
+      subscriptions: optional<list<subscriptions.SubscriptionObject>>
+      fees: optional<list<commons.FeeObject>>
+      credits: optional<list<CreditObject>>
+
+  InvoiceStatus:
+    enum:
+      - draft
+      - finalized
+
+  PaymentStatus:
+    enum:
+      - pending
+      - succeeded
+      - failed
+
+  InvoiceType:
+    enum:
+      - charge
+      - add_on
+      - subscription
+      - credit
+
+  CreditObject:
+    properties:
+      lago_id: optional<string>
+      amount_cents: optional<integer>
+      amount_currency: optional<string>
+      item: optional<CreditItem>
+
+  CreditItem:
+    properties:
+      lago_id: optional<string>
+      type: optional<string>
+      code: optional<string>
+      name: optional<string>

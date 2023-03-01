@@ -60,7 +60,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
     end
 
     context 'with a previous failed webhook' do
-      let(:previous_webhook) { create(:webhook, :failed, organization:) }
+      let(:previous_webhook) { create(:webhook, :failed, organization:, endpoint: webhook_url) }
 
       it 'succeeds the retried webhook' do
         webhook_service.call
@@ -120,7 +120,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
       end
 
       context 'with a previous failed webhook' do
-        let(:previous_webhook) { create(:webhook, :failed, organization:) }
+        let(:previous_webhook) { create(:webhook, :failed, organization:, endpoint: webhook_url) }
 
         it 'fails the retried webhooks' do
           webhook_service.call
@@ -136,7 +136,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         end
 
         context 'when the previous failed webhook have been retried 3 times' do
-          let(:previous_webhook) { create(:webhook, :failed, organization:, retries: 2) }
+          let(:previous_webhook) { create(:webhook, :failed, organization:, retries: 2, endpoint: webhook_url) }
 
           it 'does not enqueue a SendWebhookJob' do
             expect { webhook_service.call }.not_to have_enqueued_job(SendWebhookJob)

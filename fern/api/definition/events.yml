@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+service:
+  display-name: Events Service
+  auth: true
+  base-path: /events
+  endpoints:
+    create:
+      path: ""
+      method: POST
+      docs: Create a new event
+      display-name: Create a new event
+      request: EventInput
+
+    createBatchEvents:
+      path: /batch
+      method: POST
+      docs: Create batch events
+      display-name: Create batch events
+      request: BatchEventInput
+
+    get:
+      path: /{id}
+      method: GET
+      docs: Return a single event
+      display-name: Find event by transaction ID
+      path-parameters:
+        id:
+          docs: Id of the existing transaction
+          type: string
+      response: Event
+
+types:
+  EventInput:
+    properties:
+      event: optional<EventInputObject>
+
+  EventInputObject:
+    properties:
+      transaction_id: optional<string>
+      external_customer_id: optional<string>
+      code: optional<string>
+      timestamp: optional<integer>
+      external_subscription_id: optional<string>
+      properties: optional<map<string, unknown>>
+
+  BatchEventInput:
+    properties:
+      event: optional<BatchEventInputObject>
+
+  BatchEventInputObject:
+    properties:
+      transaction_id: optional<string>
+      external_customer_id: optional<string>
+      code: optional<string>
+      timestamp: optional<integer>
+      external_subscription_ids: optional<list<string>>
+      properties: optional<map<string, unknown>>
+
+  Event:
+    properties:
+      event: optional<EventObject>
+
+  EventObject:
+    properties:
+      lago_id: optional<string>
+      transaction_id: optional<string>
+      lago_customer_id: optional<string>
+      external_customer_id: optional<string>
+      code: optional<string>
+      timestamp: optional<string>
+      properties: optional<map<string, unknown>>
+      lago_subscription_id: optional<string>
+      external_subscription_id: optional<string>
+      created_at: optional<string>
