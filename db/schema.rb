@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_02_27_145104) do
+ActiveRecord::Schema[7.0].define(version: 2023_03_01_122720) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -345,6 +345,16 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_27_145104) do
     t.index ["token"], name: "index_invites_on_token", unique: true
   end
 
+  create_table "invoice_metadata", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id", null: false
+    t.string "key", null: false
+    t.string "value", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id", "key"], name: "index_invoice_metadata_on_invoice_id_and_key", unique: true
+    t.index ["invoice_id"], name: "index_invoice_metadata_on_invoice_id"
+  end
+
   create_table "invoice_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id", null: false
     t.uuid "subscription_id", null: false
@@ -637,6 +647,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_02_27_145104) do
   add_foreign_key "groups", "groups", column: "parent_group_id"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"
+  add_foreign_key "invoice_metadata", "invoices"
   add_foreign_key "invoice_subscriptions", "invoices"
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
