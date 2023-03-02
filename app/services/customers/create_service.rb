@@ -7,7 +7,10 @@ module Customers
       new_customer = customer.new_record?
 
       unless valid_metadata_count?(metadata: params[:metadata])
-        return result.not_allowed_failure!(code: 'invalid_number_of_metadata')
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
       end
 
       ActiveRecord::Base.transaction do
@@ -61,7 +64,10 @@ module Customers
       billing_configuration = args[:billing_configuration]&.to_h || {}
 
       unless valid_metadata_count?(metadata: args[:metadata])
-        return result.not_allowed_failure!(code: 'invalid_number_of_metadata')
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
       end
 
       customer = Customer.new(

@@ -298,9 +298,9 @@ RSpec.describe Customers::CreateService, type: :service do
             )
 
             aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              expect(result.error.code).to eq('invalid_number_of_metadata')
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages.keys).to include(:metadata)
+              expect(result.error.messages[:metadata]).to include('invalid_count')
             end
           end
         end

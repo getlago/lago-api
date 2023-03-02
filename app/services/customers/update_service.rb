@@ -7,7 +7,10 @@ module Customers
       return result.not_found_failure!(resource: 'customer') unless customer
 
       unless valid_metadata_count?(metadata: args[:metadata])
-        return result.not_allowed_failure!(code: 'invalid_number_of_metadata')
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
       end
 
       ActiveRecord::Base.transaction do
