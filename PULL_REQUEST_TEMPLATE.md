@@ -1,6 +1,6 @@
 ## Roadmap Task
 
-👉  https://github.com/getlago/lago/issues/{{NUMBER}}
+👉  https://getlago.canny.io/feature-requests/p/{{FEATURE_SLUG}}
 
 ## Context
 
