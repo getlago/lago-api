@@ -24,6 +24,8 @@ class InvoiceSubscription < ApplicationRecord
           order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
         }
 
+  # NOTE: Billed automatically by the recurring billing process
+  #       It is used to prevent double billing on billing day
   scope :recurring, -> { where(recurring: true) }
 
   def fees

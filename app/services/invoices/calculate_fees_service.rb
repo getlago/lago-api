@@ -6,7 +6,11 @@ module Invoices
       @invoice = invoice
       @subscriptions = subscriptions
       @timestamp = timestamp
+
+      # NOTE: Billed automatically by the recurring billing process
+      #       It is used to prevent double billing on billing day
       @recurring = recurring
+
       @context = context
 
       super
