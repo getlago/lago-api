@@ -5,7 +5,7 @@ groups:
         version: 0.0.132
         output:
           location: maven
-          coordinate: io.github.fern-api:lago
+          coordinate: io.github.lago-api:lago
           username: ${MAVEN_USERNAME}
           password: ${MAVEN_PASSWORD}
         github:
