@@ -3979,16 +3979,6 @@ type Query {
   ): PlanCollection!
 
   """
-  Query a single wallet
-  """
-  wallet(
-    """
-    Uniq ID of the wallet
-    """
-    id: ID!
-  ): WalletDetails
-
-  """
   Query wallet transactions
   """
   walletTransactions(
@@ -5139,25 +5129,6 @@ type Wallet {
 type WalletCollection {
   collection: [Wallet!]!
   metadata: CollectionMetadata!
-}
-
-type WalletDetails {
-  balance: String!
-  consumedAmount: String!
-  consumedCredits: String!
-  createdAt: ISO8601DateTime!
-  creditsBalance: String!
-  currency: CurrencyEnum!
-  customer: Customer
-  expirationAt: ISO8601DateTime
-  id: ID!
-  lastBalanceSyncAt: ISO8601DateTime
-  lastConsumedCreditAt: ISO8601DateTime
-  name: String
-  rateAmount: String!
-  status: WalletStatusEnum!
-  terminatedAt: ISO8601DateTime
-  updatedAt: ISO8601DateTime!
 }
 
 enum WalletStatusEnum {
