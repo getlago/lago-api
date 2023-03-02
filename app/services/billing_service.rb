@@ -167,16 +167,19 @@ class BillingService
   def already_billed_filter_sql
     # TODO: A migration to unify type of the timestamp property must performed
     timestamp_condition = <<-SQL
-      CASE
+      (CASE
         WHEN invoice_subscriptions.properties->>'timestamp' ~ '^[0-9\.]+$'
         THEN
           to_timestamp((invoice_subscriptions.properties->>'timestamp')::integer)::timestamptz
         ELSE
           (invoice_subscriptions.properties->>'timestamp')::timestamptz
-      END
+      END) AT TIME ZONE COALESCE(cus.timezone, org.timezone, 'UTC')
     SQL
 
     InvoiceSubscription
+      .joins('INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id')
+      .joins('INNER JOIN customers AS cus ON sub.customer_id = cus.id')
+      .joins('INNER JOIN organizations AS org ON cus.organization_id = org.id')
       .where("invoice_subscriptions.properties->>'timestamp' IS NOT NULL")
       .where("DATE(#{Arel.sql(timestamp_condition)}) = DATE(?)", today.to_date)
       .recurring
