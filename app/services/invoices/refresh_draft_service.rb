@@ -6,6 +6,11 @@ module Invoices
       @invoice = invoice
       @subscription_ids = invoice.subscriptions.pluck(:id)
       @context = context
+
+      # NOTE: Recurring status (meaning billed automatically from the recurring billing process)
+      #       should be kept to prevent double billing on billing day
+      @recurring = invoice.invoice_subscriptions.first&.recurring || false
+
       super
     end
 
@@ -27,6 +32,7 @@ module Invoices
           invoice: invoice.reload,
           subscriptions: Subscription.find(subscription_ids),
           timestamp: invoice.created_at.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
+          recurring:,
           context:,
         )
 
@@ -47,6 +53,6 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscription_ids, :context
+    attr_accessor :invoice, :subscription_ids, :recurring, :context
   end
 end

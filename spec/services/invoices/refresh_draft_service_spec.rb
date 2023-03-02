@@ -8,7 +8,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:invoice) do
-      create(:invoice, subscriptions: [subscription], status:, organization: subscription.organization)
+      create(:invoice, status:, organization: subscription.organization)
     end
 
     let(:started_at) { 1.month.ago }
@@ -20,8 +20,10 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         created_at: started_at,
       )
     end
+    let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, recurring: true) }
 
     before do
+      invoice_subscription
       allow(Invoices::CalculateFeesService).to receive(:call).and_call_original
     end
 
@@ -43,6 +45,8 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         .to change { invoice.reload.fees.count }.from(1).to(2)
         .and change { invoice.fees.pluck(:id).include?(fee.id) }.from(true).to(false)
         .and change { invoice.fees.pluck(:created_at).uniq }.to([invoice.created_at])
+
+      expect(invoice.invoice_subscriptions.first.recurring).to be_truthy
     end
 
     it 'assigns credit notes to new created fee' do

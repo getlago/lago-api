@@ -5,7 +5,11 @@ module Invoices
     def initialize(subscriptions:, timestamp:, recurring:)
       @subscriptions = subscriptions
       @timestamp = timestamp
+
+      # NOTE: Billed automatically by the recurring billing process
+      #       It is used to prevent double billing on billing day
       @recurring = recurring
+
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
 
