@@ -384,6 +384,16 @@ RSpec.describe BillingService, type: :service do
           end
         end
       end
+
+      context 'with customer timezone' do
+        let(:timezone) { 'Pacific/Noumea' }
+
+        it 'does not enqueue a job' do
+          travel_to(subscription_at + 10.hours) do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
+      end
     end
   end
 end
