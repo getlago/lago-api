@@ -28,7 +28,6 @@ module Types
     field :plan, resolver: Resolvers::PlanResolver
     field :current_version, resolver: Resolvers::VersionResolver
     field :wallets, resolver: Resolvers::WalletsResolver
-    field :wallet, resolver: Resolvers::WalletResolver
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
