@@ -3989,16 +3989,6 @@ type Query {
   ): WalletDetails
 
   """
-  Query a single wallet transaction
-  """
-  walletTransaction(
-    """
-    Uniq ID of the wallet transaction
-    """
-    id: ID!
-  ): WalletTransactionDetails
-
-  """
   Query wallet transactions
   """
   walletTransactions(
@@ -5190,18 +5180,6 @@ type WalletTransaction {
 type WalletTransactionCollection {
   collection: [WalletTransaction!]!
   metadata: CollectionMetadata!
-}
-
-type WalletTransactionDetails {
-  amount: String!
-  createdAt: ISO8601DateTime!
-  creditAmount: String!
-  id: ID!
-  settledAt: ISO8601DateTime
-  status: WalletTransactionStatusEnum!
-  transactionType: WalletTransactionTransactionTypeEnum!
-  updatedAt: ISO8601DateTime!
-  wallet: Wallet
 }
 
 enum WalletTransactionStatusEnum {

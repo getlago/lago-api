@@ -30,7 +30,6 @@ module Types
     field :wallets, resolver: Resolvers::WalletsResolver
     field :wallet, resolver: Resolvers::WalletResolver
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
-    field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
