@@ -2902,6 +2902,7 @@ enum FeeTypesEnum {
   add_on
   charge
   credit
+  instant_charge
   subscription
 }
 

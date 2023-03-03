@@ -51,6 +51,15 @@ RSpec.describe Fee, type: :model do
         expect(fee_model.new(fee_type: 'credit').item_code).to eq('credit')
       end
     end
+
+    context 'when it is an instant charge fee' do
+      let(:charge) { create(:standard_charge, :instant) }
+
+      it 'returns related billable metric code' do
+        expect(fee_model.new(charge:, fee_type: 'instant_charge').item_code)
+          .to eq(charge.billable_metric.code)
+      end
+    end
   end
 
   describe '.item_name' do
@@ -84,6 +93,15 @@ RSpec.describe Fee, type: :model do
     context 'when it is a credit fee' do
       it 'returns add on name' do
         expect(fee_model.new(fee_type: 'credit').item_name).to eq('credit')
+      end
+    end
+
+    context 'when it is an instant charge fee' do
+      let(:charge) { create(:standard_charge, :instant) }
+
+      it 'returns related billable metric name' do
+        expect(fee_model.new(charge:, fee_type: 'instant_charge').item_name)
+          .to eq(charge.billable_metric.name)
       end
     end
   end
