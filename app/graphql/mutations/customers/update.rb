@@ -28,6 +28,8 @@ module Mutations
       argument :currency, Types::CurrencyEnum, required: false
       argument :timezone, Types::TimezoneEnum, required: false
 
+      argument :metadata, [Types::Customers::Metadata::Input], required: false
+
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false
 

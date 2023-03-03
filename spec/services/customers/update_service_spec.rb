@@ -82,6 +82,47 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
+    context 'with metadata' do
+      let(:customer_metadata) { create(:customer_metadata, customer:) }
+      let(:another_customer_metadata) { create(:customer_metadata, customer:, key: 'test', value: '1') }
+      let(:update_args) do
+        {
+          id: customer.id,
+          name: 'Updated customer name',
+          metadata: [
+            {
+              id: customer_metadata.id,
+              key: 'new key',
+              value: 'new value',
+              display_in_invoice: true,
+            },
+            {
+              key: 'Added key',
+              value: 'Added value',
+              display_in_invoice: true,
+            },
+          ],
+        }
+      end
+
+      before do
+        customer_metadata
+        another_customer_metadata
+      end
+
+      it 'updates metadata' do
+        result = customers_service.update(**update_args)
+
+        metadata_keys = result.customer.metadata.pluck(:key)
+        metadata_ids = result.customer.metadata.pluck(:id)
+
+        expect(result.customer.metadata.count).to eq(2)
+        expect(metadata_keys).to eq(['new key', 'Added key'])
+        expect(metadata_ids).to include(customer_metadata.id)
+        expect(metadata_ids).not_to include(another_customer_metadata.id)
+      end
+    end
+
     context 'with validation error' do
       let(:external_id) { nil }
 

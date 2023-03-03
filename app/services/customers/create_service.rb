@@ -6,6 +6,13 @@ module Customers
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
 
+      unless valid_metadata_count?(metadata: params[:metadata])
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
+      end
+
       ActiveRecord::Base.transaction do
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
@@ -32,7 +39,15 @@ module Customers
           return currency_result unless currency_result.success?
         end
 
-        customer.save!
+        ActiveRecord::Base.transaction do
+          customer.save!
+
+          if new_customer && params[:metadata]
+            params[:metadata].each { |m| create_metadata(customer:, args: m) }
+          elsif params[:metadata]
+            Customers::Metadata::UpdateService.call(customer:, params: params[:metadata])
+          end
+        end
       end
 
       # NOTE: handle configuration for configured payment providers
@@ -47,6 +62,13 @@ module Customers
 
     def create(**args)
       billing_configuration = args[:billing_configuration]&.to_h || {}
+
+      unless valid_metadata_count?(metadata: args[:metadata])
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
+      end
 
       customer = Customer.new(
         organization_id: args[:organization_id],
@@ -71,7 +93,12 @@ module Customers
       )
 
       assign_premium_attributes(customer, args)
-      customer.save!
+
+      ActiveRecord::Base.transaction do
+        customer.save!
+
+        args[:metadata].each { |m| create_metadata(customer:, args: m) } if args[:metadata].present?
+      end
 
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
@@ -85,6 +112,21 @@ module Customers
     end
 
     private
+
+    def valid_metadata_count?(metadata:)
+      return true if metadata.blank?
+      return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
+
+      false
+    end
+
+    def create_metadata(customer:, args:)
+      customer.metadata.create!(
+        key: args[:key],
+        value: args[:value],
+        display_in_invoice: args[:display_in_invoice] || false,
+      )
+    end
 
     def assign_premium_attributes(customer, args)
       return unless License.premium?

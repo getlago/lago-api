@@ -6,6 +6,13 @@ module Customers
       customer = result.user.customers.find_by(id: args[:id])
       return result.not_found_failure!(resource: 'customer') unless customer
 
+      unless valid_metadata_count?(metadata: args[:metadata])
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
+      end
+
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         if args.key?(:currency)
@@ -55,7 +62,12 @@ module Customers
 
         # NOTE: external_id is not editable if customer is attached to subscriptions
         customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
-        customer.save!
+
+        ActiveRecord::Base.transaction do
+          customer.save!
+
+          Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
+        end
 
         # NOTE: if payment provider is updated, we need to create/update the provider customer
         payment_provider = old_payment_provider || customer.payment_provider
@@ -94,6 +106,13 @@ module Customers
     end
 
     private
+
+    def valid_metadata_count?(metadata:)
+      return true if metadata.blank?
+      return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
+
+      false
+    end
 
     def assign_premium_attributes(customer, args)
       return unless License.premium?

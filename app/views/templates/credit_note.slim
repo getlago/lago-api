@@ -285,6 +285,13 @@ html
             tr
               td.body-1 = I18n.t('credit_note.issue_date')
               td.body-2 = I18n.l(issuing_date, format: :default)
+        .credit-note-information-column
+          table.credit-note-information-table
+            - if customer.metadata.displayable.any?
+              - customer.metadata.displayable.order(created_at: :asc).each do |metadata|
+                tr
+                  td.body-1 = metadata.key
+                  td.body-2 = metadata.value
 
       .mb-24.overflow-auto
         .billing-information-column

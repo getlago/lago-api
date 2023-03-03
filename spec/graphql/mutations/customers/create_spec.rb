@@ -23,6 +23,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           canEditAttributes
           invoiceGracePeriod
           billingConfiguration { documentLocale }
+          metadata { id, key, value, displayInInvoice }
         }
       }
     GQL
@@ -49,6 +50,13 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           billingConfiguration: {
             documentLocale: 'fr',
           },
+          metadata: [
+            {
+              key: 'manager',
+              value: 'John Doe',
+              displayInInvoice: true,
+            },
+          ],
         },
       },
     )
@@ -66,6 +74,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
+      expect(result_data['metadata'].count).to eq(1)
+      expect(result_data['metadata'][0]['value']).to eq('John Doe')
     end
   end
 
