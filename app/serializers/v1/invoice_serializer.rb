@@ -27,6 +27,7 @@ module V1
       payload = payload.merge(subscriptions) if include?(:subscriptions)
       payload = payload.merge(fees) if include?(:fees)
       payload = payload.merge(credits) if include?(:credits)
+      payload = payload.merge(metadata) if include?(:metadata)
 
       payload
     end
@@ -50,6 +51,14 @@ module V1
 
     def credits
       ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credits').serialize
+    end
+
+    def metadata
+      ::CollectionSerializer.new(
+        model.metadata,
+        ::V1::Invoices::MetadataSerializer,
+        collection_name: 'metadata',
+      ).serialize
     end
   end
 end
