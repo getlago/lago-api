@@ -12,6 +12,7 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
         updateInvoice(input: $input) {
           id
           paymentStatus
+          metadata { id, key, value }
         }
       }
     GQL
@@ -26,6 +27,12 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
         input: {
           id: invoice.id,
           paymentStatus: 'succeeded',
+          metadata: [
+            {
+              key: 'test-key',
+              value: 'value',
+            },
+          ],
         },
       },
     )
@@ -35,6 +42,7 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['paymentStatus']).to eq('succeeded')
+      expect(result_data['metadata'][0]['key']).to eq('test-key')
     end
   end
 

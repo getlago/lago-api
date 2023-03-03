@@ -10,6 +10,7 @@ module Mutations
 
       argument :id, ID, required: true
       argument :payment_status, Types::Invoices::PaymentStatusTypeEnum, required: false
+      argument :metadata, [Types::Invoices::Metadata::Input], required: false
 
       type Types::Invoices::Object
 

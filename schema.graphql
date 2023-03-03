@@ -3013,6 +3013,7 @@ type Invoice {
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
   legacy: Boolean!
+  metadata: [InvoiceMetadata!]
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
   refundableAmountCents: BigInt!
@@ -3047,6 +3048,20 @@ interface InvoiceItem {
   itemCode: String!
   itemName: String!
   itemType: String!
+}
+
+type InvoiceMetadata {
+  createdAt: ISO8601DateTime!
+  id: ID!
+  key: String!
+  updatedAt: ISO8601DateTime!
+  value: String!
+}
+
+input InvoiceMetadataInput {
+  id: ID
+  key: String!
+  value: String!
 }
 
 enum InvoicePaymentStatusTypeEnum {
@@ -5033,6 +5048,7 @@ input UpdateInvoiceInput {
   """
   clientMutationId: String
   id: ID!
+  metadata: [InvoiceMetadataInput!]
   paymentStatus: InvoicePaymentStatusTypeEnum
 }
 
