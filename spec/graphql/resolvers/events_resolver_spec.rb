@@ -132,4 +132,23 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql do
       expect(events_response['collection'].first['matchCustomField']).to be_falsey
     end
   end
+
+  context 'with deleted customer' do
+    before { event.customer.discard! }
+
+    it 'returns the customer details' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+      )
+
+      events_response = result['data']['events']
+
+      aggregate_failures do
+        expect(events_response['collection'].first['externalCustomerId']).to eq(event.customer.external_id)
+        expect(events_response['collection'].first['customerTimezone']).to eq('TZ_UTC')
+      end
+    end
+  end
 end
