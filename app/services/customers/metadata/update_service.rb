@@ -15,6 +15,7 @@ module Customers
         hash_metadata = params.map { |m| m.to_h.deep_symbolize_keys }
         hash_metadata.each do |payload_metadata|
           metadata = customer.metadata.find_by(id: payload_metadata[:id])
+          payload_metadata[:display_in_invoice] = payload_metadata[:display_in_invoice] || false
 
           if metadata
             metadata.update!(payload_metadata)
