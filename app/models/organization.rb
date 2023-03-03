@@ -12,6 +12,7 @@ class Organization < ApplicationRecord
   has_many :subscriptions, through: :customers
   has_many :invoices
   has_many :credit_notes, through: :invoices
+  has_many :fees, through: :invoices
   has_many :events
   has_many :coupons
   has_many :applied_coupons, through: :coupons
