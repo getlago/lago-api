@@ -8,7 +8,7 @@ class Event < ApplicationRecord
   include OrganizationTimezone
 
   belongs_to :organization
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   belongs_to :subscription
 
   validates :transaction_id, presence: true, uniqueness: { scope: :subscription_id }
