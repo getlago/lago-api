@@ -3,6 +3,7 @@ require:
   - rubocop-performance
   - rubocop-rails
   - rubocop-thread_safety
+  - rubocop-graphql
 
 AllCops:
   DisplayStyleGuide: true
