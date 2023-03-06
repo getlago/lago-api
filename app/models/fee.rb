@@ -3,7 +3,7 @@
 class Fee < ApplicationRecord
   include Currencies
 
-  belongs_to :invoice
+  belongs_to :invoice, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
@@ -22,7 +22,7 @@ class Fee < ApplicationRecord
   monetize :vat_amount_cents
   monetize :total_amount_cents
 
-  FEE_TYPES = %i[charge add_on subscription credit].freeze
+  FEE_TYPES = %i[charge add_on subscription credit instant_charge].freeze
 
   enum fee_type: FEE_TYPES
 
@@ -40,7 +40,7 @@ class Fee < ApplicationRecord
   end
 
   def item_code
-    return billable_metric.code if charge?
+    return billable_metric.code if charge? || instant_charge?
     return add_on.code if add_on?
     return fee_type if credit?
 
@@ -48,7 +48,7 @@ class Fee < ApplicationRecord
   end
 
   def item_name
-    return billable_metric.name if charge?
+    return billable_metric.name if charge? || instant_charge?
     return add_on.name if add_on?
     return fee_type if credit?
 

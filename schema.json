@@ -10742,6 +10742,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "instant_charge",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
