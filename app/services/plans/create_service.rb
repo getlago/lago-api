@@ -46,6 +46,7 @@ module Plans
         charge_model: args[:charge_model]&.to_sym,
         properties: args[:properties] || {},
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
+        instant: args[:instant] || false,
       )
     end
 
