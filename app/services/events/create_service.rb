@@ -48,6 +48,8 @@ module Events
         handle_persisted_event if should_handle_persisted_event?
       end
 
+      Fees::CreateInstantJob.perform_later(charge:, event:) if instant_charge?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -63,6 +65,8 @@ module Events
     end
 
     private
+
+    delegate :event, to: :result
 
     def customer(organization:, params:)
       return @customer if defined? @customer
@@ -85,6 +89,18 @@ module Events
     def handle_persisted_event
       service_result = persisted_event_service.call
       service_result.raise_if_error!
+    end
+
+    def charge
+      @charge ||= event.subscription
+        .plan
+        .charges
+        .joins(:billable_metric)
+        .find_by(billable_metric: { code: event.code })
+    end
+
+    def instant_charge?
+      charge&.instant? || false
     end
   end
 end

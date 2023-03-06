@@ -56,7 +56,8 @@ RSpec.describe Events::CreateService, type: :service do
   end
 
   describe '#call' do
-    let(:subscription) { create(:active_subscription, customer:, organization:) }
+    let(:plan) { create(:plan, organization: customer.organization) }
+    let(:subscription) { create(:active_subscription, customer:, organization:, plan:) }
 
     let(:create_args) do
       {
@@ -394,6 +395,42 @@ RSpec.describe Events::CreateService, type: :service do
 
           expect(result).not_to be_success
         end
+      end
+    end
+
+    context 'when event matches an instant charge' do
+      let(:charge) { create(:standard_charge, :instant, plan:, billable_metric:) }
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization: customer.organization,
+          aggregation_type: 'sum_agg',
+          field_name: 'item_id',
+        )
+      end
+
+      let(:create_args) do
+        {
+          customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          properties: { billable_metric.field_name => '12' },
+          timestamp: Time.zone.now.to_i,
+        }
+      end
+
+      before { charge }
+
+      it 'enqueues a job to perform the instant aggregation' do
+        expect do
+          create_service.call(
+            organization:,
+            params: create_args,
+            timestamp:,
+            metadata: {},
+          )
+        end.to have_enqueued_job(Fees::CreateInstantJob)
       end
     end
   end
