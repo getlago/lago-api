@@ -12434,7 +12434,7 @@
         {
           "kind": "OBJECT",
           "name": "InvoiceMetadata",
-          "description": null,
+          "description": "Attributes for invoice metadata object",
           "interfaces": [
 
           ],
@@ -12537,7 +12537,7 @@
         {
           "kind": "INPUT_OBJECT",
           "name": "InvoiceMetadataInput",
-          "description": null,
+          "description": "Attributes for creating or updating invoice metadata object",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -20501,18 +20501,6 @@
               "deprecationReason": null
             },
             {
-              "name": "paymentStatus",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "InvoicePaymentStatusTypeEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "metadata",
               "description": null,
               "type": {
@@ -20527,6 +20515,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentStatus",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "InvoicePaymentStatusTypeEnum",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

@@ -3050,6 +3050,9 @@ interface InvoiceItem {
   itemType: String!
 }
 
+"""
+Attributes for invoice metadata object
+"""
 type InvoiceMetadata {
   createdAt: ISO8601DateTime!
   id: ID!
@@ -3058,6 +3061,9 @@ type InvoiceMetadata {
   value: String!
 }
 
+"""
+Attributes for creating or updating invoice metadata object
+"""
 input InvoiceMetadataInput {
   id: ID
   key: String!
