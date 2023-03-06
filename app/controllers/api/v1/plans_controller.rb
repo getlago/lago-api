@@ -93,7 +93,7 @@ module Api
               group_properties: [
                 :group_id,
                 { values: {} },
-              ]
+              ],
             },
           ],
         )

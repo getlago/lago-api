@@ -8,6 +8,7 @@ module V1
         lago_billable_metric_id: model.billable_metric_id,
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
+        instant: model.instant,
         properties: model.properties,
       }.merge(group_properties)
     end

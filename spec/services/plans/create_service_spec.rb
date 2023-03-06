@@ -57,6 +57,8 @@ RSpec.describe Plans::CreateService, type: :service do
       }
     end
 
+    around { |test| lago_premium!(&test) }
+
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
