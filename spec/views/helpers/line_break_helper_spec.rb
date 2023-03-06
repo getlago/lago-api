@@ -7,7 +7,7 @@ RSpec.describe LineBreakHelper do
 
   describe '.break_lines' do
     it 'replaces \n with <br\>' do
-      html = helper.break_lines('t\nt')
+      html = helper.break_lines("t\nt")
 
       expect(html).to eq('t<br/>t')
     end
