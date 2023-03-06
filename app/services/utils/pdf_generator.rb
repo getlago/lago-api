@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../../views/helpers/line_break_helper.rb'
+require_relative '../../views/helpers/line_break_helper'
 
 module Utils
   class PdfGenerator < BaseService
