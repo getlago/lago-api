@@ -41,13 +41,15 @@ module Plans
     private
 
     def create_charge(plan, args)
-      plan.charges.create!(
+      charge = plan.charges.new(
         billable_metric_id: args[:billable_metric_id],
         charge_model: args[:charge_model]&.to_sym,
         properties: args[:properties] || {},
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
-        instant: args[:instant] || false,
       )
+      charge.instant = args[:instant] || false if License.premium? && args.key?(:instant)
+      charge.save!
+      charge
     end
 
     def track_plan_created(plan)

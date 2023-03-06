@@ -59,6 +59,8 @@ RSpec.describe Plans::UpdateService, type: :service do
   end
 
   describe 'call' do
+    around { |test| lago_premium!(&test) }
+
     it 'updates a plan' do
       result = plans_service.call
 
@@ -162,6 +164,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               id: existing_charge.id,
               billable_metric_id: billable_metrics.first.id,
               charge_model: 'standard',
+              instant: true,
               group_properties: [
                 {
                   group_id: group.id,
@@ -193,6 +196,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           group_id: group.id,
           values: { 'amount' => '100' },
         )
+        expect(existing_charge).to be_instant
       end
     end
 

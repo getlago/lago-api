@@ -9,6 +9,7 @@ module V1
         billable_metric_code: model.billable_metric.code,
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
+        instant: model.instant,
         properties: model.properties,
       }.merge(group_properties)
     end

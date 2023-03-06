@@ -45,7 +45,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
     it 'creates a succeeded webhook' do
       webhook_service.call
 
-      webhook = Webhook.first
+      webhook = Webhook.order(created_at: :desc).first
 
       aggregate_failures do
         expect(webhook).to be_succeeded
@@ -107,7 +107,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
       it 'creates a failed webhook' do
         webhook_service.call
 
-        webhook = Webhook.first
+        webhook = Webhook.order(created_at: :desc).first
 
         aggregate_failures do
           expect(webhook).to be_failed
