@@ -67,6 +67,10 @@ class Organization < ApplicationRecord
     end
   end
 
+  def html_invoice_footer
+    invoice_footer.to_s.gsub(/\n/, '<br/>').html_safe
+  end
+
   private
 
   def generate_api_key
