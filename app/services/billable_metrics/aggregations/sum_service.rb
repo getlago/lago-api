@@ -4,10 +4,11 @@ module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
       def aggregate(from_datetime:, to_datetime:, options: {})
-        events = events_scope(from_datetime: from_datetime, to_datetime: to_datetime)
+        events = events_scope(from_datetime:, to_datetime:)
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
+        result.instant_aggregation = BigDecimal(compute_instant_aggregation)
         result.count = events.count
         result.options = { running_total: running_total(events, options) }
         result
@@ -47,6 +48,13 @@ module BillableMetrics
 
             accumulator << total += val
           end
+      end
+
+      def compute_instant_aggregation
+        return 0 unless event
+        return 0 if event.properties.blank?
+
+        event.properties[billable_metric.field_name] || 0
       end
     end
   end
