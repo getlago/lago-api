@@ -85,11 +85,16 @@ module Api
             :id,
             :billable_metric_id,
             :charge_model,
-            { properties: {} },
-            group_properties: [
-              :group_id,
-              { values: {} },
-            ],
+            :instant,
+            {
+              properties: {},
+            },
+            {
+              group_properties: [
+                :group_id,
+                { values: {} },
+              ]
+            },
           ],
         )
       end

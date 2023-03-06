@@ -35,6 +35,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             billable_metric_id: billable_metrics.last.id,
             charge_model: 'graduated',
+            instant: true,
             properties: {
               graduated_ranges: [
                 {
@@ -63,10 +64,26 @@ RSpec.describe Plans::CreateService, type: :service do
     it 'creates a plan' do
       expect { plans_service.create(**create_args) }
         .to change(Plan, :count).by(1)
+    end
+
+    it 'creates charges' do
+      plans_service.create(**create_args)
 
       plan = Plan.order(:created_at).last
-
       expect(plan.charges.count).to eq(2)
+
+      standard_charge = plan.charges.standard.first
+      graduated_charge = plan.charges.graduated.first
+
+      expect(standard_charge).not_to be_instant
+      expect(standard_charge.group_properties.first).to have_attributes(
+        {
+          group_id: group.id,
+          values: { 'amount' => '100' },
+        },
+      )
+
+      expect(graduated_charge).to be_instant
     end
 
     it 'calls SegmentTrackJob' do
