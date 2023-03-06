@@ -5,9 +5,10 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   subject(:count_service) do
     described_class.new(
-      billable_metric: billable_metric,
-      subscription: subscription,
-      group: group,
+      billable_metric:,
+      subscription:,
+      group:,
+      event: instant_event,
     )
   end
 
@@ -19,7 +20,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   let(:billable_metric) do
     create(
       :billable_metric,
-      organization: organization,
+      organization:,
       aggregation_type: 'count_agg',
     )
   end
@@ -27,19 +28,21 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
 
+  let(:instant_event) { nil }
+
   before do
     create_list(
       :event,
       4,
       code: billable_metric.code,
-      subscription: subscription,
-      customer: customer,
+      subscription:,
+      customer:,
       timestamp: Time.zone.now - 1.day,
     )
   end
 
   it 'aggregates the events' do
-    result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+    result = count_service.aggregate(from_datetime:, to_datetime:)
 
     expect(result.aggregation).to eq(4)
   end
@@ -48,7 +51,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     let(:to_datetime) { Time.zone.now - 2.days }
 
     it 'does not take events into account' do
-      result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = count_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(0)
     end
@@ -114,6 +117,16 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
 
       expect(result.aggregation).to eq(2)
+    end
+  end
+
+  context 'when instant aggregation' do
+    let(:instant_event) { create(:event, subscription:, customer:) }
+
+    it 'assigns an instant aggregation' do
+      result = count_service.aggregate(from_datetime:, to_datetime:)
+
+      expect(result.instant_aggregation).to eq(1)
     end
   end
 end
