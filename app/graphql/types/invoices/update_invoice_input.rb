@@ -4,7 +4,6 @@ module Types
   module Invoices
     class UpdateInvoiceInput < BaseInputObject
       description 'Update Invoice input arguments'
-      graphql_name 'UpdateInvoiceInput'
 
       argument :id, ID, required: true
       argument :metadata, [Types::Invoices::Metadata::Input], required: false
