@@ -69,6 +69,13 @@ RSpec.describe Fees::CreateInstantService, type: :service do
       end
     end
 
+    it 'delivers a webhook' do
+      fee_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued
+        .with('fee.instant_created', Fee)
+    end
+
     context 'when aggregation fails' do
       let(:aggregation_result) do
         BaseService::Result.new.service_failure!(code: 'failure', message: 'Failure')
