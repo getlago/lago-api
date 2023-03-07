@@ -14499,7 +14499,7 @@
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for Update",
+                  "description": "Parameters for UpdateInvoice",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,

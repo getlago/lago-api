@@ -3591,7 +3591,7 @@ type Mutation {
   """
   updateInvoice(
     """
-    Parameters for Update
+    Parameters for UpdateInvoice
     """
     input: UpdateInvoiceInput!
   ): Invoice

@@ -5,6 +5,7 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
       description 'Update an existing invoice'
+      graphql_name 'UpdateInvoice'
 
       input_object_class Types::Invoices::UpdateInvoiceInput
 
