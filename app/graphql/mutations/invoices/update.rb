@@ -4,13 +4,9 @@ module Mutations
   module Invoices
     class Update < BaseMutation
       include AuthenticableApiUser
-
-      graphql_name 'UpdateInvoice'
       description 'Update an existing invoice'
 
-      argument :id, ID, required: true
-      argument :metadata, [Types::Invoices::Metadata::Input], required: false
-      argument :payment_status, Types::Invoices::PaymentStatusTypeEnum, required: false
+      input_object_class Types::Invoices::UpdateInvoiceInput
 
       type Types::Invoices::Object
 
