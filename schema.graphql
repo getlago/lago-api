@@ -1451,34 +1451,6 @@ type CouponCollection {
   metadata: CollectionMetadata!
 }
 
-type CouponDetails {
-  amountCents: BigInt
-  amountCurrency: CurrencyEnum
-  appliedCouponsCount: Int!
-  code: String
-  couponType: CouponTypeEnum!
-  createdAt: ISO8601DateTime!
-
-  """
-  Number of customers using this coupon
-  """
-  customerCount: Int!
-  expiration: CouponExpiration!
-  expirationAt: ISO8601DateTime
-  frequency: CouponFrequency!
-  frequencyDuration: Int
-  id: ID!
-  limitedPlans: Boolean!
-  name: String!
-  organization: Organization
-  percentageRate: Float
-  plans: [Plan!]
-  reusable: Boolean!
-  status: CouponStatusEnum!
-  terminatedAt: ISO8601DateTime
-  updatedAt: ISO8601DateTime!
-}
-
 enum CouponExpiration {
   no_expiration
   time_limit
@@ -3786,7 +3758,7 @@ type Query {
     Uniq ID of the coupon
     """
     id: ID!
-  ): CouponDetails
+  ): Coupon
 
   """
   Query coupons of an organization
