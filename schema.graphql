@@ -141,24 +141,6 @@ type BillableMetricCollection {
   metadata: CollectionMetadata!
 }
 
-type BillableMetricDetail {
-  activeSubscriptionsCount: Int!
-  aggregationType: AggregationTypeEnum!
-  code: String!
-  createdAt: ISO8601DateTime!
-  deletedAt: ISO8601DateTime
-  description: String
-  draftInvoicesCount: Int!
-  fieldName: String
-  flatGroups: [Group!]
-  group: JSON
-  id: ID!
-  name: String!
-  organization: Organization
-  subscriptionsCount: Int!
-  updatedAt: ISO8601DateTime!
-}
-
 enum BillingTimeEnum {
   anniversary
   calendar
@@ -3800,7 +3782,7 @@ type Query {
     Uniq ID of the billable metric
     """
     id: ID!
-  ): BillableMetricDetail
+  ): BillableMetric
 
   """
   Query billable metrics of an organization
