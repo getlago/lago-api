@@ -21,7 +21,7 @@ module Fees
       end
 
       result.fees = fees.compact
-      # TODO(instant_charges): deliver webhooks for fees
+      deliver_webhooks
 
       result
     rescue BaseService::FailedResult => e
@@ -50,7 +50,7 @@ module Fees
         fee_type: :instant_charge,
         invoiceable: charge,
         units: result.units,
-        properties: boundaries, # TODO: should we add event id in the property / add a relation ??
+        properties: boundaries,
         events_count: result.count,
         group_id: group&.id,
         instant_event_id: event.id,
@@ -114,6 +114,10 @@ module Fees
       return false unless event.properties.key?(group.key.to_s)
 
       event.properties[group.key.to_s] == group.value
+    end
+
+    def deliver_webhooks
+      result.fees.each { |f| SendWebhookJob.perform_later('fee.instant_created', f) }
     end
   end
 end
