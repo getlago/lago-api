@@ -3626,37 +3626,6 @@ type PlanCollection {
   metadata: CollectionMetadata!
 }
 
-type PlanDetails {
-  activeSubscriptionsCount: Int!
-  amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
-  billChargesMonthly: Boolean
-
-  """
-  Number of charges attached to a plan
-  """
-  chargeCount: Int!
-  charges: [Charge!]
-  code: String!
-  createdAt: ISO8601DateTime!
-
-  """
-  Number of customers attached to a plan
-  """
-  customerCount: Int!
-  description: String
-  draftInvoicesCount: Int!
-  id: ID!
-  interval: PlanInterval!
-  name: String!
-  organization: Organization
-  parentId: ID
-  payInAdvance: Boolean!
-  subscriptionsCount: Int!
-  trialPeriod: Float
-  updatedAt: ISO8601DateTime!
-}
-
 enum PlanInterval {
   monthly
   weekly
@@ -3920,7 +3889,7 @@ type Query {
     Uniq ID of the plan
     """
     id: ID!
-  ): PlanDetails
+  ): Plan
 
   """
   Query plans of an organization
