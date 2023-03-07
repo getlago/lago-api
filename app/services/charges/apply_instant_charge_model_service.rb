@@ -55,8 +55,6 @@ module Charges
       previous_result = BaseService::Result.new
       previous_result.aggregation = aggregation_result.aggregation - aggregation_result.instant_aggregation
       previous_result.count = aggregation_result.count - 1
-
-      # TODO: Make it works with percentage model
       previous_result.options = aggregation_result.options
 
       charge_model.apply(charge:, aggregation_result: previous_result, properties:).amount

@@ -296,7 +296,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_07_131524) do
     t.uuid "invoiceable_id"
     t.integer "events_count"
     t.uuid "group_id"
-    t.string "instant_event_id"
+    t.uuid "instant_event_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["group_id"], name: "index_fees_on_group_id"
