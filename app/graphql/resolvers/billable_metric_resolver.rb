@@ -9,7 +9,7 @@ module Resolvers
 
     argument :id, ID, required: true, description: 'Uniq ID of the billable metric'
 
-    type Types::BillableMetrics::SingleObject, null: true
+    type Types::BillableMetrics::Object, null: true
 
     def resolve(id: nil)
       validate_organization!
