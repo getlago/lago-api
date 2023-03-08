@@ -62,7 +62,6 @@ module Plans
         billable_metric_id: params[:billable_metric_id],
         amount_currency: params[:amount_currency],
         charge_model: params[:charge_model]&.to_sym,
-        instant: params[:instant] || false,
         properties: params[:properties] || {},
         group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
@@ -82,6 +81,8 @@ module Plans
           # NOTE: charges cannot be edited if plan is attached to a subscription
           unless plan.attached_to_subscriptions?
             payload_charge[:group_properties]&.map! { |gp| GroupProperty.new(gp) }
+            instant = payload_charge.delete(:instant)
+            charge.instant = instant || false if License.premium?
             charge.update!(payload_charge)
             charge
           end
