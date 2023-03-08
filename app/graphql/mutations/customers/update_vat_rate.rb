@@ -11,7 +11,7 @@ module Mutations
       argument :id, ID, required: true
       argument :vat_rate, Float, required: false
 
-      type Types::Customers::SingleObject
+      type Types::Customers::Object
 
       def resolve(id:, vat_rate:)
         result = ::Customers::UpdateService.new(context[:current_user]).update(

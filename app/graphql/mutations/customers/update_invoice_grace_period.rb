@@ -11,7 +11,7 @@ module Mutations
       argument :id, ID, required: true
       argument :invoice_grace_period, Integer, required: false
 
-      type Types::Customers::SingleObject
+      type Types::Customers::Object
 
       def resolve(id:, invoice_grace_period:)
         result = ::Customers::UpdateService.new(context[:current_user]).update(id:, invoice_grace_period:)

@@ -36,7 +36,14 @@ module Types
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true
 
       field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
-      field :subscriptions, [Types::Subscriptions::Object]
+      field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
+
+      field :invoices, [Types::Invoices::Object]
+
+      field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
+      field :applied_coupons, [Types::AppliedCoupons::Object], null: true
+
+      field :credit_notes, [Types::CreditNotes::Object], null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -56,6 +63,18 @@ module Types
 
       field :can_edit_attributes, Boolean, null: false do
         description 'Check if customer attributes are editable'
+      end
+
+      def invoices
+        object.invoices.order(created_at: :desc)
+      end
+
+      def applied_coupons
+        object.applied_coupons.active.order(created_at: :asc)
+      end
+
+      def applied_add_ons
+        object.applied_add_ons.order(created_at: :desc)
       end
 
       def has_active_wallet
