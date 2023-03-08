@@ -6,8 +6,9 @@ RSpec.describe Api::V1::FeesController, type: :request do
   let(:organization) { create(:organization) }
 
   describe 'GET /fees/:id' do
-    let(:invoice) { create(:invoice, organization:) }
-    let(:fee) { create(:fee, invoice:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:fee) { create(:fee, subscription:) }
 
     it 'returns a fee' do
       get_with_token(organization, "/api/v1/fees/#{fee.id}")
