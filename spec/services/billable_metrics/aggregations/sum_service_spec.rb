@@ -5,9 +5,10 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   subject(:sum_service) do
     described_class.new(
-      billable_metric: billable_metric,
-      subscription: subscription,
-      group: group,
+      billable_metric:,
+      subscription:,
+      group:,
+      event: instant_event,
     )
   end
 
@@ -19,7 +20,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   let(:billable_metric) do
     create(
       :billable_metric,
-      organization: organization,
+      organization:,
       aggregation_type: 'sum_agg',
       field_name: 'total_count',
     )
@@ -31,13 +32,15 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     { free_units_per_events: 2, free_units_per_total_aggregation: 30 }
   end
 
+  let(:instant_event) { nil }
+
   before do
     create_list(
       :event,
       4,
       code: billable_metric.code,
-      customer: customer,
-      subscription: subscription,
+      customer:,
+      subscription:,
       timestamp: Time.zone.now - 1.day,
       properties: {
         total_count: 12,
@@ -46,9 +49,10 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   end
 
   it 'aggregates the events' do
-    result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime, options: options)
+    result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
 
     expect(result.aggregation).to eq(48)
+    expect(result.instant_aggregation).to be_zero
     expect(result.count).to eq(4)
     expect(result.options).to eq({ running_total: [12, 24] })
   end
@@ -57,7 +61,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     let(:options) { {} }
 
     it 'returns an empty running total array' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime, options: options)
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
       expect(result.options).to eq({ running_total: [] })
     end
   end
@@ -68,7 +72,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns an empty running total array' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime, options: options)
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
       expect(result.options).to eq({ running_total: [] })
     end
   end
@@ -79,7 +83,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns running total based on per total aggregation' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime, options: options)
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
       expect(result.options).to eq({ running_total: [12, 24, 36] })
     end
   end
@@ -90,7 +94,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns running total based on per events' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime, options: options)
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
       expect(result.options).to eq({ running_total: [12, 24] })
     end
   end
@@ -99,7 +103,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     let(:to_datetime) { Time.zone.now - 2.days }
 
     it 'does not take events into account' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = sum_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -113,7 +117,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'counts as zero' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = sum_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -126,8 +130,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 4.5,
@@ -136,7 +140,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = sum_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(52.5)
     end
@@ -147,8 +151,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 'foo_bar',
@@ -157,7 +161,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns a failed result' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = sum_service.aggregate(from_datetime:, to_datetime:)
 
       aggregate_failures do
         expect(result).not_to be_success
@@ -177,8 +181,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
@@ -189,8 +193,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 8,
@@ -201,8 +205,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
@@ -212,11 +216,52 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime, options: options)
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
 
       expect(result.aggregation).to eq(20)
       expect(result.count).to eq(2)
       expect(result.options).to eq({ running_total: [12, 20] })
+    end
+  end
+
+  context 'when event is given' do
+    let(:instant_event) do
+      create(
+        :event,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: Time.zone.now - 1.day,
+        properties:,
+      )
+    end
+
+    let(:properties) { { total_count: 12 } }
+
+    it 'assigns an instant aggregation' do
+      result = sum_service.aggregate(from_datetime:, to_datetime:)
+
+      expect(result.instant_aggregation).to eq(12)
+    end
+
+    context 'when event propertie does not match metric field name' do
+      let(:properties) { { final_count: 10 } }
+
+      it 'assigns 0 as instant aggregation' do
+        result = sum_service.aggregate(from_datetime:, to_datetime:)
+
+        expect(result.instant_aggregation).to be_zero
+      end
+    end
+
+    context 'when event is missing properties' do
+      let(:properties) { {} }
+
+      it 'assigns 0 as instant aggregation' do
+        result = sum_service.aggregate(from_datetime:, to_datetime:)
+
+        expect(result.instant_aggregation).to be_zero
+      end
     end
   end
 end

@@ -91,6 +91,25 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is fee.instant_created' do
+    let(:webhook_service) { instance_double(Webhooks::Fees::InstantCreatedService) }
+    let(:fee) { create(:fee) }
+
+    before do
+      allow(Webhooks::Fees::InstantCreatedService).to receive(:new)
+        .with(object: fee, options: {}, webhook_id: nil)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook fee service' do
+      send_webhook_job.perform_now('fee.instant_created', fee)
+
+      expect(Webhooks::Fees::InstantCreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is event.error' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::InvoicePaymentFailureService) }
 

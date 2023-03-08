@@ -13,6 +13,7 @@ module LagoApi
       #{config.root}/lib
       #{config.root}/lib/lago_http_client
       #{config.root}/lib/lago_utils
+      #{config.root}/app/views/helpers
     ]
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq

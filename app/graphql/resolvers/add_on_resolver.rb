@@ -9,7 +9,7 @@ module Resolvers
 
     argument :id, ID, required: true, description: 'Uniq ID of the add-on'
 
-    type Types::AddOns::SingleObject, null: true
+    type Types::AddOns::Object, null: true
 
     def resolve(id: nil)
       validate_organization!

@@ -9,7 +9,7 @@ module Resolvers
 
     argument :id, ID, required: true, description: 'Uniq ID of the plan'
 
-    type Types::Plans::SingleObject, null: true
+    type Types::Plans::Object, null: true
 
     def resolve(id: nil)
       validate_organization!

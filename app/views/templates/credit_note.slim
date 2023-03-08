@@ -387,7 +387,7 @@ html
             td.body-1 = I18n.t('credit_note.total_due')
             td.body-1 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
-      p.body-3.mb-24 = organization.invoice_footer
+      p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
       .powered-by
         span.body-2

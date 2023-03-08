@@ -3,11 +3,12 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      def initialize(billable_metric:, subscription:, group: nil)
+      def initialize(billable_metric:, subscription:, group: nil, event: nil)
         super(nil)
         @billable_metric = billable_metric
         @subscription = subscription
         @group = group
+        @event = event
       end
 
       def aggregate(from_date:, to_date:, options: {})
@@ -16,7 +17,7 @@ module BillableMetrics
 
       protected
 
-      attr_accessor :billable_metric, :subscription, :group
+      attr_accessor :billable_metric, :subscription, :group, :event
 
       delegate :customer, to: :subscription
 
