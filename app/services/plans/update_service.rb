@@ -82,7 +82,7 @@ module Plans
           # NOTE: charges cannot be edited if plan is attached to a subscription
           unless plan.attached_to_subscriptions?
             payload_charge[:group_properties]&.map! { |gp| GroupProperty.new(gp) }
-            charge.update(payload_charge)
+            charge.update!(payload_charge)
             charge
           end
 
