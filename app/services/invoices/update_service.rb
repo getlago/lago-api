@@ -11,21 +11,36 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+      return result.not_allowed_failure!(code: 'metadata_on_draft_invoice') if invoice.draft? && params[:metadata]
 
-      unless valid_payment_status?(params[:payment_status])
+      if params.key?(:payment_status) && !valid_payment_status?(params[:payment_status])
         return result.single_validation_failure!(
           field: :payment_status,
           error_code: 'value_is_invalid',
         )
       end
 
-      invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
-      invoice.save!
+      unless valid_metadata_count?(metadata: params[:metadata])
+        return result.single_validation_failure!(
+          field: :metadata,
+          error_code: 'invalid_count',
+        )
+      end
 
-      handle_prepaid_credits(params[:payment_status])
+      invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
+
+      ActiveRecord::Base.transaction do
+        invoice.save!
+
+        Invoices::Metadata::UpdateService.call(invoice:, params: params[:metadata]) if params[:metadata]
+      end
+
+      if params.key?(:payment_status)
+        handle_prepaid_credits(params[:payment_status])
+        track_payment_status_changed
+      end
 
       result.invoice = invoice
-      track_payment_status_changed
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -56,6 +71,13 @@ module Invoices
       return unless payment_status == 'succeeded'
 
       Invoices::PrepaidCreditJob.perform_later(invoice)
+    end
+
+    def valid_metadata_count?(metadata:)
+      return true if metadata.blank?
+      return true if metadata.count <= ::Metadata::InvoiceMetadata::COUNT_PER_INVOICE
+
+      false
     end
   end
 end

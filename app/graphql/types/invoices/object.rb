@@ -25,6 +25,8 @@ module Types
       field :file_url, String, null: true
       field :vat_rate, Float, null: false
 
+      field :metadata, [Types::Invoices::Metadata::Object], null: true
+
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
