@@ -19,7 +19,7 @@ nb:
     total_due: Å betale
     powered_by: Fakturering drevet av
 
-    details: “%{resource} detaljer"
+    details: "%{resource} detaljer"
     subscription: Abonnement
     date_from: Fra
     date_to: til
