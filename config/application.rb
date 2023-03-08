@@ -24,7 +24,7 @@ module LagoApi
     config.active_record.encryption.key_derivation_salt = ENV['ENCRYPTION_KEY_DERIVATION_SALT']
 
     config.i18n.load_path += Dir[Rails.root.join('config/locales/**/*.{rb,yml}')]
-    config.i18n.available_locales = %i[en fr]
+    config.i18n.available_locales = %i[en fr nb]
     config.i18n.default_locale = :en
 
     config.generators do |g|

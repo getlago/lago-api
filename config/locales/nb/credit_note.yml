@@ -1,0 +1,18 @@
+nb:
+  credit_note:
+    document_name: Kreditnota
+    credit_note_number: Kreditnota nummer
+    invoice_number: Fakturanummer
+    issue_date: Dato
+    credit_from: Fra
+    credit_to: Til
+    refunded_notice: Refundert %{issuing_date}
+    credited_notice: Kreditert til kontobalanse %{issuing_date}
+    credited_refunded_notice: Kreditert til kontobalanse og refundert %{issuing_date}
+    subscription: Abonnement
+    sub_total_without_tax: Sub total (ekskl. MVA)
+    tax: Merverdiavgift
+    credited_on_customer_balance: Kreditert til kontobalanse
+    refunded: Refundert
+    total_due: Beløp
+    powered_by: Fakturering drevet av
