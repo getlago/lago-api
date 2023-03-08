@@ -8,7 +8,7 @@ module Api
 
         result = Invoices::UpdateService.new(
           invoice: invoice,
-          params: update_params,
+          params: update_params.to_h.deep_symbolize_keys,
         ).call
 
         if result.success?
@@ -49,7 +49,7 @@ module Api
             ::V1::InvoiceSerializer,
             collection_name: 'invoices',
             meta: pagination_metadata(invoices),
-            includes: %i[customer],
+            includes: %i[customer metadata],
           ),
         )
       end
@@ -110,7 +110,14 @@ module Api
       private
 
       def update_params
-        params.require(:invoice).permit(:payment_status)
+        params.require(:invoice).permit(
+          :payment_status,
+          metadata: [
+            :id,
+            :key,
+            :value,
+          ],
+        )
       end
 
       def render_invoice(invoice)
@@ -118,7 +125,7 @@ module Api
           json: ::V1::InvoiceSerializer.new(
             invoice,
             root_name: 'invoice',
-            includes: %i[customer subscriptions fees credits],
+            includes: %i[customer subscriptions fees credits metadata],
           ),
         )
       end

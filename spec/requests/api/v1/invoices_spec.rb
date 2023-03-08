@@ -27,6 +27,34 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context 'with metadata' do
+      let(:update_params) do
+        {
+          metadata: [
+            {
+              key: 'Hello',
+              value: 'Hi',
+            },
+          ],
+        }
+      end
+
+      it 'returns a success' do
+        put_with_token(organization, "/api/v1/invoices/#{invoice.id}", { invoice: update_params })
+
+        metadata = json[:invoice][:metadata]
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:invoice][:lago_id]).to eq(invoice.id)
+
+          expect(metadata).to be_present
+          expect(metadata.first[:key]).to eq('Hello')
+          expect(metadata.first[:value]).to eq('Hi')
+        end
+      end
+    end
   end
 
   describe 'GET /invoices/:id' do

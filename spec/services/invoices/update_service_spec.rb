@@ -44,6 +44,95 @@ RSpec.describe Invoices::UpdateService do
       )
     end
 
+    context 'with metadata' do
+      let(:invoice_metadata) { create(:invoice_metadata, invoice:) }
+      let(:another_invoice_metadata) { create(:invoice_metadata, invoice:, key: 'test', value: '1') }
+      let(:update_args) do
+        {
+          metadata: [
+            {
+              id: invoice_metadata.id,
+              key: 'new key',
+              value: 'new value',
+            },
+            {
+              key: 'Added key',
+              value: 'Added value',
+            },
+          ],
+        }
+      end
+
+      before do
+        invoice_metadata
+        another_invoice_metadata
+      end
+
+      it 'updates metadata' do
+        metadata_keys = result.invoice.metadata.pluck(:key)
+        metadata_ids = result.invoice.metadata.pluck(:id)
+
+        expect(result.invoice.metadata.count).to eq(2)
+        expect(metadata_keys).to eq(['new key', 'Added key'])
+        expect(metadata_ids).to include(invoice_metadata.id)
+        expect(metadata_ids).not_to include(another_invoice_metadata.id)
+      end
+
+      context 'when invoice is in draft status' do
+        let(:invoice) { create(:invoice, status: 'draft') }
+
+        it 'fails to update metadata' do
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq('metadata_on_draft_invoice')
+          end
+        end
+      end
+
+      context 'when more than five metadata objects are provided' do
+        let(:update_args) do
+          {
+            metadata: [
+              {
+                id: invoice_metadata.id,
+                key: 'new key',
+                value: 'new value',
+              },
+              {
+                key: 'Added key1',
+                value: 'Added value1',
+              },
+              {
+                key: 'Added key2',
+                value: 'Added value2',
+              },
+              {
+                key: 'Added key3',
+                value: 'Added value3',
+              },
+              {
+                key: 'Added key4',
+                value: 'Added value4',
+              },
+              {
+                key: 'Added key5',
+                value: 'Added value5',
+              },
+            ],
+          }
+        end
+
+        it 'fails to update invoice with metadata' do
+          aggregate_failures do
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:metadata)
+            expect(result.error.messages[:metadata]).to include('invalid_count')
+          end
+        end
+      end
+    end
+
     context 'when invoice type is credit and new payment_status is succeeded' do
       let(:subscription) { create(:subscription, customer: invoice.customer) }
       let(:wallet) { create(:wallet, customer: invoice.customer, balance: 10.0, credits_balance: 10.0) }
@@ -89,19 +178,6 @@ RSpec.describe Invoices::UpdateService do
           payment_status: 'Foo Bar',
         }
       end
-
-      it 'returns an error' do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:payment_status)
-          expect(result.error.messages[:payment_status]).to include('value_is_invalid')
-        end
-      end
-    end
-
-    context 'when invoice payment_status is not present' do
-      let(:update_args) { {} }
 
       it 'returns an error' do
         aggregate_failures do
