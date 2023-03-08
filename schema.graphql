@@ -2465,82 +2465,6 @@ type Customer {
   addressLine1: String
   addressLine2: String
   applicableTimezone: TimezoneEnum!
-  billingConfiguration: CustomerBillingConfiguration
-
-  """
-  Check if customer attributes are editable
-  """
-  canEditAttributes: Boolean!
-  city: String
-  country: CountryCode
-  createdAt: ISO8601DateTime!
-
-  """
-  Credit notes credits balance available per customer
-  """
-  creditNotesBalanceAmountCents: BigInt!
-
-  """
-  Number of available credits from credit notes per customer
-  """
-  creditNotesCreditsAvailableCount: Int!
-  currency: CurrencyEnum
-  deletedAt: ISO8601DateTime
-  email: String
-  externalId: String!
-
-  """
-  Define if a customer has an active wallet
-  """
-  hasActiveWallet: Boolean!
-
-  """
-  Define if a customer has any credit note
-  """
-  hasCreditNotes: Boolean!
-  id: ID!
-  invoiceGracePeriod: Int
-  legalName: String
-  legalNumber: String
-  logoUrl: String
-  metadata: [CustomerMetadata!]
-  name: String
-  paymentProvider: ProviderTypeEnum
-  phone: String
-  providerCustomer: ProviderCustomer
-  sequentialId: String!
-  slug: String!
-  state: String
-  subscriptions: [Subscription!]
-  timezone: TimezoneEnum
-  updatedAt: ISO8601DateTime!
-  url: String
-  vatRate: Float
-  zipcode: String
-}
-
-type CustomerBillingConfiguration {
-  documentLocale: String
-  id: ID!
-}
-
-input CustomerBillingConfigurationInput {
-  documentLocale: String
-}
-
-type CustomerCollection {
-  collection: [Customer!]!
-  metadata: CollectionMetadata!
-}
-
-type CustomerDetails {
-  """
-  Number of active subscriptions per customer
-  """
-  activeSubscriptionCount: Int!
-  addressLine1: String
-  addressLine2: String
-  applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
   billingConfiguration: CustomerBillingConfiguration
@@ -2606,6 +2530,20 @@ type CustomerDetails {
   url: String
   vatRate: Float
   zipcode: String
+}
+
+type CustomerBillingConfiguration {
+  documentLocale: String
+  id: ID!
+}
+
+input CustomerBillingConfigurationInput {
+  documentLocale: String
+}
+
+type CustomerCollection {
+  collection: [Customer!]!
+  metadata: CollectionMetadata!
 }
 
 type CustomerMetadata {
@@ -3500,7 +3438,7 @@ type Mutation {
     Parameters for UpdateCustomerInvoiceGracePeriod
     """
     input: UpdateCustomerInvoiceGracePeriodInput!
-  ): CustomerDetails
+  ): Customer
 
   """
   Assign the vat rate to Customers
@@ -3510,7 +3448,7 @@ type Mutation {
     Parameters for UpdateCustomerVatRate
     """
     input: UpdateCustomerVatRateInput!
-  ): CustomerDetails
+  ): Customer
 
   """
   Updates a new Customer Wallet
@@ -3792,7 +3730,7 @@ type Query {
     Uniq ID of the customer
     """
     id: ID!
-  ): CustomerDetails
+  ): Customer
 
   """
   Query customer's credit note

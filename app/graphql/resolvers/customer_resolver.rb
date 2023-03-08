@@ -9,7 +9,7 @@ module Resolvers
 
     argument :id, ID, required: true, description: 'Uniq ID of the customer'
 
-    type Types::Customers::SingleObject, null: true
+    type Types::Customers::Object, null: true
 
     def resolve(id: nil)
       validate_organization!
