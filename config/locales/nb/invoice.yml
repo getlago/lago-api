@@ -1,0 +1,43 @@
+nb:
+  invoice:
+    document_name: Faktura
+    invoice_number: Fakturanummer
+    issue_date: Dato
+    bill_from: Fra
+    bill_to: Til
+    due_date: Forfallsdato %{date}
+    total_credits_with_value: "Antall kreditter: %{credit_amount} kreditter"
+    all_subscriptions: Alle Abonnement
+    all_usage_based_fees: Alle bruksbaserte kostnader
+    sub_total_without_tax: Sub total (ekskl. MVA)
+    tax: Merverdiavgift
+    sub_total_with_tax: Sub total (inkl. MVA)
+    credit_notes: Kreditnotaer
+    coupons: Kuponger
+    prepaid_credits: Forskuddsbetalte kreditter
+    prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
+    total_due: Å betale
+    powered_by: Fakturering drevet av
+
+    details: "%{resource} detaljer"
+    subscription: Abonnement
+    date_from: Fra
+    date_to: til
+    monthly: Månedlig
+    yearly: Årlig
+    weekly: Ukentlig
+    sub_total: Sub total
+    subscription_interval: "%{plan_interval} abonnement - %{plan_name}"
+
+    usage_based_fees: Bruksbaserte kostnader
+    list_of_charges: Oversikt over kostnader fra %{from} til %{to}
+    see_breakdown: Se oversikt for antall enheter
+    total_unit_interval: "Antall enheter: %{events_count} hendelser for %{units}"
+    total_unit: "Antall enheter: %{units}"
+    total: Totalt
+    breakdown: Oversikt
+    breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
+    breakdown_of: "Fordeling av %{fee_group_name}"
+    notice: For eksempel, hvis en enhet legges til med 15 dager igjen på månedsabonnementet ganger vi prisen med 15/31 (antall dager gjenstående delt på antall dager å abonnementet ditt) for å beregne den rette prisen. Samme logikk benyttes når en enhet fjernes etter f.eks 10 dager, da ganger vi prisen med 10/31.
+
+    total_credits: Antall kreditter
