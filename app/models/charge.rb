@@ -33,6 +33,8 @@ class Charge < ApplicationRecord
 
   default_scope -> { kept }
 
+  scope :instant, -> { where(instant: true) }
+
   def properties(group_id: nil)
     group_properties.find_by(group_id:)&.values || read_attribute(:properties)
   end

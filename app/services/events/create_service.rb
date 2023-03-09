@@ -48,7 +48,7 @@ module Events
         handle_persisted_event if should_handle_persisted_event?
       end
 
-      Fees::CreateInstantJob.perform_later(charge:, event:) if instant_charge?
+      charges.each { |c| Fees::CreateInstantJob.perform_later(charge: c, event:) } if instant_charges?
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -91,16 +91,17 @@ module Events
       service_result.raise_if_error!
     end
 
-    def charge
-      @charge ||= event.subscription
+    def charges
+      @charges ||= event.subscription
         .plan
         .charges
+        .instant
         .joins(:billable_metric)
-        .find_by(billable_metric: { code: event.code })
+        .where(billable_metric: { code: event.code })
     end
 
-    def instant_charge?
-      charge&.instant? || false
+    def instant_charges?
+      charges.any?
     end
   end
 end

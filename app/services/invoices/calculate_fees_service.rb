@@ -72,7 +72,7 @@ module Invoices
     end
 
     def create_charges_fees(subscription, boundaries)
-      subscription.plan.charges.each do |charge|
+      subscription.plan.charges.where(instant: false).each do |charge|
         fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
         fee_result.raise_if_error!
       end

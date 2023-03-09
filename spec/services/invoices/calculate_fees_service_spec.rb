@@ -52,8 +52,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:billing_time) { :calendar }
     let(:interval) { 'monthly' }
 
+    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
+
     before do
-      create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      charge
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
@@ -80,6 +82,20 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription.properties['to_datetime']).to match_datetime('2022-03-05 23:59:59')
           expect(invoice_subscription.properties['from_datetime']).to match_datetime('2022-02-06 00:00:00')
+        end
+      end
+
+      context 'when charge is instant' do
+        let(:charge) { create(:standard_charge, :instant, plan: subscription.plan, charge_model: 'standard') }
+
+        it 'does not create a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.charge_kind.count).to eq(0)
+          end
         end
       end
     end
@@ -331,10 +347,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
 
         let(:next_plan) { create(:plan, interval: :monthly, amount_cents: 2000) }
-
-        let(:charge) do
-          create(:standard_charge, plan:, properties: { amount: 100 })
-        end
 
         before { next_subscription }
 
