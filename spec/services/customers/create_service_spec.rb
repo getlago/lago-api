@@ -63,18 +63,16 @@ RSpec.describe Customers::CreateService, type: :service do
       customer = Customer.find_by(external_id:)
       billing = create_args[:billing_configuration]
 
-      aggregate_failures do
-        expect(customer.id).to be_present
-        expect(customer.organization_id).to eq(organization.id)
-        expect(customer.external_id).to eq(create_args[:external_id])
-        expect(customer.name).to eq(create_args[:name])
-        expect(customer.currency).to eq(create_args[:currency])
-        expect(customer.timezone).to be_nil
-
-        expect(customer.vat_rate).to eq(billing[:vat_rate])
-        expect(customer.document_locale).to eq(billing[:document_locale])
-        expect(customer.invoice_grace_period).to be_nil
-      end
+      expect(customer).to have_attributes(
+        organization_id: organization.id,
+        external_id: create_args[:external_id],
+        name: create_args[:name],
+        currency: create_args[:currency],
+        timezone: nil,
+        vat_rate: billing[:vat_rate],
+        document_locale: billing[:document_locale],
+        invoice_grace_period: nil,
+      )
     end
 
     it 'calls SegmentTrackJob' do
