@@ -68,6 +68,7 @@ gem 'slim'
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'
+  gem 'mailcatcher'
   gem 'timecop'
 end
 

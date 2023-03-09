@@ -53,6 +53,7 @@ module Customers
       # NOTE: handle configuration for configured payment providers
       handle_api_billing_configuration(customer, params, new_customer)
 
+      customer.save!
       result.customer = customer
       track_customer_created(customer)
       result
