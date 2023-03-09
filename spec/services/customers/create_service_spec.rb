@@ -37,7 +37,7 @@ RSpec.describe Customers::CreateService, type: :service do
       expect(result).to be_success
 
       aggregate_failures do
-        customer = Customer.find(result.customer.id)
+        customer = result.customer
         expect(customer.id).to be_present
         expect(customer.organization_id).to eq(organization.id)
         expect(customer.external_id).to eq(create_args[:external_id])
