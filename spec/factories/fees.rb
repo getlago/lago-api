@@ -40,6 +40,7 @@ FactoryBot.define do
     invoice
     applied_add_on
     fee_type { 'add_on' }
+    subscription { nil }
 
     amount_cents { 200 }
     amount_currency { 'EUR' }
