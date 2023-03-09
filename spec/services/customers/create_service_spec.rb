@@ -52,6 +52,31 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
+    it 'creates customer with correctly persisted attributes' do
+      result = customers_service.create_from_api(
+        organization:,
+        params: create_args,
+      )
+
+      expect(result).to be_success
+
+      customer = Customer.find_by(external_id:)
+      billing = create_args[:billing_configuration]
+
+      aggregate_failures do
+        expect(customer.id).to be_present
+        expect(customer.organization_id).to eq(organization.id)
+        expect(customer.external_id).to eq(create_args[:external_id])
+        expect(customer.name).to eq(create_args[:name])
+        expect(customer.currency).to eq(create_args[:currency])
+        expect(customer.timezone).to be_nil
+
+        expect(customer.vat_rate).to eq(billing[:vat_rate])
+        expect(customer.document_locale).to eq(billing[:document_locale])
+        expect(customer.invoice_grace_period).to be_nil
+      end
+    end
+
     it 'calls SegmentTrackJob' do
       customer = customers_service.create_from_api(
         organization:,

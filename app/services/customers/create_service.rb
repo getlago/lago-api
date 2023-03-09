@@ -161,6 +161,7 @@ module Customers
 
       if new_customer
         create_billing_configuration(customer, billing)
+        customer.save!
         return
       end
 
