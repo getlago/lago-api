@@ -58,15 +58,12 @@ Rails.application.configure do
   end
 
   if ENV['LAGO_SMTP_ADDRESS'].present? && !ENV['LAGO_SMTP_ADDRESS'].empty?
+    config.action_mailer.perform_deliveries = true
+    config.action_mailer.raise_delivery_errors = true
     config.action_mailer.delivery_method = :smtp
     config.action_mailer.smtp_settings = {
       address: ENV['LAGO_SMTP_ADDRESS'],
       port: ENV['LAGO_SMTP_PORT'],
-      domain: ENV['LAGO_SMTP_DOMAIN'],
-      user_name: ENV['LAGO_SMTP_USERNAME'],
-      password: ENV['LAGO_SMTP_PASSWORD'],
-      authentication: 'login',
-      enable_starttls_auto: true,
     }
   end
 end
