@@ -432,6 +432,21 @@ RSpec.describe Events::CreateService, type: :service do
           )
         end.to have_enqueued_job(Fees::CreateInstantJob)
       end
+
+      context 'when multiple charges have the billable metric' do
+        before { create(:standard_charge, :instant, plan:, billable_metric:) }
+
+        it 'enqueues a job for each charge' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.to have_enqueued_job(Fees::CreateInstantJob).twice
+        end
+      end
     end
   end
 end
