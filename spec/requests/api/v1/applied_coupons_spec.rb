@@ -89,7 +89,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
     context 'with pagination' do
       let(:coupon_latest) do
-        create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization: organization)
+        create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:)
       end
       let(:applied_coupon_latest) do
         create(
@@ -119,9 +119,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
     end
 
     context 'with status param' do
-      let(:coupon_latest) do
-        create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization: organization)
-      end
+      let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:) }
       let(:applied_coupon_latest) do
         create(
           :applied_coupon,
@@ -148,9 +146,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
     context 'with external_customer_id params' do
       let(:customer_new) { create(:customer, organization: organization) }
-      let(:coupon_latest) do
-        create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization: organization)
-      end
+      let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:) }
       let(:applied_coupon_latest) do
         create(
           :applied_coupon,
