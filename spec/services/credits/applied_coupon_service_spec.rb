@@ -106,7 +106,7 @@ RSpec.describe Credits::AppliedCouponService do
     end
 
     context 'when coupon is percentage' do
-      let(:coupon) { create(:coupon, coupon_type: 'percentage') }
+      let(:coupon) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10.00) }
 
       let(:applied_coupon) do
         create(:applied_coupon, coupon:, percentage_rate: 20.00)
@@ -227,7 +227,9 @@ RSpec.describe Credits::AppliedCouponService do
     end
 
     context 'when coupon is recurring and percentage' do
-      let(:coupon) { create(:coupon, frequency: 'recurring', frequency_duration: 3, coupon_type: 'percentage') }
+      let(:coupon) do
+        create(:coupon, frequency: 'recurring', frequency_duration: 3, coupon_type: 'percentage', percentage_rate: 10)
+      end
 
       let(:applied_coupon) do
         create(

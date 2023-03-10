@@ -40,7 +40,7 @@ RSpec.describe Credits::AppliedCouponsService do
         amount_currency: plan.amount_currency,
       )
     end
-    let(:coupon_latest) { create(:coupon, coupon_type: 'percentage') }
+    let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10.00) }
     let(:applied_coupon_latest) do
       create(
         :applied_coupon,
@@ -98,7 +98,7 @@ RSpec.describe Credits::AppliedCouponsService do
     end
 
     context 'when both coupons are percentage' do
-      let(:coupon) { create(:coupon, coupon_type: 'percentage') }
+      let(:coupon) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10.00) }
       let(:applied_coupon) do
         create(
           :applied_coupon,
