@@ -623,4 +623,66 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
       end
     end
   end
+
+  describe 'with count_agg / percentage' do
+    let(:aggregation_type) { 'count_agg' }
+    let(:field_name) { 'amount' }
+
+    describe 'with free_units_per_events' do
+      it 'creates an instant fee ' do
+        ### 24 january: Create subscription.
+        jan24 = DateTime.new(2023, 1, 24)
+
+        travel_to(jan24) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+        end
+
+        charge = create(
+          :percentage_charge,
+          :instant,
+          plan:,
+          billable_metric:,
+          properties: {
+            rate: '1',
+            fixed_amount: '1',
+            free_units_per_events: 1,
+          },
+        )
+
+        subscription = customer.subscriptions.first
+
+        ### 15 february: Send an event.
+        feb15 = DateTime.new(2023, 2, 15)
+
+        travel_to(feb15) do
+          expect do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_customer_id: customer.external_id,
+                properties: { amount: '5' },
+              },
+            )
+          end.to change { subscription.reload.fees.count }.from(0).to(1)
+
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: 'instant_charge',
+            units: 1,
+            events_count: 1,
+            amount_cents: 0,
+          )
+        end
+      end
+    end
+  end
 end
