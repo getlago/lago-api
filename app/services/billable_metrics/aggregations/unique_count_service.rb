@@ -9,8 +9,8 @@ module BillableMetrics
 
         result.aggregation = events.count("DISTINCT (#{sanitized_field_name})")
         result.instant_aggregation = BigDecimal(compute_instant_aggregation(events))
+        result.options = { running_total: running_total(options) }
         result.count = events.count
-        result.options = options
         result
       end
 
@@ -27,6 +27,17 @@ module BillableMetrics
         return 0 if existing_property
 
         1
+      end
+
+      # NOTE: Return cumulative sum of event count based on the number of free units
+      #       (per_events or per_total_aggregation).
+      def running_total(options)
+        free_units_per_events = options[:free_units_per_events].to_i
+        free_units_per_total_aggregation = BigDecimal(options[:free_units_per_total_aggregation] || 0)
+
+        return [] if free_units_per_events.zero? && free_units_per_total_aggregation.zero?
+
+        (1..result.aggregation).to_a
       end
     end
   end
