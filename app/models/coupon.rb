@@ -44,8 +44,13 @@ class Coupon < ApplicationRecord
   validates :name, presence: true
   validates :code, uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
 
+  validates :amount_cents, presence: true, if: :fixed_amount?
   validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: true
+
+  validates :amount_currency, presence: true, if: :fixed_amount?
   validates :amount_currency, inclusion: { in: currency_list }, allow_nil: true
+
+  validates :percentage_rate, presence: true, if: :percentage?
 
   default_scope -> { kept }
   scope :order_by_status_and_expiration,
