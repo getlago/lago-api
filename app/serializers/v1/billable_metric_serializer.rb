@@ -34,7 +34,7 @@ module V1
     end
 
     def plans_count
-      model.plans.count
+      model.plans.distinct.count
     end
   end
 end

@@ -47,7 +47,7 @@ module Types
       end
 
       def plans_count
-        object.plans.count
+        object.plans.distinct.count
       end
     end
   end
