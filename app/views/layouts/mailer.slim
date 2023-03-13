@@ -1,0 +1,148 @@
+html
+  head
+    meta http-equiv="Content-Type" content="text/html; charset=utf-8"
+    css:
+      .template-company {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 32px;
+      }
+
+      .template-company:not(:last-child) {
+        margin-right: 12px;
+      }
+
+      .template-company--logo {
+        width: 32px;
+        height: 32px;
+        border-radius: 12px;
+        background-color: blue;
+      }
+
+        .template-company--name {
+          font-size: 20px;
+          font-weight: 600;
+          line-height: 28px;
+          letter-spacing: 0em;
+          color: #19212e;
+        }
+
+        .template-content {
+          background-color: #fff;
+          padding: 32px;
+          border-radius: 12px;
+          border: #d9dee7;
+          margin-bottom: 32px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          font-family: Inter;
+        }
+
+        .template-content--title {
+          size: 14px;
+          font-weight: 500px;
+          line-height: 20px;
+          letter-spacing: 0em;
+          color: #66758f;
+          text-align: center;
+        }
+
+        .template-content--price {
+          color: #19212e;
+          font-size: 32px;
+          font-weight: 700;
+          line-height: 40px;
+          letter-spacing: 0em;
+        }
+
+        .template-content--divider {
+          height: 1px;
+          width: 100%;
+          margin: 24px 0;
+          background-color: #d9dee7;
+        }
+
+        .template-content--infos-block {
+          width: 100%;
+
+          > *:not(:last-child) {
+            margin-bottom: 4px;
+          }
+        }
+
+        .template-content--infos-line {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+        }
+
+        .template-content--info-label {
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 20px;
+          letter-spacing: 0em;
+          color: #66758f;
+        }
+
+        .template-content--info-value {
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 20px;
+          letter-spacing: 0em;
+          color: #19212e;
+        }
+
+        .template-content--download-block {
+          display: flex;
+          align-items: center;
+
+          > *:first-child {
+            margin-right: 8px;
+          }
+        }
+
+        .template-content--contact-block {
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 20px;
+          letter-spacing: 0em;
+          text-align: center;
+        }
+
+        .template-content--contact-email {
+          color: #006cfa;
+          margin-left: 4px;
+        }
+
+        .template-content--footer {
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 16px;
+          letter-spacing: 0em;
+          color: #8c95a6;
+          margin-bottom: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .template-content--footer svg {
+          margin: 0 4px;
+        }
+  body
+    .template
+      .template-company
+        .template-company--logo
+          img src=@organization.logo_url
+        .template-company--name
+          = @organization.name
+      .template-content
+        = yield
+      .template-content--footer
+        span todo
+        img height="12px"
+        span todo

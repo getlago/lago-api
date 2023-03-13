@@ -1,0 +1,5 @@
+en:
+  email:
+    invoice:
+      finalized:
+        subject: "Your Invoice from %{organization_name} #%{invoice_number}"
