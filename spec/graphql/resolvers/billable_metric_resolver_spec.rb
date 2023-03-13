@@ -21,6 +21,7 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
           subscriptionsCount
           activeSubscriptionsCount
           draftInvoicesCount
+          plansCount
         }
       }
     GQL
