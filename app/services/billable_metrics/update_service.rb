@@ -16,8 +16,8 @@ module BillableMetrics
       billable_metric.description = params[:description] if params.key?(:description)
 
       # NOTE: Only name and description are editable if billable metric
-      #       is attached to subscriptions
-      unless billable_metric.attached_to_subscriptions?
+      #       is attached to a plan
+      unless billable_metric.plans.exists?
         billable_metric.code = params[:code] if params.key?(:code)
         billable_metric.aggregation_type = params[:aggregation_type]&.to_sym if params.key?(:aggregation_type)
         billable_metric.field_name = params[:field_name] if params.key?(:field_name)
