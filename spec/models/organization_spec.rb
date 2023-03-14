@@ -125,6 +125,8 @@ RSpec.describe Organization, type: :model do
       organization.email_settings = ['email.not_permitted']
 
       expect(organization).not_to be_valid
+      expect(organization.errors.first.attribute).to eq(:email_settings)
+      expect(organization.errors.first.type).to eq(:unsupported_value)
     end
   end
 
