@@ -18806,42 +18806,6 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "addressLine1",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "addressLine2",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "city",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "email",
               "description": null,
               "type": {
@@ -18890,11 +18854,47 @@
               "deprecationReason": null
             },
             {
-              "name": "webhookUrl",
+              "name": "addressLine1",
               "description": null,
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "addressLine2",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "country",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CountryCode",
                 "ofType": null
               },
               "defaultValue": null,
@@ -18926,11 +18926,11 @@
               "deprecationReason": null
             },
             {
-              "name": "country",
+              "name": "webhookUrl",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "CountryCode",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
