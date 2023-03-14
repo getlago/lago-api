@@ -20,6 +20,7 @@ RSpec.describe ::V1::BillableMetricSerializer do
       expect(result['billable_metric']['group']).to eq({})
       expect(result['billable_metric']['active_subscriptions_count']).to eq(0)
       expect(result['billable_metric']['draft_invoices_count']).to eq(0)
+      expect(result['billable_metric']['plans_count']).to eq(0)
     end
   end
 
@@ -48,5 +49,12 @@ RSpec.describe ::V1::BillableMetricSerializer do
     create(:fee, invoice: draft_invoice, charge: charge2)
 
     expect(result['billable_metric']['draft_invoices_count']).to eq(1)
+  end
+
+  it 'returns the number of plans' do
+    plan = create(:plan, organization: billable_metric.organization)
+    create(:standard_charge, billable_metric:, plan:)
+
+    expect(result['billable_metric']['plans_count']).to eq(1)
   end
 end

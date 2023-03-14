@@ -14,6 +14,7 @@ module V1
         group: model.active_groups_as_tree,
         active_subscriptions_count:,
         draft_invoices_count:,
+        plans_count:,
       }
     end
 
@@ -30,6 +31,10 @@ module V1
         .select(:invoice_id)
         .distinct
         .count
+    end
+
+    def plans_count
+      model.plans.distinct.count
     end
   end
 end

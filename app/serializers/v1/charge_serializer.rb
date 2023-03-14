@@ -6,6 +6,7 @@ module V1
       {
         lago_id: model.id,
         lago_billable_metric_id: model.billable_metric_id,
+        billable_metric_code: model.billable_metric.code,
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
         properties: model.properties,

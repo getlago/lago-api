@@ -99,6 +99,9 @@ exceed the size of a 32-bit integer, it's encoded as a string.
 """
 scalar BigInt
 
+"""
+Base billable metric
+"""
 type BillableMetric {
   activeSubscriptionsCount: Int!
   aggregationType: AggregationTypeEnum!
@@ -113,6 +116,7 @@ type BillableMetric {
   id: ID!
   name: String!
   organization: Organization
+  plansCount: Int!
   subscriptionsCount: Int!
   updatedAt: ISO8601DateTime!
 }

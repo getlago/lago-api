@@ -14,7 +14,8 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       name: 'New Metric',
       code: 'new_metric',
       description: 'New metric description',
-      aggregation_type: 'count_agg',
+      aggregation_type: 'sum_agg',
+      field_name: 'field_value',
     }.tap { |p| p[:group] = group unless group.nil? }
   end
   let(:group) { nil }
@@ -30,7 +31,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         expect(metric.id).to eq(billable_metric.id)
         expect(metric.name).to eq('New Metric')
         expect(metric.code).to eq('new_metric')
-        expect(metric.aggregation_type).to eq('count_agg')
+        expect(metric.aggregation_type).to eq('sum_agg')
       end
     end
 
@@ -105,6 +106,32 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.error_code).to eq('billable_metric_not_found')
+        end
+      end
+    end
+
+    context 'when billable metric is linked to plan' do
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, billable_metric:, plan:) }
+
+      before { charge }
+
+      it 'updates only name and description' do
+        result = update_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.billable_metric).to have_attributes(
+            name: 'New Metric',
+            description: 'New metric description',
+          )
+
+          expect(result.billable_metric).not_to have_attributes(
+            code: 'new_metric',
+            aggregation_type: 'sum_agg',
+            field_name: 'field_value',
+          )
         end
       end
     end
