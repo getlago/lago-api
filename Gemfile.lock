@@ -274,6 +274,8 @@ GEM
       racc (~> 1.4)
     nokogiri (1.14.1-arm64-darwin)
       racc (~> 1.4)
+    nokogiri (1.14.1-x86_64-darwin)
+      racc (~> 1.4)
     nokogiri (1.14.1-x86_64-linux)
       racc (~> 1.4)
     oauth2 (2.0.9)
@@ -437,6 +439,7 @@ GEM
 PLATFORMS
   aarch64-linux-musl
   arm64-darwin-22
+  x86_64-darwin-21
   x86_64-linux
 
 DEPENDENCIES
