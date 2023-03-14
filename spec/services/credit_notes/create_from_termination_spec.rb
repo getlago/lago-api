@@ -3,20 +3,24 @@
 require 'rails_helper'
 
 RSpec.describe CreditNotes::CreateFromTermination, type: :service do
-  subject(:create_service) { described_class.new(subscription: subscription) }
+  subject(:create_service) { described_class.new(subscription:) }
 
   let(:started_at) { Time.zone.parse('2022-09-01 10:00') }
   let(:subscription_at) { Time.zone.parse('2022-09-01 10:00') }
   let(:terminated_at) { Time.zone.parse('2022-10-15 10:00') }
 
+  let(:customer) { create(:customer) }
+  let(:organization) { customer.organization }
+
   let(:subscription) do
     create(
       :subscription,
-      plan: plan,
+      customer:,
+      plan:,
       status: :terminated,
-      subscription_at: subscription_at,
-      started_at: started_at,
-      terminated_at: terminated_at,
+      subscription_at:,
+      started_at:,
+      terminated_at:,
       billing_time: :calendar,
     )
   end
@@ -24,6 +28,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:plan) do
     create(
       :plan,
+      organization:,
       pay_in_advance: true,
       amount_cents: 31,
     )
@@ -32,8 +37,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:subscription_fee) do
     create(
       :fee,
-      subscription: subscription,
-      invoice: invoice,
+      subscription:,
+      invoice:,
       amount_cents: 100,
       vat_amount_cents: 20,
       invoiceable_type: 'Subscription',
@@ -45,7 +50,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:invoice) do
     create(
       :invoice,
-      customer: subscription.customer,
+      customer:,
       amount_currency: 'EUR',
       amount_cents: 100,
       total_amount_currency: 'EUR',
@@ -275,6 +280,84 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
             expect(credit_note.credit_amount_cents).to eq(19)
             expect(credit_note.credit_amount_currency).to eq('EUR')
             expect(credit_note.balance_amount_cents).to eq(19)
+            expect(credit_note.balance_amount_currency).to eq('EUR')
+            expect(credit_note.reason).to eq('order_change')
+
+            expect(credit_note.items.count).to eq(1)
+          end
+        end
+      end
+    end
+
+    context 'with rounding at max precision' do
+      let(:started_at) { Time.zone.parse('2023-01-30 10:00') }
+      let(:subscription_at) { Time.zone.parse('2023-01-30 10:00') }
+      let(:terminated_at) { Time.zone.parse('2023-03-14 10:00') }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          status: :terminated,
+          subscription_at:,
+          started_at:,
+          terminated_at:,
+          billing_time: :anniversary,
+        )
+      end
+
+      let(:plan) do
+        create(
+          :plan,
+          organization:,
+          pay_in_advance: true,
+          amount_cents: 999,
+        )
+      end
+
+      let(:invoice) do
+        create(
+          :invoice,
+          customer:,
+          amount_currency: 'EUR',
+          amount_cents: 999,
+          total_amount_currency: 'EUR',
+          total_amount_cents: 0,
+        )
+      end
+
+      let(:subscription_fee) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 999,
+          vat_amount_cents: 0,
+          invoiceable_type: 'Subscription',
+          invoiceable_id: subscription.id,
+          vat_rate: 0,
+          created_at: Time.zone.parse('2023-02-28 10:00'),
+        )
+      end
+
+      before { organization.vat_rate = 0 }
+
+      it 'creates a credit note' do
+        travel_to(terminated_at) do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            credit_note = result.credit_note
+            expect(credit_note).to be_available
+            expect(credit_note).to be_order_change
+            expect(credit_note.total_amount_cents).to eq(499)
+            expect(credit_note.total_amount_currency).to eq('EUR')
+            expect(credit_note.credit_amount_cents).to eq(499)
+            expect(credit_note.credit_amount_currency).to eq('EUR')
+            expect(credit_note.balance_amount_cents).to eq(499)
             expect(credit_note.balance_amount_currency).to eq('EUR')
             expect(credit_note.reason).to eq('order_change')
 
