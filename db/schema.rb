@@ -429,7 +429,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_13_145506) do
     t.integer "invoice_grace_period", default: 0, null: false
     t.string "timezone", default: "UTC", null: false
     t.string "document_locale", default: "en", null: false
-    t.string "email_settings", default: [], array: true
+    t.string "email_settings", default: [], null: false, array: true
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end
