@@ -8,6 +8,7 @@ RSpec.describe Organizations::UpdateService do
   let(:organization) { create(:organization) }
 
   let(:timezone) { nil }
+  let(:email_settings) { [] }
   let(:invoice_grace_period) { 0 }
   let(:logo) { nil }
   let(:country) { 'FR' }
@@ -26,6 +27,7 @@ RSpec.describe Organizations::UpdateService do
       country:,
       timezone:,
       logo:,
+      email_settings:,
       billing_configuration: {
         vat_rate: 12.5,
         invoice_footer: 'invoice footer',
@@ -62,6 +64,7 @@ RSpec.describe Organizations::UpdateService do
       around { |test| lago_premium!(&test) }
 
       let(:timezone) { 'Europe/Paris' }
+      let(:email_settings) { ['invoice.finalized'] }
 
       it 'updates the organization' do
         result = update_service.call

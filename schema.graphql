@@ -2729,6 +2729,9 @@ input DownloadInvoiceInput {
   id: ID!
 }
 
+"""
+Organization Email Settings Values
+"""
 enum EmailSettingsEnum {
   """
   credit_note.created
@@ -3523,6 +3526,9 @@ type Mutation {
   ): CreditNote
 }
 
+"""
+Organization Type
+"""
 type Organization {
   addressLine1: String
   addressLine2: String
@@ -3532,6 +3538,7 @@ type Organization {
   country: CountryCode
   createdAt: ISO8601DateTime!
   email: String
+  emailSettings: [EmailSettingsEnum!]
   gocardlessPaymentProvider: GocardlessProvider
   id: ID!
   legalName: String

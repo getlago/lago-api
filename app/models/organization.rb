@@ -78,7 +78,7 @@ class Organization < ApplicationRecord
 
   def generate_api_key
     api_key = SecureRandom.uuid
-    orga = Organization.find_by(api_key: api_key)
+    orga = Organization.find_by(api_key:)
 
     return generate_api_key if orga.present?
 
@@ -86,9 +86,7 @@ class Organization < ApplicationRecord
   end
 
   def validate_email_settings
-    return errors.add(:email_settings, :not_an_array) unless email_settings.is_a?(Array)
-
-    return if email_setting.all? { |v| EMAIL_SETTINGS.include?(v) }
+    return if email_settings.all? { |v| EMAIL_SETTINGS.include?(v) }
 
     errors.add(:email_settings, :unsupported_value)
   end

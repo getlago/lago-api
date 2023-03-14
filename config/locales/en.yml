@@ -41,3 +41,4 @@ en:
         value_already_exists: value_already_exists
         too_long: value_is_too_long
         values_not_all_present: values_not_all_present
+        unsupported_value: unsupported_value

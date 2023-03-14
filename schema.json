@@ -8680,7 +8680,7 @@
         {
           "kind": "ENUM",
           "name": "EmailSettingsEnum",
-          "description": null,
+          "description": "Organization Email Settings Values",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -13235,7 +13235,7 @@
         {
           "kind": "OBJECT",
           "name": "Organization",
-          "description": null,
+          "description": "Organization Type",
           "interfaces": [
 
           ],
@@ -13354,6 +13354,28 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "emailSettings",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "EmailSettingsEnum",
+                    "ofType": null
+                  }
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,

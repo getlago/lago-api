@@ -19,6 +19,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           city
           country
           timezone
+          emailSettings
           billingConfiguration { vatRate, invoiceFooter, invoiceGracePeriod, documentLocale }
         }
       }
@@ -89,6 +90,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             billingConfiguration: {
               invoiceGracePeriod: 3,
             },
+            emailSettings: ['invoice_finalized'],
           },
         },
       )
@@ -98,6 +100,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       aggregate_failures do
         expect(result_data['timezone']).to eq(timezone)
         expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(3)
+        expect(result_data['emailSettings']).to eq(['invoice_finalized'])
       end
     end
 

@@ -3,8 +3,10 @@
 module Types
   module Organizations
     class EmailSettingsEnum < Types::BaseEnum
-      Organization::EMAIL_SETTINGS.each do |code|
-        value code.tr('.', '_'), code
+      description 'Organization Email Settings Values'
+
+      Organization::EMAIL_SETTINGS.each do |value|
+        value(value.tr('.', '_'), value, value:)
       end
     end
   end

@@ -52,6 +52,7 @@ module Organizations
       return unless License.premium?
 
       organization.timezone = params[:timezone] if params.key?(:timezone)
+      organization.email_settings = params[:email_settings] if params.key?(:email_settings)
     end
 
     def handle_base64_logo
