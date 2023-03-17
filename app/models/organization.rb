@@ -4,6 +4,11 @@ class Organization < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
 
+  EMAIL_SETTINGS = [
+    'invoice.finalized',
+    'credit_note.created',
+  ].freeze
+
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics
@@ -43,6 +48,8 @@ class Organization < ApplicationRecord
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
   validates :webhook_url, url: true, allow_nil: true
 
+  validate :validate_email_settings
+
   def logo_url
     return if logo.blank?
 
@@ -71,10 +78,16 @@ class Organization < ApplicationRecord
 
   def generate_api_key
     api_key = SecureRandom.uuid
-    orga = Organization.find_by(api_key: api_key)
+    orga = Organization.find_by(api_key:)
 
     return generate_api_key if orga.present?
 
     self.api_key = SecureRandom.uuid
+  end
+
+  def validate_email_settings
+    return if email_settings.all? { |v| EMAIL_SETTINGS.include?(v) }
+
+    errors.add(:email_settings, :unsupported_value)
   end
 end

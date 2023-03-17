@@ -19,6 +19,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         legal_name: 'test1',
         legal_number: '123',
         timezone: 'Europe/Paris',
+        email_settings: ['invoice.finalized'],
         billing_configuration: {
           invoice_footer: 'footer',
           invoice_grace_period: 3,
@@ -65,6 +66,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
         aggregate_failures do
           expect(json[:organization][:timezone]).to eq(update_params[:timezone])
+          expect(json[:organization][:email_settings]).to eq(update_params[:email_settings])
 
           billing = json[:organization][:billing_configuration]
           expect(billing[:invoice_grace_period]).to eq(3)

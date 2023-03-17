@@ -114,6 +114,20 @@ RSpec.describe Organization, type: :model do
 
       expect(organization).not_to be_valid
     end
+
+    it 'is valid with email_settings' do
+      organization.email_settings = ['invoice.finalized', 'credit_note.created']
+
+      expect(organization).to be_valid
+    end
+
+    it 'is invalid with non permitted email_settings value' do
+      organization.email_settings = ['email.not_permitted']
+
+      expect(organization).not_to be_valid
+      expect(organization.errors.first.attribute).to eq(:email_settings)
+      expect(organization.errors.first.type).to eq(:unsupported_value)
+    end
   end
 
   describe 'Callbacks' do

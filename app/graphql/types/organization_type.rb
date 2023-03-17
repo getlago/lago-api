@@ -2,28 +2,36 @@
 
 module Types
   class OrganizationType < Types::BaseObject
+    description 'Organization Type'
+
     field :id, ID, null: false
-    field :name, String, null: false
-    field :api_key, String, null: false
-    field :webhook_url, String
-    field :logo_url, String
+
+    field :email, String
     field :legal_name, String
     field :legal_number, String
-    field :email, String
+    field :logo_url, String
+    field :name, String, null: false
+
     field :address_line1, String
     field :address_line2, String
-    field :state, String
-    field :zipcode, String
     field :city, String
     field :country, Types::CountryCodeEnum, null: true
-    field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-    field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+    field :state, String
+    field :zipcode, String
+
+    field :api_key, String, null: false
+    field :webhook_url, String
+
     field :timezone, Types::TimezoneEnum, null: true
 
-    field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
+    field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+    field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-    field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
+    field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
+    field :email_settings, [Types::Organizations::EmailSettingsEnum], null: true
+
     field :gocardless_payment_provider, Types::PaymentProviders::Gocardless, null: true
+    field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
 
     def billing_configuration
       {
