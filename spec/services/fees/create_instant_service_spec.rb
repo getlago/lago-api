@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Fees::CreateInstantService, type: :service do
-  subject(:fee_service) { described_class.new(charge:, event:) }
+  subject(:fee_service) { described_class.new(charge:, event:, estimate:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -15,6 +15,7 @@ RSpec.describe Fees::CreateInstantService, type: :service do
 
   let(:charge) { create(:standard_charge, :instant, billable_metric:, plan:) }
   let(:event) { create(:event, subscription:, customer:) }
+  let(:estimate) { false }
 
   describe '#call' do
     let(:aggregation_result) do
@@ -236,6 +237,44 @@ RSpec.describe Fees::CreateInstantService, type: :service do
             expect(result.fees.count).to be_zero
           end
         end
+      end
+    end
+
+    context 'when in estimate mode' do
+      let(:estimate) { true }
+
+      it 'does not persist the fee' do
+        result = fee_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.fees.count).to eq(1)
+          expect(result.fees.first).not_to be_persisted
+          expect(result.fees.first).to have_attributes(
+            subscription:,
+            charge:,
+            amount_cents: 10,
+            amount_currency: 'EUR',
+            vat_rate: 20.0,
+            vat_amount_cents: 2,
+            vat_amount_currency: 'EUR',
+            fee_type: 'instant_charge',
+            invoiceable: charge,
+            units: 9,
+            properties: Hash,
+            events_count: 1,
+            group: nil,
+            instant_event_id: event.id,
+          )
+        end
+      end
+
+      it 'does not deliver a webhook' do
+        fee_service.call
+
+        expect(SendWebhookJob).not_to have_been_enqueued
+          .with('fee.instant_created', Fee)
       end
     end
   end

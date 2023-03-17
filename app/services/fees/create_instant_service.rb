@@ -2,9 +2,10 @@
 
 module Fees
   class CreateInstantService < BaseService
-    def initialize(charge:, event:)
+    def initialize(charge:, event:, estimate: false)
       @charge = charge
       @event = event
+      @estimate = estimate
 
       super
     end
@@ -32,7 +33,7 @@ module Fees
 
     private
 
-    attr_reader :charge, :event
+    attr_reader :charge, :event, :estimate
 
     delegate :billable_metric, to: :charge
     delegate :subscription, :customer, to: :event
@@ -56,7 +57,7 @@ module Fees
         instant_event_id: event.id,
       )
       fee.compute_vat
-      fee.save!
+      fee.save! unless estimate
 
       fee
     end
@@ -117,6 +118,8 @@ module Fees
     end
 
     def deliver_webhooks
+      return if estimate
+
       result.fees.each { |f| SendWebhookJob.perform_later('fee.instant_created', f) }
     end
   end
