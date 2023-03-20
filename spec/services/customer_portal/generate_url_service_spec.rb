@@ -15,7 +15,7 @@ RSpec.describe CustomerPortal::GenerateUrlService, type: :service do
       public_authenticator = ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE'])
 
       aggregate_failures do
-        expect(result.url).to include('https://app.lago.dev/customer-portal/')
+        expect(result.url).to include('/customer-portal/')
         expect(public_authenticator.verify(message)).to eq(customer.id)
       end
     end

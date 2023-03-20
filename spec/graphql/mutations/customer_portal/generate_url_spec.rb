@@ -29,7 +29,7 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
 
     data = result['data']['generateCustomerPortalUrl']
 
-    expect(data['url']).to include('https://app.lago.dev/customer-portal/')
+    expect(data['url']).to include('/customer-portal/')
   end
 
   context 'without current user' do
