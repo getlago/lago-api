@@ -51,6 +51,25 @@ module Api
         )
       end
 
+      def estimate_fees
+        result = Fees::EstimateInstantService.call(
+          organization: current_organization,
+          params: create_params,
+        )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.fees,
+              ::V1::FeeSerializer,
+              collection_name: 'fees',
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
