@@ -38,5 +38,29 @@ RSpec.describe InvoiceMailer, type: :mailer do
         expect(Invoices::GeneratePdfService).to have_received(:new)
       end
     end
+
+    context 'when organization email is nil' do
+      before do
+        invoice.organization.update(email: nil)
+      end
+
+      it 'returns a mailer with nil values' do
+        mailer = invoice_mailer.with(invoice:).finalized
+
+        expect(mailer.to).to be_nil
+      end
+    end
+
+    context 'when customer email is nil' do
+      before do
+        invoice.customer.update(email: nil)
+      end
+
+      it 'returns a mailer with nil values' do
+        mailer = invoice_mailer.with(invoice:).finalized
+
+        expect(mailer.to).to be_nil
+      end
+    end
   end
 end
