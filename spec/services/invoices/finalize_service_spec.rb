@@ -6,6 +6,8 @@ RSpec.describe Invoices::FinalizeService, type: :service do
   subject(:finalize_service) { described_class.new(invoice:) }
 
   describe '#call' do
+    around { |test| lago_premium!(&test) }
+  
     let(:invoice) do
       create(
         :invoice,
