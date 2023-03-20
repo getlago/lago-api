@@ -121,6 +121,16 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
+    context 'when license is not premium' do
+      before { License.instance_variable_set(:@premium, false) }
+
+      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        expect do
+          invoice_service.create
+        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
+    end
+
     context 'when organization does not have a webhook url' do
       before { subscription.customer.organization.update!(webhook_url: nil) }
 
