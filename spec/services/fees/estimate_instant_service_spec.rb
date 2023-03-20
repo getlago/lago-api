@@ -1,0 +1,150 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe Fees::EstimateInstantService do
+  subject(:estimate_service) { described_class.new(organization:, params:) }
+
+  let(:organization) { create(:organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:charge) { create(:standard_charge, :instant, plan:, billable_metric:) }
+
+  let(:customer) { create(:customer, organization:) }
+
+  let(:subscription) do
+    create(
+      :subscription,
+      customer:,
+      plan:,
+      started_at: 1.year.ago,
+    )
+  end
+
+  let(:params) do
+    {
+      code:,
+      external_customer_id:,
+      external_subscription_id:,
+    }
+  end
+
+  let(:code) { billable_metric&.code }
+  let(:external_customer_id) { customer&.external_id }
+  let(:external_subscription_id) { subscription&.external_id }
+
+  before { charge }
+
+  describe '#call' do
+    it 'returns a list of fees' do
+      result = estimate_service.call
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
+
+        fee = result.fees.first
+        expect(fee).not_to be_persisted
+        expect(fee).to have_attributes(
+          subscription:,
+          charge:,
+          fee_type: 'instant_charge',
+          invoiceable: charge,
+          events_count: 1,
+          instant_event_id: nil,
+        )
+      end
+    end
+
+    context 'when event code does not match an instant charge' do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+
+      it 'fails with a validation error' do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:code]).to eq(['does_not_match_an_instant_charge'])
+        end
+      end
+    end
+
+    context 'when event matches multiple charges' do
+      let(:charge2) { create(:standard_charge, :instant, plan:, billable_metric:) }
+
+      before { charge2 }
+
+      it 'returns a fee per charges' do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
+        end
+      end
+    end
+
+    context 'when external customer is not found' do
+      let(:external_customer_id) { nil }
+      let(:external_subscription_id) { nil }
+
+      it 'fails with a not found error' do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq('customer_not_found')
+        end
+      end
+    end
+
+    context 'when external subscription is not found' do
+      let(:external_subscription_id) { nil }
+
+      it 'fails with a not found error' do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq('subscription_not_found')
+        end
+      end
+
+      context 'when customer has an active subscription' do
+        let(:subscription) do
+          create(
+            :active_subscription,
+            customer:,
+            plan:,
+            started_at: 1.year.ago,
+          )
+        end
+
+        before { subscription }
+
+        it 'returns a list of fees' do
+          result = estimate_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.fees.count).to eq(1)
+
+            fee = result.fees.first
+            expect(fee).not_to be_persisted
+            expect(fee).to have_attributes(
+              subscription:,
+              charge:,
+              fee_type: 'instant_charge',
+              invoiceable: charge,
+              events_count: 1,
+              instant_event_id: nil,
+            )
+          end
+        end
+      end
+    end
+  end
+end
