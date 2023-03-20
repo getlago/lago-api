@@ -12,6 +12,8 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
   end
 
   describe 'create' do
+    around { |test| lago_premium!(&test) }
+
     let(:subscription) do
       create(
         :subscription,
@@ -101,6 +103,22 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect do
         invoice_service.create
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+    end
+
+    it 'enqueues an ActionMailer::MailDeliveryJob' do
+      expect do
+        invoice_service.create
+      end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+    end
+
+    context 'when organization does not have right email settings' do
+      before { subscription.customer.organization.update!(email_settings: []) }
+
+      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        expect do
+          invoice_service.create
+        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
     end
 
     context 'when organization does not have a webhook url' do
