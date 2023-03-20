@@ -5,5 +5,6 @@ FactoryBot.define do
     name { Faker::Company.name }
     vat_rate { 20 }
     webhook_url { Faker::Internet.url }
+    email { Faker::Internet.email }
   end
 end

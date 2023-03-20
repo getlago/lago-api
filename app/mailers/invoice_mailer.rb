@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class InvoiceMailer < ApplicationMailer
+  before_action :ensure_pdf
+
   def finalized
     @invoice = params[:invoice]
     @organization = @invoice.organization
@@ -10,6 +12,10 @@ class InvoiceMailer < ApplicationMailer
     return if @customer.email.blank?
 
     I18n.locale = @customer.preferred_document_locale
+
+    @invoice.file.open do |file|
+      attachments['invoice.pdf'] = file.read
+    end
 
     mail(
       to: @customer.email,
@@ -21,5 +27,14 @@ class InvoiceMailer < ApplicationMailer
         invoice_number: @invoice.number,
       ),
     )
+  end
+
+  private
+
+  def ensure_pdf
+    invoice = params[:invoice]
+    return if invoice.file.present?
+
+    Invoices::GeneratePdfService.new(invoice:).call
   end
 end
