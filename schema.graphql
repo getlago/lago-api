@@ -3811,6 +3811,11 @@ type Query {
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
 
   """
+  Query invoices of a customer
+  """
+  customerPortalInvoices(limit: Int, page: Int, searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
+
+  """
   Query the usage of the customer on the current billing period
   """
   customerUsage(customerId: ID, subscriptionId: ID!): CustomerUsage!

@@ -114,5 +114,32 @@ RSpec.describe GraphqlController, type: :request do
         expect(json['errors'].first['extensions']['status']).to eq(401)
       end
     end
+
+    context 'with customer portal token' do
+      let(:customer) { create(:customer) }
+      let(:query) do
+        <<~GQL
+          query {
+            customerPortalInvoices(limit: 5) {
+              collection { id }
+              metadata { currentPage, totalCount }
+            }
+          }
+        GQL
+      end
+      let(:token) do
+        ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE']).generate(customer.id, expires_in: 12.hours)
+      end
+
+      it 'retrieves the correct end user and returns success status code' do
+        post '/graphql', headers: {
+          'customer-portal-token' => token,
+        }, params: {
+          query: query,
+        }
+
+        expect(response.status).to be(200)
+      end
+    end
   end
 end
