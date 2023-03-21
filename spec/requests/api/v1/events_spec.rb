@@ -6,9 +6,10 @@ RSpec.describe Api::V1::EventsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }
+  let(:plan) { create(:plan, organization:) }
 
   before do
-    create(:active_subscription, customer:, organization:)
+    create(:active_subscription, customer:, organization:, plan:)
   end
 
   describe 'POST /events' do
@@ -118,6 +119,87 @@ RSpec.describe Api::V1::EventsController, type: :request do
         get_with_token(event.organization, "/api/v1/events/#{event.transaction_id}")
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe 'POST /events/estimate_fees' do
+    let(:charge) { create(:standard_charge, :instant, plan:, billable_metric: metric) }
+
+    before { charge }
+
+    it 'returns a success' do
+      post_with_token(
+        organization,
+        '/api/v1/events/estimate_fees',
+        event: {
+          code: metric.code,
+          external_customer_id: customer.external_id,
+          properties: {
+            foo: 'bar',
+          },
+        },
+      )
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:fees].count).to eq(1)
+
+        fee = json[:fees].first
+        expect(fee[:lago_id]).to be_nil
+        expect(fee[:lago_group_id]).to be_nil
+        expect(fee[:item][:type]).to eq('instant_charge')
+        expect(fee[:item][:code]).to eq(metric.code)
+        expect(fee[:item][:name]).to eq(metric.name)
+        expect(fee[:amount_cents]).to be_an(Integer)
+        expect(fee[:amount_currency]).to eq('EUR')
+        expect(fee[:vat_amount_cents]).to be_an(Integer)
+        expect(fee[:vat_amount_currency]).to eq('EUR')
+        expect(fee[:units]).to eq('1.0')
+        expect(fee[:events_count]).to eq(1)
+      end
+    end
+
+    context 'with missing customer id' do
+      it 'returns a not found error' do
+        post_with_token(
+          organization,
+          '/api/v1/events/estimate_fees',
+          event: {
+            code: metric.code,
+            external_customer_id: nil,
+            properties: {
+              foo: 'bar',
+            },
+          },
+        )
+
+        aggregate_failures do
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+    end
+
+    context 'when metric code does not match an instant charge' do
+      let(:charge) { create(:standard_charge, plan:, billable_metric: metric) }
+
+      it 'returns a validation error' do
+        post_with_token(
+          organization,
+          '/api/v1/events/estimate_fees',
+          event: {
+            code: metric.code,
+            external_customer_id: customer.external_id,
+            properties: {
+              foo: 'bar',
+            },
+          },
+        )
+
+        aggregate_failures do
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
       end
     end
   end
