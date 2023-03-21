@@ -15305,11 +15305,11 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "status",
+                  "name": "limit",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "InvoiceStatusTypeEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15329,11 +15329,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "searchTerm",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "Int",
+                    "name": "String",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15341,11 +15341,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "searchTerm",
+                  "name": "status",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
+                    "kind": "ENUM",
+                    "name": "InvoiceStatusTypeEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
