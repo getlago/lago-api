@@ -104,8 +104,8 @@ RSpec.describe GraphqlController, type: :request do
               input: {
                 email: user.email,
                 password: 'ILoveLago',
-              }
-            }
+              },
+            },
           },
         )
 
