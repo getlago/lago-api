@@ -22,9 +22,9 @@ class GraphqlController < ApplicationController
     query = params[:query]
     operation_name = params[:operationName]
     context = {
-      current_user: current_user,
-      current_organization: current_organization,
-      customer_portal_user: customer_portal_user,
+      current_user:,
+      current_organization:,
+      customer_portal_user:,
     }
     result = LagoApiSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
     render json: result

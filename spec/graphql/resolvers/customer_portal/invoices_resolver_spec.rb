@@ -28,16 +28,14 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   it 'returns a list of invoices' do
     result = execute_graphql(
       customer_portal_user: customer,
-      query: query,
+      query:,
     )
 
     invoices_response = result['data']['customerPortalInvoices']
 
     aggregate_failures do
       expect(invoices_response['collection'].count).to eq(2)
-      expect(invoices_response['collection'].pluck('id')).to match_array(
-        [draft_invoice.id, finalized_invoice.id],
-      )
+      expect(invoices_response['collection'].pluck('id')).to contain_exactly(draft_invoice.id, finalized_invoice.id)
       expect(invoices_response['metadata']['currentPage']).to eq(1)
       expect(invoices_response['metadata']['totalCount']).to eq(2)
     end
@@ -58,7 +56,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
     it 'only returns draft invoice' do
       result = execute_graphql(
         customer_portal_user: customer,
-        query: query,
+        query:,
         variables: { status: 'draft' },
       )
 
@@ -75,7 +73,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   context 'without customer portal user' do
     it 'returns an error' do
       result = execute_graphql(
-        query: query,
+        query:,
       )
 
       expect_unauthorized_error(result)

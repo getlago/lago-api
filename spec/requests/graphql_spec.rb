@@ -93,17 +93,21 @@ RSpec.describe GraphqlController, type: :request do
         expired_token
         sleep 1 # Ensure token is expired
 
-        post '/graphql', headers: {
-          'Authorization' => "Bearer #{expired_token}"
-        }, params: {
-          query: mutation,
-          variables: {
-            input: {
-              email: user.email,
-              password: 'ILoveLago'
+        post(
+          '/graphql',
+          headers: {
+            'Authorization' => "Bearer #{expired_token}",
+          },
+          params: {
+            query: mutation,
+            variables: {
+              input: {
+                email: user.email,
+                password: 'ILoveLago',
+              }
             }
-          }
-        }
+          },
+        )
 
         expect(response.status).to be(200)
 
@@ -132,11 +136,15 @@ RSpec.describe GraphqlController, type: :request do
       end
 
       it 'retrieves the correct end user and returns success status code' do
-        post '/graphql', headers: {
-          'customer-portal-token' => token,
-        }, params: {
-          query: query,
-        }
+        post(
+          '/graphql',
+          headers: {
+            'customer-portal-token' => token,
+          },
+          params: {
+            query:,
+          },
+        )
 
         expect(response.status).to be(200)
       end

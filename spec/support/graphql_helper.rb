@@ -10,10 +10,10 @@ module GraphQLHelper
   def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, **kwargs)
     args = kwargs.merge(
       context: {
-        controller: controller,
-        current_user: current_user,
-        current_organization: current_organization,
-        customer_portal_user: customer_portal_user,
+        controller:,
+        current_user:,
+        current_organization:,
+        customer_portal_user:,
       },
     )
 

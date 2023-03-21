@@ -7,10 +7,10 @@ module Resolvers
 
       description 'Query invoices of a customer'
 
-      argument :status, Types::Invoices::StatusTypeEnum, required: false
-      argument :page, Integer, required: false
       argument :limit, Integer, required: false
+      argument :page, Integer, required: false
       argument :search_term, String, required: false
+      argument :status, Types::Invoices::StatusTypeEnum, required: false
 
       type Types::Invoices::Object.collection_type, null: false
 
