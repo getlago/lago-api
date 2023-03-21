@@ -73,50 +73,6 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
-    context 'when invoice type is credit and new status is succeeded' do
-      let(:subscription) { create(:subscription, customer: customer) }
-      let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
-      let(:wallet_transaction) do
-        create(:wallet_transaction, wallet: wallet, amount: 15.0, credit_amount: 15.0, status: 'pending')
-      end
-      let(:fee) do
-        create(
-          :fee,
-          fee_type: 'credit',
-          invoiceable_type: 'WalletTransaction',
-          invoiceable_id: wallet_transaction.id,
-          invoice: invoice,
-        )
-      end
-
-      before do
-        wallet_transaction
-        fee
-        subscription
-        invoice.update(invoice_type: 'credit')
-      end
-
-      it 'calls Invoices::PrepaidCreditJob' do
-        stripe_service.create
-
-        expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
-      end
-    end
-
-    it 'calls SegmentTrackJob' do
-      invoice = stripe_service.create.payment.invoice
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
-        },
-      )
-    end
-
     context 'with no payment provider' do
       let(:stripe_payment_provider) { nil }
 
@@ -271,36 +227,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
       expect(result).to be_success
       expect(result.payment.status).to eq('succeeded')
-      expect(result.invoice.payment_status).to eq('succeeded')
-      expect(result.invoice.ready_for_payment_processing).to eq(false)
-    end
-
-    it 'calls SegmentTrackJob' do
-      invoice = stripe_service.update_payment_status(
-        provider_payment_id: 'ch_123456',
-        status: 'succeeded',
-      ).payment.invoice
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
-        },
-      )
-    end
-
-    it 'calls the SendWebhook job' do
-      invoice = stripe_service.update_payment_status(
-        provider_payment_id: 'ch_123456',
-        status: 'succeeded',
-      ).payment.invoice
-
-      expect(SendWebhookJob).to have_received(:perform_later).with(
-        'invoice.payment_status_updated',
-        invoice,
+      expect(result.invoice.reload).to have_attributes(
+        payment_status: 'succeeded',
+        ready_for_payment_processing: false,
       )
     end
 
@@ -313,8 +242,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
         expect(result).to be_success
         expect(result.payment.status).to eq('failed')
-        expect(result.invoice.payment_status).to eq('failed')
-        expect(result.invoice.ready_for_payment_processing).to eq(true)
+        expect(result.invoice.reload).to have_attributes(
+          payment_status: 'failed',
+          ready_for_payment_processing: true,
+        )
       end
     end
 

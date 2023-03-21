@@ -19,7 +19,7 @@ module Invoices
         return result unless should_process_payment?
 
         unless invoice.total_amount_cents.positive?
-          update_invoice_payment_status(:succeeded)
+          update_invoice_payment_status(payment_status: :succeeded)
           return result
         end
 
@@ -39,9 +39,7 @@ module Invoices
         payment.save!
 
         invoice_payment_status = invoice_payment_status(payment.status)
-        update_invoice_payment_status(invoice_payment_status)
-        handle_prepaid_credits(payment.invoice, invoice_payment_status)
-        track_payment_status_changed(payment.invoice)
+        update_invoice_payment_status(payment_status: invoice_payment_status)
 
         result.payment = payment
         result
@@ -58,18 +56,11 @@ module Invoices
         payment.update!(status: status)
 
         invoice_payment_status = invoice_payment_status(status)
-        payment.invoice.update!(
-          payment_status: invoice_payment_status,
-          ready_for_payment_processing: invoice_payment_status != 'succeeded',
-        )
-        handle_prepaid_credits(payment.invoice, invoice_payment_status)
-
-        SendWebhookJob.perform_later('invoice.payment_status_updated', payment.invoice)
-        track_payment_status_changed(payment.invoice)
+        update_invoice_payment_status(payment_status: invoice_payment_status)
 
         result
-      rescue ArgumentError
-        result.single_validation_failure!(field: :payment_status, error_code: 'value_is_invalid')
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private
@@ -133,37 +124,33 @@ module Invoices
         )
       rescue GoCardlessPro::Error => e
         deliver_error_webhook(e)
-        update_invoice_payment_status(:failed)
+        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
 
         raise
       end
 
       def invoice_payment_status(payment_status)
-        return 'pending' if PENDING_STATUSES.include?(payment_status)
-        return 'succeeded' if SUCCESS_STATUSES.include?(payment_status)
-        return 'failed' if FAILED_STATUSES.include?(payment_status)
+        return :pending if PENDING_STATUSES.include?(payment_status)
+        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
+        return :failed if FAILED_STATUSES.include?(payment_status)
 
         payment_status
       end
 
-      def update_invoice_payment_status(payment_status)
-        return unless Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
-
-        invoice.update!(
-          payment_status:,
-          ready_for_payment_processing: payment_status.to_s == 'failed',
+      def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+        result = Invoices::UpdateService.call(
+          invoice:,
+          params: {
+            payment_status:,
+            ready_for_payment_processing: payment_status.to_sym != :succeeded,
+          },
+          webhook_notification: deliver_webhook,
         )
+        result.raise_if_error!
       end
 
       def increment_payment_attempts
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
-      end
-
-      def handle_prepaid_credits(invoice, invoice_payment_status)
-        return unless invoice.invoice_type == 'credit'
-        return unless invoice_payment_status == 'succeeded'
-
-        Invoices::PrepaidCreditJob.perform_later(invoice)
       end
 
       def deliver_error_webhook(gocardless_error)
@@ -176,18 +163,6 @@ module Invoices
           provider_error: {
             message: gocardless_error.message,
             error_code: gocardless_error.code,
-          },
-        )
-      end
-
-      def track_payment_status_changed(invoice)
-        SegmentTrackJob.perform_later(
-          membership_id: CurrentContext.membership,
-          event: 'payment_status_changed',
-          properties: {
-            organization_id: invoice.organization.id,
-            invoice_id: invoice.id,
-            payment_status: invoice.payment_status,
           },
         )
       end

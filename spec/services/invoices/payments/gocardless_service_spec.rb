@@ -47,7 +47,6 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           'currency' => invoice.total_amount_currency,
           'status' => 'paid_out',
         ))
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
@@ -59,7 +58,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       aggregate_failures do
         expect(result.invoice).to be_succeeded
         expect(result.invoice.payment_attempts).to eq(1)
-        expect(result.invoice.ready_for_payment_processing).to eq(false)
+        expect(result.invoice.reload.ready_for_payment_processing).to eq(false)
 
         expect(result.payment.id).to be_present
         expect(result.payment.invoice).to eq(invoice)
@@ -72,50 +71,6 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       end
 
       expect(gocardless_payments_service).to have_received(:create)
-    end
-
-    context 'when invoice type is credit and new status is succeeded' do
-      let(:subscription) { create(:subscription, customer: customer) }
-      let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
-      let(:wallet_transaction) do
-        create(:wallet_transaction, wallet: wallet, amount: 15.0, credit_amount: 15.0, status: 'pending')
-      end
-      let(:fee) do
-        create(
-          :fee,
-          fee_type: 'credit',
-          invoiceable_type: 'WalletTransaction',
-          invoiceable_id: wallet_transaction.id,
-          invoice: invoice,
-        )
-      end
-
-      before do
-        wallet_transaction
-        fee
-        subscription
-        invoice.update(invoice_type: 'credit')
-      end
-
-      it 'calls Invoices::PrepaidCreditJob' do
-        gocardless_service.create
-
-        expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
-      end
-    end
-
-    it 'calls SegmentTrackJob' do
-      invoice = gocardless_service.create.payment.invoice
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
-        },
-      )
     end
 
     context 'with no payment provider' do
@@ -226,7 +181,6 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
@@ -239,36 +193,9 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
       expect(result).to be_success
       expect(result.payment.status).to eq('paid_out')
-      expect(result.invoice.payment_status).to eq('succeeded')
-      expect(result.invoice.ready_for_payment_processing).to eq(false)
-    end
-
-    it 'calls SegmentTrackJob' do
-      invoice = gocardless_service.update_payment_status(
-        provider_payment_id: 'ch_123456',
-        status: 'paid_out',
-      ).payment.invoice
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
-        },
-      )
-    end
-
-    it 'calls SendWebhookJob' do
-      invoice = gocardless_service.update_payment_status(
-        provider_payment_id: 'ch_123456',
-        status: 'paid_out',
-      ).payment.invoice
-
-      expect(SendWebhookJob).to have_received(:perform_later).with(
-        'invoice.payment_status_updated',
-        invoice,
+      expect(result.invoice.reload).to have_attributes(
+        payment_status: 'succeeded',
+        ready_for_payment_processing: false,
       )
     end
 
@@ -281,8 +208,10 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
         expect(result).to be_success
         expect(result.payment.status).to eq('failed')
-        expect(result.invoice.payment_status).to eq('failed')
-        expect(result.invoice.ready_for_payment_processing).to eq(true)
+        expect(result.invoice.reload).to have_attributes(
+          payment_status: 'failed',
+          ready_for_payment_processing: true,
+        )
       end
     end
 
