@@ -81,6 +81,16 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
+    context 'when organization does not have right email settings' do
+      before { invoice.organization.update!(email_settings: []) }
+
+      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        expect do
+          finalize_service.call
+        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
+    end
+
     context 'when license if not premium' do
       before { License.instance_variable_set(:@premium, false) }
 

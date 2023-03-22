@@ -33,6 +33,8 @@ module Invoices
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.save!
 
+        InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+
         track_invoice_created(invoice)
         result.invoice = invoice
       end
@@ -89,6 +91,11 @@ module Invoices
     # NOTE: accounting date must be in customer timezone
     def issuing_date
       datetime.in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def should_deliver_email?
+      License.premium? &&
+        customer.organization.email_settings.include?('invoice.finalized')
     end
   end
 end

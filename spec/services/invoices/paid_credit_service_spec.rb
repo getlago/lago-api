@@ -10,6 +10,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
   let(:timestamp) { Time.current.to_i }
 
   describe 'create' do
+    around { |test| lago_premium!(&test) }
+
     let(:customer) { create(:customer) }
     let(:subscription) { create(:subscription, customer: customer) }
     let(:wallet) { create(:wallet, customer: customer) }
@@ -49,6 +51,32 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       expect do
         invoice_service.create
       end.to have_enqueued_job(SendWebhookJob)
+    end
+
+    it 'enqueues an ActionMailer::MailDeliveryJob' do
+      expect do
+        invoice_service.create
+      end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+    end
+
+    context 'when organization does not have right email settings' do
+      before { customer.organization.update!(email_settings: []) }
+
+      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        expect do
+          invoice_service.create
+        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
+    end
+
+    context 'when license if not premium' do
+      before { License.instance_variable_set(:@premium, false) }
+
+      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        expect do
+          invoice_service.create
+        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
     end
 
     it 'calls SegmentTrackJob' do
