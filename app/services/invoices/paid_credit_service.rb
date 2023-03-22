@@ -35,13 +35,13 @@ module Invoices
         invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.save!
 
-        InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
-
         track_invoice_created(invoice)
         result.invoice = invoice
       end
 
       SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice) if should_deliver_webhook?
+      InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+
       create_payment(result.invoice)
 
       result
