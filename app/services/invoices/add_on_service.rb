@@ -38,7 +38,7 @@ module Invoices
       end
 
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
-      InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+      InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
       create_payment(result.invoice)
 
