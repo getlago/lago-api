@@ -60,6 +60,7 @@ module CreditNotes
       if credit_note.finalized?
         track_credit_note_created
         deliver_webhook
+        deliver_email
         handle_refund if should_handle_refund?
       end
 
@@ -165,6 +166,14 @@ module CreditNotes
         'credit_note.created',
         credit_note,
       )
+    end
+
+    def deliver_email
+      # NOTE: We already check the premium state for the credit note creation
+      return unless credit_note.organization.email_settings.include?('credit_note.created')
+
+      CreditNoteMailer.with(credit_note:)
+        .created.deliver_later
     end
 
     def should_handle_refund?
