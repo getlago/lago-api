@@ -43,7 +43,6 @@ class InvoiceMailer < ApplicationMailer
 
   def ensure_pdf
     invoice = params[:invoice]
-    return if invoice.file.present?
 
     Invoices::GeneratePdfService.new(invoice:).call
   end
