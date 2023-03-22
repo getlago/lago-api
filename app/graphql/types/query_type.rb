@@ -24,6 +24,8 @@ module Types
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :customer_invoices, resolver: Resolvers::Customers::InvoicesResolver
     field :customer_portal_invoices, resolver: Resolvers::CustomerPortal::InvoicesResolver
+    field :customer_portal_user, resolver: Resolvers::CustomerPortal::CustomerResolver
+    field :customer_portal_organization, resolver: Resolvers::CustomerPortal::OrganizationResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :plan, resolver: Resolvers::PlanResolver

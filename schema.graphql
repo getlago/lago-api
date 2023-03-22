@@ -3816,6 +3816,16 @@ type Query {
   customerPortalInvoices(limit: Int, page: Int, searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
 
   """
+  Query customer portal organization
+  """
+  customerPortalOrganization: Organization
+
+  """
+  Query a customer portal user
+  """
+  customerPortalUser: Customer
+
+  """
   Query the usage of the customer on the current billing period
   """
   customerUsage(customerId: ID, subscriptionId: ID!): CustomerUsage!
