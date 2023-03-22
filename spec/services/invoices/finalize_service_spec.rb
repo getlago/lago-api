@@ -7,7 +7,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
 
   describe '#call' do
     around { |test| lago_premium!(&test) }
-  
+
     let(:invoice) do
       create(
         :invoice,
