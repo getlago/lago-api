@@ -332,8 +332,18 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     context 'when invoice grace period is removed' do
       let(:organization) { create(:organization, webhook_url: nil, invoice_grace_period: 3) }
       let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
+      let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+      let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
+      let(:pdf_result) { OpenStruct.new(io: pdf_file) }
 
       around { |test| lago_premium!(&test) }
+
+      before do
+        allow(Utils::PdfGenerator).to receive(:new)
+          .and_return(pdf_generator)
+        allow(pdf_generator).to receive(:call)
+          .and_return(pdf_result)
+      end
 
       it 'finalizes draft invoices' do
         create_subscription(
