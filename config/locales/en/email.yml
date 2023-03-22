@@ -10,3 +10,14 @@ en:
         invoice_number: Invoice Number
         issue_date: Issue Date
         download: Download invoice for details
+    credit_note:
+      created:
+        subject: "Your credit note from %{organization_name} #%{credit_note_number}"
+        credit_note_from: "Credit Note from %{organization_name}"
+        credited_refunded_notice: "Credited on customer balance and refunded on %{date}"
+        credited_notice: "Credited on customer balance on %{date}"
+        refunded_notice: "Refunded on %{date}"
+        credit_note_number: "Credit note number"
+        invoice_number: "Invoice number"
+        issue_date: "Issue date"
+        download: Download credit note for details
