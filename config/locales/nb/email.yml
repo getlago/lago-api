@@ -1,0 +1,12 @@
+nb:
+  email:
+    questions: Har du spørsmål? Kontakt oss på 
+    powered_by: Fakturering drevet av
+    invoice:
+      finalized:
+        subject: "Faktura fra %{organization_name} #%{invoice_number}"
+        invoice_from: "Faktura fra %{organization_name}"
+        due_date: Forfallsdato %{date}
+        invoice_number: Fakturanummer
+        issue_date: Dato
+        download: Last ned faktura for detaljer
