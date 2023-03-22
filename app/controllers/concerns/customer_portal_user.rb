@@ -10,6 +10,8 @@ module CustomerPortalUser
     id = public_authenticator.verify(customer_portal_token)
 
     @customer_portal_user ||= Customer.find_by(id:)
+  rescue ActiveSupport::MessageVerifier::InvalidSignature
+    nil
   end
 
   private
