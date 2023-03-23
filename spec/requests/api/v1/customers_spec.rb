@@ -388,6 +388,36 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
   end
 
+  describe 'GET /customers/:customer_external_id/portal_url' do
+    let(:customer) { create(:customer, organization:) }
+    let(:organization) { create(:organization) }
+
+    it 'returns the portal url' do
+      get_with_token(
+        organization,
+        "/api/v1/customers/#{customer.external_id}/portal_url",
+      )
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:portal_url]).to include('/customer-portal/')
+      end
+    end
+
+    context 'when customer does not belongs to the organization' do
+      let(:customer) { create(:customer) }
+
+      it 'returns not found error' do
+        get_with_token(
+          organization,
+          "/api/v1/customers/#{customer.external_id}/portal_url",
+        )
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe 'GET /customers' do
     let(:organization) { create(:organization) }
 

@@ -40,6 +40,24 @@ module Api
         end
       end
 
+      def portal_url
+        customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
+
+        result = ::CustomerPortal::GenerateUrlService.call(customer:)
+
+        if result.success?
+          render(
+            json: {
+              customer: {
+                portal_url: result.url,
+              },
+            },
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def index
         customers = current_organization.customers
           .page(params[:page])
