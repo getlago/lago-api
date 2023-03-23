@@ -36,6 +36,7 @@ RSpec.describe Fees::PaidCreditService do
         expect(created_fee.vat_amount_cents).to eq(0)
         expect(created_fee.vat_rate).to eq(0)
         expect(created_fee.units).to eq(1)
+        expect(created_fee.payment_status).to eq('pending')
       end
     end
 

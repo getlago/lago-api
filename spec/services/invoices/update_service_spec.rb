@@ -47,6 +47,16 @@ RSpec.describe Invoices::UpdateService do
       )
     end
 
+    context 'with attached fees' do
+      it 'euqueus a job to update the payment_status of the fees' do
+        result
+
+        expect(Invoices::UpdateFeesPaymentStatusJob)
+          .to have_been_enqueued
+          .with(invoice)
+      end
+    end
+
     context 'with metadata' do
       let(:invoice_metadata) { create(:invoice_metadata, invoice:) }
       let(:another_invoice_metadata) { create(:invoice_metadata, invoice:, key: 'test', value: '1') }

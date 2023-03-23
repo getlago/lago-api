@@ -24,6 +24,7 @@ module Fees
         amount_cents: amount_cents,
         amount_currency: wallet_transaction.wallet.currency,
         units: 1,
+        payment_status: :pending,
 
         # NOTE: No VAT should be applied on as it can be considered as an advance
         vat_rate: 0,

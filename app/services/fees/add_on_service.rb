@@ -21,6 +21,7 @@ module Fees
         invoiceable: applied_add_on,
         vat_rate: customer.applicable_vat_rate,
         units: 1,
+        payment_status: :pending,
       )
 
       new_fee.compute_vat

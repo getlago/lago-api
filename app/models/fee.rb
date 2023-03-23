@@ -23,8 +23,10 @@ class Fee < ApplicationRecord
   monetize :total_amount_cents
 
   FEE_TYPES = %i[charge add_on subscription credit instant_charge].freeze
+  PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum fee_type: FEE_TYPES
+  enum payment_status: PAYMENT_STATUS
 
   validates :amount_currency, inclusion: { in: currency_list }
   validates :vat_amount_currency, inclusion: { in: currency_list }
