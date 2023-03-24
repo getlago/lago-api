@@ -22,6 +22,11 @@ RSpec.describe ::V1::FeeSerializer do
         'total_amount_currency' => fee.amount_currency,
         'units' => fee.units.to_s,
         'events_count' => fee.events_count,
+        'payment_status' => fee.payment_status,
+        'created_at' => fee.created_at&.iso8601,
+        'succeeded_at' => fee.succeeded_at&.iso8601,
+        'failed_at' => fee.failed_at&.iso8601,
+        'refunded_at' => fee.refunded_at&.iso8601,
       )
       expect(result['fee']['item']).to include(
         'type' => fee.fee_type,

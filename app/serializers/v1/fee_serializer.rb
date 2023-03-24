@@ -23,6 +23,11 @@ module V1
         events_count: model.events_count,
         lago_invoice_id: model.invoice_id,
         external_subscription_id: model.subscription&.external_id,
+        payment_status: model.payment_status,
+        created_at: model.created_at&.iso8601,
+        succeeded_at: model.succeeded_at&.iso8601,
+        failed_at: model.failed_at&.iso8601,
+        refunded_at: model.refunded_at&.iso8601,
       }
     end
   end

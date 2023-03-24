@@ -28,10 +28,7 @@ module Invoices
         )
       end
 
-      if params.key?(:payment_status)
-        invoice.payment_status = params[:payment_status]
-        invoice.fees.update_all(payment_status: params[:payment_status]) # rubocop:disable Rails/SkipsModelValidations
-      end
+      invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
 
       if params.key?(:ready_for_payment_processing)
         invoice.ready_for_payment_processing = params[:ready_for_payment_processing]

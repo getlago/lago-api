@@ -36,6 +36,15 @@ class Fee < ApplicationRecord
   scope :subscription_kind, -> { where(fee_type: :subscription) }
   scope :charge_kind, -> { where(fee_type: :charge) }
 
+  # NOTE: instant fees are not be linked to any invoice, but add_on fees does not have any subscriptions
+  #       so we need a bit of logic to find the fee in the right organization scope
+  scope :from_organization,
+        lambda { |organization|
+          left_joins(:invoice)
+            .left_joins(subscription: :customer)
+            .where('COALESCE(invoices.organization_id, customers.organization_id) = ?', organization.id)
+        }
+
   def compute_vat
     self.vat_amount_cents = (amount_cents * vat_rate).fdiv(100).round
     self.vat_amount_currency = amount_currency
