@@ -46,9 +46,10 @@ html
               td
                 table cellpadding="0" cellspacing="0" style="margin: auto; padding-bottom: 32px"
                   tr
-                    td valign="middle" style="vertical-align: middle; padding-right: 12px"
-                      a style="text-decoration: none" href=""
-                        img src=@organization.logo_url valign="middle" style="vertical-align: middle; height: 32px; width: 32px; border-radius: 8px;"
+                    - if @organization.logo.present?
+                      td valign="middle" style="vertical-align: middle; padding-right: 12px"
+                        a style="text-decoration: none" href=""
+                          img src=@organization.logo_url valign="middle" style="vertical-align: middle; height: 32px; width: 32px; border-radius: 8px;"
                     td style="height: 32px; font-size: 20px; font-weight: 700; line-height: 28px; letter-spacing: 0em;"
                       = @organization.name
             tr
