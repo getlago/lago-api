@@ -21,6 +21,7 @@ module Types
     field :update_customer_invoice_grace_period, mutation: Mutations::Customers::UpdateInvoiceGracePeriod
     field :destroy_customer, mutation: Mutations::Customers::Destroy
 
+    field :download_customer_portal_invoice, mutation: Mutations::CustomerPortal::DownloadInvoice
     field :generate_customer_portal_url, mutation: Mutations::CustomerPortal::GenerateUrl
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
