@@ -172,15 +172,15 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(package_charge['chargeModel']).to eq('package')
       group_properties = package_charge['groupProperties'][0]['values']
       expect(group_properties['amount']).to eq('300.00')
-      expect(group_properties['freeUnits']).to eq(10)
-      expect(group_properties['packageSize']).to eq(10)
+      expect(group_properties['freeUnits']).to eq('10')
+      expect(group_properties['packageSize']).to eq('10')
 
       percentage_charge = result_data['charges'][2]
       expect(percentage_charge['chargeModel']).to eq('percentage')
       group_properties = percentage_charge['groupProperties'][0]['values']
       expect(group_properties['rate']).to eq('0.25')
       expect(group_properties['fixedAmount']).to eq('2')
-      expect(group_properties['freeUnitsPerEvents']).to eq(5)
+      expect(group_properties['freeUnitsPerEvents']).to eq('5')
       expect(group_properties['freeUnitsPerTotalAggregation']).to eq('50')
 
       graduated_charge = result_data['charges'][3]

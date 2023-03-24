@@ -3,8 +3,6 @@
 module Types
   module Charges
     class PropertiesInput < Types::BaseInputObject
-      graphql_name 'PropertiesInput'
-
       # NOTE: Standard and Package charge model
       argument :amount, String, required: false
 
@@ -12,13 +10,13 @@ module Types
       argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
 
       # NOTE: Package charge model
-      argument :free_units, Integer, required: false
-      argument :package_size, Integer, required: false
+      argument :free_units, GraphQL::Types::BigInt, required: false
+      argument :package_size, GraphQL::Types::BigInt, required: false
 
       # NOTE: Percentage charge model
       argument :rate, String, required: false
       argument :fixed_amount, String, required: false
-      argument :free_units_per_events, Integer, required: false
+      argument :free_units_per_events, GraphQL::Types::BigInt, required: false
       argument :free_units_per_total_aggregation, String, required: false
 
       # NOTE: Volume charge model

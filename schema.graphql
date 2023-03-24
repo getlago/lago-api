@@ -2850,16 +2850,16 @@ type GocardlessProvider {
 
 type GraduatedRange {
   flatAmount: String!
-  fromValue: Int!
+  fromValue: BigInt!
   perUnitAmount: String!
-  toValue: Int
+  toValue: BigInt
 }
 
 input GraduatedRangeInput {
   flatAmount: String!
-  fromValue: Int!
+  fromValue: BigInt!
   perUnitAmount: String!
-  toValue: Int
+  toValue: BigInt
 }
 
 type Group {
@@ -3670,11 +3670,11 @@ enum PlanInterval {
 type Properties {
   amount: String
   fixedAmount: String
-  freeUnits: Int
-  freeUnitsPerEvents: Int
+  freeUnits: BigInt
+  freeUnitsPerEvents: BigInt
   freeUnitsPerTotalAggregation: String
   graduatedRanges: [GraduatedRange!]
-  packageSize: Int
+  packageSize: BigInt
   rate: String
   volumeRanges: [VolumeRange!]
 }
@@ -3682,11 +3682,11 @@ type Properties {
 input PropertiesInput {
   amount: String
   fixedAmount: String
-  freeUnits: Int
-  freeUnitsPerEvents: Int
+  freeUnits: BigInt
+  freeUnitsPerEvents: BigInt
   freeUnitsPerTotalAggregation: String
   graduatedRanges: [GraduatedRangeInput!]
-  packageSize: Int
+  packageSize: BigInt
   rate: String
   volumeRanges: [VolumeRangeInput!]
 }
@@ -5074,16 +5074,16 @@ input VoidCreditNoteInput {
 
 type VolumeRange {
   flatAmount: String!
-  fromValue: Int!
+  fromValue: BigInt!
   perUnitAmount: String!
-  toValue: Int
+  toValue: BigInt
 }
 
 input VolumeRangeInput {
   flatAmount: String!
-  fromValue: Int!
+  fromValue: BigInt!
   perUnitAmount: String!
-  toValue: Int
+  toValue: BigInt
 }
 
 type Wallet {
