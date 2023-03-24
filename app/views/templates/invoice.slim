@@ -225,9 +225,17 @@ html
       }
       .invoice-information-table tr td:first-child {
         padding: 0 16px 0 0;
+        width: 35%;
+      }
+      .invoice-information-table, tr td{
+        text-wrap: normal;
+        word-wrap: break-word;
+        vertical-align: top;
       }
       .invoice-information-table {
         border-collapse: collapse;
+        table-layout: fixed;
+        width: 100%;
       }
 
       .billing-information-column {
