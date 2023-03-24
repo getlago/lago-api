@@ -10,6 +10,8 @@ module V1
           type: model.fee_type,
           code: model.item_code,
           name: model.item_name,
+          lago_item_id: model.item_id,
+          item_type: model.item_type,
         },
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
@@ -19,6 +21,8 @@ module V1
         total_amount_currency: model.amount_currency,
         units: model.units,
         events_count: model.events_count,
+        lago_invoice_id: model.invoice_id,
+        external_subscription_id: model.subscription&.external_id,
       }
     end
   end
