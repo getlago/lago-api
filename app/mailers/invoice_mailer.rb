@@ -38,12 +38,4 @@ class InvoiceMailer < ApplicationMailer
 
     Invoices::GeneratePdfService.new(invoice:).call
   end
-
-  private
-
-  def ensure_pdf
-    invoice = params[:invoice]
-
-    Invoices::GeneratePdfService.new(invoice:).call
-  end
 end

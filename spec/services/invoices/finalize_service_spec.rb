@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Invoices::FinalizeService, type: :service do
   subject(:finalize_service) { described_class.new(invoice:) }
 
-  describe '#call' do 
+  describe '#call' do
     let(:invoice) do
       create(
         :invoice,
