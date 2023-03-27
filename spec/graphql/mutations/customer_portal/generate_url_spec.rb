@@ -17,38 +17,12 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
     GQL
   end
 
-  it 'returns customer portal url' do
-    result = execute_graphql(
-      current_organization: organization,
-      current_user: user,
-      query: mutation,
-      variables: {
-        input: { id: customer.id },
-      },
-    )
+  context 'when licence is premium' do
+    around { |test| lago_premium!(&test) }
 
-    data = result['data']['generateCustomerPortalUrl']
-
-    expect(data['url']).to include('/customer-portal/')
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
+    it 'returns customer portal url' do
       result = execute_graphql(
         current_organization: organization,
-        query: mutation,
-        variables: {
-          input: { id: customer.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
         current_user: user,
         query: mutation,
         variables: {
@@ -56,7 +30,37 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
         },
       )
 
-      expect_forbidden_error(result)
+      data = result['data']['generateCustomerPortalUrl']
+
+      expect(data['url']).to include('/customer-portal/')
+    end
+
+    context 'without current user' do
+      it 'returns an error' do
+        result = execute_graphql(
+          current_organization: organization,
+          query: mutation,
+          variables: {
+            input: { id: customer.id },
+          },
+        )
+
+        expect_unauthorized_error(result)
+      end
+    end
+
+    context 'without current organization' do
+      it 'returns an error' do
+        result = execute_graphql(
+          current_user: user,
+          query: mutation,
+          variables: {
+            input: { id: customer.id },
+          },
+        )
+
+        expect_forbidden_error(result)
+      end
     end
   end
 end
