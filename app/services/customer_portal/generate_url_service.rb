@@ -9,6 +9,7 @@ module CustomerPortal
     end
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: 'customer') if customer.blank?
 
       public_authenticator = ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE'])

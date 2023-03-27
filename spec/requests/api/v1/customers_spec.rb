@@ -392,28 +392,43 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
 
-    it 'returns the portal url' do
-      get_with_token(
-        organization,
-        "/api/v1/customers/#{customer.external_id}/portal_url",
-      )
+    context 'when licence is premium' do
+      around { |test| lago_premium!(&test) }
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:customer][:portal_url]).to include('/customer-portal/')
-      end
-    end
-
-    context 'when customer does not belongs to the organization' do
-      let(:customer) { create(:customer) }
-
-      it 'returns not found error' do
+      it 'returns the portal url' do
         get_with_token(
           organization,
           "/api/v1/customers/#{customer.external_id}/portal_url",
         )
 
-        expect(response).to have_http_status(:not_found)
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+          expect(json[:customer][:portal_url]).to include('/customer-portal/')
+        end
+      end
+
+      context 'when customer does not belongs to the organization' do
+        let(:customer) { create(:customer) }
+
+        it 'returns not found error' do
+          get_with_token(
+            organization,
+            "/api/v1/customers/#{customer.external_id}/portal_url",
+          )
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+    end
+
+    context 'when licence is not premium' do
+      it 'returns error' do
+        get_with_token(
+          organization,
+          "/api/v1/customers/#{customer.external_id}/portal_url",
+        )
+
+        expect(response).to have_http_status(:forbidden)
       end
     end
   end
