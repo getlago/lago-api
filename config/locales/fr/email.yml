@@ -1,0 +1,12 @@
+fr:
+  email:
+    questions: Questions? Contactez nous à 
+    powered_by: Généré par
+    invoice:
+      finalized:
+        subject: "Votre facture nº %{invoice_number} de %{organization_name}"
+        invoice_from: "Facture de %{organization_name}"
+        due_date: Date d'émission le %{date}
+        invoice_number: Nº de facture
+        issue_date: Date d'émission
+        download: Télécharger la facture pour plus de détails

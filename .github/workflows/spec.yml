@@ -29,6 +29,7 @@ jobs:
       LAGO_API_URL: https://api.lago.dev
       LAGO_PDF_URL: https://pdf.lago.dev
       SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
+      LAGO_FROM_EMAIL: noreply@getlago.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

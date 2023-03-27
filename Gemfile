@@ -62,8 +62,9 @@ gem 'sentry-sidekiq'
 gem 'aws-sdk-s3', require: false
 gem 'google-cloud-storage', require: false
 
-# PDF Templating
+# Templating
 gem 'slim'
+gem 'slim-rails'
 
 group :development, :test, :staging do
   gem 'factory_bot_rails'

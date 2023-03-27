@@ -40,6 +40,8 @@ module Invoices
       end
 
       SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice) if should_deliver_webhook?
+      InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
+
       create_payment(result.invoice)
 
       result
@@ -93,6 +95,11 @@ module Invoices
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def should_deliver_email?
+      License.premium? &&
+        customer.organization.email_settings.include?('invoice.finalized')
     end
   end
 end

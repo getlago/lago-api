@@ -73,6 +73,32 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
+    it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+      expect do
+        finalize_service.call
+      end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+    end
+
+    context 'with lago_premium' do
+      around { |test| lago_premium!(&test) }
+
+      it 'enqueues an ActionMailer::MailDeliveryJob' do
+        expect do
+          finalize_service.call
+        end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
+
+      context 'when organization does not have right email settings' do
+        before { invoice.organization.update!(email_settings: []) }
+
+        it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+          expect do
+            finalize_service.call
+          end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end
+      end
+    end
+
     it 'calls SegmentTrackJob' do
       invoice = finalize_service.call.invoice
 

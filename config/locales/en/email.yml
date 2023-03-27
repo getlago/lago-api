@@ -1,0 +1,12 @@
+en:
+  email:
+    questions: Questions? Contact us at
+    powered_by: Powered by
+    invoice:
+      finalized:
+        subject: "Your Invoice from %{organization_name} #%{invoice_number}"
+        invoice_from: "Invoice from %{organization_name}"
+        due_date: total due %{date}
+        invoice_number: Invoice Number
+        issue_date: Issue Date
+        download: Download invoice for details

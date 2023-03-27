@@ -47,6 +47,7 @@ module Invoices
         SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
       else
         SendWebhookJob.perform_later('invoice.created', invoice) if should_deliver_webhook?
+        InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_finalized_email?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
       end
@@ -77,6 +78,11 @@ module Invoices
 
     def should_deliver_webhook?
       customer.organization.webhook_url?
+    end
+
+    def should_deliver_finalized_email?
+      License.premium? &&
+        customer.organization.email_settings.include?('invoice.finalized')
     end
 
     def track_invoice_created(invoice)

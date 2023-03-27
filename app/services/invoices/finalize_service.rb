@@ -15,7 +15,9 @@ module Invoices
         result.raise_if_error!
 
         invoice.update!(status: :finalized, issuing_date:)
+
         SendWebhookJob.perform_later('invoice.created', invoice) if invoice.organization.webhook_url?
+        InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
 
@@ -60,6 +62,11 @@ module Invoices
           credit_note_method: 'credit',
         },
       )
+    end
+
+    def should_deliver_email?
+      License.premium? &&
+        invoice.organization.email_settings.include?('invoice.finalized')
     end
   end
 end
