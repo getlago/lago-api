@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_03_13_145506) do
+ActiveRecord::Schema[7.0].define(version: 2023_03_27_134418) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -515,7 +515,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_13_145506) do
   create_table "refunds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "payment_id", null: false
     t.uuid "credit_note_id", null: false
-    t.uuid "payment_provider_id", null: false
+    t.uuid "payment_provider_id"
     t.uuid "payment_provider_customer_id", null: false
     t.bigint "amount_cents", default: 0, null: false
     t.string "amount_currency", null: false
