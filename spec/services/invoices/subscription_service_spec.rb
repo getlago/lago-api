@@ -12,8 +12,6 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
   end
 
   describe 'create' do
-    around { |test| lago_premium!(&test) }
-
     let(:subscription) do
       create(
         :subscription,
