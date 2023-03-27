@@ -10,3 +10,14 @@ nb:
         invoice_number: Fakturanummer
         issue_date: Dato
         download: Last ned faktura for detaljer
+    credit_note:
+      created:
+        subject: "Kreditnota din fra %{organization_name} #%{credit_note_number}"
+        credit_note_from: "Kreditnota fra %{organization_name}"
+        credited_refunded_notice: "Kreditert til kontobalanse og refundert %{date}"
+        credited_notice: "Kreditert til kontobalanse %{date}"
+        refunded_notice: "Refundert %{date}"
+        credit_note_number: "Kreditnota nummer"
+        invoice_number: "Faktura nummer"
+        issue_date: "Dato"
+        download: Last ned kreditnota for detaljer

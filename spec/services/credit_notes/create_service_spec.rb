@@ -111,6 +111,22 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         .with('credit_note.created', CreditNote)
     end
 
+    it 'delivers an email' do
+      expect do
+        create_service.call
+      end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+    end
+
+    context 'when organization does not have right email settings' do
+      before { invoice.organization.update!(email_settings: []) }
+
+      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        expect do
+          create_service.call
+        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
+    end
+
     context 'with invalid items' do
       let(:credit_amount_cents) { 10 }
       let(:refund_amount_cents) { 15 }

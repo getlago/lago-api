@@ -7,6 +7,16 @@ describe 'Terminate Pay in Advance Scenarios', :scenarios, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 5000) }
   let(:metric) { create(:billable_metric, organization:) }
+  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
+  let(:pdf_result) { OpenStruct.new(io: pdf_file) }
+
+  before do
+    allow(Utils::PdfGenerator).to receive(:new)
+      .and_return(pdf_generator)
+    allow(pdf_generator).to receive(:call)
+      .and_return(pdf_result)
+  end
 
   it 'creates expected credit note and invoice' do
     ### 8 Feb: Create and terminate subscription

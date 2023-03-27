@@ -10,3 +10,14 @@ fr:
         invoice_number: Nº de facture
         issue_date: Date d'émission
         download: Télécharger la facture pour plus de détails
+    credit_note:
+      created:
+        subject: "Votre avoir nº  %{credit_note_number} de %{organization_name} "
+        credit_note_from: "Votre avoir de %{organization_name}"
+        credited_refunded_notice: "Crédité sur le solde du client et remboursé le %{date}"
+        credited_notice: "Crédité sur le solde du client le %{date}"
+        refunded_notice: "Remboursé le %{date}"
+        credit_note_number: "Avoir nº"
+        invoice_number: "Facture nº"
+        issue_date: "Date d'émission"
+        download: Télécharger l'avoir pour plus de détails
