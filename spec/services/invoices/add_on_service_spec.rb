@@ -11,8 +11,6 @@ RSpec.describe Invoices::AddOnService, type: :service do
   let(:applied_add_on) { create(:applied_add_on) }
 
   describe 'create' do
-    around { |test| lago_premium!(&test) }
-
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
@@ -46,29 +44,29 @@ RSpec.describe Invoices::AddOnService, type: :service do
       end.to have_enqueued_job(SendWebhookJob)
     end
 
-    it 'enqueues an ActionMailer::MailDeliveryJob' do
+    it 'does not enqueue an ActionMailer::MailDeliveryJob' do
       expect do
         invoice_service.create
-      end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
-    context 'when organization does not have right email settings' do
-      before { applied_add_on.customer.organization.update!(email_settings: []) }
+    context 'with lago_premium' do
+      around { |test| lago_premium!(&test) }
 
-      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+      it 'enqueues an ActionMailer::MailDeliveryJob' do
         expect do
           invoice_service.create
-        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
       end
-    end
 
-    context 'when license if not premium' do
-      before { License.instance_variable_set(:@premium, false) }
+      context 'when organization does not have right email settings' do
+        before { applied_add_on.customer.organization.update!(email_settings: []) }
 
-      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
-        expect do
-          invoice_service.create
-        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+          expect do
+            invoice_service.create
+          end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end
       end
     end
 

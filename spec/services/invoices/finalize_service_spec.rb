@@ -6,8 +6,6 @@ RSpec.describe Invoices::FinalizeService, type: :service do
   subject(:finalize_service) { described_class.new(invoice:) }
 
   describe '#call' do
-    around { |test| lago_premium!(&test) }
-
     let(:invoice) do
       create(
         :invoice,
@@ -75,29 +73,29 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
-    it 'enqueues an ActionMailer::MailDeliveryJob' do
+    it 'does not enqueue an ActionMailer::MailDeliveryJob' do
       expect do
         finalize_service.call
-      end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
-    context 'when organization does not have right email settings' do
-      before { invoice.organization.update!(email_settings: []) }
+    context 'with lago_premium' do
+      around { |test| lago_premium!(&test) }
 
-      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+      it 'enqueues an ActionMailer::MailDeliveryJob' do
         expect do
           finalize_service.call
-        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
       end
-    end
 
-    context 'when license if not premium' do
-      before { License.instance_variable_set(:@premium, false) }
+      context 'when organization does not have right email settings' do
+        before { invoice.organization.update!(email_settings: []) }
 
-      it 'does not enqueue an ActionMailer::MailDeliveryJob' do
-        expect do
-          finalize_service.call
-        end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+          expect do
+            finalize_service.call
+          end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end
       end
     end
 

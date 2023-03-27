@@ -17,16 +17,18 @@ class InvoiceMailer < ApplicationMailer
       attachments['invoice.pdf'] = file.read
     end
 
-    mail(
-      to: @customer.email,
-      from: email_address_with_name(ENV['LAGO_FROM_EMAIL'], @organization.name),
-      reply_to: email_address_with_name(@organization.email, @organization.name),
-      subject: I18n.t(
-        'email.invoice.finalized.subject',
-        organization_name: @organization.name,
-        invoice_number: @invoice.number,
-      ),
-    )
+    I18n.with_locale(@customer.preferred_document_locale) do
+      mail(
+        to: @customer.email,
+        from: email_address_with_name(ENV['LAGO_FROM_EMAIL'], @organization.name),
+        reply_to: email_address_with_name(@organization.email, @organization.name),
+        subject: I18n.t(
+          'email.invoice.finalized.subject',
+          organization_name: @organization.name,
+          invoice_number: @invoice.number,
+        ),
+      )
+    end
   end
 
   private
