@@ -40,7 +40,7 @@ RSpec.describe CustomerPortal::GenerateUrlService, type: :service do
         result = generate_url_service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('licence_is_not_premium')
+        expect(result.error.code).to eq('feature_unavailable')
       end
     end
   end
