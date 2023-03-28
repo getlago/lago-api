@@ -73,4 +73,49 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
   end
+
+  describe 'PUT /fees/:id' do
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:fee) { create(:charge_fee, fee_type: 'instant_charge', subscription:, invoice: nil) }
+
+    let(:update_params) { { payment_status: 'succeeded' } }
+
+    it 'updates the fee' do
+      put_with_token(organization, "/api/v1/fees/#{fee.id}", fee: update_params)
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:fee]).to include(
+          lago_id: fee.reload.id,
+          lago_group_id: fee.group_id,
+          amount_cents: fee.amount_cents,
+          amount_currency: fee.amount_currency,
+          vat_amount_cents: fee.vat_amount_cents,
+          vat_amount_currency: fee.vat_amount_currency,
+          units: fee.units.to_s,
+          events_count: fee.events_count,
+          payment_status: fee.payment_status,
+          created_at: fee.created_at&.iso8601,
+          succeeded_at: fee.succeeded_at&.iso8601,
+          failed_at: fee.failed_at&.iso8601,
+          refunded_at: fee.refunded_at&.iso8601,
+        )
+        expect(json[:fee][:item]).to include(
+          type: fee.fee_type,
+          code: fee.item_code,
+          name: fee.item_name,
+        )
+      end
+    end
+
+    context 'when fee does not exist' do
+      it 'returns not found' do
+        get_with_token(organization, '/api/v1/fees/foo', fee: update_params)
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
