@@ -2,9 +2,10 @@
 
 module Invoices
   class UpdateService < BaseService
-    def initialize(invoice:, params:)
+    def initialize(invoice:, params:, webhook_notification: false)
       @invoice = invoice
       @params = params
+      @webhook_notification = webhook_notification
 
       super
     end
@@ -29,6 +30,10 @@ module Invoices
 
       invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
 
+      if params.key?(:ready_for_payment_processing)
+        invoice.ready_for_payment_processing = params[:ready_for_payment_processing]
+      end
+
       ActiveRecord::Base.transaction do
         invoice.save!
 
@@ -38,6 +43,7 @@ module Invoices
       if params.key?(:payment_status)
         handle_prepaid_credits(params[:payment_status])
         track_payment_status_changed
+        deliver_webhook
       end
 
       result.invoice = invoice
@@ -48,7 +54,7 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :params
+    attr_reader :invoice, :params, :webhook_notification
 
     def valid_payment_status?(payment_status)
       Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
@@ -67,8 +73,8 @@ module Invoices
     end
 
     def handle_prepaid_credits(payment_status)
-      return unless invoice.invoice_type == 'credit'
-      return unless payment_status == 'succeeded'
+      return unless invoice.invoice_type&.to_sym == :credit
+      return unless payment_status&.to_sym == :succeeded
 
       Invoices::PrepaidCreditJob.perform_later(invoice)
     end
@@ -78,6 +84,12 @@ module Invoices
       return true if metadata.count <= ::Metadata::InvoiceMetadata::COUNT_PER_INVOICE
 
       false
+    end
+
+    def deliver_webhook
+      return unless webhook_notification
+
+      SendWebhookJob.perform_later('invoice.payment_status_updated', invoice)
     end
   end
 end

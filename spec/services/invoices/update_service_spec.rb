@@ -3,10 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::UpdateService do
-  subject(:invoice_service) { described_class.new(invoice: invoice, params: update_args) }
+  subject(:invoice_service) do
+    described_class.new(invoice:, params: update_args, webhook_notification:)
+  end
 
   let(:invoice) { create(:invoice) }
   let(:invoice_id) { invoice.id }
+  let(:webhook_notification) { false }
 
   let(:update_args) do
     {
@@ -160,6 +163,19 @@ RSpec.describe Invoices::UpdateService do
         result
 
         expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
+      end
+    end
+
+    context 'with payment_status update and notification is turned on' do
+      let(:webhook_notification) { true }
+
+      it 'delivers a webhook' do
+        result
+
+        expect(SendWebhookJob).to have_been_enqueued.with(
+          'invoice.payment_status_updated',
+          invoice,
+        )
       end
     end
 
