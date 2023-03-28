@@ -41,6 +41,22 @@ class Fee < ApplicationRecord
     self.vat_amount_currency = amount_currency
   end
 
+  def item_id
+    return billable_metric.id if charge? || instant_charge?
+    return add_on.id if add_on?
+    return invoiceable_id if credit?
+
+    subscription_id
+  end
+
+  def item_type
+    return BillableMetric.name if charge? || instant_charge?
+    return AddOn.name if add_on?
+    return WalletTransaction.name if credit?
+
+    Subscription.name
+  end
+
   def item_code
     return billable_metric.code if charge? || instant_charge?
     return add_on.code if add_on?

@@ -11,20 +11,25 @@ RSpec.describe ::V1::FeeSerializer do
 
   it 'serializes the fee' do
     aggregate_failures do
-      expect(result['fee']['lago_id']).to eq(fee.id)
-      expect(result['fee']['lago_group_id']).to eq(fee.group_id)
-      expect(result['fee']['amount_cents']).to eq(fee.amount_cents)
-      expect(result['fee']['amount_currency']).to eq(fee.amount_currency)
-      expect(result['fee']['vat_amount_cents']).to eq(fee.vat_amount_cents)
-      expect(result['fee']['vat_amount_currency']).to eq(fee.vat_amount_currency)
-      expect(result['fee']['total_amount_cents']).to eq(fee.total_amount_cents)
-      expect(result['fee']['total_amount_currency']).to eq(fee.amount_currency)
-      expect(result['fee']['units']).to eq(fee.units.to_s)
-      expect(result['fee']['events_count']).to eq(fee.events_count)
-
-      expect(result['fee']['item']['type']).to eq(fee.fee_type)
-      expect(result['fee']['item']['code']).to eq(fee.item_code)
-      expect(result['fee']['item']['name']).to eq(fee.item_name)
+      expect(result['fee']).to include(
+        'lago_id' => fee.id,
+        'lago_group_id' => fee.group_id,
+        'amount_cents' => fee.amount_cents,
+        'amount_currency' => fee.amount_currency,
+        'vat_amount_cents' => fee.vat_amount_cents,
+        'vat_amount_currency' => fee.vat_amount_currency,
+        'total_amount_cents' => fee.total_amount_cents,
+        'total_amount_currency' => fee.amount_currency,
+        'units' => fee.units.to_s,
+        'events_count' => fee.events_count,
+      )
+      expect(result['fee']['item']).to include(
+        'type' => fee.fee_type,
+        'code' => fee.item_code,
+        'name' => fee.item_name,
+        'lago_item_id' => fee.item_id,
+        'item_type' => fee.item_type,
+      )
     end
   end
 end
