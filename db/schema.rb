@@ -297,6 +297,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_27_134418) do
     t.integer "events_count"
     t.uuid "group_id"
     t.uuid "instant_event_id"
+    t.integer "payment_status", default: 0, null: false
+    t.datetime "succeeded_at", precision: nil
+    t.datetime "failed_at", precision: nil
+    t.datetime "refunded_at", precision: nil
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["group_id"], name: "index_fees_on_group_id"

@@ -26,6 +26,7 @@ module Fees
         invoiceable: subscription,
         units: 1,
         properties: boundaries.to_h,
+        payment_status: :pending,
       )
 
       new_fee.compute_vat

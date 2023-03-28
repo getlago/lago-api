@@ -28,6 +28,7 @@ RSpec.describe Fees::AddOnService do
         expect(created_fee.vat_rate).to eq(20.0)
         expect(created_fee.units).to eq(1)
         expect(created_fee.events_count).to be_nil
+        expect(created_fee.payment_status).to eq('pending')
       end
     end
 

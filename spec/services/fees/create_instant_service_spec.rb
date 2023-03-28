@@ -66,6 +66,7 @@ RSpec.describe Fees::CreateInstantService, type: :service do
           events_count: 1,
           group: nil,
           instant_event_id: event.id,
+          payment_status: 'pending',
         )
       end
     end

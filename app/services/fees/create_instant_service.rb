@@ -55,6 +55,7 @@ module Fees
         events_count: result.count,
         group_id: group&.id,
         instant_event_id: event.id,
+        payment_status: :pending,
       )
       fee.compute_vat
       fee.save! unless estimate

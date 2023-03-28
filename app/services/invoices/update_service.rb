@@ -44,6 +44,7 @@ module Invoices
         handle_prepaid_credits(params[:payment_status])
         track_payment_status_changed
         deliver_webhook
+        Invoices::UpdateFeesPaymentStatusJob.perform_later(invoice)
       end
 
       result.invoice = invoice

@@ -69,6 +69,7 @@ module Fees
         properties: boundaries.to_h,
         events_count: amount_result.count,
         group_id: group&.id,
+        payment_status: :pending,
       )
 
       new_fee.compute_vat
