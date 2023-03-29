@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_03_27_134418) do
+ActiveRecord::Schema[7.0].define(version: 2023_03_28_161507) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -438,6 +438,16 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_27_134418) do
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end
 
+  create_table "password_resets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "token", null: false
+    t.datetime "expire_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_password_resets_on_token", unique: true
+    t.index ["user_id"], name: "index_password_resets_on_user_id"
+  end
+
   create_table "payment_provider_customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.uuid "payment_provider_id"
@@ -660,6 +670,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_27_134418) do
   add_foreign_key "invoices", "organizations"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "password_resets", "users"
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
