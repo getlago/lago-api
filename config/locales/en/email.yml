@@ -21,3 +21,5 @@ en:
         invoice_number: "Invoice number"
         issue_date: "Issue date"
         download: Download credit note for details
+    password_reset:
+      subject: "Reset your Lago password"
