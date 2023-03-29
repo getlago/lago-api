@@ -72,9 +72,6 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
     context 'with invalid customer reference' do
       let(:subscription3) { create(:active_subscription) }
-
-      before { subscription3 }
-
       let(:event_arguments) do
         {
           transaction_id: SecureRandom.uuid,
@@ -82,6 +79,8 @@ RSpec.describe Events::CreateBatchService, type: :service do
           code: billable_metric.code,
         }
       end
+
+      before { subscription3 }
 
       it 'returns an error' do
         result = create_batch_service.validate_params(organization:, params: event_arguments)
