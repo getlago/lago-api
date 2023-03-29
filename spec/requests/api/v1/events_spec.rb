@@ -7,10 +7,9 @@ RSpec.describe Api::V1::EventsController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:active_subscription, customer:, organization:, plan:) }
 
-  before do
-    create(:active_subscription, customer:, organization:, plan:)
-  end
+  before { subscription }
 
   describe 'POST /events' do
     it 'returns a success' do
@@ -47,6 +46,10 @@ RSpec.describe Api::V1::EventsController, type: :request do
   end
 
   describe 'POST /events/batch' do
+    let(:subscription2) { create(:active_subscription, customer:, organization:, plan:) }
+
+    before { subscription2 }
+
     it 'returns a success' do
       post_with_token(
         organization,
@@ -55,7 +58,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           code: metric.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          external_subscription_ids: %w[id1 id2],
+          external_subscription_ids: [subscription.external_id, subscription2.external_id],
           timestamp: Time.zone.now.to_i,
           properties: {
             foo: 'bar',
@@ -83,7 +86,29 @@ RSpec.describe Api::V1::EventsController, type: :request do
           },
         )
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:not_found)
+        expect(Events::CreateBatchJob).not_to have_been_enqueued
+      end
+    end
+
+    context 'with invalid subscription external_id' do
+      it 'returns an unprocessable entity' do
+        post_with_token(
+          organization,
+          '/api/v1/events/batch',
+          event: {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
+            external_subscription_ids: [subscription.external_id, subscription2.external_id, 'invalid'],
+            timestamp: Time.zone.now.to_i,
+            properties: {
+              foo: 'bar',
+            },
+          },
+        )
+
+        expect(response).to have_http_status(:not_found)
         expect(Events::CreateBatchJob).not_to have_been_enqueued
       end
     end

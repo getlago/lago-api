@@ -22,7 +22,10 @@ module Api
       end
 
       def batch
-        validate_result = Events::CreateBatchService.new.validate_params(params: batch_params)
+        validate_result = Events::CreateBatchService.new.validate_params(
+          organization: current_organization,
+          params: batch_params,
+        )
         return render_error_response(validate_result) unless validate_result.success?
 
         Events::CreateBatchJob.perform_later(
