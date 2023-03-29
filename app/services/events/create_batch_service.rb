@@ -4,10 +4,10 @@ module Events
   class CreateBatchService < BaseService
     def validate_params(organization:, params:)
       Events::ValidateCreationService.call(
-        organization: organization,
-        params: params,
+        organization:,
+        params:,
         customer: customer(organization:, params:),
-        result: result,
+        result:,
         batch: true,
       )
 
