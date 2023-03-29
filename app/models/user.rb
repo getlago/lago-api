@@ -4,6 +4,8 @@ class User < ApplicationRecord
   include PaperTrailTraceable
   has_secure_password
 
+  has_many :password_resets
+
   has_many :memberships
   has_many :organizations, through: :memberships, class_name: 'Organization'
 
