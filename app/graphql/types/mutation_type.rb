@@ -71,6 +71,8 @@ module Types
     field :revoke_membership, mutation: Mutations::Memberships::Revoke
 
     field :create_password_reset, mutation: Mutations::PasswordResets::Create
+    field :reset_password, mutation: Mutations::PasswordResets::Reset
+
     field :retry_webhook, mutation: Mutations::Webhooks::Retry
   end
 end
