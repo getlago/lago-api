@@ -42,29 +42,31 @@ html
       tr
         td
           table.main-table cellpadding="0" cellspacing="0" style="padding: 64px 0"
-            tr
-              td
-                table cellpadding="0" cellspacing="0" style="margin: auto; padding-bottom: 32px"
-                  tr
-                    - if @organization.logo.present?
-                      td valign="middle" style="vertical-align: middle; padding-right: 12px"
-                        a style="text-decoration: none" href=""
-                          img src=@organization.logo_url valign="middle" style="vertical-align: middle; height: 32px; width: 32px; border-radius: 8px;"
-                    td style="height: 32px; font-size: 20px; font-weight: 700; line-height: 28px; letter-spacing: 0em;"
-                      = @organization.name
+            - if @organization.present?
+              tr
+                td
+                  table cellpadding="0" cellspacing="0" style="margin: auto; padding-bottom: 32px"
+                    tr
+                      - if @organization.logo.present?
+                        td valign="middle" style="vertical-align: middle; padding-right: 12px"
+                          a style="text-decoration: none" href=""
+                            img src=@organization.logo_url valign="middle" style="vertical-align: middle; height: 32px; width: 32px; border-radius: 8px;"
+                      td style="height: 32px; font-size: 20px; font-weight: 700; line-height: 28px; letter-spacing: 0em;"
+                        = @organization.name
             tr
               td
                 table cellpadding="0" cellspacing="0" style="width: 100%; background-color: #fff; border: 1px solid #d9dee7; border-radius: 12px; padding: 32px;"
                   tr
                     td
                       = yield
-                      table cellpadding="0" cellspacing="0" style="margin: auto; padding-top: 24px"
-                        tr
-                          td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: center; color: #66758f;"
-                            = I18n.t('email.questions')
-                            | &nbsp;
-                            a style="text-decoration: none; color: #006cfa" href="mailto:#{@organization.email}"
-                              = @organization.email
+                      - if @organization.present?
+                        table cellpadding="0" cellspacing="0" style="margin: auto; padding-top: 24px"
+                          tr
+                            td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: center; color: #66758f;"
+                              = I18n.t('email.questions')
+                              | &nbsp;
+                              a style="text-decoration: none; color: #006cfa" href="mailto:#{@organization.email}"
+                                = @organization.email
                 table cellpadding="0" cellspacing="0" style="margin: auto; padding-top: 32px"
                   tr
                     td style="font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0em; text-align: center; color: #8c95a6; padding-right: 4px;"
