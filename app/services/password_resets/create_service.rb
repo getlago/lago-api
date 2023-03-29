@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PasswordReset
+module PasswordResets
   class CreateService < BaseService
     def initialize(user:)
       @user = user
@@ -12,9 +12,9 @@ module PasswordReset
       return result.not_found_failure!(resource: 'user') if user.blank?
 
       password_reset = PasswordReset.create!(
-        user_id: user.id,
+        user:,
         token: SecureRandom.hex(20),
-        expire_at: DateTime.now + 30.minutes,
+        expire_at: Time.current + 30.minutes,
       )
 
       PasswordResetMailer.with(password_reset:).requested.deliver_later
