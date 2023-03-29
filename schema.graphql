@@ -3932,6 +3932,16 @@ type Query {
   organization: Organization
 
   """
+  Query a password reset by token
+  """
+  passwordReset(
+    """
+    Uniq token of the password reset
+    """
+    token: String!
+  ): ResetPassword!
+
+  """
   Query a single plan of an organization
   """
   plan(
