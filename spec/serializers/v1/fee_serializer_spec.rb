@@ -5,23 +5,17 @@ require 'rails_helper'
 RSpec.describe ::V1::FeeSerializer do
   subject(:serializer) { described_class.new(fee, root_name: 'fee') }
 
-  let(:subscription) { create(:subscription) }
-  let(:invoice) { create(:invoice) }
-  let(:fee) { create(:fee, invoice:, subscription:) }
-
-  let(:result) { JSON.parse(serializer.to_json) }
-
-  before do
+  let(:fee) do
     create(
-      :invoice_subscription,
-      invoice:,
-      subscription:,
+      :fee,
       properties: {
         from_datetime: Time.current,
         to_datetime: Time.current,
       },
     )
   end
+
+  let(:result) { JSON.parse(serializer.to_json) }
 
   it 'serializes the fee' do
     aggregate_failures do
@@ -50,28 +44,38 @@ RSpec.describe ::V1::FeeSerializer do
         'item_type' => fee.item_type,
       )
 
-      expect(result['fee']['date_from']).not_to be_nil
-      expect(result['fee']['date_to']).not_to be_nil
+      expect(result['fee']['from_date']).not_to be_nil
+      expect(result['fee']['to_date']).not_to be_nil
     end
   end
 
   context 'when fee is charge' do
     let(:charge) { create(:standard_charge) }
-    let(:fee) { create(:fee, fee_type: 'charge', invoice:, subscription:, charge:) }
+    let(:fee) do
+      create(
+        :fee,
+        fee_type: 'charge',
+        charge:,
+        properties: {
+          from_datetime: Time.current,
+          to_datetime: Time.current,
+        },
+      )
+    end
 
     it 'serializes the fees with dates boundaries' do
-      expect(result['fee']['date_from']).not_to be_nil
-      expect(result['fee']['date_to']).not_to be_nil
+      expect(result['fee']['from_date']).not_to be_nil
+      expect(result['fee']['to_date']).not_to be_nil
     end
   end
 
   context 'when fee is add_on' do
     let(:add_on) { create(:add_on) }
-    let(:fee) { create(:fee, fee_type: 'add_on', invoice:, add_on:) }
+    let(:fee) { create(:fee, fee_type: 'add_on', add_on:) }
 
     it 'does not serializes the fees with date boundaries' do
-      expect(result['fee']['date_from']).to be_nil
-      expect(result['fee']['date_to']).to be_nil
+      expect(result['fee']['from_date']).to be_nil
+      expect(result['fee']['to_date']).to be_nil
     end
   end
 end

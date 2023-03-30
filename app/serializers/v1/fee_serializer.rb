@@ -44,12 +44,12 @@ module V1
       }
     end
 
-    def date_from
-      model.properties['from_datetime'].to_datetime.iso8601
+    def from_date
+      model.properties['from_datetime']&.to_datetime&.iso8601
     end
 
-    def date_to
-      model.properties['to_datetime'].to_datetime.iso8601
+    def to_date
+      model.properties['to_datetime']&.to_datetime&.iso8601
     end
   end
 end
