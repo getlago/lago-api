@@ -592,7 +592,7 @@ html
                       td width="70%"
                         .body-1 = fee.billable_metric.name
                         .body-3
-                          - if fee.charge.billable_metric.recurring_count_agg? && fees.sum(&:units) > 0
+                          - if fee.billable_metric.recurring_count_agg? && fees.sum(&:units) > 0
                             = I18n.t('invoice.see_breakdown')
                           - elsif fee.charge.percentage?
                             = I18n.t('invoice.total_unit_interval', events_count: fees.sum(&:events_count), units: fees.sum(&:units))
