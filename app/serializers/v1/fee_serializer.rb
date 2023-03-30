@@ -3,7 +3,7 @@
 module V1
   class FeeSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         lago_group_id: model.group_id,
         item: {
@@ -29,6 +29,33 @@ module V1
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
       }
+
+      payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
+
+      payload
+    end
+
+    private
+
+    def date_boundaries
+      {
+        date_from:,
+        date_to:,
+      }
+    end
+
+    def date_from
+      invoice = model.invoice
+      subscription = model.subscription
+
+      invoice.invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
+    end
+
+    def date_to
+      invoice = model.invoice
+      subscription = model.subscription
+
+      invoice.invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date
     end
   end
 end
