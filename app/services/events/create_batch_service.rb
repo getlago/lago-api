@@ -2,21 +2,20 @@
 
 module Events
   class CreateBatchService < BaseService
-    ALL_REQUIRED_PARAMS = %i[transaction_id code external_subscription_ids].freeze
+    def validate_params(organization:, params:)
+      Events::ValidateCreationService.call(
+        organization:,
+        params:,
+        customer: customer(organization:, params:),
+        result:,
+        batch: true,
+      )
 
-    def validate_params(params:)
-      params_errors = ALL_REQUIRED_PARAMS.each_with_object({}) do |key, errors|
-        errors[key] = ['value_is_mandatory'] if params[key].blank?
-      end
-      return result if params_errors.blank?
-
-      result.validation_failure!(errors: params_errors)
+      result
     end
 
     def call(organization:, params:, timestamp:, metadata:)
-      customer = organization.subscriptions.find_by(
-        external_id: params[:external_subscription_ids]&.first,
-      )&.customer
+      customer = customer(organization:, params:)
 
       Events::ValidateCreationService.call(
         organization: organization,
@@ -78,6 +77,14 @@ module Events
 
       service_result = persisted_service.call
       service_result.raise_if_error!
+    end
+
+    private
+
+    def customer(organization:, params:)
+      organization.subscriptions.find_by(
+        external_id: params[:external_subscription_ids]&.first,
+      )&.customer
     end
   end
 end
