@@ -39,23 +39,17 @@ module V1
 
     def date_boundaries
       {
-        date_from:,
-        date_to:,
+        from_date:,
+        to_date:,
       }
     end
 
     def date_from
-      invoice = model.invoice
-      subscription = model.subscription
-
-      invoice.invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
+      model.properties['from_datetime'].to_datetime.iso8601
     end
 
     def date_to
-      invoice = model.invoice
-      subscription = model.subscription
-
-      invoice.invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date
+      model.properties['to_datetime'].to_datetime.iso8601
     end
   end
 end
