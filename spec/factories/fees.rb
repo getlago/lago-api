@@ -16,6 +16,21 @@ FactoryBot.define do
 
     vat_amount_cents { 2 }
     vat_amount_currency { 'EUR' }
+
+    trait :succeeded do
+      payment_status { :succeeded }
+      succeeded_at { Time.current }
+    end
+
+    trait :failed do
+      payment_status { :failed }
+      failed_at { Time.current }
+    end
+
+    trait :refunded do
+      payment_status { :refunded }
+      refunded_at { Time.current }
+    end
   end
 
   factory :charge_fee, parent: :fee do
