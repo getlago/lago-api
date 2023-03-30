@@ -420,6 +420,35 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
+      context 'when properties field_name value is not a number' do
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:params) do
+          {
+            code: billable_metric.code,
+            external_customer_id: customer.external_id,
+            external_subscription_ids: [subscription.external_id],
+            properties: {
+              item_id: 'test',
+            },
+          }
+        end
+
+        it 'returns an value_is_not_valid_number error' do
+          validate_event
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:properties)
+            expect(result.error.messages[:properties]).to include('value_is_not_valid_number')
+          end
+        end
+
+        it 'enqueues a SendWebhookJob' do
+          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
       context 'when event belongs to a recurring persisted metric' do
         let(:billable_metric) do
           create(
