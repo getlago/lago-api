@@ -112,6 +112,31 @@ RSpec.describe Events::CreateBatchService, type: :service do
         end
       end
     end
+
+    context 'with invalid properties' do
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+      let(:event_arguments) do
+        {
+          transaction_id: SecureRandom.uuid,
+          external_subscription_ids: [subscription.external_id, subscription2.external_id],
+          code: billable_metric.code,
+          properties: {
+            item_id: 'test',
+          },
+        }
+      end
+
+      it 'returns an error' do
+        result = create_batch_service.validate_params(organization:, params: event_arguments)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:properties)
+          expect(result.error.messages[:properties]).to include('value_is_not_valid_number')
+        end
+      end
+    end
   end
 
   describe '#call' do

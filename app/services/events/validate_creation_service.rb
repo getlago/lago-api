@@ -32,6 +32,7 @@ module Events
       end
       return missing_subscription_error if invalid_subscriptions.present?
       return invalid_code_error unless valid_code?
+      return invalid_properties_error unless valid_properties?
 
       invalid_persisted_events = params[:external_subscription_ids]
         .map { |external_id| organization.subscriptions.find_by(external_id:) }
