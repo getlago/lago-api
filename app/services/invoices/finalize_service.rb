@@ -11,7 +11,7 @@ module Invoices
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
 
       ActiveRecord::Base.transaction do
-        result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
+        self.result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         result.raise_if_error!
 
         invoice.update!(status: :finalized, issuing_date:)
@@ -19,7 +19,7 @@ module Invoices
         invoice.credit_notes.each(&:finalized!)
       end
 
-      SendWebhookJob.perform_later('invoice.created', invoice) if invoice.organization.webhook_url?
+      SendWebhookJob.perform_later('invoice.created', result.invoice) if invoice.organization.webhook_url?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
       track_invoice_created(invoice)
@@ -34,7 +34,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice
+    attr_accessor :invoice, :result
 
     def issuing_date
       @issuing_date ||= Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date
