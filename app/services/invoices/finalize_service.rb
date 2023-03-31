@@ -16,19 +16,20 @@ module Invoices
 
         invoice.update!(status: :finalized, issuing_date:)
 
-        SendWebhookJob.perform_later('invoice.created', invoice) if invoice.organization.webhook_url?
-        InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
-        Invoices::Payments::CreateService.new(invoice).call
-        track_invoice_created(invoice)
-
-        invoice.credit_notes.each do |credit_note|
-          credit_note.finalized!
-          track_credit_note_created(credit_note)
-          SendWebhookJob.perform_later('credit_note.created', credit_note)
-        end
-
-        result
+        invoice.credit_notes.each(&:finalized!)
       end
+
+      SendWebhookJob.perform_later('invoice.created', invoice) if invoice.organization.webhook_url?
+      InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+      Invoices::Payments::CreateService.new(invoice).call
+      track_invoice_created(invoice)
+
+      invoice.credit_notes.each do |credit_note|
+        track_credit_note_created(credit_note)
+        SendWebhookJob.perform_later('credit_note.created', credit_note)
+      end
+
+      result
     end
 
     private
