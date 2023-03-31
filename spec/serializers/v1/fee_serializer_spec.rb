@@ -5,7 +5,15 @@ require 'rails_helper'
 RSpec.describe ::V1::FeeSerializer do
   subject(:serializer) { described_class.new(fee, root_name: 'fee') }
 
-  let(:fee) { create(:fee) }
+  let(:fee) do
+    create(
+      :fee,
+      properties: {
+        from_datetime: Time.current,
+        to_datetime: Time.current,
+      },
+    )
+  end
 
   let(:result) { JSON.parse(serializer.to_json) }
 
@@ -35,6 +43,39 @@ RSpec.describe ::V1::FeeSerializer do
         'lago_item_id' => fee.item_id,
         'item_type' => fee.item_type,
       )
+
+      expect(result['fee']['from_date']).not_to be_nil
+      expect(result['fee']['to_date']).not_to be_nil
+    end
+  end
+
+  context 'when fee is charge' do
+    let(:charge) { create(:standard_charge) }
+    let(:fee) do
+      create(
+        :fee,
+        fee_type: 'charge',
+        charge:,
+        properties: {
+          from_datetime: Time.current,
+          to_datetime: Time.current,
+        },
+      )
+    end
+
+    it 'serializes the fees with dates boundaries' do
+      expect(result['fee']['from_date']).not_to be_nil
+      expect(result['fee']['to_date']).not_to be_nil
+    end
+  end
+
+  context 'when fee is add_on' do
+    let(:add_on) { create(:add_on) }
+    let(:fee) { create(:fee, fee_type: 'add_on', add_on:) }
+
+    it 'does not serializes the fees with date boundaries' do
+      expect(result['fee']['from_date']).to be_nil
+      expect(result['fee']['to_date']).to be_nil
     end
   end
 end
