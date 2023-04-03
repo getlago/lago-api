@@ -12,7 +12,7 @@ module V1
         name: model.name,
         rate_amount: model.rate_amount,
         credits_balance: model.credits_balance,
-        balance: model.balance,
+        balance_cents: model.balance_cents,
         consumed_credits: model.consumed_credits,
         created_at: model.created_at&.iso8601,
         expiration_at: model.expiration_at&.iso8601,

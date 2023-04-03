@@ -5161,12 +5161,15 @@ input VolumeRangeInput {
   toValue: BigInt
 }
 
+"""
+Wallet
+"""
 type Wallet {
-  balance: String!
-  consumedAmount: String!
-  consumedCredits: String!
+  balanceCents: BigInt!
+  consumedAmountCents: BigInt!
+  consumedCredits: Float!
   createdAt: ISO8601DateTime!
-  creditsBalance: String!
+  creditsBalance: Float!
   currency: CurrencyEnum!
   customer: Customer
   expirationAt: ISO8601DateTime
@@ -5174,7 +5177,7 @@ type Wallet {
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
   name: String
-  rateAmount: String!
+  rateAmount: Float!
   status: WalletStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!

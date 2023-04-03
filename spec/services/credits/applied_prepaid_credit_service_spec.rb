@@ -3,22 +3,22 @@
 require 'rails_helper'
 
 RSpec.describe Credits::AppliedPrepaidCreditService do
-  subject(:credit_service) { described_class.new(invoice: invoice, wallet: wallet) }
+  subject(:credit_service) { described_class.new(invoice:, wallet:) }
 
   let(:invoice) do
     create(
       :invoice,
-      customer: customer,
-      amount_cents: amount_cents,
+      customer:,
+      amount_cents:,
       amount_currency: 'EUR',
       total_amount_cents: amount_cents,
       total_amount_currency: 'EUR',
     )
   end
   let(:amount_cents) { 100 }
-  let(:wallet) { create(:wallet, customer: customer, balance: 10.00, credits_balance: 10.00) }
+  let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0) }
   let(:customer) { create(:customer) }
-  let(:subscription) { create(:subscription, customer: customer) }
+  let(:subscription) { create(:subscription, customer:) }
 
   before { subscription }
 
@@ -42,7 +42,7 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       result = credit_service.create
       wallet = result.wallet_transaction.wallet
 
-      expect(wallet.balance).to eq(9.0)
+      expect(wallet.balance_cents).to eq(900)
       expect(wallet.credits_balance).to eq(9.0)
     end
 

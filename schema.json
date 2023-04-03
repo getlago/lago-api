@@ -20188,21 +20188,21 @@
         {
           "kind": "OBJECT",
           "name": "Wallet",
-          "description": null,
+          "description": "Wallet",
           "interfaces": [
 
           ],
           "possibleTypes": null,
           "fields": [
             {
-              "name": "balance",
+              "name": "balanceCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -20213,14 +20213,14 @@
               ]
             },
             {
-              "name": "consumedAmount",
+              "name": "consumedAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -20238,7 +20238,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "Float",
                   "ofType": null
                 }
               },
@@ -20274,7 +20274,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "Float",
                   "ofType": null
                 }
               },
@@ -20398,7 +20398,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "Float",
                   "ofType": null
                 }
               },
