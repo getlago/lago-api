@@ -9,12 +9,7 @@ module Mutations
       graphql_name 'CreateSubscription'
       description 'Create a new Subscription'
 
-      argument :customer_id, ID, required: true
-      argument :plan_id, ID, required: true
-      argument :name, String, required: false
-      argument :subscription_id, ID, required: false
-      argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
-      argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
+      input_object_class Types::Subscriptions::CreateSubscriptionInput
 
       type Types::Subscriptions::Object
 
@@ -34,7 +29,7 @@ module Mutations
         result = ::Subscriptions::CreateService.call(
           customer:,
           plan:,
-          params: args.merge(external_id: SecureRandom.uuid),
+          params: args.merge(external_id: args[:external_id] || SecureRandom.uuid),
         )
 
         result.success? ? result.subscription : result_error(result)

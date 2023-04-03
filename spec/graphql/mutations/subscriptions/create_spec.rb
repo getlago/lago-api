@@ -14,6 +14,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           id
           status
           name
+          externalId
           startedAt
           billingTime
           subscriptionAt
@@ -38,6 +39,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           customerId: customer.id,
           planId: plan.id,
           name: 'invoice display name',
+          externalId: 'custom-external-id',
           billingTime: 'anniversary',
         },
       },
@@ -49,6 +51,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['status'].to_sym).to eq(:active)
       expect(result_data['name']).to eq('invoice display name')
+      expect(result_data['externalId']).to eq('custom-external-id')
       expect(result_data['startedAt']).to be_present
       expect(result_data['customer']['id']).to eq(customer.id)
       expect(result_data['plan']['id']).to eq(plan.id)
