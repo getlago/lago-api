@@ -5,6 +5,7 @@ module Types
     class CreateSubscriptionInput < BaseInputObject
       description 'Create Subscription input arguments'
 
+      argument :external_id, String, required: false
       argument :name, String, required: false
       argument :subscription_id, ID, required: false
 
