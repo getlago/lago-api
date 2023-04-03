@@ -33,7 +33,7 @@ module Coupons
       ActiveRecord::Base.transaction do
         coupon.save!
 
-        plans.each { |plan| CouponPlan.create!(coupon:, plan:) } if plan_identifiers.present?
+        plans.each { |plan| CouponTarget.create!(coupon:, plan:) } if plan_identifiers.present?
       end
 
       result.coupon = coupon

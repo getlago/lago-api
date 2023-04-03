@@ -11,6 +11,8 @@ class BillableMetric < ApplicationRecord
   has_many :groups, dependent: :delete_all
   has_many :plans, through: :charges
   has_many :persisted_events
+  has_many :coupon_targets
+  has_many :coupons, through: :coupon_targets
 
   AGGREGATION_TYPES = %i[
     count_agg

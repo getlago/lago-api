@@ -138,9 +138,9 @@ RSpec.describe Coupons::CreateService, type: :service do
           .to change(Coupon, :count).by(1)
       end
 
-      it 'creates a coupon plan' do
+      it 'creates a coupon target' do
         expect { create_service.create(**create_args) }
-          .to change(CouponPlan, :count).by(1)
+          .to change(CouponTarget, :count).by(1)
       end
     end
 
@@ -171,9 +171,9 @@ RSpec.describe Coupons::CreateService, type: :service do
           .to change(Coupon, :count).by(1)
       end
 
-      it 'creates a coupon plan' do
+      it 'creates a coupon target' do
         expect { create_service.create(**create_args) }
-          .to change(CouponPlan, :count).by(1)
+          .to change(CouponTarget, :count).by(1)
       end
     end
   end

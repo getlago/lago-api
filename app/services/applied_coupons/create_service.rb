@@ -75,8 +75,8 @@ module AppliedCoupons
       customer
         .applied_coupons
         .active
-        .joins(coupon: :coupon_plans)
-        .where(coupon_plans: { plan_id: coupon.coupon_plans.select(:plan_id) })
+        .joins(coupon: :coupon_targets)
+        .where(coupon_targets: { plan_id: coupon.coupon_targets.select(:plan_id) })
         .exists?
     end
 

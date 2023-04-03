@@ -10,8 +10,9 @@ class Coupon < ApplicationRecord
 
   has_many :applied_coupons
   has_many :customers, through: :applied_coupons
-  has_many :coupon_plans
-  has_many :plans, through: :coupon_plans
+  has_many :coupon_targets
+  has_many :plans, through: :coupon_targets
+  has_many :billable_metrics, through: :coupon_targets
 
   STATUSES = [
     :active,

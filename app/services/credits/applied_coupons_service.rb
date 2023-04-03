@@ -52,7 +52,7 @@ module Credits
     end
 
     def coupon_fees(applied_coupon)
-      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_plans.select(:plan_id) })
+      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_targets.select(:plan_id) })
     end
 
     def coupon_base_amount_cents(coupon_related_fees:)

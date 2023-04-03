@@ -12,7 +12,7 @@ module Coupons
 
       ActiveRecord::Base.transaction do
         coupon.discard!
-        coupon.coupon_plans.discard_all
+        coupon.coupon_targets.discard_all
 
         coupon.applied_coupons.active.each do |applied_coupon|
           AppliedCoupons::TerminateService.call(applied_coupon:)
