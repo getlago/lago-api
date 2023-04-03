@@ -50,9 +50,11 @@ class BillingService
     # NOTE: Prevent double billing by excluding subscription already billed
     #       or started today
     sql_ids = Subscription.where("subscriptions.id in (#{sql.join(' UNION ')})")
-      .joins(customer: :organization)
+      .joins(customer: :organization) \
+      # NOTE: exclude subscription that have already been billed today
       .joins("LEFT JOIN (#{already_billed_filter_sql}) insub ON insub.subscription_id = subscriptions.id")
-      .where(insub: { invoiced_count: nil })
+      .where(insub: { invoiced_count: nil }) \
+      # NOTE: Do not bill subscriptions that started this day, they are billed by another job
       .where.not("DATE(#{Subscription.started_at_in_timezone_sql}) = ?", today.to_date)
       .group(:id)
       .select(:id)
