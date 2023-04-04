@@ -159,10 +159,10 @@ class BillingService
       .to_sql
   end
 
-  def today_shift_sql
+  def today_shift_sql(customer: 'customers', organization: 'organizations')
     <<-SQL
       ?::timestamptz AT TIME ZONE
-      COALESCE(customers.timezone, organizations.timezone, 'UTC')
+      COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
     SQL
   end
 
@@ -183,7 +183,10 @@ class BillingService
       .joins('INNER JOIN customers AS cus ON sub.customer_id = cus.id')
       .joins('INNER JOIN organizations AS org ON cus.organization_id = org.id')
       .where("invoice_subscriptions.properties->>'timestamp' IS NOT NULL")
-      .where("DATE(#{Arel.sql(timestamp_condition)}) = DATE(?)", today.to_date)
+      .where(
+        "DATE(#{Arel.sql(timestamp_condition)}) = DATE(#{today_shift_sql(customer: 'cus', organization: 'org')})",
+        today,
+      )
       .recurring
       .group(:subscription_id)
       .select('invoice_subscriptions.subscription_id, COUNT(invoice_subscriptions.id) AS invoiced_count')
