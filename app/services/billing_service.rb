@@ -50,9 +50,11 @@ class BillingService
     # NOTE: Prevent double billing by excluding subscription already billed
     #       or started today
     sql_ids = Subscription.where("subscriptions.id in (#{sql.join(' UNION ')})")
-      .joins(customer: :organization)
+      .joins(customer: :organization) \
+      # NOTE: exclude subscription that have already been billed today
       .joins("LEFT JOIN (#{already_billed_filter_sql}) insub ON insub.subscription_id = subscriptions.id")
-      .where(insub: { invoiced_count: nil })
+      .where(insub: { invoiced_count: nil }) \
+      # NOTE: Do not bill subscriptions that started this day, they are billed by another job
       .where.not("DATE(#{Subscription.started_at_in_timezone_sql}) = ?", today.to_date)
       .group(:id)
       .select(:id)
@@ -157,10 +159,10 @@ class BillingService
       .to_sql
   end
 
-  def today_shift_sql
+  def today_shift_sql(customer: 'customers', organization: 'organizations')
     <<-SQL
       ?::timestamptz AT TIME ZONE
-      COALESCE(customers.timezone, organizations.timezone, 'UTC')
+      COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
     SQL
   end
 
@@ -181,7 +183,10 @@ class BillingService
       .joins('INNER JOIN customers AS cus ON sub.customer_id = cus.id')
       .joins('INNER JOIN organizations AS org ON cus.organization_id = org.id')
       .where("invoice_subscriptions.properties->>'timestamp' IS NOT NULL")
-      .where("DATE(#{Arel.sql(timestamp_condition)}) = DATE(?)", today.to_date)
+      .where(
+        "DATE(#{Arel.sql(timestamp_condition)}) = DATE(#{today_shift_sql(customer: 'cus', organization: 'org')})",
+        today,
+      )
       .recurring
       .group(:subscription_id)
       .select('invoice_subscriptions.subscription_id, COUNT(invoice_subscriptions.id) AS invoiced_count')
