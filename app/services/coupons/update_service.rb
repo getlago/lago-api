@@ -30,9 +30,9 @@ module Coupons
         end
 
         if (coupon.billable_metrics.exists? && plans.present?) ||
-         (coupon.plans.exists? && billable_metrics.present?) ||
-         (billable_metrics.present? && plans.present?)
-         return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
+           (coupon.plans.exists? && billable_metrics.present?) ||
+           (billable_metrics.present? && plans.present?)
+          return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
         end
 
         coupon.code = params[:code] if params.key?(:code)
