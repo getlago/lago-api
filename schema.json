@@ -11716,7 +11716,7 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "planIds",
+              "name": "billableMetricIds",
               "description": null,
               "type": {
                 "kind": "LIST",
@@ -11736,7 +11736,7 @@
               "deprecationReason": null
             },
             {
-              "name": "billableMetricIds",
+              "name": "planIds",
               "description": null,
               "type": {
                 "kind": "LIST",
