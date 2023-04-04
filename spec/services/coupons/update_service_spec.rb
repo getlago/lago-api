@@ -71,8 +71,8 @@ RSpec.describe Coupons::UpdateService, type: :service do
         coupon_plan
       end
 
-      it 'creates new coupon plans' do
-        expect { update_service.call }.to change(CouponPlan, :count).by(1)
+      it 'creates new coupon target' do
+        expect { update_service.call }.to change(CouponTarget, :count).by(1)
       end
 
       context 'with API context' do
@@ -80,8 +80,8 @@ RSpec.describe Coupons::UpdateService, type: :service do
 
         let(:applies_to) { { plan_codes: [plan.code, plan_second.code] } }
 
-        it 'creates new coupon plans using plan code' do
-          expect { update_service.call }.to change(CouponPlan, :count).by(1)
+        it 'creates new coupon target using plan code' do
+          expect { update_service.call }.to change(CouponTarget, :count).by(1)
         end
       end
     end
@@ -98,7 +98,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       end
 
       it 'deletes a coupon plan' do
-        expect { update_service.call }.to change(CouponPlan, :count).by(-1)
+        expect { update_service.call }.to change(CouponTarget, :count).by(-1)
       end
     end
 

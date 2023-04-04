@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_03_28_161507) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_03_094044) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -118,15 +118,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_28_161507) do
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
 
-  create_table "coupon_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "coupon_targets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "coupon_id", null: false
-    t.uuid "plan_id", null: false
+    t.uuid "plan_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
-    t.index ["coupon_id"], name: "index_coupon_plans_on_coupon_id"
-    t.index ["deleted_at"], name: "index_coupon_plans_on_deleted_at"
-    t.index ["plan_id"], name: "index_coupon_plans_on_plan_id"
+    t.uuid "billable_metric_id"
+    t.index ["billable_metric_id"], name: "index_coupon_targets_on_billable_metric_id"
+    t.index ["coupon_id"], name: "index_coupon_targets_on_coupon_id"
+    t.index ["deleted_at"], name: "index_coupon_targets_on_deleted_at"
+    t.index ["plan_id"], name: "index_coupon_targets_on_plan_id"
   end
 
   create_table "coupons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -148,6 +150,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_28_161507) do
     t.boolean "reusable", default: true, null: false
     t.boolean "limited_plans", default: false, null: false
     t.datetime "deleted_at"
+    t.boolean "limited_billable_metrics", default: false, null: false
     t.index ["deleted_at"], name: "index_coupons_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
@@ -638,8 +641,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_28_161507) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
-  add_foreign_key "coupon_plans", "coupons"
-  add_foreign_key "coupon_plans", "plans"
+  add_foreign_key "coupon_targets", "billable_metrics"
+  add_foreign_key "coupon_targets", "coupons"
+  add_foreign_key "coupon_targets", "plans"
   add_foreign_key "credit_note_items", "credit_notes"
   add_foreign_key "credit_note_items", "fees"
   add_foreign_key "credit_notes", "customers"

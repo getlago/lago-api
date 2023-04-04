@@ -65,22 +65,22 @@ module Coupons
     end
 
     def process_plans
-      existing_coupon_plan_ids = coupon.coupon_plans.pluck(:plan_id)
+      existing_coupon_plan_ids = coupon.coupon_targets.pluck(:plan_id)
 
       plans.each do |plan|
         next if existing_coupon_plan_ids.include?(plan.id)
 
-        CouponPlan.create!(coupon:, plan:)
+        CouponTarget.create!(coupon:, plan:)
       end
 
       sanitize_coupon_plans
     end
 
     def sanitize_coupon_plans
-      not_needed_coupon_plan_ids = coupon.coupon_plans.pluck(:plan_id) - plans.pluck(:id)
+      not_needed_coupon_plan_ids = coupon.coupon_targets.pluck(:plan_id) - plans.pluck(:id)
 
       not_needed_coupon_plan_ids.each do |coupon_plan_id|
-        CouponPlan.find_by(coupon:, plan_id: coupon_plan_id).destroy!
+        CouponTarget.find_by(coupon:, plan_id: coupon_plan_id).destroy!
       end
     end
 
