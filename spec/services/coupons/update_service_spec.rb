@@ -102,6 +102,88 @@ RSpec.describe Coupons::UpdateService, type: :service do
       end
     end
 
+    context 'with new billable metric limitations' do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:billable_metric_second) { create(:billable_metric, organization:) }
+      let(:coupon_billable_metric) { create(:coupon_billable_metric, coupon:, billable_metric:) }
+      let(:applies_to) { { billable_metric_ids: [billable_metric.id, billable_metric_second.id] } }
+
+      before do
+        CurrentContext.source = 'graphql'
+
+        billable_metric_second
+        coupon_billable_metric
+      end
+
+      it 'creates new coupon target' do
+        expect { update_service.call }.to change(CouponTarget, :count).by(1)
+      end
+
+      context 'with API context' do
+        before { CurrentContext.source = 'api' }
+
+        let(:applies_to) { { billable_metric_codes: [billable_metric.code, billable_metric_second.code] } }
+
+        it 'creates new coupon target using billable metric code' do
+          expect { update_service.call }.to change(CouponTarget, :count).by(1)
+        end
+      end
+
+      context 'with multiple limitation types' do
+        let(:plan) { create(:plan, organization:) }
+        let(:applies_to) do
+          {
+            billable_metric_ids: [billable_metric.id, billable_metric_second.id],
+            plan_ids: [plan.id],
+          }
+        end
+
+        it 'returns an error' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq('only_one_limitation_type_per_coupon_allowed')
+          end
+        end
+      end
+
+      context 'with invalid billable metric' do
+        let(:applies_to) do
+          {
+            billable_metric_ids: [billable_metric.id, billable_metric_second.id, 'invalid'],
+          }
+        end
+
+        it 'returns an error' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('billable_metrics_not_found')
+          end
+        end
+      end
+    end
+
+    context 'with coupon billable metrics to delete' do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:coupon_billable_metric) { create(:coupon_billable_metric, coupon:, billable_metric:) }
+      let(:applies_to) { { plan_ids: [] } }
+
+      before do
+        CurrentContext.source = 'graphql'
+
+        coupon_billable_metric
+      end
+
+      it 'deletes a coupon billable metric' do
+        expect { update_service.call }.to change(CouponTarget, :count).by(-1)
+      end
+    end
+
     context 'when coupon is not found' do
       let(:coupon) { nil }
 

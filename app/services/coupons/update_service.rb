@@ -18,10 +18,21 @@ module Coupons
       coupon.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
 
       @limitations = params[:applies_to]&.to_h&.deep_symbolize_keys || {}
+      coupon_already_applied = coupon.applied_coupons.exists?
 
-      unless coupon.applied_coupons.exists?
+      unless coupon_already_applied
         if !plan_identifiers.nil? && plans.count != plan_identifiers.count
           return result.not_found_failure!(resource: 'plans')
+        end
+
+        if !billable_metric_identifiers.nil? && billable_metrics.count != billable_metric_identifiers.count
+          return result.not_found_failure!(resource: 'billable_metrics')
+        end
+
+        if (coupon.billable_metrics.exists? && plans.present?) ||
+         (coupon.plans.exists? && billable_metrics.present?) ||
+         (billable_metrics.present? && plans.present?)
+         return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
         end
 
         coupon.code = params[:code] if params.key?(:code)
@@ -33,12 +44,14 @@ module Coupons
         coupon.frequency_duration = params[:frequency_duration] if params.key?(:frequency_duration)
         coupon.reusable = params[:reusable] if params.key?(:reusable)
         coupon.limited_plans = plan_identifiers.present? unless plan_identifiers.nil?
+        coupon.limited_billable_metrics = billable_metric_identifiers.present? unless billable_metric_identifiers.nil?
       end
 
       ActiveRecord::Base.transaction do
         coupon.save!
 
-        process_plans unless plan_identifiers.nil? || coupon.applied_coupons.exists?
+        process_plans unless plan_identifiers.nil? || coupon_already_applied
+        process_billable_metrics unless billable_metric_identifiers.nil? || coupon_already_applied
       end
 
       result.coupon = coupon
@@ -81,6 +94,41 @@ module Coupons
 
       not_needed_coupon_plan_ids.each do |coupon_plan_id|
         CouponTarget.find_by(coupon:, plan_id: coupon_plan_id).destroy!
+      end
+    end
+
+    def billable_metric_identifiers
+      key = api_context? ? :billable_metric_codes : :billable_metric_ids
+      limitations[key]&.compact&.uniq
+    end
+
+    def billable_metrics
+      return @billable_metrics if defined? @billable_metrics
+      return [] if billable_metric_identifiers.blank?
+
+      finder = api_context? ? :code : :id
+      @billable_metrics =
+        BillableMetric.where(finder => billable_metric_identifiers, organization_id: coupon.organization_id)
+    end
+
+    def process_billable_metrics
+      existing_coupon_billable_metric_ids = coupon.coupon_targets.pluck(:billable_metric_id)
+
+      billable_metrics.each do |billable_metric|
+        next if existing_coupon_billable_metric_ids.include?(billable_metric.id)
+
+        CouponTarget.create!(coupon:, billable_metric:)
+      end
+
+      sanitize_coupon_billable_metrics
+    end
+
+    def sanitize_coupon_billable_metrics
+      not_needed_coupon_billable_metric_ids =
+        coupon.coupon_targets.pluck(:billable_metric_id) - billable_metrics.pluck(:id)
+
+      not_needed_coupon_billable_metric_ids.each do |coupon_billable_metric_id|
+        CouponTarget.find_by(coupon:, billable_metric_id: coupon_billable_metric_id).destroy!
       end
     end
 

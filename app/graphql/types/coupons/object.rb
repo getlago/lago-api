@@ -23,7 +23,9 @@ module Types
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :limited_plans, Boolean, null: false
+      field :limited_billable_metrics, Boolean, null: false
       field :plans, [Types::Plans::Object]
+      field :billable_metrics, [Types::BillableMetrics::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
