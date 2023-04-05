@@ -72,40 +72,31 @@ module AppliedCoupons
     def plan_limitation_overlapping?
       return false if !coupon.limited_plans? && !coupon.limited_billable_metrics?
 
-      applied_coupons = customer
+      relation = customer
         .applied_coupons
         .active
         .joins(coupon: :coupon_targets)
 
-      applied_coupons
+      relation
         .where(coupon_targets: { plan_id: coupon.coupon_targets.select(:plan_id) })
-        .or(
-          applied_coupons
-            .where(coupon_targets: { billable_metric_id: coupon.coupon_targets.select(:billable_metric_id) })
-        )
-        .or(
-          applied_coupons
-            .where(coupon_targets: {
-              plan_id:
-                Charge
-                  .joins(:billable_metric)
-                  .where(billable_metric: { id: coupon.coupon_targets.select(:billable_metric_id) })
-                  .select(:plan_id)
-              }
-            )
-        )
-        .or(
-          applied_coupons
-            .where(coupon_targets: {
-              billable_metric_id:
-                Charge
-                  .joins(:plan)
-                  .where(plan: { id: coupon.coupon_targets.select(:plan_id) })
-                  .select(:billable_metric_id)
-              }
-            )
-        )
+        .or(relation.where(coupon_targets: { billable_metric_id: coupon.coupon_targets.select(:billable_metric_id) }))
+        .or(relation.where(coupon_targets: { plan_id: plans_from_billable_metric_limitations }))
+        .or(relation.where(coupon_targets: { billable_metric_id: billable_metrics_from_plan_limitations }))
         .exists?
+    end
+
+    def billable_metrics_from_plan_limitations
+      Charge
+        .joins(:plan)
+        .where(plan: { id: coupon.coupon_targets.select(:plan_id) })
+        .select(:billable_metric_id)
+    end
+
+    def plans_from_billable_metric_limitations
+      Charge
+        .joins(:billable_metric)
+        .where(billable_metric: { id: coupon.coupon_targets.select(:billable_metric_id) })
+        .select(:plan_id)
     end
 
     def track_applied_coupon_created(applied_coupon)
