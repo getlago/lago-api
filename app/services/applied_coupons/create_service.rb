@@ -70,13 +70,41 @@ module AppliedCoupons
     end
 
     def plan_limitation_overlapping?
-      return false unless coupon.limited_plans?
+      return false if !coupon.limited_plans? && !coupon.limited_billable_metrics?
 
-      customer
+      applied_coupons = customer
         .applied_coupons
         .active
         .joins(coupon: :coupon_targets)
+
+      applied_coupons
         .where(coupon_targets: { plan_id: coupon.coupon_targets.select(:plan_id) })
+        .or(
+          applied_coupons
+            .where(coupon_targets: { billable_metric_id: coupon.coupon_targets.select(:billable_metric_id) })
+        )
+        .or(
+          applied_coupons
+            .where(coupon_targets: {
+              plan_id:
+                Charge
+                  .joins(:billable_metric)
+                  .where(billable_metric: { id: coupon.coupon_targets.select(:billable_metric_id) })
+                  .select(:plan_id)
+              }
+            )
+        )
+        .or(
+          applied_coupons
+            .where(coupon_targets: {
+              billable_metric_id:
+                Charge
+                  .joins(:plan)
+                  .where(plan: { id: coupon.coupon_targets.select(:plan_id) })
+                  .select(:billable_metric_id)
+              }
+            )
+        )
         .exists?
     end
 
