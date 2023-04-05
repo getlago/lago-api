@@ -6,6 +6,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
   let(:organization) { create(:organization) }
 
   describe 'create' do
+    let(:billable_metric) { create(:billable_metric, organization:) }
     let(:expiration_at) { Time.current + 15.days }
 
     let(:create_params) do
@@ -19,6 +20,9 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         expiration: 'time_limit',
         expiration_at: expiration_at,
         reusable: false,
+        applies_to: {
+          billable_metric_codes: [billable_metric.code],
+        },
       }
     end
 
@@ -32,6 +36,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       expect(json[:coupon][:created_at]).to be_present
       expect(json[:coupon][:expiration_at]).to eq(expiration_at.iso8601)
       expect(json[:coupon][:reusable]).to eq(false)
+      expect(json[:coupon][:limited_billable_metrics]).to eq(true)
+      expect(json[:coupon][:billable_metric_codes].first).to eq(billable_metric.code)
     end
 
     context 'with expiration date input' do
