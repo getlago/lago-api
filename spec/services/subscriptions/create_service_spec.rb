@@ -137,10 +137,19 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
+    context 'when plan is pay_in_advance but subscription is not active' do
+      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
+      let(:subscription_at) { Time.current + 1.hour }
+
+      it 'does not enqueue a job to bill the subscription' do
+        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+      end
+    end
+
     context 'when plan is pay_in_advance and subscription_at is current date' do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
-      it 'enqueued a job to bill the subscription' do
+      it 'enqueues a job to bill the subscription' do
         expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
       end
     end
@@ -149,7 +158,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
       let(:subscription_at) { Time.current + 5.days }
 
-      it 'did not enqueue a job to bill the subscription' do
+      it 'does not enqueue a job to bill the subscription' do
         expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
       end
     end
@@ -317,7 +326,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
       end
 
-      # =========================>
       context 'when plan is not the same' do
         context 'when we upgrade the plan' do
           let(:plan) { create(:plan, amount_cents: 200, organization:) }

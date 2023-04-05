@@ -94,7 +94,7 @@ module Subscriptions
         new_subscription.mark_as_active!
       end
 
-      if plan.pay_in_advance? && new_subscription.subscription_at.today?
+      if new_subscription.active? && new_subscription.subscription_at.today? && plan.pay_in_advance?
         # NOTE: Since job is laucnhed from inside a db transaction
         #       we must wait for it to be commited before processing the job
         BillSubscriptionJob
