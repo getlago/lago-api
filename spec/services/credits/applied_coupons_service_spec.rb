@@ -32,6 +32,7 @@ RSpec.describe Credits::AppliedCouponsService do
 
   describe '#create' do
     let(:timestamp) { Time.zone.now.beginning_of_month }
+    let(:fee) { create(:fee, invoice:, subscription:) }
     let(:applied_coupon) do
       create(
         :applied_coupon,
@@ -55,7 +56,7 @@ RSpec.describe Credits::AppliedCouponsService do
 
     before do
       create(:invoice_subscription, invoice:, subscription:)
-      create(:fee, invoice:, subscription:)
+      fee
       applied_coupon
       applied_coupon_latest
     end
@@ -261,6 +262,89 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.total_amount_cents).to eq(90)
+          expect(result.invoice.credits.count).to eq(2)
+        end
+      end
+    end
+
+    context 'when there is combination of coupon limited to plans and coupon limited to billable metrics' do
+      let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+      let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
+      let(:applied_coupon) do
+        create(
+          :applied_coupon,
+          coupon:,
+          customer: subscription.customer,
+          amount_cents: 82,
+          amount_currency: plan.amount_currency,
+        )
+      end
+      let(:coupon_middle) { create(:coupon, coupon_type: 'fixed_amount', limited_billable_metrics: true) }
+      let(:billable_metric) { create(:billable_metric, organization: invoice.organization) }
+      let(:charge) { create(:standard_charge, billable_metric:) }
+      let(:coupon_bm_middle) do
+        create(:coupon_billable_metric, coupon: coupon_middle, billable_metric:)
+      end
+      let(:applied_coupon_middle) do
+        create(
+          :applied_coupon,
+          coupon: coupon_middle,
+          customer: subscription.customer,
+          amount_cents: 5,
+          amount_currency: plan.amount_currency,
+          created_at: applied_coupon.created_at + 2.hours,
+        )
+      end
+      let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+      let(:coupon_plan_latest) { create(:coupon_plan, coupon: coupon_latest, plan: create(:plan)) }
+      let(:applied_coupon_latest) do
+        create(
+          :applied_coupon,
+          coupon: coupon_latest,
+          customer: subscription.customer,
+          amount_cents: 20,
+          amount_currency: plan.amount_currency,
+          created_at: applied_coupon.created_at + 1.day,
+        )
+      end
+      let(:fee_middle) do
+        create(
+          :fee,
+          invoice:,
+          charge:,
+          amount_cents: 12,
+          amount_currency: 'EUR',
+          vat_amount_cents: 3,
+          vat_amount_currency: 'EUR',
+        )
+      end
+      let(:fee) do
+        create(
+          :fee,
+          invoice:,
+          subscription:,
+          amount_cents: 75,
+          amount_currency: 'EUR',
+          vat_amount_cents: 5,
+          vat_amount_currency: 'EUR',
+        )
+      end
+
+      before do
+        coupon_plan
+        coupon_plan_latest
+        charge
+        coupon_bm_middle
+        applied_coupon_middle
+        fee_middle
+      end
+
+      it 'applies two coupons' do
+        result = credit_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.invoice.total_amount_cents).to eq(35)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
