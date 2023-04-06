@@ -18,18 +18,17 @@ module Credits
 
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransaction.create!(
-          invoice: invoice,
-          wallet: wallet,
+          invoice:,
+          wallet:,
           transaction_type: :outbound,
-          amount: amount,
-          credit_amount: credit_amount,
+          amount:,
+          credit_amount:,
           status: :settled,
           settled_at: Time.current,
         )
 
         result.wallet_transaction = wallet_transaction
-
-        Wallets::Balance::DecreaseService.new(wallet: wallet, credits_amount: credit_amount).call
+        Wallets::Balance::DecreaseService.new(wallet:, credits_amount: credit_amount).call
 
         result.prepaid_credit_amount_cents = amount_cents
       end
@@ -42,6 +41,8 @@ module Credits
     private
 
     attr_accessor :invoice, :wallet
+
+    delegate :balance_cents, to: :wallet
 
     def already_applied?
       invoice&.wallet_transactions&.exists?
@@ -57,14 +58,6 @@ module Credits
       currency = invoice.amount.currency
 
       amount.round.fdiv(currency.subunit_to_unit)
-    end
-
-    def balance_cents
-      balance = wallet.balance
-      currency = invoice.amount.currency
-      rounded_amount = balance.round(currency.exponent)
-
-      rounded_amount * currency.subunit_to_unit
     end
   end
 end

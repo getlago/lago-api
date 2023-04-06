@@ -6,7 +6,7 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
   let(:customer) { create(:customer) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
+  let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0) }
   let(:wallet_transaction) do
     create(:wallet_transaction, wallet:, amount: 15.0, credit_amount: 15.0, status: 'pending')
   end
@@ -30,7 +30,7 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
   it 'updates wallet balance' do
     described_class.perform_now(invoice)
 
-    expect(wallet.reload.balance).to eq 25.0
+    expect(wallet.reload.balance_cents).to eq(2500)
   end
 
   it 'settles the wallet transaction' do

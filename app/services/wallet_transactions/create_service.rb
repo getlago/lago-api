@@ -51,7 +51,7 @@ module WalletTransactions
 
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransaction.create!(
-          wallet: wallet,
+          wallet:,
           transaction_type: :inbound,
           amount: wallet.rate_amount * granted_credits_amount,
           credit_amount: granted_credits_amount,
@@ -59,7 +59,7 @@ module WalletTransactions
           settled_at: Time.current,
         )
 
-        Wallets::Balance::IncreaseService.new(wallet: wallet, credits_amount: granted_credits_amount).call
+        Wallets::Balance::IncreaseService.new(wallet:, credits_amount: granted_credits_amount).call
 
         wallet_transaction
       end

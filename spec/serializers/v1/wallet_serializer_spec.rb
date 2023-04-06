@@ -11,21 +11,28 @@ RSpec.describe ::V1::WalletSerializer do
     result = JSON.parse(serializer.to_json)
 
     aggregate_failures do
-      expect(result['wallet']['lago_id']).to eq(wallet.id)
-      expect(result['wallet']['lago_customer_id']).to eq(wallet.customer_id)
-      expect(result['wallet']['external_customer_id']).to eq(wallet.customer.external_id)
-      expect(result['wallet']['status']).to eq(wallet.status)
-      expect(result['wallet']['currency']).to eq(wallet.currency)
-      expect(result['wallet']['name']).to eq(wallet.name)
-      expect(result['wallet']['rate_amount']).to eq(wallet.rate_amount.to_s)
-      expect(result['wallet']['credits_balance']).to eq(wallet.credits_balance.to_s)
-      expect(result['wallet']['balance']).to eq(wallet.balance.to_s)
-      expect(result['wallet']['consumed_credits']).to eq(wallet.consumed_credits.to_s)
-      expect(result['wallet']['created_at']).to eq(wallet.created_at.iso8601)
-      expect(result['wallet']['expiration_at']).to eq(wallet.expiration_at&.iso8601)
-      expect(result['wallet']['last_balance_sync_at']).to eq(wallet.last_balance_sync_at&.iso8601)
-      expect(result['wallet']['last_consumed_credit_at']).to eq(wallet.last_consumed_credit_at&.iso8601)
-      expect(result['wallet']['terminated_at']).to eq(wallet.terminated_at)
+      expect(result['wallet']).to include(
+        'lago_id' => wallet.id,
+        'lago_customer_id' => wallet.customer_id,
+        'external_customer_id' => wallet.customer.external_id,
+        'status' => wallet.status,
+        'currency' => wallet.currency,
+        'name' => wallet.name,
+        'rate_amount' => wallet.rate_amount.to_s,
+        'created_at' => wallet.created_at.iso8601,
+        'expiration_at' => wallet.expiration_at&.iso8601,
+        'last_balance_sync_at' => wallet.last_balance_sync_at&.iso8601,
+        'last_consumed_credit_at' => wallet.last_consumed_credit_at&.iso8601,
+        'terminated_at' => wallet.terminated_at,
+        'credits_balance' => wallet.credits_balance.to_s,
+        'balance_cents' => wallet.balance_cents,
+        'consumed_credits' => wallet.consumed_credits.to_s,
+      )
+
+      # NOTE: legacy values
+      expect(result['wallet']).to include(
+        'balance' => wallet.balance.to_s,
+      )
     end
   end
 end
