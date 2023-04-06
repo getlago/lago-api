@@ -23,6 +23,7 @@ module Coupons
         expiration: args[:expiration]&.to_sym,
         expiration_at: args[:expiration_at],
         limited_plans: plan_identifiers.present?,
+        limited_billable_metrics: billable_metric_identifiers.present?,
         reusable: reusable,
       )
 
@@ -30,10 +31,22 @@ module Coupons
         return result.not_found_failure!(resource: 'plans')
       end
 
+      if billable_metric_identifiers.present? && billable_metrics.count != billable_metric_identifiers.count
+        return result.not_found_failure!(resource: 'billable_metrics')
+      end
+
+      if billable_metrics.present? && plans.present?
+        return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
+      end
+
       ActiveRecord::Base.transaction do
         coupon.save!
 
         plans.each { |plan| CouponTarget.create!(coupon:, plan:) } if plan_identifiers.present?
+
+        if billable_metric_identifiers.present?
+          billable_metrics.each { |billable_metric| CouponTarget.create!(coupon:, billable_metric:) }
+        end
       end
 
       result.coupon = coupon
@@ -70,6 +83,19 @@ module Coupons
 
       finder = api_context? ? :code : :id
       @plans = Plan.where(finder => plan_identifiers, organization_id:)
+    end
+
+    def billable_metric_identifiers
+      key = api_context? ? :billable_metric_codes : :billable_metric_ids
+      limitations[key]&.compact&.uniq
+    end
+
+    def billable_metrics
+      return @billable_metrics if defined? @billable_metrics
+      return [] if billable_metric_identifiers.blank?
+
+      finder = api_context? ? :code : :id
+      @billable_metrics = BillableMetric.where(finder => billable_metric_identifiers, organization_id:)
     end
 
     def valid?(args)

@@ -1426,6 +1426,7 @@ type Coupon {
   amountCents: BigInt
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
+  billableMetrics: [BillableMetric!]
   code: String
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
@@ -1439,6 +1440,7 @@ type Coupon {
   frequency: CouponFrequency!
   frequencyDuration: Int
   id: ID!
+  limitedBillableMetrics: Boolean!
   limitedPlans: Boolean!
   name: String!
   organization: Organization
@@ -3053,6 +3055,7 @@ Represents untyped JSON
 scalar JSON
 
 input LimitationInput {
+  billableMetricIds: [ID!]
   planIds: [ID!]
 }
 

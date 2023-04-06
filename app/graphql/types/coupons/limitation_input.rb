@@ -3,8 +3,7 @@
 module Types
   module Coupons
     class LimitationInput < BaseInputObject
-      graphql_name 'LimitationInput'
-
+      argument :billable_metric_ids, [ID], required: false
       argument :plan_ids, [ID], required: false
     end
   end
