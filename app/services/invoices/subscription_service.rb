@@ -13,10 +13,13 @@ module Invoices
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
 
-      super(nil)
+      super
     end
 
     def create
+      active_subscriptions = subscriptions.select(&:active?)
+      return result if active_subscriptions.empty? && recurring
+
       result = nil
       invoice = nil
 
@@ -26,7 +29,6 @@ module Invoices
           customer:,
           issuing_date:,
           invoice_type: :subscription,
-
           amount_currency: currency,
           vat_amount_currency: currency,
           credit_amount_currency: currency,
@@ -37,7 +39,10 @@ module Invoices
         )
 
         result = Invoices::CalculateFeesService.new(
-          invoice:, subscriptions:, timestamp:, recurring:,
+          invoice:,
+          subscriptions: recurring ? active_subscriptions : subscriptions,
+          timestamp:,
+          recurring:,
         ).call
       end
 
