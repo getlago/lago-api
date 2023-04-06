@@ -9,6 +9,9 @@ class Wallet < ApplicationRecord
 
   has_many :wallet_transactions
 
+  monetize :balance_cents
+  monetize :consumed_amount_cents
+
   STATUSES = [
     :active,
     :terminated,
@@ -22,4 +25,13 @@ class Wallet < ApplicationRecord
   end
 
   scope :expired, -> { where('wallets.expiration_at::timestamp(0) <= ?', Time.current) }
+
+  def currency=(currency)
+    self.balance_currency = currency
+    self.consumed_amount_currenty = currency
+  end
+
+  def currency
+    balance_currency
+  end
 end

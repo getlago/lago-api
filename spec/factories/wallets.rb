@@ -7,8 +7,8 @@ FactoryBot.define do
     status { 'active' }
     rate_amount { '1.00' }
     currency { 'EUR' }
-    credits_balance { '0.00' }
-    balance { '0.00' }
-    consumed_credits { '0.00' }
+    credits_balance { 0 }
+    balance_cents { 0 }
+    consumed_credits { 0 }
   end
 end

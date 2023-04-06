@@ -6,6 +6,7 @@ module V1
       def serialize
         {
           expiration_date: model.expiration_at&.to_date&.iso8601,
+          balance: model.balance.to_s,
         }
       end
     end

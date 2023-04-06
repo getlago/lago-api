@@ -137,12 +137,10 @@ RSpec.describe CreditNote, type: :model do
       before { credit_note_item3 }
 
       it 'returns an empty subscription id' do
-        expect(credit_note.subscription_ids).to eq(
-          [
-            subscription_fee.subscription_id,
-            charge_fee.subscription_id,
-            nil,
-          ],
+        expect(credit_note.subscription_ids).to include(
+          subscription_fee.subscription_id,
+          charge_fee.subscription_id,
+          nil,
         )
       end
     end

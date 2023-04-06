@@ -600,11 +600,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_03_094044) do
   create_table "wallets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.integer "status", null: false
-    t.string "currency", null: false
     t.string "name"
     t.decimal "rate_amount", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "credits_balance", precision: 30, scale: 5, default: "0.0", null: false
-    t.decimal "balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "consumed_credits", precision: 30, scale: 5, default: "0.0", null: false
     t.datetime "expiration_at", precision: nil
     t.datetime "last_balance_sync_at", precision: nil
@@ -612,7 +610,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_03_094044) do
     t.datetime "terminated_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.decimal "consumed_amount", precision: 30, scale: 5, default: "0.0"
+    t.bigint "balance_cents", default: 0, null: false
+    t.string "balance_currency", null: false
+    t.bigint "consumed_amount_cents", default: 0, null: false
+    t.string "consumed_amount_currenty", null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
