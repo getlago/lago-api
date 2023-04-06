@@ -13,6 +13,9 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
     Wallet.find_each do |wallet|
       currency = Money::Currency.new(wallet.attributes['currency'])
 
+      # NOTE: prevent validation issues with deleted customers
+      wallet.customer = Customer.with_discarded.find(wallet.customer_id) if wallet.terminated?
+
       wallet.update!(
         balance_cents: (wallet.attributes['balance'] * currency.subunit_to_unit).to_i,
         balance_currency: currency.iso_code,
