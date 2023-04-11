@@ -28,8 +28,11 @@ class Charge < ApplicationRecord
   validate :validate_percentage, if: -> { percentage? && group_properties.empty? }
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
 
+  validates :min_amount_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
   validate :validate_group_properties
   validate :validate_instant
+  validate :validate_min_amount_cents
 
   default_scope -> { kept }
 
@@ -86,5 +89,11 @@ class Charge < ApplicationRecord
     return unless billable_metric.recurring_count_agg? || billable_metric.max_agg? || volume?
 
     errors.add(:instant, :invalid_aggregation_type_or_charge_model)
+  end
+
+  def validate_min_amount_cents
+    return unless instant? && min_amount_cents.positive?
+
+    errors.add(:min_amount_cents, :not_compatible_with_instant)
   end
 end

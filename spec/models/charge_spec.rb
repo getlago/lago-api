@@ -384,4 +384,21 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '#validate_min_amount_cents' do
+    it 'does not return an error' do
+      expect(build(:standard_charge)).to be_valid
+    end
+
+    context 'when charge is instant' do
+      it 'returns an error' do
+        charge = build(:standard_charge, :instant, min_amount_cents: 1200)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:min_amount_cents]).to include('not_compatible_with_instant')
+        end
+      end
+    end
+  end
 end

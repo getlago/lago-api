@@ -109,6 +109,13 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
+    context 'when recurring but no active subscriptions' do
+      it 'does not create any invoices' do
+        subscription.terminated!
+        expect { invoice_service.create }.not_to change(Invoice, :count)
+      end
+    end
+
     context 'with lago_premium' do
       around { |test| lago_premium!(&test) }
 
