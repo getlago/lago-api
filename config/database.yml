@@ -22,4 +22,3 @@ production:
   url: <%= ENV['DATABASE_URL'] %>
   pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
   prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
-
