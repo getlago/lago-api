@@ -28,7 +28,7 @@ class Wallet < ApplicationRecord
 
   def currency=(currency)
     self.balance_currency = currency
-    self.consumed_amount_currenty = currency
+    self.consumed_amount_currency = currency
   end
 
   def currency

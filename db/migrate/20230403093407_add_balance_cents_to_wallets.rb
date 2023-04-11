@@ -7,20 +7,20 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
       t.string :balance_currency
 
       t.bigint :consumed_amount_cents
-      t.string :consumed_amount_currenty
+      t.string :consumed_amount_currency
     end
 
     Wallet.find_each do |wallet|
       currency = Money::Currency.new(wallet.attributes['currency'])
 
       # NOTE: prevent validation issues with deleted customers
-      wallet.customer = Customer.with_discarded.find(wallet.customer_id) if wallet.terminated?
+      wallet.customer = Customer.with_discarded.find(wallet.customer_id)
 
       wallet.update!(
         balance_cents: (wallet.attributes['balance'] * currency.subunit_to_unit).to_i,
         balance_currency: currency.iso_code,
         consumed_amount_cents: (wallet.attributes['consumed_amount'] * currency.subunit_to_unit).to_i,
-        consumed_amount_currenty: currency.iso_code,
+        consumed_amount_currency: currency.iso_code,
       )
     end
 
@@ -30,7 +30,7 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
 
     change_column_default :wallets, :consumed_amount_cents, from: nil, to: 0
     change_column_null :wallets, :consumed_amount_cents, false
-    change_column_null :wallets, :consumed_amount_currenty, false
+    change_column_null :wallets, :consumed_amount_currency, false
 
     reversible do |dir|
       dir.up do
