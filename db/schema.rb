@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_03_093407) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_11_085545) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -610,7 +610,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_03_093407) do
     t.bigint "balance_cents", default: 0, null: false
     t.string "balance_currency", null: false
     t.bigint "consumed_amount_cents", default: 0, null: false
-    t.string "consumed_amount_currenty", null: false
+    t.string "consumed_amount_currency", null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 

@@ -7,7 +7,7 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
       t.string :balance_currency
 
       t.bigint :consumed_amount_cents
-      t.string :consumed_amount_currency
+      t.string :consumed_amount_currenty
     end
 
     Wallet.find_each do |wallet|
@@ -20,7 +20,7 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
         balance_cents: (wallet.attributes['balance'] * currency.subunit_to_unit).to_i,
         balance_currency: currency.iso_code,
         consumed_amount_cents: (wallet.attributes['consumed_amount'] * currency.subunit_to_unit).to_i,
-        consumed_amount_currency: currency.iso_code,
+        consumed_amount_currenty: currency.iso_code,
       )
     end
 
@@ -30,7 +30,7 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
 
     change_column_default :wallets, :consumed_amount_cents, from: nil, to: 0
     change_column_null :wallets, :consumed_amount_cents, false
-    change_column_null :wallets, :consumed_amount_currency, false
+    change_column_null :wallets, :consumed_amount_currenty, false
 
     reversible do |dir|
       dir.up do
