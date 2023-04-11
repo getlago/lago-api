@@ -10,6 +10,7 @@ module V1
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
         instant: model.instant,
+        min_amount_cents: model.min_amount_cents,
         properties: model.properties,
       }.merge(group_properties)
     end
