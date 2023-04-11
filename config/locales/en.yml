@@ -38,6 +38,7 @@ en:
         invalid_free_units_per_total_aggregation: invalid_free_units_per_total_aggregation
         invalid_content_type: invalid_content_type
         invalid_size: invalid_size
+        not_compatible_with_instant: not_compatible_with_instant
         value_already_exists: value_already_exists
         too_long: value_is_too_long
         values_not_all_present: values_not_all_present
