@@ -29,10 +29,20 @@ module Coupons
           return result.not_found_failure!(resource: 'billable_metrics')
         end
 
-        if (coupon.billable_metrics.exists? && plans.present?) ||
-           (coupon.plans.exists? && billable_metrics.present?) ||
-           (billable_metrics.present? && plans.present?)
+        if billable_metrics.present? && plans.present?
           return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
+        end
+
+        if coupon.billable_metrics.exists? && plans.present? && billable_metrics.blank?
+          coupon.limited_billable_metrics = false
+        elsif !billable_metric_identifiers.nil?
+          coupon.limited_billable_metrics = billable_metric_identifiers.present?
+        end
+
+        if coupon.plans.exists? && billable_metrics.present? && plans.blank?
+          coupon.limited_plans = false
+        elsif !plan_identifiers.nil?
+          coupon.limited_plans = plan_identifiers.present?
         end
 
         coupon.code = params[:code] if params.key?(:code)
@@ -43,15 +53,13 @@ module Coupons
         coupon.frequency = params[:frequency] if params.key?(:frequency)
         coupon.frequency_duration = params[:frequency_duration] if params.key?(:frequency_duration)
         coupon.reusable = params[:reusable] if params.key?(:reusable)
-        coupon.limited_plans = plan_identifiers.present? unless plan_identifiers.nil?
-        coupon.limited_billable_metrics = billable_metric_identifiers.present? unless billable_metric_identifiers.nil?
       end
 
       ActiveRecord::Base.transaction do
         coupon.save!
 
-        process_plans unless plan_identifiers.nil? || coupon_already_applied
-        process_billable_metrics unless billable_metric_identifiers.nil? || coupon_already_applied
+        process_plans unless coupon_already_applied
+        process_billable_metrics unless coupon_already_applied
       end
 
       result.coupon = coupon
@@ -78,7 +86,7 @@ module Coupons
     end
 
     def process_plans
-      existing_coupon_plan_ids = coupon.coupon_targets.pluck(:plan_id)
+      existing_coupon_plan_ids = coupon.coupon_targets.pluck(:plan_id).compact
 
       plans.each do |plan|
         next if existing_coupon_plan_ids.include?(plan.id)
@@ -90,7 +98,7 @@ module Coupons
     end
 
     def sanitize_coupon_plans
-      not_needed_coupon_plan_ids = coupon.coupon_targets.pluck(:plan_id) - plans.pluck(:id)
+      not_needed_coupon_plan_ids = coupon.coupon_targets.pluck(:plan_id).compact - plans.pluck(:id)
 
       not_needed_coupon_plan_ids.each do |coupon_plan_id|
         CouponTarget.find_by(coupon:, plan_id: coupon_plan_id).destroy!
@@ -112,7 +120,7 @@ module Coupons
     end
 
     def process_billable_metrics
-      existing_coupon_billable_metric_ids = coupon.coupon_targets.pluck(:billable_metric_id)
+      existing_coupon_billable_metric_ids = coupon.coupon_targets.pluck(:billable_metric_id).compact
 
       billable_metrics.each do |billable_metric|
         next if existing_coupon_billable_metric_ids.include?(billable_metric.id)
@@ -125,7 +133,7 @@ module Coupons
 
     def sanitize_coupon_billable_metrics
       not_needed_coupon_billable_metric_ids =
-        coupon.coupon_targets.pluck(:billable_metric_id) - billable_metrics.pluck(:id)
+        coupon.coupon_targets.pluck(:billable_metric_id).compact - billable_metrics.pluck(:id)
 
       not_needed_coupon_billable_metric_ids.each do |coupon_billable_metric_id|
         CouponTarget.find_by(coupon:, billable_metric_id: coupon_billable_metric_id).destroy!
