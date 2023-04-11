@@ -47,7 +47,12 @@ module Plans
         properties: args[:properties] || {},
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
-      charge.instant = args[:instant] || false if License.premium? && args.key?(:instant)
+
+      if License.premium?
+        charge.instant = args[:instant] || false
+        charge.min_amount_cents = args[:min_amount_cents] || 0
+      end
+
       charge.save!
       charge
     end

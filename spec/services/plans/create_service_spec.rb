@@ -25,6 +25,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             billable_metric_id: billable_metrics.first.id,
             charge_model: 'standard',
+            min_amount_cents: 100,
             group_properties: [
               {
                 group_id: group.id,
@@ -57,8 +58,6 @@ RSpec.describe Plans::CreateService, type: :service do
       }
     end
 
-    around { |test| lago_premium!(&test) }
-
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
@@ -77,7 +76,7 @@ RSpec.describe Plans::CreateService, type: :service do
       standard_charge = plan.charges.standard.first
       graduated_charge = plan.charges.graduated.first
 
-      expect(standard_charge).not_to be_instant
+      expect(standard_charge).to have_attributes(instant: false, min_amount_cents: 0)
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
@@ -85,7 +84,7 @@ RSpec.describe Plans::CreateService, type: :service do
         },
       )
 
-      expect(graduated_charge).to be_instant
+      expect(graduated_charge).not_to be_instant
     end
 
     it 'calls SegmentTrackJob' do
@@ -110,6 +109,17 @@ RSpec.describe Plans::CreateService, type: :service do
           organization_id: plan.organization_id,
         },
       )
+    end
+
+    context 'when premium' do
+      around { |test| lago_premium!(&test) }
+
+      it 'saves premium attributes' do
+        plan = plans_service.create(**create_args).plan
+
+        expect(plan.charges.standard.first).to have_attributes(instant: false, min_amount_cents: 100)
+        expect(plan.charges.graduated.first).to be_instant
+      end
     end
 
     context 'with code already used by a deleted plan' do
