@@ -14,7 +14,8 @@ RUN apk add --no-cache \
   nodejs \
   tzdata \
   openssl \
-  postgresql-dev
+  postgresql-dev \
+  libc6-compat
 
 ENV BUNDLER_VERSION='2.3.26'
 RUN gem install bundler --no-document -v '2.3.26'
@@ -31,7 +32,8 @@ COPY . /app
 RUN apk add --no-cache \
   bash \
   postgresql-dev \
-  tzdata
+  tzdata \
+  libc6-compat
 
 ARG SEGMENT_WRITE_KEY
 ARG GOCARDLESS_CLIENT_ID
