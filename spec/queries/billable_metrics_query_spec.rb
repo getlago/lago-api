@@ -12,11 +12,13 @@ RSpec.describe BillableMetricsQuery, type: :query do
   let(:billable_metric_first) { create(:billable_metric, organization:, name: 'defgh', code: '11') }
   let(:billable_metric_second) { create(:billable_metric, organization:, name: 'abcde', code: '22') }
   let(:billable_metric_third) { create(:billable_metric, organization:, name: 'presuv', code: '33') }
+  let(:billable_metric_fourth) { create(:recurring_billable_metric, organization:, name: 'qwerty', code: '44') }
 
   before do
     billable_metric_first
     billable_metric_second
     billable_metric_third
+    billable_metric_fourth
   end
 
   it 'returns all billable metrics' do
@@ -29,10 +31,80 @@ RSpec.describe BillableMetricsQuery, type: :query do
     returned_ids = result.billable_metrics.pluck(:id)
 
     aggregate_failures do
-      expect(result.billable_metrics.count).to eq(3)
+      expect(result.billable_metrics.count).to eq(4)
       expect(returned_ids).to include(billable_metric_first.id)
       expect(returned_ids).to include(billable_metric_second.id)
       expect(returned_ids).to include(billable_metric_third.id)
+      expect(returned_ids).to include(billable_metric_fourth.id)
+    end
+  end
+
+  context 'when searching for count_agg aggregation type' do
+    it 'returns 3 billable metrics' do
+      result = billable_metric_query.call(
+        search_term: nil,
+        page: 1,
+        limit: 10,
+        filters: {
+          aggregation_types: ['count_agg'],
+        },
+      )
+
+      returned_ids = result.billable_metrics.pluck(:id)
+
+      aggregate_failures do
+        expect(result.billable_metrics.count).to eq(3)
+        expect(returned_ids).to include(billable_metric_first.id)
+        expect(returned_ids).to include(billable_metric_second.id)
+        expect(returned_ids).to include(billable_metric_third.id)
+        expect(returned_ids).not_to include(billable_metric_fourth.id)
+      end
+    end
+  end
+
+  context 'when searching for recurring_count_agg aggregation type' do
+    it 'returns 1 billable metrics' do
+      result = billable_metric_query.call(
+        search_term: nil,
+        page: 1,
+        limit: 10,
+        filters: {
+          aggregation_types: ['recurring_count_agg'],
+        },
+      )
+
+      returned_ids = result.billable_metrics.pluck(:id)
+
+      aggregate_failures do
+        expect(result.billable_metrics.count).to eq(1)
+        expect(returned_ids).not_to include(billable_metric_first.id)
+        expect(returned_ids).not_to include(billable_metric_second.id)
+        expect(returned_ids).not_to include(billable_metric_third.id)
+        expect(returned_ids).to include(billable_metric_fourth.id)
+      end
+    end
+  end
+
+  context 'when searching for max_agg aggregation type' do
+    it 'returns 0 billable metrics' do
+      result = billable_metric_query.call(
+        search_term: nil,
+        page: 1,
+        limit: 10,
+        filters: {
+          aggregation_types: ['max_agg'],
+        },
+      )
+
+      returned_ids = result.billable_metrics.pluck(:id)
+
+      aggregate_failures do
+        expect(result.billable_metrics.count).to eq(0)
+        expect(returned_ids).not_to include(billable_metric_first.id)
+        expect(returned_ids).not_to include(billable_metric_second.id)
+        expect(returned_ids).not_to include(billable_metric_third.id)
+        expect(returned_ids).not_to include(billable_metric_fourth.id)
+      end
     end
   end
 
