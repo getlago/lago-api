@@ -12,9 +12,11 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :search_term, String, required: false
 
+    argument :aggregation_types, [Types::BillableMetrics::AggregationTypeEnum], required: false
+
     type Types::BillableMetrics::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, search_term: nil)
+    def resolve(ids: nil, page: nil, limit: nil, search_term: nil, aggregation_types: nil)
       validate_organization!
 
       query = ::BillableMetricsQuery.new(organization: current_organization)
@@ -24,6 +26,7 @@ module Resolvers
         limit:,
         filters: {
           ids:,
+          aggregation_types:,
         },
       )
 

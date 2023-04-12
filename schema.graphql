@@ -3788,6 +3788,8 @@ type Query {
   Query billable metrics of an organization
   """
   billableMetrics(
+    aggregationTypes: [AggregationTypeEnum!]
+
     """
     List of plan ID to fetch
     """
