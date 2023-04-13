@@ -1082,6 +1082,8 @@ RSpec.describe Fees::ChargeService do
             aggregation_type: aggregation_type,
             field_name: 'foo_bar',
           )
+
+          charge.update!(min_amount_cents: 1000)
         end
 
         it 'initializes fees' do
@@ -1092,6 +1094,7 @@ RSpec.describe Fees::ChargeService do
           usage_fee = result.fees.first
 
           aggregate_failures do
+            expect(result.fees.count).to eq(1)
             expect(usage_fee.id).to be_nil
             expect(usage_fee.invoice_id).to eq(invoice.id)
             expect(usage_fee.charge_id).to eq(charge.id)

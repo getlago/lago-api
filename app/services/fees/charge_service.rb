@@ -14,6 +14,7 @@ module Fees
       return result if already_billed?
 
       init_fees
+      init_true_up_fee(fee: result.fees.first)
       return result unless result.success?
 
       result.fees.each(&:save!)
@@ -46,8 +47,6 @@ module Fees
           init_fee(properties: group_properties.values, group: group)
         end
       end
-
-      init_true_up_fee(fee: result.fees.first)
     end
 
     def init_fee(properties:, group: nil)
