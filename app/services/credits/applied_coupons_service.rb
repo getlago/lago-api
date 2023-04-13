@@ -14,8 +14,13 @@ module Credits
         break unless invoice.amount_cents&.positive?
         next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
 
-        base_amount_cents = if applied_coupon.coupon.limited_plans?
-          coupon_related_fees = coupon_fees(applied_coupon)
+        base_amount_cents = if applied_coupon.coupon.limited_billable_metrics?
+          coupon_related_fees = billable_metric_related_fees(applied_coupon)
+          next unless coupon_related_fees.exists?
+
+          coupon_base_amount_cents(coupon_related_fees:)
+        elsif applied_coupon.coupon.limited_plans?
+          coupon_related_fees = plan_related_fees(applied_coupon)
           next unless coupon_related_fees.exists?
 
           coupon_base_amount_cents(coupon_related_fees:)
@@ -43,16 +48,31 @@ module Credits
     def applied_coupons
       return @applied_coupons if @applied_coupons
 
+      with_bm_limit = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_billable_metrics: true })
+        .order(created_at: :asc)
       with_plan_limit = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_plans: true })
         .order(created_at: :asc)
-      applied_to_all = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_plans: false })
-        .order(created_at: :asc)
+      applied_to_all =
+        customer
+          .applied_coupons
+          .active
+          .joins(:coupon)
+          .where(coupon: { limited_plans: false })
+          .where(coupon: { limited_billable_metrics: false })
+          .order(created_at: :asc)
 
-      @applied_coupons = with_plan_limit + applied_to_all
+      @applied_coupons = with_bm_limit + with_plan_limit + applied_to_all
     end
 
-    def coupon_fees(applied_coupon)
-      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_plans.select(:plan_id) })
+    def plan_related_fees(applied_coupon)
+      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_targets.select(:plan_id) })
+    end
+
+    def billable_metric_related_fees(applied_coupon)
+      invoice
+        .fees
+        .joins(charge: :billable_metric)
+        .where(billable_metric: { id: applied_coupon.coupon.coupon_targets.select(:billable_metric_id) })
     end
 
     def coupon_base_amount_cents(coupon_related_fees:)
