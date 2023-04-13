@@ -139,6 +139,7 @@ type Charge {
   groupProperties: [GroupProperties!]
   id: ID!
   instant: Boolean!
+  minAmountCents: BigInt!
   properties: Properties
   updatedAt: ISO8601DateTime!
 }
@@ -149,6 +150,7 @@ input ChargeInput {
   groupProperties: [GroupPropertiesInput!]
   id: ID
   instant: Boolean
+  minAmountCents: BigInt
   properties: PropertiesInput
 }
 
