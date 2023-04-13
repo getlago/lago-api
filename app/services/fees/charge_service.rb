@@ -24,6 +24,7 @@ module Fees
 
     def current_usage
       init_fees
+      result
     end
 
     private
@@ -36,13 +37,17 @@ module Fees
 
     def init_fees
       result.fees = []
-      return init_fee(properties: charge.properties) if charge.group_properties.blank?
 
-      charge.group_properties.each do |group_properties|
-        group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
-        init_fee(properties: group_properties.values, group: group)
+      if charge.group_properties.blank?
+        init_fee(properties: charge.properties)
+      else
+        charge.group_properties.each do |group_properties|
+          group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
+          init_fee(properties: group_properties.values, group: group)
+        end
       end
-      result
+
+      init_true_up_fee(fee: result.fees.first)
     end
 
     def init_fee(properties:, group: nil)
@@ -74,7 +79,11 @@ module Fees
 
       new_fee.compute_vat
       result.fees << new_fee
-      result
+    end
+
+    def init_true_up_fee(fee:)
+      true_up_fee = Fees::CreateTrueUpService.call(fee: fee).true_up_fee
+      result.fees << true_up_fee if true_up_fee
     end
 
     def compute_amount(properties:, group: nil)

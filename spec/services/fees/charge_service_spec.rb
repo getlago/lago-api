@@ -203,6 +203,19 @@ RSpec.describe Fees::ChargeService do
           end
         end
       end
+
+      context 'with true-up fee' do
+        it 'creates two fees' do
+          charge.update!(min_amount_cents: 1000)
+          result = charge_subscription_service.create
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.fees.count).to eq(2)
+            expect(result.fees.pluck(:amount_cents)).to match_array([0, 1000])
+          end
+        end
+      end
     end
 
     context 'with standard charge, all types of aggregation and presence of groups' do
@@ -978,6 +991,53 @@ RSpec.describe Fees::ChargeService do
             vat_amount_cents: 220,
             units: 1,
           )
+        end
+      end
+    end
+
+    context 'with true-up fee and presence of groups' do
+      let(:europe) do
+        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+      end
+
+      let(:usa) do
+        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: billable_metric,
+          min_amount_cents: 1000,
+          group_properties: [
+            build(
+              :group_property,
+              group: europe,
+              values: {
+                amount: '20',
+                amount_currency: 'EUR',
+              },
+            ),
+            build(
+              :group_property,
+              group: usa,
+              values: {
+                amount: '50',
+                amount_currency: 'EUR',
+              },
+            ),
+          ],
+        )
+      end
+
+      it 'creates three fees' do
+        result = charge_subscription_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.fees.count).to eq(3)
+          expect(result.fees.pluck(:amount_cents)).to match_array([0, 0, 1000])
         end
       end
     end
