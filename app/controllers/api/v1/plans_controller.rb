@@ -86,6 +86,7 @@ module Api
             :billable_metric_id,
             :charge_model,
             :instant,
+            :min_amount_cents,
             {
               properties: {},
             },
