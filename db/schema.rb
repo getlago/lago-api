@@ -380,11 +380,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.datetime "updated_at", null: false
     t.date "issuing_date"
     t.bigint "amount_cents", default: 0, null: false
-    t.string "amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
-    t.string "vat_amount_currency"
     t.bigint "total_amount_cents", default: 0, null: false
-    t.string "total_amount_currency"
     t.integer "invoice_type", default: 0, null: false
     t.integer "payment_status", default: 0, null: false
     t.string "number", default: "", null: false
@@ -393,16 +390,16 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.uuid "customer_id"
     t.float "vat_rate", default: 0.0, null: false
     t.bigint "credit_amount_cents", default: 0, null: false
-    t.string "credit_amount_currency"
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
     t.uuid "organization_id", null: false
     t.integer "version_number", default: 2, null: false
+    t.string "currency"
     t.bigint "fees_amount_cents", default: 0, null: false
-    t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "coupons_amount_cents", default: 0, null: false
+    t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "prepaid_credit_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"

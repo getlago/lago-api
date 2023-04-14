@@ -16,7 +16,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       organization:,
       customer:,
       total_amount_cents: 200,
-      total_amount_currency: 'EUR',
+      currency: 'EUR',
       ready_for_payment_processing: true,
     )
   end
@@ -39,7 +39,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             id: 'ch_123456',
             status: 'succeeded',
             amount: invoice.total_amount_cents,
-            currency: invoice.total_amount_currency,
+            currency: invoice.currency,
           ),
         )
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -66,7 +66,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result.payment.payment_provider).to eq(stripe_payment_provider)
         expect(result.payment.payment_provider_customer).to eq(stripe_customer)
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
-        expect(result.payment.amount_currency).to eq(invoice.total_amount_currency)
+        expect(result.payment.amount_currency).to eq(invoice.currency)
         expect(result.payment.status).to eq('succeeded')
       end
 
@@ -97,7 +97,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           organization:,
           customer:,
           total_amount_cents: 0,
-          total_amount_currency: 'EUR',
+          currency: 'EUR',
         )
       end
 

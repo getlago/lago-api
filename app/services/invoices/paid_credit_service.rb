@@ -18,10 +18,7 @@ module Invoices
           issuing_date:,
           invoice_type: :credit,
           payment_status: :pending,
-          amount_currency: currency,
-          vat_amount_currency: currency,
-          credit_amount_currency: currency,
-          total_amount_currency: currency,
+          currency:,
 
           # NOTE: No VAT should be applied on as it can be considered as an advance
           vat_rate: 0,
@@ -60,6 +57,7 @@ module Invoices
     def compute_amounts(invoice)
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
+      invoice.currency = currency
       invoice.amount_cents = fee_amounts.sum(:amount_cents)
       invoice.fees_amount_cents = invoice.amount_cents
       invoice.vat_amount_cents = fee_amounts.sum(:vat_amount_cents)

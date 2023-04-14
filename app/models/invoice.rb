@@ -24,19 +24,23 @@ class Invoice < ApplicationRecord
 
   has_one_attached :file
 
-  monetize :amount_cents
-  monetize :fees_amount_cents, with_model_currency: :amount_currency
-  monetize :coupons_amount_cents, with_model_currency: :amount_currency
-  monetize :vat_amount_cents
-  monetize :prepaid_credit_amount_cents, with_model_currency: :amount_currency
-  monetize :credit_amount_cents
-  monetize :credit_notes_amount_cents, with_model_currency: :amount_currency
-  monetize :total_amount_cents
+  monetize :amount_cents,
+           :coupons_amount_cents,
+           :credit_amount_cents,
+           :credit_notes_amount_cents,
+           :fees_amount_cents,
+           :prepaid_credit_amount_cents,
+           :total_amount_cents,
+           :vat_amount_cents,
+           with_model_currency: :currency
 
   # NOTE: Readonly fields
-  monetize :sub_total_vat_included_amount_cents, disable_validation: true, allow_nil: true
-  monetize :charge_amount_cents, disable_validation: true, allow_nil: true
-  monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
+  monetize :charge_amount_cents,
+           :sub_total_vat_included_amount_cents,
+           :subscription_amount_cents,
+           disable_validation: true,
+           allow_nil: true,
+           with_model_currency: :currency
 
   INVOICE_TYPES = %i[subscription add_on credit].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
@@ -81,24 +85,17 @@ class Invoice < ApplicationRecord
     amount_cents + vat_amount_cents
   end
 
-  def currency
-    amount_currency
-  end
-
   def sub_total_vat_included_amount_cents
     fees_amount_cents + vat_amount_cents
   end
-  alias sub_total_vat_included_amount_currency currency
 
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end
-  alias charge_amount_currency currency
 
   def subscription_amount_cents
     fees.subscription_kind.sum(:amount_cents)
   end
-  alias subscription_amount_currency currency
 
   def subtotal_before_prepaid_credits
     amount + prepaid_credit_amount

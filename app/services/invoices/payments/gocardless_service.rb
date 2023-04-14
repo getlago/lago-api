@@ -107,7 +107,7 @@ module Invoices
         client.payments.create(
           params: {
             amount: invoice.total_amount_cents,
-            currency: invoice.total_amount_currency.upcase,
+            currency: invoice.currency.upcase,
             retry_if_possible: false,
             metadata: {
               lago_customer_id: customer.id,

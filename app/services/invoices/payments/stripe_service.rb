@@ -117,7 +117,7 @@ module Invoices
       def stripe_payment_payload
         {
           amount: invoice.total_amount_cents,
-          currency: invoice.total_amount_currency.downcase,
+          currency: invoice.currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method: stripe_payment_method,
           confirm: true,

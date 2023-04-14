@@ -13,11 +13,10 @@ RSpec.describe Credits::CreditNoteService do
   let(:invoice) do
     create(
       :invoice,
-      customer: customer,
-      amount_cents: amount_cents,
-      amount_currency: 'EUR',
+      customer:,
+      currency: 'EUR',
+      amount_cents:,
       total_amount_cents: amount_cents,
-      total_amount_currency: 'EUR',
     )
   end
 
