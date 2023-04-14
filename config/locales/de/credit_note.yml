@@ -3,7 +3,7 @@ de:
     document_name: Gutschrift
     credit_note_number: Gutschriftnummer
     invoice_number: Rechnungsnummer
-    issue_date: Datum
+    issue_date: Ausgabedatum
     credit_from: Von
     credit_to: Gutschrift für
     refunded_notice: Erstattung am %{issuing_date}

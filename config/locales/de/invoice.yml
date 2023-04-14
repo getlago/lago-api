@@ -2,7 +2,7 @@ de:
   invoice:
     document_name: Rechnung
     invoice_number: Rechnungsnummer
-    issue_date: Rechnungsdatum
+    issue_date: Ausgabedatum
     bill_from: Von
     bill_to: An
     due_date: Fälligkeit %{date}
@@ -17,7 +17,7 @@ de:
     prepaid_credits: Prepaid-Guthaben
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     total_due: Insgesamt fällig
-    powered_by: Powered by
+    powered_by: Bereitgestellt von Lago
 
     details: "%{resource} Details"
     subscription: Abonnement
@@ -27,10 +27,10 @@ de:
     yearly: Jährlich
     weekly: Wöchentlich
     sub_total: Zwischensumme
-    subscription_interval: "%{plan_interval} Abonnement - %{plan_name}"
+    subscription_interval: "%{plan_interval}es Abonnement - %{plan_name}"
 
     usage_based_fees: Nutzungsabhängige Gebühren
-    list_of_charges: Liste der Gebühren von %{from} bis %{to}
+    list_of_charges: Liste der Gebühren vom %{from} bis %{to}
     see_breakdown: Siehe Aufschlüsselung für Gesamtübersicht
     total_unit_interval: "Gesamte Einheiten: %{events_count} Ereignisse für %{units}"
     total_unit: "Gesamte Einheiten: %{units}"
