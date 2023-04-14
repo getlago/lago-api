@@ -86,7 +86,7 @@ module Events
     def valid_properties?
       return true unless billable_metric.max_agg? || billable_metric.sum_agg?
 
-      valid_number?(params[:properties][billable_metric.field_name.to_sym])
+      valid_number?((params[:properties] || {})[billable_metric.field_name.to_sym])
     end
 
     def valid_number?(value)
