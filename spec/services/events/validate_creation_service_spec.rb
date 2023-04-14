@@ -223,6 +223,21 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result).to be_success
           end
         end
+
+        context 'when properties are missing' do
+          let(:params) do
+            {
+              code: billable_metric.code,
+              external_customer_id: customer.external_id,
+            }
+          end
+
+          it 'does not raise error' do
+            validate_event
+
+            expect(result).to be_success
+          end
+        end
       end
 
       context 'when event belongs to a recurring persisted event' do
