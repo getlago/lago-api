@@ -17,11 +17,11 @@ de:
     prepaid_credits: Prepaid-Guthaben
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     total_due: Insgesamt fällig
-    powered_by: Bereitgestellt von Lago
+    powered_by: Bereitgestellt von
 
     details: "%{resource} Details"
     subscription: Abonnement
-    date_from: Von
+    date_from: Vom
     date_to: Bis
     monthly: Monatlich
     yearly: Jährlich
