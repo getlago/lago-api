@@ -6,7 +6,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
   subject(:create_service) { described_class.new(fee:) }
 
   let(:charge) { create(:standard_charge, min_amount_cents: 1000) }
-  let(:fee) { create(:charge_fee, amount_cents: 700, charge: charge) }
+  let(:fee) { create(:charge_fee, amount_cents: 700, charge:) }
 
   describe '#call' do
     context 'when fee is nil' do

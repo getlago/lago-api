@@ -44,13 +44,13 @@ module Fees
       else
         charge.group_properties.each do |group_properties|
           group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
-          init_fee(properties: group_properties.values, group: group)
+          init_fee(properties: group_properties.values, group:)
         end
       end
     end
 
     def init_fee(properties:, group: nil)
-      amount_result = compute_amount(properties: properties, group: group)
+      amount_result = compute_amount(properties:, group:)
       return result.fail_with_error!(amount_result.error) unless amount_result.success?
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
@@ -60,10 +60,10 @@ module Fees
       amount_cents = rounded_amount * currency.subunit_to_unit
 
       new_fee = Fee.new(
-        invoice: invoice,
-        subscription: subscription,
-        charge: charge,
-        amount_cents: amount_cents,
+        invoice:,
+        subscription:,
+        charge:,
+        amount_cents:,
         amount_currency: currency,
         vat_rate: customer.applicable_vat_rate,
         fee_type: :charge,
@@ -81,12 +81,12 @@ module Fees
     end
 
     def init_true_up_fee(fee:)
-      true_up_fee = Fees::CreateTrueUpService.call(fee: fee).true_up_fee
+      true_up_fee = Fees::CreateTrueUpService.call(fee:).true_up_fee
       result.fees << true_up_fee if true_up_fee
     end
 
     def compute_amount(properties:, group: nil)
-      aggregation_result = aggregator(group: group).aggregate(
+      aggregation_result = aggregator(group:).aggregate(
         from_datetime: boundaries.charges_from_datetime,
         to_datetime: boundaries.charges_to_datetime,
         options: options(properties),
@@ -129,11 +129,7 @@ module Fees
                              raise(NotImplementedError)
       end
 
-      @aggregator = aggregator_service.new(
-        billable_metric: billable_metric,
-        subscription: subscription,
-        group: group,
-      )
+      @aggregator = aggregator_service.new(billable_metric:, subscription:, group:)
     end
 
     def apply_charge_model_service(aggregation_result, properties)
@@ -152,11 +148,7 @@ module Fees
                         raise(NotImplementedError)
       end
 
-      model_service.apply(
-        charge: charge,
-        aggregation_result: aggregation_result,
-        properties: properties,
-      )
+      model_service.apply(charge:, aggregation_result:, properties:)
     end
   end
 end
