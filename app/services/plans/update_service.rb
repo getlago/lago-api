@@ -80,7 +80,7 @@ module Plans
 
       hash_charges = params_charges.map { |c| c.to_h.deep_symbolize_keys }
       hash_charges.each do |payload_charge|
-        charge = Charge.find_by(id: payload_charge[:id])
+        charge = plan.charges.find_by(id: payload_charge[:id])
 
         if charge
           # NOTE: charges cannot be edited if plan is attached to a subscription
@@ -110,9 +110,9 @@ module Plans
     end
 
     def sanitize_charges(plan, args_charges, created_charges_ids)
-      args_charges_ids = args_charges.reject { |c| c[:id].nil? }.map { |c| c[:id] }
+      args_charges_ids = args_charges.map { |c| c[:id] }.compact
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
-      charges_ids.each { |id| discard_charge!(Charge.find_by(id:)) }
+      plan.charges.where(id: charges_ids).each { |charge| discard_charge!(charge) }
     end
 
     def discard_charge!(charge)
