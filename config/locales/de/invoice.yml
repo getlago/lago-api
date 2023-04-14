@@ -1,0 +1,43 @@
+de:
+  invoice:
+    document_name: Rechnung
+    invoice_number: Rechnungsnummer
+    issue_date: Ausgabedatum
+    bill_from: Von
+    bill_to: An
+    due_date: Fälligkeit %{date}
+    total_credits_with_value: "Gesamtguthaben: %{credit_amount} Credits"
+    all_subscriptions: Alle Abonnements
+    all_usage_based_fees: Alle nutzungsabhängigen Gebühren
+    sub_total_without_tax: Zwischensumme (ohne Steuern)
+    tax: Steuern
+    sub_total_with_tax: Zwischensumme (inkl. Steuern)
+    credit_notes: Gutschriften
+    coupons: Coupons
+    prepaid_credits: Prepaid-Guthaben
+    prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
+    total_due: Insgesamt fällig
+    powered_by: Bereitgestellt von Lago
+
+    details: "%{resource} Details"
+    subscription: Abonnement
+    date_from: Von
+    date_to: Bis
+    monthly: Monatlich
+    yearly: Jährlich
+    weekly: Wöchentlich
+    sub_total: Zwischensumme
+    subscription_interval: "%{plan_interval}es Abonnement - %{plan_name}"
+
+    usage_based_fees: Nutzungsabhängige Gebühren
+    list_of_charges: Liste der Gebühren vom %{from} bis %{to}
+    see_breakdown: Siehe Aufschlüsselung für Gesamtübersicht
+    total_unit_interval: "Gesamte Einheiten: %{events_count} Ereignisse für %{units}"
+    total_unit: "Gesamte Einheiten: %{units}"
+    total: Gesamt
+    breakdown: Aufschlüsselung
+    breakdown_for_days: "%{breakdown_duration} für %{breakdown_total_duration} Tage"
+    breakdown_of: "%{breakdown} für %{fee_group_name}"
+    notice: Wenn beispielsweise eine Einheit mit 15 verbleibenden Tagen in Ihrem Monatsplan hinzugefügt wird, multiplizieren wir den Preis mit 15/31 (verbleibende Tage dividiert durch die Gesamtzahl der Tage in Ihrem Plan), um den anteiligen Preis zu berechnen. Dieselbe Logik greift beim Entfernen einer Einheit, die 10 Tage lang verwendet wurde, wir multiplizieren den Preis mit 10/31.
+
+    total_credits: Gesamtguthaben
