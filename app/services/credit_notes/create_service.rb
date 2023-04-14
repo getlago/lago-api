@@ -98,7 +98,7 @@ module CreditNotes
       return true if automatic
       return false if invoice.credit?
 
-      !invoice.legacy?
+      invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Utils::PdfGenerator, type: :service do
-  subject(:pdf_generator_service) { described_class.new(template: 'invoice', context: invoice) }
+  subject(:pdf_generator_service) { described_class.new(template: 'invoices/v2', context: invoice) }
 
   let(:invoice) { create(:invoice) }
   let(:pdf_response) do

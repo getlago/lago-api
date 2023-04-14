@@ -89,7 +89,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result.invoice.vat_rate).to eq(20)
         expect(result.invoice.credit_amount_cents).to eq(0)
         expect(result.invoice.total_amount_cents).to eq(120)
-        expect(result.invoice).not_to be_legacy
+        expect(result.invoice.version_number).to eq(2)
         expect(result.invoice).to be_finalized
       end
     end
