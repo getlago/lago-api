@@ -1,0 +1,18 @@
+de:
+  credit_note:
+    document_name: Gutschrift
+    credit_note_number: Gutschriftnummer
+    invoice_number: Rechnungsnummer
+    issue_date: Datum
+    credit_from: Von
+    credit_to: Gutschrift für
+    refunded_notice: Erstattung am %{issuing_date}
+    credited_notice: Gutschrift auf Kundenguthaben am %{issuing_date}
+    credited_refunded_notice: Auf Kundenguthaben gutgeschrieben und zurückerstattet am %{issuing_date}
+    subscription: Abonnement
+    sub_total_without_tax: Zwischensumme (ohne Steuern)
+    tax: Steuern
+    credited_on_customer_balance: Auf Kundenguthaben gutgeschrieben
+    refunded: Erstattet
+    total_due: Insgesamt fällig
+    powered_by: Powered by
