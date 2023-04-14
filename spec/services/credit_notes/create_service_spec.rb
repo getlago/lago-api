@@ -320,7 +320,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               total_amount_cents: 24,
               payment_status: :succeeded,
               vat_rate: 20,
-              legacy: true,
+              version_number: 1,
             )
           end
 

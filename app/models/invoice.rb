@@ -5,6 +5,8 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
 
+  CURRENT_VERSION = 2
+
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -169,6 +171,11 @@ class Invoice < ApplicationRecord
     amount = creditable_amount_cents - credits.sum(:amount_cents) - wallet_transaction_amount_cents
     amount.negative? ? 0 : amount
   end
+
+  def legacy
+    version_number < CURRENT_VERSION
+  end
+  alias legacy? legacy
 
   private
 

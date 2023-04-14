@@ -283,7 +283,7 @@ RSpec.describe Invoice, type: :model do
   describe '#creditable_amount_cents' do
     context 'when legacy' do
       it 'returns 0' do
-        invoice = build(:invoice, legacy: true)
+        invoice = build(:invoice, version_number: 1)
         expect(invoice.creditable_amount_cents).to eq(0)
       end
     end
