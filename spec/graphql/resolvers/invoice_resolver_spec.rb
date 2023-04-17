@@ -10,6 +10,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           id
           number
           feesAmountCents
+          couponsAmountCents
           creditNotesAmountCents
           refundableAmountCents
           creditableAmountCents

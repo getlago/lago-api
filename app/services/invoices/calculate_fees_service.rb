@@ -34,7 +34,7 @@ module Invoices
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
         create_credit_note_credit if should_create_credit_note_credit?
-        Credits::AppliedCouponsService.new(invoice:).create if should_create_coupon_credit?
+        Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
@@ -161,13 +161,6 @@ module Invoices
     def create_credit_note_credit
       credit_result = Credits::CreditNoteService.new(invoice:, credit_notes:).call
       credit_result.raise_if_error!
-
-      refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
-    end
-
-    def create_applied_coupons_credit
-      credits_result = Credits::AppliedCouponsService.new(invoice:).create
-      credits_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
     end

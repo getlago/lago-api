@@ -2952,6 +2952,7 @@ type Invoice {
   amountCurrency: CurrencyEnum!
   chargeAmountCents: BigInt!
   couponTotalAmountCents: BigInt!
+  couponsAmountCents: BigInt!
   createdAt: ISO8601DateTime!
   creditAmountCents: BigInt!
   creditAmountCurrency: CurrencyEnum!
