@@ -21,6 +21,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       expect(result['invoice']['invoice_type']).to eq(invoice.invoice_type)
       expect(result['invoice']['status']).to eq(invoice.status)
       expect(result['invoice']['payment_status']).to eq(invoice.payment_status)
+      expect(result['invoice']['fees_amount_cents']).to eq(invoice.fees_amount_cents)
       expect(result['invoice']['amount_cents']).to eq(invoice.amount_cents)
       expect(result['invoice']['amount_currency']).to eq(invoice.amount_currency)
       expect(result['invoice']['vat_amount_cents']).to eq(invoice.vat_amount_cents)
