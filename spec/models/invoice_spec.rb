@@ -111,20 +111,6 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#credit_note_total_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { create(:invoice, customer:, organization:) }
-    let(:credit) { create(:credit_note_credit, invoice:) }
-
-    before { credit }
-
-    it 'returns the credit note amount' do
-      expect(invoice.credit_note_total_amount.to_s).to eq('2.00')
-    end
-  end
-
   describe '#charge_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }

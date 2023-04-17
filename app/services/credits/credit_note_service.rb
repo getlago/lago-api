@@ -33,6 +33,7 @@ module Credits
           remaining_invoice_amount -= credit_amount
 
           result.credits << credit
+          invoice.credit_notes_amount_cents += credit.amount_cents
 
           # NOTE: Invoice amount is fully covered by the credit notes
           break if remaining_invoice_amount.zero?
