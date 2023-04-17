@@ -121,41 +121,20 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#wallet_transaction_amount' do
-    let(:customer) { create(:customer) }
-    let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
-    let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
-    let(:wallet_transaction) do
-      create(:wallet_transaction, invoice:, wallet:, amount: 1, credit_amount: 1)
-    end
-
-    before { wallet_transaction }
-
-    it 'returns the wallet transaction amount' do
-      expect(invoice.wallet_transaction_amount.to_s).to eq('1.00')
-    end
-  end
-
   describe '#subtotal_before_prepaid_credits' do
     let(:customer) { create(:customer) }
-    let(:invoice) { create(:invoice, customer:, amount_cents: 555, organization: customer.organization) }
-    let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
-    let(:wallet_transaction) do
-      create(:wallet_transaction, invoice:, wallet:, amount: 1, credit_amount: 1)
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        amount_cents: 555,
+        organization: customer.organization,
+        prepaid_credit_amount_cents: 100,
+      )
     end
-
-    before { wallet_transaction }
 
     it 'returns the subtotal before prepaid credits' do
       expect(invoice.subtotal_before_prepaid_credits.to_s).to eq('6.55')
-    end
-
-    context 'when there is no prepaid credits' do
-      let(:wallet_transaction) { create(:wallet_transaction, wallet: wallet, amount: 1, credit_amount: 1) }
-
-      it 'returns the invoice amount' do
-        expect(invoice.subtotal_before_prepaid_credits.to_s).to eq('5.55')
-      end
     end
   end
 

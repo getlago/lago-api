@@ -54,8 +54,13 @@ namespace :invoices do
   desc 'Fill invoice credit amount'
   task fill_credit_amount: :environment do
     Invoice.where(credit_amount_cents: 0).find_each do |invoice|
+      transaction_amount = invoice.wallet_transactions.sum(:amount)
+      currency = invoice.amount.currency
+      rounded_amount = transaction_amount.round(currency.exponent)
+      prepaid_credit_amount = rounded_amount * currency.subunit_to_unit
+
       invoice.update!(
-        credit_amount_cents: invoice.credit_amount_cents + invoice.wallet_transaction_amount_cents,
+        credit_amount_cents: invoice.credit_amount_cents + prepaid_credit_amount,
         credit_amount_currency: invoice.currency,
       )
     end

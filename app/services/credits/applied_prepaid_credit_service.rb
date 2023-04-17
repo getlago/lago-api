@@ -9,7 +9,7 @@ module Credits
       super(nil)
     end
 
-    def create
+    def call
       return result if already_applied?
 
       amount_cents = compute_amount
@@ -31,6 +31,7 @@ module Credits
         Wallets::Balance::DecreaseService.new(wallet:, credits_amount: credit_amount).call
 
         result.prepaid_credit_amount_cents = amount_cents
+        invoice.prepaid_credit_amount_cents += amount_cents
       end
 
       result

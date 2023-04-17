@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_17_131515) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -403,6 +403,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_131515) do
     t.bigint "fees_amount_cents", default: 0, null: false
     t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "coupons_amount_cents", default: 0, null: false
+    t.bigint "prepaid_credit_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end

@@ -22,16 +22,17 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
 
   before { subscription }
 
-  describe 'create' do
+  describe 'call' do
     it 'calculates prepaid credit' do
-      result = credit_service.create
+      result = credit_service.call
 
       expect(result).to be_success
       expect(result.prepaid_credit_amount_cents).to eq(100)
+      expect(invoice.prepaid_credit_amount_cents).to eq(100)
     end
 
     it 'creates wallet transaction' do
-      result = credit_service.create
+      result = credit_service.call
 
       expect(result).to be_success
       expect(result.wallet_transaction).to be_present
@@ -39,7 +40,7 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
     end
 
     it 'updates wallet balance' do
-      result = credit_service.create
+      result = credit_service.call
       wallet = result.wallet_transaction.wallet
 
       expect(wallet.balance_cents).to eq(900)
@@ -50,14 +51,14 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       let(:amount_cents) { 1500 }
 
       it 'calculates prepaid credit' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(result.prepaid_credit_amount_cents).to eq(1000)
       end
 
       it 'creates wallet transaction' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(result.wallet_transaction).to be_present
@@ -65,7 +66,7 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       end
 
       it 'updates wallet balance' do
-        result = credit_service.create
+        result = credit_service.call
         wallet = result.wallet_transaction.wallet
 
         expect(wallet.balance).to eq(0.0)

@@ -28,6 +28,7 @@ class Invoice < ApplicationRecord
   monetize :fees_amount_cents, with_model_currency: :amount_currency
   monetize :coupons_amount_cents, with_model_currency: :amount_currency
   monetize :vat_amount_cents
+  monetize :prepaid_credit_amount_cents, with_model_currency: :amount_currency
   monetize :credit_amount_cents
   monetize :credit_notes_amount_cents, with_model_currency: :amount_currency
   monetize :total_amount_cents
@@ -36,7 +37,6 @@ class Invoice < ApplicationRecord
   monetize :sub_total_vat_included_amount_cents, disable_validation: true, allow_nil: true
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
-  monetize :wallet_transaction_amount_cents, disable_validation: true, allow_nil: true
 
   INVOICE_TYPES = %i[subscription add_on credit].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
@@ -100,20 +100,8 @@ class Invoice < ApplicationRecord
   end
   alias subscription_amount_currency currency
 
-  def wallet_transaction_amount_cents
-    transaction_amount = wallet_transactions.sum(:amount)
-
-    currency = amount.currency
-    rounded_amount = transaction_amount.round(currency.exponent)
-
-    rounded_amount * currency.subunit_to_unit
-  end
-  alias wallet_transaction_amount_currency currency
-
   def subtotal_before_prepaid_credits
-    return amount unless wallet_transactions.exists?
-
-    amount + wallet_transaction_amount
+    amount + prepaid_credit_amount
   end
 
   def invoice_subscription(subscription_id)
@@ -153,7 +141,7 @@ class Invoice < ApplicationRecord
   def refundable_amount_cents
     return 0 if legacy? || credit? || draft? || !succeeded?
 
-    amount = creditable_amount_cents - credits.sum(:amount_cents) - wallet_transaction_amount_cents
+    amount = creditable_amount_cents - credits.sum(:amount_cents) - prepaid_credit_amount_cents
     amount.negative? ? 0 : amount
   end
 

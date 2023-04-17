@@ -22,6 +22,7 @@ module V1
         credit_amount_currency: model.credit_amount_currency,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.total_amount_currency,
+        prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
         legacy: model.legacy,
       }
