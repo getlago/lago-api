@@ -16,6 +16,10 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
     expect { compute_amounts.call }.to change(invoice, :amount_cents).from(0).to(530)
   end
 
+  it 'sets fees_amount_cents from the list of fees' do
+    expect { compute_amounts.call }.to change(invoice, :fees_amount_cents).from(0).to(530)
+  end
+
   it 'sets vat_amount_cents from the list of fees' do
     expect { compute_amounts.call }.to change(invoice, :vat_amount_cents).from(0).to(91)
   end

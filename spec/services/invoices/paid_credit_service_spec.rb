@@ -33,6 +33,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         expect(result.invoice.invoice_type).to eq('credit')
         expect(result.invoice.payment_status).to eq('pending')
 
+        expect(result.invoice.fees_amount_cents).to eq(1500)
         expect(result.invoice.amount_cents).to eq(1500)
         expect(result.invoice.amount_currency).to eq('EUR')
         expect(result.invoice.vat_amount_cents).to eq(0)

@@ -84,28 +84,13 @@ RSpec.describe Invoice, type: :model do
     it { expect(invoice.currency).to eq('JPY') }
   end
 
-  describe '#sub_total_vat_excluded_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { create(:invoice, customer:, amount_currency: 'EUR', organization:) }
-    let(:fees) { create_list(:fee, 3, invoice:, amount_cents: 300) }
-
-    before { fees }
-
-    it 'returns the sub total amount without VAT' do
-      expect(invoice.sub_total_vat_excluded_amount.to_s).to eq('9.00')
-    end
-  end
-
   describe '#sub_total_vat_included_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:, vat_rate: 20) }
     let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { create(:invoice, customer:, amount_currency: 'EUR', vat_amount_cents: 180, organization:) }
-    let(:fees) { create_list(:fee, 3, invoice:, amount_cents: 300) }
-
-    before { fees }
+    let(:invoice) do
+      create(:invoice, customer:, amount_currency: 'EUR', fees_amount_cents: 900, vat_amount_cents: 180, organization:)
+    end
 
     it 'returns the sub total amount with VAT' do
       expect(invoice.sub_total_vat_included_amount.to_s).to eq('10.80')

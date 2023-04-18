@@ -42,13 +42,16 @@ module Types
       field :wallet_transaction_amount_cents, GraphQL::Types::BigInt, null: false
       field :subtotal_before_prepaid_credits, String, null: false
 
-      field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false
+      field :fees_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_vat_included_amount_cents, GraphQL::Types::BigInt, null: false
       field :coupon_total_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_note_total_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
       field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
+
+      # NOTE(legacy): Remove with coupon before VAT refactor
+      field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false, method: :fees_amount_cents
     end
   end
 end

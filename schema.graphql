@@ -2960,6 +2960,7 @@ type Invoice {
   creditableAmountCents: BigInt!
   customer: Customer!
   fees: [Fee!]
+  feesAmountCents: BigInt!
   fileUrl: String
   id: ID!
   invoiceSubscriptions: [InvoiceSubscription!]

@@ -57,9 +57,8 @@ module Invoices
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
       invoice.amount_cents = fee_amounts.sum(&:amount_cents)
-      invoice.amount_currency = applied_add_on.amount_currency
+      invoice.fees_amount_cents = invoice.amount_cents
       invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-      invoice.vat_amount_currency = applied_add_on.amount_currency
     end
 
     def create_add_on_fee(invoice)

@@ -11,6 +11,7 @@ module V1
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
+        fees_amount_cents: model.fees_amount_cents,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,

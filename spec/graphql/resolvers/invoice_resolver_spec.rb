@@ -9,6 +9,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         invoice(id: $id) {
           id
           number
+          feesAmountCents
           refundableAmountCents
           creditableAmountCents
           paymentStatus
