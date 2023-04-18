@@ -67,6 +67,8 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit2.amount_currency).to eq('EUR')
         expect(credit_note2.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
+
+        expect(invoice.credit_notes_amount_cents).to eq(70)
       end
     end
 
