@@ -30,7 +30,7 @@ RSpec.describe Credits::AppliedCouponsService do
   let(:started_at) { Time.zone.now - 2.years }
   let(:created_at) { started_at }
 
-  describe '#create' do
+  describe '#call' do
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:fee) { create(:fee, invoice:, subscription:) }
     let(:applied_coupon) do
@@ -62,10 +62,11 @@ RSpec.describe Credits::AppliedCouponsService do
     end
 
     it 'updates the invoice accordingly' do
-      result = credit_service.create
+      result = credit_service.call
 
       aggregate_failures do
         expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(32)
         expect(result.invoice.credit_amount_cents).to eq(32)
         expect(result.invoice.total_amount_cents).to eq(88)
         expect(result.invoice.credits.count).to eq(2)
@@ -86,7 +87,7 @@ RSpec.describe Credits::AppliedCouponsService do
       end
 
       it 'updates the invoice accordingly' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -110,7 +111,7 @@ RSpec.describe Credits::AppliedCouponsService do
       end
 
       it 'updates the invoice accordingly' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -135,7 +136,7 @@ RSpec.describe Credits::AppliedCouponsService do
       before { applied_coupon_latest.update!(status: :terminated) }
 
       it 'ignores the coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(result.invoice.credits.count).to be_zero
@@ -173,7 +174,7 @@ RSpec.describe Credits::AppliedCouponsService do
       end
 
       it 'ignores coupons' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -216,7 +217,7 @@ RSpec.describe Credits::AppliedCouponsService do
       end
 
       it 'ignores only one coupon and applies the other one' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -257,7 +258,7 @@ RSpec.describe Credits::AppliedCouponsService do
       end
 
       it 'applies two coupons' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -340,7 +341,7 @@ RSpec.describe Credits::AppliedCouponsService do
       end
 
       it 'applies two coupons' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success

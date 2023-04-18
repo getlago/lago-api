@@ -7,7 +7,7 @@ module Credits
       super
     end
 
-    def create
+    def call
       return result if applied_coupons.blank?
 
       applied_coupons.each do |applied_coupon|
@@ -31,6 +31,7 @@ module Credits
         credit_result = Credits::AppliedCouponService.new(invoice:, applied_coupon:, base_amount_cents:).create
         credit_result.raise_if_error!
 
+        invoice.coupons_amount_cents += credit_result.credit.amount_cents
         invoice.credit_amount_cents += credit_result.credit.amount_cents
         invoice.total_amount_cents -= credit_result.credit.amount_cents
       end

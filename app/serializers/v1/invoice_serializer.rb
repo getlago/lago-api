@@ -16,6 +16,7 @@ module V1
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
         vat_amount_currency: model.vat_amount_currency,
+        coupons_amount_cents: model.coupons_amount_cents,
         credit_notes_amount_cents: model.credit_notes_amount_cents,
         credit_amount_cents: model.credit_amount_cents,
         credit_amount_currency: model.credit_amount_currency,

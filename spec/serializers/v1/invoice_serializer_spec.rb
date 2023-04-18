@@ -26,6 +26,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       expect(result['invoice']['amount_currency']).to eq(invoice.amount_currency)
       expect(result['invoice']['vat_amount_cents']).to eq(invoice.vat_amount_cents)
       expect(result['invoice']['vat_amount_currency']).to eq(invoice.vat_amount_currency)
+      expect(result['invoice']['coupons_amount_cents']).to eq(invoice.coupons_amount_cents)
       expect(result['invoice']['credit_notes_amount_cents']).to eq(invoice.credit_notes_amount_cents)
       expect(result['invoice']['credit_amount_cents']).to eq(invoice.credit_amount_cents)
       expect(result['invoice']['credit_amount_currency']).to eq(invoice.credit_amount_currency)

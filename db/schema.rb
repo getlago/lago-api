@@ -402,6 +402,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_131515) do
     t.integer "version_number", default: 2, null: false
     t.bigint "fees_amount_cents", default: 0, null: false
     t.bigint "credit_notes_amount_cents", default: 0, null: false
+    t.bigint "coupons_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end

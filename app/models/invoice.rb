@@ -26,6 +26,7 @@ class Invoice < ApplicationRecord
 
   monetize :amount_cents
   monetize :fees_amount_cents, with_model_currency: :amount_currency
+  monetize :coupons_amount_cents, with_model_currency: :amount_currency
   monetize :vat_amount_cents
   monetize :credit_amount_cents
   monetize :credit_notes_amount_cents, with_model_currency: :amount_currency
@@ -33,7 +34,6 @@ class Invoice < ApplicationRecord
 
   # NOTE: Readonly fields
   monetize :sub_total_vat_included_amount_cents, disable_validation: true, allow_nil: true
-  monetize :coupon_total_amount_cents, disable_validation: true, allow_nil: true
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :wallet_transaction_amount_cents, disable_validation: true, allow_nil: true
@@ -89,11 +89,6 @@ class Invoice < ApplicationRecord
     fees_amount_cents + vat_amount_cents
   end
   alias sub_total_vat_included_amount_currency currency
-
-  def coupon_total_amount_cents
-    credits.coupon_kind.sum(:amount_cents)
-  end
-  alias coupon_total_amount_currency currency
 
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
