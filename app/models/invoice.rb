@@ -30,13 +30,14 @@ class Invoice < ApplicationRecord
            :credit_notes_amount_cents,
            :fees_amount_cents,
            :prepaid_credit_amount_cents,
+           :sub_total_vat_excluded_amount_cents,
+           :sub_total_vat_included_amount_cents,
            :total_amount_cents,
            :vat_amount_cents,
            with_model_currency: :currency
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents,
-           :sub_total_vat_included_amount_cents,
            :subscription_amount_cents,
            disable_validation: true,
            allow_nil: true,
@@ -85,20 +86,12 @@ class Invoice < ApplicationRecord
     amount_cents + vat_amount_cents
   end
 
-  def sub_total_vat_included_amount_cents
-    fees_amount_cents + vat_amount_cents
-  end
-
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end
 
   def subscription_amount_cents
     fees.subscription_kind.sum(:amount_cents)
-  end
-
-  def subtotal_before_prepaid_credits
-    amount + prepaid_credit_amount
   end
 
   def invoice_subscription(subscription_id)

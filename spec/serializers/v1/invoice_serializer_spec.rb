@@ -30,6 +30,8 @@ RSpec.describe ::V1::InvoiceSerializer do
         'prepaid_credit_amount_cents' => invoice.prepaid_credit_amount_cents,
         'vat_amount_cents' => invoice.vat_amount_cents,
         'credit_amount_cents' => invoice.credit_amount_cents,
+        'sub_total_vat_excluded_amount_cents' => invoice.sub_total_vat_excluded_amount_cents,
+        'sub_total_vat_included_amount_cents' => invoice.sub_total_vat_included_amount_cents,
         'total_amount_cents' => invoice.total_amount_cents,
         'file_url' => invoice.file_url,
         'version_number' => 2,

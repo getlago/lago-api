@@ -84,19 +84,6 @@ RSpec.describe Invoice, type: :model do
     it { expect(invoice.currency).to eq('JPY') }
   end
 
-  describe '#sub_total_vat_included_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization:, vat_rate: 20) }
-    let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) do
-      create(:invoice, customer:, currency: 'EUR', fees_amount_cents: 900, vat_amount_cents: 180, organization:)
-    end
-
-    it 'returns the sub total amount with VAT' do
-      expect(invoice.sub_total_vat_included_amount.to_s).to eq('10.80')
-    end
-  end
-
   describe '#charge_amount' do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }
@@ -118,23 +105,6 @@ RSpec.describe Invoice, type: :model do
 
     it 'returns the credits amount' do
       expect(invoice.credit_amount.to_s).to eq('0.00')
-    end
-  end
-
-  describe '#subtotal_before_prepaid_credits' do
-    let(:customer) { create(:customer) }
-    let(:invoice) do
-      create(
-        :invoice,
-        customer:,
-        amount_cents: 555,
-        organization: customer.organization,
-        prepaid_credit_amount_cents: 100,
-      )
-    end
-
-    it 'returns the subtotal before prepaid credits' do
-      expect(invoice.subtotal_before_prepaid_credits.to_s).to eq('6.55')
     end
   end
 
