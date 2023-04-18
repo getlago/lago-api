@@ -12,6 +12,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           feesAmountCents
           couponsAmountCents
           creditNotesAmountCents
+          prepaidCreditAmountCents
           refundableAmountCents
           creditableAmountCents
           paymentStatus

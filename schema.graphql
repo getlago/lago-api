@@ -2972,6 +2972,7 @@ type Invoice {
   metadata: [InvoiceMetadata!]
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
+  prepaidCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
