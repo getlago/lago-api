@@ -35,6 +35,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               itemName
               group { id key value }
               charge { id billableMetric { code } }
+              trueUpFee { id }
             }
           }
           subscriptions {
@@ -71,7 +72,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         id: invoice.id,
       },
@@ -99,7 +100,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: { id: invoice.id },
     )
 
@@ -115,16 +116,13 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: invoice.organization,
-        query: query,
+        query:,
         variables: {
           id: 'foo',
         },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Resource not found',
-      )
+      expect_graphql_error(result:, message: 'Resource not found')
     end
   end
 
