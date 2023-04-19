@@ -107,6 +107,32 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#provider_customer' do
+    subject(:customer) { create(:customer, organization:, payment_provider:) }
+
+    context 'when payment provider is stripe' do
+      let(:payment_provider) { 'stripe' }
+      let(:stripe_customer) { create(:stripe_customer, customer:) }
+
+      before { stripe_customer }
+
+      it 'returns the stripe provider customer object' do
+        expect(customer.provider_customer).to eq(stripe_customer)
+      end
+    end
+
+    context 'when payment provider is gocardless' do
+      let(:payment_provider) { 'gocardless' }
+      let(:gocardless_customer) { create(:gocardless_customer, customer:) }
+
+      before { gocardless_customer }
+
+      it 'returns the gocardless provider customer object' do
+        expect(customer.provider_customer).to eq(gocardless_customer)
+      end
+    end
+  end
+
   describe '#applicable_timezone' do
     subject(:customer) do
       described_class.new(organization:, timezone: 'Europe/Paris')
