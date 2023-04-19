@@ -6,6 +6,8 @@ module V1
       payload = {
         lago_id: model.id,
         lago_group_id: model.group_id,
+        lago_invoice_id: model.invoice_id,
+        lago_true_up_fee_id: model.true_up_fee_id,
         item: {
           type: model.fee_type,
           code: model.item_code,
@@ -21,7 +23,6 @@ module V1
         total_amount_currency: model.amount_currency,
         units: model.units,
         events_count: model.events_count,
-        lago_invoice_id: model.invoice_id,
         external_subscription_id: model.subscription&.external_id,
         payment_status: model.payment_status,
         created_at: model.created_at&.iso8601,

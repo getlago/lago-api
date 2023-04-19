@@ -22,6 +22,8 @@ RSpec.describe ::V1::FeeSerializer do
       expect(result['fee']).to include(
         'lago_id' => fee.id,
         'lago_group_id' => fee.group_id,
+        'lago_invoice_id' => fee.invoice_id,
+        'lago_true_up_fee_id' => fee.true_up_fee_id,
         'amount_cents' => fee.amount_cents,
         'amount_currency' => fee.amount_currency,
         'vat_amount_cents' => fee.vat_amount_cents,
