@@ -18,7 +18,7 @@ job("Build and push Docker") {
         push("packages.dev.deemos.com/p/hyperhuman/containers/lago-backend") {
             // image tags
             tags {
-                +"1.0.\$JB_SPACE_EXECUTION_NUMBER"
+                +"1.1.\$JB_SPACE_EXECUTION_NUMBER"
                 +"latest"
             }
         }
