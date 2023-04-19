@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_19_123538) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -305,12 +305,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.datetime "succeeded_at", precision: nil
     t.datetime "failed_at", precision: nil
     t.datetime "refunded_at", precision: nil
+    t.uuid "true_up_fee_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
+    t.index ["true_up_fee_id"], name: "index_fees_on_true_up_fee_id"
   end
 
   create_table "group_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -664,6 +666,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
   add_foreign_key "events", "subscriptions"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
+  add_foreign_key "fees", "fees", column: "true_up_fee_id"
   add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
