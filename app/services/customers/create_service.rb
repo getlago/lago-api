@@ -176,7 +176,13 @@ module Customers
 
       return if customer.payment_provider.nil?
 
-      create_or_update_provider_customer(customer, billing)
+      update_provider_customer = (billing || {})[:provider_customer_id].present?
+      update_provider_customer ||=
+        customer.__send__("#{customer.payment_provider}_customer")&.provider_customer_id.present?
+
+      if billing.key?(:payment_provider) && update_provider_customer
+        create_or_update_provider_customer(customer, billing)
+      end
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
