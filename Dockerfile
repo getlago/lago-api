@@ -20,9 +20,7 @@ RUN apk add --no-cache \
   libc6-compat
 
 ENV BUNDLER_VERSION='2.3.26'
-ENV HTTP_PROXY='http://10.219.33.13:8888'
-ENV HTTPS_PROXY='http://10.219.33.13:8888'
-RUN gem install bundler --no-document -v '2.3.26'
+RUN gem install bundler --no-document -v '2.3.26' --verbose
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3 --without development test
