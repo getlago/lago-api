@@ -180,9 +180,9 @@ module Customers
       update_provider_customer ||=
         customer.__send__("#{customer.payment_provider}_customer")&.provider_customer_id.present?
 
-      if billing.key?(:payment_provider) && update_provider_customer
-        create_or_update_provider_customer(customer, billing)
-      end
+      return unless billing.key?(:payment_provider) && update_provider_customer
+
+      create_or_update_provider_customer(customer, billing)
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
