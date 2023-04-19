@@ -14,6 +14,7 @@ class Fee < ApplicationRecord
   has_one :organization, through: :invoice
   has_one :billable_metric, -> { with_discarded }, through: :charge
   has_one :add_on, -> { with_discarded }, through: :applied_add_on
+  has_one :true_up_fee
 
   has_many :credit_note_items
   has_many :credit_notes, through: :credit_note_items
@@ -32,6 +33,7 @@ class Fee < ApplicationRecord
   validates :vat_amount_currency, inclusion: { in: currency_list }
   validates :units, numericality: { greated_than_or_equal_to: 0 }
   validates :events_count, numericality: { greated_than_or_equal_to: 0 }, allow_nil: true
+  validates :true_up_fee_id, presence: false, unless: :charge?
 
   scope :subscription_kind, -> { where(fee_type: :subscription) }
   scope :charge_kind, -> { where(fee_type: :charge) }
