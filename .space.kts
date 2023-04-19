@@ -9,7 +9,8 @@ job("Build and push Docker") {
         build {
             dockerfile = "Dockerfile"
             // build-time variables
-            // args["HTTP_PROXY"] = "http://10.20.30.2:1234"
+            args["HTTP_PROXY"] = "http://10.219.33.13:8888"
+            args["HTTPS_PROXY"] = "http://10.219.33.13:8888"
             // image labels
             labels["vendor"] = "Deemos"
         }
