@@ -20,6 +20,8 @@ RUN apk add --no-cache \
   libc6-compat
 
 ENV BUNDLER_VERSION='2.3.26'
+RUN gem sources --add https://mirrors.tuna.tsinghua.edu.cn/rubygems/ --remove https://rubygems.org/
+RUN bundle config mirror.https://rubygems.org https://mirrors.tuna.tsinghua.edu.cn/rubygems
 RUN gem install bundler --no-document -v '2.3.26' --verbose
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
