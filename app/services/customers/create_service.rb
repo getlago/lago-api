@@ -177,8 +177,7 @@ module Customers
       return if customer.payment_provider.nil?
 
       update_provider_customer = (billing || {})[:provider_customer_id].present?
-      update_provider_customer ||=
-        customer.__send__("#{customer.payment_provider}_customer")&.provider_customer_id.present?
+      update_provider_customer ||= customer.provider_customer&.provider_customer_id.present?
 
       return unless billing.key?(:payment_provider) && update_provider_customer
 
