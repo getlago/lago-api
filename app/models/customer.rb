@@ -87,6 +87,15 @@ class Customer < ApplicationRecord
     organization.document_locale.to_sym
   end
 
+  def provider_customer
+    case payment_provider&.to_sym
+    when :stripe
+      stripe_customer
+    when :gocardless
+      gocardless_customer
+    end
+  end
+
   private
 
   def ensure_slug
