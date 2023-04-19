@@ -5,7 +5,7 @@ WORKDIR /app
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
 RUN apk add --no-cache \
   git \
@@ -20,6 +20,8 @@ RUN apk add --no-cache \
   libc6-compat
 
 ENV BUNDLER_VERSION='2.3.26'
+ENV HTTP_PROXY='http://10.219.33.13:8888'
+ENV HTTPS_PROXY='http://10.219.33.13:8888'
 RUN gem install bundler --no-document -v '2.3.26'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
@@ -31,7 +33,7 @@ WORKDIR /app
 
 COPY . /
 
-# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
 RUN apk add --no-cache \
   bash \
