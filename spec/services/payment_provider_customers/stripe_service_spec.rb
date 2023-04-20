@@ -100,7 +100,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           :invoice,
           customer:,
           total_amount_cents: 200,
-          total_amount_currency: 'EUR',
+          currency: 'EUR',
         )
       end
 

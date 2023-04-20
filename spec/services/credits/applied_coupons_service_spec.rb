@@ -11,7 +11,7 @@ RSpec.describe Credits::AppliedCouponsService do
       amount_cents: 100,
       vat_amount_cents: 20,
       total_amount_cents: 120,
-      amount_currency: 'EUR',
+      currency: 'EUR',
       customer: subscription.customer,
     )
   end

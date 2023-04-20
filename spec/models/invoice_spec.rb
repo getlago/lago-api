@@ -79,7 +79,7 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe '#currency' do
-    let(:invoice) { build(:invoice, amount_currency: 'JPY') }
+    let(:invoice) { build(:invoice, currency: 'JPY') }
 
     it { expect(invoice.currency).to eq('JPY') }
   end
@@ -89,7 +89,7 @@ RSpec.describe Invoice, type: :model do
     let(:customer) { create(:customer, organization:, vat_rate: 20) }
     let(:subscription) { create(:subscription, organization:, customer:) }
     let(:invoice) do
-      create(:invoice, customer:, amount_currency: 'EUR', fees_amount_cents: 900, vat_amount_cents: 180, organization:)
+      create(:invoice, customer:, currency: 'EUR', fees_amount_cents: 900, vat_amount_cents: 180, organization:)
     end
 
     it 'returns the sub total amount with VAT' do

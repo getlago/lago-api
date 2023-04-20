@@ -17,7 +17,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
   let(:invoice) do
     create(
       :invoice,
-      amount_currency: 'EUR',
+      currency: 'EUR',
       amount_cents: 20,
       total_amount_cents: 24,
       payment_status: :succeeded,
@@ -55,21 +55,21 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.customer).to eq(invoice.customer)
         expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
 
-        expect(credit_note.total_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.total_amount_currency).to eq(invoice.currency)
         expect(credit_note.total_amount_cents).to eq(18)
 
-        expect(credit_note.credit_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.credit_amount_currency).to eq(invoice.currency)
         expect(credit_note.credit_amount_cents).to eq(12)
-        expect(credit_note.balance_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.balance_amount_currency).to eq(invoice.currency)
         expect(credit_note.balance_amount_cents).to eq(12)
         expect(credit_note.credit_vat_amount_cents).to eq(2)
-        expect(credit_note.credit_vat_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.credit_vat_amount_currency).to eq(invoice.currency)
         expect(credit_note.credit_status).to eq('available')
 
-        expect(credit_note.refund_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.refund_amount_currency).to eq(invoice.currency)
         expect(credit_note.refund_amount_cents).to eq(6)
         expect(credit_note.refund_vat_amount_cents).to eq(1)
-        expect(credit_note.refund_vat_amount_currency).to eq(invoice.amount_currency)
+        expect(credit_note.refund_vat_amount_currency).to eq(invoice.currency)
         expect(credit_note.refund_status).to eq('pending')
 
         expect(credit_note).to be_other
@@ -78,12 +78,12 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         item1 = credit_note.items.order(created_at: :asc).first
         expect(item1.fee).to eq(fee1)
         expect(item1.amount_cents).to eq(10)
-        expect(item1.amount_currency).to eq(invoice.amount_currency)
+        expect(item1.amount_currency).to eq(invoice.currency)
 
         item2 = credit_note.items.order(created_at: :asc).last
         expect(item2.fee).to eq(fee2)
         expect(item2.amount_cents).to eq(5)
-        expect(item2.amount_currency).to eq(invoice.amount_currency)
+        expect(item2.amount_currency).to eq(invoice.currency)
       end
     end
 
@@ -257,7 +257,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             create(
               :invoice,
               :draft,
-              amount_currency: 'EUR',
+              currency: 'EUR',
               amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
@@ -291,7 +291,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             create(
               :invoice,
               :credit,
-              amount_currency: 'EUR',
+              currency: 'EUR',
               amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
@@ -315,7 +315,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           let(:invoice) do
             create(
               :invoice,
-              amount_currency: 'EUR',
+              currency: 'EUR',
               amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,

@@ -8,20 +8,21 @@ module Types
       field :customer, Types::Customers::Object, null: false
 
       field :id, ID, null: false
-      field :sequential_id, ID, null: false
       field :number, String, null: false
-      field :charge_amount_cents, GraphQL::Types::BigInt, null: false
+      field :sequential_id, ID, null: false
+
+      field :currency, Types::CurrencyEnum
+
       field :amount_cents, GraphQL::Types::BigInt, null: false
-      field :amount_currency, Types::CurrencyEnum, null: false
-      field :vat_amount_cents, GraphQL::Types::BigInt, null: false
-      field :vat_amount_currency, Types::CurrencyEnum, null: false
+      field :charge_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_amount_cents, GraphQL::Types::BigInt, null: false
-      field :credit_amount_currency, Types::CurrencyEnum, null: false
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
-      field :total_amount_currency, Types::CurrencyEnum, null: false
+      field :vat_amount_cents, GraphQL::Types::BigInt, null: false
+
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
-      field :status, Types::Invoices::StatusTypeEnum, null: false
       field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
+      field :status, Types::Invoices::StatusTypeEnum, null: false
+
       field :file_url, String, null: true
       field :vat_rate, Float, null: false
 
@@ -55,6 +56,11 @@ module Types
       field :credit_note_total_amount_cents, GraphQL::Types::BigInt, null: false, method: :credit_notes_amount_cents
       field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false, method: :fees_amount_cents
       field :wallet_transaction_amount_cents, GraphQL::Types::BigInt, null: false, method: :prepaid_credit_amount_cents
+
+      field :amount_currency, Types::CurrencyEnum, null: false, method: :currency
+      field :credit_amount_currency, Types::CurrencyEnum, null: false, method: :currency
+      field :total_amount_currency, Types::CurrencyEnum, null: false, method: :currency
+      field :vat_amount_currency, Types::CurrencyEnum, null: false, method: :currency
     end
   end
 end

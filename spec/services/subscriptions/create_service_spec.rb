@@ -379,11 +379,9 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               create(
                 :invoice,
                 customer:,
-                amount_currency: 'EUR',
+                currency: 'EUR',
                 amount_cents: 100,
-                vat_amount_currency: 'EUR',
                 vat_amount_cents: 20,
-                total_amount_currency: 'EUR',
                 total_amount_cents: 120,
               )
             end
