@@ -2970,7 +2970,6 @@ type Invoice {
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!
   issuingDate: ISO8601Date!
-  legacy: Boolean!
   metadata: [InvoiceMetadata!]
   number: String!
   paymentStatus: InvoicePaymentStatusTypeEnum!
@@ -2988,6 +2987,7 @@ type Invoice {
   vatAmountCents: BigInt!
   vatAmountCurrency: CurrencyEnum!
   vatRate: Float!
+  versionNumber: Int!
   walletTransactionAmountCents: BigInt!
 }
 

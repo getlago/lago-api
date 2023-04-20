@@ -33,7 +33,7 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :legacy, Boolean, null: false
+      field :version_number, Integer, null: false
 
       field :subscriptions, [Types::Subscriptions::Object]
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
