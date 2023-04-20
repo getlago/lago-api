@@ -9,6 +9,7 @@ class Fee < ApplicationRecord
   belongs_to :subscription, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
+  belongs_to :true_up_parent_fee, class_name: 'Fee', foreign_key: :true_up_fee_id, optional: true
 
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice

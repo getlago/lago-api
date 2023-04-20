@@ -34,6 +34,8 @@ class Charge < ApplicationRecord
   validate :validate_instant
   validate :validate_min_amount_cents
 
+  monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
+
   default_scope -> { kept }
 
   scope :instant, -> { where(instant: true) }
