@@ -51,5 +51,9 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
         )
       end
     end
+
+    it 'sets true_up_fee_id to the fee' do
+      expect { create_service.call }.to change(fee, :true_up_fee).from(nil)
+    end
   end
 end
