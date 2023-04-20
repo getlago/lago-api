@@ -39,5 +39,7 @@ de:
     breakdown_for_days: "%{breakdown_duration} für %{breakdown_total_duration} Tage"
     breakdown_of: "%{breakdown} für %{fee_group_name}"
     notice: Wenn beispielsweise eine Einheit mit 15 verbleibenden Tagen in Ihrem Monatsplan hinzugefügt wird, multiplizieren wir den Preis mit 15/31 (verbleibende Tage dividiert durch die Gesamtzahl der Tage in Ihrem Plan), um den anteiligen Preis zu berechnen. Dieselbe Logik greift beim Entfernen einer Einheit, die 10 Tage lang verwendet wurde, wir multiplizieren den Preis mit 10/31.
+    true_up_metric: "%{metric} - Kosten für die Anpassung"
+    true_up_details: "Mindestausgabe von %{min_amount} anteilig an den Nutzungstagen"
 
     total_credits: Gesamtguthaben
