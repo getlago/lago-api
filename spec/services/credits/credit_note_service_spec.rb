@@ -15,7 +15,6 @@ RSpec.describe Credits::CreditNoteService do
       :invoice,
       customer:,
       currency: 'EUR',
-      amount_cents:,
       total_amount_cents: amount_cents,
     )
   end
