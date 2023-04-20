@@ -19,6 +19,7 @@ module Fees
       end
       true_up_fee.compute_vat
 
+      fee.true_up_fee = true_up_fee
       result.true_up_fee = true_up_fee
       result
     end
