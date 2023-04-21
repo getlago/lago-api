@@ -204,7 +204,7 @@ RSpec.describe Fees::ChargeService do
           aggregate_failures do
             expect(result).to be_success
             expect(result.fees.count).to eq(2)
-            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 1000)
+            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548) # 548 is 1000 prorated for 17 days.
           end
         end
       end
@@ -1024,7 +1024,7 @@ RSpec.describe Fees::ChargeService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.fees.count).to eq(3)
-          expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 1000)
+          expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 548) # 548 is 1000 prorated for 17 days.
         end
       end
     end

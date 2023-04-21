@@ -5,8 +5,6 @@ module Subscriptions
     class WeeklyService < Subscriptions::DatesService
       WEEK_DURATION = 7
 
-      private
-
       def compute_base_date
         billing_date - 1.week
       end

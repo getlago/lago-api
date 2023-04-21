@@ -55,5 +55,33 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
     it 'sets true_up_fee_id to the fee' do
       expect { create_service.call }.to change(fee, :true_up_fee).from(nil)
     end
+
+    context 'when prorated' do
+      let(:fee) do
+        create(
+          :charge_fee,
+          amount_cents: 200,
+          charge:,
+          properties: {
+            'from_datetime' => Date.parse('2022-08-01 00:00:00'),
+            'to_datetime' => Date.parse('2022-08-15 23:59:59'),
+            'charges_from_datetime' => Date.parse('2022-08-01 00:00:00'),
+            'charges_to_datetime' => Date.parse('2022-08-15 23:59:59'),
+          },
+        )
+      end
+
+      it 'instantiates a prorated true-up fee' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.true_up_fee).to have_attributes(
+            amount_cents: 283, # (1000 / 31.0 * 15) - 200
+          )
+        end
+      end
+    end
   end
 end
