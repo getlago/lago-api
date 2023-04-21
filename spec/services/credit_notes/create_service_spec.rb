@@ -254,6 +254,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               :invoice,
               :draft,
               currency: 'EUR',
+              fees_amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
               vat_rate: 20,

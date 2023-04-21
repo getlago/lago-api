@@ -213,8 +213,8 @@ RSpec.describe Invoice, type: :model do
     end
 
     it 'returns the expected creditable amount in cents' do
-      invoice_subscription = create(:invoice_subscription)
-      invoice = invoice_subscription.invoice
+      invoice = create(:invoice, version_number: 2)
+      invoice_subscription = create(:invoice_subscription, invoice:)
       subscription = invoice_subscription.subscription
       billable_metric = create(:recurring_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)

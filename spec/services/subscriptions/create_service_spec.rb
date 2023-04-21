@@ -381,6 +381,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 customer:,
                 currency: 'EUR',
                 sub_total_vat_excluded_amount_cents: 100,
+                fees_amount_cents: 100,
                 vat_amount_cents: 20,
                 total_amount_cents: 120,
               )
