@@ -22,6 +22,7 @@ module Credits
         applied_coupon:,
         amount_cents: credit_amount,
         amount_currency: invoice.currency,
+        before_vat: false, # NOTE: will turn to true with invoice v3
       )
 
       applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?
