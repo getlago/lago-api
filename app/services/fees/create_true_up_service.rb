@@ -39,7 +39,7 @@ module Fees
       # NOTE: number of days between beginning of the period and the termination date
       number_of_day_to_bill = (to_date + 1.day - from_date).to_i
 
-      day_price * number_of_day_to_bill
+      date_service.charge_single_day_price(charge:) * number_of_day_to_bill
     end
 
     def date_service
@@ -47,11 +47,6 @@ module Fees
         subscription,
         subscription.terminated_at || Time.current,
       )
-    end
-
-    def day_price
-      duration = date_service.compute_charges_duration(from_date: date_service.compute_charges_from_date)
-      charge.min_amount_cents.fdiv(duration.to_i)
     end
   end
 end

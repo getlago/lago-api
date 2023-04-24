@@ -97,6 +97,11 @@ module Subscriptions
       plan.amount_cents.fdiv(duration.to_i)
     end
 
+    def charge_single_day_price(charge:)
+      duration = compute_charges_duration(from_date: compute_charges_from_date)
+      charge.min_amount_cents.fdiv(duration.to_i)
+    end
+
     def charges_duration_in_days
       compute_charges_duration(from_date: compute_charges_from_date)
     end

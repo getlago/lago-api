@@ -9,6 +9,8 @@ module Subscriptions
         monthly_service.compute_from_date(billing_date).month == subscription_at.month
       end
 
+      private
+
       def compute_base_date
         billing_date - 1.year
       end
