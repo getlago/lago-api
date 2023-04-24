@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_19_123538) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_24_092207) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -306,6 +306,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_19_123538) do
     t.datetime "failed_at", precision: nil
     t.datetime "refunded_at", precision: nil
     t.uuid "true_up_fee_id"
+    t.uuid "add_on_id"
+    t.string "description"
+    t.bigint "unit_amount_cents", default: 0, null: false
+    t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["group_id"], name: "index_fees_on_group_id"
@@ -661,6 +665,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_19_123538) do
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
   add_foreign_key "events", "subscriptions"
+  add_foreign_key "fees", "add_ons"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
   add_foreign_key "fees", "fees", column: "true_up_fee_id"
