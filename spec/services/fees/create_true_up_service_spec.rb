@@ -48,12 +48,9 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
           amount_cents: 300,
           vat_amount_cents: 0,
           vat_amount_currency: fee.currency,
+          true_up_parent_fee_id: fee.id,
         )
       end
-    end
-
-    it 'sets true_up_fee_id to the fee' do
-      expect { create_service.call }.to change(fee, :true_up_fee).from(nil)
     end
 
     context 'when prorated' do

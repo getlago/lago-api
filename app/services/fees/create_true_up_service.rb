@@ -18,10 +18,10 @@ module Fees
         f.units = 1
         f.events_count = 0
         f.group_id = nil
+        f.true_up_parent_fee = fee
       end
       true_up_fee.compute_vat
 
-      fee.true_up_fee = true_up_fee
       result.true_up_fee = true_up_fee
       result
     end
@@ -43,9 +43,12 @@ module Fees
     end
 
     def date_service
+      boundaries.timestamp = Time.zone.at(boundaries.timestamp) if boundaries.timestamp.is_a?(Integer)
+
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        subscription.terminated_at || Time.current,
+        boundaries.timestamp || Time.current,
+        current_usage: subscription.terminated? && subscription.upgraded?,
       )
     end
   end
