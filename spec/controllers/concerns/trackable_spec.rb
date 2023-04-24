@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Trackable do
@@ -29,8 +31,7 @@ RSpec.describe Trackable do
 
   def dummy_class
     Class.new do
-      def self.before_action(*)
-      end
+      def self.before_action(*); end
 
       include Trackable
 
@@ -47,7 +48,7 @@ RSpec.describe Trackable do
   end
 
   def build_dummy(attrs = {})
-    base_attrs = {current_organization: membership.organization}
+    base_attrs = { current_organization: membership.organization }
     stub_const('DummyClass', dummy_class)
     DummyClass.new(base_attrs.merge(attrs))
   end

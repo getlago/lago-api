@@ -5,8 +5,8 @@ module Types
     class Object < Types::BaseObject
       graphql_name 'AppliedAddOn'
 
-      field :id, ID, null: false
       field :add_on, Types::AddOns::Object, null: false
+      field :id, ID, null: false
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false

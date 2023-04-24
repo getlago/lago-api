@@ -4,15 +4,15 @@ require 'rails_helper'
 
 RSpec.describe Fees::PaidCreditService do
   subject(:paid_credit_service) do
-    described_class.new(invoice: invoice, customer: customer, wallet_transaction: wallet_transaction)
+    described_class.new(invoice:, customer:, wallet_transaction:)
   end
 
   let(:customer) { create(:customer) }
   let(:invoice) { create(:invoice, organization: customer.organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
   let(:wallet_transaction) do
-    create(:wallet_transaction, wallet: wallet, amount: '15.00', credit_amount: '15.00')
+    create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
   end
 
   before { subscription }
@@ -46,7 +46,7 @@ RSpec.describe Fees::PaidCreditService do
           :fee,
           invoiceable_type: 'WalletTransaction',
           invoiceable_id: wallet_transaction.id,
-          invoice: invoice,
+          invoice:,
         )
       end
 

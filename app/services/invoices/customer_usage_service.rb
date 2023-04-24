@@ -9,10 +9,10 @@ module Invoices
 
       if organization_id.present?
         @organization_id = organization_id
-        @customer = Customer.find_by!(external_id: customer_id, organization_id: organization_id)
+        @customer = Customer.find_by!(external_id: customer_id, organization_id:)
         @subscription = @customer&.active_subscriptions&.find_by(external_id: subscription_id)
       else
-        customer(customer_id: customer_id)
+        customer(customer_id:)
         @subscription = @customer&.active_subscriptions&.find_by(id: subscription_id)
       end
     rescue ActiveRecord::RecordNotFound

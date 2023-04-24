@@ -6,14 +6,14 @@ module Types
       graphql_name 'CreditNote'
 
       field :id, ID, null: false
-      field :sequential_id, ID, null: false
-      field :number, String, null: false
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
+      field :number, String, null: false
+      field :sequential_id, ID, null: false
 
       field :credit_status, Types::CreditNotes::CreditStatusTypeEnum, null: true
-      field :refund_status, Types::CreditNotes::RefundStatusTypeEnum, null: true
-      field :reason, Types::CreditNotes::ReasonTypeEnum, null: false
       field :description, String, null: true
+      field :reason, Types::CreditNotes::ReasonTypeEnum, null: false
+      field :refund_status, Types::CreditNotes::RefundStatusTypeEnum, null: true
 
       field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_vat_excluded_amount_currency, Types::CurrencyEnum, null: false
@@ -36,8 +36,8 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
       field :refunded_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :file_url, String, null: true
 
@@ -45,12 +45,8 @@ module Types
       field :invoice, Types::Invoices::Object
       field :items, [Types::CreditNoteItems::Object], null: false
 
-      field :can_be_voided, Boolean, null: false do
+      field :can_be_voided, Boolean, null: false, method: :voidable? do
         description 'Check if credit note can be voided'
-      end
-
-      def can_be_voided
-        object.voidable?
       end
     end
   end

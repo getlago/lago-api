@@ -8,7 +8,7 @@ RSpec.describe PaymentProviders::DestroyService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:payment_provider) { create(:stripe_provider, organization: organization) }
+  let(:payment_provider) { create(:stripe_provider, organization:) }
 
   describe '.destroy' do
     before { payment_provider }

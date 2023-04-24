@@ -85,8 +85,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:subscription_fee) do
         create(
           :fee,
-          subscription: subscription,
-          invoice: invoice,
+          subscription:,
+          invoice:,
           amount_cents: 0,
           vat_amount_cents: 0,
           invoiceable_type: 'Subscription',

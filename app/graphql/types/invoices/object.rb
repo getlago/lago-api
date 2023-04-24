@@ -35,10 +35,10 @@ module Types
 
       field :version_number, Integer, null: false
 
-      field :subscriptions, [Types::Subscriptions::Object]
-      field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
-      field :fees, [Types::Fees::Object], null: true
       field :credit_notes, [Types::CreditNotes::Object], null: true
+      field :fees, [Types::Fees::Object], null: true
+      field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
+      field :subscriptions, [Types::Subscriptions::Object]
 
       field :coupons_amount_cents, GraphQL::Types::BigInt, null: false
       field :prepaid_credit_amount_cents, GraphQL::Types::BigInt, null: false
@@ -48,8 +48,8 @@ module Types
       field :fees_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_vat_included_amount_cents, GraphQL::Types::BigInt, null: false
 
-      field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
       field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
+      field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
 
       # NOTE(legacy): Remove with coupon before VAT refactor
       field :coupon_total_amount_cents, GraphQL::Types::BigInt, null: false, method: :coupons_amount_cents

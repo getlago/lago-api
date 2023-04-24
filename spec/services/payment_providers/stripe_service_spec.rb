@@ -16,7 +16,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       expect do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
-          secret_key: secret_key,
+          secret_key:,
           create_customers: true,
         )
 
@@ -29,7 +29,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       let(:stripe_provider) do
         create(
           :stripe_provider,
-          organization: organization,
+          organization:,
           webhook_id: 'we_123456',
           secret_key: 'secret',
         )
@@ -45,7 +45,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'updates the existing provider' do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
-          secret_key: secret_key,
+          secret_key:,
           create_customers: true,
         )
 
@@ -82,7 +82,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
   describe '.register_webhook' do
     let(:stripe_provider) do
-      create(:stripe_provider, organization: organization)
+      create(:stripe_provider, organization:)
     end
 
     let(:stripe_webhook) do
@@ -112,7 +112,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
   describe '.refresh_webhook' do
     let(:stripe_provider) do
-      create(:stripe_provider, organization: organization)
+      create(:stripe_provider, organization:)
     end
 
     let(:stripe_webhook) do
@@ -132,7 +132,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     end
 
     it 'registers a webhook on stripe' do
-      result = stripe_service.refresh_webhook(stripe_provider: stripe_provider)
+      result = stripe_service.refresh_webhook(stripe_provider:)
 
       expect(result).to be_success
 
@@ -144,7 +144,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
   end
 
   describe '.handle_incoming_webhook' do
-    let(:stripe_provider) { create(:stripe_provider, organization: organization) }
+    let(:stripe_provider) { create(:stripe_provider, organization:) }
     let(:event_result) { Stripe::Event.construct_from(event) }
 
     let(:event) do
@@ -233,7 +233,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
-          organization: organization,
+          organization:,
           event_json: event,
         )
 
@@ -266,7 +266,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
-          organization: organization,
+          organization:,
           event_json: event,
         )
 
@@ -292,7 +292,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
-          organization: organization,
+          organization:,
           event_json: event,
         )
 
@@ -320,7 +320,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
-          organization: organization,
+          organization:,
           event_json: event,
         )
 
@@ -344,7 +344,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
       it 'returns an error result' do
         result = stripe_service.handle_event(
-          organization: organization,
+          organization:,
           event_json: event.to_json,
         )
 

@@ -8,7 +8,7 @@ plan = Plan.create_with(
   amount_cents: 100,
   amount_currency: 'EUR',
 ).find_or_create_by!(
-  organization: organization,
+  organization:,
   name: 'Group Plan',
   code: 'group_plan',
 )
@@ -29,7 +29,7 @@ customer = Customer.create_with(
   legal_number: Faker::Company.duns_number,
   currency: 'EUR',
 ).find_or_create_by!(
-  organization: organization,
+  organization:,
   external_id: 'cust_with_dimensions',
 )
 
@@ -38,14 +38,14 @@ subscription = Subscription.create_with(
   subscription_at: Time.current - 3.months,
   status: :active,
 ).find_or_create_by!(
-  customer: customer,
+  customer:,
   external_id: SecureRandom.uuid,
-  plan: plan,
+  plan:,
 )
 
 # NOTE: billable metric with one dimension group
 one_dimension_metric = BillableMetric.find_or_create_by!(
-  organization: organization,
+  organization:,
   aggregation_type: 'count_agg',
   name: 'Count BM - One dimension',
   code: 'count_bm_one_dimension',
@@ -71,7 +71,7 @@ Charge.create_with(
     GroupProperty.new(group: italy, values: { amount: Faker::Number.between(from: 100, to: 500).to_s }),
   ],
 ).find_or_create_by!(
-  plan: plan,
+  plan:,
   billable_metric: one_dimension_metric,
 )
 
@@ -79,9 +79,9 @@ unless customer.events.exists?
   time = Time.current
   2.times do
     Event.create!(
-      customer: customer,
-      subscription: subscription,
-      organization: organization,
+      customer:,
+      subscription:,
+      organization:,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..12).seconds,
       created_at: time,
@@ -95,9 +95,9 @@ unless customer.events.exists?
   end
 
   Event.create!(
-    customer: customer,
-    subscription: subscription,
-    organization: organization,
+    customer:,
+    subscription:,
+    organization:,
     transaction_id: SecureRandom.uuid,
     timestamp: time - rand(0..12).seconds,
     created_at: time,
@@ -112,7 +112,7 @@ end
 
 # NOTE: billable metric with two dimensions group
 two_dimensions_metric = BillableMetric.find_or_create_by!(
-  organization: organization,
+  organization:,
   aggregation_type: 'count_agg',
   name: 'Count BM - Two dimensions',
   code: 'count_bm_two_dimensions',
@@ -156,16 +156,16 @@ Charge.create_with(
     GroupProperty.new(group: google_usa, values: { amount: Faker::Number.between(from: 100, to: 500).to_s }),
   ],
 ).find_or_create_by!(
-  plan: plan,
+  plan:,
   billable_metric: two_dimensions_metric,
 )
 
 2.times do
   time = Time.current
   Event.create!(
-    customer: customer,
-    subscription: subscription,
-    organization: organization,
+    customer:,
+    subscription:,
+    organization:,
     transaction_id: SecureRandom.uuid,
     timestamp: time - rand(0..12).seconds,
     created_at: time,
@@ -182,9 +182,9 @@ Charge.create_with(
 end
 
 Event.create!(
-  customer: customer,
-  subscription: subscription,
-  organization: organization,
+  customer:,
+  subscription:,
+  organization:,
   transaction_id: SecureRandom.uuid,
   timestamp: time - rand(0..12).seconds,
   created_at: time,
@@ -200,9 +200,9 @@ Event.create!(
 )
 
 Event.create!(
-  customer: customer,
-  subscription: subscription,
-  organization: organization,
+  customer:,
+  subscription:,
+  organization:,
   transaction_id: SecureRandom.uuid,
   timestamp: time - rand(0..12).seconds,
   created_at: time,
@@ -218,9 +218,9 @@ Event.create!(
 )
 
 Event.create!(
-  customer: customer,
-  subscription: subscription,
-  organization: organization,
+  customer:,
+  subscription:,
+  organization:,
   transaction_id: SecureRandom.uuid,
   timestamp: time - rand(0..12).seconds,
   created_at: time,

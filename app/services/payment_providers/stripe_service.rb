@@ -31,7 +31,7 @@ module PaymentProviders
         #       attached to the provider
         reattach_provider_customers(
           organization_id: args[:organization_id],
-          stripe_provider: stripe_provider,
+          stripe_provider:,
         )
       end
 
@@ -78,7 +78,7 @@ module PaymentProviders
       )
 
       PaymentProviders::Stripe::HandleEventJob.perform_later(
-        organization: organization,
+        organization:,
         event: event.to_json,
       )
 
@@ -111,7 +111,7 @@ module PaymentProviders
           )
         result.raise_if_error! || result
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
-        status = event.type == 'payment_intent.succeeded' ? 'succeeded' : 'failed'
+        status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
 
         Invoices::Payments::StripeService
           .new.update_payment_status(
@@ -145,7 +145,7 @@ module PaymentProviders
       return if stripe_provider.webhook_id.blank?
 
       ::Stripe::WebhookEndpoint.delete(
-        stripe_provider.webhook_id, {}, { api_key: api_key }
+        stripe_provider.webhook_id, {}, { api_key: }
       )
     rescue StandardError => e
       # NOTE: Since removing the webbook end-point is not critical
@@ -160,7 +160,7 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, stripe_provider:)
       PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: organization_id })
+        .where(payment_provider_id: nil, customers: { organization_id: })
         .update_all(payment_provider_id: stripe_provider.id)
     end
   end

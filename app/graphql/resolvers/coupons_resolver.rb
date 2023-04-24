@@ -8,10 +8,10 @@ module Resolvers
     description 'Query coupons of an organization'
 
     argument :ids, [ID], required: false, description: 'List of coupon IDs to fetch'
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
-    argument :status, Types::Coupons::StatusEnum, required: false
+    argument :page, Integer, required: false
     argument :search_term, String, required: false
+    argument :status, Types::Coupons::StatusEnum, required: false
 
     type Types::Coupons::Object.collection_type, null: false
 

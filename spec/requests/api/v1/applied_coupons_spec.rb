@@ -4,12 +4,12 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::AppliedCouponsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:coupon) { create(:coupon, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:coupon) { create(:coupon, organization:) }
 
   describe 'apply' do
     before do
-      create(:active_subscription, customer: customer)
+      create(:active_subscription, customer:)
     end
 
     let(:params) do
@@ -55,16 +55,16 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
   end
 
   describe 'index' do
-    let(:customer) { create(:customer, organization: organization) }
-    let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', organization: organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', organization:) }
     let(:credit) do
-      create(:credit, applied_coupon: applied_coupon, amount_cents: 2, amount_currency: customer.currency)
+      create(:credit, applied_coupon:, amount_cents: 2, amount_currency: customer.currency)
     end
     let(:applied_coupon) do
       create(
         :applied_coupon,
-        customer: customer,
-        coupon: coupon,
+        customer:,
+        coupon:,
         amount_cents: 10,
         amount_currency: customer.currency,
       )
@@ -95,7 +95,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
         create(
           :applied_coupon,
           coupon: coupon_latest,
-          customer: customer,
+          customer:,
           percentage_rate: 20.00,
           created_at: applied_coupon.created_at + 1.day,
         )
@@ -124,7 +124,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
         create(
           :applied_coupon,
           coupon: coupon_latest,
-          customer: customer,
+          customer:,
           status: :terminated,
           percentage_rate: 20.00,
           created_at: applied_coupon.created_at + 1.day,
@@ -145,7 +145,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
     end
 
     context 'with external_customer_id params' do
-      let(:customer_new) { create(:customer, organization: organization) }
+      let(:customer_new) { create(:customer, organization:) }
       let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:) }
       let(:applied_coupon_latest) do
         create(

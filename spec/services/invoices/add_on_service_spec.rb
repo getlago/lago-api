@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::AddOnService, type: :service do
   subject(:invoice_service) do
-    described_class.new(applied_add_on: applied_add_on, datetime: datetime)
+    described_class.new(applied_add_on:, datetime:)
   end
 
   let(:datetime) { Time.zone.now }

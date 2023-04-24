@@ -12,24 +12,24 @@ module Types
       field :sequential_id, String, null: false
       field :slug, String, null: false
 
-      field :country, Types::CountryCodeEnum, null: true
       field :address_line1, String, null: true
       field :address_line2, String, null: true
-      field :state, String, null: true
-      field :zipcode, String, null: true
-      field :email, String, null: true
+      field :applicable_timezone, Types::TimezoneEnum, null: false
       field :city, String, null: true
-      field :url, String, null: true
-      field :phone, String, null: true
-      field :logo_url, String, null: true
+      field :country, Types::CountryCodeEnum, null: true
+      field :currency, Types::CurrencyEnum, null: true
+      field :email, String, null: true
+      field :invoice_grace_period, Integer, null: true
       field :legal_name, String, null: true
       field :legal_number, String, null: true
-      field :vat_rate, Float, null: true
-      field :invoice_grace_period, Integer, null: true
-      field :currency, Types::CurrencyEnum, null: true
+      field :logo_url, String, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
+      field :phone, String, null: true
+      field :state, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
-      field :applicable_timezone, Types::TimezoneEnum, null: false
+      field :url, String, null: true
+      field :vat_rate, Float, null: true
+      field :zipcode, String, null: true
 
       field :metadata, [Types::Customers::Metadata::Object], null: true
 
@@ -46,22 +46,22 @@ module Types
       field :credit_notes, [Types::CreditNotes::Object], null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
-      field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
       field :active_subscription_count, Integer, null: false, description: 'Number of active subscriptions per customer'
-      field :credit_notes_credits_available_count,
-            Integer,
-            null: false,
-            description: 'Number of available credits from credit notes per customer'
       field :credit_notes_balance_amount_cents,
             GraphQL::Types::BigInt,
             null: false,
             description: 'Credit notes credits balance available per customer'
+      field :credit_notes_credits_available_count,
+            Integer,
+            null: false,
+            description: 'Number of available credits from credit notes per customer'
+      field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
+      field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
 
-      field :can_edit_attributes, Boolean, null: false do
+      field :can_edit_attributes, Boolean, null: false, method: :editable? do
         description 'Check if customer attributes are editable'
       end
 
@@ -87,10 +87,6 @@ module Types
 
       def active_subscription_count
         object.active_subscriptions.count
-      end
-
-      def can_edit_attributes
-        object.editable?
       end
 
       def provider_customer

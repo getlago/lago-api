@@ -9,11 +9,11 @@ module Mutations
       graphql_name 'CreateAddOn'
       description 'Creates a new add-on'
 
-      argument :name, String, required: true
-      argument :code, String, required: true
-      argument :description, String, required: false
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
+      argument :code, String, required: true
+      argument :description, String, required: false
+      argument :name, String, required: true
 
       type Types::AddOns::Object
 

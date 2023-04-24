@@ -3,22 +3,22 @@
 module ApiHelper
   def get_with_token(organization, path, params = {}, headers = {})
     set_headers(organization, headers)
-    get(path, params: params, headers: headers)
+    get(path, params:, headers:)
   end
 
   def post_with_token(organization, path, params = {}, headers = {})
     set_headers(organization, headers)
-    post(path, params: params.to_json, headers: headers)
+    post(path, params: params.to_json, headers:)
   end
 
   def put_with_token(organization, path, params = {}, headers = {})
     set_headers(organization, headers)
-    put(path, params: params.to_json, headers: headers)
+    put(path, params: params.to_json, headers:)
   end
 
   def delete_with_token(organization, path, params = {}, headers = {})
     set_headers(organization, headers)
-    delete(path, params: params.to_json, headers: headers)
+    delete(path, params: params.to_json, headers:)
   end
 
   def json

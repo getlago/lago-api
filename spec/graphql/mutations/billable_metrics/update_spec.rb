@@ -58,7 +58,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
     end
 
     it 'updates billable metric\'s group' do
-      create(:group, billable_metric: billable_metric)
+      create(:group, billable_metric:)
 
       result = execute_graphql(
         current_user: membership.user,
@@ -70,7 +70,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
             code: 'metric',
             description: 'metric description',
             aggregationType: 'count_agg',
-            group: group,
+            group:,
           },
         },
       )
@@ -96,7 +96,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
             code: 'metric',
             description: 'metric description',
             aggregationType: 'count_agg',
-            group: group,
+            group:,
           },
         },
       )

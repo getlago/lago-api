@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::Customers::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
 
   let(:mutation) do
     <<-GQL
@@ -23,7 +23,7 @@ RSpec.describe Mutations::Customers::Destroy, type: :graphql do
       query: mutation,
       variables: {
         input: { id: customer.id },
-      }
+      },
     )
 
     data = result['data']['destroyCustomer']

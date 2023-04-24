@@ -96,9 +96,9 @@ module Subscriptions
       end
 
       def compute_charges_duration(from_date:)
-        return monthly_service.compute_charges_duration(from_date: from_date) if plan.bill_charges_monthly
+        return monthly_service.compute_charges_duration(from_date:) if plan.bill_charges_monthly
 
-        compute_duration(from_date: from_date)
+        compute_duration(from_date:)
       end
     end
   end

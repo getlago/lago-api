@@ -7,7 +7,7 @@ RSpec.describe Invites::AcceptService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invite) { create(:invite, organization: organization, email: membership.user.email) }
+  let(:invite) { create(:invite, organization:, email: membership.user.email) }
   let(:accept_args) do
     {
       email: invite.email,
@@ -40,11 +40,11 @@ RSpec.describe Invites::AcceptService, type: :service do
     end
 
     context 'when user have already been invited then revoked' do
-      let(:revoked_membership) { create(:membership, organization: organization, status: :revoked) }
+      let(:revoked_membership) { create(:membership, organization:, status: :revoked) }
       let(:accepted_invite) do
-        create(:invite, organization: organization, email: revoked_membership.user.email, status: :accepted)
+        create(:invite, organization:, email: revoked_membership.user.email, status: :accepted)
       end
-      let(:new_invite) { create(:invite, organization: organization, email: revoked_membership.user.email) }
+      let(:new_invite) { create(:invite, organization:, email: revoked_membership.user.email) }
 
       it 'sets user, membership and organization' do
         result = accept_service.call(
@@ -62,7 +62,7 @@ RSpec.describe Invites::AcceptService, type: :service do
     end
 
     context 'when invite is already accepted' do
-      let(:accepted_invite) { create(:invite, organization: organization, status: :accepted) }
+      let(:accepted_invite) { create(:invite, organization:, status: :accepted) }
 
       it 'returns invite_not_found error' do
         result = accept_service.call(
@@ -77,7 +77,7 @@ RSpec.describe Invites::AcceptService, type: :service do
     end
 
     context 'when invite is revoked' do
-      let(:revoked_invite) { create(:invite, organization: organization, status: :revoked) }
+      let(:revoked_invite) { create(:invite, organization:, status: :revoked) }
 
       it 'returns invite_not_found error' do
         result = accept_service.call(

@@ -31,12 +31,12 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
   let(:subscription) do
     create(
       :subscription,
-      plan: plan,
-      customer: customer,
+      plan:,
+      customer:,
       started_at: Time.zone.now - 2.years,
     )
   end
@@ -69,9 +69,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     create_list(
       :event,
       4,
-      organization: organization,
-      customer: customer,
-      subscription: subscription,
+      organization:,
+      customer:,
+      subscription:,
       code: metric.code,
       timestamp: Time.zone.now,
     )
@@ -81,7 +81,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         customerId: customer.id,
         subscriptionId: subscription.id,
@@ -139,9 +139,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       create_list(
         :event,
         3,
-        organization: organization,
-        customer: customer,
-        subscription: subscription,
+        organization:,
+        customer:,
+        subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
         properties: { cloud: 'aws' },
@@ -149,9 +149,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
 
       create(
         :event,
-        organization: organization,
-        customer: customer,
-        subscription: subscription,
+        organization:,
+        customer:,
+        subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
         properties: { cloud: 'google' },
@@ -162,7 +162,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           customerId: customer.id,
           subscriptionId: subscription.id,
@@ -175,11 +175,15 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       aggregate_failures do
         expect(charge_usage['units']).to eq(4)
         expect(charge_usage['amountCents']).to eq('5000')
-        expect(groups_usage).to match_array(
-          [
-            { 'id' => aws.id, 'key' => nil, 'value' => 'aws', 'units' => 3, 'amountCents' => '3000' },
-            { 'id' => google.id, 'key' => nil, 'value' => 'google', 'units' => 1, 'amountCents' => '2000' },
-          ],
+        expect(groups_usage).to contain_exactly(
+          {
+            'id' => aws.id,
+            'key' => nil,
+            'value' => 'aws',
+            'units' => 3,
+            'amountCents' => '3000',
+          },
+          { 'id' => google.id, 'key' => nil, 'value' => 'google', 'units' => 1, 'amountCents' => '2000' },
         )
       end
     end
@@ -226,9 +230,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       create_list(
         :event,
         2,
-        organization: organization,
-        customer: customer,
-        subscription: subscription,
+        organization:,
+        customer:,
+        subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
         properties: { cloud: 'aws', region: 'usa' },
@@ -236,9 +240,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
 
       create(
         :event,
-        organization: organization,
-        customer: customer,
-        subscription: subscription,
+        organization:,
+        customer:,
+        subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
         properties: { cloud: 'aws', region: 'france' },
@@ -246,9 +250,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
 
       create(
         :event,
-        organization: organization,
-        customer: customer,
-        subscription: subscription,
+        organization:,
+        customer:,
+        subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
         properties: { cloud: 'google', region: 'usa' },
@@ -259,7 +263,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           customerId: customer.id,
           subscriptionId: subscription.id,
@@ -272,12 +276,16 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       aggregate_failures do
         expect(charge_usage['units']).to eq(4)
         expect(charge_usage['amountCents']).to eq('7000')
-        expect(groups_usage).to match_array(
-          [
-            { 'id' => aws_usa.id, 'key' => 'aws', 'value' => 'usa', 'units' => 2, 'amountCents' => '2000' },
-            { 'id' => aws_france.id, 'key' => 'aws', 'value' => 'france', 'units' => 1, 'amountCents' => '2000' },
-            { 'id' => google_usa.id, 'key' => 'google', 'value' => 'usa', 'units' => 1, 'amountCents' => '3000' },
-          ],
+        expect(groups_usage).to contain_exactly(
+          {
+            'id' => aws_usa.id,
+            'key' => 'aws',
+            'value' => 'usa',
+            'units' => 2,
+            'amountCents' => '2000',
+          },
+          { 'id' => aws_france.id, 'key' => 'aws', 'value' => 'france', 'units' => 1, 'amountCents' => '2000' },
+          { 'id' => google_usa.id, 'key' => 'google', 'value' => 'usa', 'units' => 1, 'amountCents' => '3000' },
         )
       end
     end

@@ -11,7 +11,7 @@ RSpec.describe BillAddOnJob, type: :job do
 
   before do
     allow(Invoices::AddOnService).to receive(:new)
-      .with(applied_add_on: applied_add_on, datetime: datetime)
+      .with(applied_add_on:, datetime:)
       .and_return(invoice_service)
     allow(invoice_service).to receive(:create)
       .and_return(result)

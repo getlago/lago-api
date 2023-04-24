@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateInvoiceSubscriptions < ActiveRecord::Migration[7.0]
   def change
     create_table :invoice_subscriptions, id: :uuid do |t|
@@ -12,5 +14,4 @@ class CreateInvoiceSubscriptions < ActiveRecord::Migration[7.0]
 
     remove_reference :invoices, :subscription, index: true, foreign_key: true
   end
-
 end

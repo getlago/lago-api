@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::Customers::UpdateVatRate, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
 
   let(:mutation) do
     <<~GQL

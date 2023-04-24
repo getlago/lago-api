@@ -72,7 +72,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       let(:stripe_customer) do
         create(
           :stripe_customer,
-          customer: customer,
+          customer:,
           payment_provider: stripe_provider,
         )
       end

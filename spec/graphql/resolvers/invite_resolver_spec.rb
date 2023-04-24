@@ -21,11 +21,11 @@ RSpec.describe Resolvers::InviteResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invite) { create(:invite, organization: organization) }
+  let(:invite) { create(:invite, organization:) }
 
   it 'returns a single invite' do
     result = execute_graphql(
-      query: query,
+      query:,
       variables: {
         token: invite.token,
       },
@@ -43,14 +43,14 @@ RSpec.describe Resolvers::InviteResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: invite.organization,
-        query: query,
+        query:,
         variables: {
           token: 'foo',
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Resource not found',
       )
     end

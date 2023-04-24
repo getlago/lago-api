@@ -746,7 +746,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     context 'when customer already exists' do
       let(:customer) do
-        create(:customer, organization: organization, external_id: create_args[:external_id])
+        create(:customer, organization:, external_id: create_args[:external_id])
       end
 
       before { customer }
@@ -776,7 +776,7 @@ RSpec.describe Customers::CreateService, type: :service do
       before do
         create(
           :stripe_provider,
-          organization: organization,
+          organization:,
         )
       end
 
@@ -811,7 +811,7 @@ RSpec.describe Customers::CreateService, type: :service do
       before do
         create(
           :gocardless_provider,
-          organization: organization,
+          organization:,
         )
       end
 

@@ -28,23 +28,23 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
     it 'creates a gocardless provider' do
       expect do
         gocardless_service.create_or_update(
-          organization: organization,
-          access_code: access_code,
+          organization:,
+          access_code:,
         )
       end.to change(PaymentProviders::GocardlessProvider, :count).by(1)
     end
 
     context 'when organization already have a gocardless provider' do
       let(:gocardless_provider) do
-        create(:gocardless_provider, organization: organization, access_token: 'access_token_123')
+        create(:gocardless_provider, organization:, access_token: 'access_token_123')
       end
 
       before { gocardless_provider }
 
       it 'updates the existing provider' do
         result = gocardless_service.create_or_update(
-          organization: organization,
-          access_code: access_code,
+          organization:,
+          access_code:,
         )
 
         expect(result).to be_success
@@ -61,8 +61,8 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
 
       it 'returns an error result' do
         result = gocardless_service.create_or_update(
-          organization: organization,
-          access_code: access_code,
+          organization:,
+          access_code:,
         )
 
         aggregate_failures do
@@ -75,7 +75,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
   end
 
   describe '.handle_incoming_webhook' do
-    let(:gocardless_provider) { create(:gocardless_provider, organization: organization) }
+    let(:gocardless_provider) { create(:gocardless_provider, organization:) }
     let(:events_result) { events['events'].map { |event| GoCardlessPro::Resources::Event.new(event) } }
 
     let(:events) do

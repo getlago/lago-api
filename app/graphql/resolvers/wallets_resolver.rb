@@ -7,10 +7,10 @@ module Resolvers
 
     description 'Query wallets'
 
-    argument :ids, [ID], required: false, description: 'List of wallet IDs to fetch'
     argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
-    argument :page, Integer, required: false
+    argument :ids, [ID], required: false, description: 'List of wallet IDs to fetch'
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
     argument :status, Types::Wallets::StatusEnum, required: false
 
     type Types::Wallets::Object.collection_type, null: false
@@ -25,7 +25,7 @@ module Resolvers
         .page(page)
         .per(limit)
 
-      wallets = wallets.where(status: status) if status.present?
+      wallets = wallets.where(status:) if status.present?
       wallets = wallets.where(id: ids) if ids.present?
 
       wallets.order(status: :asc, created_at: :desc)

@@ -124,7 +124,7 @@ module CreditNotes
     end
 
     def valid_item?(item)
-      CreditNotes::ValidateItemService.new(result, item: item).valid?
+      CreditNotes::ValidateItemService.new(result, item:).valid?
     end
 
     def valid_credit_note?

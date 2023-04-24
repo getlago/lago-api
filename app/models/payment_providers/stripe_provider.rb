@@ -15,7 +15,7 @@ module PaymentProviders
     end
 
     def create_customers=(value)
-      push_to_settings(key: 'create_customers', value: value)
+      push_to_settings(key: 'create_customers', value:)
     end
 
     def create_customers
@@ -23,7 +23,7 @@ module PaymentProviders
     end
 
     def webhook_id=(value)
-      push_to_settings(key: 'webhook_id', value: value)
+      push_to_settings(key: 'webhook_id', value:)
     end
 
     def webhook_id

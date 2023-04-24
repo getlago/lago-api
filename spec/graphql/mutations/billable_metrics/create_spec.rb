@@ -68,7 +68,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
             code: 'new_metric',
             description: 'New metric description',
             aggregationType: 'count_agg',
-            group: group,
+            group:,
           },
         },
       )
@@ -94,7 +94,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
             code: 'new_metric',
             description: 'New metric description',
             aggregationType: 'count_agg',
-            group: group,
+            group:,
           },
         },
       )
@@ -132,9 +132,9 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
             name: 'New Metric',
             code: 'new_metric',
             description: 'New metric description',
-            aggregationType: 'count_agg'
-          }
-        }
+            aggregationType: 'count_agg',
+          },
+        },
       )
 
       expect_forbidden_error(result)

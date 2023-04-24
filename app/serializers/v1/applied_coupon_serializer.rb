@@ -11,7 +11,7 @@ module V1
         external_customer_id: model.customer.external_id,
         status: model.status,
         amount_cents: model.amount_cents,
-        amount_cents_remaining: amount_cents_remaining,
+        amount_cents_remaining:,
         amount_currency: model.amount_currency,
         percentage_rate: model.percentage_rate,
         frequency: model.frequency,

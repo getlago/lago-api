@@ -11,7 +11,7 @@ RSpec.describe BillPaidCreditJob, type: :job do
 
   before do
     allow(Invoices::PaidCreditService).to receive(:new)
-      .with(wallet_transaction: wallet_transaction, timestamp: timestamp)
+      .with(wallet_transaction:, timestamp:)
       .and_return(invoice_service)
     allow(invoice_service).to receive(:create)
       .and_return(result)

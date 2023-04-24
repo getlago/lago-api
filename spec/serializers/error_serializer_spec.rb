@@ -8,7 +8,7 @@ RSpec.describe ErrorSerializer do
     {
       input_params: {
         customer_id: 'customer',
-        transaction_id: transaction_id,
+        transaction_id:,
         code: 'code',
       },
       error: 'Event not found',
@@ -26,8 +26,8 @@ RSpec.describe ErrorSerializer do
           'customer_id' => 'customer',
           'transaction_id' => transaction_id,
           'code' => 'code',
-        }
-      }
+        },
+      },
     }
   end
   let(:serializer) do

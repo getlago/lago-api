@@ -8,8 +8,8 @@ module Resolvers
     description "Query invoice's credit note"
 
     argument :invoice_id, ID, required: true, description: 'Uniq ID of the invoice'
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
 
     type Types::CreditNotes::Object.collection_type, null: true
 

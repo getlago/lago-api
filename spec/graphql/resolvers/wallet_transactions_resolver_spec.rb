@@ -16,10 +16,10 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer, organization: organization) }
-  let(:wallet) { create(:wallet, customer: customer) }
-  let(:wallet_transaction) { create(:wallet_transaction, wallet: wallet) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:, organization:) }
+  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
   before do
     subscription
@@ -30,7 +30,7 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         walletId: wallet.id,
       },
@@ -51,14 +51,14 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
         variables: {
           walletId: wallet.id,
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end
@@ -69,14 +69,14 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query,
+        query:,
         variables: {
           walletId: wallet.id,
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Not in organization',
       )
     end
@@ -87,14 +87,14 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           walletId: '123456',
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Resource not found',
       )
     end

@@ -213,7 +213,7 @@ module Subscriptions
           customer_id: subscription.customer_id,
           plan_code: subscription.plan.code,
           plan_name: subscription.plan.name,
-          subscription_type: subscription_type,
+          subscription_type:,
           organization_id: subscription.organization.id,
           billing_time: subscription.billing_time,
         },

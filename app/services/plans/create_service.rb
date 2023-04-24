@@ -14,7 +14,7 @@ module Plans
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         trial_period: args[:trial_period],
-        bill_charges_monthly: args[:interval]&.to_sym == :yearly ? args[:bill_charges_monthly] || false : nil,
+        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil,
       )
 
       # Validates billable metrics

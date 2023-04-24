@@ -1,32 +1,30 @@
+# frozen_string_literal: true
+
 module Types
   module Events
     class Object < Types::BaseObject
       graphql_name 'Event'
 
-      field :id, ID, null: false
       field :code, String, null: false
+      field :id, ID, null: false
 
       field :external_customer_id, String, null: false
       field :external_subscription_id, String, null: false
       field :transaction_id, String, null: true
 
-      field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
-      field :received_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :customer_timezone, Types::TimezoneEnum, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :received_at, GraphQL::Types::ISO8601DateTime, null: false, method: :created_at
+      field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
 
       field :api_client, String, null: true
       field :ip_address, String, null: true
 
-      field :payload, GraphQL::Types::JSON, null: false
       field :billable_metric_name, String, null: true
+      field :payload, GraphQL::Types::JSON, null: false
 
       field :match_billable_metric, Boolean, null: false
       field :match_custom_field, Boolean, null: false
-
-      def received_at
-        object.created_at
-      end
 
       def external_customer_id
         object.customer.external_id

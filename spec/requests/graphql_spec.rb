@@ -21,15 +21,16 @@ RSpec.describe GraphqlController, type: :request do
     end
 
     it 'returns GraphQL response' do
-      post '/graphql', params: {
-        query: mutation,
-        variables: {
-          input: {
-            email: user.email,
-            password: 'ILoveLago'
-          }
-        }
-      }
+      post '/graphql',
+           params: {
+             query: mutation,
+             variables: {
+               input: {
+                 email: user.email,
+                 password: 'ILoveLago',
+               },
+             },
+           }
 
       expect(response.status).to be(200)
       expect(CurrentContext.source).to eq 'graphql'
@@ -48,42 +49,47 @@ RSpec.describe GraphqlController, type: :request do
         JWT.encode(
           {
             sub: user.id,
-            exp: Time.now.to_i
+            exp: Time.now.to_i,
           },
-          ENV['SECRET_KEY_BASE'], 'HS256'
+          ENV['SECRET_KEY_BASE'],
+          'HS256',
         )
       end
 
       it 'retrieves the current user and refreshes the token' do
-        post '/graphql', headers: {
-          'Authorization' => "Bearer #{token}"
-        }, params: {
-          query: mutation,
-          variables: {
-            input: {
-              email: user.email,
-              password: 'ILoveLago'
-            }
-          }
-        }
+        post '/graphql',
+             headers: {
+               'Authorization' => "Bearer #{token}",
+             },
+             params: {
+               query: mutation,
+               variables: {
+                 input: {
+                   email: user.email,
+                   password: 'ILoveLago',
+                 },
+               },
+             }
 
         expect(response.status).to be(200)
         expect(response.headers['x-lago-token']).to be_present
       end
 
       it 'retrieves the current organization' do
-        post '/graphql', headers: {
-          'Authorization' => "Bearer #{token}",
-          'x-lago-organization' => membership.organization
-        }, params: {
-          query: mutation,
-          variables: {
-            input: {
-              email: user.email,
-              password: 'ILoveLago'
-            }
-          }
-        }
+        post '/graphql',
+             headers: {
+               'Authorization' => "Bearer #{token}",
+               'x-lago-organization' => membership.organization,
+             },
+             params: {
+               query: mutation,
+               variables: {
+                 input: {
+                   email: user.email,
+                   password: 'ILoveLago',
+                 },
+               },
+             }
 
         expect(response.status).to be(200)
         expect(response.headers['x-lago-token']).to be_present

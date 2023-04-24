@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
   let(:credit_note) { create(:credit_note) }
   let(:organization) { credit_note.organization }
-  let(:membership) { create(:membership, organization: organization) }
+  let(:membership) { create(:membership, organization:) }
 
   let(:pdf_response) do
     File.read(Rails.root.join('spec/fixtures/blank.pdf'))

@@ -6,7 +6,7 @@ RSpec.describe BillingService, type: :service do
   subject(:billing_service) { described_class.new }
 
   describe '.call' do
-    let(:plan) { create(:plan, interval: interval, bill_charges_monthly: bill_charges_monthly) }
+    let(:plan) { create(:plan, interval:, bill_charges_monthly:) }
     let(:bill_charges_monthly) { false }
     let(:subscription_at) { DateTime.parse('20 Feb 2021') }
     let(:customer) { create(:customer) }
@@ -14,10 +14,10 @@ RSpec.describe BillingService, type: :service do
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
-        subscription_at: subscription_at,
+        plan:,
+        subscription_at:,
         started_at: Time.zone.now,
-        billing_time: billing_time,
+        billing_time:,
       )
     end
 
@@ -30,9 +30,9 @@ RSpec.describe BillingService, type: :service do
       let(:subscription1) do
         create(
           :subscription,
-          customer: customer,
-          plan: plan,
-          subscription_at: subscription_at,
+          customer:,
+          plan:,
+          subscription_at:,
           started_at: Time.zone.now,
         )
       end
@@ -40,9 +40,9 @@ RSpec.describe BillingService, type: :service do
       let(:subscription2) do
         create(
           :subscription,
-          customer: customer,
-          plan: plan,
-          subscription_at: subscription_at,
+          customer:,
+          plan:,
+          subscription_at:,
           started_at: Time.zone.now,
         )
       end
@@ -50,8 +50,8 @@ RSpec.describe BillingService, type: :service do
       let(:subscription3) do
         create(
           :subscription,
-          plan: plan,
-          subscription_at: subscription_at,
+          plan:,
+          subscription_at:,
           started_at: Time.zone.now,
         )
       end
@@ -69,7 +69,7 @@ RSpec.describe BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with(match_array([subscription1, subscription2]), current_date.to_i, recurring: true)
+            .with(contain_exactly(subscription1, subscription2), current_date.to_i, recurring: true)
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription3], current_date.to_i, recurring: true)
@@ -275,9 +275,9 @@ RSpec.describe BillingService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          subscription_at: subscription_at,
+          subscription_at:,
           started_at: Time.zone.now,
-          previous_subscription: previous_subscription,
+          previous_subscription:,
           status: :pending,
         )
       end
@@ -285,7 +285,7 @@ RSpec.describe BillingService, type: :service do
       let(:previous_subscription) do
         create(
           :subscription,
-          subscription_at: subscription_at,
+          subscription_at:,
           started_at: Time.zone.now,
           billing_time: :anniversary,
         )
@@ -309,11 +309,11 @@ RSpec.describe BillingService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          customer: customer,
-          plan: plan,
-          subscription_at: subscription_at,
-          started_at: started_at,
-          billing_time: billing_time,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at:,
+          billing_time:,
           created_at: subscription_at,
         )
       end
@@ -322,7 +322,7 @@ RSpec.describe BillingService, type: :service do
       let(:billing_time) { :anniversary }
       let(:subscription_at) { DateTime.parse('2022-12-13T12:00:00Z') }
       let(:started_at) { subscription_at }
-      let(:customer) { create(:customer, organization: plan.organization, timezone: timezone) }
+      let(:customer) { create(:customer, organization: plan.organization, timezone:) }
       let(:timezone) { nil }
 
       it 'does not enqueue a job' do
@@ -350,7 +350,7 @@ RSpec.describe BillingService, type: :service do
       let(:invoice_subscription) do
         create(
           :invoice_subscription,
-          subscription: subscription,
+          subscription:,
           recurring: true,
           properties: {
             timestamp: subscription_at - 1.hour,
@@ -370,7 +370,7 @@ RSpec.describe BillingService, type: :service do
         let(:invoice_subscription) do
           create(
             :invoice_subscription,
-            subscription: subscription,
+            subscription:,
             recurring: true,
             properties: {
               timestamp: (subscription_at - 1.hour).to_i,

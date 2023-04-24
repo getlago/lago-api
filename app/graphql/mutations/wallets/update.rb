@@ -9,9 +9,9 @@ module Mutations
       graphql_name 'UpdateCustomerWallet'
       description 'Updates a new Customer Wallet'
 
+      argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :id, ID, required: true
       argument :name, String, required: false
-      argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
 
       type Types::Wallets::Object
 
@@ -21,8 +21,8 @@ module Mutations
         result = ::Wallets::UpdateService
           .new(context[:current_user])
           .update(
-            wallet: wallet,
-            args: args,
+            wallet:,
+            args:,
           )
 
         result.success? ? result.wallet : result_error(result)

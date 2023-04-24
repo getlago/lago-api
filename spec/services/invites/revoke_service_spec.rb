@@ -7,7 +7,7 @@ RSpec.describe Invites::RevokeService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invite) { create(:invite, organization: organization) }
+  let(:invite) { create(:invite, organization:) }
 
   describe '#call' do
     context 'when invite is not found' do
@@ -27,7 +27,7 @@ RSpec.describe Invites::RevokeService, type: :service do
     end
 
     context 'when invite is revoked' do
-      let(:revoked_invite) { create(:invite, organization: organization, status: 'revoked') }
+      let(:revoked_invite) { create(:invite, organization:, status: 'revoked') }
       let(:revoke_args) do
         {
           id: revoked_invite.id,
@@ -44,7 +44,7 @@ RSpec.describe Invites::RevokeService, type: :service do
     end
 
     context 'when invite is accepted' do
-      let(:accepted_invite) { create(:invite, organization: organization, status: 'accepted') }
+      let(:accepted_invite) { create(:invite, organization:, status: 'accepted') }
       let(:revoke_args) do
         {
           id: accepted_invite.id,

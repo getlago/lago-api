@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:coupon) { create(:coupon, organization: organization) }
+  let(:coupon) { create(:coupon, organization:) }
 
   let(:mutation) do
     <<-GQL
@@ -45,5 +45,4 @@ RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
       expect_unauthorized_error(result)
     end
   end
-
 end

@@ -6,7 +6,7 @@ module Coupons
       valid_expiration_at?
 
       if errors?
-        result.validation_failure!(errors: errors)
+        result.validation_failure!(errors:)
         return false
       end
 

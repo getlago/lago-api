@@ -102,7 +102,7 @@ class Invoice < ApplicationRecord
   end
 
   def invoice_subscription(subscription_id)
-    invoice_subscriptions.find_by(subscription_id: subscription_id)
+    invoice_subscriptions.find_by(subscription_id:)
   end
 
   def subscription_fees(subscription_id)

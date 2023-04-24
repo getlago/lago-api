@@ -1,4 +1,4 @@
-# freozen_string_literal: true
+# frozen_string_literal: true
 
 module Resolvers
   class VersionResolver < Resolvers::BaseResolver

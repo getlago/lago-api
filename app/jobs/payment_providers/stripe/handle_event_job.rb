@@ -7,7 +7,7 @@ module PaymentProviders
 
       def perform(organization:, event:)
         result = PaymentProviders::StripeService.new.handle_event(
-          organization: organization,
+          organization:,
           event_json: event,
         )
         result.raise_if_error!

@@ -12,8 +12,8 @@ module Fees
       return result if already_billed?
 
       new_fee = Fee.new(
-        invoice: invoice,
-        applied_add_on: applied_add_on,
+        invoice:,
+        applied_add_on:,
         amount_cents: applied_add_on.amount_cents,
         amount_currency: applied_add_on.amount_currency,
         fee_type: :add_on,
