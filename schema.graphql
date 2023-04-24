@@ -2828,6 +2828,7 @@ type Fee implements InvoiceItem {
   itemType: String!
   subscription: Subscription
   trueUpFee: Fee
+  trueUpParentFee: Fee
   units: Float!
   vatAmountCents: BigInt!
   vatAmountCurrency: CurrencyEnum!

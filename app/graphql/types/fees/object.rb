@@ -9,6 +9,7 @@ module Types
       field :charge, Types::Charges::Object, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
+      field :true_up_parent_fee, Types::Fees::Object, null: true
 
       field :vat_amount_cents, GraphQL::Types::BigInt, null: false
       field :vat_amount_currency, Types::CurrencyEnum, null: false
