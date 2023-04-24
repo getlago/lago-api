@@ -36,6 +36,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               group { id key value }
               charge { id billableMetric { code } }
               trueUpFee { id }
+              trueUpParentFee { id }
             }
           }
           subscriptions {

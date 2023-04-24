@@ -24,6 +24,7 @@ RSpec.describe ::V1::FeeSerializer do
         'lago_group_id' => fee.group_id,
         'lago_invoice_id' => fee.invoice_id,
         'lago_true_up_fee_id' => fee.true_up_fee_id,
+        'lago_true_up_parent_fee_id' => fee.true_up_parent_fee&.id,
         'amount_cents' => fee.amount_cents,
         'amount_currency' => fee.amount_currency,
         'vat_amount_cents' => fee.vat_amount_cents,
