@@ -24,6 +24,7 @@ module Invoices
         end
         invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
 
+        invoice.fees.each { |f| f.true_up_fee&.destroy! }
         invoice.fees.destroy_all
         invoice.invoice_subscriptions.destroy_all
         invoice.update!(vat_rate: invoice.customer.applicable_vat_rate)
