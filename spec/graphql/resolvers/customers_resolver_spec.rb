@@ -1,4 +1,6 @@
-# frozen_string_literal: true
+# frozen_string_literal: true
+
+#  frozen_string_literal: true
 
 require 'rails_helper'
 
@@ -18,12 +20,12 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
   let(:organization) { membership.organization }
 
   it 'returns a list of customers' do
-    customer = create(:customer, organization: organization)
+    customer = create(:customer, organization:)
 
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
     )
 
     customers_response = result['data']['customers']
@@ -39,10 +41,10 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
 
   context 'without current organization' do
     it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query: query)
+      result = execute_graphql(current_user: membership.user, query:)
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end

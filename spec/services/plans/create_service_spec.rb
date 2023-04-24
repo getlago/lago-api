@@ -10,7 +10,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
   describe 'create' do
     let(:plan_name) { 'Some plan name' }
-    let(:billable_metrics) { create_list(:billable_metric, 2, organization: organization) }
+    let(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
     let(:group) { create(:group, billable_metric: billable_metrics.first) }
     let(:create_args) do
       {

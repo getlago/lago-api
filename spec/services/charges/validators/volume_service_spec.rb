@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Charges::Validators::VolumeService, type: :service do
-  subject(:volume_service) { described_class.new(charge: charge) }
+  subject(:volume_service) { described_class.new(charge:) }
 
   let(:charge) { build(:volume_charge, properties: { volume_ranges: ranges }) }
 

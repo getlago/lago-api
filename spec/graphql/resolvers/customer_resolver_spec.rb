@@ -58,16 +58,16 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) do
-    create(:customer, organization: organization, currency: 'EUR')
+    create(:customer, organization:, currency: 'EUR')
   end
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:applied_add_on) { create(:applied_add_on, customer: customer) }
-  let(:credit_note) { create(:credit_note, customer: customer) }
-  let(:credit_note_item) { create(:credit_note_item, credit_note: credit_note) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:applied_add_on) { create(:applied_add_on, customer:) }
+  let(:credit_note) { create(:credit_note, customer:) }
+  let(:credit_note_item) { create(:credit_note_item, credit_note:) }
 
   before do
     organization.update!(timezone: 'America/New_York')
-    create_list(:invoice, 2, customer: customer)
+    create_list(:invoice, 2, customer:)
     applied_add_on
     subscription
     credit_note_item
@@ -77,7 +77,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         customerId: customer.id,
       },
@@ -100,8 +100,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   end
 
   context 'when active and pending subscriptions are requested' do
-    let(:second_subscription) { create(:pending_subscription, customer: customer) }
-    let(:third_subscription) { create(:pending_subscription, customer: customer, previous_subscription: subscription) }
+    let(:second_subscription) { create(:pending_subscription, customer:) }
+    let(:third_subscription) { create(:pending_subscription, customer:, previous_subscription: subscription) }
 
     let(:query) do
       <<~GQL
@@ -126,7 +126,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           customerId: customer.id,
         },
@@ -145,14 +145,14 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
         variables: {
           customerId: customer.id,
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end
@@ -163,14 +163,14 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: {
           customerId: 'foo',
         },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Resource not found',
       )
     end

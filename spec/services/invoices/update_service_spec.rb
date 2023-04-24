@@ -150,7 +150,7 @@ RSpec.describe Invoices::UpdateService do
       let(:subscription) { create(:subscription, customer: invoice.customer) }
       let(:wallet) { create(:wallet, customer: invoice.customer, balance: 10.0, credits_balance: 10.0) }
       let(:wallet_transaction) do
-        create(:wallet_transaction, wallet: wallet, amount: 15.0, credit_amount: 15.0, status: 'pending')
+        create(:wallet_transaction, wallet:, amount: 15.0, credit_amount: 15.0, status: 'pending')
       end
       let(:fee) do
         create(
@@ -158,7 +158,7 @@ RSpec.describe Invoices::UpdateService do
           fee_type: 'credit',
           invoiceable_type: 'WalletTransaction',
           invoiceable_id: wallet_transaction.id,
-          invoice: invoice,
+          invoice:,
         )
       end
 

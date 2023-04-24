@@ -31,7 +31,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: { customerId: customer.id },
     )
 
@@ -39,9 +39,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
 
     aggregate_failures do
       expect(invoices_response['collection'].count).to eq(customer.invoices.count)
-      expect(invoices_response['collection'].pluck('id')).to match_array(
-        [draft_invoice.id, finalized_invoice.id],
-      )
+      expect(invoices_response['collection'].pluck('id')).to contain_exactly(draft_invoice.id, finalized_invoice.id)
       expect(invoices_response['metadata']['currentPage']).to eq(1)
       expect(invoices_response['metadata']['totalCount']).to eq(2)
     end
@@ -63,7 +61,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: { customerId: customer.id, status: 'draft' },
       )
 
@@ -81,12 +79,12 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
         variables: { customerId: customer.id },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end
@@ -97,12 +95,12 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query,
+        query:,
         variables: { customerId: customer.id },
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Not in organization',
       )
     end
@@ -113,7 +111,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query: query,
+        query:,
         variables: { customerId: '123456' },
       )
 

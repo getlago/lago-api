@@ -5,8 +5,8 @@ module Mutations
     description 'Registers a new user and creates related organization'
 
     argument :email, String, required: true
-    argument :password, String, required: true
     argument :organization_name, String, required: true
+    argument :password, String, required: true
 
     type Types::Payloads::RegisterUserType
 
@@ -14,7 +14,7 @@ module Mutations
       result = UsersService.new.register(
         email,
         password,
-        organization_name
+        organization_name,
       )
 
       result.success? ? result : result_error(result)

@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Invoices::SubscriptionService, type: :service do
   subject(:invoice_service) do
     described_class.new(
-      subscriptions: subscriptions,
+      subscriptions:,
       timestamp: timestamp.to_i,
       recurring: true,
     )
@@ -15,9 +15,9 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
+        plan:,
         subscription_at: started_at.to_date,
-        started_at: started_at,
+        started_at:,
         created_at: started_at,
       )
     end
@@ -27,7 +27,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:started_at) { Time.zone.now - 2.years }
 
-    let(:plan) { create(:plan, interval: 'monthly', pay_in_advance: pay_in_advance) }
+    let(:plan) { create(:plan, interval: 'monthly', pay_in_advance:) }
     let(:pay_in_advance) { false }
 
     before do

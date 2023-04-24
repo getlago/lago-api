@@ -22,8 +22,8 @@ module Credits
 
           # NOTE: create a new credit line on the invoice
           credit = Credit.create!(
-            invoice: invoice,
-            credit_note: credit_note,
+            invoice:,
+            credit_note:,
             amount_cents: credit_amount,
             amount_currency: invoice.currency,
           )

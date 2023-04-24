@@ -7,9 +7,9 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
 
   describe 'update' do
     before do
@@ -26,7 +26,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
     end
 
     it 'updates the wallet' do
-      result = update_service.update(wallet: wallet, args: update_args)
+      result = update_service.update(wallet:, args: update_args)
 
       expect(result).to be_success
 

@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe Fees::SubscriptionService do
   subject(:fees_subscription_service) do
     described_class.new(
-      invoice: invoice,
-      subscription: subscription,
-      boundaries: boundaries,
+      invoice:,
+      subscription:,
+      boundaries:,
     )
   end
 
@@ -36,11 +36,11 @@ RSpec.describe Fees::SubscriptionService do
   let(:subscription) do
     create(
       :subscription,
-      plan: plan,
-      started_at: started_at,
-      subscription_at: subscription_at,
-      customer: customer,
-      created_at: created_at,
+      plan:,
+      started_at:,
+      subscription_at:,
+      customer:,
+      created_at:,
       external_id: 'sub_id',
     )
   end
@@ -506,11 +506,11 @@ RSpec.describe Fees::SubscriptionService do
         let(:subscription) do
           create(
             :subscription,
-            plan: plan,
-            started_at: started_at,
+            plan:,
+            started_at:,
             subscription_at: DateTime.parse('2022-08-31'),
             billing_time: :anniversary,
-            customer: customer,
+            customer:,
             external_id: 'sub_id',
           )
         end
@@ -668,8 +668,8 @@ RSpec.describe Fees::SubscriptionService do
           before do
             plan.update!(
               pay_in_advance: true,
-              trial_period: trial_period,
-              interval: interval,
+              trial_period:,
+              interval:,
             )
           end
 
@@ -764,7 +764,7 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     before do
-      create(:fee, subscription: subscription, invoice: invoice)
+      create(:fee, subscription:, invoice:)
     end
 
     it 'does not create a fee' do
@@ -778,11 +778,11 @@ RSpec.describe Fees::SubscriptionService do
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
+        plan:,
         status: :terminated,
-        started_at: started_at,
-        subscription_at: subscription_at,
-        customer: customer,
+        started_at:,
+        subscription_at:,
+        customer:,
         external_id: 'sub_id',
       )
     end
@@ -897,7 +897,7 @@ RSpec.describe Fees::SubscriptionService do
         status: :terminated,
         plan: previous_plan,
         started_at: started_at - 6.months,
-        customer: customer,
+        customer:,
         external_id: 'sub_id',
       )
     end
@@ -906,11 +906,11 @@ RSpec.describe Fees::SubscriptionService do
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
-        started_at: started_at,
-        subscription_at: subscription_at,
-        previous_subscription: previous_subscription,
-        customer: customer,
+        plan:,
+        started_at:,
+        subscription_at:,
+        previous_subscription:,
+        customer:,
         external_id: 'sub_id',
       )
     end

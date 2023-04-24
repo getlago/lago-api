@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe Mutations::Wallets::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
   let(:expiration_at) { DateTime.parse('2022-01-01 23:59:59') }
 
   let(:mutation) do

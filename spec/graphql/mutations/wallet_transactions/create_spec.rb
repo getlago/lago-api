@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer, balance: 10.0, credits_balance: 10.0) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
 
   let(:mutation) do
     <<-GQL
@@ -32,7 +32,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
         input: {
           walletId: wallet.id,
           paidCredits: '5.00',
-          grantedCredits: '5.00'
+          grantedCredits: '5.00',
         },
       },
     )
@@ -55,7 +55,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
           input: {
             walletId: wallet.id,
             paidCredits: '5.00',
-            grantedCredits: '5.00'
+            grantedCredits: '5.00',
           },
         },
       )
@@ -73,7 +73,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
           input: {
             walletId: wallet.id,
             paidCredits: '5.00',
-            grantedCredits: '5.00'
+            grantedCredits: '5.00',
           },
         },
       )

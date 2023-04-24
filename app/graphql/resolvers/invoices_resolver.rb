@@ -8,11 +8,11 @@ module Resolvers
     description 'Query invoices'
 
     argument :ids, [ID], required: false, description: 'List of invoice IDs to fetch'
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
-    argument :status, Types::Invoices::StatusTypeEnum, required: false
+    argument :page, Integer, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
     argument :search_term, String, required: false
+    argument :status, Types::Invoices::StatusTypeEnum, required: false
 
     type Types::Invoices::Object.collection_type, null: false
 

@@ -55,7 +55,7 @@ module Api
         @input_params ||= params.require(:wallet_transaction).permit(
           :wallet_id,
           :paid_credits,
-          :granted_credits
+          :granted_credits,
         )
       end
     end

@@ -7,10 +7,10 @@ module Resolvers
 
     description "Query customer's credit note"
 
-    argument :ids, [String], required: false, description: 'List of plan ID to fetch'
     argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
-    argument :page, Integer, required: false
+    argument :ids, [String], required: false, description: 'List of plan ID to fetch'
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
     argument :search_term, String, required: false
 
     type Types::CreditNotes::Object.collection_type, null: true

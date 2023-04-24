@@ -135,10 +135,10 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     end
 
     context 'with error on gocardless' do
-      let(:customer) { create(:customer, organization: organization) }
+      let(:customer) { create(:customer, organization:) }
 
       let(:subscription) do
-        create(:subscription, organization: organization, customer: customer)
+        create(:subscription, organization:, customer:)
       end
 
       let(:organization) do
@@ -174,7 +174,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     let(:payment) do
       create(
         :payment,
-        invoice: invoice,
+        invoice:,
         provider_payment_id: 'ch_123456',
         status: 'pending_submission',
       )

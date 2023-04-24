@@ -9,7 +9,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:stripe_provider) do
       create(
         :stripe_provider,
-        organization: organization,
+        organization:,
         webhook_secret: 'secrests',
       )
     end
@@ -84,7 +84,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:gocardless_provider) do
       create(
         :gocardless_provider,
-        organization: organization,
+        organization:,
         webhook_secret: 'secrets',
       )
     end

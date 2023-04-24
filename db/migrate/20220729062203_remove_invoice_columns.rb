@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class RemoveInvoiceColumns < ActiveRecord::Migration[7.0]
   def change
     remove_column :invoices, :from_date

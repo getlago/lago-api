@@ -31,7 +31,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
           code: 'new_code',
           description: 'desc',
           amountCents: 123,
-          amountCurrency: 'USD'
+          amountCurrency: 'USD',
         },
       },
     )
@@ -57,7 +57,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
             name: 'New name',
             code: 'new_code',
             amountCents: 123,
-            amountCurrency: 'USD'
+            amountCurrency: 'USD',
           },
         },
       )

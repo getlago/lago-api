@@ -12,7 +12,7 @@ class Membership < ApplicationRecord
   ].freeze
 
   enum status: STATUSES
-  enum role: [:admin]
+  enum role: { admin: 0 }
 
   def mark_as_revoked!(timestamp = Time.current)
     self.revoked_at ||= timestamp

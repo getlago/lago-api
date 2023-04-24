@@ -7,7 +7,7 @@ module Api
         invoice = current_organization.invoices.find_by(id: params[:id])
 
         result = Invoices::UpdateService.new(
-          invoice: invoice,
+          invoice:,
           params: update_params.to_h.deep_symbolize_keys,
         ).call
 

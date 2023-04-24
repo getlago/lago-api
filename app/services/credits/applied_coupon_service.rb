@@ -18,8 +18,8 @@ module Credits
       credit_amount = compute_amount
 
       new_credit = Credit.create!(
-        invoice: invoice,
-        applied_coupon: applied_coupon,
+        invoice:,
+        applied_coupon:,
         amount_cents: credit_amount,
         amount_currency: invoice.currency,
       )

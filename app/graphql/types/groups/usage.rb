@@ -5,11 +5,11 @@ module Types
     class Usage < Types::BaseObject
       graphql_name 'GroupUsage'
 
+      field :amount_cents, GraphQL::Types::BigInt, null: false
       field :id, ID, null: false
       field :key, String, null: true
-      field :value, String, null: false
       field :units, GraphQL::Types::Float, null: false
-      field :amount_cents, GraphQL::Types::BigInt, null: false
+      field :value, String, null: false
     end
   end
 end

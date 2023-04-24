@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   subject(:apply_percentage_service) do
     described_class.apply(
-      charge: charge,
-      aggregation_result: aggregation_result,
+      charge:,
+      aggregation_result:,
       properties: charge.properties,
     )
   end
@@ -14,7 +14,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   before do
     aggregation_result.aggregation = aggregation
     aggregation_result.count = 4
-    aggregation_result.options = { running_total: running_total }
+    aggregation_result.options = { running_total: }
   end
 
   let(:running_total) { [50, 150, 400] }
@@ -32,9 +32,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       :percentage_charge,
       properties: {
         rate: '1.3',
-        fixed_amount: fixed_amount,
-        free_units_per_events: free_units_per_events,
-        free_units_per_total_aggregation: free_units_per_total_aggregation,
+        fixed_amount:,
+        free_units_per_events:,
+        free_units_per_total_aggregation:,
       },
     )
   end

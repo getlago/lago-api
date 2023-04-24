@@ -28,7 +28,7 @@ module Sequenced
         loop do
           sequential_id += 1
 
-          break sequential_id unless sequence_scope.exists?(sequential_id: sequential_id)
+          break sequential_id unless sequence_scope.exists?(sequential_id:)
         end
       end
 
@@ -45,7 +45,7 @@ module Sequenced
 
   class_methods do
     def sequenced(scope:)
-      self.sequenced_options = { scope: scope }
+      self.sequenced_options = { scope: }
     end
 
     def sequenced_options=(options)

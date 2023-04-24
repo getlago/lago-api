@@ -16,8 +16,8 @@ module Fees
       new_amount_cents = compute_amount
 
       new_fee = Fee.new(
-        invoice: invoice,
-        subscription: subscription,
+        invoice:,
+        subscription:,
         amount_cents: new_amount_cents.round,
         amount_currency: plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
@@ -198,7 +198,7 @@ module Fees
     # NOTE: cost of a single day in a period
     def single_day_price(target_subscription, optional_from_date: nil)
       date_service(target_subscription).single_day_price(
-        optional_from_date: optional_from_date,
+        optional_from_date:,
       )
     end
   end

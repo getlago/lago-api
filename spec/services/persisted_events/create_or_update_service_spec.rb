@@ -18,7 +18,7 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
   let(:event) do
     create(
       :event,
-      properties: properties,
+      properties:,
       organization: billable_metric.organization,
       code: billable_metric.code,
       timestamp: event_timestamp,
@@ -60,7 +60,7 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
           create(
             :persisted_event,
             customer: event.customer,
-            billable_metric: billable_metric,
+            billable_metric:,
             external_subscription_id: event.subscription.external_id,
             external_id: 'ext_12345',
             removed_at: Time.zone.parse('31 Oct 2022 09:25:00'),
@@ -85,7 +85,7 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
         create(
           :persisted_event,
           customer: event.customer,
-          billable_metric: billable_metric,
+          billable_metric:,
           external_subscription_id: event.subscription.external_id,
           external_id: 'ext_12345',
         )
@@ -111,7 +111,7 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
           create(
             :persisted_event,
             customer: event.customer,
-            billable_metric: billable_metric,
+            billable_metric:,
             external_subscription_id: event.subscription.external_id,
             external_id: 'ext_12345',
             removed_at: (Time.current - 1.hour).to_i,

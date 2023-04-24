@@ -18,7 +18,7 @@ module Mutations
 
         result = ::Invites::CreateService
           .new(context[:current_user])
-          .call(**args.merge(current_organization: current_organization))
+          .call(**args.merge(current_organization:))
 
         result.success? ? result.invite : result_error(result)
       end

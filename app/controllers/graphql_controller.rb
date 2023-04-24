@@ -26,8 +26,8 @@ class GraphqlController < ApplicationController
       current_organization:,
       customer_portal_user:,
     }
-    result = LagoApiSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
-    render json: result
+    result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
+    render(json: result)
   rescue JWT::ExpiredSignature
     render_graphql_error(code: 'expired_jwt_token', status: 401)
   rescue StandardError => e
@@ -59,22 +59,24 @@ class GraphqlController < ApplicationController
   end
 
   def handle_error_in_development(e)
-    logger.error e.message
-    logger.error e.backtrace.join("\n")
+    logger.error(e.message)
+    logger.error(e.backtrace.join("\n"))
 
-    render json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: 500
+    render(json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: 500)
   end
 
   def render_graphql_error(code:, status:, message: nil)
-    render json: {
-      data: {},
-      errors: [
-        {
-          message: message || code,
-          extensions: { status: status, code: code }
-        }
-      ]
-    }
+    render(
+      json: {
+        data: {},
+        errors: [
+          {
+            message: message || code,
+            extensions: { status:, code: },
+          },
+        ],
+      },
+    )
   end
 
   def set_context_source

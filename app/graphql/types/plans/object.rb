@@ -8,27 +8,27 @@ module Types
       field :id, ID, null: false
       field :organization, Types::OrganizationType
 
-      field :name, String, null: false
-      field :code, String, null: false
-      field :interval, Types::Plans::IntervalEnum, null: false
-      field :pay_in_advance, Boolean, null: false
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
-      field :trial_period, Float
-      field :description, String
       field :bill_charges_monthly, Boolean
+      field :code, String, null: false
+      field :description, String
+      field :interval, Types::Plans::IntervalEnum, null: false
+      field :name, String, null: false
       field :parent_id, ID, null: true
+      field :pay_in_advance, Boolean, null: false
+      field :trial_period, Float
 
       field :charges, [Types::Charges::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :active_subscriptions_count, Integer, null: false
       field :charge_count, Integer, null: false, description: 'Number of charges attached to a plan'
       field :customer_count, Integer, null: false, description: 'Number of customers attached to a plan'
-      field :subscriptions_count, Integer, null: false
-      field :active_subscriptions_count, Integer, null: false
       field :draft_invoices_count, Integer, null: false
+      field :subscriptions_count, Integer, null: false
 
       def charge_count
         object.charges.count

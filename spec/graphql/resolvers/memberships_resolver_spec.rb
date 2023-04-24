@@ -21,7 +21,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
     )
 
     memberships_response = result['data']['memberships']
@@ -39,11 +39,11 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end

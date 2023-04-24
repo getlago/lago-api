@@ -23,7 +23,7 @@ module Invoices
         stripe_result = create_stripe_payment
 
         payment = Payment.new(
-          invoice: invoice,
+          invoice:,
           payment_provider_id: organization.stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: stripe_result.amount,

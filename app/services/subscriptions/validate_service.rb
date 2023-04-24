@@ -9,7 +9,7 @@ module Subscriptions
       valid_subscription_at?
 
       if errors?
-        result.validation_failure!(errors: errors)
+        result.validation_failure!(errors:)
         return false
       end
 

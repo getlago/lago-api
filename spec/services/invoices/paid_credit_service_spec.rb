@@ -4,17 +4,17 @@ require 'rails_helper'
 
 RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
-    described_class.new(wallet_transaction: wallet_transaction, timestamp: timestamp)
+    described_class.new(wallet_transaction:, timestamp:)
   end
 
   let(:timestamp) { Time.current.to_i }
 
   describe 'create' do
     let(:customer) { create(:customer) }
-    let(:subscription) { create(:subscription, customer: customer) }
-    let(:wallet) { create(:wallet, customer: customer) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, wallet: wallet, amount: '15.00', credit_amount: '15.00')
+      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
     end
 
     before do

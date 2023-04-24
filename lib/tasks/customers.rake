@@ -10,7 +10,7 @@ namespace :customers do
   task populate_currency: :environment do
     Customer.where(currency: nil).find_each do |customer|
       currencies = customer.subscriptions.map { |s| s.plan.amount_currency }.uniq
-      next if currencies.size > 1 || currencies.size.zero?
+      next if currencies.size > 1 || currencies.empty?
 
       customer.update!(currency: currencies.first)
     end

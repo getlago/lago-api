@@ -8,11 +8,11 @@ module Resolvers
     description 'Query wallet transactions'
 
     argument :ids, [ID], required: false, description: 'List of wallet transaction IDs to fetch'
-    argument :wallet_id, ID, required: true, description: 'Uniq ID of the wallet'
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
-    argument :transaction_type, Types::WalletTransactions::TransactionTypeEnum, required: false
+    argument :page, Integer, required: false
     argument :status, Types::WalletTransactions::StatusEnum, required: false
+    argument :transaction_type, Types::WalletTransactions::TransactionTypeEnum, required: false
+    argument :wallet_id, ID, required: true, description: 'Uniq ID of the wallet'
 
     type Types::WalletTransactions::Object.collection_type, null: false
 

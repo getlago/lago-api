@@ -29,16 +29,16 @@ module WalletTransactions
       return if paid_credits_amount.zero?
 
       wallet_transaction = WalletTransaction.create!(
-        wallet: wallet,
+        wallet:,
         transaction_type: :inbound,
         amount: wallet.rate_amount * paid_credits_amount,
         credit_amount: paid_credits_amount,
-        status: :pending
+        status: :pending,
       )
 
       BillPaidCreditJob.perform_later(
         wallet_transaction,
-        Time.current.to_i
+        Time.current.to_i,
       )
 
       wallet_transaction

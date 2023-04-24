@@ -26,8 +26,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
   end
 
   let(:automatic) { true }
-  let(:fee1) { create(:fee, invoice: invoice, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
-  let(:fee2) { create(:fee, invoice: invoice, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
+  let(:fee1) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
+  let(:fee2) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 2, vat_rate: 20) }
   let(:credit_amount_cents) { 12 }
   let(:refund_amount_cents) { 6 }
   let(:items) do
@@ -160,7 +160,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     end
 
     context 'with a refund, a payment and a succeeded invoice' do
-      let(:payment) { create(:payment, invoice: invoice) }
+      let(:payment) { create(:payment, invoice:) }
 
       before { payment }
 
@@ -177,7 +177,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         let(:payment) do
           create(
             :payment,
-            invoice: invoice,
+            invoice:,
             payment_provider: gocardless_provider,
             payment_provider_customer: gocardless_customer,
           )

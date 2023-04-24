@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateAppliedAddOns < ActiveRecord::Migration[7.0]
   def change
     create_table :applied_add_ons, id: :uuid do |t|

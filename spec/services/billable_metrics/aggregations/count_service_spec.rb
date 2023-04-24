@@ -76,8 +76,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
@@ -89,8 +89,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 8,
@@ -102,8 +102,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
@@ -114,7 +114,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = count_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = count_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(2)
     end

@@ -51,7 +51,7 @@ module Api
         json: {
           status: 403,
           error: 'Forbidden',
-          code: code,
+          code:,
         },
         status: :forbidden,
       )
@@ -62,7 +62,7 @@ module Api
         json: {
           status: 405,
           error: 'Method Not Allowed',
-          code: code,
+          code:,
         },
         status: :method_not_allowed,
       )
@@ -84,7 +84,7 @@ module Api
     end
 
     def current_organization(api_key = nil)
-      @current_organization ||= Organization.find_by(api_key: api_key)
+      @current_organization ||= Organization.find_by(api_key:)
     end
 
     def set_context_source

@@ -14,12 +14,12 @@ namespace :invoices do
 
       invoice_subscription = InvoiceSubscription.find_by(
         invoice_id: invoice.id,
-        subscription_id: subscription_id,
+        subscription_id:,
       )
 
       next if invoice_subscription
 
-      InvoiceSubscription.create!(invoice_id: invoice.id, subscription_id: subscription_id)
+      InvoiceSubscription.create!(invoice_id: invoice.id, subscription_id:)
     end
   end
 

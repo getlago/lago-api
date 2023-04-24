@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ChangePrecisionAndScaleForDecimalFields < ActiveRecord::Migration[7.0]
   def change
     change_column :wallets, :rate_amount, :decimal, precision: 30, scale: 5

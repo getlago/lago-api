@@ -135,7 +135,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'when customer does not have a payment method' do
-      let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+      let(:stripe_customer) { create(:stripe_customer, customer:) }
 
       before do
         allow(Stripe::PaymentMethod).to receive(:list)
@@ -169,10 +169,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'with card error on stripe' do
-      let(:customer) { create(:customer, organization: organization) }
+      let(:customer) { create(:customer, organization:) }
 
       let(:subscription) do
-        create(:subscription, organization: organization, customer: customer)
+        create(:subscription, organization:, customer:)
       end
 
       let(:organization) do
@@ -208,7 +208,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     let(:payment) do
       create(
         :payment,
-        invoice: invoice,
+        invoice:,
         provider_payment_id: 'ch_123456',
       )
     end

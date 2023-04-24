@@ -8,16 +8,16 @@ module Mutations
       graphql_name 'UpdatePlan'
       description 'Updates an existing Plan'
 
-      argument :id, String, required: true
-      argument :name, String, required: true
-      argument :code, String, required: true
-      argument :interval, Types::Plans::IntervalEnum, required: true
-      argument :pay_in_advance, Boolean, required: true
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
-      argument :trial_period, Float, required: false
-      argument :description, String, required: false
       argument :bill_charges_monthly, Boolean, required: false
+      argument :code, String, required: true
+      argument :description, String, required: false
+      argument :id, String, required: true
+      argument :interval, Types::Plans::IntervalEnum, required: true
+      argument :name, String, required: true
+      argument :pay_in_advance, Boolean, required: true
+      argument :trial_period, Float, required: false
 
       argument :charges, [Types::Charges::Input]
 
