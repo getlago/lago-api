@@ -282,7 +282,6 @@ describe 'Terminate Pay in Advance Scenarios', :scenarios, type: :request do
 
         term_invoice = subscription.invoices.order(sequential_id: :desc).first
 
-
         expect(term_invoice.fees.count).to eq(2)
         usage_fee = term_invoice.fees.where.not(true_up_fee_id: nil).first
         true_up_fee = usage_fee.true_up_fee
