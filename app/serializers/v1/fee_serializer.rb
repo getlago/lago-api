@@ -7,8 +7,8 @@ module V1
         lago_id: model.id,
         lago_group_id: model.group_id,
         lago_invoice_id: model.invoice_id,
-        lago_true_up_fee_id: model.true_up_fee_id,
-        lago_true_up_parent_fee_id: model.true_up_parent_fee&.id,
+        lago_true_up_fee_id: model.true_up_fee&.id,
+        lago_true_up_parent_fee_id: model.true_up_parent_fee_id,
         item: {
           type: model.fee_type,
           code: model.item_code,
