@@ -1721,6 +1721,9 @@ input CreateSubscriptionInput {
   subscriptionId: ID
 }
 
+"""
+CreditNote
+"""
 type CreditNote {
   balanceAmountCents: BigInt!
   balanceAmountCurrency: CurrencyEnum!
@@ -1729,10 +1732,12 @@ type CreditNote {
   Check if credit note can be voided
   """
   canBeVoided: Boolean!
+  couponsAdjustmentAmountCents: BigInt!
   createdAt: ISO8601DateTime!
   creditAmountCents: BigInt!
   creditAmountCurrency: CurrencyEnum!
   creditStatus: CreditNoteCreditStatusEnum
+  currency: CurrencyEnum!
   customer: Customer!
   description: String
   fileUrl: String

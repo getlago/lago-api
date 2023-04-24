@@ -379,11 +379,16 @@ html
                     = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
         table.total-table width="100%"
+          - if coupons_adjustment_amount_cents.positive?
+            tr
+              td.body-2 width="70%" = I18n.t('credit_note.coupon_adjustment')
+              td.body-1 width="30%" - #{}
+                | -#{coupons_adjustment_amount_cents.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))}
           tr
             td.body-2 width="70%" = I18n.t('credit_note.sub_total_without_tax')
             td.body-1 width="30%" = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           tr
-            td.body-2 = I18n.t('credit_note.tax')
+            td.body-2 #{I18n.t('credit_note.tax')} (#{invoice.vat_rate || 0}%)
             td.body-1 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - if credited?
             tr
