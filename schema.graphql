@@ -2840,6 +2840,7 @@ enum FeeTypesEnum {
   charge
   credit
   instant_charge
+  one_off
   subscription
 }
 
@@ -3060,6 +3061,7 @@ type InvoiceSubscription {
 enum InvoiceTypeEnum {
   add_on
   credit
+  one_off
   subscription
 }
 

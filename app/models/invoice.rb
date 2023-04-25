@@ -44,7 +44,7 @@ class Invoice < ApplicationRecord
            allow_nil: true,
            with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   STATUS = %i[draft finalized].freeze
 
