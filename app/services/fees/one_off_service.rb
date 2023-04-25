@@ -55,8 +55,6 @@ module Fees
 
     delegate :customer, to: :invoice
 
-    private
-
     def add_on(identifier:)
       finder = api_context? ? :code : :id
 

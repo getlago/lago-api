@@ -19,7 +19,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
         add_on_code: add_on_first.code,
         unit_amount_cents: 1200,
         units: 2,
-        description: 'desc-123'
+        description: 'desc-123',
       },
       {
         add_on_code: add_on_second.code,
@@ -187,7 +187,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
             add_on_code: add_on_first.code,
             unit_amount_cents: 1200,
             units: 2,
-            description: 'desc-123'
+            description: 'desc-123',
           },
           {
             add_on_code: 'invalid',
