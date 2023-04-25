@@ -211,6 +211,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_24_092207) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "credit_note_id"
+    t.boolean "before_vat", default: false, null: false
     t.index ["applied_coupon_id"], name: "index_credits_on_applied_coupon_id"
     t.index ["credit_note_id"], name: "index_credits_on_credit_note_id"
     t.index ["invoice_id"], name: "index_credits_on_invoice_id"
