@@ -199,6 +199,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_24_092207) do
     t.datetime "refunded_at"
     t.date "issuing_date", null: false
     t.integer "status", default: 1, null: false
+    t.bigint "coupons_adjustment_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end

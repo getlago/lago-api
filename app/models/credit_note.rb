@@ -30,6 +30,8 @@ class CreditNote < ApplicationRecord
 
   monetize :sub_total_vat_excluded_amount_cents
 
+  monetize :coupons_adjustment_amount_cents, with_model_currency: :total_amount_currency
+
   # NOTE: Status of the credit part
   # - available: a credit amount remain available
   # - consumed: the credit amount was totaly consumed
