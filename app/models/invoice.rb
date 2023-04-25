@@ -6,6 +6,7 @@ class Invoice < ApplicationRecord
   include RansackUuidSearch
 
   CREDIT_NOTES_MIN_VERSION = 2
+  COUPON_BEFORE_VAT_VERSION = 3
 
   before_save :ensure_number
 
@@ -122,16 +123,29 @@ class Invoice < ApplicationRecord
   def creditable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft?
 
-    fees.map do |fee|
-      creditable = fee.creditable_amount_cents
-      creditable + (creditable * (fee.vat_rate || 0)).fdiv(100)
-    end.sum.round
+    fees_total_creditable = fees.sum(&:creditable_amount_cents)
+    coupons_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
+      0
+    else
+      coupons_amount_cents.fdiv(fees_amount_cents) * fees_total_creditable
+    end
+
+    vat = fees.sum do |fee|
+      # NOTE: Because coupons are applied before VAT,
+      #       we have to discribute the coupon adjustement at prorata of each fees
+      #       to compute the VAT
+      fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
+      prorated_coupon_amount = coupons_adjustement * fee_rate
+      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.vat_rate || 0)
+    end.fdiv(100).round
+
+    fees_total_creditable - coupons_adjustement + vat
   end
 
   def refundable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !succeeded?
 
-    amount = creditable_amount_cents - credits.sum(:amount_cents) - prepaid_credit_amount_cents
+    amount = creditable_amount_cents - credits.where(before_vat: false).sum(:amount_cents) - prepaid_credit_amount_cents
     amount.negative? ? 0 : amount
   end
 

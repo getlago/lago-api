@@ -42,9 +42,11 @@ module CreditNotes
     end
 
     def total_items_amount_cents
-      credit_note.items.sum do |item|
-        item.precise_amount_cents + (item.precise_amount_cents * item.fee.vat_rate).fdiv(100)
-      end.round
+      (
+        credit_note.items.sum(&:precise_amount_cents) -
+        credit_note.precise_coupons_adjustment_amount_cents +
+        credit_note.precise_vat_amount_cents
+      ).round
     end
 
     def valid_invoice_status?

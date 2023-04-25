@@ -15,7 +15,6 @@ FactoryBot.define do
 
     credit_status { 'available' }
     credit_amount_cents { 120 }
-    credit_vat_amount_cents { 20 }
     credit_amount_currency { 'EUR' }
     balance_amount_cents { 120 }
     balance_amount_currency { 'EUR' }
