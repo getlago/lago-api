@@ -367,7 +367,7 @@ html
                   = subscription_item(subscription_id).amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
               - subscription_charge_items(subscription_id).each do |item|
                 tr
-                  - if item.fee.true_up_fee.present?
+                  - if item.fee.true_up_parent_fee_id?
                     td.body-1 = I18n.t('invoice.true_up_metric', metric: item.fee.item_name)
                   - else
                     td.body-1 = item.fee.item_name
@@ -377,7 +377,7 @@ html
               - add_on_items.each do |item|
                 tr
                   td.body-1
-                    - if item.fee.true_up_fee.present?
+                    - if item.fee.true_up_parent_fee_id?
                       | #{I18n.t('invoice.true_up_metric', metric: item.fee.item_name)}
                     - else
                       | #{item.fee.item_name}

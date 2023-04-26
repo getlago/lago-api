@@ -14,7 +14,7 @@ module Fees
       return result if already_billed?
 
       init_fees
-      init_true_up_fee(fee: result.fees.first)
+      init_true_up_fee(fee: result.fees.first, amount_cents: result.fees.sum(&:amount_cents))
       return result unless result.success?
 
       result.fees.each(&:save!)
@@ -80,8 +80,8 @@ module Fees
       result.fees << new_fee
     end
 
-    def init_true_up_fee(fee:)
-      true_up_fee = Fees::CreateTrueUpService.call(fee:).true_up_fee
+    def init_true_up_fee(fee:, amount_cents:)
+      true_up_fee = Fees::CreateTrueUpService.call(fee:, amount_cents:).true_up_fee
       result.fees << true_up_fee if true_up_fee
     end
 

@@ -567,7 +567,7 @@ html
                               - else
                                 = I18n.t('invoice.total_unit', units: fee.units)
                         td.body-1 width="30%" = fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-                      - if fee.true_up_fee.present?
+                    - if fee.true_up_fee.present?
                       tr
                         td width="70%"
                           .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)

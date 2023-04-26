@@ -3,10 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Fees::CreateTrueUpService, type: :service do
-  subject(:create_service) { described_class.new(fee:) }
+  subject(:create_service) { described_class.new(fee:, amount_cents:) }
 
   let(:charge) { create(:standard_charge, min_amount_cents: 1000) }
-  let(:fee) { create(:charge_fee, amount_cents: 700, charge:) }
+  let(:fee) { create(:charge_fee, amount_cents:, charge:) }
+  let(:amount_cents) { 700 }
 
   describe '#call' do
     context 'when fee is nil' do
@@ -54,10 +55,11 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
     end
 
     context 'when prorated' do
+      let(:amount_cents) { 200 }
       let(:fee) do
         create(
           :charge_fee,
-          amount_cents: 200,
+          amount_cents:,
           charge:,
           properties: {
             'from_datetime' => Date.parse('2022-08-01 00:00:00'),
