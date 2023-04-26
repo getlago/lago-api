@@ -257,6 +257,34 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             expect(item.total_duration).to eq(31)
           end
         end
+
+        context 'with calendar subscription and pay in advance' do
+          let(:subscription) do
+            create(
+              :subscription,
+              started_at:,
+              subscription_at:,
+              billing_time: :calendar,
+              terminated_at: to_datetime,
+              status: :terminated,
+            )
+          end
+
+          before { subscription.plan.update!(pay_in_advance: true) }
+
+          it 'returns the detail the persisted metrics' do
+            aggregate_failures do
+              expect(result.count).to eq(1)
+
+              item = result.first
+              expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+              expect(item.action).to eq('add')
+              expect(item.count).to eq(1)
+              expect(item.duration).to eq(16)
+              expect(item.total_duration).to eq(31)
+            end
+          end
+        end
       end
 
       context 'when subscription was started in the period' do
