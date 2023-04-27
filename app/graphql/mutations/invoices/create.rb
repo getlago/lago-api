@@ -9,9 +9,7 @@ module Mutations
       graphql_name 'CreateInvoice'
       description 'Creates a new Invoice'
 
-      argument :currency, Types::CurrencyEnum, required: false
-      argument :customer_id, ID, required: true
-      argument :fees, [Types::Invoices::FeeInput], required: true
+      input_object_class Types::Invoices::CreateInvoiceInput
 
       type Types::Invoices::Object
 
