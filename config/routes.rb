@@ -41,7 +41,7 @@ Rails.application.routes.draw do
       resources :applied_coupons, only: %i[create index]
       resources :applied_add_ons, only: %i[create]
       resources :fees, only: %i[show update index]
-      resources :invoices, only: %i[update show index] do
+      resources :invoices, only: %i[create update show index] do
         post :download, on: :member
         post :retry_payment, on: :member
         put :refresh, on: :member
