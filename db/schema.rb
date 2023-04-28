@@ -190,16 +190,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_24_210224) do
     t.integer "refund_status"
     t.datetime "voided_at"
     t.text "description"
-    t.bigint "credit_vat_amount_cents", default: 0, null: false
-    t.string "credit_vat_amount_currency"
-    t.bigint "refund_vat_amount_cents", default: 0, null: false
-    t.string "refund_vat_amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
     t.string "vat_amount_currency"
     t.datetime "refunded_at"
     t.date "issuing_date", null: false
     t.integer "status", default: 1, null: false
     t.bigint "coupons_adjustment_amount_cents", default: 0, null: false
+    t.decimal "precise_coupons_adjustment_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "precise_vat_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
