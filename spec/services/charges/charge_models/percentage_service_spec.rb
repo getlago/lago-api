@@ -27,11 +27,12 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
   let(:expected_fixed_amount) { (4 - 2) * 2.0 }
 
+  let(:rate) { '1.3' }
   let(:charge) do
     create(
       :percentage_charge,
       properties: {
-        rate: '1.3',
+        rate:,
         fixed_amount:,
         free_units_per_events:,
         free_units_per_total_aggregation:,
@@ -52,6 +53,17 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.amount).to eq(
         (expected_percentage_amount + expected_fixed_amount),
       )
+    end
+  end
+
+  context 'when rate is 0' do
+    let(:free_units_per_events) { nil }
+    let(:free_units_per_total_aggregation) { nil }
+    let(:rate) { '0' }
+    let(:expected_fixed_amount) { (4 - 0) * 2.0 }
+
+    it 'returns 0 as expected percentage amount' do
+      expect(apply_percentage_service.amount).to eq(expected_fixed_amount)
     end
   end
 
