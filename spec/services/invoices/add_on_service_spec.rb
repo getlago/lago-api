@@ -22,16 +22,19 @@ RSpec.describe Invoices::AddOnService, type: :service do
         expect(result).to be_success
 
         expect(result.invoice.subscriptions.first).to be_nil
-        expect(result.invoice.issuing_date).to eq(datetime.to_date)
-        expect(result.invoice.invoice_type).to eq('add_on')
-        expect(result.invoice.payment_status).to eq('pending')
-
-        expect(result.invoice.currency).to eq('EUR')
-        expect(result.invoice.fees_amount_cents).to eq(200)
-        expect(result.invoice.amount_cents).to eq(200)
-        expect(result.invoice.vat_amount_cents).to eq(40)
-        expect(result.invoice.vat_rate).to eq(20)
-        expect(result.invoice.total_amount_cents).to eq(240)
+        expect(result.invoice).to have_attributes(
+          issuing_date: datetime.to_date,
+          invoice_type: 'add_on',
+          payment_status: 'pending',
+          currency: 'EUR',
+          fees_amount_cents: 200,
+          amount_cents: 200,
+          sub_total_vat_excluded_amount_cents: 200,
+          vat_amount_cents: 40,
+          vat_rate: 20,
+          sub_total_vat_included_amount_cents: 240,
+          total_amount_cents: 240,
+        )
 
         expect(result.invoice).to be_finalized
       end

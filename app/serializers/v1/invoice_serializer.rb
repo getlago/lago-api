@@ -18,6 +18,8 @@ module V1
         coupons_amount_cents: model.coupons_amount_cents,
         credit_notes_amount_cents: model.credit_notes_amount_cents,
         credit_amount_cents: model.credit_amount_cents,
+        sub_total_vat_excluded_amount_cents: model.sub_total_vat_excluded_amount_cents,
+        sub_total_vat_included_amount_cents: model.sub_total_vat_included_amount_cents,
         total_amount_cents: model.total_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,

@@ -10,7 +10,11 @@ module Invoices
     def call
       invoice.amount_cents = invoice.fees.sum(:amount_cents)
       invoice.fees_amount_cents = invoice.amount_cents
+      invoice.sub_total_vat_excluded_amount_cents = invoice.amount_cents
       invoice.vat_amount_cents = invoice.fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
+      invoice.sub_total_vat_included_amount_cents = (
+        invoice.sub_total_vat_excluded_amount_cents + invoice.vat_amount_cents
+      )
       invoice.credit_amount_cents = 0 if invoice.credits.empty?
       invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents - invoice.credit_amount_cents
 
