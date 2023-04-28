@@ -197,8 +197,8 @@ html
         line-height: 16px;
       }
 
-      .mb-8 {
-        margin-bottom: 8px;
+      .mb-4 {
+        margin-bottom: 4px;
       }
       .mb-24 {
         margin-bottom: 24px;
@@ -249,8 +249,8 @@ html
         color: #66758F;
       }
       .invoice-resume-table td {
-        padding-top: 5px;
-        padding-bottom: 5px;
+        padding-top: 8px;
+        padding-bottom: 8px;
       }
       .invoice-resume-table td:first-child {
         width: 50%;
@@ -274,8 +274,8 @@ html
         border-collapse: collapse;
       }
       .invoice-resume .total-table tr td {
-        padding-top: 5px;
-        padding-bottom: 5px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         text-align: right;
       }
       .invoice-resume .total-table td:first-child {
@@ -408,7 +408,7 @@ html
           .body-2 = customer.email
 
       .mb-24
-        h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+        h2.title-2.mb-4 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
         .body-1 = I18n.t('invoice.due_date', date: I18n.l(issuing_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
@@ -419,7 +419,9 @@ html
             td.body-1 style="text-align: left;" = "Unit Price"
             td.body-1 style="text-align: right;" = "Amount"
           tr
-            td.body-1 = I18n.t('invoice.all_subscriptions')
+            td
+              .body-1 = I18n.t('invoice.all_subscriptions')
+              .body-3 = "This is description and this is also one longer description hello 12345 hello12345. This description helps describe related fee."
             td.body-1 style="text-align: left;" = 1
             td.body-1 style="text-align: left;"
               = subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
