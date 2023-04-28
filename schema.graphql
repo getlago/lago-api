@@ -2828,6 +2828,7 @@ type EventCollection {
 }
 
 type Fee implements InvoiceItem {
+  addOn: AddOn
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   charge: Charge
