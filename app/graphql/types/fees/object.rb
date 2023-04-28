@@ -6,6 +6,7 @@ module Types
       graphql_name 'Fee'
       implements Types::Invoices::InvoiceItem
 
+      field :add_on, Types::AddOns::Object, null: true
       field :charge, Types::Charges::Object, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
@@ -19,7 +20,6 @@ module Types
       field :fee_type, Types::Fees::TypesEnum, null: false
       field :units, GraphQL::Types::Float, null: false
       field :vat_rate, GraphQL::Types::Float, null: true
-      field :add_on, Types::AddOns::Object, null: true
 
       def item_type
         object.fee_type
