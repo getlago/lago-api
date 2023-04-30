@@ -162,6 +162,21 @@ module Invoices
           },
         )
       end
+      
+      def invoice_payment_success(provider_payment_id:,status:, metadata: {})
+        payment=Payment.find_by(provider_payment_id)
+        return deliver_payment_success() if payment.invoice.succeeded?
+      end
+
+      def deliver_payment_success()
+        return unless invoice.organization.webhook_url?
+        SendWebhookJob.perform_later(
+          'invoice.payment_success',
+          invoice,
+          provider_customer_id: customer.stripe_customer.provider_customer_id,
+
+        )
+      end
 
       def handle_missing_payment(metadata)
         # NOTE: Payment was not initiated by lago

@@ -189,6 +189,19 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context 'with payment_status succeeded and notification is turned on' do
+      let(:webhook_notification) { true }
+
+      it 'deliver_payement_success_webhook' do
+        result
+
+        expect(SendWebhookJob).to have_been_enqueued.with(
+          'invoice.payment_success',
+          invoice,
+        )
+      end
+    end
+
     context 'when invoice does not exist' do
       let(:invoice) { nil }
 

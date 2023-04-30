@@ -92,5 +92,11 @@ module Invoices
 
       SendWebhookJob.perform_later('invoice.payment_status_updated', invoice)
     end
+
+    def deliver_payement_success_webhook
+      return unless webhook_notification
+
+      SendWebhookJob.perform_later('invoice.payment_success', invoice)
+    end
   end
 end
