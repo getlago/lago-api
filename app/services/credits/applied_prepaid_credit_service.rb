@@ -56,7 +56,7 @@ module Credits
     end
 
     def compute_amount_from_cents(amount)
-      currency = invoice.amount.currency
+      currency = invoice.total_amount.currency
 
       amount.round.fdiv(currency.subunit_to_unit)
     end

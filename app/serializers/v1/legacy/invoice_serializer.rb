@@ -10,6 +10,8 @@ module V1
           vat_amount_currency: model.currency,
           credit_amount_currency: model.currency,
           total_amount_currency: model.currency,
+          amount_cents: model.fees_amount_cents,
+          credit_amount_cents: model.credits.sum(:amount_cents),
         }
       end
 

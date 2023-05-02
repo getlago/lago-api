@@ -8,7 +8,8 @@ RSpec.describe Credits::AppliedCouponsService do
   let(:invoice) do
     create(
       :invoice,
-      amount_cents: 100,
+      fees_amount_cents: 100,
+      sub_total_vat_excluded_amount_cents: 100,
       vat_amount_cents: 20,
       total_amount_cents: 120,
       currency: 'EUR',
@@ -67,7 +68,6 @@ RSpec.describe Credits::AppliedCouponsService do
       aggregate_failures do
         expect(result).to be_success
         expect(result.invoice.coupons_amount_cents).to eq(32)
-        expect(result.invoice.credit_amount_cents).to eq(32)
         expect(result.invoice.total_amount_cents).to eq(88)
         expect(result.invoice.credits.count).to eq(2)
       end
@@ -91,7 +91,7 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.credits.count).to eq(2)
@@ -115,7 +115,7 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.total_amount_cents).to eq(82)
           expect(result.invoice.credits.count).to eq(2)
@@ -178,7 +178,7 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
           expect(result.invoice.total_amount_cents).to eq(120)
           expect(result.invoice.credits.count).to be_zero
