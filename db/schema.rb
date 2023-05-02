@@ -385,7 +385,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_24_210224) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "issuing_date"
-    t.bigint "amount_cents", default: 0, null: false
     t.bigint "vat_amount_cents", default: 0, null: false
     t.bigint "total_amount_cents", default: 0, null: false
     t.integer "invoice_type", default: 0, null: false
@@ -395,7 +394,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_24_210224) do
     t.string "file"
     t.uuid "customer_id"
     t.float "vat_rate", default: 0.0, null: false
-    t.bigint "credit_amount_cents", default: 0, null: false
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false

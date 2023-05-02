@@ -145,7 +145,7 @@ module Invoices
 
     def should_create_coupon_credit?
       return false if not_in_finalizing_process?
-      return false unless invoice.amount_cents&.positive?
+      return false unless invoice.fees_amount_cents&.positive?
 
       true
     end
@@ -174,7 +174,6 @@ module Invoices
 
     # NOTE: Since credit impact the invoice amount, we need to recompute the amount and the VAT amount
     def refresh_amounts(credit_amount_cents:)
-      invoice.credit_amount_cents += credit_amount_cents
       invoice.total_amount_cents -= credit_amount_cents
     end
 

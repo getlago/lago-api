@@ -10,7 +10,6 @@ RSpec.describe Credits::AppliedCouponService do
   let(:invoice) do
     create(
       :invoice,
-      amount_cents:,
       currency: 'EUR',
       total_amount_cents: amount_cents,
     )

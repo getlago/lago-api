@@ -84,9 +84,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 892,
-          amount_cents: 892,
           vat_amount_cents: 178,
-          credit_amount_cents: 0,
+          credit_notes_amount_cents: 0,
           total_amount_cents: 1070,
         )
 
@@ -120,9 +119,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 892,
-          amount_cents: 892,
           vat_amount_cents: 178,
-          credit_amount_cents: 643,
+          credit_notes_amount_cents: 643,
           total_amount_cents: 427, # 892 + 178 - 643
         )
       end
@@ -228,9 +226,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 8928, # 1928 + 2000 + 5000
-          amount_cents: 8928,
           vat_amount_cents: 1786,
-          credit_amount_cents: 643,
+          credit_notes_amount_cents: 643,
           total_amount_cents: 10_071,
         )
       end

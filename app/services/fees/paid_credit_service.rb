@@ -12,7 +12,7 @@ module Fees
     def create
       return result if already_billed?
 
-      currency = invoice.amount.currency
+      currency = invoice.total_amount.currency
       rounded_amount = wallet_transaction.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
 
