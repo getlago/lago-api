@@ -25,9 +25,7 @@ class Invoice < ApplicationRecord
 
   has_one_attached :file
 
-  monetize :amount_cents,
-           :coupons_amount_cents,
-           :credit_amount_cents,
+  monetize :coupons_amount_cents,
            :credit_notes_amount_cents,
            :fees_amount_cents,
            :prepaid_credit_amount_cents,

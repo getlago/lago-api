@@ -20,13 +20,12 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             invoiceType
             paymentStatus
             totalAmountCents
-            creditAmountCents
+            feesAmountCents
             vatAmountCents
-            amountCents
             subTotalVatExcludedAmountCents
             subTotalVatIncludedAmountCents
-            couponTotalAmountCents
-            creditNoteTotalAmountCents
+            couponsAmountCents
+            creditNotesAmountCents
           }
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
