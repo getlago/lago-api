@@ -95,9 +95,9 @@ module Invoices
     end
 
     def compute_amounts
-      invoice.amount_cents = invoice.fees.sum(&:amount_cents)
+      invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
       invoice.vat_amount_cents = invoice.fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
-      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
+      invoice.total_amount_cents = invoice.fees_amount_cents + invoice.vat_amount_cents
     end
 
     def current_cache_key
@@ -137,7 +137,7 @@ module Invoices
         from_datetime: boundaries[:charges_from_datetime].iso8601,
         to_datetime: boundaries[:charges_to_datetime].iso8601,
         issuing_date: invoice.issuing_date.iso8601,
-        amount_cents: invoice.amount_cents,
+        amount_cents: invoice.fees_amount_cents,
         amount_currency: invoice.currency,
         total_amount_cents: invoice.total_amount_cents,
         total_amount_currency: invoice.currency,

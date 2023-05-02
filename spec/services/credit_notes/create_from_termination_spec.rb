@@ -52,7 +52,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       :invoice,
       customer:,
       currency: 'EUR',
-      amount_cents: 100,
       total_amount_cents: 120,
     )
   end
@@ -320,8 +319,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :invoice,
           customer:,
           currency: 'EUR',
-          amount_cents: 999,
-          total_amount_cents: 0,
+          total_amount_cents: 999,
         )
       end
 

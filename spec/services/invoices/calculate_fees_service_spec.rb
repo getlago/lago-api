@@ -474,9 +474,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.fees_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.credit_amount_cents).to eq(10)
           expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.credits.count).to eq(1)
 
@@ -510,9 +509,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.credit_amount_cents).to eq(30)
           expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.wallet_transactions.count).to eq(1)
         end

@@ -84,10 +84,9 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result.invoice.fees.charge_kind.count).to eq(1)
 
         expect(result.invoice.currency).to eq('EUR')
-        expect(result.invoice.amount_cents).to eq(100)
+        expect(result.invoice.fees_amount_cents).to eq(100)
         expect(result.invoice.vat_amount_cents).to eq(20)
         expect(result.invoice.vat_rate).to eq(20)
-        expect(result.invoice.credit_amount_cents).to eq(0)
         expect(result.invoice.total_amount_cents).to eq(120)
         expect(result.invoice.version_number).to eq(2)
         expect(result.invoice).to be_finalized

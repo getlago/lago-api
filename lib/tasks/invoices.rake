@@ -60,7 +60,7 @@ namespace :invoices do
       prepaid_credit_amount = rounded_amount * currency.subunit_to_unit
 
       invoice.update!(
-        credit_amount_cents: invoice.credit_amount_cents + prepaid_credit_amount,
+        credit_amount_cents: invoice.credits.sum(&:amount_cents) + prepaid_credit_amount,
         credit_amount_currency: invoice.currency,
       )
     end
