@@ -414,32 +414,25 @@ html
       .invoice-resume.mb-24.overflow-auto
         table.invoice-resume-table width="100%"
           tr
-            td.body-1 Item
-            td.body-1 style="text-align: left;" = "Unit"
-            td.body-1 style="text-align: left;" = "Unit Price"
-            td.body-1 style="text-align: right;" = "Amount"
-          tr
-            td
-              .body-1 = I18n.t('invoice.all_subscriptions')
-              .body-3 = "This is description and this is also one longer description hello 12345 hello12345. This description helps describe related fee."
-            td.body-1 style="text-align: left;" = 1
-            td.body-1 style="text-align: left;"
-              = subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            td.body-1 style="text-align: right;"
-              = subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          tr
-            td.body-1 = I18n.t('invoice.all_usage_based_fees')
-            td.body-1 style="text-align: left;" = 1
-            td.body-1 style="text-align: left;"
-              = charge_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            td.body-1 style="text-align: right;"
-              = charge_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-1 = I18n.t('invoice.item')
+            td.body-1 style="text-align: left;" = I18n.t('invoice.unit')
+            td.body-1 style="text-align: left;" = I18n.t('invoice.unit_price')
+            td.body-1 style="text-align: right;" = I18n.t('invoice.amount')
+          - if one_off?
+            - fees.each do |fee|
+              tr
+                td
+                  .body-1 = fee.add_on.name
+                  .body-3 = fee.description
+                td.body-1 style="text-align: left;" = fee.units
+                td.body-1 style="text-align: left;" = fee.unit_amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+                td.body-1 style="text-align: right;" = fee.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
         table.total-table width="100%"
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.sub_total_without_tax')
-              td.body-2 = fees_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2
               td.body-2 #{I18n.t('invoice.tax')} (#{vat_rate || 0}%)

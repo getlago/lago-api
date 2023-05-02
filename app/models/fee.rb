@@ -23,6 +23,7 @@ class Fee < ApplicationRecord
   monetize :amount_cents
   monetize :vat_amount_cents
   monetize :total_amount_cents
+  monetize :unit_amount_cents, disable_validation: true, allow_nil: true
 
   # TODO: Deprecate add_on type in the near future
   FEE_TYPES = %i[charge add_on subscription credit instant_charge one_off].freeze
