@@ -2828,7 +2828,6 @@ type EventCollection {
 }
 
 type Fee implements InvoiceItem {
-  addOn: AddOn
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   charge: Charge
@@ -2855,6 +2854,7 @@ Fee input for creating invoice
 input FeeInput {
   addOnId: ID!
   description: String
+  name: String
   unitAmountCents: BigInt
   units: Float
 }
