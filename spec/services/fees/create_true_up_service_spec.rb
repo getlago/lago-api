@@ -29,28 +29,30 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
     end
 
     it 'instantiates a true-up fee' do
-      result = create_service.call
+      travel_to(DateTime.new(2023, 4, 1)) do
+        result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+        aggregate_failures do
+          expect(result).to be_success
 
-        expect(result.true_up_fee).to have_attributes(
-          subscription: fee.subscription,
-          charge: fee.charge,
-          amount_currency: fee.currency,
-          vat_rate: fee.vat_rate,
-          fee_type: 'charge',
-          invoiceable: fee.charge,
-          properties: fee.properties,
-          payment_status: 'pending',
-          units: 1,
-          events_count: 0,
-          group: nil,
-          amount_cents: 300,
-          vat_amount_cents: 0,
-          vat_amount_currency: fee.currency,
-          true_up_parent_fee_id: fee.id,
-        )
+          expect(result.true_up_fee).to have_attributes(
+            subscription: fee.subscription,
+            charge: fee.charge,
+            amount_currency: fee.currency,
+            vat_rate: fee.vat_rate,
+            fee_type: 'charge',
+            invoiceable: fee.charge,
+            properties: fee.properties,
+            payment_status: 'pending',
+            units: 1,
+            events_count: 0,
+            group: nil,
+            amount_cents: 300,
+            vat_amount_cents: 0,
+            vat_amount_currency: fee.currency,
+            true_up_parent_fee_id: fee.id,
+          )
+        end
       end
     end
 
@@ -71,14 +73,16 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
       end
 
       it 'instantiates a prorated true-up fee' do
-        result = create_service.call
+        travel_to(DateTime.new(2023, 4, 1)) do
+          result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+          aggregate_failures do
+            expect(result).to be_success
 
-          expect(result.true_up_fee).to have_attributes(
-            amount_cents: 283, # (1000 / 31.0 * 15) - 200
-          )
+            expect(result.true_up_fee).to have_attributes(
+              amount_cents: 283, # (1000 / 31.0 * 15) - 200
+            )
+          end
         end
       end
     end
