@@ -11,7 +11,7 @@ module Credits
       return result if applied_coupons.blank?
 
       applied_coupons.each do |applied_coupon|
-        break unless invoice.amount_cents&.positive?
+        break unless invoice.fees_amount_cents&.positive?
         next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
 
         base_amount_cents = if applied_coupon.coupon.limited_billable_metrics?
@@ -32,7 +32,6 @@ module Credits
         credit_result.raise_if_error!
 
         invoice.coupons_amount_cents += credit_result.credit.amount_cents
-        invoice.credit_amount_cents += credit_result.credit.amount_cents
         invoice.total_amount_cents -= credit_result.credit.amount_cents
       end
 

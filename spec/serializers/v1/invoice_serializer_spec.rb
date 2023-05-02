@@ -23,13 +23,11 @@ RSpec.describe ::V1::InvoiceSerializer do
         'status' => invoice.status,
         'payment_status' => invoice.payment_status,
         'currency' => invoice.currency,
-        'amount_cents' => invoice.amount_cents,
         'fees_amount_cents' => invoice.fees_amount_cents,
         'coupons_amount_cents' => invoice.coupons_amount_cents,
         'credit_notes_amount_cents' => invoice.credit_notes_amount_cents,
         'prepaid_credit_amount_cents' => invoice.prepaid_credit_amount_cents,
         'vat_amount_cents' => invoice.vat_amount_cents,
-        'credit_amount_cents' => invoice.credit_amount_cents,
         'sub_total_vat_excluded_amount_cents' => invoice.sub_total_vat_excluded_amount_cents,
         'sub_total_vat_included_amount_cents' => invoice.sub_total_vat_included_amount_cents,
         'total_amount_cents' => invoice.total_amount_cents,
@@ -42,6 +40,8 @@ RSpec.describe ::V1::InvoiceSerializer do
         'vat_amount_currency' => invoice.currency,
         'credit_amount_currency' => invoice.currency,
         'total_amount_currency' => invoice.currency,
+        'amount_cents' => invoice.fees.sum(:amount_cents),
+        'credit_amount_cents' => invoice.credits.sum(:amount_cents),
       )
 
       expect(result['invoice']['metadata'].first).to include(

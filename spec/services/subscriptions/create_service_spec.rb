@@ -380,7 +380,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 :invoice,
                 customer:,
                 currency: 'EUR',
-                amount_cents: 100,
+                sub_total_vat_excluded_amount_cents: 100,
                 vat_amount_cents: 20,
                 total_amount_cents: 120,
               )

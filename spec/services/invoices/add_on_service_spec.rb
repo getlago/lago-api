@@ -28,7 +28,6 @@ RSpec.describe Invoices::AddOnService, type: :service do
           payment_status: 'pending',
           currency: 'EUR',
           fees_amount_cents: 200,
-          amount_cents: 200,
           sub_total_vat_excluded_amount_cents: 200,
           vat_amount_cents: 40,
           vat_rate: 20,

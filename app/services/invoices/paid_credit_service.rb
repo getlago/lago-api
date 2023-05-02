@@ -29,7 +29,6 @@ module Invoices
 
         compute_amounts(invoice)
 
-        invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
         invoice.save!
 
         track_invoice_created(invoice)
@@ -58,13 +57,13 @@ module Invoices
       fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
 
       invoice.currency = currency
-      invoice.amount_cents = fee_amounts.sum(:amount_cents)
-      invoice.fees_amount_cents = invoice.amount_cents
-      invoice.sub_total_vat_excluded_amount_cents = invoice.amount_cents
+      invoice.fees_amount_cents = fee_amounts.sum(:amount_cents)
+      invoice.sub_total_vat_excluded_amount_cents = invoice.fees_amount_cents
       invoice.vat_amount_cents = fee_amounts.sum(:vat_amount_cents)
       invoice.sub_total_vat_included_amount_cents = (
         invoice.sub_total_vat_excluded_amount_cents + invoice.vat_amount_cents
       )
+      invoice.total_amount_cents = invoice.sub_total_vat_included_amount_cents
     end
 
     def create_credit_fee(invoice)
