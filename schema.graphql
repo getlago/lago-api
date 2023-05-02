@@ -2955,16 +2955,13 @@ enum InviteStatusTypeEnum {
   revoked
 }
 
+"""
+Invoice
+"""
 type Invoice {
-  amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
   chargeAmountCents: BigInt!
-  couponTotalAmountCents: BigInt!
   couponsAmountCents: BigInt!
   createdAt: ISO8601DateTime!
-  creditAmountCents: BigInt!
-  creditAmountCurrency: CurrencyEnum!
-  creditNoteTotalAmountCents: BigInt!
   creditNotes: [CreditNote!]
   creditNotesAmountCents: BigInt!
   creditableAmountCents: BigInt!
@@ -2987,15 +2984,11 @@ type Invoice {
   subTotalVatExcludedAmountCents: BigInt!
   subTotalVatIncludedAmountCents: BigInt!
   subscriptions: [Subscription!]
-  subtotalBeforePrepaidCredits: String!
   totalAmountCents: BigInt!
-  totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
   vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
   vatRate: Float!
   versionNumber: Int!
-  walletTransactionAmountCents: BigInt!
 }
 
 type InvoiceCollection {

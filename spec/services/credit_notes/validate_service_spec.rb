@@ -30,7 +30,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120, amount_cents: 100) }
+  let(:invoice) { create(:invoice, total_amount_cents: 120) }
   let(:customer) { invoice.customer }
 
   let(:fee) do
