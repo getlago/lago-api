@@ -15,7 +15,7 @@ module Invoices
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'currency') unless currency
       return result.not_found_failure!(resource: 'fees') if fees.blank?
-      return result.not_found_failure!(resource: 'add_on') unless add_ons.count == fees.count
+      return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
 
       invoice = nil
 
@@ -95,7 +95,7 @@ module Invoices
     def add_on_identifiers
       identifier = api_context? ? :add_on_code : :add_on_id
 
-      fees.pluck(identifier)
+      fees.pluck(identifier).uniq
     end
   end
 end
