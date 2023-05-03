@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_25_130239) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_03_143229) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -573,6 +573,18 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_130239) do
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
 
+  create_table "tax_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "description"
+    t.string "code", null: false
+    t.string "name", null: false
+    t.float "value", default: 0.0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code", "organization_id"], name: "index_tax_rates_on_code_and_organization_id", unique: true
+    t.index ["organization_id"], name: "index_tax_rates_on_organization_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -700,6 +712,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_130239) do
   add_foreign_key "refunds", "payments"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
+  add_foreign_key "tax_rates", "organizations"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
