@@ -10,6 +10,7 @@ de:
     credited_notice: Gutschrift auf Kundenguthaben am %{issuing_date}
     credited_refunded_notice: Auf Kundenguthaben gutgeschrieben und zurückerstattet am %{issuing_date}
     subscription: Abonnement
+    coupon_adjustment: Coupons
     sub_total_without_tax: Zwischensumme (ohne Steuern)
     tax: Steuern
     credited_on_customer_balance: Auf Kundenguthaben gutgeschrieben
