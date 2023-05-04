@@ -47,7 +47,7 @@ RSpec.describe Fees::OneOffService do
         expect(first_fee.amount_currency).to eq('EUR')
         expect(first_fee.vat_amount_cents).to eq(480)
         expect(first_fee.vat_rate).to eq(20.0)
-        expect(first_fee.fee_type).to eq('one_off')
+        expect(first_fee.fee_type).to eq('add_on')
         expect(first_fee.payment_status).to eq('pending')
 
         expect(second_fee.id).not_to be_nil
@@ -60,7 +60,7 @@ RSpec.describe Fees::OneOffService do
         expect(second_fee.amount_currency).to eq('EUR')
         expect(second_fee.vat_amount_cents).to eq(80)
         expect(second_fee.vat_rate).to eq(20.0)
-        expect(second_fee.fee_type).to eq('one_off')
+        expect(second_fee.fee_type).to eq('add_on')
         expect(second_fee.payment_status).to eq('pending')
       end
     end

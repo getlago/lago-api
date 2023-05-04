@@ -70,7 +70,7 @@ class Invoice < ApplicationRecord
             .where('invoices.created_at < ?', invoice.created_at)
         }
 
-  validates :issuing_date, presence: true
+  validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
 
   def file_url

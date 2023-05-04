@@ -2840,7 +2840,6 @@ enum FeeTypesEnum {
   charge
   credit
   instant_charge
-  one_off
   subscription
 }
 

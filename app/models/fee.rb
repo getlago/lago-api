@@ -25,7 +25,7 @@ class Fee < ApplicationRecord
   monetize :total_amount_cents
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit instant_charge one_off].freeze
+  FEE_TYPES = %i[charge add_on subscription credit instant_charge].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum fee_type: FEE_TYPES
@@ -39,7 +39,6 @@ class Fee < ApplicationRecord
 
   scope :subscription_kind, -> { where(fee_type: :subscription) }
   scope :charge_kind, -> { where(fee_type: :charge) }
-  scope :one_off_kind, -> { where(fee_type: :one_off) }
 
   # NOTE: instant fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
@@ -57,7 +56,7 @@ class Fee < ApplicationRecord
 
   def item_id
     return billable_metric.id if charge? || instant_charge?
-    return add_on.id if add_on? || one_off?
+    return add_on.id if add_on?
     return invoiceable_id if credit?
 
     subscription_id
@@ -65,7 +64,7 @@ class Fee < ApplicationRecord
 
   def item_type
     return BillableMetric.name if charge? || instant_charge?
-    return AddOn.name if add_on? || one_off?
+    return AddOn.name if add_on?
     return WalletTransaction.name if credit?
 
     Subscription.name
@@ -73,7 +72,7 @@ class Fee < ApplicationRecord
 
   def item_code
     return billable_metric.code if charge? || instant_charge?
-    return add_on.code if add_on? || one_off?
+    return add_on.code if add_on?
     return fee_type if credit?
 
     subscription.plan.code
@@ -81,7 +80,7 @@ class Fee < ApplicationRecord
 
   def item_name
     return billable_metric.name if charge? || instant_charge?
-    return add_on.name if add_on? || one_off?
+    return add_on.name if add_on?
     return fee_type if credit?
 
     subscription.plan.name
@@ -105,7 +104,7 @@ class Fee < ApplicationRecord
   def add_on
     return @add_on if defined? @add_on
 
-    return super if one_off?
+    return super if add_on_id.present?
     return unless add_on?
 
     @add_on = AddOn.with_discarded.find_by(id: applied_add_on.add_on_id)

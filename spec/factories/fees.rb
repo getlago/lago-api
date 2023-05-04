@@ -70,7 +70,7 @@ FactoryBot.define do
   factory :one_off_fee, class: 'Fee' do
     invoice
     add_on
-    fee_type { 'one_off' }
+    fee_type { 'add_on' }
     subscription { nil }
 
     amount_cents { 200 }

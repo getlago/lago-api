@@ -42,7 +42,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
         expect(result.invoice.invoice_type).to eq('one_off')
         expect(result.invoice.payment_status).to eq('pending')
-        expect(result.invoice.fees.one_off_kind.count).to eq(2)
+        expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
         expect(result.invoice.fees.pluck(:description)).to contain_exactly('desc-123', add_on_second.description)
 
         expect(result.invoice.currency).to eq('EUR')
@@ -163,7 +163,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include('value_not_present')
+          expect(result.error.messages[:currency]).to include('value_is_mandatory')
         end
       end
     end
