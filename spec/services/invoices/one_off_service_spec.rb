@@ -151,6 +151,23 @@ RSpec.describe Invoices::OneOffService, type: :service do
       end
     end
 
+    context 'when currency does not present' do
+      let(:currency) { nil }
+
+      before { customer.update!(currency: nil) }
+
+      it 'fails' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:currency)
+          expect(result.error.messages[:currency]).to include('value_not_present')
+        end
+      end
+    end
+
     context 'when customer is not found' do
       let(:customer) { nil }
 

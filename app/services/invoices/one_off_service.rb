@@ -13,7 +13,7 @@ module Invoices
 
     def create
       return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'currency') unless currency
+      return result.validation_failure!(errors: { currency: ['value_not_present'] }) unless currency
       return result.not_found_failure!(resource: 'fees') if fees.blank?
       return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
 
