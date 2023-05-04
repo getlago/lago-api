@@ -10,13 +10,13 @@ RSpec.describe ::V1::TaxRateSerializer do
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result['tax_rate']['lago_id']).to eq(tax_rate.id)
-      expect(result['tax_rate']['name']).to eq(tax_rate.name)
-      expect(result['tax_rate']['code']).to eq(tax_rate.code)
-      expect(result['tax_rate']['value']).to eq(tax_rate.value)
-      expect(result['tax_rate']['description']).to eq(tax_rate.description)
-      expect(result['tax_rate']['created_at']).to eq(tax_rate.created_at.iso8601)
-    end
+    expect(result['tax_rate']).to include(
+      'lago_id' => tax_rate.id,
+      'name' => tax_rate.name,
+      'code' => tax_rate.code,
+      'value' => tax_rate.value,
+      'description' => tax_rate.description,
+      'created_at' => tax_rate.created_at.iso8601,
+    )
   end
 end

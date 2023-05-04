@@ -4,7 +4,7 @@ module Api
   module V1
     class TaxRatesController < Api::BaseController
       def create
-        TaxRates::CreateService.call(organization: current_organization, params: input_params)
+        result = TaxRates::CreateService.call(organization: current_organization, params: input_params)
 
         if result.success?
           render_tax_rate(result.tax_rate)
