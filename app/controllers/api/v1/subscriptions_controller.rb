@@ -76,22 +76,27 @@ module Api
       end
 
       def index
-        customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
-
-        return not_found_error(resource: 'customer') unless customer
-
-        subscriptions = customer.active_subscriptions
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            subscriptions,
-            ::V1::SubscriptionSerializer,
-            collection_name: 'subscriptions',
-            meta: pagination_metadata(subscriptions),
+        result = SubscriptionsQuery.call(
+          organization: current_organization,
+          pagination: BaseQuery::Pagination.new(
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE,
           ),
+          filters: BaseQuery::Filters.new(index_filters),
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.subscriptions,
+              ::V1::SubscriptionSerializer,
+              collection_name: 'subscriptions',
+              meta: pagination_metadata(result.subscriptions),
+            ),
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private
@@ -111,6 +116,10 @@ module Api
 
       def update_params
         params.require(:subscription).permit(:name, :subscription_date, :subscription_at)
+      end
+
+      def index_filters
+        params.permit(:external_customer_id, :plan_code)
       end
     end
   end

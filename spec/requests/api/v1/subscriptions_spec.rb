@@ -223,11 +223,13 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context 'with invalid customer' do
-      it 'returns not_found error' do
-        get_with_token(organization, '/api/v1/subscriptions?external_customer_id=invalid')
+    context 'with plan code' do
+      it 'returns subscriptions' do
+        get_with_token(organization, "/api/v1/subscriptions?plan_code=#{plan.code}")
 
-        expect(response).to have_http_status(:not_found)
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].count).to eq(1)
+        expect(json[:subscriptions].first[:lago_id]).to eq(subscription1.id)
       end
     end
   end
