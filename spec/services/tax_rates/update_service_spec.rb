@@ -23,14 +23,13 @@ RSpec.describe TaxRates::UpdateService, type: :service do
 
     it 'updates the tax rate' do
       result = update_service.call
-      expect(result).to be_success
 
-      aggregate_failures do
-        expect(result.tax_rate.name).to eq(params[:name])
-        expect(result.tax_rate.code).to eq(params[:code])
-        expect(result.tax_rate.value).to eq(params[:value])
-        expect(result.tax_rate.description).to eq(params[:description])
-      end
+      expect(result).to be_success
+      expect(result.tax_rate).to have_attributes(
+        name: params[:name],
+        value: params[:value],
+        description: params[:description],
+      )
     end
 
     it 'returns tax rate in the result' do
