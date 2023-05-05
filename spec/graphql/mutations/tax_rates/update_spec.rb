@@ -17,7 +17,7 @@ RSpec.describe Mutations::TaxRates::Update, type: :graphql do
 
   let(:mutation) do
     <<-GQL
-      mutation($input: UpdateTaxRateInput!) {
+      mutation($input: TaxRateUpdateInput!) {
         updateTaxRate(input: $input) {
           id name code description value
         }
@@ -34,6 +34,7 @@ RSpec.describe Mutations::TaxRates::Update, type: :graphql do
     )
 
     expect(result['data']['updateTaxRate']).to include(
+      'id' => String,
       'name' => 'Updated tax rate name',
       'code' => 'updated-tax-rate-code',
       'description' => 'Updated tax rate description',

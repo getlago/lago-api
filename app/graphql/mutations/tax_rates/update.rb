@@ -9,12 +9,7 @@ module Mutations
       graphql_name 'UpdateTaxRate'
       description 'Update an existing tax rate'
 
-      argument :code, String, required: true
-      argument :description, String, required: false
-      argument :id, ID, required: true
-      argument :name, String, required: true
-      argument :value, Float, required: true
-
+      input_object_class Types::TaxRates::UpdateInput
       type Types::TaxRates::Object
 
       def resolve(**args)
