@@ -302,5 +302,8 @@ GraphQL/ArgumentDescription:
 GraphQL/FieldDescription:
   Enabled: false
 
+GraphQL/ObjectDescription:
+  Enabled: false
+
 GraphQL/ExtractType:
   Enabled: false
