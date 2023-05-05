@@ -4020,6 +4020,29 @@ type Query {
   ): PlanCollection!
 
   """
+  Query a single tax rate of an organization
+  """
+  taxRate(
+    """
+    Uniq ID of the tax rate
+    """
+    id: ID!
+  ): TaxRate
+
+  """
+  Query tax rates of an organization
+  """
+  taxRates(
+    """
+    List of tax rates IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    searchTerm: String
+  ): TaxRateCollection!
+
+  """
   Query wallet transactions
   """
   walletTransactions(
@@ -4201,6 +4224,27 @@ type Subscription {
   subscriptionAt: ISO8601DateTime
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
+}
+
+type TaxRate {
+  code: String!
+  createdAt: ISO8601DateTime!
+
+  """
+  Number of customers using this tax rate
+  """
+  customersCount: Int!
+  description: String
+  id: ID!
+  name: String!
+  organization: Organization
+  updatedAt: ISO8601DateTime!
+  value: Float!
+}
+
+type TaxRateCollection {
+  collection: [TaxRate!]!
+  metadata: CollectionMetadata!
 }
 
 """
