@@ -19,6 +19,10 @@ module TaxRates
         description: params[:description],
       )
 
+      # TODO: Refresh only invoices related to the corresponding customers.
+      draft_invoices = tax_rate.organization.invoices.draft
+      Invoices::RefreshBatchJob.perform_later(draft_invoices.pluck(:id))
+
       result.tax_rate = tax_rate
       result
     rescue ActiveRecord::RecordInvalid => e
