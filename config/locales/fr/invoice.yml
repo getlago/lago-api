@@ -18,6 +18,10 @@ fr:
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
     total_due: Total dû
     powered_by: Document généré par
+    item: Article
+    unit: Unité
+    unit_price: Prix unitaire
+    amount: Montant
 
     details: "Détails de %{resource}"
     subscription: Abonnement

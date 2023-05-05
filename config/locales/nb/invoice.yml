@@ -18,6 +18,10 @@ nb:
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     total_due: Å betale
     powered_by: Fakturering drevet av
+    item: Vare
+    unit: Enhet
+    unit_price: Enhetspris
+    amount: Beløp
 
     details: "%{resource} detaljer"
     subscription: Abonnement

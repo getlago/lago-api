@@ -41,7 +41,11 @@ module Invoices
     end
 
     def template
-      "invoices/v#{invoice.version_number}"
+      if invoice.one_off?
+        'invoices/one_off'
+      else
+        "invoices/v#{invoice.version_number}"
+      end
     end
 
     def should_send_webhook?

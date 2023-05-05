@@ -18,6 +18,10 @@ en:
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     total_due: Total due
     powered_by: Powered by
+    item: Item
+    unit: Unit
+    unit_price: Unit price
+    amount: Amount
 
     details: "%{resource} details"
     subscription: Subscription
