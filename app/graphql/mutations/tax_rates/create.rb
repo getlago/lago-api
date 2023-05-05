@@ -9,11 +9,7 @@ module Mutations
       graphql_name 'CreateTaxRate'
       description 'Creates a tax rate'
 
-      argument :code, String, required: true
-      argument :description, String, required: false
-      argument :name, String, required: true
-      argument :value, Float, required: true
-
+      input_object_class Types::TaxRates::CreateInput
       type Types::TaxRates::Object
 
       def resolve(**args)
