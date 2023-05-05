@@ -16,6 +16,7 @@ RSpec.describe ::V1::TaxRateSerializer do
       'code' => tax_rate.code,
       'value' => tax_rate.value,
       'description' => tax_rate.description,
+      'customers_count' => 0,
       'created_at' => tax_rate.created_at.iso8601,
     )
   end
