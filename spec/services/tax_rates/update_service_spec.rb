@@ -37,6 +37,14 @@ RSpec.describe TaxRates::UpdateService, type: :service do
       expect(result.tax_rate).to be_a(TaxRate)
     end
 
+    it 'refreshes draft invoices' do
+      draft_invoice = create(:invoice, :draft, organization:)
+
+      expect do
+        update_service.call
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+    end
+
     context 'when tax rate is not found' do
       let(:tax_rate) { nil }
 
