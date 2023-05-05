@@ -23,6 +23,8 @@ module V1
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.amount_currency,
         units: model.units,
+        description: model.description,
+        unit_amount_cents: model.unit_amount_cents,
         events_count: model.events_count,
         external_subscription_id: model.subscription&.external_id,
         payment_status: model.payment_status,
