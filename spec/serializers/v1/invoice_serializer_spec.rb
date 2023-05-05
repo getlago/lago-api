@@ -32,7 +32,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         'sub_total_vat_included_amount_cents' => invoice.sub_total_vat_included_amount_cents,
         'total_amount_cents' => invoice.total_amount_cents,
         'file_url' => invoice.file_url,
-        'version_number' => 2,
+        'version_number' => 3,
 
         # NOTE: deprecated fields
         'legacy' => false,

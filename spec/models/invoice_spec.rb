@@ -196,9 +196,25 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
+    context 'when fees sum is zero' do
+      let(:invoice_subscription) { create(:invoice_subscription) }
+      let(:invoice) { invoice_subscription.invoice }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
+      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+
+      before do
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, vat_rate: 20)
+      end
+
+      it 'returns 0' do
+        expect(invoice.creditable_amount_cents).to eq(0)
+      end
+    end
+
     it 'returns the expected creditable amount in cents' do
-      invoice_subscription = create(:invoice_subscription)
-      invoice = invoice_subscription.invoice
+      invoice = create(:invoice, version_number: 2)
+      invoice_subscription = create(:invoice_subscription, invoice:)
       subscription = invoice_subscription.subscription
       billable_metric = create(:recurring_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)

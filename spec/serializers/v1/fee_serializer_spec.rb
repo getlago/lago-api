@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::FeeSerializer do
-  subject(:serializer) { described_class.new(fee, root_name: 'fee') }
+  subject(:serializer) { described_class.new(fee, root_name: 'fee', includes: inclusion) }
 
   let(:fee) do
     create(
@@ -15,6 +15,7 @@ RSpec.describe ::V1::FeeSerializer do
     )
   end
 
+  let(:inclusion) { [] }
   let(:result) { JSON.parse(serializer.to_json) }
 
   it 'serializes the fee' do
@@ -87,6 +88,31 @@ RSpec.describe ::V1::FeeSerializer do
     it 'does not serializes the fees with date boundaries' do
       expect(result['fee']['from_date']).to be_nil
       expect(result['fee']['to_date']).to be_nil
+    end
+  end
+
+  context 'when instant_charge attributes are included' do
+    let(:inclusion) { %i[instant_charge] }
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, customer:, organization:, plan:) }
+    let(:charge) { create(:standard_charge, :instant, plan:) }
+    let(:event) { create(:event, subscription:, organization:, customer:) }
+
+    let(:fee) { create(:fee, fee_type: 'instant_charge', subscription:, charge:, instant_event_id: event.id) }
+
+    it 'serializes the instant charge attributes' do
+      aggregate_failures do
+        expect(result['fee']).to include(
+          'lago_subscription_id' => subscription.id,
+          'external_subscription_id' => subscription.external_id,
+          'lago_customer_id' => customer.id,
+          'external_customer_id' => customer.external_id,
+          'event_transaction_id' => event.transaction_id,
+        )
+      end
     end
   end
 end

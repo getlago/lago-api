@@ -63,7 +63,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
   let(:subscription) { invoice_subscription.subscription }
   let(:fee) { create(:fee, subscription:, invoice:, amount_cents: 10) }
 
@@ -171,7 +171,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   end
 
   context 'with an add on invoice' do
-    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
     let(:add_on) { create(:add_on, organization:) }
     let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
     let(:fee) { create(:add_on_fee, invoice:, applied_add_on:) }

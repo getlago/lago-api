@@ -26,7 +26,6 @@ module V1
         description: model.description,
         unit_amount_cents: model.unit_amount_cents,
         events_count: model.events_count,
-        external_subscription_id: model.subscription&.external_id,
         payment_status: model.payment_status,
         created_at: model.created_at&.iso8601,
         succeeded_at: model.succeeded_at&.iso8601,
@@ -35,6 +34,7 @@ module V1
       }
 
       payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
+      payload.merge!(instant_charge_attributes) if model.instant_charge?
 
       payload
     end
@@ -54,6 +54,20 @@ module V1
 
     def to_date
       model.properties['to_datetime']&.to_datetime&.iso8601
+    end
+
+    def instant_charge_attributes
+      return {} unless model.instant_charge?
+
+      event = model.subscription.organization.events.find_by(id: model.instant_event_id)
+
+      {
+        lago_subscription_id: model.subscription_id,
+        external_subscription_id: model.subscription&.external_id,
+        lago_customer_id: model.customer.id,
+        external_customer_id: model.customer.external_id,
+        event_transaction_id: event&.transaction_id,
+      }
     end
   end
 end

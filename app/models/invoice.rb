@@ -122,6 +122,8 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft?
 
     fees_total_creditable = fees.sum(&:creditable_amount_cents)
+    return 0 if fees_total_creditable.zero?
+
     coupons_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
       0
     else
