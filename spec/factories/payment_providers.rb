@@ -22,4 +22,18 @@ FactoryBot.define do
       { access_token: SecureRandom.uuid }.to_json
     end
   end
+
+  factory :adyen_provider, class: 'PaymentProviders::AdyenProvider' do
+    organization
+    type { 'PaymentProviders::AdyenProvider' }
+
+    secrets do
+      { api_key:, merchant_account: }.to_json
+    end
+
+    transient do
+      api_key { SecureRandom.uuid }
+      merchant_account { Faker::Company.duns_number }
+    end
+  end
 end

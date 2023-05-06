@@ -31,6 +31,7 @@ class Organization < ApplicationRecord
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
   has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
+  has_one :adyen_payment_provider, class_name: 'PaymentProviders::AdyenProvider'
 
   has_one_attached :logo
 
@@ -72,6 +73,8 @@ class Organization < ApplicationRecord
       stripe_payment_provider
     when 'gocardless'
       gocardless_payment_provider
+    when 'adyen'
+      adyen_payment_provider
     end
   end
 
