@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class AdyenProvider < BaseProvider
-    validates :api_key, presence: true
+    validates :api_key, :merchant_account, presence: true
 
     def environment
       if Rails.env.production?

@@ -53,6 +53,10 @@ module PaymentProviderCustomers
         return PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer) if async
 
         PaymentProviderCustomers::StripeCreateJob.perform_now(result.provider_customer)
+      elsif result.provider_customer.type == 'PaymentProviderCustomers::AdyenCustomer'
+        return PaymentProviderCustomers::AdyenCreateJob.perform_later(result.provider_customer) if async
+
+        PaymentProviderCustomers::AdyenCreateJob.perform_now(result.provider_customer)
       else
         return PaymentProviderCustomers::GocardlessCreateJob.perform_later(result.provider_customer) if async
 

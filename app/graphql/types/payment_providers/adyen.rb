@@ -14,10 +14,6 @@ module Types
       def api_key
         "#{'•' * 8}…#{object.api_key[-3..]}"
       end
-
-      def merchant_account
-        "#{'•' * 8}…#{object.api_key[-3..]}"
-      end
     end
   end
 end
