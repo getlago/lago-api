@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def create
       result.adyen_customer = adyen_customer
-      return result if adyen_customer.provider_customer_id?
+      # return result if adyen_customer.provider_customer_id?
 
       adyen_result = generate_checkout_url
 

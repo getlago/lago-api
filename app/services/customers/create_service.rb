@@ -167,7 +167,7 @@ module Customers
 
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
-        if %w[stripe gocardless].include?(billing[:payment_provider])
+        if %w[stripe gocardless adyen].include?(billing[:payment_provider])
           customer.payment_provider = billing[:payment_provider]
         end
       end
@@ -190,6 +190,8 @@ module Customers
                          PaymentProviderCustomers::StripeCustomer
                        when 'gocardless'
                          PaymentProviderCustomers::GocardlessCustomer
+                      when 'adyen'
+                        PaymentProviderCustomers::AdyenCustomer
       end
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
