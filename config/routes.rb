@@ -69,6 +69,10 @@ Rails.application.routes.draw do
     post 'gocardless/:organization_id', to: 'webhooks#gocardless', on: :collection, as: :gocardless
   end
 
+  namespace :admin do
+    resources :organizations, only: %i[update]
+  end
+
   match '*unmatched' => 'application#not_found',
         via: %i[get post put delete patch],
         constraints: lambda { |req|
