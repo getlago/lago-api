@@ -364,5 +364,35 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         end
       end
     end
+
+    context 'with a coupon applied to the invoice' do
+      let(:invoice) do
+        create(
+          :invoice,
+          customer:,
+          currency: 'EUR',
+          fees_amount_cents: 100,
+          total_amount_cents: 108,
+          coupons_amount_cents: 10,
+          vat_amount_cents: 18,
+          vat_rate: 20,
+        )
+      end
+
+      it 'takes the coupon into account' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to have_attributes(
+            total_amount_cents: 17,
+            credit_amount_cents: 17,
+            balance_amount_cents: 17,
+          )
+        end
+      end
+    end
   end
 end
