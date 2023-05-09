@@ -22,11 +22,19 @@ module CreditNotes
       amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
       return result unless amount.positive?
 
-      vat_amount = (amount * last_subscription_fee.vat_rate).fdiv(100)
+      adjustment_result = CreditNotes::ComputeAmountService.call(
+        invoice: last_subscription_fee.invoice,
+        items: [
+          CreditNoteItem.new(
+            fee_id: last_subscription_fee.id,
+            precise_amount_cents: amount.truncate(DB_PRECISION_SCALE),
+          ),
+        ],
+      )
 
       CreditNotes::CreateService.new(
         invoice: last_subscription_fee.invoice,
-        credit_amount_cents: (amount + vat_amount).round,
+        credit_amount_cents: adjustment_result.creditable_amount_cents,
         refund_amount_cents: 0,
         items: [
           {

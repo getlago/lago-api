@@ -42,9 +42,9 @@ module CreditNotes
         create_items
         return result unless result.success?
 
-        credit_note.precise_coupons_adjustment_amount_cents = coupons_adjustment_amount_cents
+        credit_note.precise_coupons_adjustment_amount_cents = adjustement_result.coupons_adjustment_amount_cents
         credit_note.coupons_adjustment_amount_cents = credit_note.precise_coupons_adjustment_amount_cents.round
-        credit_note.precise_vat_amount_cents = vat_amount_cents
+        credit_note.precise_vat_amount_cents = adjustement_result.vat_amount_cents
         credit_note.vat_amount_cents = credit_note.precise_vat_amount_cents.round
 
         valid_credit_note?
@@ -188,21 +188,11 @@ module CreditNotes
       end
     end
 
-    def coupons_adjustment_amount_cents
-      return 0 if invoice.version_number < Invoice::COUPON_BEFORE_VAT_VERSION
-
-      invoice.coupons_amount_cents.fdiv(invoice.fees_amount_cents) * credit_note.items.sum(&:precise_amount_cents)
-    end
-
-    def vat_amount_cents
-      credit_note.items.sum do |item|
-        # NOTE: Because coupons are applied before VAT,
-        #       we have to discribute the coupon adjustement at prorata of each items
-        #       to compute the VAT
-        item_rate = item.precise_amount_cents.fdiv(credit_note.items.sum(&:precise_amount_cents))
-        prorated_coupon_amount = credit_note.precise_coupons_adjustment_amount_cents * item_rate
-        (item.precise_amount_cents - prorated_coupon_amount) * (item.fee.vat_rate || 0)
-      end.fdiv(100)
+    def adjustement_result
+      @adjustement_result ||= CreditNotes::ComputeAmountService.call(
+        invoice:,
+        items: credit_note.items,
+      )
     end
   end
 end
