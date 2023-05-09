@@ -14,7 +14,6 @@ RSpec.describe TaxRates::UpdateService, type: :service do
 
     let(:params) do
       {
-        name: 'updated name',
         code: 'updated code',
         value: 15.0,
         description: 'updated desc',
@@ -26,7 +25,8 @@ RSpec.describe TaxRates::UpdateService, type: :service do
 
       expect(result).to be_success
       expect(result.tax_rate).to have_attributes(
-        name: params[:name],
+        name: tax_rate.name,
+        code: params[:code],
         value: params[:value],
         description: params[:description],
       )

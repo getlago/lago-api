@@ -12,12 +12,12 @@ module TaxRates
     def call
       return result.not_found_failure!(resource: 'tax_rate') unless tax_rate
 
-      tax_rate.update!(
-        name: params[:name],
-        code: params[:code],
-        value: params[:value],
-        description: params[:description],
-      )
+      tax_rate.name = params[:name] if params.key?(:name)
+      tax_rate.code = params[:code] if params.key?(:code)
+      tax_rate.value = params[:value] if params.key?(:value)
+      tax_rate.description = params[:description] if params.key?(:description)
+
+      tax_rate.save!
 
       # TODO: Refresh only invoices related to the corresponding customers.
       draft_invoices = tax_rate.organization.invoices.draft
