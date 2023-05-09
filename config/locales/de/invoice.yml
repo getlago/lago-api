@@ -18,6 +18,10 @@ de:
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     total_due: Insgesamt fällig
     powered_by: Bereitgestellt von
+    item: Artikel
+    unit: Einheit
+    unit_price: Stückpreis
+    amount: Betrag
 
     details: "%{resource} Details"
     subscription: Abonnement

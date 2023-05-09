@@ -52,6 +52,7 @@ module Types
     field :update_credit_note, mutation: Mutations::CreditNotes::Update
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
 
+    field :create_invoice, mutation: Mutations::Invoices::Create
     field :download_invoice, mutation: Mutations::Invoices::Download
     field :finalize_invoice, mutation: Mutations::Invoices::Finalize
     field :refresh_invoice, mutation: Mutations::Invoices::Refresh

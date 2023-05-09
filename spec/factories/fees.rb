@@ -60,7 +60,24 @@ FactoryBot.define do
     amount_cents { 200 }
     amount_currency { 'EUR' }
 
-    invoiceable factory: :add_on
+    invoiceable_type { 'AppliedAddOn' }
+    invoiceable_id { applied_add_on.id }
+
+    vat_amount_cents { 2 }
+    vat_amount_currency { 'EUR' }
+  end
+
+  factory :one_off_fee, class: 'Fee' do
+    invoice
+    add_on
+    fee_type { 'add_on' }
+    subscription { nil }
+
+    amount_cents { 200 }
+    amount_currency { 'EUR' }
+
+    invoiceable_type { 'AddOn' }
+    invoiceable_id { add_on.id }
 
     vat_amount_cents { 2 }
     vat_amount_currency { 'EUR' }

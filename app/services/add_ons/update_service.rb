@@ -11,14 +11,11 @@ module AddOns
     def call
       return result.not_found_failure!(resource: 'add_on') unless add_on
 
-      add_on.name = params[:name]
-      add_on.description = params[:description]
-
-      unless add_on.applied_add_ons.exists?
-        add_on.code = params[:code]
-        add_on.amount_cents = params[:amount_cents]
-        add_on.amount_currency = params[:amount_currency]
-      end
+      add_on.name = params[:name] if params.key?(:name)
+      add_on.description = params[:description] if params.key?(:description)
+      add_on.code = params[:code] if params.key?(:code)
+      add_on.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
+      add_on.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
 
       add_on.save!
 

@@ -74,8 +74,16 @@ RSpec.describe ::V1::FeeSerializer do
   end
 
   context 'when fee is add_on' do
-    let(:add_on) { create(:add_on) }
-    let(:fee) { create(:fee, fee_type: 'add_on', add_on:) }
+    let(:fee) { create(:add_on_fee) }
+
+    it 'does not serializes the fees with date boundaries' do
+      expect(result['fee']['from_date']).to be_nil
+      expect(result['fee']['to_date']).to be_nil
+    end
+  end
+
+  context 'when fee is one_off' do
+    let(:fee) { create(:one_off_fee) }
 
     it 'does not serializes the fees with date boundaries' do
       expect(result['fee']['from_date']).to be_nil

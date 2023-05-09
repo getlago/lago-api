@@ -42,7 +42,7 @@ class Invoice < ApplicationRecord
            allow_nil: true,
            with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   STATUS = %i[draft finalized].freeze
 
@@ -70,7 +70,7 @@ class Invoice < ApplicationRecord
             .where('invoices.created_at < ?', invoice.created_at)
         }
 
-  validates :issuing_date, presence: true
+  validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
 
   def file_url
