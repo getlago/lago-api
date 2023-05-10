@@ -14,7 +14,6 @@ module Admin
       return unauthorized_error unless auth_header
 
       token = auth_header.split(' ').second
-      pp token
       payload = Google::Auth::IDTokens::verify_oidc token, aud: ENV['GOOGLE_AUTH_CLIENT_ID']
 
       CurrentContext.email = payload['email']

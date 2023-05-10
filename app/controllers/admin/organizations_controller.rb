@@ -3,19 +3,23 @@
 module Admin
   class OrganizationsController < BaseController
     def update
-      result = Organizations::UpdateService.call(organization: current_organization, params: input_params)
-
-      
+      render(
+            json: ::V1::OrganizationSerializer.new(
+              current_organization,
+              root_name: 'organization',
+            ),
+          )
     end
 
     private
 
     def current_organization
-      @current_organization ||= Organization.find_by(params[:id])
+      pp params[:id]
+      @current_organization ||= Organization.find_by(id: params[:id])
     end
 
     def input_params
-      params.require(:organization).permit(:name)
+      params.permit(:name)
     end
   end
 end
