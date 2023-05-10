@@ -24,10 +24,10 @@ class Organization < ApplicationRecord
   has_many :add_ons
   has_many :invites
   has_many :payment_providers
+  has_many :tax_rates
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
   has_many :webhooks
-  has_many :tax_rates
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
   has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
