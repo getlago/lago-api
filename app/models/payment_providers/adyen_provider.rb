@@ -5,7 +5,7 @@ module PaymentProviders
     validates :api_key, :merchant_account, presence: true
 
     def environment
-      if Rails.env.production?
+      if Rails.env.production? && live_prefix.present?
         :live
       else
         :test

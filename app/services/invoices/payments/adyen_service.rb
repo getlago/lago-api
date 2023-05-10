@@ -79,6 +79,7 @@ module Invoices
       def client
         @client ||= Adyen::Client.new(
           api_key: adyen_payment_provider.api_key,
+          live_prefix: adyen_payment_provider.live_prefix,
           env: adyen_payment_provider.environment,
         )
       end

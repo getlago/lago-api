@@ -43,12 +43,8 @@ class WebhooksController < ApplicationController
     
     result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
-      body: notification_request_item,
-      signature:
+      body: notification_request_item
     )
-    
-    puts notification_request_item["eventCode"]
-    puts notification_request_item["merchantReference"]
 
     unless result.success?
       if result.error.code == 'webhook_error'

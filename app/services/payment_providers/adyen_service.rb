@@ -28,16 +28,14 @@ module PaymentProviders
       result.record_validation_failure!(record: e.record)
     end
 
-    def handle_incoming_webhook(organization_id:, body:, signature:)
+    def handle_incoming_webhook(organization_id:, body:)
       organization = Organization.find_by(id: organization_id)
       validator = ::Adyen::Utils::HmacValidator.new
       hmac_key = organization.adyen_payment_provider.hmac_key
 
-      # TODO: Change it to async
-      # PaymentProviders::Adyen::HandleEventJob.perform_later(organization:, event_json: body.to_json)
-      PaymentProviders::Adyen::HandleEventJob.new.perform(organization:, event_json: body.to_json)
-
-      if hmac_key && !validator.valid_notification_hmac?(signature, hmac_key)
+      PaymentProviders::Adyen::HandleEventJob.perform_later(organization:, event_json: body.to_json)
+      
+      if hmac_key && !validator.valid_notification_hmac?(body, hmac_key)
         return result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
       end
 
