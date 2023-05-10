@@ -7,5 +7,6 @@ FactoryBot.define do
     description { 'French Standard VAT' }
     name { 'VAT' }
     value { 20.0 }
+    applied_by_default { true }
   end
 end
