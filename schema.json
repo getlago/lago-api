@@ -104,6 +104,38 @@
               "name": "apiKey",
               "description": null,
               "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "merchantAccount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "livePrefix",
+              "description": null,
+              "type": {
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
@@ -113,7 +145,7 @@
               "deprecationReason": null
             },
             {
-              "name": "merchantAccount",
+              "name": "hmacKey",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -511,6 +543,20 @@
               ]
             },
             {
+              "name": "hmacKey",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -521,6 +567,20 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "livePrefix",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -14296,6 +14356,20 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "adyenPaymentProvider",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "AdyenProvider",
                 "ofType": null
               },
               "isDeprecated": false,

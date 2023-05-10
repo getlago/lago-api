@@ -4,8 +4,7 @@ module PaymentProviderCustomers
   class AdyenCreateJob < ApplicationJob
     queue_as :providers
 
-    retry_on Adyen::APIError, wait: :exponentially_longer, attempts: 6
-    
+    retry_on Adyen::AdyenError, wait: :exponentially_longer, attempts: 6
 
     def perform(adyen_customer)
       result = PaymentProviderCustomers::AdyenService.new(adyen_customer).create

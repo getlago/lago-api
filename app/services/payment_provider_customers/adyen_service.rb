@@ -10,14 +10,9 @@ module PaymentProviderCustomers
 
     def create
       result.adyen_customer = adyen_customer
-      # return result if adyen_customer.provider_customer_id?
+      return result if adyen_customer.provider_customer_id?
 
       adyen_result = generate_checkout_url
-
-      # adyen_customer.update!(
-      #   provider_customer_id: adyen_result.id,
-      # )
-      deliver_success_webhook
       
       result.checkout_url = adyen_result.response["url"]
       result
@@ -75,15 +70,6 @@ module PaymentProviderCustomers
       }
       prms[:shopperEmail] = customer.email if customer.email
       prms
-    end
-
-    def deliver_success_webhook
-      return unless organization.webhook_url?
-
-      SendWebhookJob.perform_later(
-        'customer.payment_provider_created',
-        customer
-      )
     end
 
     def deliver_error_webhook(adyen_error)
