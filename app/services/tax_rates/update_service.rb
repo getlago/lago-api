@@ -16,6 +16,7 @@ module TaxRates
       tax_rate.code = params[:code] if params.key?(:code)
       tax_rate.value = params[:value] if params.key?(:value)
       tax_rate.description = params[:description] if params.key?(:description)
+      tax_rate.applied_by_default = params[:applied_by_default] if params.key?(:applied_by_default)
 
       tax_rate.save!
 

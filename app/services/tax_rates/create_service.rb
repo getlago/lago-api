@@ -10,12 +10,15 @@ module TaxRates
     end
 
     def call
-      tax_rate = organization.tax_rates.create!(
+      tax_rate = organization.tax_rates.new(
         name: params[:name],
         code: params[:code],
         value: params[:value],
         description: params[:description],
       )
+
+      tax_rate.applied_by_default = params[:applied_by_default] if params.key?(:applied_by_default)
+      tax_rate.save!
 
       result.tax_rate = tax_rate
       result
