@@ -5,7 +5,6 @@ module PaymentProviders
     PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
     REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
-    # TODO: Add more events
     WEBHOOKS_EVENTS = [
       'AUTHORISATION'
     ].freeze
@@ -53,11 +52,13 @@ module PaymentProviders
         )
       end
 
+      adyen_service = PaymentProviderCustomers::AdyenService.new
+
       case event["eventCode"]
       when 'AUTHORISATION'
         return result if event["success"] != "true" || event.dig("amount", "value") != 0
 
-        result = PaymentProviderCustomers::AdyenService.new.authorise(organization, event)
+        result = adyen_service.authorise(organization, event)
         result.raise_if_error! || result
       end
     end

@@ -40,11 +40,11 @@ module PaymentProviderCustomers
       
       payment_method_id = event.dig("additionalData", "recurring.recurringDetailReference")
 
-
       @adyen_customer = PaymentProviderCustomers::AdyenCustomer.
         joins(:customer).
-        where(customers: { organization_id: }).
-        find_by(external_id: shopper_reference)
+        where(customers: { external_id: shopper_reference, organization_id: organization.id }).
+        first
+
       return handle_missing_customer(shopper_reference) unless adyen_customer
 
       adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
