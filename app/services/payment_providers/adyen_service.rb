@@ -12,7 +12,7 @@ module PaymentProviders
 
     def create_or_update(**args)
       adyen_provider = PaymentProviders::AdyenProvider.find_or_initialize_by(
-        organization_id: args[:organization_id]
+        organization_id: args[:organization].id,
       )
 
       adyen_provider.api_key = args[:api_key] if args.key?(:api_key)
