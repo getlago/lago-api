@@ -15810,18 +15810,6 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "vatRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "enumValues": null

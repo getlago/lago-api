@@ -3904,7 +3904,6 @@ input OrganizationBillingConfigurationInput {
   documentLocale: String
   invoiceFooter: String
   invoiceGracePeriod: Int
-  vatRate: Float
 }
 
 type Plan {
