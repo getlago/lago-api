@@ -25,7 +25,6 @@ module Mutations
       argument :state, String, required: false
       argument :timezone, Types::TimezoneEnum, required: false
       argument :url, String, required: false
-      argument :vat_rate, Float, required: false
       argument :zipcode, String, required: false
 
       argument :metadata, [Types::Customers::Metadata::Input], required: false
