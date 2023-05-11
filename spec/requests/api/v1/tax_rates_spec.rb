@@ -12,6 +12,7 @@ RSpec.describe Api::V1::TaxRatesController, type: :request do
         code: 'tax_rate_code',
         value: 20.0,
         description: 'tax_rate_description',
+        applied_by_default: false,
       }
     end
 
@@ -27,6 +28,7 @@ RSpec.describe Api::V1::TaxRatesController, type: :request do
         expect(json[:tax_rate][:value]).to eq(create_params[:value])
         expect(json[:tax_rate][:description]).to eq(create_params[:description])
         expect(json[:tax_rate][:created_at]).to be_present
+        expect(json[:tax_rate][:applied_by_default]).to eq(create_params[:applied_by_default])
       end
     end
   end
@@ -36,9 +38,10 @@ RSpec.describe Api::V1::TaxRatesController, type: :request do
     let(:code) { 'code_updated' }
     let(:name) { 'name_updated' }
     let(:value) { 15.0 }
+    let(:applied_by_default) { false }
 
     let(:update_params) do
-      { code:, name:, value: }
+      { code:, name:, value:, applied_by_default: }
     end
 
     it 'updates a tax rate' do
@@ -54,6 +57,7 @@ RSpec.describe Api::V1::TaxRatesController, type: :request do
         expect(json[:tax_rate][:code]).to eq(update_params[:code])
         expect(json[:tax_rate][:name]).to eq(update_params[:name])
         expect(json[:tax_rate][:value]).to eq(update_params[:value])
+        expect(json[:tax_rate][:applied_by_default]).to eq(update_params[:applied_by_default])
       end
     end
 

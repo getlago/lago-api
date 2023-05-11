@@ -61,7 +61,7 @@ module Api
       private
 
       def input_params
-        params.require(:tax_rate).permit(:code, :description, :name, :value)
+        params.require(:tax_rate).permit(:code, :description, :name, :value, :applied_by_default)
       end
 
       def render_tax_rate(tax_rate)

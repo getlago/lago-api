@@ -9,6 +9,7 @@ module V1
         code: model.code,
         value: model.value,
         description: model.description,
+        applied_by_default: model.applied_by_default,
         customers_count:,
         created_at: model.created_at.iso8601,
       }
