@@ -13,6 +13,8 @@ module Types
       field :name, String, null: false
       field :value, Float, null: false
 
+      field :applied_by_default, Boolean, null: false
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 

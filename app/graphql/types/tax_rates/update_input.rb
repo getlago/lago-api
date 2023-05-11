@@ -10,6 +10,8 @@ module Types
       argument :id, ID, required: true
       argument :name, String, required: false
       argument :value, Float, required: false
+
+      argument :applied_by_default, Boolean, required: false
     end
   end
 end

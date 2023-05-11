@@ -12,6 +12,7 @@ RSpec.describe Mutations::TaxRates::Update, type: :graphql do
       code: 'updated-tax-rate-code',
       description: 'Updated tax rate description',
       value: 30.0,
+      appliedByDefault: false,
     }
   end
 
@@ -19,7 +20,7 @@ RSpec.describe Mutations::TaxRates::Update, type: :graphql do
     <<-GQL
       mutation($input: TaxRateUpdateInput!) {
         updateTaxRate(input: $input) {
-          id name code description value
+          id name code description value appliedByDefault
         }
       }
     GQL
@@ -39,6 +40,7 @@ RSpec.describe Mutations::TaxRates::Update, type: :graphql do
       'code' => 'updated-tax-rate-code',
       'description' => 'Updated tax rate description',
       'value' => 30.0,
+      'appliedByDefault' => false,
     )
   end
 

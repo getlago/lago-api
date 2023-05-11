@@ -11,7 +11,9 @@ RSpec.describe TaxRatesQuery, type: :query do
   let(:organization) { membership.organization }
   let(:tax_rate_first) { create(:tax_rate, organization:, name: 'defgh', code: '11') }
   let(:tax_rate_second) { create(:tax_rate, organization:, name: 'abcde', code: '22') }
-  let(:tax_rate_third) { create(:tax_rate, organization:, name: 'presuv', code: '33') }
+  let(:tax_rate_third) do
+    create(:tax_rate, organization:, name: 'presuv', code: '33', applied_by_default: false)
+  end
 
   before do
     tax_rate_first
@@ -43,6 +45,19 @@ RSpec.describe TaxRatesQuery, type: :query do
       )
 
       expect(result.tax_rates).to eq([tax_rate_second])
+    end
+  end
+
+  context 'with a filter on applied by default' do
+    it 'returns only one tax rate' do
+      result = tax_rates_query.call(
+        search_term: '',
+        page: 1,
+        limit: 10,
+        filters: { applied_by_default: false },
+      )
+
+      expect(result.tax_rates).to eq([tax_rate_third])
     end
   end
 end

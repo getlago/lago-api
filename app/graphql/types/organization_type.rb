@@ -29,6 +29,7 @@ module Types
 
     field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
     field :email_settings, [Types::Organizations::EmailSettingsEnum], null: true
+    field :tax_rates, [Types::TaxRates::Object], null: true, resolver: Resolvers::TaxRatesResolver
 
     field :gocardless_payment_provider, Types::PaymentProviders::Gocardless, null: true
     field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
