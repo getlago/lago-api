@@ -27,11 +27,37 @@ module PaymentProviderCustomers
         checkout_url: res.response["url"]
       )
 
-      res
+      return res
     rescue Adyen::AdyenError => e
       deliver_error_webhook(e)
 
       raise
+    end
+
+    def authorise(organization, event)
+      shopper_reference = event.dig("additionalData", "shopperReference") ||
+        event.dig("additionalData", "recurring.shopperReference")
+      
+      payment_method_id = event.dig("additionalData", "recurring.recurringDetailReference")
+
+
+      @adyen_customer = PaymentProviderCustomers::AdyenCustomer.
+        joins(:customer).
+        where(customers: { organization_id: }).
+        find_by(external_id: shopper_reference)
+      return handle_missing_customer(shopper_reference) unless adyen_customer
+
+      adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
+
+      if organization.webhook_url?
+        SendWebhookJob.perform_later('customer.payment_provider_created', customer)
+      end
+
+      # TODO: stripe does this, do we need it here?
+      # reprocess_pending_invoices(customer)
+
+      result.adyen_customer = adyen_customer
+      result
     end
 
     private
@@ -51,8 +77,8 @@ module PaymentProviderCustomers
     def client
       @client ||= Adyen::Client.new(
         api_key: adyen_payment_provider.api_key,
-        live_prefix: adyen_payment_provider.live_prefix,
         env: adyen_payment_provider.environment,
+        live_url_prefix: adyen_payment_provider.live_prefix 
       )
     end
 
@@ -84,6 +110,16 @@ module PaymentProviderCustomers
           error_code: adyen_error.code,
         }
       )
+    end
+
+    def handle_missing_customer(shopper_reference)
+      # NOTE: Adyen customer was not created from lago
+      return result unless shopper_reference
+
+      # NOTE: Customer does not belong to this lago instance
+      return result if Customer.find_by(external_id: shopper_reference).nil?
+
+      result.not_found_failure!(resource: 'adyen_customer')
     end
   end
 end

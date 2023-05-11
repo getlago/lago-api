@@ -12,14 +12,13 @@ module PaymentProviders
 
     def create_or_update(**args)
       adyen_provider = PaymentProviders::AdyenProvider.find_or_initialize_by(
-        organization_id: args[:organization].id,
+        organization_id: args[:organization].id
       )
 
       adyen_provider.api_key = args[:api_key] if args.key?(:api_key)
       adyen_provider.merchant_account = args[:merchant_account] if args.key?(:merchant_account)
       adyen_provider.live_prefix = args[:live_prefix] if args.key?(:live_prefix)
       adyen_provider.hmac_key = args[:hmac_key] if args.key?(:hmac_key)
-      
       adyen_provider.save!
 
       result.adyen_provider = adyen_provider
@@ -56,32 +55,9 @@ module PaymentProviders
 
       case event["eventCode"]
       when 'AUTHORISATION'
-
-        service = PaymentProviderCustomers::AdyenService.new
-
-        # TODO Update payment method
-        # result = PaymentProviderCustomers::AdyenService
-        #   .new
-        #   .update_payment_method(
-        #     organization_id: organization.id,
-        #     stripe_customer_id: event.data.object.customer,
-        #     payment_method_id: event.data.object.payment_method,
-        #     metadata: event.data.object.metadata.to_h.symbolize_keys,
-        #   )
-
         return result if event["success"] != "true" || event.dig("amount", "value") != 0
 
-        shopper_reference = event.dig("additionalData", "recurring.shopperReference")
-        payment_method_id = event.dig("additionalData", "recurring.recurringDetailReference")
-        customer = Customer.find_by(external_id: shopper_reference)
-
-        payment_provider_customer = PaymentProviderCustomers::AdyenCustomer.find_by(customer:)
-        payment_provider_customer.update!(provider_customer_id: shopper_reference)
-
-        if organization.webhook_url?
-          SendWebhookJob.perform_later('customer.payment_provider_created', customer)
-        end
-
+        result = PaymentProviderCustomers::AdyenService.new.authorise(organization, event)
         result.raise_if_error! || result
       end
     end
