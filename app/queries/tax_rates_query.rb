@@ -6,6 +6,11 @@ class TaxRatesQuery < BaseQuery
 
     tax_rates = base_scope.result
     tax_rates = tax_rates.where(id: filters[:ids]) if filters[:ids].present?
+
+    unless filters[:applied_by_default].nil?
+      tax_rates = tax_rates.where(applied_by_default: filters[:applied_by_default])
+    end
+
     tax_rates = tax_rates.order(:name).page(page).per(limit)
 
     result.tax_rates = tax_rates
