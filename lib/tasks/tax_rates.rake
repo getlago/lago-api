@@ -20,7 +20,7 @@ namespace :tax_rates do
         code: "tax_#{customer.vat_rate}",
       )
 
-      customer.customers_tax_rates.create!(tax_rate:)
+      customer.applied_tax_rates.create!(tax_rate:)
     end
   end
 end

@@ -29,8 +29,8 @@ class Customer < ApplicationRecord
            dependent: :destroy
   has_many :persisted_events
 
-  has_many :customers_tax_rates
-  has_many :tax_rates, through: :customers_tax_rates
+  has_many :applied_tax_rates
+  has_many :tax_rates, through: :applied_tax_rates
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
   has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CustomersTaxRate < ApplicationRecord
+class AppliedTaxRate < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :customer

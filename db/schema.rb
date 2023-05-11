@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_10_113501) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_11_124419) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -85,6 +85,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_10_113501) do
     t.integer "frequency_duration_remaining"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
+  end
+
+  create_table "applied_tax_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.uuid "tax_rate_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_applied_tax_rates_on_customer_id"
+    t.index ["tax_rate_id"], name: "index_applied_tax_rates_on_tax_rate_id"
   end
 
   create_table "billable_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -258,15 +267,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_10_113501) do
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
     t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
-  end
-
-  create_table "customers_tax_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "customer_id", null: false
-    t.uuid "tax_rate_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["customer_id"], name: "index_customers_tax_rates_on_customer_id"
-    t.index ["tax_rate_id"], name: "index_customers_tax_rates_on_tax_rate_id"
   end
 
   create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -669,6 +669,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_10_113501) do
   add_foreign_key "add_ons", "organizations"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
+  add_foreign_key "applied_tax_rates", "customers"
+  add_foreign_key "applied_tax_rates", "tax_rates"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
@@ -684,8 +686,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_10_113501) do
   add_foreign_key "credits", "invoices"
   add_foreign_key "customer_metadata", "customers"
   add_foreign_key "customers", "organizations"
-  add_foreign_key "customers_tax_rates", "customers"
-  add_foreign_key "customers_tax_rates", "tax_rates"
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
   add_foreign_key "events", "subscriptions"
