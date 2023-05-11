@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Admin::BaseController, type: [:controller, :admin] do
+RSpec.describe Admin::BaseController, type: [:request, :admin] do
   controller do
     def index
       render nothing: true

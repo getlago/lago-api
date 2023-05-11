@@ -7,3 +7,24 @@ RSpec.configure do |config|
       .and_return({ email: 'test@getlago.com' })
   end
 end
+
+module AdminHelper
+  def admin_put(path, params = {}, headers = {})
+    apply_headers(headers)
+    put(path, params: params.to_json, headers:)
+  end
+
+  def json
+    return response.body unless response.media_type.include?('json')
+
+    JSON.parse(response.body, symbolize_names: true)
+  end
+
+  private
+
+  def apply_headers(headers)
+    headers['Content-Type'] = 'application/json'
+    headers['Accept'] = 'application/json'
+    headers['Authorization'] = 'Bearer 123456'
+  end
+end
