@@ -30,7 +30,6 @@ RSpec.describe Organizations::UpdateService do
       logo:,
       email_settings:,
       billing_configuration: {
-        vat_rate: 12.5,
         invoice_footer: 'invoice footer',
         document_locale: 'fr',
         invoice_grace_period:,
@@ -56,7 +55,6 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.country).to eq('FR')
         expect(result.organization.timezone).to eq('UTC')
 
-        expect(result.organization.vat_rate).to eq(12.5)
         expect(result.organization.invoice_footer).to eq('invoice footer')
         expect(result.organization.document_locale).to eq('fr')
       end
@@ -133,6 +131,96 @@ RSpec.describe Organizations::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:country]).to eq(['not_a_valid_country_code'])
+        end
+      end
+    end
+
+    context 'with legacy vat_rate' do
+      let(:vat_rate) { 12.5 }
+      let(:params) do
+        {
+          webhook_url: 'http://foo.bar',
+          legal_name: 'Foobar',
+          legal_number: '1234',
+          email: 'foo@bar.com',
+          address_line1: 'Line 1',
+          address_line2: 'Line 2',
+          state: 'Foobar',
+          zipcode: 'FOO1234',
+          city: 'Foobar',
+          country:,
+          timezone:,
+          logo:,
+          email_settings:,
+          billing_configuration: {
+            vat_rate:,
+            invoice_footer: 'invoice footer',
+            document_locale: 'fr',
+            invoice_grace_period:,
+          },
+        }
+      end
+
+      it 'assigns the vat_rate and creates a tax_rate' do
+        result = update_service.call
+
+        aggregate_failures do
+          expect(result.organization.vat_rate).to eq(12.5)
+
+          expect(result.organization.tax_rates.count).to eq(1)
+
+          tax_rate = result.organization.tax_rates.first
+          expect(tax_rate.value).to eq(12.5)
+        end
+      end
+
+      context 'when organization already have a tax rate' do
+        before { create(:tax_rate, organization:, value: 14) }
+
+        it 'create a new tax_rate' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result.organization.vat_rate).to eq(12.5)
+
+            expect(result.organization.tax_rates.count).to eq(2)
+            expect(result.organization.tax_rates.applied_by_default.count).to eq(1)
+
+            tax_rate = result.organization.tax_rates.applied_by_default.first
+            expect(tax_rate.value).to eq(12.5)
+          end
+        end
+
+        context 'with vat_rate equals to 0' do
+          let(:vat_rate) { 0 }
+
+          it 'toggle the applied_by_default flag' do
+            result = update_service.call
+
+            aggregate_failures do
+              expect(result.organization.vat_rate).to eq(0)
+
+              expect(result.organization.tax_rates.count).to eq(1)
+              expect(result.organization.tax_rates.applied_by_default.count).to eq(0)
+            end
+          end
+        end
+      end
+
+      context 'when organization have multiple tax rates' do
+        before do
+          create(:tax_rate, organization:, value: 14)
+          create(:tax_rate, organization:, value: 15)
+        end
+
+        it 'raises a validation error' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:vat_rate]).to eq(['multiple_tax_rates'])
+          end
         end
       end
     end

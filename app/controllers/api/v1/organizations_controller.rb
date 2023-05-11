@@ -38,8 +38,10 @@ module Api
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
-            :vat_rate,
             :document_locale,
+
+            # NOTE(legacy): vat has been moved to tax rate model
+            :vat_rate,
           ],
         )
       end

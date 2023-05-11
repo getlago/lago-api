@@ -26,8 +26,10 @@ module Organizations
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-      organization.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
       organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
+
+      # NOTE(legacy): keep accepting vat_rate field temporary by converting it into tax rate
+      handle_legacy_vat_rate(billing[:vat_rate]) if billing.key?(:vat_rate)
 
       if License.premium? && billing.key?(:invoice_grace_period)
         Organizations::UpdateInvoiceGracePeriodService.call(
@@ -45,6 +47,8 @@ module Organizations
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
@@ -73,6 +77,28 @@ module Organizations
         filename: 'logo',
         content_type:,
       )
+    end
+
+    def handle_legacy_vat_rate(vat_rate)
+      if organization.tax_rates.applied_by_default.count > 1
+        result.single_validation_failure!(field: :vat_rate, error_code: 'multiple_tax_rates')
+          .raise_if_error!
+      end
+
+      # NOTE(legacy): Keep updating vat_rate untill we remove the field
+      organization.vat_rate = vat_rate
+
+      current_tax_rate = organization.tax_rates.applied_by_default.first
+      return if current_tax_rate&.value == vat_rate
+
+      current_tax_rate&.update!(applied_by_default: false)
+      return if vat_rate.zero?
+
+      organization.tax_rates.create_with(
+        value: vat_rate,
+        name: "Tax (#{vat_rate}%)",
+        applied_by_default: true,
+      ).find_or_create_by!(code: "tax_#{vat_rate}")
     end
   end
 end
