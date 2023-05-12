@@ -15,7 +15,7 @@ Rails.application.config.middleware.insert_before(0, Rack::Cors) do
 
       origins frontend_origin
     elsif Rails.env.development?
-      origins 'app.lago.dev', 'api'
+      origins 'app.lago.dev', 'api', 'lago.ngrok.dev'
     end
 
     resource '*',
