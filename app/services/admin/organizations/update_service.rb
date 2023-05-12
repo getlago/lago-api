@@ -6,11 +6,13 @@ module Admin
       def initialize(organization:, params:)
         @organization = organization
         @params = params
-  
-        super(nil)
+
+        super
       end
 
       def call
+        return result.not_found_failure!(resource: 'organization') unless organization
+
         organization.name = params[:name] if params.key?(:name)
 
         organization.save!

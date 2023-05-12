@@ -22,6 +22,7 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
       aggregate_failures do
         expect(json[:organization][:name]).to eq('FooBar')
+        expect(organization.reload.name).to eq('FooBar')
       end
     end
   end
