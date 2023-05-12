@@ -470,7 +470,7 @@ html
                     = credit.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2 width="70%" = I18n.t('invoice.sub_total_without_tax')
-              td.body-2 width="30%" = fees_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 width="30%" = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2 #{I18n.t('invoice.tax')} (#{vat_rate || 0}%)
               td.body-2 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
