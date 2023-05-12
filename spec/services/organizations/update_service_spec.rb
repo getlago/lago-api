@@ -167,15 +167,15 @@ RSpec.describe Organizations::UpdateService do
         aggregate_failures do
           expect(result.organization.vat_rate).to eq(12.5)
 
-          expect(result.organization.tax_rates.count).to eq(1)
+          expect(result.organization.taxes.count).to eq(1)
 
-          tax_rate = result.organization.tax_rates.first
-          expect(tax_rate.value).to eq(12.5)
+          tax_rate = result.organization.taxes.first
+          expect(tax_rate.rate).to eq(12.5)
         end
       end
 
       context 'when organization already have a tax rate' do
-        before { create(:tax_rate, organization:, value: 14) }
+        before { create(:tax, organization:, rate: 14) }
 
         it 'create a new tax_rate' do
           result = update_service.call
@@ -183,25 +183,25 @@ RSpec.describe Organizations::UpdateService do
           aggregate_failures do
             expect(result.organization.vat_rate).to eq(12.5)
 
-            expect(result.organization.tax_rates.count).to eq(2)
-            expect(result.organization.tax_rates.applied_by_default.count).to eq(1)
+            expect(result.organization.taxes.count).to eq(2)
+            expect(result.organization.taxes.applied_to_organization.count).to eq(1)
 
-            tax_rate = result.organization.tax_rates.applied_by_default.first
-            expect(tax_rate.value).to eq(12.5)
+            tax_rate = result.organization.taxes.applied_to_organization.first
+            expect(tax_rate.rate).to eq(12.5)
           end
         end
 
         context 'with vat_rate equals to 0' do
           let(:vat_rate) { 0 }
 
-          it 'toggle the applied_by_default flag' do
+          it 'toggle the applied_to_organization flag' do
             result = update_service.call
 
             aggregate_failures do
               expect(result.organization.vat_rate).to eq(0)
 
-              expect(result.organization.tax_rates.count).to eq(1)
-              expect(result.organization.tax_rates.applied_by_default.count).to eq(0)
+              expect(result.organization.taxes.count).to eq(1)
+              expect(result.organization.taxes.applied_to_organization.count).to eq(0)
             end
           end
         end
@@ -209,8 +209,8 @@ RSpec.describe Organizations::UpdateService do
 
       context 'when organization have multiple tax rates' do
         before do
-          create(:tax_rate, organization:, value: 14)
-          create(:tax_rate, organization:, value: 15)
+          create(:tax, organization:, rate: 14)
+          create(:tax, organization:, rate: 15)
         end
 
         it 'raises a validation error' do
@@ -219,7 +219,7 @@ RSpec.describe Organizations::UpdateService do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:vat_rate]).to eq(['multiple_tax_rates'])
+            expect(result.error.messages[:vat_rate]).to eq(['multiple_taxes'])
           end
         end
       end

@@ -80,24 +80,24 @@ module Organizations
     end
 
     def handle_legacy_vat_rate(vat_rate)
-      if organization.tax_rates.applied_by_default.count > 1
-        result.single_validation_failure!(field: :vat_rate, error_code: 'multiple_tax_rates')
+      if organization.taxes.applied_to_organization.count > 1
+        result.single_validation_failure!(field: :vat_rate, error_code: 'multiple_taxes')
           .raise_if_error!
       end
 
-      # NOTE(legacy): Keep updating vat_rate untill we remove the field
+      # NOTE(legacy): Keep updating vat_rate until we remove the field
       organization.vat_rate = vat_rate
 
-      current_tax_rate = organization.tax_rates.applied_by_default.first
-      return if current_tax_rate&.value == vat_rate
+      current_tax = organization.taxes.applied_to_organization.first
+      return if current_tax&.rate == vat_rate
 
-      current_tax_rate&.update!(applied_by_default: false)
+      current_tax&.update!(applied_to_organization: false)
       return if vat_rate.zero?
 
-      organization.tax_rates.create_with(
-        value: vat_rate,
+      organization.taxes.create_with(
+        rate: vat_rate,
         name: "Tax (#{vat_rate}%)",
-        applied_by_default: true,
+        applied_to_organization: true,
       ).find_or_create_by!(code: "tax_#{vat_rate}")
     end
   end

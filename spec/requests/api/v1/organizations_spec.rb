@@ -49,6 +49,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         expect(billing[:invoice_footer]).to eq('footer')
         expect(billing[:document_locale]).to eq('fr')
         expect(billing[:vat_rate]).to eq(20)
+
+        expect(json[:organization][:taxes]).not_to be_nil
       end
     end
 

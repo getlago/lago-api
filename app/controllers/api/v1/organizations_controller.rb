@@ -11,6 +11,7 @@ module Api
             json: ::V1::OrganizationSerializer.new(
               result.organization,
               root_name: 'organization',
+              includes: %i[taxes],
             ),
           )
         else
@@ -40,7 +41,7 @@ module Api
             :invoice_grace_period,
             :document_locale,
 
-            # NOTE(legacy): vat has been moved to tax rate model
+            # NOTE(legacy): vat has been moved to tax model
             :vat_rate,
           ],
         )
