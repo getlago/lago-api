@@ -4,7 +4,7 @@ module Admin
   class OrganizationsController < BaseController
     def update
       result = Admin::Organizations::UpdateService.call(
-        organization: current_organization,
+        organization:,
         params: update_params,
       )
 
@@ -20,8 +20,8 @@ module Admin
 
     private
 
-    def current_organization
-      @current_organization ||= Organization.find_by(id: params[:id])
+    def organization
+      @organization ||= Organization.find_by(id: params[:id])
     end
 
     def update_params

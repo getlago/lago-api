@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
   let(:organization) { create(:organization) }
 
-  describe 'update' do
+  describe 'PUT /admin/organizations/:id' do
     let(:update_params) do
       {
         name: 'FooBar',
