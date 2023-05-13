@@ -31,11 +31,11 @@ module PaymentProviders
       validator = ::Adyen::Utils::HmacValidator.new
       hmac_key = organization.adyen_payment_provider.hmac_key
 
-      PaymentProviders::Adyen::HandleEventJob.perform_later(organization:, event_json: body.to_json)
-      
       if hmac_key && !validator.valid_notification_hmac?(body, hmac_key)
         return result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
       end
+
+      PaymentProviders::Adyen::HandleEventJob.perform_later(organization:, event_json: body.to_json)
 
       result.event = body
       result
@@ -56,9 +56,13 @@ module PaymentProviders
 
       case event["eventCode"]
       when 'AUTHORISATION'
-        return result if event["success"] != "true" || event.dig("amount", "value") != 0
+        return result if event["success"] != "true"
 
-        result = adyen_service.authorise(organization, event)
+        if event.dig("amount", "value") == 0
+          result = adyen_service.authorise(organization, event)
+        else
+          result = adyen_service.payment(organization, event)
+        end
         result.raise_if_error! || result
       end
     end

@@ -35,9 +35,7 @@ module PaymentProviderCustomers
     end
 
     def authorise(organization, event)
-      shopper_reference = event.dig("additionalData", "shopperReference") ||
-        event.dig("additionalData", "recurring.shopperReference")
-      
+      shopper_reference = shopper_reference_from_event(event)
       payment_method_id = event.dig("additionalData", "recurring.recurringDetailReference")
 
       @adyen_customer = PaymentProviderCustomers::AdyenCustomer.
@@ -80,6 +78,11 @@ module PaymentProviderCustomers
         env: adyen_payment_provider.environment,
         live_url_prefix: adyen_payment_provider.live_prefix 
       )
+    end
+
+    def shopper_reference_from_event(event)
+      event.dig("additionalData", "shopperReference") ||
+        event.dig("additionalData", "recurring.shopperReference")
     end
 
     def payment_link_params

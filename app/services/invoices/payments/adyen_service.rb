@@ -88,7 +88,7 @@ module Invoices
       end
 
       def create_adyen_payment
-        client.checkout.payments_api.payments(payment_params)
+        client.checkout.payments_api.payments(payment_params).response
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
@@ -97,7 +97,7 @@ module Invoices
       end
 
       def payment_params
-        {
+        prms = {
           amount: {
             currency: invoice.currency.upcase,
             value: invoice.total_amount_cents
@@ -105,13 +105,15 @@ module Invoices
           reference: invoice.id,
           paymentMethod: {
             type: "scheme",
-            storedPaymentMethodId: invoice.customer.adyen_customer.payment_method_id
+            storedPaymentMethodId: customer.adyen_customer.payment_method_id
           },
-          shopperReference: invoice.customer.external_id,
-          merchantAccount: invoice.customer.adyen_customer.merchant_account,
+          shopperReference: customer.external_id,
+          merchantAccount: adyen_payment_provider.merchant_account,
           shopperInteraction: "ContAuth",
           recurringProcessingModel: "UnscheduledCardOnFile"
         }
+        prms[:shopperEmail] = customer.email if customer.email
+        prms
       end
 
       def invoice_payment_status(payment_status)
