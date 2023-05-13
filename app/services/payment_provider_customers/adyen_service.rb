@@ -13,7 +13,7 @@ module PaymentProviderCustomers
       return result if adyen_customer.provider_customer_id?
 
       adyen_result = generate_checkout_url
-      
+
       result.checkout_url = adyen_result.response["url"]
       result
     end
@@ -34,7 +34,7 @@ module PaymentProviderCustomers
       raise
     end
 
-    def authorise(organization, event)
+    def preauthorise(organization, event)
       shopper_reference = shopper_reference_from_event(event)
       payment_method_id = event.dig("additionalData", "recurring.recurringDetailReference")
 
@@ -50,9 +50,6 @@ module PaymentProviderCustomers
       if organization.webhook_url?
         SendWebhookJob.perform_later('customer.payment_provider_created', customer)
       end
-
-      # TODO: stripe does this, do we need it here?
-      # reprocess_pending_invoices(customer)
 
       result.adyen_customer = adyen_customer
       result

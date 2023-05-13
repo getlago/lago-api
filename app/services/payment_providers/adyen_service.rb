@@ -2,9 +2,6 @@
 
 module PaymentProviders
   class AdyenService < BaseService
-    PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
-    REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
-
     WEBHOOKS_EVENTS = [
       'AUTHORISATION'
     ].freeze
@@ -59,7 +56,7 @@ module PaymentProviders
         return result if event["success"] != "true"
 
         if event.dig("amount", "value") == 0
-          result = adyen_service.authorise(organization, event)
+          result = adyen_service.preauthorise(organization, event)
         else
           result = adyen_service.payment(organization, event)
         end
