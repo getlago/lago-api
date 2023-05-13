@@ -3,8 +3,8 @@
 module Invoices
   module Payments
     class AdyenService < BaseService
-      PENDING_STATUSES = %w[Authorised AuthorisedPending Received].freeze
-      SUCCESS_STATUSES = %w[SentForSettle SettleScheduled Settled Refunded].freeze
+      PENDING_STATUSES = %w[AuthorisedPending Received].freeze
+      SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
       FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
       def initialize(invoice = nil)
