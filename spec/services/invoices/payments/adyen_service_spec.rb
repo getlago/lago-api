@@ -139,7 +139,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       before do
         subscription
 
-        allow(payments_api).to receive(:create)
+        allow(payments_api).to receive(:payments)
           .and_raise(Adyen::AdyenError.new('code' => 'code', 'msg' => 'error'))
       end
 
@@ -167,7 +167,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         :payment,
         invoice:,
         provider_payment_id: 'ch_123456',
-        status: 'AuthorisedPending',
+        status: 'Pending',
       )
     end
 
@@ -179,11 +179,11 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     it 'updates the payment and invoice payment_status' do
       result = adyen_service.update_payment_status(
         provider_payment_id: 'ch_123456',
-        status: 'paid_out',
+        status: 'Authorised',
       )
 
       expect(result).to be_success
-      expect(result.payment.status).to eq('paid_out')
+      expect(result.payment.status).to eq('Authorised')
       expect(result.invoice.reload).to have_attributes(
         payment_status: 'succeeded',
         ready_for_payment_processing: false,
@@ -194,11 +194,11 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       it 'updates the payment and invoice status' do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'failed',
+          status: 'Refused',
         )
 
         expect(result).to be_success
-        expect(result.payment.status).to eq('failed')
+        expect(result.payment.status).to eq('Refused')
         expect(result.invoice.reload).to have_attributes(
           payment_status: 'failed',
           ready_for_payment_processing: true,
