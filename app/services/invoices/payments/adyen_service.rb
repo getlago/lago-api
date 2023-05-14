@@ -26,6 +26,8 @@ module Invoices
 
         adyen_result = create_adyen_payment
 
+        p adyen_result
+
         payment = Payment.new(
           invoice:,
           payment_provider_id: adyen_payment_provider.id,

@@ -3,7 +3,7 @@
 module PaymentProviders
   class AdyenService < BaseService
     WEBHOOKS_EVENTS = [
-      'AUTHORISATION'
+      'AUTHORISATION', 'REFUND'
     ].freeze
 
     def create_or_update(**args)
@@ -49,17 +49,25 @@ module PaymentProviders
         )
       end
 
-      adyen_service = PaymentProviderCustomers::AdyenService.new
-
       case event["eventCode"]
       when 'AUTHORISATION'
         return result if event["success"] != "true"
 
+        service = PaymentProviderCustomers::AdyenService.new
+
         if event.dig("amount", "value") == 0
-          result = adyen_service.preauthorise(organization, event)
-        else
-          result = adyen_service.payment(organization, event)
+          result = service.preauthorise(organization, event)
+        # else
+        #   result = service.payment(organization, event)
         end
+        result.raise_if_error! || result
+      when 'REFUND'
+        service = CreditNotes::Refunds::AdyenService.new
+
+        provider_refund_id = event["pspReference"]
+        status = event["success"] == "true" ? :succeeded : :failed
+
+        result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error! || result
       end
     end

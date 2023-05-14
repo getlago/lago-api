@@ -22,7 +22,7 @@ module CreditNotes
           payment_provider_customer: payment.payment_provider_customer,
           amount_cents: adyen_result.response.dig("amount", "value"),
           amount_currency: adyen_result.response.dig("amount", "currency"),
-          status: adyen_result.response["status"],
+          status: "pending",
           provider_refund_id: adyen_result.response["pspReference"],
         )
         refund.save!

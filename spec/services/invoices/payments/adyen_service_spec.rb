@@ -10,43 +10,34 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
   let(:adyen_payment_provider) { create(:adyen_provider, organization:) }
   let(:adyen_customer) { create(:adyen_customer, customer:) }
   let(:adyen_client) { instance_double(Adyen::Client) }
-  let(:adyen_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
-  let(:adyen_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
-  let(:adyen_list_response) { instance_double(GoCardlessPro::ListResponse) }
+  let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
+  let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+  let(:payments_response) { generate(:adyen_payments_response) }
 
   let(:invoice) do
     create(
       :invoice,
       organization:,
       customer:,
-      total_amount_cents: 200,
-      currency: 'EUR',
+      total_amount_cents: 1000,
+      currency: 'USD',
       ready_for_payment_processing: true
     )
   end
 
-  describe '.create' do
+  describe '#create' do
     before do
       adyen_payment_provider
       adyen_customer
 
       allow(Adyen::Client).to receive(:new)
         .and_return(adyen_client)
-      allow(adyen_client).to receive(:mandates)
-        .and_return(adyen_mandates_service)
-      allow(adyen_mandates_service).to receive(:list)
-        .and_return(adyen_list_response)
-      allow(adyen_list_response).to receive(:records)
-        .and_return([GoCardlessPro::Resources::Mandate.new('id' => 'mandate_id')])
-      allow(adyen_client).to receive(:payments)
-        .and_return(adyen_payments_service)
-      allow(adyen_payments_service).to receive(:create)
-        .and_return(GoCardlessPro::Resources::Payment.new(
-          'id' => '_ID_',
-          'amount' => invoice.total_amount_cents,
-          'currency' => invoice.currency,
-          'status' => 'paid_out',
-        ))
+      allow(adyen_client).to receive(:checkout)
+        .and_return(checkout)
+      allow(checkout).to receive(:payments_api)
+        .and_return(payments_api)
+      allow(payments_api).to receive(:payments)
+        .and_return(payments_response)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
@@ -66,11 +57,11 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         expect(result.payment.payment_provider_customer).to eq(adyen_customer)
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.currency)
-        expect(result.payment.status).to eq('paid_out')
-        expect(adyen_customer.reload.provider_mandate_id).to eq('mandate_id')
+        expect(result.payment.status).to eq('Authorised')
+        expect(adyen_customer.reload.payment_method_id).to eq(result["pspReference"])
       end
 
-      expect(adyen_payments_service).to have_received(:create)
+      expect(payments_api).to have_received(:payments)
     end
 
     context 'with no payment provider' do
@@ -85,7 +76,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
           expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(adyen_payments_service).not_to have_received(:create)
+          expect(payments_api).not_to have_received(:payments)
         end
       end
     end
@@ -112,7 +103,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
 
           expect(result.invoice).to be_succeeded
 
-          expect(adyen_payments_service).not_to have_received(:create)
+          expect(payments_api).not_to have_received(:payments)
         end
       end
     end
@@ -129,7 +120,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
           expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(adyen_payments_service).not_to have_received(:create)
+          expect(payments_api).not_to have_received(:payments)
         end
       end
     end
@@ -148,7 +139,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       before do
         subscription
 
-        allow(adyen_payments_service).to receive(:create)
+        allow(payments_api).to receive(:create)
           .and_raise(Adyen::AdyenError.new('code' => 'code', 'msg' => 'error'))
       end
 
@@ -221,7 +212,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       it 'does not update the status of invoice and payment' do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: ['SentForSettle', 'SettleScheduled', 'Settled', 'Refunded'].sample
+          status: ['Authorised', 'SentForSettle', 'SettleScheduled', 'Settled', 'Refunded'].sample
         )
 
         expect(result).to be_success
