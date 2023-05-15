@@ -19,11 +19,6 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :customers_count, Integer, null: false, description: 'Number of customers using this tax rate'
-
-      def customers_count
-        # TODO: Not yet implemented.
-        0
-      end
     end
   end
 end
