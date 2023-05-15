@@ -258,4 +258,72 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       expect(subscription.reload.invoices.count).to eq(1)
     end
   end
+
+  context 'when plan is billed yearly with monthly charges' do
+    let(:plan) do
+      create(
+        :plan,
+        organization:,
+        amount_cents: 5_000_000,
+        amount_currency: 'GBP',
+        interval: 'yearly',
+        pay_in_advance: true,
+        bill_charges_monthly: true,
+      )
+    end
+
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        timezone: 'Europe/London',
+        currency: 'GBP',
+        invoice_grace_period: 2,
+        vat_rate: 20,
+      )
+    end
+
+    it 'creates subscription fees' do
+      ### 31st of Mar: Create a subscription
+      mar31 = DateTime.new(2023, 3, 31)
+
+      travel_to(mar31) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'anniversary',
+          },
+        )
+      end
+
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.first
+      expect(subscription.invoices.count).to eq(1)
+
+      ### 30 of Apr- Bill subscription
+      apr30 = DateTime.new(2023, 4, 30, 12)
+      travel_to(apr30) do
+        BillingService.new.call
+      end
+
+      perform_all_enqueued_jobs
+
+      invoice = subscription.invoices.order(:number).last
+      expect(invoice.fees.subscription.count).to be_zero
+
+      ### 30 of Apr- Bill subscription
+      apr30 = DateTime.new(2024, 3, 31, 12)
+      travel_to(apr30) do
+        BillingService.new.call
+      end
+
+      perform_all_enqueued_jobs
+
+      invoice = subscription.invoices.order(:number).last
+      expect(invoice.fees.subscription.count).to eq(1)
+    end
+  end
 end

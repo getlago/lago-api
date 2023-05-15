@@ -130,6 +130,35 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
           end
         end
       end
+
+      context 'when plan is in advance and date is on the last day of month' do
+        let(:pay_in_advance) { true }
+
+        let(:billing_at) { DateTime.parse('30 apr 2021') }
+        let(:subscription_at) { DateTime.parse('31 mar 2021') }
+
+        it 'returns the current day' do
+          expect(result).to eq('2021-04-30 00:00:00 UTC')
+        end
+
+        context 'when billing month is longer than subscription one' do
+          let(:billing_at) { DateTime.parse('29 feb 2020') }
+          let(:subscription_at) { DateTime.parse('31 jan 2020') }
+
+          it 'returns the durrent day' do
+            expect(result).to eq('2020-02-29 00:00:00 UTC')
+          end
+        end
+      end
+
+      context 'when plan is in arrear and date is on the last day of month' do
+        let(:billing_at) { DateTime.parse('30 apr 2021') }
+        let(:subscription_at) { DateTime.parse('31 mar 2021') }
+
+        it 'returns the day current billing day' do
+          expect(result).to eq('2021-03-31 00:00:00 UTC')
+        end
+      end
     end
   end
 

@@ -177,6 +177,10 @@ module Subscriptions
       Date.new(year, month, day)
     end
 
+    def last_day_of_month?(date)
+      date.day == date.end_of_month.day
+    end
+
     def compute_base_date
       raise(NotImplementedError)
     end
