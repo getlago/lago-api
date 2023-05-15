@@ -20,9 +20,7 @@ module TaxRates
 
       tax_rate.save!
 
-      # TODO: Refresh only invoices related to the corresponding customers.
-      draft_invoices = tax_rate.organization.invoices.draft
-      Invoices::RefreshBatchJob.perform_later(draft_invoices.pluck(:id))
+      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
 
       result.tax_rate = tax_rate
       result
@@ -33,5 +31,12 @@ module TaxRates
     private
 
     attr_reader :tax_rate, :params
+
+    def draft_invoice_ids
+      @draft_invoice_ids ||= tax_rate.organization.invoices
+        .where(customer_id: tax_rate.applicable_customers.select(:id))
+        .draft
+        .pluck(:id)
+    end
   end
 end
