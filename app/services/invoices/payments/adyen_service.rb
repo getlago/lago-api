@@ -26,8 +26,6 @@ module Invoices
 
         adyen_result = create_adyen_payment
 
-        p adyen_result
-
         payment = Payment.new(
           invoice:,
           payment_provider_id: adyen_payment_provider.id,
@@ -150,8 +148,8 @@ module Invoices
           invoice,
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
-            message: adyen_error.msg,
-            error_code: adyen_error.code,
+            message: adyen_error.request["msg"],
+            error_code: adyen_error.request["code"],
           },
         )
       end

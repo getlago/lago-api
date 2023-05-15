@@ -157,11 +157,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:organization) { create(:organization) }
 
     let(:adyen_provider) do
-      create(
-        :adyen_provider,
-        organization:,
-        webhook_secret: 'secrets',
-      )
+      create(:adyen_provider, organization:)
     end
 
     let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
@@ -182,9 +178,8 @@ RSpec.describe WebhooksController, type: :request do
         .and_return(adyen_service)
       allow(adyen_service).to receive(:handle_incoming_webhook)
         .with(
-          organization_id: organization.id,
-          body: body.to_json,
-          signature: 'signature',
+          organization_id: organization.id, 
+          body: body["notificationItems"].first&.dig("NotificationRequestItem")
         )
         .and_return(result)
     end
@@ -194,7 +189,6 @@ RSpec.describe WebhooksController, type: :request do
         "/webhooks/adyen/#{adyen_provider.organization_id}",
         params: body.to_json,
         headers: {
-          'Webhook-Signature' => 'signature',
           'Content-Type' => 'application/json',
         },
       )
@@ -213,10 +207,9 @@ RSpec.describe WebhooksController, type: :request do
       it 'returns a bad request' do
         post(
           "/webhooks/adyen/#{adyen_provider.organization_id}",
-          params: events.to_json,
+          params: body.to_json,
           headers: {
-            'Webhook-Signature' => 'signature',
-            'Content-Type' => 'application/json',
+            'Content-Type' => 'application/json'
           },
         )
 

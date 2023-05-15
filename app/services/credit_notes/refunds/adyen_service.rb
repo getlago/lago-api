@@ -91,7 +91,7 @@ module CreditNotes
           payment.provider_payment_id
         )
       rescue Adyen::AdyenError => e
-        deliver_error_webhook(message: e.msg, code: e.code)
+        deliver_error_webhook(message: e..request["msg"], code: e..request["code"])
         update_credit_note_status(:failed)
 
         raise
