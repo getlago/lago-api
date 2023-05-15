@@ -9,6 +9,8 @@ RSpec.describe TaxRates::DestroyService, type: :service do
   let(:organization) { membership.organization }
   let(:tax_rate) { create(:tax_rate, organization:) }
 
+  let(:customer) { create(:customer, organization:) }
+
   describe '#call' do
     before { tax_rate }
 
@@ -19,7 +21,7 @@ RSpec.describe TaxRates::DestroyService, type: :service do
     end
 
     it 'refreshes draft invoices' do
-      draft_invoice = create(:invoice, :draft, organization:)
+      draft_invoice = create(:invoice, :draft, organization:, customer:)
 
       expect do
         destroy_service.call
