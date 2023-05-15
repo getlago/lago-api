@@ -61,6 +61,8 @@ module Customers
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     def create(**args)
@@ -159,7 +161,9 @@ module Customers
         Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
       end
 
-      customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+      # NOTE(legacy): keep accepting vat_rate field temporary by converting it into tax rate
+      handle_legacy_vat_rate(customer:, vat_rate: billing[:vat_rate]) if billing.key?(:vat_rate)
+
       customer.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
       if new_customer
@@ -218,6 +222,28 @@ module Customers
           organization_id: customer.organization_id,
         },
       )
+    end
+
+    def handle_legacy_vat_rate(customer:, vat_rate:)
+      if customer.tax_rates.count > 1
+        result.single_validation_failure!(
+          field: :vat_rate,
+          error_code: 'multiple_tax_rates',
+        ).raise_if_error!
+      end
+
+      # NOTE(legacy): Keep updating vat_rate until we remove the field
+      customer.vat_rate = vat_rate
+
+      current_tax_rate = customer.tax_rates.first
+      return if current_tax_rate&.value == vat_rate
+
+      tax_rate = customer.organization.tax_rates
+        .create_with(value: vat_rate, name: "Tax (#{vat_rate}%)")
+        .find_or_create_by!(code: "tax_#{vat_rate}")
+
+      ::AppliedTaxRates::DestroyService.call(applied_tax_rate: customer.applied_tax_rates&.first)
+      ::AppliedTaxRates::CreateService.call(customer:, tax_rate:)
     end
   end
 end

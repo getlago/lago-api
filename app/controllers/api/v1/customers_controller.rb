@@ -120,8 +120,10 @@ module Api
             :provider_customer_id,
             :sync,
             :sync_with_provider,
-            :vat_rate,
             :document_locale,
+
+            # NOTE(legacy): vat has been moved to tax rate model
+            :vat_rate,
           ],
           metadata: [
             :id,
@@ -137,7 +139,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[metadata],
+            includes: %i[metadata tax_rates],
           ),
         )
       end

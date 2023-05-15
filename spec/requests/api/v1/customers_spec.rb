@@ -475,6 +475,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:ok)
         expect(json[:customer][:lago_id]).to eq(customer.id)
+        expect(json[:customer][:tax_rates]).not_to be_nil
       end
     end
 

@@ -3,12 +3,19 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::CustomerSerializer do
-  subject(:serializer) { described_class.new(customer, root_name: 'customer', includes: %i[metadata]) }
+  subject(:serializer) do
+    described_class.new(customer, root_name: 'customer', includes: %i[metadata tax_rates])
+  end
 
   let(:customer) { create(:customer) }
   let(:metadata) { create(:customer_metadata, customer:) }
+  let(:tax_rate) { create(:tax_rate, organization: customer.organization) }
+  let(:applied_tax_rate) { create(:applied_tax_rate, customer:, tax_rate:) }
 
-  before { metadata }
+  before do
+    metadata
+    applied_tax_rate
+  end
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -44,6 +51,7 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['metadata'].first['value']).to eq(metadata.value)
       expect(result['customer']['metadata'].first['display_in_invoice']).to eq(metadata.display_in_invoice)
       expect(result['customer']['tax_identification_number']).to eq(customer.tax_identification_number)
+      expect(result['customer']['taxes'].count).to eq(1)
     end
   end
 end
