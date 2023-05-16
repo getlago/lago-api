@@ -72,6 +72,9 @@ Rails.application.routes.draw do
 
   namespace :admin do
     resources :organizations, only: %i[update]
+    resources :invoices do
+      post :regenerate, on: :member
+    end
   end
 
   match '*unmatched' => 'application#not_found',

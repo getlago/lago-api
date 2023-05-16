@@ -14,6 +14,11 @@ module AdminHelper
     put(path, params: params.to_json, headers:)
   end
 
+  def admin_post(path, params = {}, headers = {})
+    apply_headers(headers)
+    post(path, params: params.to_json, headers:)
+  end
+
   def json
     return response.body unless response.media_type.include?('json')
 
