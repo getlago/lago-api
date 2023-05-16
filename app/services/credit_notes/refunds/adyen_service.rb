@@ -20,10 +20,10 @@ module CreditNotes
           payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment.payment_provider_customer,
-          amount_cents: adyen_result.response.dig("amount", "value"),
-          amount_currency: adyen_result.response.dig("amount", "currency"),
-          status: "pending",
-          provider_refund_id: adyen_result.response["pspReference"],
+          amount_cents: adyen_result.response.dig('amount', 'value'),
+          amount_currency: adyen_result.response.dig('amount', 'currency'),
+          status: 'pending',
+          provider_refund_id: adyen_result.response['pspReference'],
         )
         refund.save!
 
@@ -91,7 +91,7 @@ module CreditNotes
           payment.provider_payment_id
         )
       rescue Adyen::AdyenError => e
-        deliver_error_webhook(message: e..request["msg"], code: e..request["code"])
+        deliver_error_webhook(message: e.msg, code: e.code)
         update_credit_note_status(:failed)
 
         raise

@@ -148,9 +148,9 @@ module Invoices
           invoice,
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
-            message: adyen_error.request["msg"],
-            error_code: adyen_error.request["code"],
-          },
+            message: adyen_error.msg,
+            error_code: adyen_error.code
+          }
         )
       end
     end

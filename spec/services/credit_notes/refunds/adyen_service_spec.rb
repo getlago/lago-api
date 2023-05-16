@@ -10,6 +10,11 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:adyen_payment_provider) { create(:adyen_provider, organization:) }
   let(:adyen_customer) { create(:adyen_customer, customer:) }
+  let(:adyen_client) { instance_double(Adyen::Client) }
+  let(:modifications_api) { Adyen::ModificationsApi.new(adyen_client, 70) }
+  let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+  let(:refunds_response) { generate(:adyen_refunds_response) }
+
   let(:payment) do
     create(
       :payment,
@@ -28,7 +33,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
       invoice:,
       refund_amount_cents: 134,
       refund_amount_currency: 'CHF',
-      refund_status: :pending,
+      refund_status: :pending
     )
   end
 
@@ -36,15 +41,14 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
     before do
       payment
 
-      allow(Adyen::Refund).to receive(:create)
-        .and_return(
-          Adyen::Refund.construct_from(
-            id: 're_123456',
-            status: 'succeeded',
-            amount: 134,
-            currency: 'chf',
-          ),
-        )
+      allow(Adyen::Client).to receive(:new)
+        .and_return(adyen_client)
+      allow(adyen_client).to receive(:checkout)
+        .and_return(checkout)
+      allow(checkout).to receive(:modifications_api)
+        .and_return(modifications_api)
+      allow(modifications_api).to receive(:refund_captured_payment)
+        .and_return(refunds_response)
       allow(SegmentTrackJob).to receive(:perform_later)
     end
 
@@ -62,11 +66,11 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
         expect(result.refund.payment_provider_customer).to eq(adyen_customer)
         expect(result.refund.amount_cents).to eq(134)
         expect(result.refund.amount_currency).to eq('CHF')
-        expect(result.refund.status).to eq('succeeded')
-        expect(result.refund.provider_refund_id).to eq('re_123456')
+        expect(result.refund.status).to eq('pending')
+        expect(result.refund.provider_refund_id).to eq(refunds_response.response['pspReference'])
 
-        expect(result.credit_note).to be_succeeded
-        expect(result.credit_note.refunded_at).to be_present
+        expect(result.credit_note).not_to be_succeeded
+        expect(result.credit_note.refunded_at).not_to be_present
       end
     end
 
@@ -79,20 +83,20 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          refund_status: 'succeeded',
+          refund_status: 'pending',
         },
       )
     end
 
     context 'with an error on adyen' do
       before do
-        allow(Adyen::Refund).to receive(:create)
-          .and_raise(Adyen::InvalidRequestError.new('error', {}))
+        allow(modifications_api).to receive(:refund_captured_payment)
+          .and_raise(Adyen::AdyenError.new(nil, nil, 'error'))
       end
 
       it 'delivers an error webhook' do
         expect { adyen_service.create }
-          .to raise_error(Adyen::InvalidRequestError)
+          .to raise_error(Adyen::AdyenError)
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
@@ -126,7 +130,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
           expect(result.credit_note).to eq(credit_note)
           expect(result.refund).to be_nil
 
-          expect(Adyen::Refund).not_to have_received(:create)
+          expect(modifications_api).not_to have_received(:refund_captured_payment)
         end
       end
     end
@@ -143,7 +147,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
           expect(result.credit_note).to eq(credit_note)
           expect(result.refund).to be_nil
 
-          expect(Adyen::Refund).not_to have_received(:create)
+          expect(modifications_api).not_to have_received(:refund_captured_payment)
         end
       end
     end

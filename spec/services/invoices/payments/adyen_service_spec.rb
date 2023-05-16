@@ -140,7 +140,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         subscription
 
         allow(payments_api).to receive(:payments)
-          .and_raise(Adyen::AdyenError.new('code' => 'code', 'msg' => 'error'))
+          .and_raise(Adyen::AdyenError.new(nil, nil, 'error', 'code'))
       end
 
       it 'delivers an error webhook' do

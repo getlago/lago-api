@@ -163,7 +163,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
 
     let(:body) do
-      path = Rails.root.join('spec/fixtures/adyen/result.json')
+      path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_response.json')
       JSON.parse(File.read(path))
     end
 
