@@ -78,6 +78,9 @@ module Types
     field :destroy_tax_rate, mutation: Mutations::TaxRates::Destroy
     field :update_tax_rate, mutation: Mutations::TaxRates::Update
 
+    field :create_applied_tax_rate, mutation: Mutations::AppliedTaxRates::Create
+    field :destroy_applied_tax_rate, mutation: Mutations::AppliedTaxRates::Destroy
+
     field :retry_webhook, mutation: Mutations::Webhooks::Retry
   end
 end
