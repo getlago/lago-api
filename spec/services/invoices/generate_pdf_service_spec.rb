@@ -112,5 +112,23 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
         expect { invoice_generate_service.call }.to have_enqueued_job(SendWebhookJob)
       end
     end
+
+    context 'when in Admin context' do
+      let(:context) { 'admin' }
+
+      before do
+        invoice.file.attach(
+          io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
+          filename: 'invoice.pdf',
+          content_type: 'application/pdf',
+        )
+      end
+
+      it 'generates the invoice synchronously' do
+        result = invoice_generate_service.call
+
+        expect(result.invoice.file.filename.to_s).not_to eq('invoice.pdf')
+      end
+    end
   end
 end

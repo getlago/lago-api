@@ -13,7 +13,7 @@ module Invoices
       return result.not_found_failure!(resource: 'invoice') if invoice.blank?
       return result.not_allowed_failure!(code: 'is_draft') if invoice.draft?
 
-      generate_pdf if invoice.file.blank?
+      generate_pdf if should_generate_pdf?
 
       SendWebhookJob.perform_later('invoice.generated', invoice) if should_send_webhook?
 
@@ -50,6 +50,10 @@ module Invoices
 
     def should_send_webhook?
       context == 'api'
+    end
+
+    def should_generate_pdf?
+      context == 'admin' || invoice.file.blank?
     end
   end
 end
