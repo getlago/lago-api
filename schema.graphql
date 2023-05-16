@@ -2535,6 +2535,7 @@ type Customer {
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
+  appliedTaxRates: [AppliedTaxRate!]
   billingConfiguration: CustomerBillingConfiguration
 
   """
@@ -2593,7 +2594,6 @@ type Customer {
     """
     status: [StatusTypeEnum!]
   ): [Subscription!]!
-  taxRates: [TaxRate!]
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String

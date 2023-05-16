@@ -32,7 +32,6 @@ module Types
       field :zipcode, String, null: true
 
       field :metadata, [Types::Customers::Metadata::Object], null: true
-      field :tax_rates, [Types::TaxRates::Object], null: true
 
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true
 
@@ -43,6 +42,7 @@ module Types
 
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
       field :applied_coupons, [Types::AppliedCoupons::Object], null: true
+      field :applied_tax_rates, [Types::AppliedTaxRates::Object], null: true
 
       field :credit_notes, [Types::CreditNotes::Object], null: true
 
