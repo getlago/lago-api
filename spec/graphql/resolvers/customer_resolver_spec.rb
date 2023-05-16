@@ -30,6 +30,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           subscriptions(status: [active]) { id, status }
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
+          appliedTaxRates { id taxRate { id code name } }
           creditNotes {
             id
             creditStatus
@@ -61,6 +62,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   end
   let(:subscription) { create(:subscription, customer:) }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
+  let(:applied_tax_rate) { create(:applied_tax_rate, customer:) }
   let(:credit_note) { create(:credit_note, customer:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:) }
 
@@ -68,6 +70,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     organization.update!(timezone: 'America/New_York')
     create_list(:invoice, 2, customer:)
     applied_add_on
+    applied_tax_rate
     subscription
     credit_note_item
   end
@@ -89,6 +92,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['subscriptions'].count).to eq(1)
       expect(customer_response['invoices'].count).to eq(2)
       expect(customer_response['appliedAddOns'].count).to eq(1)
+      expect(customer_response['appliedTaxRates'].count).to eq(1)
       expect(customer_response['currency']).to be_present
       expect(customer_response['timezone']).to be_nil
       expect(customer_response['applicableTimezone']).to eq('TZ_AMERICA_NEW_YORK')
@@ -111,6 +115,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             subscriptions(status: [active, pending]) { id, status }
             appliedCoupons { id amountCents amountCurrency coupon { id name } }
             appliedAddOns { id amountCents amountCurrency addOn { id name } }
+            appliedTaxRates { id taxRate { id name code description } }
           }
         }
       GQL
