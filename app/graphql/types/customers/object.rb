@@ -32,6 +32,7 @@ module Types
       field :zipcode, String, null: true
 
       field :metadata, [Types::Customers::Metadata::Object], null: true
+      field :tax_rates, [Types::TaxRates::Object], null: true
 
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true
 

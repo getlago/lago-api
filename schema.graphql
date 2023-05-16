@@ -2574,6 +2574,7 @@ type Customer {
     """
     status: [StatusTypeEnum!]
   ): [Subscription!]!
+  taxRates: [TaxRate!]
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String
