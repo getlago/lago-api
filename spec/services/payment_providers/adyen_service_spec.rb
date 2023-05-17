@@ -7,20 +7,19 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:api_key) { 'test_api_key_1' }
+  let(:merchant_account) { 'LagoMerchant' }
 
   describe '.create_or_update' do
-    it 'creates a adyen provider' do
+    it 'creates an adyen provider' do
       expect do
-        adyen_service.create_or_update(
-          organization:,
-          access_code:,
-        )
+        adyen_service.create_or_update(organization:, api_key:, merchant_account:)
       end.to change(PaymentProviders::AdyenProvider, :count).by(1)
     end
 
-    context 'when organization already have a adyen provider' do
+    context 'when organization already has an adyen provider' do
       let(:adyen_provider) do
-        create(:adyen_provider, organization:, access_token: 'access_token_123')
+        create(:adyen_provider, organization:, api_key: 'api_key_789')
       end
 
       before { adyen_provider }
@@ -28,14 +27,14 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       it 'updates the existing provider' do
         result = adyen_service.create_or_update(
           organization:,
-          access_code:,
+          api_key:,
         )
 
         expect(result).to be_success
 
         aggregate_failures do
           expect(result.adyen_provider.id).to eq(adyen_provider.id)
-          expect(result.adyen_provider.access_token).to eq('access_token_554')
+          expect(result.adyen_provider.api_key).to eq('test_api_key_1')
         end
       end
     end
@@ -46,7 +45,8 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       it 'returns an error result' do
         result = adyen_service.create_or_update(
           organization:,
-          access_code:,
+          api_key: nil,
+          merchant_account: nil
         )
 
         aggregate_failures do
@@ -59,60 +59,41 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
     end
   end
 
-  describe '.handle_incoming_webhook' do
-    let(:adyen_provider) { create(:adyen_provider, organization:) }
-    let(:events_result) { events['events'].map { |event| GoCardlessPro::Resources::Event.new(event) } }
+  describe '#handle_incoming_webhook' do
+    let(:adyen_provider) { create(:adyen_provider, organization:, hmac_key: nil) }
 
-    let(:events) do
-      path = Rails.root.join('spec/fixtures/adyen/events.json')
-      JSON.parse(File.read(path))
+    let(:body) do
+      JSON.parse(event_response_json)['notificationItems'].first&.dig('NotificationRequestItem')
+    end
+
+    let(:event_response_json) do
+      path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_response.json')
+      File.read(path)
     end
 
     before { adyen_provider }
 
     it 'checks the webhook' do
-      allow(GoCardlessPro::Webhook).to receive(:parse)
-        .and_return(events_result)
-
       result = adyen_service.handle_incoming_webhook(
         organization_id: organization.id,
-        body: events.to_json
+        body:
       )
 
       expect(result).to be_success
 
-      expect(result.events).to eq(events_result)
+      expect(result.event).to eq(body)
       expect(PaymentProviders::Adyen::HandleEventJob).to have_been_enqueued
     end
 
-    context 'when failing to parse payload' do
-      it 'returns an error' do
-        allow(GoCardlessPro::Webhook).to receive(:parse).and_raise(JSON::ParserError)
-
-        result = adyen_service.handle_incoming_webhook(
-          organization_id: organization.id,
-          body: events.to_json,
-          signature: 'signature',
-        )
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('webhook_error')
-          expect(result.error.error_message).to eq('Invalid payload')
-        end
-      end
-    end
-
     context 'when failing to validate the signature' do
-      it 'returns an error' do
-        allow(GoCardlessPro::Webhook).to receive(:parse)
-          .and_raise(GoCardlessPro::Webhook::InvalidSignatureError.new('error'))
+      before do
+        organization.adyen_payment_provider.update! hmac_key: "123"
+      end
 
+      it 'returns an error' do
         result = adyen_service.handle_incoming_webhook(
           organization_id: organization.id,
-          body: events.to_json,
-          signature: 'signature',
+          body:
         )
 
         aggregate_failures do
@@ -125,35 +106,51 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
     end
   end
 
-  describe '.handle_event' do
+  describe '#handle_event' do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }
+    let(:payment_provider_service) { instance_double(PaymentProviderCustomers::AdyenService) }
     let(:service_result) { BaseService::Result.new }
 
     before do
       allow(Invoices::Payments::AdyenService).to receive(:new)
         .and_return(payment_service)
+      allow(PaymentProviderCustomers::AdyenService).to receive(:new)
+        .and_return(payment_provider_service)
       allow(payment_service).to receive(:update_payment_status)
+        .and_return(service_result)
+      allow(payment_provider_service).to receive(:preauthorise)
         .and_return(service_result)
     end
 
-    context 'when succeeded payment event' do
-      let(:events) do
-        path = Rails.root.join('spec/fixtures/adyen/events.json')
+    context 'when succeeded authorisation event' do
+      let(:event_json) do
+        JSON.parse(event_response_json)['notificationItems'].
+          first&.dig('NotificationRequestItem').to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_response.json')
         File.read(path)
       end
 
       it 'routes the event to an other service' do
-        adyen_service.handle_event(events_json: events)
+        adyen_service.handle_event(organization:, event_json:)
 
-        expect(Invoices::Payments::AdyenService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(PaymentProviderCustomers::AdyenService).to have_received(:new)
+        expect(payment_provider_service).to have_received(:preauthorise)
       end
     end
 
     context 'when succeeded refund event' do
       let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
-      let(:events) do
-        path = Rails.root.join('spec/fixtures/adyen/events_refund.json')
+
+      let(:event_json) do
+        JSON.parse(event_response_json)['notificationItems'].
+          first&.dig('NotificationRequestItem').to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join('spec/fixtures/adyen/webhook_refund_response.json')
         File.read(path)
       end
 
@@ -165,7 +162,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       end
 
       it 'routes the event to an other service' do
-        adyen_service.handle_event(events_json: events)
+        adyen_service.handle_event(organization:, event_json:)
 
         expect(CreditNotes::Refunds::AdyenService).to have_received(:new)
         expect(refund_service).to have_received(:update_status)

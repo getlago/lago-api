@@ -13,7 +13,7 @@
         },
         "amount": {
           "currency": "USD",
-          "value": 1000
+          "value": 0
         },
         "eventCode": "AUTHORISATION",
         "eventDate": "2023-05-13T12:17:10+02:00",

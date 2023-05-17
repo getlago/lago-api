@@ -36,8 +36,6 @@ module PaymentProviders
 
       result.event = body
       result
-    rescue JSON::ParserError
-      result.service_failure!(code: 'webhook_error', message: 'Invalid payload')
     end
 
     def handle_event(organization:, event_json:)
@@ -51,14 +49,11 @@ module PaymentProviders
 
       case event["eventCode"]
       when 'AUTHORISATION'
-        return result if event["success"] != "true"
+        return result if event["success"] != "true" || event.dig("amount", "value") != 0
 
         service = PaymentProviderCustomers::AdyenService.new
 
-        if event.dig("amount", "value") == 0
-          result = service.preauthorise(organization, event)
-        end
-
+        result = service.preauthorise(organization, event)
         result.raise_if_error! || result
       when 'REFUND'
         service = CreditNotes::Refunds::AdyenService.new
