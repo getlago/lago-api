@@ -106,8 +106,8 @@ module PaymentProviderCustomers
         'customer.payment_provider_error',
         customer,
         provider_error: {
-          message: adyen_error.request["msg"],
-          error_code: adyen_error..request["msg"]
+          message: adyen_error.request&.dig("msg") || adyen_error.msg,
+          error_code: adyen_error.request&.dig("code") || adyen_error.code
         }
       )
     end
