@@ -69,7 +69,7 @@ module Api
             ::V1::CustomerSerializer,
             collection_name: 'customers',
             meta: pagination_metadata(customers),
-            includes: %i[metadata],
+            includes: %i[metadata taxes],
           ),
         )
       end
@@ -122,7 +122,7 @@ module Api
             :sync_with_provider,
             :document_locale,
 
-            # NOTE(legacy): vat has been moved to tax rate model
+            # NOTE(legacy): vat has been moved to tax model
             :vat_rate,
           ],
           metadata: [
@@ -139,7 +139,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[metadata tax_rates],
+            includes: %i[metadata taxes],
           ),
         )
       end

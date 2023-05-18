@@ -15,9 +15,9 @@ RSpec.describe Customers::AppliedTaxes::CreateService, type: :service do
     end
 
     context 'when already applied to the customer' do
-      it 'does not apply the tax rate once again' do
-        create(:applied_tax_rate, tax_rate:, customer:)
-        expect { create_service.call }.not_to change(AppliedTaxRate, :count)
+      it 'does not apply the tax once again' do
+        create(:customer_applied_tax, tax:, customer:)
+        expect { create_service.call }.not_to change(Customer::AppliedTax, :count)
       end
     end
 

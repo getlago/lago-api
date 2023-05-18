@@ -30,7 +30,7 @@ module V1
       }.merge(legacy_values.except(:billing_configuration))
 
       payload = payload.merge(metadata) if include?(:metadata)
-      payload = payload.merge(tax_rates) if include?(:tax_rates)
+      payload = payload.merge(taxes) if include?(:taxes)
 
       payload
     end
@@ -72,8 +72,8 @@ module V1
       @legacy_values ||= ::V1::Legacy::CustomerSerializer.new(model).serialize
     end
 
-    def tax_rates
-      ::CollectionSerializer.new(model.tax_rates, ::V1::TaxRateSerializer, collection_name: 'tax_rates').serialize
+    def taxes
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
     end
   end
 end
