@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-describe 'Instant charges Scenarios', :scenarios, type: :request do
+describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
@@ -12,7 +12,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }
 
   describe 'with count_agg / standard' do
-    it 'creates an instant fee' do
+    it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -28,7 +28,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
       charge = create(
         :standard_charge,
-        :instant,
+        :pay_in_advance,
         plan:,
         billable_metric:,
         properties: { amount: '10' },
@@ -54,7 +54,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1000)
@@ -78,7 +78,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1000)
@@ -90,7 +90,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
     let(:aggregation_type) { 'unique_count_agg' }
     let(:field_name) { 'unique_id' }
 
-    it 'creates an instant fee' do
+    it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -106,7 +106,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
       charge = create(
         :standard_charge,
-        :instant,
+        :pay_in_advance,
         plan:,
         billable_metric:,
         properties: { amount: '12' },
@@ -133,7 +133,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1200)
@@ -158,7 +158,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(0)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(0)
@@ -183,7 +183,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1200)
@@ -195,7 +195,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
     let(:aggregation_type) { 'sum_agg' }
     let(:field_name) { 'amount' }
 
-    it 'creates an instant fee' do
+    it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -211,7 +211,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
       charge = create(
         :package_charge,
-        :instant,
+        :pay_in_advance,
         plan:,
         billable_metric:,
         properties: { amount: '100', free_units: 3, package_size: 2 },
@@ -238,7 +238,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(3)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(0) # free units
@@ -286,7 +286,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
     let(:aggregation_type) { 'sum_agg' }
     let(:field_name) { 'amount' }
 
-    it 'creates an instant fee' do
+    it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -302,7 +302,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
       charge = create(
         :graduated_charge,
-        :instant,
+        :pay_in_advance,
         plan:,
         billable_metric:,
         properties: {
@@ -344,7 +344,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(3)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(2 * 3 + 1)
@@ -393,7 +393,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
     let(:field_name) { 'amount' }
 
     describe 'with free_units_per_events' do
-      it 'creates an instant fee ' do
+      it 'creates an pay_in_advance fee ' do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -409,7 +409,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         charge = create(
           :percentage_charge,
-          :instant,
+          :pay_in_advance,
           plan:,
           billable_metric:,
           properties: {
@@ -452,7 +452,8 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'instant_charge',
+            fee_type: 'charge',
+            pay_in_advance: true,
             units: 5,
             events_count: 1,
             amount_cents: 0,
@@ -473,7 +474,8 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'instant_charge',
+            fee_type: 'charge',
+            pay_in_advance: true,
             units: 3,
             events_count: 1,
             amount_cents: 100 + 15,
@@ -483,7 +485,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
     end
 
     describe 'with free_units_per_total_aggregation' do
-      it 'creates an instant fee ' do
+      it 'creates an pay_in_advance fee ' do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -499,7 +501,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         charge = create(
           :percentage_charge,
-          :instant,
+          :pay_in_advance,
           plan:,
           billable_metric:,
           properties: {
@@ -542,7 +544,8 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'instant_charge',
+            fee_type: 'charge',
+            pay_in_advance: true,
             units: 1,
             events_count: 1,
             amount_cents: 100 + 5,
@@ -551,7 +554,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
       end
     end
 
-    it 'creates an instant fee' do
+    it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -567,7 +570,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
       charge = create(
         :percentage_charge,
-        :instant,
+        :pay_in_advance,
         plan:,
         billable_metric:,
         properties: {
@@ -598,7 +601,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
-        expect(fee).to be_instant_charge
+        expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(5)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(100 + 2 * 5) # 2 units not free
@@ -629,7 +632,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
     let(:field_name) { 'amount' }
 
     describe 'with free_units_per_events' do
-      it 'creates an instant fee ' do
+      it 'creates an pay_in_advance fee ' do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -645,7 +648,7 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
 
         charge = create(
           :percentage_charge,
-          :instant,
+          :pay_in_advance,
           plan:,
           billable_metric:,
           properties: {
@@ -676,7 +679,8 @@ describe 'Instant charges Scenarios', :scenarios, type: :request do
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'instant_charge',
+            fee_type: 'charge',
+            pay_in_advance: true,
             units: 1,
             events_count: 1,
             amount_cents: 0,

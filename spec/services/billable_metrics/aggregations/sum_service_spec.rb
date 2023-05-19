@@ -8,7 +8,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       billable_metric:,
       subscription:,
       group:,
-      event: instant_event,
+      event: pay_in_advance_event,
     )
   end
 
@@ -32,7 +32,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     { free_units_per_events: 2, free_units_per_total_aggregation: 30 }
   end
 
-  let(:instant_event) { nil }
+  let(:pay_in_advance_event) { nil }
 
   before do
     create_list(
@@ -52,7 +52,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
 
     expect(result.aggregation).to eq(48)
-    expect(result.instant_aggregation).to be_zero
+    expect(result.pay_in_advance_aggregation).to be_zero
     expect(result.count).to eq(4)
     expect(result.options).to eq({ running_total: [12, 24] })
   end
@@ -225,7 +225,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   end
 
   context 'when event is given' do
-    let(:instant_event) do
+    let(:pay_in_advance_event) do
       create(
         :event,
         code: billable_metric.code,
@@ -238,29 +238,29 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     let(:properties) { { total_count: 12 } }
 
-    it 'assigns an instant aggregation' do
+    it 'assigns an pay_in_advance aggregation' do
       result = sum_service.aggregate(from_datetime:, to_datetime:)
 
-      expect(result.instant_aggregation).to eq(12)
+      expect(result.pay_in_advance_aggregation).to eq(12)
     end
 
     context 'when event propertie does not match metric field name' do
       let(:properties) { { final_count: 10 } }
 
-      it 'assigns 0 as instant aggregation' do
+      it 'assigns 0 as pay_in_advance aggregation' do
         result = sum_service.aggregate(from_datetime:, to_datetime:)
 
-        expect(result.instant_aggregation).to be_zero
+        expect(result.pay_in_advance_aggregation).to be_zero
       end
     end
 
     context 'when event is missing properties' do
       let(:properties) { {} }
 
-      it 'assigns 0 as instant aggregation' do
+      it 'assigns 0 as pay_in_advance aggregation' do
         result = sum_service.aggregate(from_datetime:, to_datetime:)
 
-        expect(result.instant_aggregation).to be_zero
+        expect(result.pay_in_advance_aggregation).to be_zero
       end
     end
   end

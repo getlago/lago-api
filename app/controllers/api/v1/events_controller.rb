@@ -55,7 +55,7 @@ module Api
       end
 
       def estimate_fees
-        result = Fees::EstimateInstantService.call(
+        result = Fees::EstimatePayInAdvanceService.call(
           organization: current_organization,
           params: create_params,
         )

@@ -36,7 +36,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             billable_metric_id: billable_metrics.last.id,
             charge_model: 'graduated',
-            instant: true,
+            pay_in_advance: true,
             properties: {
               graduated_ranges: [
                 {
@@ -76,7 +76,7 @@ RSpec.describe Plans::CreateService, type: :service do
       standard_charge = plan.charges.standard.first
       graduated_charge = plan.charges.graduated.first
 
-      expect(standard_charge).to have_attributes(instant: false, min_amount_cents: 0)
+      expect(standard_charge).to have_attributes(pay_in_advance: false, min_amount_cents: 0)
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
@@ -84,7 +84,7 @@ RSpec.describe Plans::CreateService, type: :service do
         },
       )
 
-      expect(graduated_charge).not_to be_instant
+      expect(graduated_charge).not_to be_pay_in_advance
     end
 
     it 'calls SegmentTrackJob' do
@@ -117,8 +117,8 @@ RSpec.describe Plans::CreateService, type: :service do
       it 'saves premium attributes' do
         plan = plans_service.create(**create_args).plan
 
-        expect(plan.charges.standard.first).to have_attributes(instant: false, min_amount_cents: 100)
-        expect(plan.charges.graduated.first).to be_instant
+        expect(plan.charges.standard.first).to have_attributes(pay_in_advance: false, min_amount_cents: 100)
+        expect(plan.charges.graduated.first).to be_pay_in_advance
       end
     end
 

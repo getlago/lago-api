@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module BillableMetrics
-  class InstantAggregationService < BaseService
+  class PayInAdvanceAggregationService < BaseService
     def initialize(billable_metric:, boundaries:, properties:, event:, group: nil)
       @billable_metric = billable_metric
       @boundaries = boundaries

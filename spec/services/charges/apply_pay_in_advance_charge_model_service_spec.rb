@@ -2,14 +2,14 @@
 
 require 'rails_helper'
 
-RSpec.describe Charges::ApplyInstantChargeModelService, type: :service do
+RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
   let(:charge_service) { described_class.new(charge:, aggregation_result:, properties:) }
 
-  let(:charge) { create(:standard_charge, :instant) }
+  let(:charge) { create(:standard_charge, :pay_in_advance) }
   let(:aggregation_result) do
     BaseService::Result.new.tap do |result|
       result.aggregation = 10
-      result.instant_aggregation = 1
+      result.pay_in_advance_aggregation = 1
       result.count = 5
       result.options = {}
     end
@@ -17,7 +17,7 @@ RSpec.describe Charges::ApplyInstantChargeModelService, type: :service do
   let(:properties) { {} }
 
   describe '#call' do
-    context 'when charge is not instant' do
+    context 'when charge is not pay_in_advance' do
       let(:charge) { create(:standard_charge) }
 
       it 'returns an error' do
@@ -27,7 +27,7 @@ RSpec.describe Charges::ApplyInstantChargeModelService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ServiceFailure)
           expect(result.error.code).to eq('apply_charge_model_error')
-          expect(result.error.error_message).to eq('Charge is not instant')
+          expect(result.error.error_message).to eq('Charge is not pay_in_advance')
         end
       end
     end
@@ -66,7 +66,7 @@ RSpec.describe Charges::ApplyInstantChargeModelService, type: :service do
       let(:charge) do
         create(
           :graduated_charge,
-          :instant,
+          :pay_in_advance,
           properties: {
             graduated_ranges: [
               {
@@ -85,14 +85,14 @@ RSpec.describe Charges::ApplyInstantChargeModelService, type: :service do
     end
 
     describe 'when package charge model' do
-      let(:charge) { create(:package_charge, :instant) }
+      let(:charge) { create(:package_charge, :pay_in_advance) }
       let(:charge_model_class) { Charges::ChargeModels::PackageService }
 
       it_behaves_like 'a charge model'
     end
 
     describe 'when percentage charge model' do
-      let(:charge) { create(:percentage_charge, :instant) }
+      let(:charge) { create(:percentage_charge, :pay_in_advance) }
       let(:charge_model_class) { Charges::ChargeModels::PercentageService }
 
       it_behaves_like 'a charge model'

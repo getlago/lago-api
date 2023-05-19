@@ -30,7 +30,7 @@ class FeesQuery < BaseQuery
   end
 
   def with_external_customer(scope)
-    # NOTE: instant fees are not be linked to any invoice, but add_on fees does not have any subscriptions
+    # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
     #       so we need a bit of logic to find the fee in the right customer scope
     #       - Add ons and regular fees: customers linked to the invoice
     #       - Instant: customers linked to the subscription

@@ -26,7 +26,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit instant_charge].freeze
+  FEE_TYPES = %i[charge add_on subscription credit].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum fee_type: FEE_TYPES
@@ -41,7 +41,7 @@ class Fee < ApplicationRecord
   scope :subscription_kind, -> { where(fee_type: :subscription) }
   scope :charge_kind, -> { where(fee_type: :charge) }
 
-  # NOTE: instant fees are not be linked to any invoice, but add_on fees does not have any subscriptions
+  # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
   scope :from_organization,
         lambda { |organization|
@@ -56,7 +56,7 @@ class Fee < ApplicationRecord
   end
 
   def item_id
-    return billable_metric.id if charge? || instant_charge?
+    return billable_metric.id if charge?
     return add_on.id if add_on?
     return invoiceable_id if credit?
 
@@ -64,7 +64,7 @@ class Fee < ApplicationRecord
   end
 
   def item_type
-    return BillableMetric.name if charge? || instant_charge?
+    return BillableMetric.name if charge?
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
 
@@ -72,7 +72,7 @@ class Fee < ApplicationRecord
   end
 
   def item_code
-    return billable_metric.code if charge? || instant_charge?
+    return billable_metric.code if charge?
     return add_on.code if add_on?
     return fee_type if credit?
 
@@ -80,7 +80,7 @@ class Fee < ApplicationRecord
   end
 
   def item_name
-    return billable_metric.name if charge? || instant_charge?
+    return billable_metric.name if charge?
     return add_on.name if add_on?
     return fee_type if credit?
 

@@ -2,13 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Fees::EstimateInstantService do
+RSpec.describe Fees::EstimatePayInAdvanceService do
   subject(:estimate_service) { described_class.new(organization:, params:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:charge) { create(:standard_charge, :instant, plan:, billable_metric:) }
+  let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
   let(:customer) { create(:customer, organization:) }
 
@@ -48,15 +48,16 @@ RSpec.describe Fees::EstimateInstantService do
         expect(fee).to have_attributes(
           subscription:,
           charge:,
-          fee_type: 'instant_charge',
+          fee_type: 'charge',
+          pay_in_advance: true,
           invoiceable: charge,
           events_count: 1,
-          instant_event_id: nil,
+          pay_in_advance_event_id: nil,
         )
       end
     end
 
-    context 'when event code does not match an instant charge' do
+    context 'when event code does not match an pay_in_advance charge' do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
       it 'fails with a validation error' do
@@ -71,7 +72,7 @@ RSpec.describe Fees::EstimateInstantService do
     end
 
     context 'when event matches multiple charges' do
-      let(:charge2) { create(:standard_charge, :instant, plan:, billable_metric:) }
+      let(:charge2) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
       before { charge2 }
 
@@ -137,10 +138,11 @@ RSpec.describe Fees::EstimateInstantService do
             expect(fee).to have_attributes(
               subscription:,
               charge:,
-              fee_type: 'instant_charge',
+              fee_type: 'charge',
+              pay_in_advance: true,
               invoiceable: charge,
               events_count: 1,
-              instant_event_id: nil,
+              pay_in_advance_event_id: nil,
             )
           end
         end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Charges
-  class ApplyInstantChargeModelService < BaseService
+  class ApplyPayInAdvanceChargeModelService < BaseService
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result
@@ -11,8 +11,8 @@ module Charges
     end
 
     def call
-      unless charge.instant?
-        return result.service_failure!(code: 'apply_charge_model_error', message: 'Charge is not instant')
+      unless charge.pay_in_advance?
+        return result.service_failure!(code: 'apply_charge_model_error', message: 'Charge is not pay_in_advance')
       end
 
       amount = amount_including_event - amount_excluding_event
@@ -22,7 +22,7 @@ module Charges
       rounded_amount = amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
 
-      result.units = aggregation_result.instant_aggregation
+      result.units = aggregation_result.pay_in_advance_aggregation
       result.count = 1
       result.amount = amount_cents
       result
@@ -53,7 +53,7 @@ module Charges
 
     def amount_excluding_event
       previous_result = BaseService::Result.new
-      previous_result.aggregation = aggregation_result.aggregation - aggregation_result.instant_aggregation
+      previous_result.aggregation = aggregation_result.aggregation - aggregation_result.pay_in_advance_aggregation
       previous_result.count = aggregation_result.count - 1
       previous_result.options = aggregation_result.options
 

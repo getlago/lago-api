@@ -145,8 +145,8 @@ type Charge {
   deletedAt: ISO8601DateTime
   groupProperties: [GroupProperties!]
   id: ID!
-  instant: Boolean!
   minAmountCents: BigInt!
+  payInAdvance: Boolean!
   properties: Properties
   updatedAt: ISO8601DateTime!
 }
@@ -156,8 +156,8 @@ input ChargeInput {
   chargeModel: ChargeModelEnum!
   groupProperties: [GroupPropertiesInput!]
   id: ID
-  instant: Boolean
   minAmountCents: BigInt
+  payInAdvance: Boolean
   properties: PropertiesInput
 }
 
@@ -2916,7 +2916,6 @@ enum FeeTypesEnum {
   add_on
   charge
   credit
-  instant_charge
   subscription
 }
 

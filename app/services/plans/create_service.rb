@@ -49,7 +49,7 @@ module Plans
       )
 
       if License.premium?
-        charge.instant = args[:instant] || false
+        charge.pay_in_advance = args[:pay_in_advance] || false
         charge.min_amount_cents = args[:min_amount_cents] || 0
       end
 

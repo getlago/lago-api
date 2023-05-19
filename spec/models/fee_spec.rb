@@ -52,11 +52,11 @@ RSpec.describe Fee, type: :model do
       end
     end
 
-    context 'when it is an instant charge fee' do
-      let(:charge) { create(:standard_charge, :instant) }
+    context 'when it is an pay_in_advance charge fee' do
+      let(:charge) { create(:standard_charge, :pay_in_advance) }
 
       it 'returns related billable metric code' do
-        expect(fee_model.new(charge:, fee_type: 'instant_charge').item_code)
+        expect(fee_model.new(charge:, fee_type: 'charge').item_code)
           .to eq(charge.billable_metric.code)
       end
     end
@@ -96,11 +96,11 @@ RSpec.describe Fee, type: :model do
       end
     end
 
-    context 'when it is an instant charge fee' do
-      let(:charge) { create(:standard_charge, :instant) }
+    context 'when it is an pay_in_advance charge fee' do
+      let(:charge) { create(:standard_charge, :pay_in_advance) }
 
       it 'returns related billable metric name' do
-        expect(fee_model.new(charge:, fee_type: 'instant_charge').item_name)
+        expect(fee_model.new(charge:, fee_type: 'charge').item_name)
           .to eq(charge.billable_metric.name)
       end
     end
@@ -140,11 +140,11 @@ RSpec.describe Fee, type: :model do
       end
     end
 
-    context 'when it is an instant charge fee' do
-      let(:charge) { create(:standard_charge, :instant) }
+    context 'when it is an pay_in_advance charge fee' do
+      let(:charge) { create(:standard_charge, :pay_in_advance) }
 
       it 'returns billable metric' do
-        expect(fee_model.new(charge:, fee_type: 'instant_charge').item_type)
+        expect(fee_model.new(charge:, fee_type: 'charge').item_type)
           .to eq('BillableMetric')
       end
     end
@@ -187,11 +187,11 @@ RSpec.describe Fee, type: :model do
       end
     end
 
-    context 'when it is an instant charge fee' do
-      let(:charge) { create(:standard_charge, :instant) }
+    context 'when it is an pay_in_advance charge fee' do
+      let(:charge) { create(:standard_charge, :pay_in_advance) }
 
       it 'returns the billable metric id' do
-        expect(fee_model.new(charge:, fee_type: 'instant_charge').item_id)
+        expect(fee_model.new(charge:, fee_type: 'charge').item_id)
           .to eq(charge.billable_metric.id)
       end
     end

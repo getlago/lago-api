@@ -67,7 +67,7 @@ module Plans
       )
 
       if License.premium?
-        charge.instant = params[:instant] || false
+        charge.pay_in_advance = params[:pay_in_advance] || false
         charge.min_amount_cents = params[:min_amount_cents] || 0
       end
 
@@ -87,10 +87,10 @@ module Plans
           unless plan.attached_to_subscriptions?
             payload_charge[:group_properties]&.map! { |gp| GroupProperty.new(gp) }
 
-            instant = payload_charge.delete(:instant)
+            pay_in_advance = payload_charge.delete(:pay_in_advance)
             min_amount_cents = payload_charge.delete(:min_amount_cents)
             if License.premium?
-              charge.instant = instant || false
+              charge.pay_in_advance = pay_in_advance || false
               charge.min_amount_cents = min_amount_cents || 0
             end
 

@@ -9,7 +9,7 @@ module Types
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
       field :group_properties, [Types::Charges::GroupProperties], null: true
       field :id, ID, null: false
-      field :instant, Boolean, null: false
+      field :pay_in_advance, Boolean, null: false
       field :min_amount_cents, GraphQL::Types::BigInt, null: false
       field :properties, Types::Charges::Properties, null: true
 
