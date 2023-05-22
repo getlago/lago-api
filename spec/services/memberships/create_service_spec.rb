@@ -47,7 +47,7 @@ RSpec.describe Memberships::CreateService, type: :service do
 
     context 'when user already has a membership in the organization' do
       before do
-        Membership.create(user:, organization:)
+        create(:membership, user:, organization:)
       end
 
       it 'returns a result with error' do
@@ -55,7 +55,7 @@ RSpec.describe Memberships::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.error_code).to eq('')
+          expect(result.error.messages[:user_id]).to include('value_already_exist')
         end
       end
     end

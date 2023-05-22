@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_17_093556) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_22_091400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -430,6 +430,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_17_093556) do
     t.integer "status", default: 0, null: false
     t.datetime "revoked_at"
     t.index ["organization_id"], name: "index_memberships_on_organization_id"
+    t.index ["user_id", "organization_id"], name: "index_memberships_on_user_id_and_organization_id", unique: true, where: "(revoked_at IS NULL)"
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
