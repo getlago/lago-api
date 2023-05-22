@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_22_091400) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_22_093423) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -87,13 +87,13 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_091400) do
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
   end
 
-  create_table "applied_tax_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "applied_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
-    t.uuid "tax_rate_id", null: false
+    t.uuid "tax_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customer_id"], name: "index_applied_tax_rates_on_customer_id"
-    t.index ["tax_rate_id"], name: "index_applied_tax_rates_on_tax_rate_id"
+    t.index ["customer_id"], name: "index_applied_taxes_on_customer_id"
+    t.index ["tax_id"], name: "index_applied_taxes_on_tax_id"
   end
 
   create_table "billable_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -584,17 +584,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_091400) do
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
 
-  create_table "tax_rates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "description"
     t.string "code", null: false
     t.string "name", null: false
-    t.float "value", default: 0.0, null: false
+    t.float "rate", default: 0.0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "applied_by_default", default: false, null: false
-    t.index ["code", "organization_id"], name: "index_tax_rates_on_code_and_organization_id", unique: true
-    t.index ["organization_id"], name: "index_tax_rates_on_organization_id"
+    t.boolean "applied_to_organization", default: false, null: false
+    t.index ["code", "organization_id"], name: "index_taxes_on_code_and_organization_id", unique: true
+    t.index ["organization_id"], name: "index_taxes_on_organization_id"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -671,8 +671,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_091400) do
   add_foreign_key "add_ons", "organizations"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
-  add_foreign_key "applied_tax_rates", "customers"
-  add_foreign_key "applied_tax_rates", "tax_rates"
+  add_foreign_key "applied_taxes", "customers"
+  add_foreign_key "applied_taxes", "taxes"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
@@ -726,7 +726,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_091400) do
   add_foreign_key "refunds", "payments"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
-  add_foreign_key "tax_rates", "organizations"
+  add_foreign_key "taxes", "organizations"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"

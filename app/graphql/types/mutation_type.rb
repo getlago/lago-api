@@ -74,12 +74,12 @@ module Types
     field :create_password_reset, mutation: Mutations::PasswordResets::Create
     field :reset_password, mutation: Mutations::PasswordResets::Reset
 
-    field :create_tax_rate, mutation: Mutations::TaxRates::Create
-    field :destroy_tax_rate, mutation: Mutations::TaxRates::Destroy
-    field :update_tax_rate, mutation: Mutations::TaxRates::Update
+    field :create_tax, mutation: Mutations::Taxes::Create
+    field :destroy_tax, mutation: Mutations::Taxes::Destroy
+    field :update_tax, mutation: Mutations::Taxes::Update
 
-    field :create_applied_tax_rate, mutation: Mutations::AppliedTaxRates::Create
-    field :destroy_applied_tax_rate, mutation: Mutations::AppliedTaxRates::Destroy
+    field :create_applied_tax, mutation: Mutations::AppliedTaxes::Create
+    field :destroy_applied_tax, mutation: Mutations::AppliedTaxes::Destroy
 
     field :retry_webhook, mutation: Mutations::Webhooks::Retry
   end

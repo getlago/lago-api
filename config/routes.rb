@@ -20,7 +20,7 @@ Rails.application.routes.draw do
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
-          resources :applied_tax_rates, only: %i[create destroy], param: :tax_rate_code
+          resources :applied_taxes, only: %i[create destroy], param: :tax_code
         end
       end
 
@@ -49,7 +49,7 @@ Rails.application.routes.draw do
         put :finalize, on: :member
       end
       resources :plans, param: :code
-      resources :tax_rates, param: :code
+      resources :taxes, param: :code
       resources :wallet_transactions, only: :create
       get '/wallets/:id/wallet_transactions', to: 'wallet_transactions#index'
       resources :wallets, only: %i[create update show index]
