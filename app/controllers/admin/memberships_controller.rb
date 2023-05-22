@@ -24,9 +24,5 @@ module Admin
     def organization
       @organization ||= Organization.find_by(id: params[:organization_id])
     end
-
-    def create_params
-      params.permit(:user_id, :organization_id)
-    end
   end
 end
