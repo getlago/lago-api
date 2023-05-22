@@ -82,6 +82,8 @@ GEM
       tzinfo (~> 2.0)
     addressable (2.8.4)
       public_suffix (>= 2.0.2, < 6.0)
+    adyen-ruby-api-library (7.0.1)
+      faraday
     analytics-ruby (2.4.0)
     aws-eventstream (1.2.0)
     aws-partitions (1.605.0)
@@ -453,6 +455,7 @@ PLATFORMS
 DEPENDENCIES
   activejob-traceable
   activejob-uniqueness
+  adyen-ruby-api-library
   analytics-ruby (~> 2.4.0)
   aws-sdk-s3
   bcrypt

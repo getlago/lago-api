@@ -33,6 +33,7 @@ module Types
 
     field :gocardless_payment_provider, Types::PaymentProviders::Gocardless, null: true
     field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
+    field :adyen_payment_provider, Types::PaymentProviders::Adyen, null: true
 
     def billing_configuration
       {
