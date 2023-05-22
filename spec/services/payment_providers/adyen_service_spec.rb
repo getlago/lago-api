@@ -46,7 +46,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
         result = adyen_service.create_or_update(
           organization:,
           api_key: nil,
-          merchant_account: nil
+          merchant_account: nil,
         )
 
         aggregate_failures do

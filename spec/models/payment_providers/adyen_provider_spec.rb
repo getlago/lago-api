@@ -20,7 +20,7 @@ RSpec.describe PaymentProviders::AdyenProvider, type: :model do
   describe '#merchant_account' do
     subject { provider.merchant_account }
 
-    let(:merchant_account) { "TestECOM" }
+    let(:merchant_account) { 'TestECOM' }
 
     before { provider.merchant_account = merchant_account }
 

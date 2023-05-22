@@ -28,7 +28,7 @@ FactoryBot.define do
     type { 'PaymentProviders::AdyenProvider' }
 
     secrets do
-      { api_key:, merchant_account:, live_prefix:, hmac_key:}.to_json
+      { api_key:, merchant_account:, live_prefix:, hmac_key: }.to_json
     end
 
     transient do

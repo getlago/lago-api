@@ -4,7 +4,7 @@ module PaymentProviders
   class AdyenService < BaseService
     def create_or_update(**args)
       adyen_provider = PaymentProviders::AdyenProvider.find_or_initialize_by(
-        organization_id: args[:organization].id
+        organization_id: args[:organization].id,
       )
 
       adyen_provider.api_key = args[:api_key] if args.key?(:api_key)
