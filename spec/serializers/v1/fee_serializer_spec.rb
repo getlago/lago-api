@@ -91,19 +91,21 @@ RSpec.describe ::V1::FeeSerializer do
     end
   end
 
-  context 'when instant_charge attributes are included' do
-    let(:inclusion) { %i[instant_charge] }
+  context 'when pay_in_advance attributes are included' do
+    let(:inclusion) { %i[pay_in_advance] }
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:) }
     let(:subscription) { create(:subscription, customer:, organization:, plan:) }
-    let(:charge) { create(:standard_charge, :instant, plan:) }
+    let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
     let(:event) { create(:event, subscription:, organization:, customer:) }
 
-    let(:fee) { create(:fee, fee_type: 'instant_charge', subscription:, charge:, instant_event_id: event.id) }
+    let(:fee) do
+      create(:fee, fee_type: 'charge', pay_in_advance: true, subscription:, charge:, pay_in_advance_event_id: event.id)
+    end
 
-    it 'serializes the instant charge attributes' do
+    it 'serializes the pay_in_advance charge attributes' do
       aggregate_failures do
         expect(result['fee']).to include(
           'lago_subscription_id' => subscription.id,

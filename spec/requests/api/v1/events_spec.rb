@@ -149,7 +149,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
   end
 
   describe 'POST /events/estimate_fees' do
-    let(:charge) { create(:standard_charge, :instant, plan:, billable_metric: metric) }
+    let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric: metric) }
 
     before { charge }
 
@@ -174,9 +174,10 @@ RSpec.describe Api::V1::EventsController, type: :request do
         fee = json[:fees].first
         expect(fee[:lago_id]).to be_nil
         expect(fee[:lago_group_id]).to be_nil
-        expect(fee[:item][:type]).to eq('instant_charge')
+        expect(fee[:item][:type]).to eq('charge')
         expect(fee[:item][:code]).to eq(metric.code)
         expect(fee[:item][:name]).to eq(metric.name)
+        expect(fee[:pay_in_advance]).to eq(true)
         expect(fee[:amount_cents]).to be_an(Integer)
         expect(fee[:amount_currency]).to eq('EUR')
         expect(fee[:vat_amount_cents]).to be_an(Integer)
@@ -206,7 +207,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       end
     end
 
-    context 'when metric code does not match an instant charge' do
+    context 'when metric code does not match an pay_in_advance charge' do
       let(:charge) { create(:standard_charge, plan:, billable_metric: metric) }
 
       it 'returns a validation error' do

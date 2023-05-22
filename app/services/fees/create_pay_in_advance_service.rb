@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Fees
-  class CreateInstantService < BaseService
+  class CreatePayInAdvanceService < BaseService
     def initialize(charge:, event:, estimate: false)
       @charge = charge
       @event = event
@@ -48,14 +48,15 @@ module Fees
         amount_cents: result.amount,
         amount_currency: subscription.plan.amount_currency,
         vat_rate: customer.applicable_vat_rate,
-        fee_type: :instant_charge,
+        fee_type: :charge,
         invoiceable: charge,
         units: result.units,
         properties: boundaries,
         events_count: result.count,
         group_id: group&.id,
-        instant_event_id: event.id,
+        pay_in_advance_event_id: event.id,
         payment_status: :pending,
+        pay_in_advance: true,
       )
       fee.compute_vat
       fee.save! unless estimate
@@ -91,7 +92,7 @@ module Fees
     end
 
     def aggregate(properties:, group:)
-      aggregation_result = BillableMetrics::InstantAggregationService.call(
+      aggregation_result = BillableMetrics::PayInAdvanceAggregationService.call(
         billable_metric:, boundaries:, group:, properties:, event:,
       )
       aggregation_result.raise_if_error!
@@ -99,7 +100,7 @@ module Fees
     end
 
     def apply_charge_model(aggregation_result:, properties:)
-      charge_model_result = Charges::ApplyInstantChargeModelService.call(
+      charge_model_result = Charges::ApplyPayInAdvanceChargeModelService.call(
         charge:, aggregation_result:, properties:,
       )
       charge_model_result.raise_if_error!
@@ -121,7 +122,7 @@ module Fees
     def deliver_webhooks
       return if estimate
 
-      result.fees.each { |f| SendWebhookJob.perform_later('fee.instant_created', f) }
+      result.fees.each { |f| SendWebhookJob.perform_later('fee.pay_in_advance_created', f) }
     end
   end
 end

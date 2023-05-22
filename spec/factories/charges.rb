@@ -52,8 +52,8 @@ FactoryBot.define do
       end
     end
 
-    trait :instant do
-      instant { true }
+    trait :pay_in_advance do
+      pay_in_advance { true }
     end
   end
 end

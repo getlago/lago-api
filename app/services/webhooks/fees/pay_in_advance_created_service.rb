@@ -2,7 +2,7 @@
 
 module Webhooks
   module Fees
-    class InstantCreatedService < Webhooks::BaseService
+    class PayInAdvanceCreatedService < Webhooks::BaseService
       private
 
       def current_organization
@@ -17,7 +17,7 @@ module Webhooks
       end
 
       def webhook_type
-        'fee.instant_created'
+        'fee.created'
       end
 
       def object_type

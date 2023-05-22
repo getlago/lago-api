@@ -31,14 +31,14 @@ class Charge < ApplicationRecord
   validates :min_amount_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   validate :validate_group_properties
-  validate :validate_instant
+  validate :validate_pay_in_advance
   validate :validate_min_amount_cents
 
   monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
 
   default_scope -> { kept }
 
-  scope :instant, -> { where(instant: true) }
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
   def properties(group_id: nil)
     group_properties.find_by(group_id:)&.values || read_attribute(:properties)
@@ -83,19 +83,19 @@ class Charge < ApplicationRecord
     errors.add(:group_properties, :values_not_all_present) if bm_group_ids != gp_group_ids
   end
 
-  # NOTE: An instant charge cannot be created in the following cases:
+  # NOTE: An pay_in_advance charge cannot be created in the following cases:
   # - billable metric aggregation type is max_agg or recurring_count_agg
   # - charge model is volume
-  def validate_instant
-    return unless instant?
+  def validate_pay_in_advance
+    return unless pay_in_advance?
     return unless billable_metric.recurring_count_agg? || billable_metric.max_agg? || volume?
 
-    errors.add(:instant, :invalid_aggregation_type_or_charge_model)
+    errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
   end
 
   def validate_min_amount_cents
-    return unless instant? && min_amount_cents.positive?
+    return unless pay_in_advance? && min_amount_cents.positive?
 
-    errors.add(:min_amount_cents, :not_compatible_with_instant)
+    errors.add(:min_amount_cents, :not_compatible_with_pay_in_advance)
   end
 end

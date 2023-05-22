@@ -16,6 +16,7 @@ module V1
           lago_item_id: model.item_id,
           item_type: model.item_type,
         },
+        pay_in_advance: model.pay_in_advance,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
@@ -34,7 +35,7 @@ module V1
       }
 
       payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
-      payload.merge!(instant_charge_attributes) if model.instant_charge?
+      payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
 
       payload
     end
@@ -56,10 +57,10 @@ module V1
       model.properties['to_datetime']&.to_datetime&.iso8601
     end
 
-    def instant_charge_attributes
-      return {} unless model.instant_charge?
+    def pay_in_advance_charge_attributes
+      return {} unless model.pay_in_advance?
 
-      event = model.subscription.organization.events.find_by(id: model.instant_event_id)
+      event = model.subscription.organization.events.find_by(id: model.pay_in_advance_event_id)
 
       {
         lago_subscription_id: model.subscription_id,

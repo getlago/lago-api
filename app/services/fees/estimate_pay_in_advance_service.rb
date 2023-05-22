@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Fees
-  class EstimateInstantService < BaseService
+  class EstimatePayInAdvanceService < BaseService
     def initialize(organization:, params:)
       @organization = organization
       @params = params
@@ -27,7 +27,7 @@ module Fees
         raise ActiveRecord::Rollback
       end
 
-      fees.each { |f| f.instant_event_id = nil }
+      fees.each { |f| f.pay_in_advance_event_id = nil }
 
       result.fees = fees
       result
@@ -76,13 +76,13 @@ module Fees
       @charges ||= event.subscription
         .plan
         .charges
-        .instant
+        .pay_in_advance
         .joins(:billable_metric)
         .where(billable_metric: { code: event.code })
     end
 
     def estimated_charge_fees(charge)
-      service_result = Fees::CreateInstantService.call(charge:, event:, estimate: true)
+      service_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
       service_result.raise_if_error!
 
       service_result.fees

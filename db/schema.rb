@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_11_124419) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_17_093556) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -121,7 +121,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_11_124419) do
     t.integer "charge_model", default: 0, null: false
     t.jsonb "properties", default: "{}", null: false
     t.datetime "deleted_at"
-    t.boolean "instant", default: false, null: false
+    t.boolean "pay_in_advance", default: false, null: false
     t.bigint "min_amount_cents", default: 0, null: false
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
@@ -309,7 +309,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_11_124419) do
     t.uuid "invoiceable_id"
     t.integer "events_count"
     t.uuid "group_id"
-    t.uuid "instant_event_id"
+    t.uuid "pay_in_advance_event_id"
     t.integer "payment_status", default: 0, null: false
     t.datetime "succeeded_at", precision: nil
     t.datetime "failed_at", precision: nil
@@ -318,6 +318,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_11_124419) do
     t.uuid "add_on_id"
     t.string "description"
     t.bigint "unit_amount_cents", default: 0, null: false
+    t.boolean "pay_in_advance", default: false, null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"

@@ -8,7 +8,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       billable_metric:,
       subscription:,
       group:,
-      event: instant_event,
+      event: pay_in_advance_event,
     )
   end
 
@@ -29,7 +29,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
 
-  let(:instant_event) { nil }
+  let(:pay_in_advance_event) { nil }
 
   before do
     create_list(
@@ -128,7 +128,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   end
 
   context 'when event is given' do
-    let(:instant_event) do
+    let(:pay_in_advance_event) do
       create(
         :event,
         code: billable_metric.code,
@@ -141,13 +141,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
     let(:properties) { { anonymous_id: 'unknown' } }
 
-    it 'assigns an instant aggregation' do
+    it 'assigns an pay_in_advance aggregation' do
       result = count_service.aggregate(from_datetime:, to_datetime:)
 
-      expect(result.instant_aggregation).to eq(1)
+      expect(result.pay_in_advance_aggregation).to eq(1)
     end
 
-    context 'when event propety is already known' do
+    context 'when event property is already known' do
       before do
         create(
           :event,
@@ -159,20 +159,20 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         )
       end
 
-      it 'assigns zero as instant aggregation' do
+      it 'assigns zero as pay_in_advance aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:)
 
-        expect(result.instant_aggregation).to be_zero
+        expect(result.pay_in_advance_aggregation).to be_zero
       end
     end
 
     context 'when event is missing properties' do
       let(:properties) { {} }
 
-      it 'assigns 0 as instant aggregation' do
+      it 'assigns 0 as pay_in_advance aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:)
 
-        expect(result.instant_aggregation).to be_zero
+        expect(result.pay_in_advance_aggregation).to be_zero
       end
     end
   end

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Fees::CreateInstantService, type: :service do
+RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   subject(:fee_service) { described_class.new(charge:, event:, estimate:) }
 
   let(:organization) { create(:organization) }
@@ -13,7 +13,7 @@ RSpec.describe Fees::CreateInstantService, type: :service do
 
   let(:group) { nil }
 
-  let(:charge) { create(:standard_charge, :instant, billable_metric:, plan:) }
+  let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
   let(:event) { create(:event, subscription:, customer:) }
   let(:estimate) { false }
 
@@ -35,11 +35,11 @@ RSpec.describe Fees::CreateInstantService, type: :service do
     end
 
     before do
-      allow(BillableMetrics::InstantAggregationService).to receive(:call)
+      allow(BillableMetrics::PayInAdvanceAggregationService).to receive(:call)
         .with(billable_metric:, boundaries: Hash, group:, properties: Hash, event:)
         .and_return(aggregation_result)
 
-      allow(Charges::ApplyInstantChargeModelService).to receive(:call)
+      allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
         .with(charge:, aggregation_result:, properties: Hash)
         .and_return(charge_result)
     end
@@ -59,13 +59,14 @@ RSpec.describe Fees::CreateInstantService, type: :service do
           vat_rate: 20.0,
           vat_amount_cents: 2,
           vat_amount_currency: 'EUR',
-          fee_type: 'instant_charge',
+          fee_type: 'charge',
+          pay_in_advance: true,
           invoiceable: charge,
           units: 9,
           properties: Hash,
           events_count: 1,
           group: nil,
-          instant_event_id: event.id,
+          pay_in_advance_event_id: event.id,
           payment_status: 'pending',
         )
       end
@@ -75,7 +76,7 @@ RSpec.describe Fees::CreateInstantService, type: :service do
       fee_service.call
 
       expect(SendWebhookJob).to have_been_enqueued
-        .with('fee.instant_created', Fee)
+        .with('fee.pay_in_advance_created', Fee)
     end
 
     context 'when aggregation fails' do
@@ -121,7 +122,7 @@ RSpec.describe Fees::CreateInstantService, type: :service do
       let(:charge) do
         create(
           :standard_charge,
-          :instant,
+          :pay_in_advance,
           plan: subscription.plan,
           billable_metric:,
           group_properties: [
@@ -163,13 +164,14 @@ RSpec.describe Fees::CreateInstantService, type: :service do
             vat_rate: 20.0,
             vat_amount_cents: 2,
             vat_amount_currency: 'EUR',
-            fee_type: 'instant_charge',
+            fee_type: 'charge',
+            pay_in_advance: true,
             invoiceable: charge,
             units: 9,
             properties: Hash,
             events_count: 1,
             group:,
-            instant_event_id: event.id,
+            pay_in_advance_event_id: event.id,
           )
         end
       end
@@ -206,13 +208,14 @@ RSpec.describe Fees::CreateInstantService, type: :service do
               vat_rate: 20.0,
               vat_amount_cents: 2,
               vat_amount_currency: 'EUR',
-              fee_type: 'instant_charge',
+              fee_type: 'charge',
+              pay_in_advance: true,
               invoiceable: charge,
               units: 9,
               properties: Hash,
               events_count: 1,
               group:,
-              instant_event_id: event.id,
+              pay_in_advance_event_id: event.id,
             )
           end
         end
@@ -260,13 +263,14 @@ RSpec.describe Fees::CreateInstantService, type: :service do
             vat_rate: 20.0,
             vat_amount_cents: 2,
             vat_amount_currency: 'EUR',
-            fee_type: 'instant_charge',
+            fee_type: 'charge',
+            pay_in_advance: true,
             invoiceable: charge,
             units: 9,
             properties: Hash,
             events_count: 1,
             group: nil,
-            instant_event_id: event.id,
+            pay_in_advance_event_id: event.id,
           )
         end
       end
@@ -275,7 +279,7 @@ RSpec.describe Fees::CreateInstantService, type: :service do
         fee_service.call
 
         expect(SendWebhookJob).not_to have_been_enqueued
-          .with('fee.instant_created', Fee)
+          .with('fee.pay_in_advance_created', Fee)
       end
     end
   end

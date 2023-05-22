@@ -83,8 +83,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when charge is instant' do
-        let(:charge) { create(:standard_charge, :instant, plan: subscription.plan, charge_model: 'standard') }
+      context 'when charge is pay_in_advance' do
+        let(:charge) { create(:standard_charge, :pay_in_advance, plan: subscription.plan, charge_model: 'standard') }
 
         it 'does not create a charge fee' do
           result = invoice_service.call
