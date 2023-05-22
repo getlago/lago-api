@@ -5,5 +5,10 @@ FactoryBot.define do
     user
     organization
     role { 'admin' }
+
+    trait :revoked do
+      status { :revoked }
+      revoked_at { Time.zone.now }
+    end
   end
 end

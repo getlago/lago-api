@@ -5,8 +5,8 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        user_id: model.user_id,
-        organization_id: model.organization_id,
+        lago_user_id: model.user_id,
+        lago_organization_id: model.organization_id,
         role: model.role,
       }
     end
