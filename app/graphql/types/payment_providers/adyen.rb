@@ -5,11 +5,11 @@ module Types
     class Adyen < Types::BaseObject
       graphql_name 'AdyenProvider'
 
-      field :id, ID, null: false
       field :api_key, String, null: false
-      field :merchant_account, String, null: false
-      field :live_prefix, String, null: true
       field :hmac_key, String, null: true
+      field :id, ID, null: false
+      field :live_prefix, String, null: true
+      field :merchant_account, String, null: false
 
       # NOTE: Api key is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value
