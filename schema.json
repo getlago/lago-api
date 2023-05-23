@@ -1355,6 +1355,24 @@
               ]
             },
             {
+              "name": "invoiceable",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "minAmountCents",
               "description": null,
               "type": {
@@ -1479,7 +1497,7 @@
               "deprecationReason": null
             },
             {
-              "name": "payInAdvance",
+              "name": "invoiceable",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -1496,6 +1514,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payInAdvance",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,

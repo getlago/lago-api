@@ -9,6 +9,7 @@ module V1
         billable_metric_code: model.billable_metric.code,
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
+        invoiceable: model.invoiceable,
         pay_in_advance: model.pay_in_advance,
         min_amount_cents: model.min_amount_cents,
         properties: model.properties,
