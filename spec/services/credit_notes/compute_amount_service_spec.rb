@@ -41,7 +41,7 @@ RSpec.describe CreditNotes::ComputeAmountService, type: :service do
 
       expect(result).to have_attributes(
         coupons_adjustment_amount_cents: 7.5,
-        vat_amount_cents: 1.5,
+        taxes_amount_cents: 1.5,
         creditable_amount_cents: 9,
       )
     end

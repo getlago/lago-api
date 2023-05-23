@@ -240,10 +240,10 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
-  describe ' #sub_total_vat_exclueded_amount_cents' do
-    it 'returs the total amount without the vat' do
-      expect(credit_note.sub_total_vat_excluded_amount_cents)
-        .to eq(credit_note.total_amount_cents - credit_note.vat_amount_cents)
+  describe ' #sub_total_excluding_taxes_amount_cents' do
+    it 'returs the total amount without the taxes' do
+      expect(credit_note.sub_total_excluding_taxes_amount_cents)
+        .to eq(credit_note.total_amount_cents - credit_note.taxes_amount_cents)
     end
   end
 end

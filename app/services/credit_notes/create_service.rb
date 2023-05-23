@@ -27,7 +27,6 @@ module CreditNotes
           invoice:,
           issuing_date:,
           total_amount_currency: invoice.currency,
-          vat_amount_currency: invoice.currency,
           credit_amount_currency: invoice.currency,
           refund_amount_currency: invoice.currency,
           balance_amount_currency: invoice.currency,
@@ -44,8 +43,8 @@ module CreditNotes
 
         credit_note.precise_coupons_adjustment_amount_cents = adjustement_result.coupons_adjustment_amount_cents
         credit_note.coupons_adjustment_amount_cents = credit_note.precise_coupons_adjustment_amount_cents.round
-        credit_note.precise_vat_amount_cents = adjustement_result.vat_amount_cents
-        credit_note.vat_amount_cents = credit_note.precise_vat_amount_cents.round
+        credit_note.precise_taxes_amount_cents = adjustement_result.taxes_amount_cents
+        credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
 
         valid_credit_note?
         result.raise_if_error!

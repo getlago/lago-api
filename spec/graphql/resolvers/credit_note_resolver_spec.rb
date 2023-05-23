@@ -13,17 +13,11 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
           reason
           currency
           totalAmountCents
-          totalAmountCurrency
           creditAmountCents
-          creditAmountCurrency
           balanceAmountCents
-          balanceAmountCurrency
           totalAmountCents
-          totalAmountCurrency
-          vatAmountCents
-          vatAmountCurrency
-          subTotalVatExcludedAmountCents
-          subTotalVatExcludedAmountCurrency
+          taxesAmountCents
+          subTotalExcludingTaxesAmountCents
           couponsAdjustmentAmountCents
           createdAt
           updatedAt
