@@ -36,13 +36,9 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             creditStatus
             reason
             totalAmountCents
-            totalAmountCurrency
             creditAmountCents
-            creditAmountCurrency
             balanceAmountCents
-            balanceAmountCurrency
             refundAmountCents
-            refundAmountCurrency
             items {
               id
               amountCents

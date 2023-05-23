@@ -17,7 +17,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       credit_amount_cents:,
       refund_amount_cents:,
       precise_coupons_adjustment_amount_cents: 0,
-      precise_vat_amount_cents: 2,
+      precise_taxes_amount_cents: 2,
     )
   end
   let(:item) do
@@ -192,7 +192,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
           credit_amount_cents:,
           refund_amount_cents:,
           precise_coupons_adjustment_amount_cents: 2,
-          precise_vat_amount_cents: 3.6,
+          precise_taxes_amount_cents: 3.6,
         )
       end
       let(:item) do

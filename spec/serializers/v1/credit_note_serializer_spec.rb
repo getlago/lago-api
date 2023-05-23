@@ -27,8 +27,8 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       'description' => credit_note.description,
       'currency' => credit_note.currency,
       'total_amount_cents' => credit_note.total_amount_cents,
-      'vat_amount_cents' => credit_note.vat_amount_cents,
-      'sub_total_vat_excluded_amount_cents' => credit_note.sub_total_vat_excluded_amount_cents,
+      'taxes_amount_cents' => credit_note.taxes_amount_cents,
+      'sub_total_excluding_taxes_amount_cents' => credit_note.sub_total_excluding_taxes_amount_cents,
       'balance_amount_cents' => credit_note.balance_amount_cents,
       'credit_amount_cents' => credit_note.credit_amount_cents,
       'refund_amount_cents' => credit_note.refund_amount_cents,
@@ -39,11 +39,13 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
 
       # NOTE: deprecated fields
       'total_amount_currency' => credit_note.total_amount_currency,
-      'vat_amount_currency' => credit_note.vat_amount_currency,
-      'sub_total_vat_excluded_amount_currency' => credit_note.sub_total_vat_excluded_amount_currency,
+      'vat_amount_currency' => credit_note.currency,
+      'sub_total_vat_excluded_amount_currency' => credit_note.currency,
       'balance_amount_currency' => credit_note.balance_amount_currency,
       'credit_amount_currency' => credit_note.credit_amount_currency,
       'refund_amount_currency' => credit_note.refund_amount_currency,
+      'vat_amount_cents' => credit_note.taxes_amount_cents,
+      'sub_total_vat_excluded_amount_cents' => credit_note.sub_total_excluding_taxes_amount_cents,
     )
 
     expect(result['credit_note'].keys).to include('customer', 'items')

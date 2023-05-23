@@ -20,7 +20,7 @@ module CreditNotes
       return result if credit_amount_cents == credit_note.credit_amount_cents
 
       credit_note.update!(
-        vat_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.vat_rate }.fdiv(100).round,
+        taxes_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.vat_rate }.fdiv(100).round,
         credit_amount_cents:,
         balance_amount_cents: credit_amount_cents,
         total_amount_cents: credit_amount_cents + credit_note.refund_amount_cents,

@@ -11,7 +11,7 @@ module CreditNotes
 
     def call
       result.coupons_adjustment_amount_cents = coupons_adjustment_amount_cents
-      result.vat_amount_cents = vat_amount_cents
+      result.taxes_amount_cents = taxes_amount_cents
       result.creditable_amount_cents = creditable_amount_cents
       result
     end
@@ -30,7 +30,7 @@ module CreditNotes
       invoice.coupons_amount_cents.fdiv(invoice.fees_amount_cents) * items_amount_cents
     end
 
-    def vat_amount_cents
+    def taxes_amount_cents
       items.map do |item|
         # NOTE: Because coupons are applied before VAT,
         #       we have to discribute the coupon adjustement at prorata of each items
@@ -42,7 +42,7 @@ module CreditNotes
     end
 
     def creditable_amount_cents
-      (items_amount_cents - coupons_adjustment_amount_cents + vat_amount_cents).round
+      (items_amount_cents - coupons_adjustment_amount_cents + taxes_amount_cents).round
     end
   end
 end
