@@ -9,10 +9,7 @@ module Mutations
       graphql_name 'AddAdyenPaymentProvider'
       description 'Add or update Adyen payment provider'
 
-      argument :api_key, String, required: true
-      argument :hmac_key, String, required: false
-      argument :live_prefix, String, required: false
-      argument :merchant_account, String, required: true
+      input_object_class Types::PaymentProviders::AdyenInput
 
       type Types::PaymentProviders::Adyen
 
