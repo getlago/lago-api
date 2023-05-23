@@ -90,9 +90,7 @@ module Plans
 
             invoiceable = payload_charge.delete(:invoiceable)
             min_amount_cents = payload_charge.delete(:min_amount_cents)
-            if License.premium? && !invoiceable.nil?
-              charge.invoiceable = invoiceable
-            end
+            charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
             charge.min_amount_cents = min_amount_cents || 0 if Licence.premium?
 
             charge.update!(payload_charge)
