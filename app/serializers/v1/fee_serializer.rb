@@ -17,6 +17,7 @@ module V1
           item_type: model.item_type,
         },
         pay_in_advance: model.pay_in_advance,
+        invoiceable: model.charge&.invoiceable || false,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,

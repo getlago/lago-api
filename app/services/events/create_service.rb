@@ -97,6 +97,7 @@ module Events
         .charges
         .pay_in_advance
         .joins(:billable_metric)
+        .where(invoiceable: false)
         .where(billable_metric: { code: event.code })
     end
 

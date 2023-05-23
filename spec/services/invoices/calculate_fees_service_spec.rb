@@ -83,8 +83,37 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when charge is pay_in_advance' do
-        let(:charge) { create(:standard_charge, :pay_in_advance, plan: subscription.plan, charge_model: 'standard') }
+      context 'when charge is pay_in_advance and invoiceable' do
+        let(:charge) do
+          create(
+            :standard_charge,
+            :pay_in_advance,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: true,
+          )
+        end
+
+        it 'does not create a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.charge_kind.count).to eq(0)
+          end
+        end
+      end
+
+      context 'when charge is pay_in_arrear and not invoiceable' do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: false,
+          )
+        end
 
         it 'does not create a charge fee' do
           result = invoice_service.call

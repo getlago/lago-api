@@ -29,6 +29,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       charge = create(
         :standard_charge,
         :pay_in_advance,
+        invoiceable: false,
         plan:,
         billable_metric:,
         properties: { amount: '10' },
@@ -107,6 +108,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       charge = create(
         :standard_charge,
         :pay_in_advance,
+        invoiceable: false,
         plan:,
         billable_metric:,
         properties: { amount: '12' },
@@ -212,6 +214,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       charge = create(
         :package_charge,
         :pay_in_advance,
+        invoiceable: false,
         plan:,
         billable_metric:,
         properties: { amount: '100', free_units: 3, package_size: 2 },
@@ -303,6 +306,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       charge = create(
         :graduated_charge,
         :pay_in_advance,
+        invoiceable: false,
         plan:,
         billable_metric:,
         properties: {
@@ -410,6 +414,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         charge = create(
           :percentage_charge,
           :pay_in_advance,
+          invoiceable: false,
           plan:,
           billable_metric:,
           properties: {
@@ -502,6 +507,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         charge = create(
           :percentage_charge,
           :pay_in_advance,
+          invoiceable: false,
           plan:,
           billable_metric:,
           properties: {
@@ -571,6 +577,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       charge = create(
         :percentage_charge,
         :pay_in_advance,
+        invoiceable: false,
         plan:,
         billable_metric:,
         properties: {
@@ -649,6 +656,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         charge = create(
           :percentage_charge,
           :pay_in_advance,
+          invoiceable: false,
           plan:,
           billable_metric:,
           properties: {

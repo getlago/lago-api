@@ -10,6 +10,8 @@ module V1
         charge: {
           lago_id: model.charge.id,
           charge_model: model.charge.charge_model,
+          invoiceable: model.charge.invoiceable,
+          pay_in_advance: model.charge.pay_in_advance,
         },
         billable_metric: {
           lago_id: model.billable_metric.id,
