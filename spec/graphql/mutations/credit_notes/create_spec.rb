@@ -18,7 +18,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
       payment_status: 'succeeded',
       currency: 'EUR',
       fees_amount_cents: 100,
-      vat_amount_cents: 120,
+      taxes_amount_cents: 120,
       total_amount_cents: 120,
     )
   end

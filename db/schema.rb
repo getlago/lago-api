@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_22_093423) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_23_094557) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -395,7 +395,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_093423) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "issuing_date"
-    t.bigint "vat_amount_cents", default: 0, null: false
+    t.bigint "taxes_amount_cents", default: 0, null: false
     t.bigint "total_amount_cents", default: 0, null: false
     t.integer "invoice_type", default: 0, null: false
     t.integer "payment_status", default: 0, null: false
@@ -403,7 +403,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_093423) do
     t.integer "sequential_id"
     t.string "file"
     t.uuid "customer_id"
-    t.float "vat_rate", default: 0.0, null: false
+    t.float "taxes_rate", default: 0.0, null: false
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
@@ -415,8 +415,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_093423) do
     t.bigint "coupons_amount_cents", default: 0, null: false
     t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "prepaid_credit_amount_cents", default: 0, null: false
-    t.bigint "sub_total_vat_excluded_amount_cents", default: 0, null: false
-    t.bigint "sub_total_vat_included_amount_cents", default: 0, null: false
+    t.bigint "sub_total_excluding_taxes_amount_cents", default: 0, null: false
+    t.bigint "sub_total_including_taxes_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end

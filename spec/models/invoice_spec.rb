@@ -229,9 +229,9 @@ RSpec.describe Invoice, type: :model do
           :invoice,
           fees_amount_cents: 200,
           coupons_amount_cents: 20,
-          vat_amount_cents: 36,
+          taxes_amount_cents: 36,
           total_amount_cents: 216,
-          vat_rate: 20,
+          taxes_rate: 20,
           version_number: 3,
         )
       end

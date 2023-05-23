@@ -29,7 +29,7 @@ module Invoices
           invoice_type: :one_off,
           payment_status: :pending,
           currency:,
-          vat_rate: customer.applicable_vat_rate,
+          taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
           status: :finalized,
         )

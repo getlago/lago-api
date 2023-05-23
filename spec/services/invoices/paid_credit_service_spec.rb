@@ -35,10 +35,10 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
           payment_status: 'pending',
           currency: 'EUR',
           fees_amount_cents: 1500,
-          sub_total_vat_excluded_amount_cents: 1500,
-          vat_amount_cents: 0,
-          vat_rate: 0,
-          sub_total_vat_included_amount_cents: 1500,
+          sub_total_excluding_taxes_amount_cents: 1500,
+          taxes_amount_cents: 0,
+          taxes_rate: 0,
+          sub_total_including_taxes_amount_cents: 1500,
           total_amount_cents: 1500,
         )
 

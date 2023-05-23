@@ -20,7 +20,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       currency: 'EUR',
       total_amount_cents: 24,
       payment_status: :succeeded,
-      vat_rate: 20,
+      taxes_rate: 20,
       version_number: 2,
     )
   end
@@ -257,7 +257,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               fees_amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
-              vat_rate: 20,
+              taxes_rate: 20,
             )
           end
 
@@ -290,7 +290,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               currency: 'EUR',
               total_amount_cents: 24,
               payment_status: :succeeded,
-              vat_rate: 20,
+              taxes_rate: 20,
             )
           end
 
@@ -311,10 +311,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             create(
               :invoice,
               currency: 'EUR',
-              sub_total_vat_excluded_amount_cents: 20,
+              sub_total_excluding_taxes_amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
-              vat_rate: 20,
+              taxes_rate: 20,
               version_number: 1,
             )
           end
@@ -340,10 +340,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           currency: 'EUR',
           fees_amount_cents: 20,
           coupons_amount_cents: 10,
-          vat_amount_cents: 2,
+          taxes_amount_cents: 2,
           total_amount_cents: 12,
           payment_status: :succeeded,
-          vat_rate: 20,
+          taxes_rate: 20,
           version_number: 3,
         )
       end

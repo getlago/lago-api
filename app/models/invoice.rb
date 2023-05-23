@@ -29,10 +29,10 @@ class Invoice < ApplicationRecord
            :credit_notes_amount_cents,
            :fees_amount_cents,
            :prepaid_credit_amount_cents,
-           :sub_total_vat_excluded_amount_cents,
-           :sub_total_vat_included_amount_cents,
+           :sub_total_excluding_taxes_amount_cents,
+           :sub_total_including_taxes_amount_cents,
            :total_amount_cents,
-           :vat_amount_cents,
+           :taxes_amount_cents,
            with_model_currency: :currency
 
   # NOTE: Readonly fields
@@ -81,8 +81,8 @@ class Invoice < ApplicationRecord
 
   def fee_total_amount_cents
     amount_cents = fees.sum(:amount_cents)
-    vat_amount_cents = fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
-    amount_cents + vat_amount_cents
+    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
+    amount_cents + taxes_amount_cents
   end
 
   def charge_amount_cents

@@ -9,13 +9,11 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         customerUsage(customerId: $customerId, subscriptionId: $subscriptionId) {
           fromDatetime
           toDatetime
+          currency
           issuingDate
           amountCents
-          amountCurrency
           totalAmountCents
-          totalAmountCurrency
-          vatAmountCents
-          vatAmountCurrency
+          taxesAmountCents
           chargesUsage {
             billableMetric { name code aggregationType }
             charge { chargeModel }
@@ -93,13 +91,11 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     aggregate_failures do
       expect(usage_response['fromDatetime']).to eq(Time.current.beginning_of_month.iso8601)
       expect(usage_response['toDatetime']).to eq(Time.current.end_of_month.iso8601)
+      expect(usage_response['currency']).to eq('EUR')
       expect(usage_response['issuingDate']).to eq(Time.zone.today.end_of_month.iso8601)
       expect(usage_response['amountCents']).to eq('5')
-      expect(usage_response['amountCurrency']).to eq('EUR')
       expect(usage_response['totalAmountCents']).to eq('6')
-      expect(usage_response['totalAmountCurrency']).to eq('EUR')
-      expect(usage_response['vatAmountCents']).to eq('1')
-      expect(usage_response['vatAmountCurrency']).to eq('EUR')
+      expect(usage_response['taxesAmountCents']).to eq('1')
 
       charge_usage = usage_response['chargesUsage'].first
       expect(charge_usage['billableMetric']['name']).to eq(metric.name)

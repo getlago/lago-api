@@ -37,7 +37,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       expect(json[:invoice][:issuing_date]).to eq(Time.current.to_date.to_s)
       expect(json[:invoice][:invoice_type]).to eq('one_off')
       expect(json[:invoice][:amount_cents]).to eq(2800)
-      expect(json[:invoice][:vat_amount_cents]).to eq(560)
+      expect(json[:invoice][:taxes_amount_cents]).to eq(560)
       expect(json[:invoice][:total_amount_cents]).to eq(3360)
       expect(json[:invoice][:currency]).to eq('EUR')
     end
