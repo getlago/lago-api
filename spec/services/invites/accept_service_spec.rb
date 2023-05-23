@@ -7,7 +7,8 @@ RSpec.describe Invites::AcceptService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invite) { create(:invite, organization:, email: membership.user.email) }
+  let(:user) { create(:user) }
+  let(:invite) { create(:invite, organization:, email: user.email) }
   let(:accept_args) do
     {
       email: invite.email,
@@ -40,7 +41,7 @@ RSpec.describe Invites::AcceptService, type: :service do
     end
 
     context 'when user have already been invited then revoked' do
-      let(:revoked_membership) { create(:membership, organization:, status: :revoked) }
+      let(:revoked_membership) { create(:membership, :revoked, organization:) }
       let(:accepted_invite) do
         create(:invite, organization:, email: revoked_membership.user.email, status: :accepted)
       end
