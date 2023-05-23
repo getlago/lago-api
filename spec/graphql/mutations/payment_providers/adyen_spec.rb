@@ -42,8 +42,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['apiKey']).to eq("••••••••…abc")
-      expect(result_data['hmacKey']).to eq("••••••••…124")
+      expect(result_data['apiKey']).to eq('••••••••…abc')
+      expect(result_data['hmacKey']).to eq('••••••••…124')
       expect(result_data['livePrefix']).to eq(live_prefix)
       expect(result_data['merchantAccount']).to eq(merchant_account)
     end
