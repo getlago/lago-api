@@ -20,28 +20,28 @@ module PaymentProviders
       get_from_secrets('api_key')
     end
 
-    def merchant_account=(value)
-      push_to_secrets(key: 'merchant_account', value:)
-    end
-
-    def merchant_account
-      get_from_secrets('merchant_account')
-    end
-
-    def live_prefix=(value)
-      push_to_secrets(key: 'live_prefix', value:)
-    end
-
-    def live_prefix
-      get_from_secrets('live_prefix')
-    end
-
     def hmac_key=(value)
       push_to_secrets(key: 'hmac_key', value:)
     end
 
     def hmac_key
       get_from_secrets('hmac_key')
+    end
+
+    def live_prefix=(value)
+      push_to_settings(key: 'live_prefix', value:)
+    end
+
+    def live_prefix
+      get_from_settings('live_prefix')
+    end
+
+    def merchant_account=(value)
+      push_to_settings(key: 'merchant_account', value:)
+    end
+
+    def merchant_account
+      get_from_settings('merchant_account')
     end
   end
 end
