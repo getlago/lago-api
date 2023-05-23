@@ -21,9 +21,9 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             paymentStatus
             totalAmountCents
             feesAmountCents
-            vatAmountCents
-            subTotalVatExcludedAmountCents
-            subTotalVatIncludedAmountCents
+            taxesAmountCents
+            subTotalExcludingTaxesAmountCents
+            subTotalIncludingTaxesAmountCents
             couponsAmountCents
             creditNotesAmountCents
           }

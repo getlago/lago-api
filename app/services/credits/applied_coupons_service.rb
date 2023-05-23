@@ -29,7 +29,7 @@ module Credits
         credit_result.raise_if_error!
 
         invoice.coupons_amount_cents += credit_result.credit.amount_cents
-        invoice.sub_total_vat_excluded_amount_cents -= credit_result.credit.amount_cents
+        invoice.sub_total_excluding_taxes_amount_cents -= credit_result.credit.amount_cents
       end
 
       result.invoice = invoice

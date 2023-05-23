@@ -374,8 +374,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           fees_amount_cents: 100,
           total_amount_cents: 108,
           coupons_amount_cents: 10,
-          vat_amount_cents: 18,
-          vat_rate: 20,
+          taxes_amount_cents: 18,
+          taxes_rate: 20,
         )
       end
 

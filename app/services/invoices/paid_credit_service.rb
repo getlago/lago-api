@@ -21,7 +21,7 @@ module Invoices
           currency:,
 
           # NOTE: No VAT should be applied on as it can be considered as an advance
-          vat_rate: 0,
+          taxes_rate: 0,
           timezone: customer.applicable_timezone,
         )
 
@@ -58,12 +58,12 @@ module Invoices
 
       invoice.currency = currency
       invoice.fees_amount_cents = fee_amounts.sum(:amount_cents)
-      invoice.sub_total_vat_excluded_amount_cents = invoice.fees_amount_cents
-      invoice.vat_amount_cents = fee_amounts.sum(:vat_amount_cents)
-      invoice.sub_total_vat_included_amount_cents = (
-        invoice.sub_total_vat_excluded_amount_cents + invoice.vat_amount_cents
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+      invoice.taxes_amount_cents = fee_amounts.sum(:vat_amount_cents)
+      invoice.sub_total_including_taxes_amount_cents = (
+        invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
       )
-      invoice.total_amount_cents = invoice.sub_total_vat_included_amount_cents
+      invoice.total_amount_cents = invoice.sub_total_including_taxes_amount_cents
     end
 
     def create_credit_fee(invoice)

@@ -33,7 +33,7 @@ module Invoices
         end
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-        invoice.sub_total_vat_excluded_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents)
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
         Invoices::ComputeAmountsFromFees.call(invoice:)

@@ -19,17 +19,17 @@ module Types
       field :status, Types::Invoices::StatusTypeEnum, null: false
 
       field :currency, Types::CurrencyEnum
-      field :vat_rate, Float, null: false
+      field :taxes_rate, Float, null: false
 
       field :charge_amount_cents, GraphQL::Types::BigInt, null: false
       field :coupons_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_notes_amount_cents, GraphQL::Types::BigInt, null: false
       field :fees_amount_cents, GraphQL::Types::BigInt, null: false
       field :prepaid_credit_amount_cents, GraphQL::Types::BigInt, null: false
-      field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false
-      field :sub_total_vat_included_amount_cents, GraphQL::Types::BigInt, null: false
+      field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
+      field :sub_total_including_taxes_amount_cents, GraphQL::Types::BigInt, null: false
+      field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
-      field :vat_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 

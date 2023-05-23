@@ -2633,15 +2633,13 @@ input CustomerMetadataInput {
 
 type CustomerUsage {
   amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
   chargesUsage: [ChargeUsage!]!
+  currency: CurrencyEnum!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
+  taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
-  totalAmountCurrency: CurrencyEnum!
-  vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
 }
 
 """
@@ -3056,13 +3054,13 @@ type Invoice {
   refundableAmountCents: BigInt!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
-  subTotalVatExcludedAmountCents: BigInt!
-  subTotalVatIncludedAmountCents: BigInt!
+  subTotalExcludingTaxesAmountCents: BigInt!
+  subTotalIncludingTaxesAmountCents: BigInt!
   subscriptions: [Subscription!]
+  taxesAmountCents: BigInt!
+  taxesRate: Float!
   totalAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
-  vatAmountCents: BigInt!
-  vatRate: Float!
   versionNumber: Int!
 }
 
