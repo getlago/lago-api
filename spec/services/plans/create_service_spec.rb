@@ -123,13 +123,13 @@ RSpec.describe Plans::CreateService, type: :service do
             pay_in_advance: false,
             min_amount_cents: 100,
             invoiceable: true,
-          }
+          },
         )
         expect(plan.charges.graduated.first).to have_attributes(
           {
             pay_in_advance: true,
             invoiceable: false,
-          }
+          },
         )
       end
     end
