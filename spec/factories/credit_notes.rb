@@ -10,8 +10,7 @@ FactoryBot.define do
     reason { 'duplicated_charge' }
     total_amount_cents { 120 }
     total_amount_currency { 'EUR' }
-    vat_amount_cents { 20 }
-    vat_amount_currency { 'EUR' }
+    taxes_amount_cents { 20 }
 
     credit_status { 'available' }
     credit_amount_cents { 120 }

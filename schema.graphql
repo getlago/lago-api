@@ -1758,7 +1758,6 @@ CreditNote
 """
 type CreditNote {
   balanceAmountCents: BigInt!
-  balanceAmountCurrency: CurrencyEnum!
 
   """
   Check if credit note can be voided
@@ -1767,7 +1766,6 @@ type CreditNote {
   couponsAdjustmentAmountCents: BigInt!
   createdAt: ISO8601DateTime!
   creditAmountCents: BigInt!
-  creditAmountCurrency: CurrencyEnum!
   creditStatus: CreditNoteCreditStatusEnum
   currency: CurrencyEnum!
   customer: Customer!
@@ -1780,17 +1778,14 @@ type CreditNote {
   number: String!
   reason: CreditNoteReasonEnum!
   refundAmountCents: BigInt!
-  refundAmountCurrency: CurrencyEnum!
   refundStatus: CreditNoteRefundStatusEnum
   refundedAt: ISO8601DateTime
   sequentialId: ID!
-  subTotalVatExcludedAmountCents: BigInt!
-  subTotalVatExcludedAmountCurrency: CurrencyEnum!
+  subTotalExcludingTaxesAmountCents: BigInt!
+  taxesAmountCents: BigInt!
+  taxesRate: Float!
   totalAmountCents: BigInt!
-  totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
-  vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
   voidedAt: ISO8601DateTime
 }
 

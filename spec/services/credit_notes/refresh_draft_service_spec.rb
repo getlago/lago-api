@@ -28,7 +28,7 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
 
     it 'updates vat amounts of the credit note' do
       expect { refresh_service.call }
-        .to change { credit_note.reload.vat_amount_cents }.from(20).to(0)
+        .to change { credit_note.reload.taxes_amount_cents }.from(20).to(0)
         .and change(credit_note, :credit_amount_cents).from(120).to(100)
         .and change(credit_note, :balance_amount_cents).from(120).to(100)
         .and change(credit_note, :total_amount_cents).from(120).to(100)
