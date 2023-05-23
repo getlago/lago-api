@@ -62,12 +62,13 @@ module Plans
         billable_metric_id: params[:billable_metric_id],
         amount_currency: params[:amount_currency],
         charge_model: params[:charge_model]&.to_sym,
+        pay_in_advance: params[:pay_in_advance] || false,
         properties: params[:properties] || {},
         group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
 
       if License.premium?
-        charge.pay_in_advance = params[:pay_in_advance] || false
+        charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
         charge.min_amount_cents = params[:min_amount_cents] || 0
       end
 
@@ -87,10 +88,10 @@ module Plans
           unless plan.attached_to_subscriptions?
             payload_charge[:group_properties]&.map! { |gp| GroupProperty.new(gp) }
 
-            pay_in_advance = payload_charge.delete(:pay_in_advance)
+            invoiceable = payload_charge.delete(:invoiceable)
             min_amount_cents = payload_charge.delete(:min_amount_cents)
             if License.premium?
-              charge.pay_in_advance = pay_in_advance || false
+              charge.invoiceable = invoiceable unless invoiceable.nil?
               charge.min_amount_cents = min_amount_cents || 0
             end
 

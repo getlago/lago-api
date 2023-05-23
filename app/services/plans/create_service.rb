@@ -44,12 +44,13 @@ module Plans
       charge = plan.charges.new(
         billable_metric_id: args[:billable_metric_id],
         charge_model: args[:charge_model]&.to_sym,
+        pay_in_advance: args[:pay_in_advance] || false,
         properties: args[:properties] || {},
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
 
       if License.premium?
-        charge.pay_in_advance = args[:pay_in_advance] || false
+        charge.invoiceable = args[:invoiceable] unless args[:invoiceable].nil?
         charge.min_amount_cents = args[:min_amount_cents] || 0
       end
 

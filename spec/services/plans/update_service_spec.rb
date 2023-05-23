@@ -164,6 +164,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               billable_metric_id: billable_metrics.first.id,
               charge_model: 'standard',
               pay_in_advance: true,
+              invoiceable: false,
               group_properties: [
                 {
                   group_id: group.id,
@@ -201,7 +202,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       it 'does not update premium attributes' do
         plan = plans_service.call.plan
 
-        expect(existing_charge.reload).not_to be_pay_in_advance
+        expect(existing_charge.reload).to have_attributes(pay_in_advance: true, invoiceable: true)
         expect(plan.charges.where(pay_in_advance: false).first.min_amount_cents).to eq(0)
       end
 
@@ -211,7 +212,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         it 'saves premium attributes' do
           plans_service.call
 
-          expect(existing_charge.reload).to be_pay_in_advance
+          expect(existing_charge.reload).to have_attributes(pay_in_advance: true, invoiceable: false)
           expect(plan.charges.where(pay_in_advance: false).first.min_amount_cents).to eq(100)
         end
       end
