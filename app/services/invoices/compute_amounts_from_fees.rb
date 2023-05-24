@@ -20,7 +20,7 @@ module Invoices
         #       compared to the invoice total fees amount
         fee_rate = invoice.fees_amount_cents.zero? ? 0 : fee.amount_cents.fdiv(invoice.fees_amount_cents)
         prorated_coupon_amount = fee_rate * invoice.coupons_amount_cents
-        (fee.amount_cents - prorated_coupon_amount) * fee.vat_rate
+        (fee.amount_cents - prorated_coupon_amount) * fee.taxes_rate
       end.fdiv(100).round
 
       invoice.sub_total_including_taxes_amount_cents = (

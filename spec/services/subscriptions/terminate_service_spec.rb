@@ -91,10 +91,10 @@ RSpec.describe Subscriptions::TerminateService do
           subscription:,
           invoice:,
           amount_cents: 100,
-          vat_amount_cents: 20,
+          taxes_amount_cents: 20,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          vat_rate: 20,
+          taxes_rate: 20,
         )
       end
 

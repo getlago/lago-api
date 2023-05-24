@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_23_140656) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_24_130637) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -296,9 +296,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_23_140656) do
     t.uuid "subscription_id"
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
-    t.bigint "vat_amount_cents", null: false
-    t.string "vat_amount_currency", null: false
-    t.float "vat_rate", default: 0.0, null: false
+    t.bigint "taxes_amount_cents", null: false
+    t.float "taxes_rate", default: 0.0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false

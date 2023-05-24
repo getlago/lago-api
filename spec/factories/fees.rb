@@ -10,12 +10,10 @@ FactoryBot.define do
 
     amount_cents { 200 }
     amount_currency { 'EUR' }
+    taxes_amount_cents { 2 }
 
     invoiceable_type { 'Subscription' }
     invoiceable_id { subscription.id }
-
-    vat_amount_cents { 2 }
-    vat_amount_currency { 'EUR' }
 
     trait :succeeded do
       payment_status { :succeeded }
@@ -59,12 +57,10 @@ FactoryBot.define do
 
     amount_cents { 200 }
     amount_currency { 'EUR' }
+    taxes_amount_cents { 2 }
 
     invoiceable_type { 'AppliedAddOn' }
     invoiceable_id { applied_add_on.id }
-
-    vat_amount_cents { 2 }
-    vat_amount_currency { 'EUR' }
   end
 
   factory :one_off_fee, class: 'Fee' do
@@ -75,11 +71,9 @@ FactoryBot.define do
 
     amount_cents { 200 }
     amount_currency { 'EUR' }
+    taxes_amount_cents { 2 }
 
     invoiceable_type { 'AddOn' }
     invoiceable_id { add_on.id }
-
-    vat_amount_cents { 2 }
-    vat_amount_currency { 'EUR' }
   end
 end

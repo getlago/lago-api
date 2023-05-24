@@ -8,10 +8,10 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:credit_note) { create(:credit_note, status:) }
-    let(:fee) { create(:fee, vat_rate: 0) }
+    let(:fee) { create(:fee, taxes_rate: 0) }
 
     before do
-      create(:credit_note_item, credit_note:, fee: create(:fee, vat_rate: 20))
+      create(:credit_note_item, credit_note:, fee: create(:fee, taxes_rate: 20))
     end
 
     context 'when credit_note is finalized' do
