@@ -84,7 +84,7 @@ module PaymentProviderCustomers
 
     def payment_link_params
       prms = {
-        reference: "authorization customer #{customer.id}",
+        reference: "authorization customer #{customer.external_id}",
         amount: {
           value: 0, # pre-authorization
           currency: customer.currency.presence || "USD"
