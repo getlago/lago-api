@@ -96,7 +96,7 @@ module Invoices
 
     def compute_amounts
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
-      invoice.taxes_amount_cents = invoice.fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
+      invoice.taxes_amount_cents = invoice.fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
     end
 

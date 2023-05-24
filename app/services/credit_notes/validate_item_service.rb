@@ -43,7 +43,7 @@ module CreditNotes
     end
 
     def total_item_amount_cents
-      (item.amount_cents + (item.amount_cents * fee.vat_rate).fdiv(100)).round
+      (item.amount_cents + (item.amount_cents * fee.taxes_rate).fdiv(100)).round
     end
 
     def valid_fee?

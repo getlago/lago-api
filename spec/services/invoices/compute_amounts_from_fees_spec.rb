@@ -8,8 +8,8 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
   let(:invoice) { create(:invoice) }
 
   before do
-    create(:fee, invoice:, amount_cents: 151, vat_rate: 10)
-    create(:fee, invoice:, amount_cents: 379, vat_rate: 20)
+    create(:fee, invoice:, amount_cents: 151, taxes_rate: 10)
+    create(:fee, invoice:, amount_cents: 379, taxes_rate: 20)
     create(:credit, invoice:, amount_cents: 100)
   end
 

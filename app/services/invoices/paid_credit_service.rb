@@ -54,12 +54,12 @@ module Invoices
     end
 
     def compute_amounts(invoice)
-      fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
+      fee_amounts = invoice.fees.select(:amount_cents, :taxes_amount_cents)
 
       invoice.currency = currency
       invoice.fees_amount_cents = fee_amounts.sum(:amount_cents)
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-      invoice.taxes_amount_cents = fee_amounts.sum(:vat_amount_cents)
+      invoice.taxes_amount_cents = fee_amounts.sum(:taxes_amount_cents)
       invoice.sub_total_including_taxes_amount_cents = (
         invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
       )

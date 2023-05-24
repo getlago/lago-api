@@ -43,7 +43,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
               id
               amountCents
               amountCurrency
-              fee { id amountCents amountCurrency itemType itemCode itemName vatRate units eventsCount }
+              fee { id amountCents amountCurrency itemType itemCode itemName taxesRate units eventsCount }
             }
           }
         }

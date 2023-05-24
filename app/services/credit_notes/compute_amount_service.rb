@@ -37,7 +37,7 @@ module CreditNotes
         #       to compute the VAT
         item_rate = item.precise_amount_cents.fdiv(items_amount_cents)
         prorated_coupon_amount = coupons_adjustment_amount_cents * item_rate
-        (item.precise_amount_cents - prorated_coupon_amount) * (item.fee.vat_rate || 0)
+        (item.precise_amount_cents - prorated_coupon_amount) * (item.fee.taxes_rate || 0)
       end.sum.fdiv(100)
     end
 

@@ -38,7 +38,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       :fee,
       invoice:,
       amount_cents: 100,
-      vat_rate: 20,
+      taxes_rate: 20,
     )
   end
 
@@ -80,7 +80,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:credit_amount_cents) { 250 }
 
       before do
-        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -98,7 +98,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
       before do
         invoice.succeeded!
-        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
       it 'fails the validation' do

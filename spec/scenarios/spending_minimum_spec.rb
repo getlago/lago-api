@@ -71,14 +71,14 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         expect(usage_fee).to have_attributes(
           amount_cents: 800,
-          vat_amount_cents: 160,
+          taxes_amount_cents: 160,
           units: 1,
         )
 
         # True up fee is pro-rated for 25/28 days.
         expect(true_up_fee).to have_attributes(
           amount_cents: 92, # (1000 / 28.0 * 25 - 800).floor
-          vat_amount_cents: 18,
+          taxes_amount_cents: 18,
           units: 1,
         )
 
@@ -220,7 +220,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         # True up fee is pro-rated for 25/28 days.
         expect(true_up_fee).to have_attributes(
           amount_cents: 1928, # (10000 / 28.0 * 25 - 2000 - 5000).floor
-          vat_amount_cents: 386,
+          taxes_amount_cents: 386,
           units: 1,
         )
 

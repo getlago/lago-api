@@ -19,7 +19,7 @@ module Fees
         fee_type: :add_on,
         invoiceable_type: 'AppliedAddOn',
         invoiceable: applied_add_on,
-        vat_rate: customer.applicable_vat_rate,
+        taxes_rate: customer.applicable_vat_rate,
         units: 1,
         payment_status: :pending,
       )

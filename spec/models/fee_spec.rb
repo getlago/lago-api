@@ -7,14 +7,9 @@ RSpec.describe Fee, type: :model do
 
   describe '.compute_vat' do
     it 'computes the vat' do
-      fee = fee_model.new(amount_cents: 132, amount_currency: 'EUR', vat_rate: 20.0)
-
+      fee = fee_model.new(amount_cents: 132, amount_currency: 'EUR', taxes_rate: 20.0)
       fee.compute_vat
-
-      aggregate_failures do
-        expect(fee.vat_amount_currency).to eq('EUR')
-        expect(fee.vat_amount_cents).to eq(26)
-      end
+      expect(fee.taxes_amount_cents).to eq(26)
     end
   end
 
@@ -198,9 +193,9 @@ RSpec.describe Fee, type: :model do
   end
 
   describe '#total_amount_cents' do
-    let(:fee) { create(:fee, amount_cents: 100, vat_amount_cents: 20) }
+    let(:fee) { create(:fee, amount_cents: 100, taxes_amount_cents: 20) }
 
-    it 'returns the sum of amount and vat' do
+    it 'returns the sum of amount and taxes' do
       expect(fee.total_amount_cents).to eq(120)
     end
   end
