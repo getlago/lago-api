@@ -28,7 +28,7 @@ module Fees
             unit_amount_cents:,
             amount_cents: (unit_amount_cents * units).round,
             amount_currency: invoice.currency,
-            vat_rate: customer.applicable_vat_rate,
+            taxes_rate: customer.applicable_vat_rate,
             fee_type: :add_on,
             invoiceable_type: 'AddOn',
             invoiceable: add_on,

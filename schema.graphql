@@ -2878,6 +2878,7 @@ type Fee implements InvoiceItem {
   amountCurrency: CurrencyEnum!
   charge: Charge
   creditableAmountCents: BigInt!
+  currency: CurrencyEnum!
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group
@@ -2886,12 +2887,11 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   subscription: Subscription
+  taxesAmountCents: BigInt!
+  taxesRate: Float
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
-  vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
-  vatRate: Float
 }
 
 """

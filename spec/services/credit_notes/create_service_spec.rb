@@ -26,8 +26,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
   end
 
   let(:automatic) { true }
-  let(:fee1) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 1, vat_rate: 20) }
-  let(:fee2) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 1, vat_rate: 20) }
+  let(:fee1) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
+  let(:fee2) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
   let(:credit_amount_cents) { 12 }
   let(:refund_amount_cents) { 6 }
   let(:items) do

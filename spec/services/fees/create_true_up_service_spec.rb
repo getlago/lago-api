@@ -39,7 +39,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             subscription: fee.subscription,
             charge: fee.charge,
             amount_currency: fee.currency,
-            vat_rate: fee.vat_rate,
+            taxes_rate: fee.taxes_rate,
             fee_type: 'charge',
             invoiceable: fee.charge,
             properties: fee.properties,
@@ -48,8 +48,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             events_count: 0,
             group: nil,
             amount_cents: 300,
-            vat_amount_cents: 0,
-            vat_amount_currency: fee.currency,
+            taxes_amount_cents: 0,
             true_up_parent_fee_id: fee.id,
           )
         end

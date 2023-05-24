@@ -30,7 +30,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
   let(:invoice) { create(:invoice, total_amount_cents: 120) }
   let(:customer) { invoice.customer }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 100, vat_rate: 20) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 100, taxes_rate: 20) }
 
   describe '.call' do
     it 'validates the item' do
@@ -67,7 +67,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       let(:amount_cents) { fee.amount_cents + 10 }
 
       before do
-        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -83,7 +83,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
     context 'when reaching fee creditable amount' do
       before do
         create(:credit_note_item, fee:, amount_cents: 99)
-        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
       it 'fails the validation' do

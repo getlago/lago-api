@@ -312,8 +312,7 @@ RSpec.describe Credits::AppliedCouponsService do
           charge:,
           amount_cents: 12,
           amount_currency: 'EUR',
-          vat_amount_cents: 3,
-          vat_amount_currency: 'EUR',
+          taxes_amount_cents: 3,
         )
       end
       let(:fee) do
@@ -323,8 +322,7 @@ RSpec.describe Credits::AppliedCouponsService do
           subscription:,
           amount_cents: 75,
           amount_currency: 'EUR',
-          vat_amount_cents: 5,
-          vat_amount_currency: 'EUR',
+          taxes_amount_cents: 5,
         )
       end
 

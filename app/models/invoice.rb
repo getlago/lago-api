@@ -81,7 +81,7 @@ class Invoice < ApplicationRecord
 
   def fee_total_amount_cents
     amount_cents = fees.sum(:amount_cents)
-    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
+    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
     amount_cents + taxes_amount_cents
   end
 
@@ -136,7 +136,7 @@ class Invoice < ApplicationRecord
       #       to compute the VAT
       fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
       prorated_coupon_amount = coupons_adjustement * fee_rate
-      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.vat_rate || 0)
+      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.taxes_rate || 0)
     end.fdiv(100).round
 
     fees_total_creditable - coupons_adjustement + vat

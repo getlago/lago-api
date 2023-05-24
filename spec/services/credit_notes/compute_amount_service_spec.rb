@@ -32,8 +32,8 @@ RSpec.describe CreditNotes::ComputeAmountService, type: :service do
     ]
   end
 
-  let(:fee1) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 1, vat_rate: 20) }
-  let(:fee2) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 1, vat_rate: 20) }
+  let(:fee1) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
+  let(:fee2) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
 
   describe '.call' do
     it 'computes the credit note amounts' do
