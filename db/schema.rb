@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_24_130637) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_25_120005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -326,6 +326,21 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_24_130637) do
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
+  end
+
+  create_table "fees_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "fee_id", null: false
+    t.uuid "tax_id", null: false
+    t.string "tax_description"
+    t.string "tax_code", null: false
+    t.string "tax_name", null: false
+    t.float "tax_rate", default: 0.0, null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fee_id"], name: "index_fees_taxes_on_fee_id"
+    t.index ["tax_id"], name: "index_fees_taxes_on_tax_id"
   end
 
   create_table "group_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -697,6 +712,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_24_130637) do
   add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
+  add_foreign_key "fees_taxes", "fees"
+  add_foreign_key "fees_taxes", "taxes"
   add_foreign_key "group_properties", "charges", on_delete: :cascade
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
