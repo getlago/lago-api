@@ -23,16 +23,19 @@ class Invoice < ApplicationRecord
   has_many :metadata, class_name: 'Metadata::InvoiceMetadata', dependent: :destroy
   has_many :credit_notes
 
+  has_many :invoices_taxes
+  has_many :taxes, through: :invoices_taxes
+
   has_one_attached :file
 
   monetize :coupons_amount_cents,
            :credit_notes_amount_cents,
            :fees_amount_cents,
            :prepaid_credit_amount_cents,
-           :sub_total_vat_excluded_amount_cents,
-           :sub_total_vat_included_amount_cents,
+           :sub_total_excluding_taxes_amount_cents,
+           :sub_total_including_taxes_amount_cents,
            :total_amount_cents,
-           :vat_amount_cents,
+           :taxes_amount_cents,
            with_model_currency: :currency
 
   # NOTE: Readonly fields
@@ -81,8 +84,8 @@ class Invoice < ApplicationRecord
 
   def fee_total_amount_cents
     amount_cents = fees.sum(:amount_cents)
-    vat_amount_cents = fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
-    amount_cents + vat_amount_cents
+    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
+    amount_cents + taxes_amount_cents
   end
 
   def charge_amount_cents
@@ -136,7 +139,7 @@ class Invoice < ApplicationRecord
       #       to compute the VAT
       fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
       prorated_coupon_amount = coupons_adjustement * fee_rate
-      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.vat_rate || 0)
+      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.taxes_rate || 0)
     end.fdiv(100).round
 
     fees_total_creditable - coupons_adjustement + vat

@@ -6,6 +6,11 @@ class Tax < ApplicationRecord
   has_many :applied_taxes
   has_many :customers, through: :applied_taxes
 
+  has_many :fees_taxes
+  has_many :fees, through: :fees_taxes
+  has_many :invoices_taxes
+  has_many :invoices, through: :invoices_taxes
+
   belongs_to :organization
 
   validates :name, :rate, presence: true

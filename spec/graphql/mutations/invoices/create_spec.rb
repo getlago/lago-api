@@ -28,10 +28,10 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         createInvoice(input: $input) {
           id,
           feesAmountCents,
-          vatAmountCents,
+          taxesAmountCents,
           totalAmountCents,
           currency,
-          vatRate,
+          taxesRate,
           invoiceType,
           issuingDate
         }
@@ -60,9 +60,9 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
       expect(result_data['issuingDate']).to eq(Time.current.to_date.to_s)
       expect(result_data['invoiceType']).to eq('one_off')
       expect(result_data['feesAmountCents']).to eq('2800')
-      expect(result_data['vatAmountCents']).to eq('560')
+      expect(result_data['taxesAmountCents']).to eq('560')
       expect(result_data['totalAmountCents']).to eq('3360')
-      expect(result_data['vatRate']).to eq(20)
+      expect(result_data['taxesRate']).to eq(20)
       expect(result_data['currency']).to eq('EUR')
     end
   end

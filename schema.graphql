@@ -1760,7 +1760,6 @@ CreditNote
 """
 type CreditNote {
   balanceAmountCents: BigInt!
-  balanceAmountCurrency: CurrencyEnum!
 
   """
   Check if credit note can be voided
@@ -1769,7 +1768,6 @@ type CreditNote {
   couponsAdjustmentAmountCents: BigInt!
   createdAt: ISO8601DateTime!
   creditAmountCents: BigInt!
-  creditAmountCurrency: CurrencyEnum!
   creditStatus: CreditNoteCreditStatusEnum
   currency: CurrencyEnum!
   customer: Customer!
@@ -1782,17 +1780,14 @@ type CreditNote {
   number: String!
   reason: CreditNoteReasonEnum!
   refundAmountCents: BigInt!
-  refundAmountCurrency: CurrencyEnum!
   refundStatus: CreditNoteRefundStatusEnum
   refundedAt: ISO8601DateTime
   sequentialId: ID!
-  subTotalVatExcludedAmountCents: BigInt!
-  subTotalVatExcludedAmountCurrency: CurrencyEnum!
+  subTotalExcludingTaxesAmountCents: BigInt!
+  taxesAmountCents: BigInt!
+  taxesRate: Float!
   totalAmountCents: BigInt!
-  totalAmountCurrency: CurrencyEnum!
   updatedAt: ISO8601DateTime!
-  vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
   voidedAt: ISO8601DateTime
 }
 
@@ -2635,15 +2630,13 @@ input CustomerMetadataInput {
 
 type CustomerUsage {
   amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
   chargesUsage: [ChargeUsage!]!
+  currency: CurrencyEnum!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
+  taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
-  totalAmountCurrency: CurrencyEnum!
-  vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
 }
 
 """
@@ -2887,6 +2880,7 @@ type Fee implements InvoiceItem {
   amountCurrency: CurrencyEnum!
   charge: Charge
   creditableAmountCents: BigInt!
+  currency: CurrencyEnum!
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group
@@ -2895,12 +2889,11 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   subscription: Subscription
+  taxesAmountCents: BigInt!
+  taxesRate: Float
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
-  vatAmountCents: BigInt!
-  vatAmountCurrency: CurrencyEnum!
-  vatRate: Float
 }
 
 """
@@ -3058,13 +3051,13 @@ type Invoice {
   refundableAmountCents: BigInt!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
-  subTotalVatExcludedAmountCents: BigInt!
-  subTotalVatIncludedAmountCents: BigInt!
+  subTotalExcludingTaxesAmountCents: BigInt!
+  subTotalIncludingTaxesAmountCents: BigInt!
   subscriptions: [Subscription!]
+  taxesAmountCents: BigInt!
+  taxesRate: Float!
   totalAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
-  vatAmountCents: BigInt!
-  vatRate: Float!
   versionNumber: Int!
 }
 

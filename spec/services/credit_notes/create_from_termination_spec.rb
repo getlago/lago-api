@@ -40,10 +40,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       subscription:,
       invoice:,
       amount_cents: 100,
-      vat_amount_cents: 20,
+      taxes_amount_cents: 20,
       invoiceable_type: 'Subscription',
       invoiceable_id: subscription.id,
-      vat_rate: 20,
+      taxes_rate: 20,
     )
   end
 
@@ -88,10 +88,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           subscription:,
           invoice:,
           amount_cents: 0,
-          vat_amount_cents: 0,
+          taxes_amount_cents: 0,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          vat_rate: 20,
+          taxes_rate: 20,
         )
       end
 
@@ -107,10 +107,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           subscription:,
           invoice:,
           amount_cents: 20,
-          vat_amount_cents: 4,
+          taxes_amount_cents: 4,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          vat_rate: 20,
+          taxes_rate: 20,
           created_at: Time.current - 2.months,
         )
       end
@@ -121,10 +121,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           subscription:,
           invoice:,
           amount_cents: 20,
-          vat_amount_cents: 4,
+          taxes_amount_cents: 4,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          vat_rate: 20,
+          taxes_rate: 20,
           created_at: Time.current - 1.month,
         )
       end
@@ -331,10 +331,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           subscription:,
           invoice:,
           amount_cents: 999,
-          vat_amount_cents: 0,
+          taxes_amount_cents: 0,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          vat_rate: 0,
+          taxes_rate: 0,
           created_at: Time.zone.parse('2023-02-28 10:00'),
         )
       end
@@ -374,8 +374,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           fees_amount_cents: 100,
           total_amount_cents: 108,
           coupons_amount_cents: 10,
-          vat_amount_cents: 18,
-          vat_rate: 20,
+          taxes_amount_cents: 18,
+          taxes_rate: 20,
         )
       end
 

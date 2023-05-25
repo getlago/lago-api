@@ -11,10 +11,10 @@ RSpec.describe CreditNotes::ComputeAmountService, type: :service do
       currency: 'EUR',
       fees_amount_cents: 20,
       coupons_amount_cents: 10,
-      vat_amount_cents: 2,
+      taxes_amount_cents: 2,
       total_amount_cents: 12,
       payment_status: :succeeded,
-      vat_rate: 20,
+      taxes_rate: 20,
       version_number: 3,
     )
   end
@@ -32,8 +32,8 @@ RSpec.describe CreditNotes::ComputeAmountService, type: :service do
     ]
   end
 
-  let(:fee1) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 1, vat_rate: 20) }
-  let(:fee2) { create(:fee, invoice:, amount_cents: 10, vat_amount_cents: 1, vat_rate: 20) }
+  let(:fee1) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
+  let(:fee2) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
 
   describe '.call' do
     it 'computes the credit note amounts' do
@@ -41,7 +41,7 @@ RSpec.describe CreditNotes::ComputeAmountService, type: :service do
 
       expect(result).to have_attributes(
         coupons_adjustment_amount_cents: 7.5,
-        vat_amount_cents: 1.5,
+        taxes_amount_cents: 1.5,
         creditable_amount_cents: 9,
       )
     end

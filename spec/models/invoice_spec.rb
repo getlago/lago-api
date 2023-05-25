@@ -102,8 +102,8 @@ RSpec.describe Invoice, type: :model do
     let(:invoice) { create(:invoice, customer:, organization:) }
 
     it 'returns the fee amount vat included' do
-      create(:fee, invoice:, amount_cents: 100, vat_rate: 20)
-      create(:fee, invoice:, amount_cents: 133, vat_rate: 20)
+      create(:fee, invoice:, amount_cents: 100, taxes_rate: 20)
+      create(:fee, invoice:, amount_cents: 133, taxes_rate: 20)
 
       expect(invoice.fee_total_amount_cents).to eq(120 + 160)
     end
@@ -204,7 +204,7 @@ RSpec.describe Invoice, type: :model do
       let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 
       before do
-        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, vat_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, taxes_rate: 20)
       end
 
       it 'returns 0' do
@@ -218,7 +218,7 @@ RSpec.describe Invoice, type: :model do
       subscription = invoice_subscription.subscription
       billable_metric = create(:recurring_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, vat_rate: 20)
+      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
 
       expect(invoice.creditable_amount_cents).to eq(160)
     end
@@ -229,9 +229,9 @@ RSpec.describe Invoice, type: :model do
           :invoice,
           fees_amount_cents: 200,
           coupons_amount_cents: 20,
-          vat_amount_cents: 36,
+          taxes_amount_cents: 36,
           total_amount_cents: 216,
-          vat_rate: 20,
+          taxes_rate: 20,
           version_number: 3,
         )
       end
@@ -245,7 +245,7 @@ RSpec.describe Invoice, type: :model do
         create(:standard_charge, plan: subscription.plan, billable_metric:)
       end
       let(:fee) do
-        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 200, vat_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 200, taxes_rate: 20)
       end
 
       before { fee }

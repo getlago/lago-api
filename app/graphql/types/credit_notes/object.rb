@@ -19,14 +19,15 @@ module Types
       field :refund_status, Types::CreditNotes::RefundStatusTypeEnum, null: true
 
       field :currency, Types::CurrencyEnum, null: false
+      field :taxes_rate, Float, null: false
 
       field :balance_amount_cents, GraphQL::Types::BigInt, null: false
       field :coupons_adjustment_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :refund_amount_cents, GraphQL::Types::BigInt, null: false
-      field :sub_total_vat_excluded_amount_cents, GraphQL::Types::BigInt, null: false
+      field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
+      field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
-      field :vat_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :refunded_at, GraphQL::Types::ISO8601DateTime, null: true
@@ -42,14 +43,6 @@ module Types
       field :can_be_voided, Boolean, null: false, method: :voidable? do
         description 'Check if credit note can be voided'
       end
-
-      # NOTE(legacy): Remove with coupon before VAT refactor
-      field :balance_amount_currency, Types::CurrencyEnum, null: false
-      field :credit_amount_currency, Types::CurrencyEnum, null: false
-      field :refund_amount_currency, Types::CurrencyEnum, null: false
-      field :sub_total_vat_excluded_amount_currency, Types::CurrencyEnum, null: false
-      field :total_amount_currency, Types::CurrencyEnum, null: false
-      field :vat_amount_currency, Types::CurrencyEnum, null: false
     end
   end
 end

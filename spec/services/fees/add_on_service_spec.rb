@@ -24,8 +24,8 @@ RSpec.describe Fees::AddOnService do
         expect(created_fee.applied_add_on_id).to eq(applied_add_on.id)
         expect(created_fee.amount_cents).to eq(200)
         expect(created_fee.amount_currency).to eq('EUR')
-        expect(created_fee.vat_amount_cents).to eq(40)
-        expect(created_fee.vat_rate).to eq(20.0)
+        expect(created_fee.taxes_amount_cents).to eq(40)
+        expect(created_fee.taxes_rate).to eq(20.0)
         expect(created_fee.units).to eq(1)
         expect(created_fee.events_count).to be_nil
         expect(created_fee.payment_status).to eq('pending')

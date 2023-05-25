@@ -9,7 +9,7 @@ RSpec.describe Credits::AppliedCouponsService do
     create(
       :invoice,
       fees_amount_cents: 100,
-      sub_total_vat_excluded_amount_cents: 100,
+      sub_total_excluding_taxes_amount_cents: 100,
       currency: 'EUR',
       customer: subscription.customer,
     )
@@ -66,7 +66,7 @@ RSpec.describe Credits::AppliedCouponsService do
       aggregate_failures do
         expect(result).to be_success
         expect(result.invoice.coupons_amount_cents).to eq(30)
-        expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(70)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
         expect(result.invoice.credits.count).to eq(2)
       end
     end
@@ -90,7 +90,7 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.coupons_amount_cents).to eq(30)
-          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(70)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -113,7 +113,7 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.coupons_amount_cents).to eq(35)
-          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(65)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(65)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -175,7 +175,7 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.coupons_amount_cents).to eq(0)
-          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
           expect(result.invoice.credits.count).to be_zero
         end
       end
@@ -217,7 +217,7 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.coupons_amount_cents).to eq(20)
-          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(80)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(80)
           expect(result.invoice.credits.count).to eq(1)
         end
       end
@@ -259,7 +259,7 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.coupons_amount_cents).to eq(30)
-          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(70)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -312,8 +312,7 @@ RSpec.describe Credits::AppliedCouponsService do
           charge:,
           amount_cents: 12,
           amount_currency: 'EUR',
-          vat_amount_cents: 3,
-          vat_amount_currency: 'EUR',
+          taxes_amount_cents: 3,
         )
       end
       let(:fee) do
@@ -323,8 +322,7 @@ RSpec.describe Credits::AppliedCouponsService do
           subscription:,
           amount_cents: 75,
           amount_currency: 'EUR',
-          vat_amount_cents: 5,
-          vat_amount_currency: 'EUR',
+          taxes_amount_cents: 5,
         )
       end
 
@@ -343,7 +341,7 @@ RSpec.describe Credits::AppliedCouponsService do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.coupons_amount_cents).to eq(80)
-          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(20)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(20)
           expect(result.invoice.credits.count).to eq(2)
         end
       end

@@ -20,8 +20,11 @@ class Fee < ApplicationRecord
   has_many :credit_note_items
   has_many :credit_notes, through: :credit_note_items
 
+  has_many :fees_taxes
+  has_many :taxes, through: :fees_taxes
+
   monetize :amount_cents
-  monetize :vat_amount_cents
+  monetize :taxes_amount_cents
   monetize :total_amount_cents
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true
 
@@ -33,7 +36,6 @@ class Fee < ApplicationRecord
   enum payment_status: PAYMENT_STATUS
 
   validates :amount_currency, inclusion: { in: currency_list }
-  validates :vat_amount_currency, inclusion: { in: currency_list }
   validates :units, numericality: { greated_than_or_equal_to: 0 }
   validates :events_count, numericality: { greated_than_or_equal_to: 0 }, allow_nil: true
   validates :true_up_fee_id, presence: false, unless: :charge?
@@ -51,8 +53,7 @@ class Fee < ApplicationRecord
         }
 
   def compute_vat
-    self.vat_amount_cents = (amount_cents * vat_rate).fdiv(100).round
-    self.vat_amount_currency = amount_currency
+    self.taxes_amount_cents = (amount_cents * taxes_rate).fdiv(100).round
   end
 
   def item_id
@@ -92,7 +93,7 @@ class Fee < ApplicationRecord
   end
 
   def total_amount_cents
-    amount_cents + vat_amount_cents
+    amount_cents + taxes_amount_cents
   end
   alias total_amount_currency currency
 

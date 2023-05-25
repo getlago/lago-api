@@ -21,9 +21,9 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             paymentStatus
             totalAmountCents
             feesAmountCents
-            vatAmountCents
-            subTotalVatExcludedAmountCents
-            subTotalVatIncludedAmountCents
+            taxesAmountCents
+            subTotalExcludingTaxesAmountCents
+            subTotalIncludingTaxesAmountCents
             couponsAmountCents
             creditNotesAmountCents
           }
@@ -36,18 +36,14 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
             creditStatus
             reason
             totalAmountCents
-            totalAmountCurrency
             creditAmountCents
-            creditAmountCurrency
             balanceAmountCents
-            balanceAmountCurrency
             refundAmountCents
-            refundAmountCurrency
             items {
               id
               amountCents
               amountCurrency
-              fee { id amountCents amountCurrency itemType itemCode itemName vatRate units eventsCount }
+              fee { id amountCents amountCurrency itemType itemCode itemName taxesRate units eventsCount }
             }
           }
         }

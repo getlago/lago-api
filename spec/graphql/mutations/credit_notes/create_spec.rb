@@ -18,7 +18,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
       payment_status: 'succeeded',
       currency: 'EUR',
       fees_amount_cents: 100,
-      vat_amount_cents: 120,
+      taxes_amount_cents: 120,
       total_amount_cents: 120,
     )
   end
@@ -32,14 +32,11 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
           refundStatus
           reason
           description
+          currency
           totalAmountCents
-          totalAmountCurrency
           creditAmountCents
-          creditAmountCurrency
           balanceAmountCents
-          balanceAmountCurrency
           refundAmountCents
-          refundAmountCurrency
           items {
             id
             amountCents
@@ -87,14 +84,11 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
       expect(result_data['refundStatus']).to eq('pending')
       expect(result_data['reason']).to eq('duplicated_charge')
       expect(result_data['description']).to eq('Duplicated charge')
+      expect(result_data['currency']).to eq('EUR')
       expect(result_data['totalAmountCents']).to eq('15')
-      expect(result_data['totalAmountCurrency']).to eq('EUR')
       expect(result_data['creditAmountCents']).to eq('10')
-      expect(result_data['creditAmountCurrency']).to eq('EUR')
       expect(result_data['balanceAmountCents']).to eq('10')
-      expect(result_data['balanceAmountCurrency']).to eq('EUR')
       expect(result_data['refundAmountCents']).to eq('5')
-      expect(result_data['refundAmountCurrency']).to eq('EUR')
 
       expect(result_data['items'][0]['id']).to be_present
       expect(result_data['items'][0]['amountCents']).to eq('10')
