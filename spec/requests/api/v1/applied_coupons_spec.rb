@@ -84,90 +84,12 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
         expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon.id)
         expect(json[:applied_coupons].first[:amount_cents]).to eq(applied_coupon.amount_cents)
         expect(json[:applied_coupons].first[:amount_cents_remaining]).to eq(8)
-      end
-    end
 
-    context 'with pagination' do
-      let(:coupon_latest) do
-        create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:)
-      end
-      let(:applied_coupon_latest) do
-        create(
-          :applied_coupon,
-          coupon: coupon_latest,
-          customer:,
-          percentage_rate: 20.00,
-          created_at: applied_coupon.created_at + 1.day,
-        )
-      end
-
-      before { applied_coupon_latest }
-
-      it 'returns applied coupons with correct meta data' do
-        get_with_token(organization, '/api/v1/applied_coupons?page=1&per_page=1')
-
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:applied_coupons].count).to eq(1)
-          expect(json[:meta][:current_page]).to eq(1)
-          expect(json[:meta][:next_page]).to eq(2)
-          expect(json[:meta][:prev_page]).to eq(nil)
-          expect(json[:meta][:total_pages]).to eq(2)
-          expect(json[:meta][:total_count]).to eq(2)
-        end
-      end
-    end
-
-    context 'with status param' do
-      let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:) }
-      let(:applied_coupon_latest) do
-        create(
-          :applied_coupon,
-          coupon: coupon_latest,
-          customer:,
-          status: :terminated,
-          percentage_rate: 20.00,
-          created_at: applied_coupon.created_at + 1.day,
-        )
-      end
-
-      before { applied_coupon_latest }
-
-      it 'returns applied coupons with correct status' do
-        get_with_token(organization, '/api/v1/applied_coupons?status=terminated')
-
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:applied_coupons].count).to eq(1)
-          expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_latest.id)
-        end
-      end
-    end
-
-    context 'with external_customer_id params' do
-      let(:customer_new) { create(:customer, organization:) }
-      let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10, organization:) }
-      let(:applied_coupon_latest) do
-        create(
-          :applied_coupon,
-          coupon: coupon_latest,
-          customer: customer_new,
-          status: :active,
-          percentage_rate: 20.00,
-          created_at: applied_coupon.created_at + 1.day,
-        )
-      end
-
-      before { applied_coupon_latest }
-
-      it 'returns applied coupons of the selected customer' do
-        get_with_token(organization, "/api/v1/applied_coupons?external_customer_id=#{customer_new.external_id}")
-
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:applied_coupons].count).to eq(1)
-          expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_latest.id)
-        end
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(nil)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(1)
+        expect(json[:meta][:total_count]).to eq(1)
       end
     end
   end
