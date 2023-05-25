@@ -16,17 +16,21 @@ RSpec.describe Api::V1::FeesController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        expect(json[:fee][:lago_id]).to eq(fee.id)
-        expect(json[:fee][:lago_group_id]).to eq(fee.group_id)
-        expect(json[:fee][:item][:type]).to eq(fee.fee_type)
-        expect(json[:fee][:item][:code]).to eq(fee.item_code)
-        expect(json[:fee][:item][:name]).to eq(fee.item_name)
-        expect(json[:fee][:amount_cents]).to eq(fee.amount_cents)
-        expect(json[:fee][:amount_currency]).to eq(fee.amount_currency)
-        expect(json[:fee][:taxes_amount_cents]).to eq(fee.taxes_amount_cents)
-        expect(json[:fee][:vat_amount_cents]).to eq(fee.taxes_amount_cents)
-        expect(json[:fee][:units]).to eq(fee.units.to_s)
-        expect(json[:fee][:events_count]).to eq(fee.events_count)
+        expect(json[:fee]).to include(
+          lago_id: fee.id,
+          lago_group_id: fee.group_id,
+          amount_cents: fee.amount_cents,
+          amount_currency: fee.amount_currency,
+          taxes_amount_cents: fee.taxes_amount_cents,
+          units: fee.units.to_s,
+          events_count: fee.events_count,
+          taxes: [],
+        )
+        expect(json[:fee][:item]).to include(
+          type: fee.fee_type,
+          code: fee.item_code,
+          name: fee.item_name,
+        )
       end
     end
 
@@ -48,6 +52,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
             taxes_amount_cents: fee.taxes_amount_cents,
             units: fee.units.to_s,
             events_count: fee.events_count,
+            taxes: [],
           )
           expect(json[:fee][:item]).to include(
             type: fee.fee_type,
@@ -104,6 +109,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
           succeeded_at: fee.succeeded_at&.iso8601,
           failed_at: fee.failed_at&.iso8601,
           refunded_at: fee.refunded_at&.iso8601,
+          taxes: [],
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,
