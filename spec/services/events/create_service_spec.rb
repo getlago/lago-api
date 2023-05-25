@@ -398,8 +398,8 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'when event matches an instant charge' do
-      let(:charge) { create(:standard_charge, :instant, plan:, billable_metric:) }
+    context 'when event matches an pay_in_advance charge' do
+      let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
       let(:billable_metric) do
         create(
           :billable_metric,
@@ -422,7 +422,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       before { charge }
 
-      it 'enqueues a job to perform the instant aggregation' do
+      it 'enqueues a job to perform the pay_in_advance aggregation' do
         expect do
           create_service.call(
             organization:,
@@ -430,11 +430,11 @@ RSpec.describe Events::CreateService, type: :service do
             timestamp:,
             metadata: {},
           )
-        end.to have_enqueued_job(Fees::CreateInstantJob)
+        end.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
       end
 
       context 'when multiple charges have the billable metric' do
-        before { create(:standard_charge, :instant, plan:, billable_metric:) }
+        before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
         it 'enqueues a job for each charge' do
           expect do
@@ -444,7 +444,7 @@ RSpec.describe Events::CreateService, type: :service do
               timestamp:,
               metadata: {},
             )
-          end.to have_enqueued_job(Fees::CreateInstantJob).twice
+          end.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
         end
       end
     end

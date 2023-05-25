@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV['RAILS_ENV'] = 'test'
 require_relative '../config/environment'
@@ -40,6 +42,7 @@ end
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include GraphQLHelper, type: :graphql
+  config.include AdminHelper, type: :request
   config.include ApiHelper, type: :request
   config.include ScenariosHelper
   config.include LicenseHelper

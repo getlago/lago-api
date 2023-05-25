@@ -14,14 +14,14 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     let(:update_args) do
       {
         name: 'new name',
-        subscription_at: subscription_at,
+        subscription_at:,
       }
     end
 
     before { subscription }
 
     it 'updates the subscription' do
-      result = update_service.update(subscription: subscription, args: update_args)
+      result = update_service.update(subscription:, args: update_args)
 
       expect(result).to be_success
 
@@ -39,7 +39,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
 
       it 'updates the subscription' do
-        result = update_service.update(subscription: subscription, args: update_args)
+        result = update_service.update(subscription:, args: update_args)
 
         expect(result).to be_success
 
@@ -54,7 +54,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       let(:subscription) { create(:pending_subscription) }
 
       it 'updates the subscription_at as well' do
-        result = update_service.update(subscription: subscription, args: update_args)
+        result = update_service.update(subscription:, args: update_args)
 
         expect(result).to be_success
 
@@ -70,7 +70,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         before { subscription.plan.update!(pay_in_advance: true) }
 
         it 'activates subscription' do
-          result = update_service.update(subscription: subscription, args: update_args)
+          result = update_service.update(subscription:, args: update_args)
 
           expect(result).to be_success
 
@@ -82,7 +82,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
         it 'enqueues a job to bill the subscription' do
           expect do
-            update_service.update(subscription: subscription, args: update_args)
+            update_service.update(subscription:, args: update_args)
           end.to have_enqueued_job(BillSubscriptionJob)
         end
       end

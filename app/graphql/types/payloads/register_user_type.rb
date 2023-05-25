@@ -3,10 +3,10 @@
 module Types
   module Payloads
     class RegisterUserType < Types::BaseObject
-      field :user, Types::UserType, null: false
-      field :organization, Types::OrganizationType, null: false
       field :membership, Types::MembershipType, null: false
+      field :organization, Types::OrganizationType, null: false
       field :token, String, null: false
+      field :user, Types::UserType, null: false
     end
   end
 end

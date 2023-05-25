@@ -4,17 +4,17 @@ require 'rails_helper'
 
 RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
-    described_class.new(wallet_transaction: wallet_transaction, timestamp: timestamp)
+    described_class.new(wallet_transaction:, timestamp:)
   end
 
   let(:timestamp) { Time.current.to_i }
 
   describe 'create' do
     let(:customer) { create(:customer) }
-    let(:subscription) { create(:subscription, customer: customer) }
-    let(:wallet) { create(:wallet, customer: customer) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, wallet: wallet, amount: '15.00', credit_amount: '15.00')
+      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
     end
 
     before do
@@ -29,18 +29,18 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       aggregate_failures do
         expect(result).to be_success
 
-        expect(result.invoice.issuing_date).to eq(Time.zone.at(timestamp).to_date)
-        expect(result.invoice.invoice_type).to eq('credit')
-        expect(result.invoice.payment_status).to eq('pending')
-
-        expect(result.invoice.fees_amount_cents).to eq(1500)
-        expect(result.invoice.amount_cents).to eq(1500)
-        expect(result.invoice.amount_currency).to eq('EUR')
-        expect(result.invoice.vat_amount_cents).to eq(0)
-        expect(result.invoice.vat_amount_currency).to eq('EUR')
-        expect(result.invoice.vat_rate).to eq(0)
-        expect(result.invoice.total_amount_cents).to eq(1500)
-        expect(result.invoice.total_amount_currency).to eq('EUR')
+        expect(result.invoice).to have_attributes(
+          issuing_date: Time.zone.at(timestamp).to_date,
+          invoice_type: 'credit',
+          payment_status: 'pending',
+          currency: 'EUR',
+          fees_amount_cents: 1500,
+          sub_total_vat_excluded_amount_cents: 1500,
+          vat_amount_cents: 0,
+          vat_rate: 0,
+          sub_total_vat_included_amount_cents: 1500,
+          total_amount_cents: 1500,
+        )
 
         expect(result.invoice).to be_finalized
       end

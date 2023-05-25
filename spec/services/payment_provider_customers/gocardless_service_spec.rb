@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
   subject(:gocardless_service) { described_class.new(gocardless_customer) }
 
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
   let(:gocardless_provider) { create(:gocardless_provider) }
   let(:organization) { gocardless_provider.organization }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
@@ -14,7 +14,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
   let(:gocardless_billing_request_flow_service) { instance_double(GoCardlessPro::Services::BillingRequestFlowsService) }
 
   let(:gocardless_customer) do
-    create(:gocardless_customer, customer: customer, provider_customer_id: nil)
+    create(:gocardless_customer, customer:, provider_customer_id: nil)
   end
 
   describe '.create' do
@@ -52,7 +52,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
 
     context 'when customer already have a gocardless customer id' do
       let(:gocardless_customer) do
-        create(:gocardless_customer, customer: customer, provider_customer_id: 'cus_123456')
+        create(:gocardless_customer, customer:, provider_customer_id: 'cus_123456')
       end
 
       it 'does not call gocardless API' do

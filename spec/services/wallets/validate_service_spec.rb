@@ -8,17 +8,17 @@ RSpec.describe Wallets::ValidateService, type: :service do
   let(:result) { BaseService::Result.new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
   let(:customer_id) { customer.external_id }
   let(:paid_credits) { '1.00' }
   let(:granted_credits) { '0.00' }
   let(:args) do
     {
-      customer: customer,
+      customer:,
       organization_id: organization.id,
-      paid_credits: paid_credits,
-      granted_credits: granted_credits,
+      paid_credits:,
+      granted_credits:,
     }
   end
 
@@ -34,8 +34,8 @@ RSpec.describe Wallets::ValidateService, type: :service do
         {
           customer: nil,
           organization_id: organization.id,
-          paid_credits: paid_credits,
-          granted_credits: granted_credits,
+          paid_credits:,
+          granted_credits:,
         }
       end
 
@@ -46,7 +46,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
     end
 
     context 'when customer already has a wallet' do
-      before { create(:wallet, customer: customer) }
+      before { create(:wallet, customer:) }
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid

@@ -220,6 +220,32 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
 
+      context 'with provider customer' do
+        let(:payment_provider) { create(:stripe_provider) }
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider:) }
+
+        before do
+          stripe_customer
+          customer.update!(payment_provider: 'stripe')
+        end
+
+        it 'updates the customer' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.customer).to eq(customer)
+            expect(result.customer.name).to eq(create_args[:name])
+            expect(result.customer.external_id).to eq(create_args[:external_id])
+            expect(result.customer.vat_rate).to eq(create_args[:billing_configuration][:vat_rate])
+            expect(result.customer.document_locale).to eq(create_args[:billing_configuration][:document_locale])
+          end
+        end
+      end
+
       context 'with metadata' do
         let(:customer_metadata) { create(:customer_metadata, customer:) }
         let(:another_customer_metadata) { create(:customer_metadata, customer:, key: 'test', value: '1') }
@@ -720,7 +746,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     context 'when customer already exists' do
       let(:customer) do
-        create(:customer, organization: organization, external_id: create_args[:external_id])
+        create(:customer, organization:, external_id: create_args[:external_id])
       end
 
       before { customer }
@@ -750,7 +776,7 @@ RSpec.describe Customers::CreateService, type: :service do
       before do
         create(
           :stripe_provider,
-          organization: organization,
+          organization:,
         )
       end
 
@@ -785,7 +811,7 @@ RSpec.describe Customers::CreateService, type: :service do
       before do
         create(
           :gocardless_provider,
-          organization: organization,
+          organization:,
         )
       end
 

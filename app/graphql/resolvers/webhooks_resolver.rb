@@ -7,10 +7,10 @@ module Resolvers
 
     description 'Query Webhooks'
 
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
-    argument :status, Types::Webhooks::StatusEnum, required: false
+    argument :page, Integer, required: false
     argument :search_term, String, required: false
+    argument :status, Types::Webhooks::StatusEnum, required: false
 
     type Types::Webhooks::Object.collection_type, null: false
 

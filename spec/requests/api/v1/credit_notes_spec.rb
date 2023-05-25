@@ -14,12 +14,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       organization:,
       customer:,
       payment_status: 'succeeded',
-      amount_cents: 100,
-      amount_currency: 'EUR',
+      currency: 'EUR',
+      fees_amount_cents: 100,
       vat_amount_cents: 120,
-      vat_amount_currency: 'EUR',
       total_amount_cents: 120,
-      total_amount_currency: 'EUR',
     )
   end
 

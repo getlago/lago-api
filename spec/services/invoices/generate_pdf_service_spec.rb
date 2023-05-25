@@ -103,15 +103,6 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
 
         expect(result.invoice.file).to be_present
       end
-
-      context 'with preferred locale' do
-        before { customer.update!(document_locale: 'fr') }
-
-        it 'sets the correct document locale' do
-          expect { invoice_generate_service.call }
-            .to change(I18n, :locale).from(:en).to(:fr)
-        end
-      end
     end
 
     context 'when in API context' do
@@ -119,6 +110,24 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
 
       it 'calls the SendWebhook job' do
         expect { invoice_generate_service.call }.to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
+    context 'when in Admin context' do
+      let(:context) { 'admin' }
+
+      before do
+        invoice.file.attach(
+          io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
+          filename: 'invoice.pdf',
+          content_type: 'application/pdf',
+        )
+      end
+
+      it 'generates the invoice synchronously' do
+        result = invoice_generate_service.call
+
+        expect(result.invoice.file.filename.to_s).not_to eq('invoice.pdf')
       end
     end
   end

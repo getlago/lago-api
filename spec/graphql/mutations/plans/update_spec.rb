@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::Plans::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization: organization) }
+  let(:plan) { create(:plan, organization:) }
   let(:mutation) do
     <<~GQL
       mutation($input: UpdatePlanInput!) {
@@ -53,7 +53,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
   end
 
   let(:billable_metrics) do
-    create_list(:billable_metric, 5, organization: organization)
+    create_list(:billable_metric, 5, organization:)
   end
 
   let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }

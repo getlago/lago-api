@@ -20,8 +20,8 @@ module CreditNotes
         gocardless_result = create_gocardless_refund
 
         refund = Refund.new(
-          credit_note: credit_note,
-          payment: payment,
+          credit_note:,
+          payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment.payment_provider_customer,
           amount_cents: gocardless_result.amount,
@@ -39,14 +39,14 @@ module CreditNotes
       end
 
       def update_status(provider_refund_id:, status:)
-        refund = Refund.find_by(provider_refund_id: provider_refund_id)
+        refund = Refund.find_by(provider_refund_id:)
         return result.not_found_failure!(resource: 'gocardless_refund') unless refund
 
         result.refund = refund
         @credit_note = result.credit_note = refund.credit_note
         return result if refund.credit_note.succeeded?
 
-        refund.update!(status: status)
+        refund.update!(status:)
         update_credit_note_status(credit_note_status(refund.status))
         track_refund_status_changed(status)
 
@@ -120,7 +120,7 @@ module CreditNotes
           credit_note,
           provider_customer_id: customer.gocardless_customer.provider_customer_id,
           provider_error: {
-            message: message,
+            message:,
             error_code: code,
           },
         )

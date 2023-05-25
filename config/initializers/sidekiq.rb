@@ -11,11 +11,11 @@ end
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
+  config.logger = Rails.logger
+  config[:max_retries] = 0
 end
 
 Sidekiq.configure_client do |config|
   config.redis = redis_config
+  config.logger = Rails.logger
 end
-
-Sidekiq.logger = Rails.logger
-Sidekiq.options[:max_retries] = 0

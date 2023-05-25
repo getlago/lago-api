@@ -10,7 +10,7 @@ module CreditNotes
       valid_global_amount?
 
       if errors?
-        result.validation_failure!(errors: errors)
+        result.validation_failure!(errors:)
         return false
       end
 

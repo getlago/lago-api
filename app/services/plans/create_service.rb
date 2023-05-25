@@ -14,7 +14,7 @@ module Plans
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         trial_period: args[:trial_period],
-        bill_charges_monthly: args[:interval]&.to_sym == :yearly ? args[:bill_charges_monthly] || false : nil,
+        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil,
       )
 
       # Validates billable metrics
@@ -49,7 +49,7 @@ module Plans
       )
 
       if License.premium?
-        charge.instant = args[:instant] || false
+        charge.pay_in_advance = args[:pay_in_advance] || false
         charge.min_amount_cents = args[:min_amount_cents] || 0
       end
 

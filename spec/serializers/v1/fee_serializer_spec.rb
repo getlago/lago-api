@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::FeeSerializer do
-  subject(:serializer) { described_class.new(fee, root_name: 'fee') }
+  subject(:serializer) { described_class.new(fee, root_name: 'fee', includes: inclusion) }
 
   let(:fee) do
     create(
@@ -15,6 +15,7 @@ RSpec.describe ::V1::FeeSerializer do
     )
   end
 
+  let(:inclusion) { [] }
   let(:result) { JSON.parse(serializer.to_json) }
 
   it 'serializes the fee' do
@@ -22,6 +23,9 @@ RSpec.describe ::V1::FeeSerializer do
       expect(result['fee']).to include(
         'lago_id' => fee.id,
         'lago_group_id' => fee.group_id,
+        'lago_invoice_id' => fee.invoice_id,
+        'lago_true_up_fee_id' => fee.true_up_fee&.id,
+        'lago_true_up_parent_fee_id' => fee.true_up_parent_fee_id,
         'amount_cents' => fee.amount_cents,
         'amount_currency' => fee.amount_currency,
         'vat_amount_cents' => fee.vat_amount_cents,
@@ -70,12 +74,47 @@ RSpec.describe ::V1::FeeSerializer do
   end
 
   context 'when fee is add_on' do
-    let(:add_on) { create(:add_on) }
-    let(:fee) { create(:fee, fee_type: 'add_on', add_on:) }
+    let(:fee) { create(:add_on_fee) }
 
     it 'does not serializes the fees with date boundaries' do
       expect(result['fee']['from_date']).to be_nil
       expect(result['fee']['to_date']).to be_nil
+    end
+  end
+
+  context 'when fee is one_off' do
+    let(:fee) { create(:one_off_fee) }
+
+    it 'does not serializes the fees with date boundaries' do
+      expect(result['fee']['from_date']).to be_nil
+      expect(result['fee']['to_date']).to be_nil
+    end
+  end
+
+  context 'when pay_in_advance attributes are included' do
+    let(:inclusion) { %i[pay_in_advance] }
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, customer:, organization:, plan:) }
+    let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
+    let(:event) { create(:event, subscription:, organization:, customer:) }
+
+    let(:fee) do
+      create(:fee, fee_type: 'charge', pay_in_advance: true, subscription:, charge:, pay_in_advance_event_id: event.id)
+    end
+
+    it 'serializes the pay_in_advance charge attributes' do
+      aggregate_failures do
+        expect(result['fee']).to include(
+          'lago_subscription_id' => subscription.id,
+          'external_subscription_id' => subscription.external_id,
+          'lago_customer_id' => customer.id,
+          'external_customer_id' => customer.external_id,
+          'event_transaction_id' => event.transaction_id,
+        )
+      end
     end
   end
 end

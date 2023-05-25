@@ -15,8 +15,8 @@ module Mutations
 
       def resolve(id:, vat_rate:)
         result = ::Customers::UpdateService.new(context[:current_user]).update(
-          id: id,
-          vat_rate: vat_rate,
+          id:,
+          vat_rate:,
         )
 
         result.success? ? result.customer : result_error(result)

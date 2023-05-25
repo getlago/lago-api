@@ -9,10 +9,10 @@ module Subscriptions
       @plan = plan
       @params = params
 
-      @name = params[:name]&.strip
+      @name = params[:name].to_s.strip
       @subscription_at = params[:subscription_at] || Time.current
       @billing_time = params[:billing_time]
-      @external_id = params[:external_id]&.strip
+      @external_id = params[:external_id].to_s.strip
 
       @current_subscription = if api_context?
         editable_subscriptions&.find_by(external_id:)
@@ -213,7 +213,7 @@ module Subscriptions
           customer_id: subscription.customer_id,
           plan_code: subscription.plan.code,
           plan_name: subscription.plan.name,
-          subscription_type: subscription_type,
+          subscription_type:,
           organization_id: subscription.organization.id,
           billing_time: subscription.billing_time,
         },

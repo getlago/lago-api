@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Credits::CreditNoteService do
   subject(:credit_service) do
     described_class.new(
-      invoice: invoice,
+      invoice:,
       credit_notes: [credit_note1, credit_note2],
     )
   end
@@ -13,11 +13,9 @@ RSpec.describe Credits::CreditNoteService do
   let(:invoice) do
     create(
       :invoice,
-      customer: customer,
-      amount_cents: amount_cents,
-      amount_currency: 'EUR',
+      customer:,
+      currency: 'EUR',
       total_amount_cents: amount_cents,
-      total_amount_currency: 'EUR',
     )
   end
 
@@ -30,7 +28,7 @@ RSpec.describe Credits::CreditNoteService do
       total_amount_cents: 20,
       balance_amount_cents: 20,
       credit_amount_cents: 20,
-      customer: customer,
+      customer:,
     )
   end
 
@@ -40,7 +38,7 @@ RSpec.describe Credits::CreditNoteService do
       total_amount_cents: 50,
       balance_amount_cents: 50,
       credit_amount_cents: 50,
-      customer: customer,
+      customer:,
     )
   end
 

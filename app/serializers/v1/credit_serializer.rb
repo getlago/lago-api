@@ -7,6 +7,7 @@ module V1
         lago_id: model.id,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
+        before_vat: model.before_vat,
         item: {
           lago_id: model.item_id,
           type: model.item_type,

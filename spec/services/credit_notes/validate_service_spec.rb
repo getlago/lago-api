@@ -8,7 +8,6 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
   let(:result) { BaseService::Result.new }
   let(:amount_cents) { 10 }
   let(:credit_amount_cents) { 12 }
-  let(:item_amount_cents) { 10 }
   let(:refund_amount_cents) { 0 }
   let(:credit_note) do
     create(
@@ -17,6 +16,8 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       customer:,
       credit_amount_cents:,
       refund_amount_cents:,
+      precise_coupons_adjustment_amount_cents: 0,
+      precise_vat_amount_cents: 2,
     )
   end
   let(:item) do
@@ -29,7 +30,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120, amount_cents: 100) }
+  let(:invoice) { create(:invoice, total_amount_cents: 120) }
   let(:customer) { invoice.customer }
 
   let(:fee) do
@@ -161,6 +162,63 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:base]).to eq(['higher_than_remaining_invoice_amount'])
+        end
+      end
+    end
+
+    context 'when invoice is v3 with coupons' do
+      let(:invoice) do
+        create(
+          :invoice,
+          currency: 'EUR',
+          fees_amount_cents: 100,
+          coupons_amount_cents: 10,
+          vat_amount_cents: 18,
+          total_amount_cents: 108,
+          payment_status: :succeeded,
+          vat_rate: 20,
+          version_number: 3,
+        )
+      end
+
+      let(:amount_cents) { 20 }
+      let(:credit_amount_cents) { 22 }
+      let(:refund_amount_cents) { 0 }
+      let(:credit_note) do
+        create(
+          :credit_note,
+          invoice:,
+          customer:,
+          credit_amount_cents:,
+          refund_amount_cents:,
+          precise_coupons_adjustment_amount_cents: 2,
+          precise_vat_amount_cents: 3.6,
+        )
+      end
+      let(:item) do
+        create(
+          :credit_note_item,
+          credit_note:,
+          amount_cents:,
+          precise_amount_cents: amount_cents,
+          fee:,
+        )
+      end
+
+      it 'validates the credit_note' do
+        expect(validator).to be_valid
+      end
+
+      context 'when amount does not matches items' do
+        let(:amount_cents) { 1 }
+
+        it 'fails the validation' do
+          aggregate_failures do
+            expect(validator).not_to be_valid
+
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:base]).to eq(['does_not_match_item_amounts'])
+          end
         end
       end
     end

@@ -11,9 +11,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
         :invoice,
         :draft,
         subscriptions: [subscription],
-        amount_currency: 'EUR',
-        vat_amount_currency: 'EUR',
-        total_amount_currency: 'EUR',
+        currency: 'EUR',
         issuing_date: Time.zone.at(timestamp).to_date,
       )
     end

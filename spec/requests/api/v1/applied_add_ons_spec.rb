@@ -4,12 +4,12 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::AppliedAddOnsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:add_on) { create(:add_on, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:add_on) { create(:add_on, organization:) }
 
   describe 'create' do
     before do
-      create(:active_subscription, customer: customer)
+      create(:active_subscription, customer:)
     end
 
     let(:params) do

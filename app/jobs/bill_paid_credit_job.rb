@@ -7,8 +7,8 @@ class BillPaidCreditJob < ApplicationJob
 
   def perform(wallet_transaction, timestamp)
     result = Invoices::PaidCreditService.new(
-      wallet_transaction: wallet_transaction,
-      timestamp: timestamp,
+      wallet_transaction:,
+      timestamp:,
     ).create
 
     result.raise_if_error!

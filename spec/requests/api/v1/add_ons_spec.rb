@@ -12,7 +12,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         code: 'add_on1_code',
         amount_cents: 123,
         amount_currency: 'EUR',
-        description: 'description'
+        description: 'description',
       }
     end
 
@@ -29,12 +29,12 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
   end
 
   describe 'update' do
-    let(:add_on) { create(:add_on, organization: organization) }
+    let(:add_on) { create(:add_on, organization:) }
     let(:code) { 'add_on_code' }
     let(:update_params) do
       {
         name: 'add_on1',
-        code: code,
+        code:,
         amount_cents: 123,
         amount_currency: 'EUR',
         description: 'description',
@@ -62,7 +62,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     context 'when add-on code already exists in organization scope (validation error)' do
-      let(:add_on2) { create(:add_on, organization: organization) }
+      let(:add_on2) { create(:add_on, organization:) }
       let(:code) { add_on2.code }
 
       before { add_on2 }
@@ -80,7 +80,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
   end
 
   describe 'show' do
-    let(:add_on) { create(:add_on, organization: organization) }
+    let(:add_on) { create(:add_on, organization:) }
 
     it 'returns a add-on' do
       get_with_token(
@@ -103,7 +103,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
   end
 
   describe 'destroy' do
-    let(:add_on) { create(:add_on, organization: organization) }
+    let(:add_on) { create(:add_on, organization:) }
 
     before { add_on }
 
@@ -130,7 +130,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
   end
 
   describe 'index' do
-    let(:add_on) { create(:add_on, organization: organization) }
+    let(:add_on) { create(:add_on, organization:) }
 
     before { add_on }
 
@@ -144,7 +144,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:add_on2) { create(:add_on, organization: organization) }
+      let(:add_on2) { create(:add_on, organization:) }
 
       before { add_on2 }
 

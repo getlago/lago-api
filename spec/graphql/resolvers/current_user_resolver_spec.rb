@@ -23,7 +23,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
 
     result = execute_graphql(
       current_user: user,
-      query: query
+      query:,
     )
 
     aggregate_failures do
@@ -44,7 +44,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
     it 'only lists organizations when membership has an active status' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
       )
 
       expect(result['data']['currentUser']['organizations']).not_to include(revoked_membership.organization)
@@ -53,7 +53,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
 
   context 'with no current_user' do
     it 'returns an error' do
-      result = execute_graphql(query: query)
+      result = execute_graphql(query:)
 
       expect_unauthorized_error(result)
     end

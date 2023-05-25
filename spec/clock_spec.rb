@@ -15,8 +15,8 @@ describe Clockwork do
     it 'enqueue a subscription biller job' do
       Clockwork::Test.run(
         file: clock_file,
-        start_time: start_time,
-        end_time: end_time,
+        start_time:,
+        end_time:,
         tick_speed: 1.second,
       )
 
@@ -36,8 +36,8 @@ describe Clockwork do
     it 'enqueue a activate subscriptions job' do
       Clockwork::Test.run(
         file: clock_file,
-        start_time: start_time,
-        end_time: end_time,
+        start_time:,
+        end_time:,
         tick_speed: 1.second,
       )
 

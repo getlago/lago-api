@@ -8,8 +8,8 @@ module Resolvers
     description 'Query add-ons of an organization'
 
     argument :ids, [ID], required: false, description: 'List of add-ons IDs to fetch'
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
     argument :search_term, String, required: false
 
     type Types::AddOns::Object.collection_type, null: false

@@ -8,7 +8,7 @@ module WalletTransactions
       valid_granted_credits_amount? if args[:granted_credits]
 
       if errors?
-        result.validation_failure!(errors: errors)
+        result.validation_failure!(errors:)
         return false
       end
 

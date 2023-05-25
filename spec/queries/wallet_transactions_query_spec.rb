@@ -118,7 +118,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   context 'when wallet is not found' do
     it 'returns not found error' do
       result = wallet_transactions_query.call(
-        wallet_id: wallet.id + 'abc',
+        wallet_id: "#{wallet.id}abc",
         page: 1,
         limit: 10,
         filters: {},

@@ -9,10 +9,10 @@ module Invoices
 
       if organization_id.present?
         @organization_id = organization_id
-        @customer = Customer.find_by!(external_id: customer_id, organization_id: organization_id)
+        @customer = Customer.find_by!(external_id: customer_id, organization_id:)
         @subscription = @customer&.active_subscriptions&.find_by(external_id: subscription_id)
       else
-        customer(customer_id: customer_id)
+        customer(customer_id:)
         @subscription = @customer&.active_subscriptions&.find_by(id: subscription_id)
       end
     rescue ActiveRecord::RecordNotFound
@@ -38,9 +38,7 @@ module Invoices
           organization: subscription.organization,
           customer: subscription.customer,
           issuing_date: boundaries[:issuing_date],
-          amount_currency: plan.amount_currency,
-          vat_amount_currency: plan.amount_currency,
-          total_amount_currency: plan.amount_currency,
+          currency: plan.amount_currency,
         )
 
         add_charge_fees
@@ -97,9 +95,9 @@ module Invoices
     end
 
     def compute_amounts
-      invoice.amount_cents = invoice.fees.sum(&:amount_cents)
+      invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
       invoice.vat_amount_cents = invoice.fees.sum { |f| f.amount_cents * f.vat_rate }.fdiv(100).round
-      invoice.total_amount_cents = invoice.amount_cents + invoice.vat_amount_cents
+      invoice.total_amount_cents = invoice.fees_amount_cents + invoice.vat_amount_cents
     end
 
     def current_cache_key
@@ -139,12 +137,12 @@ module Invoices
         from_datetime: boundaries[:charges_from_datetime].iso8601,
         to_datetime: boundaries[:charges_to_datetime].iso8601,
         issuing_date: invoice.issuing_date.iso8601,
-        amount_cents: invoice.amount_cents,
-        amount_currency: invoice.amount_currency,
+        amount_cents: invoice.fees_amount_cents,
+        amount_currency: invoice.currency,
         total_amount_cents: invoice.total_amount_cents,
-        total_amount_currency: invoice.total_amount_currency,
+        total_amount_currency: invoice.currency,
         vat_amount_cents: invoice.vat_amount_cents,
-        vat_amount_currency: invoice.vat_amount_currency,
+        vat_amount_currency: invoice.currency,
         fees: invoice.fees.group_by(&:charge_id).map do |charge_id, fees|
           fee = fees.first
           {

@@ -9,31 +9,27 @@ module Credits
 
     def call
       return result if applied_coupons.blank?
+      return result if invoice.fees_amount_cents.zero?
 
       applied_coupons.each do |applied_coupon|
-        break unless invoice.amount_cents&.positive?
+        break unless invoice.fees_amount_cents&.positive?
         next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
 
-        base_amount_cents = if applied_coupon.coupon.limited_billable_metrics?
-          coupon_related_fees = billable_metric_related_fees(applied_coupon)
-          next unless coupon_related_fees.exists?
-
-          coupon_base_amount_cents(coupon_related_fees:)
+        fees = if applied_coupon.coupon.limited_billable_metrics?
+          billable_metric_related_fees(applied_coupon)
         elsif applied_coupon.coupon.limited_plans?
-          coupon_related_fees = plan_related_fees(applied_coupon)
-          next unless coupon_related_fees.exists?
-
-          coupon_base_amount_cents(coupon_related_fees:)
+          plan_related_fees(applied_coupon)
         else
-          invoice.total_amount_cents
+          invoice.fees
         end
+        next unless fees.exists?
 
+        base_amount_cents = fees.sum(:amount_cents)
         credit_result = Credits::AppliedCouponService.new(invoice:, applied_coupon:, base_amount_cents:).create
         credit_result.raise_if_error!
 
         invoice.coupons_amount_cents += credit_result.credit.amount_cents
-        invoice.credit_amount_cents += credit_result.credit.amount_cents
-        invoice.total_amount_cents -= credit_result.credit.amount_cents
+        invoice.sub_total_vat_excluded_amount_cents -= credit_result.credit.amount_cents
       end
 
       result.invoice = invoice
@@ -49,18 +45,16 @@ module Credits
     def applied_coupons
       return @applied_coupons if @applied_coupons
 
-      with_bm_limit = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_billable_metrics: true })
+      base_scope = customer
+        .applied_coupons.active
+        .joins(:coupon)
         .order(created_at: :asc)
-      with_plan_limit = customer.applied_coupons.active.joins(:coupon).where(coupon: { limited_plans: true })
-        .order(created_at: :asc)
+
+      with_bm_limit = base_scope.where(coupon: { limited_billable_metrics: true })
+      with_plan_limit = base_scope.where(coupon: { limited_plans: true })
       applied_to_all =
-        customer
-          .applied_coupons
-          .active
-          .joins(:coupon)
-          .where(coupon: { limited_plans: false })
+        base_scope.where(coupon: { limited_plans: false })
           .where(coupon: { limited_billable_metrics: false })
-          .order(created_at: :asc)
 
       @applied_coupons = with_bm_limit + with_plan_limit + applied_to_all
     end
@@ -74,17 +68,6 @@ module Credits
         .fees
         .joins(charge: :billable_metric)
         .where(billable_metric: { id: applied_coupon.coupon.coupon_targets.select(:billable_metric_id) })
-    end
-
-    def coupon_base_amount_cents(coupon_related_fees:)
-      fee_amounts = coupon_related_fees.select(:amount_cents, :vat_amount_cents)
-      fees_amount_cents = fee_amounts.sum(&:amount_cents)
-      fees_vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-      total_fees_amount_cents = fees_amount_cents + fees_vat_amount_cents
-
-      # In some cases when credit note is already applied sum from above
-      # can be greater than invoice total_amount_cents
-      (total_fees_amount_cents > invoice.total_amount_cents) ? invoice.total_amount_cents : total_fees_amount_cents
     end
   end
 end

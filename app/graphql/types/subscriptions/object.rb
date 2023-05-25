@@ -5,22 +5,22 @@ module Types
     class Object < Types::BaseObject
       graphql_name 'Subscription'
 
-      field :id, ID, null: false
-      field :external_id, String, null: false
       field :customer, Types::Customers::Object, null: false
+      field :external_id, String, null: false
+      field :id, ID, null: false
       field :plan, Types::Plans::Object, null: false
 
-      field :status, Types::Subscriptions::StatusTypeEnum
       field :name, String, null: true
       field :next_name, String, null: true
-      field :next_pending_start_date, GraphQL::Types::ISO8601Date
+      field :next_pending_start_date, GraphQL::Types::ISO8601Date, method: :downgrade_plan_date
       field :period_end_date, GraphQL::Types::ISO8601Date
+      field :status, Types::Subscriptions::StatusTypeEnum
 
       field :billing_time, Types::Subscriptions::BillingTimeEnum
-      field :subscription_at, GraphQL::Types::ISO8601DateTime
       field :canceled_at, GraphQL::Types::ISO8601DateTime
-      field :terminated_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
+      field :subscription_at, GraphQL::Types::ISO8601DateTime
+      field :terminated_at, GraphQL::Types::ISO8601DateTime
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -35,10 +35,6 @@ module Types
 
       def next_name
         object.next_subscription&.name
-      end
-
-      def next_pending_start_date
-        object.downgrade_plan_date
       end
 
       def period_end_date

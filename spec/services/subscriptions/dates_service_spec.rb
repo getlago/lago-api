@@ -8,14 +8,14 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   let(:subscription) do
     create(
       :subscription,
-      plan: plan,
-      subscription_at: subscription_at,
+      plan:,
+      subscription_at:,
       billing_time: :anniversary,
-      started_at: started_at,
+      started_at:,
     )
   end
 
-  let(:plan) { create(:plan, interval: interval, pay_in_advance: pay_in_advance) }
+  let(:plan) { create(:plan, interval:, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
   let(:subscription_at) { DateTime.parse('02 Feb 2021') }

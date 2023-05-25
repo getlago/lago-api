@@ -17,11 +17,7 @@ module Types
       field :vat_amount_cents, GraphQL::Types::BigInt, null: false
       field :vat_amount_currency, Types::CurrencyEnum, null: false
 
-      field :charges_usage, [Types::Charges::Usage], null: false
-
-      def charges_usage
-        object.fees
-      end
+      field :charges_usage, [Types::Charges::Usage], null: false, method: :fees
     end
   end
 end

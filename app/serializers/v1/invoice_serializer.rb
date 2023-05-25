@@ -11,21 +11,18 @@ module V1
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
+        currency: model.currency,
         fees_amount_cents: model.fees_amount_cents,
-        amount_cents: model.amount_cents,
-        amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
-        vat_amount_currency: model.vat_amount_currency,
         coupons_amount_cents: model.coupons_amount_cents,
         credit_notes_amount_cents: model.credit_notes_amount_cents,
-        credit_amount_cents: model.credit_amount_cents,
-        credit_amount_currency: model.credit_amount_currency,
+        sub_total_vat_excluded_amount_cents: model.sub_total_vat_excluded_amount_cents,
+        sub_total_vat_included_amount_cents: model.sub_total_vat_included_amount_cents,
         total_amount_cents: model.total_amount_cents,
-        total_amount_currency: model.total_amount_currency,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
-        legacy: model.legacy,
-      }
+        version_number: model.version_number,
+      }.merge(legacy_values)
 
       payload = payload.merge(customer) if include?(:customer)
       payload = payload.merge(subscriptions) if include?(:subscriptions)
@@ -63,6 +60,10 @@ module V1
         ::V1::Invoices::MetadataSerializer,
         collection_name: 'metadata',
       ).serialize
+    end
+
+    def legacy_values
+      ::V1::Legacy::InvoiceSerializer.new(model).serialize
     end
   end
 end

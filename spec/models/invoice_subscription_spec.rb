@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe InvoiceSubscription, type: :model do
-  let(:invoice_subscription) { create(:invoice_subscription, properties: properties) }
+  let(:invoice_subscription) { create(:invoice_subscription, properties:) }
   let(:invoice) { invoice_subscription.invoice }
   let(:subscription) { invoice_subscription.subscription }
 
@@ -14,10 +14,10 @@ RSpec.describe InvoiceSubscription, type: :model do
 
   let(:properties) do
     {
-      from_datetime: from_datetime,
-      to_datetime: to_datetime,
-      charges_from_datetime: charges_from_datetime,
-      charges_to_datetime: charges_to_datetime,
+      from_datetime:,
+      to_datetime:,
+      charges_from_datetime:,
+      charges_to_datetime:,
     }
   end
 
@@ -86,7 +86,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        charge: charge,
+        charge:,
         fee_type: 'charge',
         amount_cents: 100,
       )
@@ -95,7 +95,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        charge: charge,
+        charge:,
         fee_type: 'charge',
         amount_cents: 200,
       )
@@ -147,7 +147,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        charge: charge,
+        charge:,
         fee_type: 'charge',
         amount_cents: 200,
       )
@@ -156,7 +156,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        charge: charge,
+        charge:,
         fee_type: 'charge',
         amount_cents: 100,
       )

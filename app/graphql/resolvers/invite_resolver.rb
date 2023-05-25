@@ -10,7 +10,7 @@ module Resolvers
 
     def resolve(token:)
       invite = Invite.find_by(
-        token: token,
+        token:,
         status: 'pending',
       )
 

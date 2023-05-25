@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Charges::Validators::PercentageService, type: :service do
-  subject(:percentage_service) { described_class.new(charge: charge) }
+  subject(:percentage_service) { described_class.new(charge:) }
 
   let(:charge) { build(:percentage_charge, properties: percentage_properties) }
 
@@ -90,20 +90,10 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
 
     context 'when rate is zero' do
       let(:percentage_properties) do
-        {
-          rate: '0.00',
-          fixed_amount: '2',
-        }
+        { rate: '0.00', fixed_amount: '2' }
       end
 
-      it 'is invalid' do
-        aggregate_failures do
-          expect(percentage_service).not_to be_valid
-          expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(percentage_service.result.error.messages.keys).to include(:rate)
-          expect(percentage_service.result.error.messages[:rate]).to include('invalid_rate')
-        end
-      end
+      it { expect(percentage_service).to be_valid }
     end
 
     context 'when free_units_per_events is not an integer' do

@@ -28,7 +28,7 @@ module Invoices
         gocardless_result = create_gocardless_payment
 
         payment = Payment.new(
-          invoice: invoice,
+          invoice:,
           payment_provider_id: gocardless_payment_provider.id,
           payment_provider_customer_id: customer.gocardless_customer.id,
           amount_cents: gocardless_result.amount,
@@ -46,14 +46,14 @@ module Invoices
       end
 
       def update_payment_status(provider_payment_id:, status:)
-        payment = Payment.find_by(provider_payment_id: provider_payment_id)
+        payment = Payment.find_by(provider_payment_id:)
         return result.not_found_failure!(resource: 'gocardless_payment') unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
         return result if payment.invoice.succeeded?
 
-        payment.update!(status: status)
+        payment.update!(status:)
 
         invoice_payment_status = invoice_payment_status(status)
         update_invoice_payment_status(payment_status: invoice_payment_status)
@@ -107,7 +107,7 @@ module Invoices
         client.payments.create(
           params: {
             amount: invoice.total_amount_cents,
-            currency: invoice.total_amount_currency.upcase,
+            currency: invoice.currency.upcase,
             retry_if_possible: false,
             metadata: {
               lago_customer_id: customer.id,

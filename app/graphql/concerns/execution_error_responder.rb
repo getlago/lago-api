@@ -8,8 +8,8 @@ module ExecutionErrorResponder
 
   def execution_error(error: 'Internal Error', status: 422, code: 'internal_error', details: nil)
     payload = {
-      status: status,
-      code: code,
+      status:,
+      code:,
     }
 
     if details.is_a?(Hash)
@@ -36,7 +36,7 @@ module ExecutionErrorResponder
     execution_error(
       error: 'Method Not Allowed',
       status: 405,
-      code: code,
+      code:,
     )
   end
 

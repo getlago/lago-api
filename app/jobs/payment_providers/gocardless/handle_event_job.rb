@@ -6,7 +6,7 @@ module PaymentProviders
       queue_as 'providers'
 
       def perform(events_json:)
-        result = PaymentProviders::GocardlessService.new.handle_event(events_json: events_json)
+        result = PaymentProviders::GocardlessService.new.handle_event(events_json:)
         result.raise_if_error!
       end
     end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_22_093423) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -87,6 +87,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
   end
 
+  create_table "applied_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_applied_taxes_on_customer_id"
+    t.index ["tax_id"], name: "index_applied_taxes_on_tax_id"
+  end
+
   create_table "billable_metrics", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "name", null: false
@@ -112,7 +121,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.integer "charge_model", default: 0, null: false
     t.jsonb "properties", default: "{}", null: false
     t.datetime "deleted_at"
-    t.boolean "instant", default: false, null: false
+    t.boolean "pay_in_advance", default: false, null: false
     t.bigint "min_amount_cents", default: 0, null: false
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
@@ -190,20 +199,19 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.integer "refund_status"
     t.datetime "voided_at"
     t.text "description"
-    t.bigint "credit_vat_amount_cents", default: 0, null: false
-    t.string "credit_vat_amount_currency"
-    t.bigint "refund_vat_amount_cents", default: 0, null: false
-    t.string "refund_vat_amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
     t.string "vat_amount_currency"
     t.datetime "refunded_at"
     t.date "issuing_date", null: false
     t.integer "status", default: 1, null: false
+    t.bigint "coupons_adjustment_amount_cents", default: 0, null: false
+    t.decimal "precise_coupons_adjustment_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "precise_vat_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
 
-  create_table "credits", force: :cascade do |t|
+  create_table "credits", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id"
     t.uuid "applied_coupon_id"
     t.bigint "amount_cents", null: false
@@ -211,6 +219,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "credit_note_id"
+    t.boolean "before_vat", default: false, null: false
     t.index ["applied_coupon_id"], name: "index_credits_on_applied_coupon_id"
     t.index ["credit_note_id"], name: "index_credits_on_credit_note_id"
     t.index ["invoice_id"], name: "index_credits_on_invoice_id"
@@ -300,17 +309,24 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.uuid "invoiceable_id"
     t.integer "events_count"
     t.uuid "group_id"
-    t.uuid "instant_event_id"
+    t.uuid "pay_in_advance_event_id"
     t.integer "payment_status", default: 0, null: false
     t.datetime "succeeded_at", precision: nil
     t.datetime "failed_at", precision: nil
     t.datetime "refunded_at", precision: nil
+    t.uuid "true_up_parent_fee_id"
+    t.uuid "add_on_id"
+    t.string "description"
+    t.bigint "unit_amount_cents", default: 0, null: false
+    t.boolean "pay_in_advance", default: false, null: false
+    t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
+    t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
   end
 
   create_table "group_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -379,12 +395,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "issuing_date"
-    t.bigint "amount_cents", default: 0, null: false
-    t.string "amount_currency"
     t.bigint "vat_amount_cents", default: 0, null: false
-    t.string "vat_amount_currency"
     t.bigint "total_amount_cents", default: 0, null: false
-    t.string "total_amount_currency"
     t.integer "invoice_type", default: 0, null: false
     t.integer "payment_status", default: 0, null: false
     t.string "number", default: "", null: false
@@ -392,18 +404,19 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.string "file"
     t.uuid "customer_id"
     t.float "vat_rate", default: 0.0, null: false
-    t.bigint "credit_amount_cents", default: 0, null: false
-    t.string "credit_amount_currency"
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
     t.uuid "organization_id", null: false
-    t.integer "version_number", default: 2, null: false
+    t.integer "version_number", default: 3, null: false
+    t.string "currency"
     t.bigint "fees_amount_cents", default: 0, null: false
     t.bigint "coupons_amount_cents", default: 0, null: false
     t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "prepaid_credit_amount_cents", default: 0, null: false
+    t.bigint "sub_total_vat_excluded_amount_cents", default: 0, null: false
+    t.bigint "sub_total_vat_included_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end
@@ -417,6 +430,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.integer "status", default: 0, null: false
     t.datetime "revoked_at"
     t.index ["organization_id"], name: "index_memberships_on_organization_id"
+    t.index ["user_id", "organization_id"], name: "index_memberships_on_user_id_and_organization_id", unique: true, where: "(revoked_at IS NULL)"
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
@@ -570,6 +584,19 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
   end
 
+  create_table "taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "description"
+    t.string "code", null: false
+    t.string "name", null: false
+    t.float "rate", default: 0.0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "applied_to_organization", default: false, null: false
+    t.index ["code", "organization_id"], name: "index_taxes_on_code_and_organization_id", unique: true
+    t.index ["organization_id"], name: "index_taxes_on_organization_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -644,6 +671,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
   add_foreign_key "add_ons", "organizations"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
+  add_foreign_key "applied_taxes", "customers"
+  add_foreign_key "applied_taxes", "taxes"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
@@ -662,8 +691,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
   add_foreign_key "events", "customers"
   add_foreign_key "events", "organizations"
   add_foreign_key "events", "subscriptions"
+  add_foreign_key "fees", "add_ons"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
+  add_foreign_key "fees", "fees", column: "true_up_parent_fee_id"
   add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
@@ -695,6 +726,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_140356) do
   add_foreign_key "refunds", "payments"
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
+  add_foreign_key "taxes", "organizations"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"

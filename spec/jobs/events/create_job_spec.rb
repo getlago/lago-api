@@ -13,7 +13,7 @@ RSpec.describe Events::CreateJob, type: :job do
   it 'calls the event service' do
     allow(Events::CreateService).to receive(:new).and_return(create_service)
     allow(create_service).to receive(:call)
-      .with(organization: organization, params: params, timestamp: Time.zone.at(timestamp), metadata: metadata)
+      .with(organization:, params:, timestamp: Time.zone.at(timestamp), metadata:)
       .and_return(result)
 
     described_class.perform_now(organization, params, timestamp, metadata)

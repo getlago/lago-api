@@ -5,12 +5,12 @@ require 'rails_helper'
 RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   subject(:stripe_service) { described_class.new(stripe_customer) }
 
-  let(:customer) { create(:customer, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider) }
   let(:organization) { stripe_provider.organization }
 
   let(:stripe_customer) do
-    create(:stripe_customer, customer: customer, provider_customer_id: nil)
+    create(:stripe_customer, customer:, provider_customer_id: nil)
   end
 
   describe '.create' do
@@ -39,7 +39,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
     context 'when customer already have a stripe customer id' do
       let(:stripe_customer) do
-        create(:stripe_customer, customer: customer, provider_customer_id: 'cus_123456')
+        create(:stripe_customer, customer:, provider_customer_id: 'cus_123456')
       end
 
       it 'does not call stripe API' do
@@ -100,7 +100,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           :invoice,
           customer:,
           total_amount_cents: 200,
-          total_amount_currency: 'EUR',
+          currency: 'EUR',
         )
       end
 
@@ -183,9 +183,9 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     let(:stripe_customer) do
       create(
         :stripe_customer,
-        customer: customer,
+        customer:,
         provider_customer_id: 'cus_123456',
-        payment_method_id: payment_method_id,
+        payment_method_id:,
       )
     end
 
@@ -193,7 +193,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       result = stripe_service.delete_payment_method(
         organization_id: organization.id,
         stripe_customer_id: stripe_customer.provider_customer_id,
-        payment_method_id: payment_method_id,
+        payment_method_id:,
       )
 
       aggregate_failures do
@@ -276,9 +276,9 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     let(:stripe_customer) do
       create(
         :stripe_customer,
-        customer: customer,
+        customer:,
         provider_customer_id: 'cus_123456',
-        payment_method_id: payment_method_id,
+        payment_method_id:,
       )
     end
 

@@ -8,16 +8,16 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
   let(:subscription) do
     create(
       :subscription,
-      plan: plan,
-      customer: customer,
-      subscription_at: subscription_at,
-      billing_time: billing_time,
-      started_at: started_at,
+      plan:,
+      customer:,
+      subscription_at:,
+      billing_time:,
+      started_at:,
     )
   end
 
-  let(:customer) { create(:customer, timezone: timezone) }
-  let(:plan) { create(:plan, interval: :weekly, pay_in_advance: pay_in_advance) }
+  let(:customer) { create(:customer, timezone:) }
+  let(:plan) { create(:plan, interval: :weekly, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
   let(:subscription_at) { DateTime.parse('02 Feb 2021') }
@@ -154,7 +154,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: terminated_at,
+            terminated_at:,
           )
         end
 
@@ -226,7 +226,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
           let(:previous_invoice_subscription) do
             create(
               :invoice_subscription,
-              subscription: subscription,
+              subscription:,
               properties: {
                 charges_to_datetime: '2022-02-27T22:59:59Z',
               },
@@ -309,7 +309,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         let(:terminated_at) { DateTime.parse('06 Mar 2022') }
 
         before do
-          subscription.update!(status: :terminated, terminated_at: terminated_at)
+          subscription.update!(status: :terminated, terminated_at:)
         end
 
         it 'returns the terminated date' do
@@ -338,7 +338,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         let(:terminated_at) { DateTime.parse('06 Mar 2022') }
 
         before do
-          subscription.update!(status: :terminated, terminated_at: terminated_at)
+          subscription.update!(status: :terminated, terminated_at:)
         end
 
         it 'returns the terminated date' do
@@ -402,7 +402,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
   end
 
   describe 'compute_previous_beginning_of_period' do
-    let(:result) { date_service.previous_beginning_of_period(current_period: current_period).to_s }
+    let(:result) { date_service.previous_beginning_of_period(current_period:).to_s }
 
     let(:current_period) { false }
 

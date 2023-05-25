@@ -12,7 +12,7 @@ RSpec.describe Resolvers::VersionResolver, type: :graphql do
   end
 
   it 'returns the currentVersion' do
-    result = execute_graphql(query: query)
+    result = execute_graphql(query:)
 
     version_response = result['data']['currentVersion']
 

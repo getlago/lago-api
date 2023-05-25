@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
   subject(:apply_graduated_service) do
     described_class.apply(
-      charge: charge,
-      aggregation_result: aggregation_result,
+      charge:,
+      aggregation_result:,
       properties: charge.properties,
     )
   end

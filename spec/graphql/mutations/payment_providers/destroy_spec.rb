@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:payment_provider) { create(:stripe_provider, organization: organization) }
+  let(:payment_provider) { create(:stripe_provider, organization:) }
 
   let(:mutation) do
     <<-GQL

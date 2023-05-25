@@ -51,9 +51,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     create(
       :invoice,
       customer:,
-      amount_currency: 'EUR',
-      amount_cents: 100,
-      total_amount_currency: 'EUR',
+      currency: 'EUR',
+      fees_amount_cents: 100,
       total_amount_cents: 120,
     )
   end
@@ -86,8 +85,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:subscription_fee) do
         create(
           :fee,
-          subscription: subscription,
-          invoice: invoice,
+          subscription:,
+          invoice:,
           amount_cents: 0,
           vat_amount_cents: 0,
           invoiceable_type: 'Subscription',
@@ -320,9 +319,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         create(
           :invoice,
           customer:,
-          amount_currency: 'EUR',
-          amount_cents: 999,
-          total_amount_currency: 'EUR',
+          currency: 'EUR',
+          fees_amount_cents: 999,
           total_amount_cents: 0,
         )
       end
@@ -363,6 +361,36 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
             expect(credit_note.items.count).to eq(1)
           end
+        end
+      end
+    end
+
+    context 'with a coupon applied to the invoice' do
+      let(:invoice) do
+        create(
+          :invoice,
+          customer:,
+          currency: 'EUR',
+          fees_amount_cents: 100,
+          total_amount_cents: 108,
+          coupons_amount_cents: 10,
+          vat_amount_cents: 18,
+          vat_rate: 20,
+        )
+      end
+
+      it 'takes the coupon into account' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to have_attributes(
+            total_amount_cents: 17,
+            credit_amount_cents: 17,
+            balance_amount_cents: 17,
+          )
         end
       end
     end

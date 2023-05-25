@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Trackable
   extend ActiveSupport::Concern
 
@@ -14,7 +16,7 @@ module Trackable
 
     # NOTE: When doing requests from the API, we haven't the current user information.
     # In that case, we add tracing information on the first created membership of the organization.
-    return first_membership_id unless (defined?(current_user) && current_user)
+    return first_membership_id unless defined?(current_user) && current_user
 
     current_organization.memberships.find_by(user_id: current_user.id).id
   end

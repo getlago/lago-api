@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::AppliedCoupons::Terminate, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:coupon) { create(:coupon, organization: organization) }
-  let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+  let(:coupon) { create(:coupon, organization:) }
+  let(:applied_coupon) { create(:applied_coupon, coupon:) }
 
   let(:mutation) do
     <<-GQL

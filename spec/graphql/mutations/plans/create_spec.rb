@@ -52,7 +52,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   end
 
   let(:billable_metrics) do
-    create_list(:billable_metric, 5, organization: organization)
+    create_list(:billable_metric, 5, organization:)
   end
 
   let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }

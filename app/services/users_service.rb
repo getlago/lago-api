@@ -2,7 +2,7 @@
 
 class UsersService < BaseService
   def login(email, password)
-    result.user = User.find_by(email: email)&.authenticate(password)
+    result.user = User.find_by(email:)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships&.active&.any?
       return result.single_validation_failure!(error_code: 'incorrect_login_or_password')
@@ -17,7 +17,7 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
-    result.user = User.find_or_initialize_by(email: email)
+    result.user = User.find_or_initialize_by(email:)
 
     if result.user.id
       result.single_validation_failure!(field: :email, error_code: 'user_already_exists')
@@ -38,7 +38,7 @@ class UsersService < BaseService
   end
 
   def register_from_invite(email, password, organization_id)
-    result.user = User.find_or_initialize_by(email: email)
+    result.user = User.find_or_initialize_by(email:)
 
     ActiveRecord::Base.transaction do
       result.organization = Organization.find(organization_id)

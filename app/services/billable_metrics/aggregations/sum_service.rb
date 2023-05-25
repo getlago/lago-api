@@ -8,7 +8,7 @@ module BillableMetrics
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
-        result.instant_aggregation = BigDecimal(compute_instant_aggregation)
+        result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = events.count
         result.options = { running_total: running_total(events, options) }
         result
@@ -50,11 +50,11 @@ module BillableMetrics
           end
       end
 
-      def compute_instant_aggregation
-        return 0 unless event
-        return 0 if event.properties.blank?
+      def compute_pay_in_advance_aggregation
+        return BigDecimal(0) unless event
+        return BigDecimal(0) if event.properties.blank?
 
-        event.properties[billable_metric.field_name] || 0
+        BigDecimal(event.properties.fetch(billable_metric.field_name, 0).to_s)
       end
     end
   end

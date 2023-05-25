@@ -5,7 +5,8 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
 
-  CURRENT_VERSION = 2
+  CREDIT_NOTES_MIN_VERSION = 2
+  COUPON_BEFORE_VAT_VERSION = 3
 
   before_save :ensure_number
 
@@ -24,21 +25,24 @@ class Invoice < ApplicationRecord
 
   has_one_attached :file
 
-  monetize :amount_cents
-  monetize :fees_amount_cents, with_model_currency: :amount_currency
-  monetize :coupons_amount_cents, with_model_currency: :amount_currency
-  monetize :vat_amount_cents
-  monetize :prepaid_credit_amount_cents, with_model_currency: :amount_currency
-  monetize :credit_amount_cents
-  monetize :credit_notes_amount_cents, with_model_currency: :amount_currency
-  monetize :total_amount_cents
+  monetize :coupons_amount_cents,
+           :credit_notes_amount_cents,
+           :fees_amount_cents,
+           :prepaid_credit_amount_cents,
+           :sub_total_vat_excluded_amount_cents,
+           :sub_total_vat_included_amount_cents,
+           :total_amount_cents,
+           :vat_amount_cents,
+           with_model_currency: :currency
 
   # NOTE: Readonly fields
-  monetize :sub_total_vat_included_amount_cents, disable_validation: true, allow_nil: true
-  monetize :charge_amount_cents, disable_validation: true, allow_nil: true
-  monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
+  monetize :charge_amount_cents,
+           :subscription_amount_cents,
+           disable_validation: true,
+           allow_nil: true,
+           with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   STATUS = %i[draft finalized].freeze
 
@@ -66,7 +70,7 @@ class Invoice < ApplicationRecord
             .where('invoices.created_at < ?', invoice.created_at)
         }
 
-  validates :issuing_date, presence: true
+  validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
 
   def file_url
@@ -81,31 +85,16 @@ class Invoice < ApplicationRecord
     amount_cents + vat_amount_cents
   end
 
-  def currency
-    amount_currency
-  end
-
-  def sub_total_vat_included_amount_cents
-    fees_amount_cents + vat_amount_cents
-  end
-  alias sub_total_vat_included_amount_currency currency
-
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end
-  alias charge_amount_currency currency
 
   def subscription_amount_cents
     fees.subscription_kind.sum(:amount_cents)
   end
-  alias subscription_amount_currency currency
-
-  def subtotal_before_prepaid_credits
-    amount + prepaid_credit_amount
-  end
 
   def invoice_subscription(subscription_id)
-    invoice_subscriptions.find_by(subscription_id: subscription_id)
+    invoice_subscriptions.find_by(subscription_id:)
   end
 
   def subscription_fees(subscription_id)
@@ -130,25 +119,35 @@ class Invoice < ApplicationRecord
   end
 
   def creditable_amount_cents
-    return 0 if legacy? || credit? || draft?
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft?
 
-    fees.map do |fee|
-      creditable = fee.creditable_amount_cents
-      creditable + (creditable * (fee.vat_rate || 0)).fdiv(100)
-    end.sum.round
+    fees_total_creditable = fees.sum(&:creditable_amount_cents)
+    return 0 if fees_total_creditable.zero?
+
+    coupons_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
+      0
+    else
+      coupons_amount_cents.fdiv(fees_amount_cents) * fees_total_creditable
+    end
+
+    vat = fees.sum do |fee|
+      # NOTE: Because coupons are applied before VAT,
+      #       we have to discribute the coupon adjustement at prorata of each fees
+      #       to compute the VAT
+      fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
+      prorated_coupon_amount = coupons_adjustement * fee_rate
+      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.vat_rate || 0)
+    end.fdiv(100).round
+
+    fees_total_creditable - coupons_adjustement + vat
   end
 
   def refundable_amount_cents
-    return 0 if legacy? || credit? || draft? || !succeeded?
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !succeeded?
 
-    amount = creditable_amount_cents - credits.sum(:amount_cents) - prepaid_credit_amount_cents
+    amount = creditable_amount_cents - credits.where(before_vat: false).sum(:amount_cents) - prepaid_credit_amount_cents
     amount.negative? ? 0 : amount
   end
-
-  def legacy
-    version_number < CURRENT_VERSION
-  end
-  alias legacy? legacy
 
   private
 

@@ -37,28 +37,28 @@ module GraphQLHelper
 
   def expect_unauthorized_error(result)
     expect_graphql_error(
-      result: result,
+      result:,
       message: :unauthorized,
     )
   end
 
   def expect_forbidden_error(result)
     expect_graphql_error(
-      result: result,
+      result:,
       message: :forbidden,
     )
   end
 
   def expect_unprocessable_entity(result)
     expect_graphql_error(
-      result: result,
+      result:,
       message: :unprocessable_entity,
     )
   end
 
   def expect_not_found(result)
     expect_graphql_error(
-      result: result,
+      result:,
       message: :not_found,
     )
   end

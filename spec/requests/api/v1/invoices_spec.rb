@@ -7,6 +7,78 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
+  describe 'create' do
+    let(:add_on_first) { create(:add_on, organization:) }
+    let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
+    let(:customer_external_id) { customer.external_id }
+    let(:create_params) do
+      {
+        external_customer_id: customer_external_id,
+        currency: 'EUR',
+        fees: [
+          {
+            add_on_code: add_on_first.code,
+            unit_amount_cents: 1200,
+            units: 2,
+            description: 'desc-123',
+          },
+          {
+            add_on_code: add_on_second.code,
+          },
+        ],
+      }
+    end
+
+    it 'creates a invoice' do
+      post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice][:lago_id]).to be_present
+      expect(json[:invoice][:issuing_date]).to eq(Time.current.to_date.to_s)
+      expect(json[:invoice][:invoice_type]).to eq('one_off')
+      expect(json[:invoice][:amount_cents]).to eq(2800)
+      expect(json[:invoice][:vat_amount_cents]).to eq(560)
+      expect(json[:invoice][:total_amount_cents]).to eq(3360)
+      expect(json[:invoice][:currency]).to eq('EUR')
+    end
+
+    context 'when customer does not exist' do
+      let(:customer_external_id) { 'invalid' }
+
+      it 'returns a not found error' do
+        post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when add_on does not exist' do
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: 'EUR',
+          fees: [
+            {
+              add_on_code: add_on_first.code,
+              unit_amount_cents: 1200,
+              units: 2,
+              description: 'desc-123',
+            },
+            {
+              add_on_code: 'invalid',
+            },
+          ],
+        }
+      end
+
+      it 'returns a not found error' do
+        post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe 'UPDATE /invoices' do
     let(:update_params) do
       { payment_status: 'succeeded' }

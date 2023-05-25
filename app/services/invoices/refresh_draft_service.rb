@@ -39,7 +39,7 @@ module Invoices
         invoice.credit_notes.each do |credit_note|
           subscription_id = cn_subscription_ids.find { |h| h[:credit_note_id] == credit_note.id }[:subscription_id]
           fee = invoice.fees.subscription.find_by(subscription_id:)
-          credit_note.items.update_all(fee_id: fee.id) # rubocop:disable Rails/SkipsModelValidations
+          CreditNotes::RefreshDraftService.call(credit_note:, fee:)
         end
 
         return calculate_result unless calculate_result.success?

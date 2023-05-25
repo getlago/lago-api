@@ -46,15 +46,17 @@ Rails.application.configure do
     config.cache_store = :mem_cache_store, ENV['LAGO_MEMCACHE_SERVERS'].split(',')
 
   elsif ENV['LAGO_REDIS_CACHE_URL'].present?
-    config.cache_store = :redis_cache_store, {
-      url: ENV['LAGO_REDIS_CACHE_URL'],
-      error_handler: ->(method:, returning:, exception:) {
-        Rails.logger.error(exception.message)
-        Rails.logger.error(exception.backtrace.join("\n"))
+    config.cache_store =
+      :redis_cache_store,
+      {
+        url: ENV['LAGO_REDIS_CACHE_URL'],
+        error_handler: lambda { |method:, returning:, exception:|
+          Rails.logger.error(exception.message)
+          Rails.logger.error(exception.backtrace.join("\n"))
 
-        Sentry.capture_exception(exception)
-      },
-    }
+          Sentry.capture_exception(exception)
+        },
+      }
   end
 
   if ENV['LAGO_SMTP_ADDRESS'].present? && !ENV['LAGO_SMTP_ADDRESS'].empty?

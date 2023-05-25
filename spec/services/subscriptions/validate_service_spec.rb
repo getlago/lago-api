@@ -8,15 +8,15 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
   let(:result) { BaseService::Result.new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:plan) { create(:plan, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
   let(:subscription_at) { '2022-07-07T00:00:00Z' }
 
   let(:args) do
     {
-      customer: customer,
-      plan: plan,
-      subscription_at: subscription_at,
+      customer:,
+      plan:,
+      subscription_at:,
     }
   end
 

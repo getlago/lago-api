@@ -20,8 +20,8 @@ module Mutations
         result = ::Subscriptions::UpdateService
           .new(context[:current_user])
           .update(
-            subscription: subscription,
-            args: args,
+            subscription:,
+            args:,
           )
 
         result.success? ? result.subscription : result_error(result)

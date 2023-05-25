@@ -18,10 +18,10 @@ module Events
       customer = customer(organization:, params:)
 
       Events::ValidateCreationService.call(
-        organization: organization,
-        params: params,
-        customer: customer,
-        result: result,
+        organization:,
+        params:,
+        customer:,
+        result:,
         batch: true,
       )
       return result unless result.success?

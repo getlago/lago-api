@@ -768,6 +768,91 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "AppliedTax",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "customer",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Customer",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "tax",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Tax",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
           "kind": "SCALAR",
           "name": "BigInt",
           "description": "Represents non-fractional signed whole numeric values. Since the value may exceed the size of a 32-bit integer, it's encoded as a string.",
@@ -1270,14 +1355,14 @@
               ]
             },
             {
-              "name": "instant",
+              "name": "minAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Boolean",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -1288,14 +1373,14 @@
               ]
             },
             {
-              "name": "minAmountCents",
+              "name": "payInAdvance",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Boolean",
                   "ofType": null
                 }
               },
@@ -1350,18 +1435,6 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "id",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ID",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "billableMetricId",
               "description": null,
               "type": {
@@ -1394,7 +1467,19 @@
               "deprecationReason": null
             },
             {
-              "name": "instant",
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payInAdvance",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -1418,18 +1503,6 @@
               "deprecationReason": null
             },
             {
-              "name": "properties",
-              "description": null,
-              "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "PropertiesInput",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "groupProperties",
               "description": null,
               "type": {
@@ -1444,6 +1517,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "properties",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PropertiesInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -3769,14 +3854,30 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
+              "name": "amountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "amountCurrency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
                   "ofType": null
                 }
               },
@@ -3813,30 +3914,14 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCents",
+              "name": "name",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "amountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -4003,18 +4088,6 @@
               "deprecationReason": null
             },
             {
-              "name": "percentageRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "frequency",
               "description": null,
               "type": {
@@ -4033,6 +4106,73 @@
                 "kind": "SCALAR",
                 "name": "Int",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "percentageRate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "CreateAppliedTaxInput",
+          "description": "Autogenerated input type of CreateAppliedTax",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customerId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "taxId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -4062,14 +4202,14 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
+              "name": "aggregationType",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
+                  "kind": "ENUM",
+                  "name": "AggregationTypeEnum",
                   "ofType": null
                 }
               },
@@ -4110,22 +4250,6 @@
               "deprecationReason": null
             },
             {
-              "name": "aggregationType",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "AggregationTypeEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "fieldName",
               "description": null,
               "type": {
@@ -4144,6 +4268,22 @@
                 "kind": "SCALAR",
                 "name": "JSON",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -4173,16 +4313,24 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
+              "name": "amountCents",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "amountCurrency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -4217,42 +4365,6 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCents",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "BigInt",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "amountCurrency",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "percentageRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "frequency",
               "description": null,
               "type": {
@@ -4274,6 +4386,34 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "percentageRate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4356,16 +4496,12 @@
               "deprecationReason": null
             },
             {
-              "name": "reason",
+              "name": "description",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CreditNoteReasonEnum",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -4388,12 +4524,16 @@
               "deprecationReason": null
             },
             {
-              "name": "description",
+              "name": "reason",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CreditNoteReasonEnum",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -4471,50 +4611,6 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "externalId",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "country",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CountryCode",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "addressLine1",
               "description": null,
               "type": {
@@ -4539,7 +4635,7 @@
               "deprecationReason": null
             },
             {
-              "name": "state",
+              "name": "city",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -4551,11 +4647,23 @@
               "deprecationReason": null
             },
             {
-              "name": "zipcode",
+              "name": "country",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4575,47 +4683,27 @@
               "deprecationReason": null
             },
             {
-              "name": "city",
+              "name": "externalId",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "url",
+              "name": "invoiceGracePeriod",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "phone",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "logoUrl",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "name": "Int",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4647,11 +4735,11 @@
               "deprecationReason": null
             },
             {
-              "name": "vatRate",
+              "name": "logoUrl",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Float",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4659,11 +4747,27 @@
               "deprecationReason": null
             },
             {
-              "name": "invoiceGracePeriod",
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "phone",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Int",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4671,11 +4775,11 @@
               "deprecationReason": null
             },
             {
-              "name": "currency",
+              "name": "state",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4688,6 +4792,42 @@
               "type": {
                 "kind": "ENUM",
                 "name": "TimezoneEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "vatRate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -4774,6 +4914,22 @@
               "deprecationReason": null
             },
             {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "customerId",
               "description": null,
               "type": {
@@ -4790,7 +4946,19 @@
               "deprecationReason": null
             },
             {
-              "name": "rateAmount",
+              "name": "expirationAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "grantedCredits",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -4834,7 +5002,7 @@
               "deprecationReason": null
             },
             {
-              "name": "grantedCredits",
+              "name": "rateAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -4842,34 +5010,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "expirationAt",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601DateTime",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "currency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
                   "ofType": null
                 }
               },
@@ -4901,14 +5041,14 @@
               "deprecationReason": null
             },
             {
-              "name": "walletId",
+              "name": "grantedCredits",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "ID",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -4933,14 +5073,14 @@
               "deprecationReason": null
             },
             {
-              "name": "grantedCredits",
+              "name": "walletId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -4982,6 +5122,81 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "CreateInvoiceInput",
+          "description": "Create Invoice input arguments",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customerId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fees",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "FeeInput",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -5095,70 +5310,6 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "code",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "interval",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "payInAdvance",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "amountCents",
               "description": null,
               "type": {
@@ -5191,12 +5342,28 @@
               "deprecationReason": null
             },
             {
-              "name": "trialPeriod",
+              "name": "billChargesMonthly",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Float",
+                "name": "Boolean",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -5215,12 +5382,32 @@
               "deprecationReason": null
             },
             {
-              "name": "billChargesMonthly",
+              "name": "interval",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "PlanInterval",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -5232,6 +5419,34 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payInAdvance",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "trialPeriod",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
                 "ofType": null
               },
               "defaultValue": null,
@@ -5387,7 +5602,7 @@
         {
           "kind": "OBJECT",
           "name": "CreditNote",
-          "description": null,
+          "description": "CreditNote",
           "interfaces": [
 
           ],
@@ -5438,6 +5653,24 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "couponsAdjustmentAmountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -5508,6 +5741,24 @@
                 "kind": "ENUM",
                 "name": "CreditNoteCreditStatusEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -6097,22 +6348,6 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "feeId",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "amountCents",
               "description": null,
               "type": {
@@ -6121,6 +6356,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "feeId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -7196,6 +7447,28 @@
                   "ofType": {
                     "kind": "OBJECT",
                     "name": "AppliedCoupon",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "appliedTaxes",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "AppliedTax",
                     "ofType": null
                   }
                 }
@@ -8385,6 +8658,45 @@
         },
         {
           "kind": "INPUT_OBJECT",
+          "name": "DestroyAppliedTaxInput",
+          "description": "Autogenerated input type of DestroyAppliedTax",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
           "name": "DestroyBillableMetricInput",
           "description": "Autogenerated input type of DestroyBillableMetric",
           "interfaces": null,
@@ -8746,6 +9058,86 @@
           "kind": "OBJECT",
           "name": "DestroyPlanPayload",
           "description": "Autogenerated return type of DestroyPlan",
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "DestroyTaxInput",
+          "description": "Autogenerated input type of DestroyTax",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "DestroyTaxPayload",
+          "description": "Autogenerated return type of DestroyTax",
           "interfaces": [
 
           ],
@@ -9453,6 +9845,34 @@
               ]
             },
             {
+              "name": "trueUpFee",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Fee",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "trueUpParentFee",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Fee",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "units",
               "description": null,
               "type": {
@@ -9525,6 +9945,81 @@
           "enumValues": null
         },
         {
+          "kind": "INPUT_OBJECT",
+          "name": "FeeInput",
+          "description": "Fee input for creating invoice",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "addOnId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "unitAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "units",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
           "kind": "ENUM",
           "name": "FeeTypesEnum",
           "description": null,
@@ -9553,12 +10048,6 @@
             },
             {
               "name": "credit",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "instant_charge",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -9879,7 +10368,7 @@
               "deprecationReason": null
             },
             {
-              "name": "perUnitAmount",
+              "name": "flatAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -9895,7 +10384,7 @@
               "deprecationReason": null
             },
             {
-              "name": "flatAmount",
+              "name": "perUnitAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -10481,68 +10970,14 @@
         {
           "kind": "OBJECT",
           "name": "Invoice",
-          "description": null,
+          "description": "Invoice",
           "interfaces": [
 
           ],
           "possibleTypes": null,
           "fields": [
             {
-              "name": "amountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "amountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "chargeAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "couponTotalAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -10586,60 +11021,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "creditAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "creditAmountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "creditNoteTotalAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -10700,6 +11081,20 @@
                   "name": "BigInt",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -10846,24 +11241,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ISO8601Date",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "legacy",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
                   "ofType": null
                 }
               },
@@ -11062,24 +11439,6 @@
               ]
             },
             {
-              "name": "subtotalBeforePrepaidCredits",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "totalAmountCents",
               "description": null,
               "type": {
@@ -11088,24 +11447,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "totalAmountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
                   "ofType": null
                 }
               },
@@ -11152,24 +11493,6 @@
               ]
             },
             {
-              "name": "vatAmountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "vatRate",
               "description": null,
               "type": {
@@ -11188,14 +11511,14 @@
               ]
             },
             {
-              "name": "walletTransactionAmountCents",
+              "name": "versionNumber",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Int",
                   "ofType": null
                 }
               },
@@ -11796,6 +12119,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "one_off",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -12381,6 +12710,35 @@
               ]
             },
             {
+              "name": "createAppliedTax",
+              "description": "Assign a tax to a customer",
+              "type": {
+                "kind": "OBJECT",
+                "name": "AppliedTax",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for CreateAppliedTax",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "CreateAppliedTaxInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "createBillableMetric",
               "description": "Creates a new Billable metric",
               "type": {
@@ -12584,6 +12942,35 @@
               ]
             },
             {
+              "name": "createInvoice",
+              "description": "Creates a new Invoice",
+              "type": {
+                "kind": "OBJECT",
+                "name": "Invoice",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for CreateInvoice",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "CreateInvoiceInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "createPasswordReset",
               "description": "Creates a new password reset",
               "type": {
@@ -12671,6 +13058,35 @@
               ]
             },
             {
+              "name": "createTax",
+              "description": "Creates a tax",
+              "type": {
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for CreateTax",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "TaxCreateInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "destroyAddOn",
               "description": "Deletes an add-on",
               "type": {
@@ -12690,6 +13106,35 @@
                     "ofType": {
                       "kind": "INPUT_OBJECT",
                       "name": "DestroyAddOnInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "destroyAppliedTax",
+              "description": "Unassign a tax from a customer",
+              "type": {
+                "kind": "OBJECT",
+                "name": "AppliedTax",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for DestroyAppliedTax",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "DestroyAppliedTaxInput",
                       "ofType": null
                     }
                   },
@@ -12835,6 +13280,35 @@
                     "ofType": {
                       "kind": "INPUT_OBJECT",
                       "name": "DestroyPlanInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "destroyTax",
+              "description": "Deletes a tax",
+              "type": {
+                "kind": "OBJECT",
+                "name": "DestroyTaxPayload",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for DestroyTax",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "DestroyTaxInput",
                       "ofType": null
                     }
                   },
@@ -13715,6 +14189,35 @@
               ]
             },
             {
+              "name": "updateTax",
+              "description": "Update an existing tax",
+              "type": {
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for UpdateTax",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "TaxUpdateInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "voidCreditNote",
               "description": "Voids a Credit Note",
               "type": {
@@ -14019,6 +14522,95 @@
               ]
             },
             {
+              "name": "taxes",
+              "description": "Query taxes of an organization",
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "Tax",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "appliedToOrganization",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "ids",
+                  "description": "List of taxes IDs to fetch",
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "page",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "searchTerm",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "timezone",
               "description": null,
               "type": {
@@ -14186,6 +14778,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "documentLocale",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceFooter",
               "description": null,
               "type": {
@@ -14215,18 +14819,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Float",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "documentLocale",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -14899,18 +15491,6 @@
               "deprecationReason": null
             },
             {
-              "name": "rate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "fixedAmount",
               "description": null,
               "type": {
@@ -14936,6 +15516,18 @@
             },
             {
               "name": "freeUnitsPerTotalAggregation",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -15160,7 +15752,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15172,7 +15764,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15262,7 +15854,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15274,7 +15866,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15384,18 +15976,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -15408,11 +15988,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "status",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "CouponStatusEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15425,6 +16005,18 @@
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "status",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CouponStatusEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15539,6 +16131,22 @@
               "deprecationReason": null,
               "args": [
                 {
+                  "name": "customerId",
+                  "description": "Uniq ID of the customer",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "ids",
                   "description": "List of plan ID to fetch",
                   "type": {
@@ -15559,23 +16167,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "customerId",
-                  "description": "Uniq ID of the customer",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15587,7 +16179,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15644,11 +16236,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "status",
+                  "name": "limit",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "InvoiceStatusTypeEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15668,11 +16260,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "searchTerm",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "Int",
+                    "name": "String",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15680,11 +16272,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "searchTerm",
+                  "name": "status",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
+                    "kind": "ENUM",
+                    "name": "InvoiceStatusTypeEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -15867,7 +16459,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15879,7 +16471,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15916,7 +16508,7 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15928,7 +16520,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15986,7 +16578,7 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -15998,7 +16590,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16068,7 +16660,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16080,7 +16672,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16129,18 +16721,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -16153,11 +16733,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "status",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "InvoiceStatusTypeEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -16195,6 +16775,18 @@
                   "defaultValue": null,
                   "isDeprecated": false,
                   "deprecationReason": null
+                },
+                {
+                  "name": "status",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "InvoiceStatusTypeEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 }
               ]
             },
@@ -16214,7 +16806,7 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16226,7 +16818,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16351,6 +16943,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "page",
                   "description": null,
                   "type": {
@@ -16363,7 +16967,109 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "searchTerm",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "tax",
+              "description": "Query a single tax of an organization",
+              "type": {
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the tax",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "taxes",
+              "description": "Query taxes of an organization",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "TaxCollection",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "appliedToOrganization",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "ids",
+                  "description": "List of taxes IDs to fetch",
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16424,16 +17130,12 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "walletId",
-                  "description": "Uniq ID of the wallet",
+                  "name": "limit",
+                  "description": null,
                   "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -16452,11 +17154,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "status",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
+                    "kind": "ENUM",
+                    "name": "WalletTransactionStatusEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -16476,12 +17178,16 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "status",
-                  "description": null,
+                  "name": "walletId",
+                  "description": "Uniq ID of the wallet",
                   "type": {
-                    "kind": "ENUM",
-                    "name": "WalletTransactionStatusEnum",
-                    "ofType": null
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -16505,6 +17211,22 @@
               "deprecationReason": null,
               "args": [
                 {
+                  "name": "customerId",
+                  "description": "Uniq ID of the customer",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "ids",
                   "description": "List of wallet IDs to fetch",
                   "type": {
@@ -16525,23 +17247,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "customerId",
-                  "description": "Uniq ID of the customer",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "page",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16553,7 +17259,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -16594,18 +17300,6 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "page",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -16618,11 +17312,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "status",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "WebhookStatusEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -16635,6 +17329,18 @@
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "status",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "WebhookStatusEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -16808,7 +17514,7 @@
               "deprecationReason": null
             },
             {
-              "name": "password",
+              "name": "organizationName",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -16824,7 +17530,7 @@
               "deprecationReason": null
             },
             {
-              "name": "organizationName",
+              "name": "password",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -17568,6 +18274,430 @@
             }
           ],
           "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "Tax",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "appliedToOrganization",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "customersCount",
+              "description": "Number of customers using this tax",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "organization",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "rate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "updatedAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "TaxCollection",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "Tax",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "TaxCreateInput",
+          "description": "Autogenerated input type of CreateTax",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "TaxUpdateInput",
+          "description": "Autogenerated input type of UpdateTax",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "appliedToOrganization",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "enumValues": null
         },
         {
@@ -18568,14 +19698,14 @@
               "deprecationReason": null
             },
             {
-              "name": "id",
+              "name": "amountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "ID",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -18584,14 +19714,14 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
+              "name": "amountCurrency",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
                   "ofType": null
                 }
               },
@@ -18628,14 +19758,14 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCents",
+              "name": "id",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -18644,14 +19774,14 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCurrency",
+              "name": "name",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
+                  "kind": "SCALAR",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -18683,30 +19813,14 @@
               "deprecationReason": null
             },
             {
-              "name": "id",
+              "name": "aggregationType",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
+                  "kind": "ENUM",
+                  "name": "AggregationTypeEnum",
                   "ofType": null
                 }
               },
@@ -18747,22 +19861,6 @@
               "deprecationReason": null
             },
             {
-              "name": "aggregationType",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "AggregationTypeEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "fieldName",
               "description": null,
               "type": {
@@ -18780,29 +19878,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "JSON",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "enumValues": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
-          "name": "UpdateCouponInput",
-          "description": "Autogenerated input type of UpdateCoupon",
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": [
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -18836,6 +19911,53 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "UpdateCouponInput",
+          "description": "Autogenerated input type of UpdateCoupon",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "amountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "amountCurrency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -18870,42 +19992,6 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCents",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "BigInt",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "amountCurrency",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "percentageRate",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Float",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "frequency",
               "description": null,
               "type": {
@@ -18927,6 +20013,50 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "percentageRate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19064,66 +20194,6 @@
               "deprecationReason": null
             },
             {
-              "name": "id",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "externalId",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "country",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CountryCode",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "addressLine1",
               "description": null,
               "type": {
@@ -19148,7 +20218,7 @@
               "deprecationReason": null
             },
             {
-              "name": "state",
+              "name": "city",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -19160,11 +20230,23 @@
               "deprecationReason": null
             },
             {
-              "name": "zipcode",
+              "name": "country",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "CountryCode",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19184,47 +20266,43 @@
               "deprecationReason": null
             },
             {
-              "name": "city",
+              "name": "externalId",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "url",
+              "name": "id",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "phone",
+              "name": "invoiceGracePeriod",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "logoUrl",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "name": "Int",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19256,11 +20334,11 @@
               "deprecationReason": null
             },
             {
-              "name": "vatRate",
+              "name": "logoUrl",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Float",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19268,11 +20346,27 @@
               "deprecationReason": null
             },
             {
-              "name": "invoiceGracePeriod",
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "phone",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Int",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19280,11 +20374,11 @@
               "deprecationReason": null
             },
             {
-              "name": "currency",
+              "name": "state",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19297,6 +20391,42 @@
               "type": {
                 "kind": "ENUM",
                 "name": "TimezoneEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "vatRate",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19485,6 +20615,18 @@
               "deprecationReason": null
             },
             {
+              "name": "expirationAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -19506,18 +20648,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "expirationAt",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "defaultValue": null,
@@ -19818,86 +20948,6 @@
               "deprecationReason": null
             },
             {
-              "name": "id",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "code",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "interval",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "payInAdvance",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "amountCents",
               "description": null,
               "type": {
@@ -19930,12 +20980,28 @@
               "deprecationReason": null
             },
             {
-              "name": "trialPeriod",
+              "name": "billChargesMonthly",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Float",
+                "name": "Boolean",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -19954,11 +21020,75 @@
               "deprecationReason": null
             },
             {
-              "name": "billChargesMonthly",
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "interval",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "PlanInterval",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payInAdvance",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "trialPeriod",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Boolean",
+                "name": "Float",
                 "ofType": null
               },
               "defaultValue": null,
@@ -20333,7 +21463,7 @@
               "deprecationReason": null
             },
             {
-              "name": "perUnitAmount",
+              "name": "flatAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -20349,7 +21479,7 @@
               "deprecationReason": null
             },
             {
-              "name": "flatAmount",
+              "name": "perUnitAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

@@ -18,9 +18,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:invoice) do
       create(
         :invoice,
-        amount_currency: 'EUR',
-        vat_amount_currency: 'EUR',
-        total_amount_currency: 'EUR',
+        currency: 'EUR',
         issuing_date: Time.zone.at(timestamp).to_date,
         customer: subscription.customer,
       )
@@ -85,8 +83,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when charge is instant' do
-        let(:charge) { create(:standard_charge, :instant, plan: subscription.plan, charge_model: 'standard') }
+      context 'when charge is pay_in_advance' do
+        let(:charge) { create(:standard_charge, :pay_in_advance, plan: subscription.plan, charge_model: 'standard') }
 
         it 'does not create a charge fee' do
           result = invoice_service.call
@@ -476,9 +474,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.fees_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.credit_amount_cents).to eq(10)
           expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.credits.count).to eq(1)
 
@@ -512,9 +509,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
-          expect(result.invoice.amount_cents).to eq(100)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
           expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.credit_amount_cents).to eq(30)
           expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.wallet_transactions.count).to eq(1)
         end

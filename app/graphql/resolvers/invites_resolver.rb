@@ -7,8 +7,8 @@ module Resolvers
 
     description 'Query pending invites of an organization'
 
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
 
     type Types::Invites::Object.collection_type, null: false
 

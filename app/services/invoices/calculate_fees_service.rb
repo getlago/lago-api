@@ -32,9 +32,12 @@ module Invoices
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
         end
 
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_vat_excluded_amount_cents = invoice.fees.sum(:amount_cents)
+        Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
+
         Invoices::ComputeAmountsFromFees.call(invoice:)
         create_credit_note_credit if should_create_credit_note_credit?
-        Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
@@ -72,7 +75,7 @@ module Invoices
     end
 
     def create_charges_fees(subscription, boundaries)
-      subscription.plan.charges.where(instant: false).each do |charge|
+      subscription.plan.charges.where(pay_in_advance: false).each do |charge|
         fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
         fee_result.raise_if_error!
       end
@@ -145,7 +148,7 @@ module Invoices
 
     def should_create_coupon_credit?
       return false if not_in_finalizing_process?
-      return false unless invoice.amount_cents&.positive?
+      return false unless invoice.fees_amount_cents&.positive?
 
       true
     end
@@ -174,7 +177,6 @@ module Invoices
 
     # NOTE: Since credit impact the invoice amount, we need to recompute the amount and the VAT amount
     def refresh_amounts(credit_amount_cents:)
-      invoice.credit_amount_cents += credit_amount_cents
       invoice.total_amount_cents -= credit_amount_cents
     end
 

@@ -53,11 +53,9 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
         expect(response).to have_http_status(:success)
-        expect(json[:groups]).to match_array(
-          [
-            { lago_id: one.id, key: nil, value: one.value },
-            { lago_id: second.id, key: nil, value: second.value },
-          ],
+        expect(json[:groups]).to contain_exactly(
+          { lago_id: one.id, key: nil, value: one.value },
+          { lago_id: second.id, key: nil, value: second.value },
         )
       end
     end
@@ -72,11 +70,9 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
         expect(response).to have_http_status(:success)
-        expect(json[:groups]).to match_array(
-          [
-            { lago_id: children1.id, key: parent.value, value: children1.value },
-            { lago_id: children2.id, key: parent.value, value: children2.value },
-          ],
+        expect(json[:groups]).to contain_exactly(
+          { lago_id: children1.id, key: parent.value, value: children1.value },
+          { lago_id: children2.id, key: parent.value, value: children2.value },
         )
       end
     end

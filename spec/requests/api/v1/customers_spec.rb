@@ -134,13 +134,13 @@ RSpec.describe Api::V1::CustomersController, type: :request do
   end
 
   describe 'GET /customers/:customer_id/current_usage' do
-    let(:customer) { create(:customer, organization: organization) }
+    let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
     let(:subscription) do
       create(
         :subscription,
-        plan: plan,
-        customer: customer,
+        plan:,
+        customer:,
         started_at: Time.zone.now - 2.years,
       )
     end
@@ -173,9 +173,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       create_list(
         :event,
         4,
-        organization: organization,
-        customer: customer,
-        subscription: subscription,
+        organization:,
+        customer:,
+        subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
       )
@@ -240,9 +240,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         create_list(
           :event,
           3,
-          organization: organization,
-          customer: customer,
-          subscription: subscription,
+          organization:,
+          customer:,
+          subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
           properties: { cloud: 'aws' },
@@ -250,9 +250,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
         create(
           :event,
-          organization: organization,
-          customer: customer,
-          subscription: subscription,
+          organization:,
+          customer:,
+          subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
           properties: { cloud: 'google' },
@@ -271,11 +271,15 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         aggregate_failures do
           expect(charge_usage[:units]).to eq('4.0')
           expect(charge_usage[:amount_cents]).to eq(5000)
-          expect(groups_usage).to match_array(
-            [
-              { lago_id: aws.id, key: nil, value: 'aws', units: '3.0', amount_cents: 3000 },
-              { lago_id: google.id, key: nil, value: 'google', units: '1.0', amount_cents: 2000 },
-            ],
+          expect(groups_usage).to contain_exactly(
+            {
+              lago_id: aws.id,
+              key: nil,
+              value: 'aws',
+              units: '3.0',
+              amount_cents: 3000,
+            },
+            { lago_id: google.id, key: nil, value: 'google', units: '1.0', amount_cents: 2000 },
           )
         end
       end
@@ -322,9 +326,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         create_list(
           :event,
           2,
-          organization: organization,
-          customer: customer,
-          subscription: subscription,
+          organization:,
+          customer:,
+          subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
           properties: { cloud: 'aws', region: 'usa' },
@@ -332,9 +336,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
         create(
           :event,
-          organization: organization,
-          customer: customer,
-          subscription: subscription,
+          organization:,
+          customer:,
+          subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
           properties: { cloud: 'aws', region: 'france' },
@@ -342,9 +346,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
         create(
           :event,
-          organization: organization,
-          customer: customer,
-          subscription: subscription,
+          organization:,
+          customer:,
+          subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
           properties: { cloud: 'google', region: 'usa' },
@@ -363,12 +367,16 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         aggregate_failures do
           expect(charge_usage[:units]).to eq('4.0')
           expect(charge_usage[:amount_cents]).to eq(7000)
-          expect(groups_usage).to match_array(
-            [
-              { lago_id: aws_usa.id, key: 'aws', value: 'usa', units: '2.0', amount_cents: 2000 },
-              { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000 },
-              { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000 },
-            ],
+          expect(groups_usage).to contain_exactly(
+            {
+              lago_id: aws_usa.id,
+              key: 'aws',
+              value: 'usa',
+              units: '2.0',
+              amount_cents: 2000,
+            },
+            { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000 },
+            { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000 },
           )
         end
       end
@@ -437,7 +445,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:organization) { create(:organization) }
 
     before do
-      create_list(:customer, 2, organization: organization)
+      create_list(:customer, 2, organization:)
     end
 
     it 'returns all customers from organization' do
@@ -452,7 +460,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
   describe 'GET /customers/:customer_id' do
     let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization: organization) }
+    let(:customer) { create(:customer, organization:) }
 
     before do
       customer
