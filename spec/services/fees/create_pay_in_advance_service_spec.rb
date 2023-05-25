@@ -282,7 +282,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
     context 'when in invoice mode' do
       subject(:fee_service) { described_class.new(charge:, event:, estimate:, invoice:) }
 
-      let(:invoice){ create(:invoice) }
+      let(:invoice) { create(:invoice) }
 
       it 'creates a fee with invoice attached' do
         result = fee_service.call

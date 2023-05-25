@@ -118,7 +118,7 @@ module Events
 
     def applicable_event?
       return true unless billable_metric.sum_agg?
-      return true unless event.properties[billable_metric.field_name]&.to_i.negative?
+      return true unless event.properties[billable_metric.field_name]&.to_i&.negative?
 
       false
     end
