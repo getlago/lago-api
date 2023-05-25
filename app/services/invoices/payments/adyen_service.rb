@@ -102,7 +102,7 @@ module Invoices
             currency: invoice.currency.upcase,
             value: invoice.total_amount_cents
           },
-          reference: invoice.id,
+          reference: invoice.number,
           paymentMethod: {
             type: "scheme",
             storedPaymentMethodId: customer.adyen_customer.payment_method_id
