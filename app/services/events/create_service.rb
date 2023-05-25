@@ -54,7 +54,7 @@ module Events
 
       if invoiceable_charges.any? && applicable_event?
         invoiceable_charges.each do |c|
-          Invoices::CreatePayInAdvanceChargeJob.perform_later(charge: c, event:, timestamp: Time.current.to_i)
+          Invoices::CreatePayInAdvanceChargeJob.perform_later(charge: c, event:, timestamp: event_timestamp)
         end
       end
 
