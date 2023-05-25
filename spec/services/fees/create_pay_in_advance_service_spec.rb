@@ -282,5 +282,47 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           .with('fee.pay_in_advance_created', Fee)
       end
     end
+
+    context 'when in invoice mode' do
+      subject(:fee_service) { described_class.new(charge:, event:, estimate:, invoice:) }
+
+      let(:invoice){ create(:invoice) }
+
+      it 'creates a fee with invoice attached' do
+        result = fee_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.fees.count).to eq(1)
+          expect(result.fees.first).to have_attributes(
+            invoice:,
+            subscription:,
+            charge:,
+            amount_cents: 10,
+            amount_currency: 'EUR',
+            vat_rate: 20.0,
+            vat_amount_cents: 2,
+            vat_amount_currency: 'EUR',
+            fee_type: 'charge',
+            pay_in_advance: true,
+            invoiceable: charge,
+            units: 9,
+            properties: Hash,
+            events_count: 1,
+            group: nil,
+            pay_in_advance_event_id: event.id,
+            payment_status: 'pending',
+          )
+        end
+      end
+
+      it 'delivers a webhook' do
+        fee_service.call
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with('fee.pay_in_advance_created', Fee)
+      end
+    end
   end
 end

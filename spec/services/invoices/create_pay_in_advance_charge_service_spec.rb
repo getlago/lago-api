@@ -1,0 +1,176 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
+  subject(:invoice_service) do
+    described_class.new(charge:, event:, timestamp: timestamp.to_i)
+  end
+
+  let(:timestamp) { Time.zone.now.beginning_of_month }
+  let(:organization) { create(:organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:active_subscription, organization:, customer:, plan:) }
+  let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
+  let(:event) { create(:event, subscription:, customer:, organization:) }
+  let(:group) { nil }
+
+  describe 'call' do
+    let(:aggregation_result) do
+      BaseService::Result.new.tap do |result|
+        result.aggregation = 9
+        result.count = 4
+        result.options = {}
+      end
+    end
+
+    let(:charge_result) do
+      BaseService::Result.new.tap do |result|
+        result.amount = 10
+        result.count = 1
+        result.units = 9
+      end
+    end
+
+    before do
+      allow(BillableMetrics::PayInAdvanceAggregationService).to receive(:call)
+        .with(billable_metric:, boundaries: Hash, group:, properties: Hash, event:)
+        .and_return(aggregation_result)
+
+      allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
+        .with(charge:, aggregation_result:, properties: Hash)
+        .and_return(charge_result)
+
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
+
+    it 'creates an invoice' do
+      result = invoice_service.call
+
+      aggregate_failures do
+        expect(result).to be_success
+
+        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+        expect(result.invoice.organization_id).to eq(organization.id)
+        expect(result.invoice.customer_id).to eq(customer.id)
+        expect(result.invoice.invoice_type).to eq('subscription')
+        expect(result.invoice.payment_status).to eq('pending')
+
+        expect(result.invoice.fees.where(fee_type: :charge).count).to eq(1)
+        expect(result.invoice.fees.first).to have_attributes(
+          subscription:,
+          charge:,
+          amount_cents: 10,
+          amount_currency: 'EUR',
+          vat_rate: 20.0,
+          vat_amount_cents: 2,
+          vat_amount_currency: 'EUR',
+          fee_type: 'charge',
+          pay_in_advance: true,
+          invoiceable: charge,
+          units: 9,
+          properties: Hash,
+          events_count: 1,
+          group: nil,
+          pay_in_advance_event_id: event.id,
+          payment_status: 'pending',
+        )
+
+        expect(result.invoice.currency).to eq(customer.currency)
+        expect(result.invoice.fees_amount_cents).to eq(10)
+        expect(result.invoice.vat_amount_cents).to eq(2)
+        expect(result.invoice.vat_rate).to eq(20)
+        expect(result.invoice.total_amount_cents).to eq(12)
+
+        expect(result.invoice).to be_finalized
+      end
+    end
+
+    it 'creates InvoiceSubscription object' do
+      expect { invoice_service.call.invoice }.to change(InvoiceSubscription, :count).by(1)
+    end
+
+    it 'calls SegmentTrackJob' do
+      invoice = invoice_service.call.invoice
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'invoice_created',
+        properties: {
+          organization_id: invoice.organization.id,
+          invoice_id: invoice.id,
+          invoice_type: invoice.invoice_type,
+        },
+      )
+    end
+
+    it 'creates a payment' do
+      payment_create_service = instance_double(Invoices::Payments::CreateService)
+      allow(Invoices::Payments::CreateService)
+        .to receive(:new).and_return(payment_create_service)
+      allow(payment_create_service)
+        .to receive(:call)
+
+      invoice_service.call
+
+      expect(Invoices::Payments::CreateService).to have_received(:new)
+      expect(payment_create_service).to have_received(:call)
+    end
+
+    it 'enqueues a SendWebhookJob' do
+      expect do
+        invoice_service.call
+      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+    end
+
+    it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+      expect do
+        invoice_service.call
+      end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+    end
+
+    context 'with lago_premium' do
+      around { |test| lago_premium!(&test) }
+
+      it 'enqueues an ActionMailer::MailDeliveryJob' do
+        expect do
+          invoice_service.call
+        end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end
+
+      context 'when organization does not have right email settings' do
+        before { customer.organization.update!(email_settings: []) }
+
+        it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+          expect do
+            invoice_service.call
+          end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end
+      end
+    end
+
+    context 'when organization does not have a webhook url' do
+      before { customer.organization.update!(webhook_url: nil) }
+
+      it 'does not enqueues a SendWebhookJob' do
+        expect do
+          invoice_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+      end
+    end
+
+    context 'with customer timezone' do
+      before { customer.update!(timezone: 'America/Los_Angeles') }
+
+      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
+
+      it 'assigns the issuing date in the customer timezone' do
+        result = invoice_service.call
+
+        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+      end
+    end
+  end
+end
