@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_25_120005) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_25_122232) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -435,6 +435,21 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_25_120005) do
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end
 
+  create_table "invoices_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id", null: false
+    t.uuid "tax_id", null: false
+    t.string "tax_description"
+    t.string "tax_code", null: false
+    t.string "tax_name", null: false
+    t.float "tax_rate", default: 0.0, null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_invoices_taxes_on_invoice_id"
+    t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
+  end
+
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "user_id", null: false
@@ -725,6 +740,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_25_120005) do
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
   add_foreign_key "invoices", "organizations"
+  add_foreign_key "invoices_taxes", "invoices"
+  add_foreign_key "invoices_taxes", "taxes"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "password_resets", "users"
