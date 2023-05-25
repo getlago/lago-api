@@ -24,11 +24,12 @@ module V1
         version_number: model.version_number,
       }.merge(legacy_values)
 
-      payload = payload.merge(customer) if include?(:customer)
-      payload = payload.merge(subscriptions) if include?(:subscriptions)
-      payload = payload.merge(fees) if include?(:fees)
-      payload = payload.merge(credits) if include?(:credits)
-      payload = payload.merge(metadata) if include?(:metadata)
+      payload.merge!(customer) if include?(:customer)
+      payload.merge!(subscriptions) if include?(:subscriptions)
+      payload.merge!(fees) if include?(:fees)
+      payload.merge!(credits) if include?(:credits)
+      payload.merge!(metadata) if include?(:metadata)
+      payload.merge!(taxes) if include?(:taxes)
 
       payload
     end
@@ -60,6 +61,10 @@ module V1
         ::V1::Invoices::MetadataSerializer,
         collection_name: 'metadata',
       ).serialize
+    end
+
+    def taxes
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
     end
 
     def legacy_values
