@@ -5,7 +5,8 @@ require 'rails_helper'
 RSpec.describe Fees::UpdateService, type: :service do
   subject(:update_service) { described_class.new(fee:, params:) }
 
-  let(:fee) { create(:charge_fee, fee_type: 'charge', pay_in_advance: true, invoice: nil) }
+  let(:charge) { create(:standard_charge, invoiceable: false) }
+  let(:fee) { create(:charge_fee, fee_type: 'charge', pay_in_advance: true, invoice: nil, charge:) }
 
   let(:params) { { payment_status: } }
   let(:payment_status) { 'succeeded' }
@@ -36,8 +37,9 @@ RSpec.describe Fees::UpdateService, type: :service do
       end
     end
 
-    context 'when fee is not pay_in_advance' do
-      let(:fee) { create(:fee, fee_type: 'charge', pay_in_advance: false, invoice: nil) }
+    context 'when fee charge is invoiceable' do
+      let(:charge) { create(:standard_charge, invoiceable: true) }
+      let(:fee) { create(:charge_fee, fee_type: 'charge', pay_in_advance: true, invoice: nil, charge:) }
 
       it 'returns a not allowed failure' do
         result = update_service.call
@@ -45,7 +47,7 @@ RSpec.describe Fees::UpdateService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq('not_an_pay_in_advance_fee')
+          expect(result.error.code).to eq('invoiceable_fee')
         end
       end
     end

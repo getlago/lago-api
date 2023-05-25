@@ -399,7 +399,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     context 'when event matches an pay_in_advance charge' do
-      let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
+      let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) do
         create(
           :billable_metric,
@@ -433,8 +433,23 @@ RSpec.describe Events::CreateService, type: :service do
         end.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
       end
 
+      context 'when charge is invoiceable' do
+        before { charge.update!(invoiceable: true) }
+
+        it 'does not enqueue a job to perform the pay_in_advance aggregation' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end
+      end
+
       context 'when multiple charges have the billable metric' do
-        before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
+        before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
 
         it 'enqueues a job for each charge' do
           expect do
