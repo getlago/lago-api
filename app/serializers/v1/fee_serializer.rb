@@ -20,8 +20,8 @@ module V1
         invoiceable: model.charge&.invoiceable || false,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
-        vat_amount_cents: model.vat_amount_cents,
-        vat_amount_currency: model.vat_amount_currency,
+        taxes_amount_cents: model.taxes_amount_cents,
+        taxes_rate: model.taxes_rate,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.amount_currency,
         units: model.units,
@@ -33,7 +33,7 @@ module V1
         succeeded_at: model.succeeded_at&.iso8601,
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
-      }
+      }.merge(legacy_values)
 
       payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
@@ -70,6 +70,10 @@ module V1
         external_customer_id: model.customer.external_id,
         event_transaction_id: event&.transaction_id,
       }
+    end
+
+    def legacy_values
+      ::V1::Legacy::FeeSerializer.new(model).serialize
     end
   end
 end

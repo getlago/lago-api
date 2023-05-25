@@ -26,7 +26,7 @@ module Invoices
 
         invoice.fees.destroy_all
         invoice.invoice_subscriptions.destroy_all
-        invoice.update!(vat_rate: invoice.customer.applicable_vat_rate)
+        invoice.update!(taxes_rate: invoice.customer.applicable_vat_rate)
 
         calculate_result = Invoices::CalculateFeesService.call(
           invoice: invoice.reload,

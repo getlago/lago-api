@@ -29,12 +29,15 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               id
             }
             fees {
+              currency
               id
               itemType
               itemCode
               itemName
               group { id key value }
               charge { id billableMetric { code } }
+              taxesRate
+              taxesAmountCents
               trueUpFee { id }
               trueUpParentFee { id }
             }
@@ -195,9 +198,10 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         expect(data['status']).to eq(invoice.status)
         expect(data['customer']['id']).to eq(customer.id)
         expect(data['customer']['name']).to eq(customer.name)
-        expect(data['fees'].first['itemType']).to eq('add_on')
-        expect(data['fees'].first['itemCode']).to eq(add_on.code)
-        expect(data['fees'].first['itemName']).to eq(add_on.name)
+        expect(data['fees'].first).to include(
+          'itemCode' => add_on.code,
+          'itemName' => add_on.name,
+        )
       end
     end
 
@@ -223,9 +227,11 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           expect(data['status']).to eq(invoice.status)
           expect(data['customer']['id']).to eq(customer.id)
           expect(data['customer']['name']).to eq(customer.name)
-          expect(data['fees'].first['itemType']).to eq('add_on')
-          expect(data['fees'].first['itemCode']).to eq(add_on.code)
-          expect(data['fees'].first['itemName']).to eq(add_on.name)
+          expect(data['fees'].first).to include(
+            'itemType' => 'add_on',
+            'itemCode' => add_on.code,
+            'itemName' => add_on.name,
+          )
         end
       end
     end

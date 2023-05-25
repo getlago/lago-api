@@ -19,7 +19,7 @@ module Invoices
           invoice_type: :add_on,
           payment_status: :pending,
           currency:,
-          vat_rate: customer.applicable_vat_rate,
+          taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
         )
 
@@ -50,16 +50,16 @@ module Invoices
     delegate :customer, to: :applied_add_on
 
     def compute_amounts(invoice)
-      fee_amounts = invoice.fees.select(:amount_cents, :vat_amount_cents)
+      fee_amounts = invoice.fees.select(:amount_cents, :taxes_amount_cents)
 
       invoice.currency = applied_add_on.amount_currency
       invoice.fees_amount_cents = fee_amounts.sum(&:amount_cents)
-      invoice.sub_total_vat_excluded_amount_cents = invoice.fees_amount_cents
-      invoice.vat_amount_cents = fee_amounts.sum(&:vat_amount_cents)
-      invoice.sub_total_vat_included_amount_cents = (
-        invoice.sub_total_vat_excluded_amount_cents + invoice.vat_amount_cents
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+      invoice.taxes_amount_cents = fee_amounts.sum(&:taxes_amount_cents)
+      invoice.sub_total_including_taxes_amount_cents = (
+        invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
       )
-      invoice.total_amount_cents = invoice.sub_total_vat_included_amount_cents
+      invoice.total_amount_cents = invoice.sub_total_including_taxes_amount_cents
     end
 
     def create_add_on_fee(invoice)

@@ -432,15 +432,15 @@ html
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.sub_total_without_tax')
-              td.body-2 = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 = sub_total_excluding_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2
-              td.body-2 #{I18n.t('invoice.tax')} (#{vat_rate || 0}%)
-              td.body-2 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 #{I18n.t('invoice.tax')} (#{taxes_rate || 0}%)
+              td.body-2 = taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.sub_total_with_tax')
-              td.body-2 = sub_total_vat_included_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 = sub_total_including_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             tr
               td.body-2
               td.body-1 = I18n.t('invoice.total_due')

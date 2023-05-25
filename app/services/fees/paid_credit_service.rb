@@ -27,7 +27,7 @@ module Fees
         payment_status: :pending,
 
         # NOTE: No VAT should be applied on as it can be considered as an advance
-        vat_rate: 0,
+        taxes_rate: 0,
       )
 
       new_fee.compute_vat

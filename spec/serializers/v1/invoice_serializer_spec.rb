@@ -27,9 +27,9 @@ RSpec.describe ::V1::InvoiceSerializer do
         'coupons_amount_cents' => invoice.coupons_amount_cents,
         'credit_notes_amount_cents' => invoice.credit_notes_amount_cents,
         'prepaid_credit_amount_cents' => invoice.prepaid_credit_amount_cents,
-        'vat_amount_cents' => invoice.vat_amount_cents,
-        'sub_total_vat_excluded_amount_cents' => invoice.sub_total_vat_excluded_amount_cents,
-        'sub_total_vat_included_amount_cents' => invoice.sub_total_vat_included_amount_cents,
+        'taxes_amount_cents' => invoice.taxes_amount_cents,
+        'sub_total_excluding_taxes_amount_cents' => invoice.sub_total_excluding_taxes_amount_cents,
+        'sub_total_including_taxes_amount_cents' => invoice.sub_total_including_taxes_amount_cents,
         'total_amount_cents' => invoice.total_amount_cents,
         'file_url' => invoice.file_url,
         'version_number' => 3,
@@ -42,6 +42,9 @@ RSpec.describe ::V1::InvoiceSerializer do
         'total_amount_currency' => invoice.currency,
         'amount_cents' => invoice.fees.sum(:amount_cents),
         'credit_amount_cents' => invoice.credits.sum(:amount_cents),
+        'vat_amount_cents' => invoice.taxes_amount_cents,
+        'sub_total_vat_excluded_amount_cents' => invoice.sub_total_excluding_taxes_amount_cents,
+        'sub_total_vat_included_amount_cents' => invoice.sub_total_including_taxes_amount_cents,
       )
 
       expect(result['invoice']['metadata'].first).to include(

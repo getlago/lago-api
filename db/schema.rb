@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_25_122232) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -200,14 +200,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
     t.integer "refund_status"
     t.datetime "voided_at"
     t.text "description"
-    t.bigint "vat_amount_cents", default: 0, null: false
-    t.string "vat_amount_currency"
+    t.bigint "taxes_amount_cents", default: 0, null: false
     t.datetime "refunded_at"
     t.date "issuing_date", null: false
     t.integer "status", default: 1, null: false
     t.bigint "coupons_adjustment_amount_cents", default: 0, null: false
     t.decimal "precise_coupons_adjustment_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.decimal "precise_vat_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "precise_taxes_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
+    t.float "taxes_rate", default: 0.0, null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
@@ -297,9 +297,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
     t.uuid "subscription_id"
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
-    t.bigint "vat_amount_cents", null: false
-    t.string "vat_amount_currency", null: false
-    t.float "vat_rate", default: 0.0, null: false
+    t.bigint "taxes_amount_cents", null: false
+    t.float "taxes_rate", default: 0.0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "units", default: "0.0", null: false
@@ -328,6 +327,21 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
+  end
+
+  create_table "fees_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "fee_id", null: false
+    t.uuid "tax_id", null: false
+    t.string "tax_description"
+    t.string "tax_code", null: false
+    t.string "tax_name", null: false
+    t.float "tax_rate", default: 0.0, null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fee_id"], name: "index_fees_taxes_on_fee_id"
+    t.index ["tax_id"], name: "index_fees_taxes_on_tax_id"
   end
 
   create_table "group_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -396,7 +410,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "issuing_date"
-    t.bigint "vat_amount_cents", default: 0, null: false
+    t.bigint "taxes_amount_cents", default: 0, null: false
     t.bigint "total_amount_cents", default: 0, null: false
     t.integer "invoice_type", default: 0, null: false
     t.integer "payment_status", default: 0, null: false
@@ -404,7 +418,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
     t.integer "sequential_id"
     t.string "file"
     t.uuid "customer_id"
-    t.float "vat_rate", default: 0.0, null: false
+    t.float "taxes_rate", default: 0.0, null: false
     t.integer "status", default: 1, null: false
     t.string "timezone", default: "UTC", null: false
     t.integer "payment_attempts", default: 0, null: false
@@ -416,10 +430,25 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
     t.bigint "coupons_amount_cents", default: 0, null: false
     t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "prepaid_credit_amount_cents", default: 0, null: false
-    t.bigint "sub_total_vat_excluded_amount_cents", default: 0, null: false
-    t.bigint "sub_total_vat_included_amount_cents", default: 0, null: false
+    t.bigint "sub_total_excluding_taxes_amount_cents", default: 0, null: false
+    t.bigint "sub_total_including_taxes_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
+  end
+
+  create_table "invoices_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id", null: false
+    t.uuid "tax_id", null: false
+    t.string "tax_description"
+    t.string "tax_code", null: false
+    t.string "tax_name", null: false
+    t.float "tax_rate", default: 0.0, null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_invoices_taxes_on_invoice_id"
+    t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -699,6 +728,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
   add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
+  add_foreign_key "fees_taxes", "fees"
+  add_foreign_key "fees_taxes", "taxes"
   add_foreign_key "group_properties", "charges", on_delete: :cascade
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
@@ -710,6 +741,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_113810) do
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
   add_foreign_key "invoices", "organizations"
+  add_foreign_key "invoices_taxes", "invoices"
+  add_foreign_key "invoices_taxes", "taxes"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "password_resets", "users"

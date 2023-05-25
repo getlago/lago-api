@@ -42,6 +42,29 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:downgrade_plan_date]).to be_nil
     end
 
+    context 'with external_customer_id, external_id and name as integer' do
+      let(:params) do
+        {
+          external_customer_id: 123,
+          plan_code:,
+          name: 456,
+          external_id: 789,
+        }
+      end
+
+      it 'returns a success' do
+        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription]).to include(
+          lago_id: String,
+          external_customer_id: '123',
+          name: '456',
+          external_id: '789',
+        )
+      end
+    end
+
     context 'with invalid plan code' do
       let(:plan_code) { "#{plan.code}-invalid" }
 

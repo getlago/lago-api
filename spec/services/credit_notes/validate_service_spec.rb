@@ -17,7 +17,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       credit_amount_cents:,
       refund_amount_cents:,
       precise_coupons_adjustment_amount_cents: 0,
-      precise_vat_amount_cents: 2,
+      precise_taxes_amount_cents: 2,
     )
   end
   let(:item) do
@@ -38,7 +38,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       :fee,
       invoice:,
       amount_cents: 100,
-      vat_rate: 20,
+      taxes_rate: 20,
     )
   end
 
@@ -80,7 +80,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:credit_amount_cents) { 250 }
 
       before do
-        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -98,7 +98,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
       before do
         invoice.succeeded!
-        create(:fee, invoice:, amount_cents: 100, vat_rate: 20, vat_amount_cents: 20)
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
       it 'fails the validation' do
@@ -173,10 +173,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
           currency: 'EUR',
           fees_amount_cents: 100,
           coupons_amount_cents: 10,
-          vat_amount_cents: 18,
+          taxes_amount_cents: 18,
           total_amount_cents: 108,
           payment_status: :succeeded,
-          vat_rate: 20,
+          taxes_rate: 20,
           version_number: 3,
         )
       end
@@ -192,7 +192,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
           credit_amount_cents:,
           refund_amount_cents:,
           precise_coupons_adjustment_amount_cents: 2,
-          precise_vat_amount_cents: 3.6,
+          precise_taxes_amount_cents: 3.6,
         )
       end
       let(:item) do

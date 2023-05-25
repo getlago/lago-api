@@ -5,7 +5,7 @@ module Api
     class SubscriptionsController < Api::BaseController
       def create
         customer = Customer.find_or_initialize_by(
-          external_id: create_params[:external_customer_id]&.strip,
+          external_id: create_params[:external_customer_id].to_s.strip,
           organization_id: current_organization.id,
         )
 

@@ -65,7 +65,7 @@ module Fees
         charge:,
         amount_cents:,
         amount_currency: currency,
-        vat_rate: customer.applicable_vat_rate,
+        taxes_rate: customer.applicable_vat_rate,
         fee_type: :charge,
         invoiceable_type: 'Charge',
         invoiceable: charge,

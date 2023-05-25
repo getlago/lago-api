@@ -16,11 +16,11 @@ module CreditNotes
       credit_note.items.update_all(fee_id: fee.id) # rubocop:disable Rails/SkipsModelValidations
 
       amount_cents = credit_note.items.sum(:amount_cents)
-      credit_amount_cents = (amount_cents + (amount_cents * fee.vat_rate).fdiv(100)).round
+      credit_amount_cents = (amount_cents + (amount_cents * fee.taxes_rate).fdiv(100)).round
       return result if credit_amount_cents == credit_note.credit_amount_cents
 
       credit_note.update!(
-        vat_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.vat_rate }.fdiv(100).round,
+        taxes_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.taxes_rate }.fdiv(100).round,
         credit_amount_cents:,
         balance_amount_cents: credit_amount_cents,
         total_amount_cents: credit_amount_cents + credit_note.refund_amount_cents,

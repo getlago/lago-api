@@ -30,11 +30,11 @@ namespace :invoices do
     end
   end
 
-  desc 'Fill invoice VAT rate'
-  task fill_vat_rate: :environment do
-    Invoice.where(vat_rate: nil).find_each do |invoice|
+  desc 'Fill invoice Taxes rate'
+  task fill_taxes_rate: :environment do
+    Invoice.where(taxes_rate: nil).find_each do |invoice|
       invoice.update!(
-        vat_rate: (invoice.vat_amount_cents.fdiv(invoice.amount_cents) * 100).round(2),
+        taxes_rate: (invoice.taxes_amount_cents.fdiv(invoice.amount_cents) * 100).round(2),
       )
     end
   end
