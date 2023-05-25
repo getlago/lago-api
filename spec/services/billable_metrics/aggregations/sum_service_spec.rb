@@ -238,10 +238,20 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
 
     let(:properties) { { total_count: 12 } }
 
-    it 'assigns an pay_in_advance aggregation' do
+    it 'assigns a pay_in_advance aggregation' do
       result = sum_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.pay_in_advance_aggregation).to eq(12)
+    end
+
+    context 'when properties is a float' do
+      let(:properties) { { total_count: 12.4 } }
+
+      it 'assigns a pay_in_advance aggregation' do
+        result = sum_service.aggregate(from_datetime:, to_datetime:)
+
+        expect(result.pay_in_advance_aggregation).to eq(12.4)
+      end
     end
 
     context 'when event propertie does not match metric field name' do
