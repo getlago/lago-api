@@ -3901,6 +3901,11 @@ type Query {
   customerPortalUser: Customer
 
   """
+  Query a customer portal events
+  """
+  customerPortalEvents(limit: Int, page: Int): EventCollection
+
+  """
   Query the usage of the customer on the current billing period
   """
   customerUsage(customerId: ID, subscriptionId: ID!): CustomerUsage!

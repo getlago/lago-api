@@ -10,7 +10,7 @@ module Fees
       super
     end
 
-    def call
+    def callcode
       fees = []
 
       ActiveRecord::Base.transaction do
