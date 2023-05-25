@@ -64,9 +64,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           charge:,
           amount_cents: 10,
           amount_currency: 'EUR',
-          vat_rate: 20.0,
-          vat_amount_cents: 2,
-          vat_amount_currency: 'EUR',
+          taxes_rate: 20.0,
+          taxes_amount_cents: 2,
           fee_type: 'charge',
           pay_in_advance: true,
           invoiceable: charge,
@@ -80,8 +79,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
         expect(result.invoice.currency).to eq(customer.currency)
         expect(result.invoice.fees_amount_cents).to eq(10)
-        expect(result.invoice.vat_amount_cents).to eq(2)
-        expect(result.invoice.vat_rate).to eq(20)
+        expect(result.invoice.taxes_amount_cents).to eq(2)
+        expect(result.invoice.taxes_rate).to eq(20)
         expect(result.invoice.total_amount_cents).to eq(12)
 
         expect(result.invoice).to be_finalized

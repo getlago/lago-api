@@ -19,7 +19,7 @@ module Invoices
           invoice_type: :subscription,
           payment_status: :pending,
           currency: customer.currency,
-          vat_rate: customer.applicable_vat_rate,
+          taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
           status: :finalized,
         )
@@ -33,7 +33,7 @@ module Invoices
         create_fees(invoice)
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-        invoice.sub_total_vat_excluded_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents)
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
