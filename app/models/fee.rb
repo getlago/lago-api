@@ -20,6 +20,9 @@ class Fee < ApplicationRecord
   has_many :credit_note_items
   has_many :credit_notes, through: :credit_note_items
 
+  has_many :fees_taxes
+  has_many :taxes, through: :fees_taxes
+
   monetize :amount_cents
   monetize :taxes_amount_cents
   monetize :total_amount_cents
