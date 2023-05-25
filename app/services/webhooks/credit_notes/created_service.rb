@@ -11,7 +11,7 @@ module Webhooks
         ::V1::CreditNoteSerializer.new(
           object,
           root_name: 'credit_note',
-          includes: %i[customer items],
+          includes: %i[customer items taxes],
         )
       end
 

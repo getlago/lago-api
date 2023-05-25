@@ -10,6 +10,8 @@ class Tax < ApplicationRecord
   has_many :fees, through: :fees_taxes
   has_many :invoices_taxes
   has_many :invoices, through: :invoices_taxes
+  has_many :credit_notes_taxes
+  has_many :credit_notes, through: :credit_notes_taxes
 
   belongs_to :organization
 

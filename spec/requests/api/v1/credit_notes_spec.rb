@@ -29,35 +29,40 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
-        expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-        expect(json[:credit_note][:sequential_id]).to eq(credit_note.sequential_id)
-        expect(json[:credit_note][:number]).to eq(credit_note.number)
-        expect(json[:credit_note][:lago_invoice_id]).to eq(invoice.id)
-        expect(json[:credit_note][:invoice_number]).to eq(invoice.number)
-        expect(json[:credit_note][:credit_status]).to eq(credit_note.credit_status)
-        expect(json[:credit_note][:reason]).to eq(credit_note.reason)
-        expect(json[:credit_note][:total_amount_cents]).to eq(credit_note.total_amount_cents)
-        expect(json[:credit_note][:total_amount_currency]).to eq(credit_note.total_amount_currency)
-        expect(json[:credit_note][:credit_amount_cents]).to eq(credit_note.credit_amount_cents)
-        expect(json[:credit_note][:credit_amount_currency]).to eq(credit_note.credit_amount_currency)
-        expect(json[:credit_note][:balance_amount_cents]).to eq(credit_note.balance_amount_cents)
-        expect(json[:credit_note][:balance_amount_currency]).to eq(credit_note.balance_amount_currency)
-        expect(json[:credit_note][:created_at]).to eq(credit_note.created_at.iso8601)
-        expect(json[:credit_note][:updated_at]).to eq(credit_note.updated_at.iso8601)
+
+        expect(json[:credit_note]).to include(
+          lago_id: credit_note.id,
+          sequential_id: credit_note.sequential_id,
+          number: credit_note.number,
+          lago_invoice_id: invoice.id,
+          invoice_number: invoice.number,
+          credit_status: credit_note.credit_status,
+          reason: credit_note.reason,
+          total_amount_cents: credit_note.total_amount_cents,
+          total_amount_currency: credit_note.total_amount_currency,
+          credit_amount_cents: credit_note.credit_amount_cents,
+          credit_amount_currency: credit_note.credit_amount_currency,
+          balance_amount_cents: credit_note.balance_amount_cents,
+          balance_amount_currency: credit_note.balance_amount_currency,
+          created_at: credit_note.created_at.iso8601,
+          updated_at: credit_note.updated_at.iso8601,
+          taxes: [],
+        )
 
         expect(json[:credit_note][:items].count).to eq(2)
 
-        json_item = json[:credit_note][:items].first
         item = credit_note_items.first
-        expect(json_item[:lago_id]).to eq(item.id)
-        expect(json_item[:amount_cents]).to eq(item.amount_cents)
-        expect(json_item[:amount_currency]).to eq(item.amount_currency)
-        expect(json_item[:fee][:lago_id]).to eq(item.fee.id)
-        expect(json_item[:fee][:amount_cents]).to eq(item.fee.amount_cents)
-        expect(json_item[:fee][:amount_currency]).to eq(item.fee.amount_currency)
-        expect(json_item[:fee][:item][:type]).to eq(item.fee.fee_type)
-        expect(json_item[:fee][:item][:code]).to eq(item.fee.item_code)
-        expect(json_item[:fee][:item][:name]).to eq(item.fee.item_name)
+        expect(json[:credit_note][:items][0]).to include(
+          lago_id: item.id,
+          amount_cents: item.amount_cents,
+          amount_currency: item.amount_currency,
+        )
+
+        expect(json[:credit_note][:items][0][:fee][:item]).to include(
+          type: item.fee.fee_type,
+          code: item.fee.item_code,
+          name: item.fee.item_name,
+        )
       end
     end
 
@@ -206,11 +211,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           expect(response).to have_http_status(:success)
           expect(json[:credit_notes].count).to eq(1)
 
-          expect(json[:meta][:current_page]).to eq(1)
-          expect(json[:meta][:next_page]).to eq(2)
-          expect(json[:meta][:prev_page]).to eq(nil)
-          expect(json[:meta][:total_pages]).to eq(2)
-          expect(json[:meta][:total_count]).to eq(2)
+          expect(json[:meta]).to include(
+            current_page: 1,
+            next_page: 2,
+            prev_page: nil,
+            total_pages: 2,
+            total_count: 2,
+          )
         end
       end
     end
@@ -263,19 +270,21 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        expect(json[:credit_note][:lago_id]).to be_present
-        expect(json[:credit_note][:credit_status]).to eq('available')
-        expect(json[:credit_note][:refund_status]).to eq('pending')
-        expect(json[:credit_note][:reason]).to eq('duplicated_charge')
-        expect(json[:credit_note][:description]).to eq('Duplicated charge')
-        expect(json[:credit_note][:total_amount_cents]).to eq(15)
-        expect(json[:credit_note][:total_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:credit_amount_cents]).to eq(10)
-        expect(json[:credit_note][:credit_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:balance_amount_cents]).to eq(10)
-        expect(json[:credit_note][:balance_amount_currency]).to eq('EUR')
-        expect(json[:credit_note][:refund_amount_cents]).to eq(5)
-        expect(json[:credit_note][:refund_amount_currency]).to eq('EUR')
+        expect(json[:credit_note]).to include(
+          credit_status: 'available',
+          refund_status: 'pending',
+          reason: 'duplicated_charge',
+          description: 'Duplicated charge',
+          total_amount_cents: 15,
+          total_amount_currency: 'EUR',
+          credit_amount_cents: 10,
+          credit_amount_currency: 'EUR',
+          balance_amount_cents: 10,
+          balance_amount_currency: 'EUR',
+          refund_amount_cents: 5,
+          refund_amount_currency: 'EUR',
+          taxes: [],
+        )
 
         expect(json[:credit_note][:items][0][:lago_id]).to be_present
         expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)

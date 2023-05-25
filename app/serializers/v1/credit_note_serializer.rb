@@ -28,8 +28,9 @@ module V1
         file_url: model.file_url,
       }.merge(legacy_values)
 
-      payload = payload.merge(customer) if include?(:customer)
-      payload = payload.merge(items) if include?(:items)
+      payload.merge!(customer) if include?(:customer)
+      payload.merge!(items) if include?(:items)
+      payload.merge!(taxes) if include?(:taxes)
 
       payload
     end
@@ -48,6 +49,10 @@ module V1
         ::V1::CreditNoteItemSerializer,
         collection_name: 'items',
       ).serialize
+    end
+
+    def taxes
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
     end
 
     def legacy_values

@@ -16,6 +16,9 @@ class CreditNote < ApplicationRecord
   has_many :fees, through: :items
   has_many :refunds
 
+  has_many :credit_notes_taxes
+  has_many :taxes, through: :credit_notes_taxes
+
   has_one_attached :file
 
   monetize :credit_amount_cents
