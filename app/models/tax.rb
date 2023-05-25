@@ -16,6 +16,8 @@ class Tax < ApplicationRecord
   validates :name, :rate, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
 
+  scope :applied_to_organization, -> { where(applied_to_organization: true) }
+
   def customers_count
     applicable_customers.count
   end
