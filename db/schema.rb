@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_25_122232) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_25_154612) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -209,6 +209,21 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_25_122232) do
     t.float "taxes_rate", default: 0.0, null: false
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
+  end
+
+  create_table "credit_notes_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "credit_note_id", null: false
+    t.uuid "tax_id", null: false
+    t.string "tax_description"
+    t.string "tax_code", null: false
+    t.string "tax_name", null: false
+    t.float "tax_rate", default: 0.0, null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["credit_note_id"], name: "index_credit_notes_taxes_on_credit_note_id"
+    t.index ["tax_id"], name: "index_credit_notes_taxes_on_tax_id"
   end
 
   create_table "credits", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -712,6 +727,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_25_122232) do
   add_foreign_key "credit_note_items", "fees"
   add_foreign_key "credit_notes", "customers"
   add_foreign_key "credit_notes", "invoices"
+  add_foreign_key "credit_notes_taxes", "credit_notes"
+  add_foreign_key "credit_notes_taxes", "taxes"
   add_foreign_key "credits", "applied_coupons"
   add_foreign_key "credits", "credit_notes"
   add_foreign_key "credits", "invoices"
