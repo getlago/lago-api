@@ -28,7 +28,7 @@ module LagoApi
     config.i18n.default_locale = :en
 
     config.generators do |g|
-      g.orm :active_record, primary_key_type: :uuid
+      g.orm(:active_record, primary_key_type: :uuid)
     end
   end
 end

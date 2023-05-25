@@ -45,7 +45,7 @@ module PersistedEvents
       # NOTE: Ensure no active persisted metric exists with the same external id
       return if PersistedEvent.where(
         customer_id: customer.id,
-        external_id: external_id,
+        external_id:,
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).none?
 
@@ -57,7 +57,7 @@ module PersistedEvents
 
       return if PersistedEvent.where(
         customer_id: customer.id,
-        external_id: external_id,
+        external_id:,
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).exists?
 

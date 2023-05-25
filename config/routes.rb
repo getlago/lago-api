@@ -20,6 +20,7 @@ Rails.application.routes.draw do
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
+          resources :applied_taxes, only: %i[create destroy], param: :tax_code
         end
       end
 
@@ -41,13 +42,14 @@ Rails.application.routes.draw do
       resources :applied_coupons, only: %i[create index]
       resources :applied_add_ons, only: %i[create]
       resources :fees, only: %i[show update index]
-      resources :invoices, only: %i[update show index] do
+      resources :invoices, only: %i[create update show index] do
         post :download, on: :member
         post :retry_payment, on: :member
         put :refresh, on: :member
         put :finalize, on: :member
       end
       resources :plans, param: :code
+      resources :taxes, param: :code
       resources :wallet_transactions, only: :create
       get '/wallets/:id/wallet_transactions', to: 'wallet_transactions#index'
       resources :wallets, only: %i[create update show index]
@@ -66,6 +68,14 @@ Rails.application.routes.draw do
   resources :webhooks, only: [] do
     post 'stripe/:organization_id', to: 'webhooks#stripe', on: :collection, as: :stripe
     post 'gocardless/:organization_id', to: 'webhooks#gocardless', on: :collection, as: :gocardless
+  end
+
+  namespace :admin do
+    resources :memberships, only: %i[create]
+    resources :organizations, only: %i[update]
+    resources :invoices do
+      post :regenerate, on: :member
+    end
   end
 
   match '*unmatched' => 'application#not_found',

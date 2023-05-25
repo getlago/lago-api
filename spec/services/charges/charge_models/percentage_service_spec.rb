@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   subject(:apply_percentage_service) do
     described_class.apply(
-      charge: charge,
-      aggregation_result: aggregation_result,
+      charge:,
+      aggregation_result:,
       properties: charge.properties,
     )
   end
@@ -14,7 +14,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   before do
     aggregation_result.aggregation = aggregation
     aggregation_result.count = 4
-    aggregation_result.options = { running_total: running_total }
+    aggregation_result.options = { running_total: }
   end
 
   let(:running_total) { [50, 150, 400] }
@@ -27,14 +27,15 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
   let(:expected_fixed_amount) { (4 - 2) * 2.0 }
 
+  let(:rate) { '1.3' }
   let(:charge) do
     create(
       :percentage_charge,
       properties: {
-        rate: '1.3',
-        fixed_amount: fixed_amount,
-        free_units_per_events: free_units_per_events,
-        free_units_per_total_aggregation: free_units_per_total_aggregation,
+        rate:,
+        fixed_amount:,
+        free_units_per_events:,
+        free_units_per_total_aggregation:,
       },
     )
   end
@@ -52,6 +53,17 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.amount).to eq(
         (expected_percentage_amount + expected_fixed_amount),
       )
+    end
+  end
+
+  context 'when rate is 0' do
+    let(:free_units_per_events) { nil }
+    let(:free_units_per_total_aggregation) { nil }
+    let(:rate) { '0' }
+    let(:expected_fixed_amount) { (4 - 0) * 2.0 }
+
+    it 'returns 0 as expected percentage amount' do
+      expect(apply_percentage_service.amount).to eq(expected_fixed_amount)
     end
   end
 

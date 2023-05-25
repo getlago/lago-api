@@ -13,7 +13,7 @@ module Fees
       return result.not_found_failure!(resource: 'fee') if fee.nil?
 
       if params.key?(:payment_status)
-        return result.not_allowed_failure!(code: 'not_an_instant_fee') unless fee.instant_charge?
+        return result.not_allowed_failure!(code: 'not_an_pay_in_advance_fee') unless fee.pay_in_advance?
 
         unless valid_payment_status?(params[:payment_status])
           return result.single_validation_failure!(

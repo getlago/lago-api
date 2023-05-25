@@ -13,7 +13,7 @@ module Invoices
       return result.not_found_failure!(resource: 'invoice') if invoice.blank?
       return result.not_allowed_failure!(code: 'is_draft') if invoice.draft?
 
-      generate_pdf(invoice) if invoice.file.blank?
+      generate_pdf if should_generate_pdf?
 
       SendWebhookJob.perform_later('invoice.generated', invoice) if should_send_webhook?
 
@@ -25,23 +25,35 @@ module Invoices
 
     attr_reader :invoice, :context
 
-    def generate_pdf(invoice)
-      I18n.locale = invoice.customer.preferred_document_locale
+    def generate_pdf
+      I18n.with_locale(invoice.customer.preferred_document_locale) do
+        pdf_service = Utils::PdfGenerator.new(template:, context: invoice)
+        pdf_result = pdf_service.call
 
-      pdf_service = Utils::PdfGenerator.new(template: 'invoice', context: invoice)
-      pdf_result = pdf_service.call
+        invoice.file.attach(
+          io: pdf_result.io,
+          filename: "#{invoice.number}.pdf",
+          content_type: 'application/pdf',
+        )
 
-      invoice.file.attach(
-        io: pdf_result.io,
-        filename: "#{invoice.number}.pdf",
-        content_type: 'application/pdf',
-      )
+        invoice.save!
+      end
+    end
 
-      invoice.save!
+    def template
+      if invoice.one_off?
+        'invoices/one_off'
+      else
+        "invoices/v#{invoice.version_number}"
+      end
     end
 
     def should_send_webhook?
       context == 'api'
+    end
+
+    def should_generate_pdf?
+      context == 'admin' || invoice.file.blank?
     end
   end
 end

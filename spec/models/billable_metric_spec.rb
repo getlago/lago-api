@@ -45,7 +45,7 @@ RSpec.describe BillableMetric, type: :model do
         one = create(:group, billable_metric:, key: 'country', value: 'france')
         second = create(:group, billable_metric:, key: 'country', value: 'italy')
 
-        expect(billable_metric.selectable_groups).to match_array([one, second])
+        expect(billable_metric.selectable_groups).to contain_exactly(one, second)
       end
     end
 
@@ -57,7 +57,7 @@ RSpec.describe BillableMetric, type: :model do
         second = create(:group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: france.id)
         third = create(:group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: italy.id)
 
-        expect(billable_metric.selectable_groups).to match_array([one, second, third])
+        expect(billable_metric.selectable_groups).to contain_exactly(one, second, third)
       end
     end
 
@@ -67,7 +67,7 @@ RSpec.describe BillableMetric, type: :model do
         one = create(:group, :deleted, billable_metric:, key: 'country', value: 'france')
         second = create(:group, :deleted, billable_metric:, key: 'country', value: 'italy')
 
-        expect(billable_metric.selectable_groups).to match_array([one, second])
+        expect(billable_metric.selectable_groups).to contain_exactly(one, second)
       end
     end
   end

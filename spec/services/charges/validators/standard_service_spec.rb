@@ -3,9 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe Charges::Validators::StandardService, type: :service do
-  subject(:standard_service) { described_class.new(charge: charge) }
+  subject(:standard_service) { described_class.new(charge:) }
 
-  let(:charge) { build(:standard_charge, properties: properties) }
+  let(:charge) { build(:standard_charge, properties:) }
   let(:properties) { {} }
 
   describe '.valid?' do

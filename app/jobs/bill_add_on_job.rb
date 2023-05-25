@@ -7,7 +7,7 @@ class BillAddOnJob < ApplicationJob
 
   def perform(applied_add_on, timestamp)
     result = Invoices::AddOnService.new(
-      applied_add_on: applied_add_on,
+      applied_add_on:,
       datetime: Time.zone.at(timestamp),
     ).create
 

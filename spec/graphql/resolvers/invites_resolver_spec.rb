@@ -16,13 +16,13 @@ RSpec.describe Resolvers::InvitesResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invite) { create(:invite, organization: organization) }
+  let(:invite) { create(:invite, organization:) }
 
   it 'returns a list of invites' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: invite.organization,
-      query: query,
+      query:,
     )
 
     invites_response = result['data']['invites']
@@ -40,11 +40,11 @@ RSpec.describe Resolvers::InvitesResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query: query,
+        query:,
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end

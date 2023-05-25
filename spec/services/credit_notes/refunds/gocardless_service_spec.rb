@@ -114,7 +114,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       let(:credit_note) do
         create(
           :credit_note,
-          customer: customer,
+          customer:,
           refund_amount_cents: 0,
           refund_amount_currency: 'CHF',
         )
@@ -154,7 +154,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
 
   describe '#update_status' do
     let(:refund) do
-      create(:refund, credit_note: credit_note)
+      create(:refund, credit_note:)
     end
 
     before do

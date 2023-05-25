@@ -125,7 +125,10 @@ RSpec.describe CreditNote, type: :model do
     end
 
     it 'returns the list of subscription ids' do
-      expect(credit_note.subscription_ids).to eq([subscription_fee.subscription_id, charge_fee.subscription_id])
+      expect(credit_note.subscription_ids).to contain_exactly(
+        subscription_fee.subscription_id,
+        charge_fee.subscription_id,
+      )
     end
 
     context 'with add_on fee' do

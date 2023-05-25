@@ -89,7 +89,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
       expect { create_batch_service }.to change(Group, :count).by(2)
 
       expect(billable_metric.reload.groups.pluck(:key, :value))
-        .to match_array([%w[region usa], %w[region europe]])
+        .to contain_exactly(%w[region usa], %w[region europe])
     end
   end
 
@@ -117,7 +117,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
 
       groups = billable_metric.reload.groups
       aws = groups.find_by(key: 'cloud', value: 'AWS')
-      expect(aws.children.pluck(:key, :value)).to match_array([%w[region usa], %w[region europe]])
+      expect(aws.children.pluck(:key, :value)).to contain_exactly(%w[region usa], %w[region europe])
 
       google = groups.find_by(key: 'cloud', value: 'Google')
       expect(google.children.pluck(:key, :value)).to eq([%w[region usa]])

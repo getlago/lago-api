@@ -7,9 +7,9 @@ class BillSubscriptionJob < ApplicationJob
 
   def perform(subscriptions, timestamp, recurring: false)
     result = Invoices::SubscriptionService.new(
-      subscriptions: subscriptions,
-      timestamp: timestamp,
-      recurring: recurring,
+      subscriptions:,
+      timestamp:,
+      recurring:,
     ).create
 
     result.raise_if_error!

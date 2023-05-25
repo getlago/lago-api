@@ -20,15 +20,11 @@ class CreditNote < ApplicationRecord
 
   monetize :credit_amount_cents
   monetize :balance_amount_cents
-  monetize :credit_vat_amount_cents
-
   monetize :refund_amount_cents
-  monetize :refund_vat_amount_cents
-
   monetize :total_amount_cents
   monetize :vat_amount_cents
-
   monetize :sub_total_vat_excluded_amount_cents
+  monetize :coupons_adjustment_amount_cents, with_model_currency: :total_amount_currency
 
   # NOTE: Status of the credit part
   # - available: a credit amount remain available

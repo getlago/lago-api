@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe CreditNotes::VoidService, type: :service do
-  subject(:void_service) { described_class.new(credit_note: credit_note) }
+  subject(:void_service) { described_class.new(credit_note:) }
 
   let(:credit_note) { create(:credit_note) }
 

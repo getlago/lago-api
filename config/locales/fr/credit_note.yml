@@ -10,6 +10,7 @@ fr:
     credited_notice: Crédité sur le solde du client le %{issuing_date}
     credited_refunded_notice: Crédité sur le solde du client et remboursée le %{issuing_date}
     subscription: Souscription
+    coupon_adjustment: Coupons
     sub_total_without_tax: Sous total (HT)
     tax: Taxe
     credited_on_customer_balance: Crédit sur le solde du client

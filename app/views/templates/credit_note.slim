@@ -367,23 +367,34 @@ html
                   = subscription_item(subscription_id).amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
               - subscription_charge_items(subscription_id).each do |item|
                 tr
-                  td.body-1 = item.fee.item_name
+                  - if item.fee.true_up_parent_fee_id?
+                    td.body-1 = I18n.t('invoice.true_up_metric', metric: item.fee.item_name)
+                  - else
+                    td.body-1 = item.fee.item_name
                   td.body-1 width="30%" style="text-align: right;"
                     = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             - else
               - add_on_items.each do |item|
                 tr
                   td.body-1
-                    | #{item.fee.item_name}
+                    - if item.fee.true_up_parent_fee_id?
+                      | #{I18n.t('invoice.true_up_metric', metric: item.fee.item_name)}
+                    - else
+                      | #{item.fee.item_name}
                   td.body-1 width="30%" style="text-align: right;"
                     = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
         table.total-table width="100%"
+          - if coupons_adjustment_amount_cents.positive?
+            tr
+              td.body-2 width="70%" = I18n.t('credit_note.coupon_adjustment')
+              td.body-1 width="30%"
+                | -#{coupons_adjustment_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))}
           tr
             td.body-2 width="70%" = I18n.t('credit_note.sub_total_without_tax')
             td.body-1 width="30%" = sub_total_vat_excluded_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           tr
-            td.body-2 = I18n.t('credit_note.tax')
+            td.body-2 #{I18n.t('credit_note.tax')} (#{invoice.vat_rate || 0}%)
             td.body-1 = vat_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
           - if credited?
             tr

@@ -26,13 +26,11 @@ module CreditNotes
           customer: invoice.customer,
           invoice:,
           issuing_date:,
-          total_amount_currency: invoice.amount_currency,
-          vat_amount_currency: invoice.amount_currency,
-          credit_amount_currency: invoice.amount_currency,
-          credit_vat_amount_currency: invoice.amount_currency,
-          refund_amount_currency: invoice.amount_currency,
-          refund_vat_amount_currency: invoice.amount_currency,
-          balance_amount_currency: invoice.amount_currency,
+          total_amount_currency: invoice.currency,
+          vat_amount_currency: invoice.currency,
+          credit_amount_currency: invoice.currency,
+          refund_amount_currency: invoice.currency,
+          balance_amount_currency: invoice.currency,
           credit_amount_cents:,
           refund_amount_cents:,
           reason:,
@@ -44,6 +42,11 @@ module CreditNotes
         create_items
         return result unless result.success?
 
+        credit_note.precise_coupons_adjustment_amount_cents = adjustement_result.coupons_adjustment_amount_cents
+        credit_note.coupons_adjustment_amount_cents = credit_note.precise_coupons_adjustment_amount_cents.round
+        credit_note.precise_vat_amount_cents = adjustement_result.vat_amount_cents
+        credit_note.vat_amount_cents = credit_note.precise_vat_amount_cents.round
+
         valid_credit_note?
         result.raise_if_error!
 
@@ -52,7 +55,6 @@ module CreditNotes
 
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
-          vat_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.vat_rate }.fdiv(100).round,
           balance_amount_cents: credit_note.credit_amount_cents,
         )
       end
@@ -98,7 +100,7 @@ module CreditNotes
       return true if automatic
       return false if invoice.credit?
 
-      !invoice.legacy?
+      invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)
@@ -114,30 +116,20 @@ module CreditNotes
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
           amount_cents: amount_cents.round,
           precise_amount_cents: amount_cents,
-          amount_currency: invoice.amount_currency,
+          amount_currency: invoice.currency,
         )
         break unless valid_item?(item)
 
         item.save!
-        refresh_vat_amounts
       end
     end
 
     def valid_item?(item)
-      CreditNotes::ValidateItemService.new(result, item: item).valid?
+      CreditNotes::ValidateItemService.new(result, item:).valid?
     end
 
     def valid_credit_note?
       CreditNotes::ValidateService.new(result, item: credit_note).valid?
-    end
-
-    def refresh_vat_amounts
-      credit_note.credit_vat_amount_cents = compute_vat_amount(credit_note.credit_amount_cents)
-      credit_note.refund_vat_amount_cents = compute_vat_amount(credit_note.refund_amount_cents)
-    end
-
-    def compute_vat_amount(total_amount)
-      total_amount - total_amount.fdiv(1 + (invoice.vat_rate || 0).fdiv(100))
     end
 
     def track_credit_note_created
@@ -194,6 +186,13 @@ module CreditNotes
       when PaymentProviders::GocardlessProvider
         CreditNotes::Refunds::GocardlessCreateJob.perform_later(credit_note)
       end
+    end
+
+    def adjustement_result
+      @adjustement_result ||= CreditNotes::ComputeAmountService.call(
+        invoice:,
+        items: credit_note.items,
+      )
     end
   end
 end

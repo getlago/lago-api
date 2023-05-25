@@ -8,10 +8,9 @@ RSpec.describe Credits::AppliedCouponsService do
   let(:invoice) do
     create(
       :invoice,
-      amount_cents: 100,
-      vat_amount_cents: 20,
-      total_amount_cents: 120,
-      amount_currency: 'EUR',
+      fees_amount_cents: 100,
+      sub_total_vat_excluded_amount_cents: 100,
+      currency: 'EUR',
       customer: subscription.customer,
     )
   end
@@ -32,7 +31,7 @@ RSpec.describe Credits::AppliedCouponsService do
 
   describe '#call' do
     let(:timestamp) { Time.zone.now.beginning_of_month }
-    let(:fee) { create(:fee, invoice:, subscription:) }
+    let(:fee) { create(:fee, amount_cents: 100, invoice:, subscription:) }
     let(:applied_coupon) do
       create(
         :applied_coupon,
@@ -66,9 +65,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
       aggregate_failures do
         expect(result).to be_success
-        expect(result.invoice.coupons_amount_cents).to eq(32)
-        expect(result.invoice.credit_amount_cents).to eq(32)
-        expect(result.invoice.total_amount_cents).to eq(88)
+        expect(result.invoice.coupons_amount_cents).to eq(30)
+        expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(70)
         expect(result.invoice.credits.count).to eq(2)
       end
     end
@@ -91,9 +89,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
-          expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(90)
+          expect(result.invoice.coupons_amount_cents).to eq(30)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(70)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -115,9 +112,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
-          expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(82)
+          expect(result.invoice.coupons_amount_cents).to eq(35)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(65)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -178,9 +174,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.amount_cents).to eq(100)
-          expect(result.invoice.vat_amount_cents).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(120)
+          expect(result.invoice.coupons_amount_cents).to eq(0)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(100)
           expect(result.invoice.credits.count).to be_zero
         end
       end
@@ -221,7 +216,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.total_amount_cents).to eq(100)
+          expect(result.invoice.coupons_amount_cents).to eq(20)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(80)
           expect(result.invoice.credits.count).to eq(1)
         end
       end
@@ -262,7 +258,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.total_amount_cents).to eq(90)
+          expect(result.invoice.coupons_amount_cents).to eq(30)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(70)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
@@ -345,7 +342,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.total_amount_cents).to eq(35)
+          expect(result.invoice.coupons_amount_cents).to eq(80)
+          expect(result.invoice.sub_total_vat_excluded_amount_cents).to eq(20)
           expect(result.invoice.credits.count).to eq(2)
         end
       end

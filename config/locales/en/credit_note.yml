@@ -10,6 +10,7 @@ en:
     credited_notice: Credited on customer balance on %{issuing_date}
     credited_refunded_notice: Credited on customer balance and refunded on %{issuing_date}
     subscription: Subscription
+    coupon_adjustment: Coupons
     sub_total_without_tax: Sub total (excl. tax)
     tax: Tax
     credited_on_customer_balance: Credited on customer balance

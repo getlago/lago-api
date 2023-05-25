@@ -5,24 +5,24 @@ require 'rails_helper'
 RSpec.describe Events::ValidateCreationService, type: :service do
   subject(:validate_event) do
     described_class.call(
-      organization: organization,
-      params: params,
-      result: result,
-      customer: customer,
-      batch: batch,
+      organization:,
+      params:,
+      result:,
+      customer:,
+      batch:,
     )
   end
 
   let(:organization) { create(:organization) }
   let(:result) { BaseService::Result.new }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:params) do
     { external_customer_id: customer.external_id, code: billable_metric.code }
   end
 
   describe '.call' do
-    let!(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
+    let!(:subscription) { create(:active_subscription, customer:, organization:) }
 
     context 'when batch is false' do
       let(:batch) { false }
@@ -46,7 +46,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       context 'when customer has two active subscriptions' do
-        before { create(:active_subscription, customer: customer, organization: organization) }
+        before { create(:active_subscription, customer:, organization:) }
 
         let(:params) do
           { code: billable_metric.code, external_subscription_id: subscription.external_id }
@@ -65,9 +65,9 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
         let(:validate_event) do
           described_class.call(
-            organization: organization,
-            params: params,
-            result: result,
+            organization:,
+            params:,
+            result:,
             customer: nil,
           )
         end
@@ -89,7 +89,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       context 'when there are two active subscriptions but external_subscription_id is not given' do
         before do
-          create(:active_subscription, customer: customer, organization: organization)
+          create(:active_subscription, customer:, organization:)
         end
 
         it 'returns a subscription_not_found error' do
@@ -117,7 +117,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
 
         before do
-          create(:active_subscription, customer: customer, organization: organization)
+          create(:active_subscription, customer:, organization:)
         end
 
         it 'returns a not found error' do
@@ -244,7 +244,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         let(:billable_metric) do
           create(
             :billable_metric,
-            organization: organization,
+            organization:,
             aggregation_type: 'recurring_count_agg',
             field_name: 'item_id',
           )
@@ -360,11 +360,11 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
         let(:validate_event) do
           described_class.call(
-            organization: organization,
-            params: params,
-            result: result,
+            organization:,
+            params:,
+            result:,
             customer: nil,
-            batch: batch,
+            batch:,
           )
         end
 
@@ -393,7 +393,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
 
         before do
-          create(:active_subscription, customer: customer, organization: organization)
+          create(:active_subscription, customer:, organization:)
         end
 
         it 'returns subscription is invalid error' do
@@ -468,7 +468,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         let(:billable_metric) do
           create(
             :billable_metric,
-            organization: organization,
+            organization:,
             aggregation_type: 'recurring_count_agg',
             field_name: 'item_id',
           )

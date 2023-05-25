@@ -4,8 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::WalletsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization, currency: 'EUR') }
-  let(:subscription) { create(:subscription, customer: customer) }
+  let(:customer) { create(:customer, organization:, currency: 'EUR') }
+  let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { '2022-06-06 23:59:59' }
 
   before { subscription }
@@ -19,7 +19,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         currency: 'EUR',
         paid_credits: '10',
         granted_credits: '10',
-        expiration_at: expiration_at,
+        expiration_at:,
       }
     end
 
@@ -58,7 +58,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   end
 
   describe 'update' do
-    let(:wallet) { create(:wallet, customer: customer) }
+    let(:wallet) { create(:wallet, customer:) }
     let(:expiration_at) { '2022-06-06 23:59:59' }
     let(:update_params) do
       {
@@ -118,7 +118,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   end
 
   describe 'show' do
-    let(:wallet) { create(:wallet, customer: customer) }
+    let(:wallet) { create(:wallet, customer:) }
 
     before { wallet }
 
@@ -180,7 +180,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   end
 
   describe 'index' do
-    let(:wallet) { create(:wallet, customer: customer) }
+    let(:wallet) { create(:wallet, customer:) }
 
     before { wallet }
 
@@ -194,7 +194,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:wallet2) { create(:wallet, customer: customer) }
+      let(:wallet2) { create(:wallet, customer:) }
 
       before { wallet2 }
 

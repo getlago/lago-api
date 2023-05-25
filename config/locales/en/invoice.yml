@@ -18,6 +18,10 @@ en:
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     total_due: Total due
     powered_by: Powered by
+    item: Item
+    unit: Unit
+    unit_price: Unit price
+    amount: Amount
 
     details: "%{resource} details"
     subscription: Subscription
@@ -39,5 +43,7 @@ en:
     breakdown_for_days: "%{breakdown_duration} of %{breakdown_total_duration} days"
     breakdown_of: "Breakdown of %{fee_group_name}"
     notice: For example, if a unit is added with 15 days left in your monthly plan, we multiply the price by 15/31 (days remaining divided by the total number of days in your plan) to calculate the prorated price. Same logic when removing a unit used during 10 days, we multiply the price by 10/31.
+    true_up_metric: "%{metric} - True-up"
+    true_up_details: "Minimum spend of %{min_amount} prorated on days of usage"
 
     total_credits: Total credits

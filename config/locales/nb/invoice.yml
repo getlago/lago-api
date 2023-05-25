@@ -18,6 +18,10 @@ nb:
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     total_due: Å betale
     powered_by: Fakturering drevet av
+    item: Vare
+    unit: Enhet
+    unit_price: Enhetspris
+    amount: Beløp
 
     details: "%{resource} detaljer"
     subscription: Abonnement
@@ -39,5 +43,7 @@ nb:
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
     breakdown_of: "Fordeling av %{fee_group_name}"
     notice: For eksempel, hvis en enhet legges til med 15 dager igjen på månedsabonnementet ganger vi prisen med 15/31 (antall dager gjenstående delt på antall dager å abonnementet ditt) for å beregne den rette prisen. Samme logikk benyttes når en enhet fjernes etter f.eks 10 dager, da ganger vi prisen med 10/31.
+    true_up_metric: "%{metric} - Tilpasningskostnader"
+    true_up_details: "Minimumsutgift på %{min_amount} beregnet etter antall brukte dager"
 
     total_credits: Antall kreditter

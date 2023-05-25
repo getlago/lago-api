@@ -19,7 +19,7 @@ module Charges
       end
 
       def validate_rate
-        return if ::Validators::DecimalAmountService.new(rate).valid_positive_amount?
+        return if ::Validators::DecimalAmountService.new(rate).valid_amount?
 
         add_error(field: :rate, error_code: 'invalid_rate')
       end

@@ -8,19 +8,19 @@ module Types
       field :id, ID, null: false
       field :organization, Types::OrganizationType
 
-      field :status, Types::Webhooks::StatusEnum, null: false
-      field :object_type, String, null: false
-      field :webhook_type, String, null: false
-      field :retries, Integer, null: false
       field :endpoint, String, null: false
+      field :object_type, String, null: false
+      field :retries, Integer, null: false
+      field :status, Types::Webhooks::StatusEnum, null: false
+      field :webhook_type, String, null: false
 
       field :http_status, Integer, null: true
       field :payload, String, null: true
       field :response, String, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :last_retried_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     end
   end
 end

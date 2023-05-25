@@ -29,6 +29,9 @@ class Customer < ApplicationRecord
            dependent: :destroy
   has_many :persisted_events
 
+  has_many :applied_taxes
+  has_many :taxes, through: :applied_taxes
+
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
   has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
 
@@ -85,6 +88,15 @@ class Customer < ApplicationRecord
     return document_locale.to_sym if document_locale?
 
     organization.document_locale.to_sym
+  end
+
+  def provider_customer
+    case payment_provider&.to_sym
+    when :stripe
+      stripe_customer
+    when :gocardless
+      gocardless_customer
+    end
   end
 
   private

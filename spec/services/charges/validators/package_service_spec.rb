@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Charges::Validators::PackageService, type: :service do
-  subject(:package_service) { described_class.new(charge: charge) }
+  subject(:package_service) { described_class.new(charge:) }
 
   let(:charge) { build(:package_charge, properties: package_properties) }
 

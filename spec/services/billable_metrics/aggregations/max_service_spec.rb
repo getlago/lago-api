@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   subject(:max_service) do
     described_class.new(
-      billable_metric: billable_metric,
-      subscription: subscription,
-      group: group,
+      billable_metric:,
+      subscription:,
+      group:,
     )
   end
 
@@ -19,7 +19,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   let(:billable_metric) do
     create(
       :billable_metric,
-      organization: organization,
+      organization:,
       aggregation_type: 'max_agg',
       field_name: 'total_count',
     )
@@ -33,8 +33,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       :event,
       4,
       code: billable_metric.code,
-      customer: customer,
-      subscription: subscription,
+      customer:,
+      subscription:,
       timestamp: Time.zone.now - 1.day,
       properties: {
         total_count: rand(10),
@@ -44,8 +44,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     create(
       :event,
       code: billable_metric.code,
-      customer: customer,
-      subscription: subscription,
+      customer:,
+      subscription:,
       timestamp: Time.zone.now - 1.day,
       properties: {
         total_count: 12,
@@ -54,7 +54,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   end
 
   it 'aggregates the events' do
-    result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+    result = max_service.aggregate(from_datetime:, to_datetime:)
 
     expect(result.aggregation).to eq(12)
     expect(result.count).to eq(5)
@@ -64,7 +64,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     let(:to_datetime) { Time.zone.now - 2.days }
 
     it 'does not take events into account' do
-      result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = max_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -77,7 +77,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
 
     it 'counts as zero' do
-      result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = max_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -89,8 +89,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 14.2,
@@ -99,7 +99,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = max_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(14.2)
     end
@@ -110,8 +110,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 'foo_bar',
@@ -120,7 +120,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
 
     it 'returns a failed result' do
-      result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = max_service.aggregate(from_datetime:, to_datetime:)
 
       aggregate_failures do
         expect(result).not_to be_success
@@ -136,14 +136,14 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
       )
     end
 
     it 'ignore the event' do
-      result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = max_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result).to be_success
       expect(result.aggregation).to eq(12)
@@ -159,8 +159,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
@@ -171,8 +171,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 8,
@@ -183,8 +183,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       create(
         :event,
         code: billable_metric.code,
-        customer: customer,
-        subscription: subscription,
+        customer:,
+        subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
           total_count: 12,
@@ -194,7 +194,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = max_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+      result = max_service.aggregate(from_datetime:, to_datetime:)
 
       expect(result.aggregation).to eq(12)
       expect(result.count).to eq(2)

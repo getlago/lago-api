@@ -35,6 +35,8 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               itemName
               group { id key value }
               charge { id billableMetric { code } }
+              trueUpFee { id }
+              trueUpParentFee { id }
             }
           }
           subscriptions {
@@ -61,7 +63,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
   let(:subscription) { invoice_subscription.subscription }
   let(:fee) { create(:fee, subscription:, invoice:, amount_cents: 10) }
 
@@ -71,7 +73,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: {
         id: invoice.id,
       },
@@ -99,7 +101,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
       variables: { id: invoice.id },
     )
 
@@ -115,16 +117,13 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: invoice.organization,
-        query: query,
+        query:,
         variables: {
           id: 'foo',
         },
       )
 
-      expect_graphql_error(
-        result: result,
-        message: 'Resource not found',
-      )
+      expect_graphql_error(result:, message: 'Resource not found')
     end
   end
 
@@ -172,7 +171,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
   end
 
   context 'with an add on invoice' do
-    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
     let(:add_on) { create(:add_on, organization:) }
     let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
     let(:fee) { create(:add_on_fee, invoice:, applied_add_on:) }

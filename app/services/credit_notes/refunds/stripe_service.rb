@@ -16,8 +16,8 @@ module CreditNotes
         stripe_result = create_stripe_refund
 
         refund = Refund.new(
-          credit_note: credit_note,
-          payment: payment,
+          credit_note:,
+          payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment.payment_provider_customer,
           amount_cents: stripe_result.amount,
@@ -124,7 +124,7 @@ module CreditNotes
           credit_note,
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
-            message: message,
+            message:,
             error_code: code,
           },
         )

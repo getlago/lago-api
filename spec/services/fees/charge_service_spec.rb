@@ -198,13 +198,15 @@ RSpec.describe Fees::ChargeService do
 
       context 'with true-up fee' do
         it 'creates two fees' do
-          charge.update!(min_amount_cents: 1000)
-          result = charge_subscription_service.create
+          travel_to(DateTime.new(2023, 4, 1)) do
+            charge.update!(min_amount_cents: 1000)
+            result = charge_subscription_service.create
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(2)
-            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 1000)
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.fees.count).to eq(2)
+              expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548) # 548 is 1000 prorated for 17 days.
+            end
           end
         end
       end
@@ -1019,12 +1021,14 @@ RSpec.describe Fees::ChargeService do
       end
 
       it 'creates three fees' do
-        result = charge_subscription_service.create
+        travel_to(DateTime.new(2023, 4, 1)) do
+          result = charge_subscription_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(3)
-          expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 1000)
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.fees.count).to eq(3)
+            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 548) # 548 is 1000 prorated for 17 days.
+          end
         end
       end
     end

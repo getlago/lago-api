@@ -15,7 +15,7 @@ module Mutations
       def resolve(id:)
         result = ::PaymentProviders::DestroyService
           .new(context[:current_user])
-          .destroy(id: id)
+          .destroy(id:)
 
         result.success? ? result.payment_provider : result_error(result)
       end

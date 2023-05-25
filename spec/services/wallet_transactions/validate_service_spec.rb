@@ -8,19 +8,19 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
   let(:result) { BaseService::Result.new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
   let(:wallet_id) { wallet.id }
   let(:paid_credits) { '1.00' }
   let(:granted_credits) { '0.00' }
   let(:args) do
     {
-      wallet_id: wallet_id,
+      wallet_id:,
       customer_id: customer.external_id,
       organization_id: organization.id,
-      paid_credits: paid_credits,
-      granted_credits: granted_credits,
+      paid_credits:,
+      granted_credits:,
     }
   end
 

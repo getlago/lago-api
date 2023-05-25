@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
-# TODO:
 RSpec.describe Invites::ValidateService, type: :service do
   subject(:validate_service) { described_class.new(result, **args) }
 
@@ -22,7 +21,7 @@ RSpec.describe Invites::ValidateService, type: :service do
     end
 
     context 'when invite already exists' do
-      before { create(:invite, email: user.email, recipient: membership, organization: organization) }
+      before { create(:invite, email: user.email, recipient: membership, organization:) }
 
       let(:args) do
         {

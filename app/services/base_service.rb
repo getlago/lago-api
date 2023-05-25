@@ -94,11 +94,11 @@ class BaseService
     end
 
     def not_found_failure!(resource:)
-      fail_with_error!(NotFoundFailure.new(self, resource: resource))
+      fail_with_error!(NotFoundFailure.new(self, resource:))
     end
 
     def not_allowed_failure!(code:)
-      fail_with_error!(MethodNotAllowedFailure.new(self, code: code))
+      fail_with_error!(MethodNotAllowedFailure.new(self, code:))
     end
 
     def record_validation_failure!(record:)
@@ -114,11 +114,11 @@ class BaseService
     end
 
     def service_failure!(code:, message:)
-      fail_with_error!(ServiceFailure.new(self, code: code, error_message: message))
+      fail_with_error!(ServiceFailure.new(self, code:, error_message: message))
     end
 
     def forbidden_failure!(code: 'feature_unavailable')
-      fail_with_error!(ForbiddenFailure.new(self, code: code))
+      fail_with_error!(ForbiddenFailure.new(self, code:))
     end
 
     def raise_if_error!

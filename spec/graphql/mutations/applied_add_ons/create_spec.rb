@@ -19,10 +19,10 @@ RSpec.describe Mutations::AppliedAddOns::Create, type: :graphql do
     GQL
   end
 
-  let(:add_on) { create(:add_on, organization: organization) }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:customer) { create(:customer, organization:) }
 
-  before { create(:active_subscription, customer: customer) }
+  before { create(:active_subscription, customer:) }
 
   it 'assigns an add-on to the customer' do
     result = execute_graphql(

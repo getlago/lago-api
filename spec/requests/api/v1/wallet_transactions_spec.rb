@@ -4,9 +4,9 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::WalletTransactionsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer) }
-  let(:wallet) { create(:wallet, customer: customer) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet) { create(:wallet, customer:) }
   let(:wallet_id) { wallet.id }
 
   before do
@@ -17,9 +17,9 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
   describe 'create' do
     let(:create_params) do
       {
-        wallet_id: wallet_id,
+        wallet_id:,
         paid_credits: '10',
-        granted_credits: '10'
+        granted_credits: '10',
       }
     end
 

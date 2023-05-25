@@ -97,6 +97,11 @@ module Subscriptions
       plan.amount_cents.fdiv(duration.to_i)
     end
 
+    def charge_single_day_price(charge:)
+      duration = compute_charges_duration(from_date: compute_charges_from_date)
+      charge.min_amount_cents.fdiv(duration.to_i)
+    end
+
     def charges_duration_in_days
       compute_charges_duration(from_date: compute_charges_from_date)
     end
@@ -170,6 +175,10 @@ module Subscriptions
       day = days_count_in_month if days_count_in_month < day
 
       Date.new(year, month, day)
+    end
+
+    def last_day_of_month?(date)
+      date.day == date.end_of_month.day
     end
 
     def compute_base_date

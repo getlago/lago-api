@@ -6,6 +6,9 @@ module V1
       payload = {
         lago_id: model.id,
         lago_group_id: model.group_id,
+        lago_invoice_id: model.invoice_id,
+        lago_true_up_fee_id: model.true_up_fee&.id,
+        lago_true_up_parent_fee_id: model.true_up_parent_fee_id,
         item: {
           type: model.fee_type,
           code: model.item_code,
@@ -13,6 +16,7 @@ module V1
           lago_item_id: model.item_id,
           item_type: model.item_type,
         },
+        pay_in_advance: model.pay_in_advance,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         vat_amount_cents: model.vat_amount_cents,
@@ -20,9 +24,9 @@ module V1
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.amount_currency,
         units: model.units,
+        description: model.description,
+        unit_amount_cents: model.unit_amount_cents,
         events_count: model.events_count,
-        lago_invoice_id: model.invoice_id,
-        external_subscription_id: model.subscription&.external_id,
         payment_status: model.payment_status,
         created_at: model.created_at&.iso8601,
         succeeded_at: model.succeeded_at&.iso8601,
@@ -31,6 +35,7 @@ module V1
       }
 
       payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
+      payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
 
       payload
     end
@@ -50,6 +55,20 @@ module V1
 
     def to_date
       model.properties['to_datetime']&.to_datetime&.iso8601
+    end
+
+    def pay_in_advance_charge_attributes
+      return {} unless model.pay_in_advance?
+
+      event = model.subscription.organization.events.find_by(id: model.pay_in_advance_event_id)
+
+      {
+        lago_subscription_id: model.subscription_id,
+        external_subscription_id: model.subscription&.external_id,
+        lago_customer_id: model.customer.id,
+        external_customer_id: model.customer.external_id,
+        event_transaction_id: event&.transaction_id,
+      }
     end
   end
 end

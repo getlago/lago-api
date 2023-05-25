@@ -8,8 +8,8 @@ module Resolvers
     description 'Query plans of an organization'
 
     argument :ids, [String], required: false, description: 'List of plan ID to fetch'
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
     argument :search_term, String, required: false
 
     type Types::Plans::Object.collection_type, null: false

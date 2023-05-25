@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization: organization) }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:plan) { create(:plan, organization:) }
+  let(:customer) { create(:customer, organization:) }
   let(:mutation) do
     <<~GQL
       mutation($input: CreateSubscriptionInput!) {

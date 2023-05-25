@@ -67,14 +67,14 @@ RSpec.describe AddOns::UpdateService, type: :service do
         }
       end
 
-      it 'updates only name and description' do
+      it 'updates all given attributes' do
         create(:applied_add_on, add_on:)
         result = add_ons_service.call
 
         aggregate_failures do
           expect(result.add_on.name).to eq('new name')
           expect(result.add_on.description).to eq('new desc')
-          expect(result.add_on.code).not_to eq('new code')
+          expect(result.add_on.code).to eq('new code')
         end
       end
     end

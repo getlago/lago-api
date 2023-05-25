@@ -5,10 +5,10 @@ require 'rails_helper'
 RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
   subject(:validation_service) do
     described_class.new(
-      subscription: subscription,
-      billable_metric: billable_metric,
-      args: args,
-      result: result,
+      subscription:,
+      billable_metric:,
+      args:,
+      result:,
     )
   end
 
@@ -69,8 +69,8 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       before do
         create(
           :persisted_event,
-          customer: customer,
-          external_id: external_id,
+          customer:,
+          external_id:,
           external_subscription_id: subscription.external_id,
         )
       end
@@ -89,8 +89,8 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       before do
         create(
           :persisted_event,
-          customer: customer,
-          external_id: external_id,
+          customer:,
+          external_id:,
           external_subscription_id: subscription.external_id,
           removed_at: Time.current - 3.days,
         )
@@ -117,8 +117,8 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       before do
         create(
           :persisted_event,
-          customer: customer,
-          external_id: external_id,
+          customer:,
+          external_id:,
           external_subscription_id: subscription.external_id,
         )
       end
@@ -130,8 +130,8 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       before do
         create(
           :persisted_event,
-          customer: customer,
-          external_id: external_id,
+          customer:,
+          external_id:,
           external_subscription_id: subscription.external_id,
           removed_at: Time.current - 3.days,
         )

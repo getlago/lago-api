@@ -21,7 +21,7 @@ module Invites
     def generate_token
       token = SecureRandom.hex(20)
 
-      return generate_token if Invite.exists?(token: token)
+      return generate_token if Invite.exists?(token:)
 
       token
     end

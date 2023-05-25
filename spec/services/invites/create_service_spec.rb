@@ -50,7 +50,7 @@ RSpec.describe Invites::CreateService, type: :service do
       let(:user) { create(:user, email: create_args[:email]) }
 
       it 'returns an error' do
-        create(:membership, organization: organization, user: user)
+        create(:membership, organization:, user:)
 
         result = create_service.call(**create_args)
 

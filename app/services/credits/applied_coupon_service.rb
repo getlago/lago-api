@@ -18,10 +18,11 @@ module Credits
       credit_amount = compute_amount
 
       new_credit = Credit.create!(
-        invoice: invoice,
-        applied_coupon: applied_coupon,
+        invoice:,
+        applied_coupon:,
         amount_cents: credit_amount,
         amount_currency: invoice.currency,
+        before_vat: false, # NOTE: will turn to true with invoice v3
       )
 
       applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?

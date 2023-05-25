@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module V1
   class EventSerializer < ModelSerializer
     def serialize
@@ -12,7 +13,7 @@ module V1
         properties: model.properties,
         lago_subscription_id: model.subscription_id,
         external_subscription_id: model.subscription&.external_id,
-        created_at: model.created_at.iso8601
+        created_at: model.created_at.iso8601,
       }
     end
   end

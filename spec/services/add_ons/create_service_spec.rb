@@ -60,7 +60,7 @@ RSpec.describe AddOns::CreateService, type: :service do
       before do
         create(
           :add_on,
-          organization: organization,
+          organization:,
           code: 'free-beer-for-us',
         )
       end

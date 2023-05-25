@@ -25,7 +25,7 @@ module V1
         currency: model.currency,
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
-        billing_configuration: billing_configuration,
+        billing_configuration:,
       }
 
       payload = payload.merge(metadata) if include?(:metadata)

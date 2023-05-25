@@ -60,7 +60,7 @@ module PaymentProviderCustomers
 
     def check_payment_method(payment_method_id)
       payment_method = Stripe::Customer.new(id: stripe_customer.provider_customer_id)
-        .retrieve_payment_method(payment_method_id, {}, { api_key: api_key })
+        .retrieve_payment_method(payment_method_id, {}, { api_key: })
 
       result.payment_method = payment_method
       result
@@ -89,7 +89,7 @@ module PaymentProviderCustomers
       Stripe::Customer.create(
         stripe_create_payload,
         {
-          api_key: api_key,
+          api_key:,
           idempotency_key: customer.id,
         },
       )

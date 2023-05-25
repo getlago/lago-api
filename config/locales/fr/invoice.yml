@@ -18,6 +18,10 @@ fr:
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
     total_due: Total dû
     powered_by: Document généré par
+    item: Article
+    unit: Unité
+    unit_price: Prix unitaire
+    amount: Montant
 
     details: "Détails de %{resource}"
     subscription: Abonnement
@@ -39,5 +43,7 @@ fr:
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
     breakdown_of: "Détails de consommation de %{fee_group_name}"
     notice: Par exemple, si une unité est ajoutée alors qu'il reste 15 jours à votre abonnement mensuel et que le mois concerné compte 31 jours, nous multiplions le prix mensuel par 15/31 (nombre de jours restants dans le mois divisé par le nombre total de jours du mois), pour un abonnement mensuel. Le principe est similaire lorsque vous retirez une unité qui n'aura été utilisée que 10 jours dans le mois, nous multiplions le prix par 10/31.
+    true_up_metric: "%{metric} - Frais d'ajustement"
+    true_up_details: "Dépense minimale de %{min_amount} au prorata des jours d'utilisation"
 
     total_credits: Total crédits

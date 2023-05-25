@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 describe SegmentTrackJob, job: true do
@@ -19,15 +21,15 @@ describe SegmentTrackJob, job: true do
       expect(SEGMENT_CLIENT).to receive(:track)
         .with(
           user_id: membership_id,
-          event: event,
+          event:,
           properties: {
             method: 1,
             hosting_type: 'self',
-            version: Utils::VersionService.new.version.version.number
-          }
+            version: Utils::VersionService.new.version.version.number,
+          },
         )
 
-      subject.perform_now(membership_id: membership_id, event: event, properties: properties)
+      subject.perform_now(membership_id:, event:, properties:)
     end
 
     context 'when LAGO_CLOUD is true' do
@@ -35,20 +37,20 @@ describe SegmentTrackJob, job: true do
         stub_const('ENV', 'LAGO_CLOUD' => 'true')
 
         expect(SEGMENT_CLIENT).to receive(:track).with(
-          hash_including(properties: hash_including(hosting_type: 'cloud'))
+          hash_including(properties: hash_including(hosting_type: 'cloud')),
         )
 
-        subject.perform_now(membership_id: membership_id, event: event, properties: properties)
+        subject.perform_now(membership_id:, event:, properties:)
       end
     end
 
     context 'when membership is nil' do
       it 'sends event to an unidentifiable membership' do
         expect(SEGMENT_CLIENT).to receive(:track).with(
-          hash_including(user_id: 'membership/unidentifiable')
+          hash_including(user_id: 'membership/unidentifiable'),
         )
 
-        subject.perform_now(membership_id: nil, event: event, properties: properties)
+        subject.perform_now(membership_id: nil, event:, properties:)
       end
     end
 
@@ -57,7 +59,7 @@ describe SegmentTrackJob, job: true do
         stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => 'true')
 
         expect(SEGMENT_CLIENT).not_to receive(:track)
-        subject.perform_now(membership_id: membership_id, event: event, properties: properties)
+        subject.perform_now(membership_id:, event:, properties:)
       end
     end
   end

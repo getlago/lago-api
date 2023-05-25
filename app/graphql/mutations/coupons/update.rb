@@ -8,15 +8,15 @@ module Mutations
       graphql_name 'UpdateCoupon'
       description 'Update an existing coupon'
 
-      argument :id, String, required: true
-      argument :name, String, required: true
-      argument :code, String, required: false
-      argument :coupon_type, Types::Coupons::CouponTypeEnum, required: true
       argument :amount_cents, GraphQL::Types::BigInt, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false
-      argument :percentage_rate, Float, required: false
+      argument :code, String, required: false
+      argument :coupon_type, Types::Coupons::CouponTypeEnum, required: true
       argument :frequency, Types::Coupons::FrequencyEnum, required: true
       argument :frequency_duration, Integer, required: false
+      argument :id, String, required: true
+      argument :name, String, required: true
+      argument :percentage_rate, Float, required: false
       argument :reusable, Boolean, required: false
 
       argument :applies_to, Types::Coupons::LimitationInput, required: false

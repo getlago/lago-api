@@ -38,7 +38,7 @@ module PaymentProviders
     end
 
     def webhook_secret=(value)
-      push_to_settings(key: 'webhook_secret', value: value)
+      push_to_settings(key: 'webhook_secret', value:)
     end
 
     def webhook_secret

@@ -3,11 +3,26 @@
 module Api
   module V1
     class InvoicesController < Api::BaseController
+      def create
+        result = Invoices::OneOffService.new(
+          customer:,
+          currency: create_params[:currency],
+          fees: create_params[:fees],
+          timestamp: Time.current.to_i,
+        ).create
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def update
         invoice = current_organization.invoices.find_by(id: params[:id])
 
         result = Invoices::UpdateService.new(
-          invoice: invoice,
+          invoice:,
           params: update_params.to_h.deep_symbolize_keys,
         ).call
 
@@ -109,6 +124,23 @@ module Api
 
       private
 
+      def create_params
+        @create_params if defined? @create_params
+
+        @create_params =
+          params.require(:invoice)
+            .permit(
+              :external_customer_id,
+              :currency,
+              fees: [
+                :add_on_code,
+                :unit_amount_cents,
+                :units,
+                :description,
+              ],
+            ).to_h.deep_symbolize_keys
+      end
+
       def update_params
         params.require(:invoice).permit(
           :payment_status,
@@ -144,6 +176,13 @@ module Api
 
       def valid_status?(status)
         Invoice.statuses.key?(status)
+      end
+
+      def customer
+        Customer.find_by(
+          external_id: create_params[:external_customer_id],
+          organization_id: current_organization.id,
+        )
       end
     end
   end

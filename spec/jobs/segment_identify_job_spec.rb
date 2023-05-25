@@ -24,10 +24,10 @@ describe SegmentIdentifyJob, job: true do
             version: Utils::VersionService.new.version.version.number,
             organization_name: membership.organization.name,
             email: membership.user.email,
-          }
+          },
         )
 
-      subject.perform_now(membership_id: membership_id)
+      subject.perform_now(membership_id:)
     end
 
     context 'when LAGO_CLOUD is true' do
@@ -37,10 +37,10 @@ describe SegmentIdentifyJob, job: true do
 
       it 'includes hosting type equal to cloud' do
         expect(SEGMENT_CLIENT).to receive(:identify).with(
-          hash_including(traits: hash_including(hosting_type: 'cloud'))
+          hash_including(traits: hash_including(hosting_type: 'cloud')),
         )
 
-        subject.perform_now(membership_id: membership_id)
+        subject.perform_now(membership_id:)
       end
     end
 
@@ -65,7 +65,7 @@ describe SegmentIdentifyJob, job: true do
         stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => 'true')
 
         expect(SEGMENT_CLIENT).not_to receive(:identify)
-        subject.perform_now(membership_id: membership_id)
+        subject.perform_now(membership_id:)
       end
     end
   end

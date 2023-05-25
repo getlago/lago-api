@@ -30,7 +30,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
           code: 'free-beer-for-us',
           description: 'some text',
           amountCents: 5000,
-          amountCurrency: 'EUR'
+          amountCurrency: 'EUR',
         },
       },
     )
@@ -57,7 +57,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
             name: 'Test Add-on',
             code: 'free-beer-for-us',
             amountCents: 5000,
-            amountCurrency: 'EUR'
+            amountCurrency: 'EUR',
           },
         },
       )
@@ -76,7 +76,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
             name: 'Test Add-on',
             code: 'free-beer-for-us',
             amountCents: 5000,
-            amountCurrency: 'EUR'
+            amountCurrency: 'EUR',
           },
         },
       )

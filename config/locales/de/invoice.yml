@@ -18,6 +18,10 @@ de:
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     total_due: Insgesamt fällig
     powered_by: Bereitgestellt von
+    item: Artikel
+    unit: Einheit
+    unit_price: Stückpreis
+    amount: Betrag
 
     details: "%{resource} Details"
     subscription: Abonnement
@@ -39,5 +43,7 @@ de:
     breakdown_for_days: "%{breakdown_duration} für %{breakdown_total_duration} Tage"
     breakdown_of: "%{breakdown} für %{fee_group_name}"
     notice: Wenn beispielsweise eine Einheit mit 15 verbleibenden Tagen in Ihrem Monatsplan hinzugefügt wird, multiplizieren wir den Preis mit 15/31 (verbleibende Tage dividiert durch die Gesamtzahl der Tage in Ihrem Plan), um den anteiligen Preis zu berechnen. Dieselbe Logik greift beim Entfernen einer Einheit, die 10 Tage lang verwendet wurde, wir multiplizieren den Preis mit 10/31.
+    true_up_metric: "%{metric} - Kosten für die Anpassung"
+    true_up_details: "Mindestausgabe von %{min_amount} anteilig an den Nutzungstagen"
 
     total_credits: Gesamtguthaben

@@ -42,7 +42,7 @@ Rails.application.configure do
   elsif ENV['LAGO_REDIS_CACHE_URL'].present?
     cache_store_config = {
       url: ENV['LAGO_REDIS_CACHE_URL'],
-      error_handler: ->(method:, returning:, exception:) {
+      error_handler: lambda { |method:, returning:, exception:|
         Rails.logger.error(exception.message)
         Rails.logger.error(exception.backtrace.join("\n"))
 

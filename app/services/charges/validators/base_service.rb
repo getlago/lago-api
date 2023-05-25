@@ -14,7 +14,7 @@ module Charges
         # NOTE: override and add validation rules
 
         if errors?
-          result.validation_failure!(errors: errors)
+          result.validation_failure!(errors:)
           return false
         end
 

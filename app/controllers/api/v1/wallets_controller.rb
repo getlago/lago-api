@@ -10,7 +10,7 @@ module Api
             current_organization,
             input_params
               .merge(organization_id: current_organization.id)
-              .merge(customer: customer),
+              .merge(customer:),
           ).create_input,
         )
 

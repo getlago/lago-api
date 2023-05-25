@@ -7,7 +7,7 @@ RSpec.describe Wallets::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization: organization, external_id: 'foobar', currency: customer_currency) }
+  let(:customer) { create(:customer, organization:, external_id: 'foobar', currency: customer_currency) }
   let(:customer_currency) { 'EUR' }
 
   describe '.create' do
@@ -17,13 +17,13 @@ RSpec.describe Wallets::CreateService, type: :service do
     let(:create_args) do
       {
         name: 'New Wallet',
-        customer: customer,
+        customer:,
         organization_id: organization.id,
         currency: 'EUR',
         rate_amount: '1.00',
         expiration_at: DateTime.parse('2022-01-01 23:59:59'),
-        paid_credits: paid_credits,
-        granted_credits: granted_credits,
+        paid_credits:,
+        granted_credits:,
       }
     end
 

@@ -7,8 +7,8 @@ module Resolvers
 
     description 'Query events of an organization'
 
-    argument :page, Integer, required: false
     argument :limit, Integer, required: false
+    argument :page, Integer, required: false
 
     type Types::Events::Object.collection_type, null: true
 

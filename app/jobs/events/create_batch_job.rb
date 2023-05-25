@@ -6,10 +6,10 @@ module Events
 
     def perform(organization, params, timestamp, metadata)
       result = Events::CreateBatchService.new.call(
-        organization: organization,
-        params: params,
+        organization:,
+        params:,
         timestamp: Time.zone.at(timestamp),
-        metadata: metadata,
+        metadata:,
       )
 
       result.raise_if_error!

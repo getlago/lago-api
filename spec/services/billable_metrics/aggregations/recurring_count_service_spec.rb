@@ -5,17 +5,17 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :service do
   subject(:recurring_service) do
     described_class.new(
-      billable_metric: billable_metric,
-      subscription: subscription,
-      group: group,
+      billable_metric:,
+      subscription:,
+      group:,
     )
   end
 
   let(:subscription) do
     create(
       :subscription,
-      started_at: started_at,
-      subscription_at: subscription_at,
+      started_at:,
+      subscription_at:,
       billing_time: :anniversary,
     )
   end
@@ -29,7 +29,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
   let(:billable_metric) do
     create(
       :billable_metric,
-      organization: organization,
+      organization:,
       aggregation_type: 'recurring_count_agg',
       field_name: 'unique_id',
     )
@@ -43,18 +43,18 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
   let(:persisted_event) do
     create(
       :persisted_event,
-      customer: customer,
-      added_at: added_at,
-      removed_at: removed_at,
+      customer:,
+      added_at:,
+      removed_at:,
       external_subscription_id: subscription.external_id,
-      billable_metric: billable_metric,
+      billable_metric:,
     )
   end
 
   before { persisted_event }
 
   describe '#aggregate' do
-    let(:result) { recurring_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime) }
+    let(:result) { recurring_service.aggregate(from_datetime:, to_datetime:) }
 
     context 'with persisted metric on full period' do
       it 'returns the number of persisted metric' do
@@ -65,8 +65,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
         let(:subscription) do
           create(
             :subscription,
-            started_at: started_at,
-            subscription_at: subscription_at,
+            started_at:,
+            subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -83,8 +83,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
         let(:subscription) do
           create(
             :subscription,
-            started_at: started_at,
-            subscription_at: subscription_at,
+            started_at:,
+            subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -96,8 +96,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           create(
             :subscription,
             previous_subscription: subscription,
-            organization: organization,
-            customer: customer,
+            organization:,
+            customer:,
             started_at: to_datetime,
           )
         end
@@ -179,7 +179,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
   end
 
   describe '#breakdown' do
-    let(:result) { recurring_service.breakdown(from_datetime: from_datetime, to_datetime: to_datetime).breakdown }
+    let(:result) { recurring_service.breakdown(from_datetime:, to_datetime:).breakdown }
 
     context 'with persisted metric on full period' do
       it 'returns the detail the persisted metrics' do
@@ -199,8 +199,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
         let(:subscription) do
           create(
             :subscription,
-            started_at: started_at,
-            subscription_at: subscription_at,
+            started_at:,
+            subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -226,8 +226,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
         let(:subscription) do
           create(
             :subscription,
-            started_at: started_at,
-            subscription_at: subscription_at,
+            started_at:,
+            subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
             status: :terminated,
@@ -239,8 +239,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
           create(
             :subscription,
             previous_subscription: subscription,
-            organization: organization,
-            customer: customer,
+            organization:,
+            customer:,
             started_at: to_datetime,
           )
         end
@@ -255,6 +255,34 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             expect(item.count).to eq(1)
             expect(item.duration).to eq(16)
             expect(item.total_duration).to eq(31)
+          end
+        end
+
+        context 'with calendar subscription and pay in advance' do
+          let(:subscription) do
+            create(
+              :subscription,
+              started_at:,
+              subscription_at:,
+              billing_time: :calendar,
+              terminated_at: to_datetime,
+              status: :terminated,
+            )
+          end
+
+          before { subscription.plan.update!(pay_in_advance: true) }
+
+          it 'returns the detail the persisted metrics' do
+            aggregate_failures do
+              expect(result.count).to eq(1)
+
+              item = result.first
+              expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+              expect(item.action).to eq('add')
+              expect(item.count).to eq(1)
+              expect(item.duration).to eq(16)
+              expect(item.total_duration).to eq(31)
+            end
           end
         end
       end
@@ -390,11 +418,11 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       before do
         create(
           :persisted_event,
-          customer: customer,
-          added_at: added_at,
-          removed_at: removed_at,
+          customer:,
+          added_at:,
+          removed_at:,
           external_subscription_id: subscription.external_id,
-          billable_metric: billable_metric,
+          billable_metric:,
           properties: {
             total_count: 12,
             region: 'europe',
@@ -403,11 +431,11 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
         create(
           :persisted_event,
-          customer: customer,
-          added_at: added_at,
-          removed_at: removed_at,
+          customer:,
+          added_at:,
+          removed_at:,
           external_subscription_id: subscription.external_id,
-          billable_metric: billable_metric,
+          billable_metric:,
           properties: {
             total_count: 8,
             region: 'europe',
@@ -416,11 +444,11 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
         create(
           :persisted_event,
-          customer: customer,
-          added_at: added_at,
-          removed_at: removed_at,
+          customer:,
+          added_at:,
+          removed_at:,
           external_subscription_id: subscription.external_id,
-          billable_metric: billable_metric,
+          billable_metric:,
           properties: {
             total_count: 8,
             region: 'africa',
@@ -429,7 +457,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       end
 
       it 'aggregates the events' do
-        result = recurring_service.aggregate(from_datetime: from_datetime, to_datetime: to_datetime)
+        result = recurring_service.aggregate(from_datetime:, to_datetime:)
 
         expect(result.aggregation).to eq(2)
       end

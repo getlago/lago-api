@@ -6,8 +6,8 @@ RSpec.describe Events::CreateBatchService, type: :service do
   subject(:create_batch_service) { described_class.new }
 
   let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
-  let(:customer) { create(:customer, organization: organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:active_subscription, customer:, organization:) }
   let(:subscription2) { create(:active_subscription, customer:, organization:) }
 
@@ -141,14 +141,14 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
   describe '#call' do
     let(:transaction_id) { SecureRandom.uuid }
-    let(:subscription) { create(:active_subscription, customer: customer, organization: organization) }
-    let(:subscription2) { create(:active_subscription, customer: customer, organization: organization) }
+    let(:subscription) { create(:active_subscription, customer:, organization:) }
+    let(:subscription2) { create(:active_subscription, customer:, organization:) }
 
     let(:create_args) do
       {
         external_subscription_ids: [subscription.external_id, subscription2.external_id],
         code: billable_metric.code,
-        transaction_id: transaction_id,
+        transaction_id:,
         properties: { foo: 'bar' },
         timestamp: Time.zone.now.to_i,
       }
@@ -163,9 +163,9 @@ RSpec.describe Events::CreateBatchService, type: :service do
     context 'when customer has two active subscription' do
       it 'creates a new event for each subscription' do
         result = create_batch_service.call(
-          organization: organization,
+          organization:,
           params: create_args,
-          timestamp: timestamp,
+          timestamp:,
           metadata: {},
         )
 
@@ -213,9 +213,9 @@ RSpec.describe Events::CreateBatchService, type: :service do
         it 'creates a persisted metric' do
           expect do
             create_batch_service.call(
-              organization: organization,
+              organization:,
               params: create_args,
-              timestamp: timestamp,
+              timestamp:,
               metadata: {},
             )
           end.to change(PersistedEvent, :count).by(2)
@@ -227,7 +227,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       let(:existing_event) do
         create(
           :event,
-          organization: organization,
+          organization:,
           transaction_id: create_args[:transaction_id],
           subscription_id: subscription.id,
         )
@@ -238,9 +238,9 @@ RSpec.describe Events::CreateBatchService, type: :service do
       it 'does not duplicate existing event' do
         expect do
           create_batch_service.call(
-            organization: organization,
+            organization:,
             params: create_args,
-            timestamp: timestamp,
+            timestamp:,
             metadata: {},
           )
         end.to change { organization.events.count }.by(1)

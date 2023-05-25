@@ -16,19 +16,19 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:coupon) { create(:coupon, organization: organization) }
+  let(:coupon) { create(:coupon, organization:) }
 
   before do
     coupon
 
-    create(:coupon, organization: organization, status: :terminated)
+    create(:coupon, organization:, status: :terminated)
   end
 
   it 'returns a list of coupons' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query: query,
+      query:,
     )
 
     coupons_response = result['data']['coupons']
@@ -44,10 +44,10 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
 
   context 'without current organization' do
     it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query: query)
+      result = execute_graphql(current_user: membership.user, query:)
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Missing organization id',
       )
     end
@@ -58,11 +58,11 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query: query,
+        query:,
       )
 
       expect_graphql_error(
-        result: result,
+        result:,
         message: 'Not in organization',
       )
     end

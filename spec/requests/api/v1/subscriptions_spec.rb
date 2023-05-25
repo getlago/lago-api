@@ -4,8 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:plan) { create(:plan, organization: organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
 
   describe 'create' do
     let(:subscription_at) { '2022-06-06T12:23:12Z' }
@@ -14,11 +14,11 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let(:params) do
       {
         external_customer_id: customer.external_id,
-        plan_code: plan_code,
+        plan_code:,
         name: 'subscription name',
         external_id: SecureRandom.uuid,
         billing_time: 'anniversary',
-        subscription_at: subscription_at,
+        subscription_at:,
       }
     end
 
@@ -40,6 +40,29 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:previous_plan_code]).to be_nil
       expect(json[:subscription][:next_plan_code]).to be_nil
       expect(json[:subscription][:downgrade_plan_date]).to be_nil
+    end
+
+    context 'with external_customer_id, external_id and name as integer' do
+      let(:params) do
+        {
+          external_customer_id: 123,
+          plan_code:,
+          name: 456,
+          external_id: 789,
+        }
+      end
+
+      it 'returns a success' do
+        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription]).to include(
+          lago_id: String,
+          external_customer_id: '123',
+          name: '456',
+          external_id: '789',
+        )
+      end
     end
 
     context 'with invalid plan code' do
@@ -66,7 +89,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:params) do
         {
           external_customer_id: customer.external_id,
-          plan_code: plan_code,
+          plan_code:,
           name: 'subscription name',
           external_id: SecureRandom.uuid,
           billing_time: 'anniversary',
@@ -98,7 +121,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   end
 
   describe 'delete /subscriptions/:id' do
-    let(:subscription) { create(:subscription, customer: customer, plan: plan) }
+    let(:subscription) { create(:subscription, customer:, plan:) }
 
     before { subscription }
 
@@ -121,7 +144,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   end
 
   describe 'update' do
-    let(:subscription) { create(:pending_subscription, customer: customer, plan: plan) }
+    let(:subscription) { create(:pending_subscription, customer:, plan:) }
     let(:update_params) { { name: 'subscription name new', subscription_at: '2022-09-05T12:23:12Z' } }
 
     before { subscription }
@@ -145,7 +168,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   end
 
   describe 'index' do
-    let(:subscription1) { create(:subscription, customer: customer, plan: plan) }
+    let(:subscription1) { create(:subscription, customer:, plan:) }
 
     before { subscription1 }
 
@@ -161,8 +184,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:previous_subscription) do
         create(
           :subscription,
-          customer: customer,
-          plan: create(:plan, organization: organization),
+          customer:,
+          plan: create(:plan, organization:),
           status: :terminated,
         )
       end
@@ -170,14 +193,14 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:next_subscription) do
         create(
           :subscription,
-          customer: customer,
-          plan: create(:plan, organization: organization),
+          customer:,
+          plan: create(:plan, organization:),
           status: :pending,
         )
       end
 
       before do
-        subscription1.update!(previous_subscription: previous_subscription, next_subscriptions: [next_subscription])
+        subscription1.update!(previous_subscription:, next_subscriptions: [next_subscription])
       end
 
       it 'returns next and previous plan code' do
@@ -201,13 +224,16 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:plan2) { create(:plan, organization: organization, amount_cents: 30_000) }
-      let(:subscription2) { create(:subscription, customer: customer, plan: plan2) }
+      let(:plan2) { create(:plan, organization:, amount_cents: 30_000) }
+      let(:subscription2) { create(:subscription, customer:, plan: plan2) }
 
       before { subscription2 }
 
       it 'returns subscriptions with correct meta data' do
-        get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}&page=1&per_page=1")
+        get_with_token(
+          organization,
+          "/api/v1/subscriptions?external_customer_id=#{customer.external_id}&page=1&per_page=1",
+        )
 
         expect(response).to have_http_status(:success)
 
@@ -220,11 +246,13 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context 'with invalid customer' do
-      it 'returns not_found error' do
-        get_with_token(organization, '/api/v1/subscriptions?external_customer_id=invalid')
+    context 'with plan code' do
+      it 'returns subscriptions' do
+        get_with_token(organization, "/api/v1/subscriptions?plan_code=#{plan.code}")
 
-        expect(response).to have_http_status(:not_found)
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].count).to eq(1)
+        expect(json[:subscriptions].first[:lago_id]).to eq(subscription1.id)
       end
     end
   end

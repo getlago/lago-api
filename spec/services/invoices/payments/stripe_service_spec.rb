@@ -16,7 +16,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       organization:,
       customer:,
       total_amount_cents: 200,
-      total_amount_currency: 'EUR',
+      currency: 'EUR',
       ready_for_payment_processing: true,
     )
   end
@@ -39,7 +39,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             id: 'ch_123456',
             status: 'succeeded',
             amount: invoice.total_amount_cents,
-            currency: invoice.total_amount_currency,
+            currency: invoice.currency,
           ),
         )
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -66,7 +66,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result.payment.payment_provider).to eq(stripe_payment_provider)
         expect(result.payment.payment_provider_customer).to eq(stripe_customer)
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
-        expect(result.payment.amount_currency).to eq(invoice.total_amount_currency)
+        expect(result.payment.amount_currency).to eq(invoice.currency)
         expect(result.payment.status).to eq('succeeded')
       end
 
@@ -97,7 +97,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           organization:,
           customer:,
           total_amount_cents: 0,
-          total_amount_currency: 'EUR',
+          currency: 'EUR',
         )
       end
 
@@ -135,7 +135,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'when customer does not have a payment method' do
-      let(:stripe_customer) { create(:stripe_customer, customer: customer) }
+      let(:stripe_customer) { create(:stripe_customer, customer:) }
 
       before do
         allow(Stripe::PaymentMethod).to receive(:list)
@@ -169,10 +169,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'with card error on stripe' do
-      let(:customer) { create(:customer, organization: organization) }
+      let(:customer) { create(:customer, organization:) }
 
       let(:subscription) do
-        create(:subscription, organization: organization, customer: customer)
+        create(:subscription, organization:, customer:)
       end
 
       let(:organization) do
@@ -208,7 +208,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     let(:payment) do
       create(
         :payment,
-        invoice: invoice,
+        invoice:,
         provider_payment_id: 'ch_123456',
       )
     end

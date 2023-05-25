@@ -79,22 +79,9 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe '#currency' do
-    let(:invoice) { build(:invoice, amount_currency: 'JPY') }
+    let(:invoice) { build(:invoice, currency: 'JPY') }
 
     it { expect(invoice.currency).to eq('JPY') }
-  end
-
-  describe '#sub_total_vat_included_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization:, vat_rate: 20) }
-    let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) do
-      create(:invoice, customer:, amount_currency: 'EUR', fees_amount_cents: 900, vat_amount_cents: 180, organization:)
-    end
-
-    it 'returns the sub total amount with VAT' do
-      expect(invoice.sub_total_vat_included_amount.to_s).to eq('10.80')
-    end
   end
 
   describe '#charge_amount' do
@@ -106,35 +93,6 @@ RSpec.describe Invoice, type: :model do
 
     it 'returns the charges amount' do
       expect(invoice.charge_amount.to_s).to eq('0.00')
-    end
-  end
-
-  describe '#credit_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { create(:invoice, customer:, organization:) }
-    let(:credit) { create(:credit, invoice:) }
-
-    it 'returns the credits amount' do
-      expect(invoice.credit_amount.to_s).to eq('0.00')
-    end
-  end
-
-  describe '#subtotal_before_prepaid_credits' do
-    let(:customer) { create(:customer) }
-    let(:invoice) do
-      create(
-        :invoice,
-        customer:,
-        amount_cents: 555,
-        organization: customer.organization,
-        prepaid_credit_amount_cents: 100,
-      )
-    end
-
-    it 'returns the subtotal before prepaid credits' do
-      expect(invoice.subtotal_before_prepaid_credits.to_s).to eq('6.55')
     end
   end
 
@@ -195,8 +153,8 @@ RSpec.describe Invoice, type: :model do
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
     let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
-    let(:fee) { create(:charge_fee, subscription: subscription, invoice: invoice, charge: charge) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
 
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.recurring_fees(subscription.id)).to eq([fee])
@@ -208,8 +166,8 @@ RSpec.describe Invoice, type: :model do
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
     let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric) }
-    let(:fee) { create(:charge_fee, subscription: subscription, invoice: invoice, charge: charge) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
 
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.recurring_breakdown(fee)).to eq([])
@@ -217,7 +175,7 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe '#creditable_amount_cents' do
-    context 'when legacy' do
+    context 'when invoice v1' do
       it 'returns 0' do
         invoice = build(:invoice, version_number: 1)
         expect(invoice.creditable_amount_cents).to eq(0)
@@ -238,15 +196,63 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    it 'returns the expected creditable amoutn in cents' do
-      invoice_subscription = create(:invoice_subscription)
-      invoice = invoice_subscription.invoice
+    context 'when fees sum is zero' do
+      let(:invoice_subscription) { create(:invoice_subscription) }
+      let(:invoice) { invoice_subscription.invoice }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
+      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+
+      before do
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, vat_rate: 20)
+      end
+
+      it 'returns 0' do
+        expect(invoice.creditable_amount_cents).to eq(0)
+      end
+    end
+
+    it 'returns the expected creditable amount in cents' do
+      invoice = create(:invoice, version_number: 2)
+      invoice_subscription = create(:invoice_subscription, invoice:)
       subscription = invoice_subscription.subscription
       billable_metric = create(:recurring_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
       create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, vat_rate: 20)
 
       expect(invoice.creditable_amount_cents).to eq(160)
+    end
+
+    context 'when invoice v3 with coupons' do
+      let(:invoice) do
+        create(
+          :invoice,
+          fees_amount_cents: 200,
+          coupons_amount_cents: 20,
+          vat_amount_cents: 36,
+          total_amount_cents: 216,
+          vat_rate: 20,
+          version_number: 3,
+        )
+      end
+
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) do
+        create(:recurring_billable_metric, organization: subscription.organization)
+      end
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:)
+      end
+      let(:fee) do
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 200, vat_rate: 20)
+      end
+
+      before { fee }
+
+      it 'returns the expected creditable amount in cents' do
+        expect(invoice.creditable_amount_cents).to eq(216)
+      end
     end
   end
 end
