@@ -75,6 +75,7 @@ class Invoice < ApplicationRecord
 
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
+  validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
   def file_url
     return if file.blank?
