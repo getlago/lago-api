@@ -136,6 +136,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
   describe 'GET /customers/:customer_id/current_usage' do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
+    let(:tax) { create(:tax, organization:, rate: 20) }
     let(:subscription) do
       create(
         :subscription,
@@ -169,6 +170,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     before do
       subscription
       charge
+      tax
 
       create_list(
         :event,

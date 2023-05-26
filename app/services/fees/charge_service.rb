@@ -74,9 +74,12 @@ module Fees
         events_count: amount_result.count,
         group_id: group&.id,
         payment_status: :pending,
+        taxes_amount_cents: 0,
       )
 
-      new_fee.compute_vat
+      taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+      taxes_result.raise_if_error!
+
       result.fees << new_fee
     end
 
