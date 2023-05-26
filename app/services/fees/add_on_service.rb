@@ -22,12 +22,16 @@ module Fees
         taxes_rate: customer.applicable_vat_rate,
         units: 1,
         payment_status: :pending,
+        taxes_amount_cents: 0,
       )
 
-      new_fee.compute_vat
+      taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+      taxes_result.raise_if_error!
+
       new_fee.save!
 
       result.fee = new_fee
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
