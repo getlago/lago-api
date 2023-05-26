@@ -7,8 +7,10 @@ RSpec.describe Fees::OneOffService do
     described_class.new(invoice:, fees:)
   end
 
-  let(:invoice) { create(:invoice, organization:) }
+  let(:invoice) { create(:invoice, organization:, customer:) }
   let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:fees) do
@@ -24,6 +26,8 @@ RSpec.describe Fees::OneOffService do
       },
     ]
   end
+
+  before { tax }
 
   describe 'create' do
     before { CurrentContext.source = 'api' }
