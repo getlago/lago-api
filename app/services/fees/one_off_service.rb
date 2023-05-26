@@ -36,7 +36,9 @@ module Fees
             payment_status: :pending,
           )
 
-          fee.compute_vat
+          taxes_result = Fees::ApplyTaxesService.call(fee:)
+          taxes_result.raise_if_error!
+
           fee.save!
 
           fees_result << fee
