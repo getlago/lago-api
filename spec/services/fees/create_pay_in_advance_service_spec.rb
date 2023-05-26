@@ -75,7 +75,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       fee_service.call
 
       expect(SendWebhookJob).to have_been_enqueued
-        .with('fee.pay_in_advance_created', Fee)
+        .with('fee.created', Fee)
     end
 
     context 'when aggregation fails' do
@@ -275,7 +275,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         fee_service.call
 
         expect(SendWebhookJob).not_to have_been_enqueued
-          .with('fee.pay_in_advance_created', Fee)
+          .with('fee.created', Fee)
       end
     end
 
@@ -316,7 +316,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         fee_service.call
 
         expect(SendWebhookJob).to have_been_enqueued
-          .with('fee.pay_in_advance_created', Fee)
+          .with('fee.created', Fee)
       end
     end
   end

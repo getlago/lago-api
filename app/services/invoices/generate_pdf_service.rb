@@ -43,6 +43,8 @@ module Invoices
     def template
       if invoice.one_off?
         'invoices/one_off'
+      elsif charge?
+        'invoices/charge'
       else
         "invoices/v#{invoice.version_number}"
       end
@@ -54,6 +56,10 @@ module Invoices
 
     def should_generate_pdf?
       context == 'admin' || invoice.file.blank?
+    end
+
+    def charge?
+      invoice.fees.all? { |f| f.pay_in_advance? }
     end
   end
 end

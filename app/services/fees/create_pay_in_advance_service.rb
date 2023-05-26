@@ -124,7 +124,7 @@ module Fees
     def deliver_webhooks
       return if estimate
 
-      result.fees.each { |f| SendWebhookJob.perform_later('fee.pay_in_advance_created', f) }
+      result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
     end
   end
 end

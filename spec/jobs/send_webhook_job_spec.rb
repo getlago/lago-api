@@ -103,7 +103,7 @@ RSpec.describe SendWebhookJob, type: :job do
     end
 
     it 'calls the webhook fee service' do
-      send_webhook_job.perform_now('fee.pay_in_advance_created', fee)
+      send_webhook_job.perform_now('fee.created', fee)
 
       expect(Webhooks::Fees::PayInAdvanceCreatedService).to have_received(:new)
       expect(webhook_service).to have_received(:call)
