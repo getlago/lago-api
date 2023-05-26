@@ -65,9 +65,34 @@ RSpec.describe Credits::AppliedCouponsService do
 
       aggregate_failures do
         expect(result).to be_success
-        expect(result.invoice.coupons_amount_cents).to eq(30)
-        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
+        expect(result.invoice.coupons_amount_cents).to eq(28)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(72)
         expect(result.invoice.credits.count).to eq(2)
+      end
+    end
+
+    context 'when first coupon covers the invoice' do
+      let(:invoice) do
+        create(
+          :invoice,
+          fees_amount_cents: 5,
+          sub_total_excluding_taxes_amount_cents: 5,
+          currency: 'EUR',
+          customer: subscription.customer,
+        )
+      end
+
+      before { fee.update!(amount_cents: 5) }
+
+      it 'updates the invoice accordingly and spends only the first coupon' do
+        result = credit_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.invoice.coupons_amount_cents).to eq(5)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(0)
+          expect(result.invoice.credits.count).to eq(1)
+        end
       end
     end
 
@@ -112,8 +137,8 @@ RSpec.describe Credits::AppliedCouponsService do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(35)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(65)
+          expect(result.invoice.coupons_amount_cents).to eq(32)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(68)
           expect(result.invoice.credits.count).to eq(2)
         end
       end
