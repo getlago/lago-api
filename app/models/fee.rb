@@ -24,9 +24,9 @@ class Fee < ApplicationRecord
   has_many :taxes, through: :fees_taxes
 
   monetize :amount_cents
-  monetize :taxes_amount_cents
+  monetize :taxes_amount_cents, with_model_currency: :currency
   monetize :total_amount_cents
-  monetize :unit_amount_cents, disable_validation: true, allow_nil: true
+  monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
   FEE_TYPES = %i[charge add_on subscription credit].freeze

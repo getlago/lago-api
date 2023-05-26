@@ -29,25 +29,28 @@ module Api
       end
 
       def index
-        applied_coupons = current_organization.applied_coupons
-        if params[:external_customer_id]
-          applied_coupons =
-            applied_coupons.joins(:customer).where(customers: { external_id: params[:external_customer_id] })
-        end
-        applied_coupons = applied_coupons.where(status: params[:status]) if valid_status?(params[:status])
-        applied_coupons = applied_coupons.order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            applied_coupons,
-            ::V1::AppliedCouponSerializer,
-            collection_name: 'applied_coupons',
-            meta: pagination_metadata(applied_coupons),
-            includes: %i[credits],
+        result = AppliedCouponsQuery.call(
+          organization: current_organization,
+          pagination: BaseQuery::Pagination.new(
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE,
           ),
+          filters: BaseQuery::Filters.new(index_filters),
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.applied_coupons,
+              ::V1::AppliedCouponSerializer,
+              collection_name: 'applied_coupons',
+              meta: pagination_metadata(result.applied_coupons),
+              includes: %i[credits],
+            ),
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private
@@ -64,8 +67,8 @@ module Api
         )
       end
 
-      def valid_status?(status)
-        AppliedCoupon.statuses.key?(status)
+      def index_filters
+        params.permit(:external_customer_id, :status)
       end
     end
   end
