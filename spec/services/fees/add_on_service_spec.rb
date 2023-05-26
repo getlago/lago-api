@@ -7,8 +7,14 @@ RSpec.describe Fees::AddOnService do
     described_class.new(invoice:, applied_add_on:)
   end
 
-  let(:invoice) { create(:invoice) }
-  let(:applied_add_on) { create(:applied_add_on) }
+  let(:customer) { create(:customer) }
+  let(:organization) { customer.organization }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:applied_add_on) { create(:applied_add_on, customer:) }
+
+  let(:tax) { create(:tax, rate: 20, organization:) }
+
+  before { tax }
 
   describe '.create' do
     it 'creates a fee' do
@@ -24,11 +30,13 @@ RSpec.describe Fees::AddOnService do
         expect(created_fee.applied_add_on_id).to eq(applied_add_on.id)
         expect(created_fee.amount_cents).to eq(200)
         expect(created_fee.amount_currency).to eq('EUR')
-        expect(created_fee.taxes_amount_cents).to eq(40)
-        expect(created_fee.taxes_rate).to eq(20.0)
         expect(created_fee.units).to eq(1)
         expect(created_fee.events_count).to be_nil
         expect(created_fee.payment_status).to eq('pending')
+
+        expect(created_fee.taxes_amount_cents).to eq(40)
+        expect(created_fee.taxes_rate).to eq(20.0)
+        expect(created_fee.fees_taxes.count).to eq(1)
       end
     end
 
