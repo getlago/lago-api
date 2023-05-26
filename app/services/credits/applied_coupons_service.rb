@@ -12,19 +12,23 @@ module Credits
       return result if invoice.fees_amount_cents.zero?
 
       applied_coupons.each do |applied_coupon|
-        break unless invoice.fees_amount_cents&.positive?
+        break unless invoice.sub_total_excluding_taxes_amount_cents&.positive?
         next if applied_coupon.coupon.fixed_amount? && applied_coupon.amount_currency != currency
 
-        fees = if applied_coupon.coupon.limited_billable_metrics?
-          billable_metric_related_fees(applied_coupon)
-        elsif applied_coupon.coupon.limited_plans?
-          plan_related_fees(applied_coupon)
-        else
-          invoice.fees
-        end
-        next unless fees.exists?
+        base_amount_cents = if applied_coupon.coupon.limited_billable_metrics?
+          fees = billable_metric_related_fees(applied_coupon)
+          next unless fees.exists?
 
-        base_amount_cents = fees.sum(:amount_cents)
+          fees.sum(:amount_cents)
+        elsif applied_coupon.coupon.limited_plans?
+          fees = plan_related_fees(applied_coupon)
+          next unless fees.exists?
+
+          fees.sum(:amount_cents)
+        else
+          invoice.sub_total_excluding_taxes_amount_cents
+        end
+
         credit_result = Credits::AppliedCouponService.new(invoice:, applied_coupon:, base_amount_cents:).create
         credit_result.raise_if_error!
 
