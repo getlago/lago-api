@@ -10,12 +10,15 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:active_subscription, organization:, customer:, plan:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:group) { nil }
 
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
   let(:event) { create(:event, subscription:, customer:) }
   let(:estimate) { false }
+
+  before { tax }
 
   describe '#call' do
     let(:aggregation_result) do
