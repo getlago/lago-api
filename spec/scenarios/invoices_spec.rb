@@ -4,6 +4,9 @@ require 'rails_helper'
 
 describe 'Invoices Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
+
+  before { tax }
 
   context 'when subscription is terminated with a grace period' do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }

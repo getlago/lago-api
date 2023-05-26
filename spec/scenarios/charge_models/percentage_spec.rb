@@ -5,9 +5,12 @@ require 'rails_helper'
 describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:plan) { create(:plan, organization:, amount_cents: 1000) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }
+
+  before { tax }
 
   describe 'with sum_agg' do
     let(:aggregation_type) { 'sum_agg' }
