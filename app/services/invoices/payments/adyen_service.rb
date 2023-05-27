@@ -79,7 +79,7 @@ module Invoices
         @client ||= Adyen::Client.new(
           api_key: adyen_payment_provider.api_key,
           env: adyen_payment_provider.environment,
-          live_url_prefix: adyen_payment_provider.live_prefix 
+          live_url_prefix: adyen_payment_provider.live_prefix
         )
       end
 
@@ -87,13 +87,33 @@ module Invoices
         @adyen_payment_provider ||= organization.adyen_payment_provider
       end
 
+      def update_payment_method_id
+        result = client.checkout.payments_api.payment_methods(payment_method_params).response
+
+        if (payment_method_id = result['storedPaymentMethods']&.first&.dig('id'))
+          customer.adyen_customer.update! payment_method_id: payment_method_id
+        end
+      rescue Adyen::AdyenError => e
+        deliver_error_webhook(e)
+        raise
+      end
+
       def create_adyen_payment
+        update_payment_method_id
+
         client.checkout.payments_api.payments(payment_params).response
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
 
         raise
+      end
+
+      def payment_method_params
+        {
+          merchantAccount: adyen_payment_provider.merchant_account,
+          shopperReference: customer.external_id,
+        }
       end
 
       def payment_params
