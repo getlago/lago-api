@@ -2876,6 +2876,7 @@ type EventCollection {
 type Fee implements InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  appliedTaxes: [FeeAppliedTax!]
   charge: Charge
   creditableAmountCents: BigInt!
   currency: CurrencyEnum!
@@ -2892,6 +2893,20 @@ type Fee implements InvoiceItem {
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
+}
+
+type FeeAppliedTax {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  fee: Fee!
+  id: ID!
+  tax: Tax!
+  taxCode: String!
+  taxDescription: String
+  taxName: String!
+  taxRate: Float!
+  updatedAt: ISO8601DateTime!
 }
 
 """
