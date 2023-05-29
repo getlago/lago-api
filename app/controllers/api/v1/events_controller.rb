@@ -66,6 +66,7 @@ module Api
               result.fees,
               ::V1::FeeSerializer,
               collection_name: 'fees',
+              includes: %i[taxes],
             ),
           )
         else

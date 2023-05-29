@@ -35,8 +35,9 @@ module V1
         refunded_at: model.refunded_at&.iso8601,
       }.merge(legacy_values)
 
-      payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
+      payload.merge!(date_boundaries) if model.charge? || model.subscription?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
+      payload.merge!(taxes) if include?(:taxes)
 
       payload
     end
@@ -70,6 +71,10 @@ module V1
         external_customer_id: model.customer.external_id,
         event_transaction_id: event&.transaction_id,
       }
+    end
+
+    def taxes
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
     end
 
     def legacy_values
