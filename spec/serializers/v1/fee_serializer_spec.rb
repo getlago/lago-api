@@ -33,6 +33,8 @@ RSpec.describe ::V1::FeeSerializer do
         'total_amount_cents' => fee.total_amount_cents,
         'total_amount_currency' => fee.amount_currency,
         'units' => fee.units.to_s,
+        'pay_in_advance' => fee.subscription.plan.pay_in_advance,
+        'invoiceable' => true,
         'events_count' => fee.events_count,
         'payment_status' => fee.payment_status,
         'created_at' => fee.created_at&.iso8601,

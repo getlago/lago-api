@@ -552,6 +552,30 @@ RSpec.describe Events::CreateService, type: :service do
           end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
+
+      context 'when event field name does not batch the BM one' do
+        let(:create_args) do
+          {
+            customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            properties: { 'wrong_field_name' => '5' },
+            timestamp: Time.zone.now.to_i,
+          }
+        end
+
+        it 'does not enqueue a job' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+      end
     end
   end
 end
