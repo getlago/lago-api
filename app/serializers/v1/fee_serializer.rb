@@ -16,8 +16,8 @@ module V1
           lago_item_id: model.item_id,
           item_type: model.item_type,
         },
-        pay_in_advance: model.pay_in_advance,
-        invoiceable: model.charge&.invoiceable || false,
+        pay_in_advance: calculate_pay_in_advance,
+        invoiceable: model.charge? ? model.charge&.invoiceable : true,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         taxes_amount_cents: model.taxes_amount_cents,
@@ -35,8 +35,9 @@ module V1
         refunded_at: model.refunded_at&.iso8601,
       }.merge(legacy_values)
 
-      payload = payload.merge(date_boundaries) if model.charge? || model.subscription?
+      payload.merge!(date_boundaries) if model.charge? || model.subscription?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
+      payload.merge!(taxes) if include?(:taxes)
 
       payload
     end
@@ -72,8 +73,22 @@ module V1
       }
     end
 
+    def taxes
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
+    end
+
     def legacy_values
       ::V1::Legacy::FeeSerializer.new(model).serialize
+    end
+
+    def calculate_pay_in_advance
+      if model.charge?
+        model.pay_in_advance
+      elsif model.subscription?
+        model.subscription&.plan&.pay_in_advance
+      else
+        false
+      end
     end
   end
 end

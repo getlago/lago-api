@@ -64,7 +64,7 @@ module Api
             ::V1::InvoiceSerializer,
             collection_name: 'invoices',
             meta: pagination_metadata(invoices),
-            includes: %i[customer metadata],
+            includes: %i[customer metadata taxes],
           ),
         )
       end
@@ -157,7 +157,7 @@ module Api
           json: ::V1::InvoiceSerializer.new(
             invoice,
             root_name: 'invoice',
-            includes: %i[customer subscriptions fees credits metadata],
+            includes: %i[customer subscriptions fees credits metadata taxes],
           ),
         )
       end

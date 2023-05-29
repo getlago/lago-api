@@ -7,7 +7,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
-  describe 'create' do
+  describe 'POST /invoices' do
     let(:add_on_first) { create(:add_on, organization:) }
     let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
     let(:customer_external_id) { customer.external_id }
@@ -29,17 +29,19 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       }
     end
 
-    it 'creates a invoice' do
+    it 'creates an invoice' do
       post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
 
       expect(response).to have_http_status(:success)
-      expect(json[:invoice][:lago_id]).to be_present
-      expect(json[:invoice][:issuing_date]).to eq(Time.current.to_date.to_s)
-      expect(json[:invoice][:invoice_type]).to eq('one_off')
-      expect(json[:invoice][:amount_cents]).to eq(2800)
-      expect(json[:invoice][:taxes_amount_cents]).to eq(560)
-      expect(json[:invoice][:total_amount_cents]).to eq(3360)
-      expect(json[:invoice][:currency]).to eq('EUR')
+      expect(json[:invoice]).to include(
+        lago_id: String,
+        issuing_date: Time.current.to_date.to_s,
+        invoice_type: 'one_off',
+        amount_cents: 2800,
+        taxes_amount_cents: 560,
+        total_amount_cents: 3360,
+        currency: 'EUR',
+      )
     end
 
     context 'when customer does not exist' do
@@ -79,7 +81,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
-  describe 'UPDATE /invoices' do
+  describe 'PUT /invoices/:id' do
     let(:update_params) do
       { payment_status: 'succeeded' }
     end
@@ -130,7 +132,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe 'GET /invoices/:id' do
-    it 'returns a invoice' do
+    it 'returns an invoice' do
       group = create(:group)
       create(:fee, invoice_id: invoice.id, group:)
 
@@ -138,13 +140,16 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
-        expect(json[:invoice][:lago_id]).to eq(invoice.id)
-        expect(json[:invoice][:payment_status]).to eq(invoice.payment_status)
-        expect(json[:invoice][:status]).to eq(invoice.status)
-        expect(json[:invoice][:customer]).not_to be_nil
-        expect(json[:invoice][:subscriptions]).not_to be_nil
+        expect(json[:invoice]).to include(
+          lago_id: invoice.id,
+          payment_status: invoice.payment_status,
+          status: invoice.status,
+          customer: Hash,
+          subscriptions: [],
+          credits: [],
+          taxes: [],
+        )
         expect(json[:invoice][:fees].first).to include(lago_group_id: group.id)
-        expect(json[:invoice][:credits]).not_to be_nil
       end
     end
 
@@ -194,18 +199,23 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
-          expect(json[:invoice][:lago_id]).to eq(invoice.id)
-          expect(json[:invoice][:payment_status]).to eq(invoice.payment_status)
-          expect(json[:invoice][:status]).to eq(invoice.status)
-          expect(json[:invoice][:customer]).not_to be_nil
-          expect(json[:invoice][:subscriptions]).not_to be_nil
-          expect(json[:invoice][:credits]).not_to be_nil
+          expect(json[:invoice]).to include(
+            lago_id: invoice.id,
+            payment_status: invoice.payment_status,
+            status: invoice.status,
+            customer: Hash,
+            subscriptions: [],
+            credits: [],
+            taxes: [],
+          )
 
           json_fee = json[:invoice][:fees].first
           expect(json_fee[:lago_group_id]).to eq(group.id)
-          expect(json_fee[:item][:type]).to eq('charge')
-          expect(json_fee[:item][:code]).to eq(billable_metric.code)
-          expect(json_fee[:item][:name]).to eq(billable_metric.name)
+          expect(json_fee[:item]).to include(
+            type: 'charge',
+            code: billable_metric.code,
+            name: billable_metric.name,
+          )
         end
       end
     end
@@ -222,9 +232,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:invoices].count).to eq(1)
-      expect(json[:invoices].first[:lago_id]).to eq(invoice.id)
-      expect(json[:invoices].first[:payment_status]).to eq(invoice.payment_status)
-      expect(json[:invoices].first[:status]).to eq(invoice.status)
+      expect(json[:invoices].first).to include(
+        lago_id: invoice.id,
+        payment_status: invoice.payment_status,
+        status: invoice.status,
+      )
     end
 
     context 'with pagination' do
@@ -238,11 +250,13 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response).to have_http_status(:success)
 
         expect(json[:invoices].count).to eq(1)
-        expect(json[:meta][:current_page]).to eq(1)
-        expect(json[:meta][:next_page]).to eq(2)
-        expect(json[:meta][:prev_page]).to eq(nil)
-        expect(json[:meta][:total_pages]).to eq(2)
-        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta]).to include(
+          current_page: 1,
+          next_page: 2,
+          prev_page: nil,
+          total_pages: 2,
+          total_count: 2,
+        )
       end
     end
 

@@ -23,4 +23,35 @@ namespace :taxes do
       customer.applied_taxes.create!(tax:)
     end
   end
+
+  desc 'Create fees_taxes for existing fees'
+  task create_fees_taxes: :environment do
+    sub_query = Fee.where('taxes_rate > 0').left_joins(:fees_taxes)
+      .group('fees.id')
+      .having('COUNT(fees_taxes.id) = 0')
+      .select(:id)
+
+    Fee.where(id: sub_query).each do |fee|
+      organization = fee.organization || fee.subscription&.customer&.organization
+
+      tax = ::Tax.create_with(
+        name: "Tax (#{fee.taxes_rate})",
+        rate: fee.taxes_rate,
+      ).find_or_create_by!(
+        organization_id: organization.id,
+        code: "tax_#{fee.taxes_rate}",
+      )
+
+      FeesTax.create!(
+        fee:,
+        tax:,
+        tax_description: tax.description,
+        tax_code: tax.code,
+        tax_name: tax.name,
+        tax_rate: tax.rate,
+        amount_currency: fee.currency,
+        amount_cents: fee.taxes_amount_cents,
+      )
+    end
+  end
 end
