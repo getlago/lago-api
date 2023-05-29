@@ -47,7 +47,6 @@ module Fees
         charge:,
         amount_cents: result.amount,
         amount_currency: subscription.plan.amount_currency,
-        taxes_rate: customer.applicable_vat_rate,
         fee_type: :charge,
         invoiceable: charge,
         units: result.units,

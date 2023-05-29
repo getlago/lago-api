@@ -12,6 +12,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     )
   end
 
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
   let(:recurring) { false }
 
   describe '#call' do
@@ -28,6 +31,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       create(
         :subscription,
         plan:,
+        customer:,
         billing_time:,
         subscription_at: started_at,
         started_at:,
@@ -45,7 +49,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:terminated_at) { nil }
     let(:status) { :active }
 
-    let(:plan) { create(:plan, interval:, pay_in_advance:) }
+    let(:plan) { create(:plan, organization:, interval:, pay_in_advance:) }
     let(:pay_in_advance) { false }
     let(:billing_time) { :calendar }
     let(:interval) { 'monthly' }
@@ -53,6 +57,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
 
     before do
+      tax
       charge
 
       allow(SegmentTrackJob).to receive(:perform_later)

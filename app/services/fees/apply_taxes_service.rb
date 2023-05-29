@@ -38,6 +38,12 @@ module Fees
       fee.taxes_amount_cents = applied_taxes_amount_cents.round
       fee.taxes_rate = applied_taxes_rate
 
+      if fee.taxes_amount_cents.zero?
+        # TODO(taxes): Remove the fallback on applicable vat to switch to new tax system
+        fee.taxes_rate = customer.applicable_vat_rate
+        fee.compute_vat
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

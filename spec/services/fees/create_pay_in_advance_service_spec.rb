@@ -59,8 +59,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           charge:,
           amount_cents: 10,
           amount_currency: 'EUR',
-          taxes_rate: 20.0,
-          taxes_amount_cents: 2,
           fee_type: 'charge',
           pay_in_advance: true,
           invoiceable: charge,
@@ -70,7 +68,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           group: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
+
+          taxes_rate: 20.0,
+          taxes_amount_cents: 2,
         )
+        expect(result.fees.first.applied_taxes.count).to eq(1)
       end
     end
 
@@ -163,8 +165,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             charge:,
             amount_cents: 10,
             amount_currency: 'EUR',
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
             fee_type: 'charge',
             pay_in_advance: true,
             invoiceable: charge,
@@ -173,7 +173,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             events_count: 1,
             group:,
             pay_in_advance_event_id: event.id,
+
+            taxes_rate: 20.0,
+            taxes_amount_cents: 2,
           )
+          expect(result.fees.first.applied_taxes.count).to eq(1)
         end
       end
 
@@ -206,8 +210,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               charge:,
               amount_cents: 10,
               amount_currency: 'EUR',
-              taxes_rate: 20.0,
-              taxes_amount_cents: 2,
               fee_type: 'charge',
               pay_in_advance: true,
               invoiceable: charge,
@@ -216,7 +218,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               events_count: 1,
               group:,
               pay_in_advance_event_id: event.id,
+
+              taxes_rate: 20.0,
+              taxes_amount_cents: 2,
             )
+            expect(result.fees.first.applied_taxes.count).to eq(1)
           end
         end
       end
@@ -260,8 +266,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             charge:,
             amount_cents: 10,
             amount_currency: 'EUR',
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
             fee_type: 'charge',
             pay_in_advance: true,
             invoiceable: charge,
@@ -270,7 +274,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             events_count: 1,
             group: nil,
             pay_in_advance_event_id: event.id,
+
+            taxes_rate: 20.0,
+            taxes_amount_cents: 2,
           )
+          expect(result.fees.first.applied_taxes.size).to eq(1)
         end
       end
 

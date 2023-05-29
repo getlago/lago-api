@@ -20,7 +20,6 @@ module Fees
         subscription:,
         amount_cents: new_amount_cents.round,
         amount_currency: plan.amount_currency,
-        taxes_rate: customer.applicable_vat_rate,
         fee_type: :subscription,
         invoiceable_type: 'Subscription',
         invoiceable: subscription,
@@ -29,7 +28,9 @@ module Fees
         payment_status: :pending,
       )
 
-      new_fee.compute_vat
+      taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+      taxes_result.raise_if_error!
+
       new_fee.save!
 
       result.fee = new_fee
