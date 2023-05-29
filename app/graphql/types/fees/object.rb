@@ -19,6 +19,8 @@ module Types
       field :taxes_rate, GraphQL::Types::Float, null: true
       field :units, GraphQL::Types::Float, null: false
 
+      field :applied_taxes, [Types::Fees::AppliedTaxes::Object]
+
       def item_type
         object.fee_type
       end
