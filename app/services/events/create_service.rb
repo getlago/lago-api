@@ -117,7 +117,7 @@ module Events
     end
 
     def applicable_event?
-      return false if event.properties[billable_metric.field_name].nil?
+      return false if !billable_metric.count_agg? && event.properties[billable_metric.field_name].nil?
       return false if billable_metric.sum_agg? && event.properties[billable_metric.field_name]&.to_i&.negative?
 
       true
