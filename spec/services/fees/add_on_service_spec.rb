@@ -36,7 +36,7 @@ RSpec.describe Fees::AddOnService do
 
         expect(created_fee.taxes_amount_cents).to eq(40)
         expect(created_fee.taxes_rate).to eq(20.0)
-        expect(created_fee.fees_taxes.count).to eq(1)
+        expect(created_fee.applied_taxes.count).to eq(1)
       end
     end
 

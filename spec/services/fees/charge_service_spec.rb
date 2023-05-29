@@ -68,7 +68,7 @@ RSpec.describe Fees::ChargeService do
 
           expect(created_fee.taxes_amount_cents).to eq(0)
           expect(created_fee.taxes_rate).to eq(20.0)
-          expect(created_fee.fees_taxes.count).to eq(1)
+          expect(created_fee.applied_taxes.count).to eq(1)
         end
       end
 
@@ -119,7 +119,7 @@ RSpec.describe Fees::ChargeService do
 
             expect(created_fee.taxes_amount_cents).to eq(1)
             expect(created_fee.taxes_rate).to eq(20.0)
-            expect(created_fee.fees_taxes.count).to eq(1)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
       end
@@ -180,7 +180,7 @@ RSpec.describe Fees::ChargeService do
 
             expect(created_fee.taxes_amount_cents).to eq(400)
             expect(created_fee.taxes_rate).to eq(20.0)
-            expect(created_fee.fees_taxes.count).to eq(1)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
       end
@@ -206,7 +206,7 @@ RSpec.describe Fees::ChargeService do
 
               expect(created_fee.taxes_amount_cents).to eq(0)
               expect(created_fee.taxes_rate).to eq(20.0)
-              expect(created_fee.fees_taxes.count).to eq(1)
+              expect(created_fee.applied_taxes.count).to eq(1)
             end
           end
         end
@@ -336,7 +336,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 800,
             units: 2,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -344,7 +344,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 1000,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -352,7 +352,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 800,
             units: 1,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
 
@@ -378,7 +378,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 6000,
             units: 15,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -386,7 +386,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 12_000,
             units: 12,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -394,7 +394,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 4000,
             units: 5,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
 
@@ -420,7 +420,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 4000,
             units: 10,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -428,7 +428,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 12_000,
             units: 12,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -436,7 +436,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 4000,
             units: 5,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
 
@@ -462,7 +462,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 800,
             units: 2,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -470,7 +470,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 1000,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -478,7 +478,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 800,
             units: 1,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
 
@@ -554,7 +554,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 400,
             units: 1,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -562,7 +562,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 1000,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -570,7 +570,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 800,
             units: 1,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -686,7 +686,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 2000,
             units: 2,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -694,7 +694,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 1000,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -702,7 +702,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 0,
             units: 1,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -806,7 +806,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 41,
             units: 2,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -814,7 +814,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 0,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
 
           expect(created_fees.third).to have_attributes(
             group: france,
@@ -822,7 +822,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 21,
             units: 1,
           )
-          expect(created_fees.third.fees_taxes.count).to eq(1)
+          expect(created_fees.third.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -926,7 +926,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 1,
             units: 2,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -934,7 +934,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 1,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -1028,7 +1028,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 280,
             units: 2,
           )
-          expect(created_fees.first.fees_taxes.count).to eq(1)
+          expect(created_fees.first.applied_taxes.count).to eq(1)
 
           expect(created_fees.second).to have_attributes(
             group: usa,
@@ -1036,7 +1036,7 @@ RSpec.describe Fees::ChargeService do
             taxes_amount_cents: 220,
             units: 1,
           )
-          expect(created_fees.second.fees_taxes.count).to eq(1)
+          expect(created_fees.second.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -1149,7 +1149,7 @@ RSpec.describe Fees::ChargeService do
 
             expect(usage_fee.taxes_amount_cents).to eq(0)
             expect(usage_fee.taxes_rate).to eq(20.0)
-            expect(usage_fee.fees_taxes.size).to eq(1)
+            expect(usage_fee.applied_taxes.size).to eq(1)
           end
         end
       end
@@ -1204,7 +1204,7 @@ RSpec.describe Fees::ChargeService do
 
           expect(usage_fee.taxes_amount_cents).to eq(1)
           expect(usage_fee.taxes_rate).to eq(20.0)
-          expect(usage_fee.fees_taxes.size).to eq(1)
+          expect(usage_fee.applied_taxes.size).to eq(1)
         end
       end
     end
