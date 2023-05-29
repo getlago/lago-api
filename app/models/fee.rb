@@ -20,8 +20,8 @@ class Fee < ApplicationRecord
   has_many :credit_note_items
   has_many :credit_notes, through: :credit_note_items
 
-  has_many :fees_taxes
-  has_many :taxes, through: :fees_taxes
+  has_many :applied_taxes, class_name: 'Fee::AppliedTax', dependent: :destroy
+  has_many :taxes, through: :applied_taxes
 
   monetize :amount_cents
   monetize :taxes_amount_cents, with_model_currency: :currency

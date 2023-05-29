@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe FeesTax, type: :model do
-  subject(:fees_tax) { create(:fees_tax) }
+RSpec.describe Fee::AppliedTax, type: :model do
+  subject(:applied_tax) { create(:fee_applied_tax) }
 
   it_behaves_like 'paper_trail traceable'
 end
