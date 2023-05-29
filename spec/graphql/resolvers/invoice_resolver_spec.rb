@@ -22,6 +22,14 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             name
             deletedAt
           }
+          appliedTaxes {
+            taxCode
+            taxName
+            taxRate
+            taxDescription
+            amountCents
+            amountCurrency
+          }
           invoiceSubscriptions {
             fromDatetime
             toDatetime

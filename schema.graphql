@@ -3027,6 +3027,7 @@ enum InviteStatusTypeEnum {
 Invoice
 """
 type Invoice {
+  appliedTaxes: [InvoiceAppliedTax!]
   chargeAmountCents: BigInt!
   couponsAmountCents: BigInt!
   createdAt: ISO8601DateTime!
@@ -3057,6 +3058,20 @@ type Invoice {
   totalAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
+}
+
+type InvoiceAppliedTax {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  invoice: Invoice!
+  tax: Tax!
+  taxCode: String!
+  taxDescription: String
+  taxName: String!
+  taxRate: Float!
+  updatedAt: ISO8601DateTime!
 }
 
 type InvoiceCollection {
