@@ -6,8 +6,12 @@ class AddOrganizationIdToInvoices < ActiveRecord::Migration[7.0]
 
     reversible do |dir|
       dir.up do
-        LagoApi::Application.load_tasks
-        Rake::Task['invoices:fill_organization'].invoke
+        execute <<-SQL
+          UPDATE invoices
+          SET organization_id = customers.organization_id
+          FROM customers
+          WHERE customers.id = invoices.customer_id
+        SQL
       end
     end
 
