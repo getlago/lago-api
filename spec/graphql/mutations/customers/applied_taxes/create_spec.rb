@@ -2,13 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::AppliedTaxes::Create, type: :graphql do
+RSpec.describe Mutations::Customers::AppliedTaxes::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:mutation) do
     <<-GQL
-      mutation($input: CreateAppliedTaxInput!) {
-        createAppliedTax(input: $input) {
+      mutation($input: CreateCustomerAppliedTaxInput!) {
+        createCustomerAppliedTax(input: $input) {
           id
           tax { id }
           customer { id }
@@ -31,7 +31,7 @@ RSpec.describe Mutations::AppliedTaxes::Create, type: :graphql do
       },
     )
 
-    result_data = result['data']['createAppliedTax']
+    result_data = result['data']['createCustomerAppliedTax']
 
     aggregate_failures do
       expect(result_data['id']).to be_present

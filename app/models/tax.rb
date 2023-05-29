@@ -3,7 +3,7 @@
 class Tax < ApplicationRecord
   include PaperTrailTraceable
 
-  has_many :applied_taxes
+  has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :customers, through: :applied_taxes
 
   has_many :fees_taxes
@@ -31,7 +31,7 @@ class Tax < ApplicationRecord
     #       customer list = customer wihout tax + customer attached to the current tax
     customers_without_taxes_query = organization.customers.left_joins(:applied_taxes)
       .group('customers.id')
-      .having('COUNT(applied_taxes.id) = 0')
+      .having('COUNT(customers_taxes.id) = 0')
       .select(:id)
     organization.customers.where(id: customers_without_taxes_query)
       .or(organization.customers.where(id: customers.select(:id)))

@@ -16,8 +16,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
   let(:tax2) { create(:tax, organization:, rate: 12) }
   let(:tax3) { create(:tax, organization:, rate: 5, applied_to_organization: true) }
 
-  let(:applied_tax1) { create(:applied_tax, customer:, tax: tax1) }
-  let(:applied_tax2) { create(:applied_tax, customer:, tax: tax2) }
+  let(:applied_tax1) { create(:customer_applied_tax, customer:, tax: tax1) }
+  let(:applied_tax2) { create(:customer_applied_tax, customer:, tax: tax2) }
 
   before do
     applied_tax1
