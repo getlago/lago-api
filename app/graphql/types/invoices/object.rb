@@ -42,6 +42,7 @@ module Types
       field :file_url, String, null: true
       field :metadata, [Types::Invoices::Metadata::Object], null: true
 
+      field :applied_taxes, [Types::Invoices::AppliedTaxes::Object]
       field :credit_notes, [Types::CreditNotes::Object], null: true
       field :fees, [Types::Fees::Object], null: true
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
