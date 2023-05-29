@@ -179,7 +179,7 @@ module Customers
       create_result.raise_if_error!
 
       # NOTE: Create service is modifying an other instance of the provider customer
-      customer.gocardless_customer&.reload
+      customer.adyen_customer&.reload
     end
   end
 end
