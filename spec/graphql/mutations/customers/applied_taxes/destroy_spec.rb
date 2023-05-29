@@ -2,16 +2,16 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::AppliedTaxes::Destroy, type: :graphql do
+RSpec.describe Mutations::Customers::AppliedTaxes::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:) }
-  let(:applied_tax) { create(:applied_tax, tax:) }
+  let(:applied_tax) { create(:customer_applied_tax, tax:) }
 
   let(:mutation) do
     <<-GQL
-      mutation($input: DestroyAppliedTaxInput!) {
-        destroyAppliedTax(input: $input) { id }
+      mutation($input: DestroyCustomerAppliedTaxInput!) {
+        destroyCustomerAppliedTax(input: $input) { id }
       }
     GQL
   end
@@ -26,7 +26,7 @@ RSpec.describe Mutations::AppliedTaxes::Destroy, type: :graphql do
         query: mutation,
         variables: { input: { id: applied_tax.id } },
       )
-    end.to change(AppliedTax, :count).by(-1)
+    end.to change(Customer::AppliedTax, :count).by(-1)
   end
 
   context 'without current_organization' do

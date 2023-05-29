@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe AppliedTaxes::CreateService, type: :service do
+RSpec.describe Customers::AppliedTaxes::CreateService, type: :service do
   subject(:create_service) { described_class.new(customer:, tax:) }
 
   let(:organization) { create(:organization) }
@@ -11,7 +11,7 @@ RSpec.describe AppliedTaxes::CreateService, type: :service do
 
   describe '#call' do
     it 'creates an applied tax' do
-      expect { create_service.call }.to change(AppliedTax, :count).by(1)
+      expect { create_service.call }.to change(Customer::AppliedTax, :count).by(1)
     end
 
     context 'when customer is not found' do

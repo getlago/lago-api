@@ -15,7 +15,7 @@ RSpec.describe Api::V1::Customers::AppliedTaxesController, type: :request do
           "/api/v1/customers/#{customer.external_id}/applied_taxes",
           { applied_tax: { tax_code: tax.code } },
         )
-      end.to change(AppliedTax, :count).by(1)
+      end.to change(Customer::AppliedTax, :count).by(1)
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -46,7 +46,7 @@ RSpec.describe Api::V1::Customers::AppliedTaxesController, type: :request do
   end
 
   describe 'DELETE /applied_taxes/:tax_code' do
-    let(:applied_tax) { create(:applied_tax, customer:, tax:) }
+    let(:applied_tax) { create(:customer_applied_tax, customer:, tax:) }
 
     before { applied_tax }
 
@@ -56,7 +56,7 @@ RSpec.describe Api::V1::Customers::AppliedTaxesController, type: :request do
           organization,
           "/api/v1/customers/#{customer.external_id}/applied_taxes/#{tax.code}",
         )
-      end.to change(AppliedTax, :count).by(-1)
+      end.to change(Customer::AppliedTax, :count).by(-1)
     end
 
     it 'returns the deleted applied tax' do

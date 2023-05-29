@@ -2,16 +2,16 @@
 
 require 'rails_helper'
 
-RSpec.describe AppliedTaxes::DestroyService, type: :service do
+RSpec.describe Customers::AppliedTaxes::DestroyService, type: :service do
   subject(:destroy_service) { described_class.new(applied_tax:) }
 
-  let(:applied_tax) { create(:applied_tax) }
+  let(:applied_tax) { create(:customer_applied_tax) }
 
   describe '#call' do
     before { applied_tax }
 
     it 'destroys the applied tax' do
-      expect { destroy_service.call }.to change(AppliedTax, :count).by(-1)
+      expect { destroy_service.call }.to change(Customer::AppliedTax, :count).by(-1)
     end
 
     context 'when applied tax is not found' do

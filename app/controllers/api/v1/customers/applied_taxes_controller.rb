@@ -10,9 +10,9 @@ module Api
           tax = current_organization.taxes.find_by(code: input_params[:tax_code])
           return not_found_error(resource: 'tax') unless tax
 
-          result = ::AppliedTaxes::CreateService.call(customer:, tax:)
+          result = ::Customers::AppliedTaxes::CreateService.call(customer:, tax:)
           if result.success?
-            render(json: ::V1::AppliedTaxSerializer.new(result.applied_tax, root_name: 'applied_tax'))
+            render(json: ::V1::Customers::AppliedTaxSerializer.new(result.applied_tax, root_name: 'applied_tax'))
           else
             render_error_response(result)
           end
@@ -27,9 +27,9 @@ module Api
           applied_tax = customer.applied_taxes.find_by(customer:, tax:)
           return not_found_error(resource: 'applied_tax') unless applied_tax
 
-          result = ::AppliedTaxes::DestroyService.call(applied_tax:)
+          result = ::Customers::AppliedTaxes::DestroyService.call(applied_tax:)
           if result.success?
-            render(json: ::V1::AppliedTaxSerializer.new(result.applied_tax, root_name: 'applied_tax'))
+            render(json: ::V1::Customers::AppliedTaxSerializer.new(result.applied_tax, root_name: 'applied_tax'))
           else
             render_error_response(result)
           end

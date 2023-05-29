@@ -2,10 +2,10 @@
 
 require 'rails_helper'
 
-RSpec.describe ::V1::AppliedTaxSerializer do
+RSpec.describe ::V1::Customers::AppliedTaxSerializer do
   subject(:serializer) { described_class.new(applied_tax, root_name: 'applied_tax') }
 
-  let(:applied_tax) { create(:applied_tax) }
+  let(:applied_tax) { create(:customer_applied_tax) }
 
   before { applied_tax }
 

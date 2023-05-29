@@ -29,7 +29,7 @@ class Customer < ApplicationRecord
            dependent: :destroy
   has_many :persisted_events
 
-  has_many :applied_taxes
+  has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'

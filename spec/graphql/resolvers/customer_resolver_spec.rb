@@ -58,7 +58,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   end
   let(:subscription) { create(:subscription, customer:) }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
-  let(:applied_tax) { create(:applied_tax, customer:) }
+  let(:applied_tax) { create(:customer_applied_tax, customer:) }
   let(:credit_note) { create(:credit_note, customer:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:) }
 
