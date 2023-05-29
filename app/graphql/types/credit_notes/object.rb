@@ -36,6 +36,7 @@ module Types
 
       field :file_url, String, null: true
 
+      field :applied_taxes, [Types::CreditNotes::AppliedTaxes::Object]
       field :customer, Types::Customers::Object, null: false
       field :invoice, Types::Invoices::Object
       field :items, [Types::CreditNoteItems::Object], null: false
