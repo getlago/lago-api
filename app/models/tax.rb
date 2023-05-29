@@ -10,11 +10,15 @@ class Tax < ApplicationRecord
   has_many :fees, through: :fees_taxes
   has_many :invoices_taxes
   has_many :invoices, through: :invoices_taxes
+  has_many :credit_notes_taxes
+  has_many :credit_notes, through: :credit_notes_taxes
 
   belongs_to :organization
 
   validates :name, :rate, presence: true
   validates :code, presence: true, uniqueness: { scope: :organization_id }
+
+  scope :applied_to_organization, -> { where(applied_to_organization: true) }
 
   def customers_count
     applicable_customers.count

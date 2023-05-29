@@ -9,7 +9,7 @@ module Api
 
         return not_found_error(resource: 'fee') unless fee
 
-        render(json: ::V1::FeeSerializer.new(fee, root_name: 'fee'))
+        render(json: ::V1::FeeSerializer.new(fee, root_name: 'fee', includes: %i[taxes]))
       end
 
       def update
@@ -18,7 +18,7 @@ module Api
         result = Fees::UpdateService.call(fee:, params: update_params)
 
         if result.success?
-          render(json: ::V1::FeeSerializer.new(fee, root_name: 'fee'))
+          render(json: ::V1::FeeSerializer.new(fee, root_name: 'fee', includes: %i[taxes]))
         else
           render_error_response(result)
         end
@@ -41,6 +41,7 @@ module Api
               ::V1::FeeSerializer,
               collection_name: 'fees',
               meta: pagination_metadata(result.fees),
+              includes: %i[taxes],
             ),
           )
         else
