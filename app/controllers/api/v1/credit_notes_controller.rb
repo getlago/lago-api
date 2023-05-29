@@ -15,7 +15,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
               root_name: 'credit_note',
-              includes: %i[items taxes],
+              includes: %i[items applied_taxes],
             ),
           )
         else
@@ -31,7 +31,7 @@ module Api
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
             root_name: 'credit_note',
-            includes: %i[items taxes],
+            includes: %i[items applied_taxes],
           ),
         )
       end
@@ -47,7 +47,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
               root_name: 'credit_note',
-              includes: %i[items taxes],
+              includes: %i[items applied_taxes],
             ),
           )
         else
@@ -84,7 +84,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
               root_name: 'credit_note',
-              includes: %i[items taxes],
+              includes: %i[items applied_taxes],
             ),
           )
         else
@@ -109,7 +109,7 @@ module Api
             ::V1::CreditNoteSerializer,
             collection_name: 'credit_notes',
             meta: pagination_metadata(credit_notes),
-            includes: %i[taxes],
+            includes: %i[applied_taxes],
           ),
         )
       end

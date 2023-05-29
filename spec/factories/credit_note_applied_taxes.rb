@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :credit_notes_tax do
+  factory :credit_note_applied_tax, class: 'CreditNote::AppliedTax' do
     credit_note
     tax
     tax_code { "vat-#{SecureRandom.uuid}" }
