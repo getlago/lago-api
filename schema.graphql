@@ -1750,6 +1750,7 @@ input CreateSubscriptionInput {
 CreditNote
 """
 type CreditNote {
+  appliedTaxes: [CreditNoteAppliedTax!]
   balanceAmountCents: BigInt!
 
   """
@@ -1780,6 +1781,20 @@ type CreditNote {
   totalAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
   voidedAt: ISO8601DateTime
+}
+
+type CreditNoteAppliedTax {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  creditNote: CreditNote!
+  id: ID!
+  tax: Tax!
+  taxCode: String!
+  taxDescription: String
+  taxName: String!
+  taxRate: Float!
+  updatedAt: ISO8601DateTime!
 }
 
 type CreditNoteCollection {

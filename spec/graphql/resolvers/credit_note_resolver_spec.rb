@@ -32,6 +32,14 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
             createdAt
             fee { id amountCents itemType itemCode itemName }
           }
+          appliedTaxes {
+            taxCode
+            taxName
+            taxRate
+            taxDescription
+            amountCents
+            amountCurrency
+          }
         }
       }
     GQL
