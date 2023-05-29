@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :invoices_tax do
+  factory :invoice_applied_tax, class: 'Invoice::AppliedTax' do
     invoice
     tax
     tax_code { "vat-#{SecureRandom.uuid}" }
