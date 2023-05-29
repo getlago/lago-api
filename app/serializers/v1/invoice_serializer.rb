@@ -29,7 +29,7 @@ module V1
       payload.merge!(fees) if include?(:fees)
       payload.merge!(credits) if include?(:credits)
       payload.merge!(metadata) if include?(:metadata)
-      payload.merge!(taxes) if include?(:taxes)
+      payload.merge!(applied_taxes) if include?(:applied_taxes)
 
       payload
     end
@@ -63,8 +63,8 @@ module V1
       ).serialize
     end
 
-    def taxes
-      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
+    def applied_taxes
+      ::CollectionSerializer.new(model.applied_taxes, ::V1::TaxSerializer, collection_name: 'applied_taxes').serialize
     end
 
     def legacy_values

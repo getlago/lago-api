@@ -147,7 +147,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           customer: Hash,
           subscriptions: [],
           credits: [],
-          taxes: [],
+          applied_taxes: [],
         )
         expect(json[:invoice][:fees].first).to include(lago_group_id: group.id)
       end
@@ -206,7 +206,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
             customer: Hash,
             subscriptions: [],
             credits: [],
-            taxes: [],
+            applied_taxes: [],
           )
 
           json_fee = json[:invoice][:fees].first

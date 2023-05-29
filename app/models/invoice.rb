@@ -23,8 +23,8 @@ class Invoice < ApplicationRecord
   has_many :metadata, class_name: 'Metadata::InvoiceMetadata', dependent: :destroy
   has_many :credit_notes
 
-  has_many :invoices_taxes
-  has_many :taxes, through: :invoices_taxes
+  has_many :applied_taxes, class_name: 'Invoice::AppliedTax', dependent: :destroy
+  has_many :taxes, through: :applied_taxes
 
   has_one_attached :file
 
