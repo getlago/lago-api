@@ -36,7 +36,7 @@ module V1
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
-      payload.merge!(taxes) if include?(:taxes)
+      payload.merge!(applied_taxes) if include?(:applied_taxes)
 
       payload
     end
@@ -72,8 +72,12 @@ module V1
       }
     end
 
-    def taxes
-      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
+    def applied_taxes
+      ::CollectionSerializer.new(
+        model.applied_taxes,
+        ::V1::Fees::AppliedTaxSerializer,
+        collection_name: 'applied_taxes',
+      ).serialize
     end
 
     def legacy_values
