@@ -190,8 +190,8 @@ module Customers
                          PaymentProviderCustomers::StripeCustomer
                        when 'gocardless'
                          PaymentProviderCustomers::GocardlessCustomer
-                      when 'adyen'
-                        PaymentProviderCustomers::AdyenCustomer
+                       when 'adyen'
+                         PaymentProviderCustomers::AdyenCustomer
       end
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
