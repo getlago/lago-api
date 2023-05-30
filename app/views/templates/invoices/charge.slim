@@ -408,7 +408,7 @@ html
           .body-2 = customer.email
 
       .mb-24
-        h2.title-2.mb-4 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+        h2.title-2.mb-4 = MoneyHelper.format(total_amount)
         .body-1 = I18n.t('invoice.due_date', date: I18n.l(issuing_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
@@ -423,7 +423,7 @@ html
               td.body-1 = fee.billable_metric.name
               td.body-2 style="text-align: left;"
               td.body-2 style="text-align: left;" = fee.units
-              td.body-2 style="text-align: right;" = fee.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 style="text-align: right;" = MoneyHelper.format(fee.amount)
 
         table.total-table width="100%"
           - if coupons_amount_cents.positive?
@@ -432,34 +432,34 @@ html
                 td.body-2
                 td.body-2 width="70%"  #{credit.invoice_coupon_display_name}
                 td.body-2 width="30%" style="text-align: right; color: #008559;"
-                  = credit.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+                  = MoneyHelper.format(credit.amount)
           tr
             td.body-2
             td.body-2 width="70%" = I18n.t('invoice.sub_total_without_tax')
-            td.body-2 width="30%" = sub_total_excluding_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-2 width="30%" = MoneyHelper.format(sub_total_excluding_taxes_amount)
           tr
             td.body-2
             td.body-2 #{I18n.t('invoice.tax')} (#{taxes_rate || 0}%)
-            td.body-2 = taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-2 = MoneyHelper.format(taxes_amount)
           tr
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_with_tax')
-            td.body-2 = sub_total_including_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-2 = MoneyHelper.format(sub_total_including_taxes_amount)
           - if credits.credit_note_kind.any?
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.credit_notes')
               td.body-2 style="text-align: right; color: #008559;"
-                = credit_notes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+                = MoneyHelper.format(credit_notes_amount)
           - if wallet_transactions.exists?
             tr
               td.body-2
               td.body-2 width="70%" = I18n.t('invoice.prepaid_credits')
-              td.prepaid-amount width="30%" = prepaid_credit_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.prepaid-amount width="30%" = MoneyHelper.format(prepaid_credit_amount)
           tr
             td.body-2
             td.body-1 width="70%" = I18n.t('invoice.total_due')
-            td.body-1 width="30%" = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-1 width="30%" = MoneyHelper.format(total_amount)
 
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
