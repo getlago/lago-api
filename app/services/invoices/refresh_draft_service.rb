@@ -24,6 +24,8 @@ module Invoices
         end
         invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
 
+        timestamp = fetch_timestamp
+
         invoice.fees.destroy_all
         invoice.invoice_subscriptions.destroy_all
         invoice.update!(taxes_rate: invoice.customer.applicable_vat_rate)
@@ -31,7 +33,7 @@ module Invoices
         calculate_result = Invoices::CalculateFeesService.call(
           invoice: invoice.reload,
           subscriptions: Subscription.find(subscription_ids),
-          timestamp: invoice.created_at.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
+          timestamp:,
           recurring:,
           context:,
         )
@@ -54,5 +56,13 @@ module Invoices
     private
 
     attr_accessor :invoice, :subscription_ids, :recurring, :context
+
+    def fetch_timestamp
+      value = invoice.fees.first&.properties&.[]('timestamp') ||
+              invoice.created_at.to_i + 1.second # NOTE: Adding 1 second because of to_i rounding.
+
+      # TODO: A migration to unify type of the timestamp property must be performed
+      value.is_a?(String) ? DateTime.parse(value) : value
+    end
   end
 end
