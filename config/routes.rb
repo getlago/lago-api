@@ -2,6 +2,10 @@
 
 require 'sidekiq/web'
 
+# NOTE: Configure Sidekiq Web session middleware
+Sidekiq::Web.use(ActionDispatch::Cookies)
+Sidekiq::Web.use(ActionDispatch::Session::CookieStore, key: '_interslice_session')
+
 Rails.application.routes.draw do
   mount Sidekiq::Web => '/sidekiq' if ENV['LAGO_SIDEKIQ_WEB'] == 'true'
 
