@@ -42,7 +42,7 @@ module Types
 
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
       field :applied_coupons, [Types::AppliedCoupons::Object], null: true
-      field :applied_taxes, [Types::AppliedTaxes::Object], null: true
+      field :applied_taxes, [Types::Customers::AppliedTaxes::Object], null: true
 
       field :credit_notes, [Types::CreditNotes::Object], null: true
 

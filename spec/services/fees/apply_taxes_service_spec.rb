@@ -16,8 +16,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
   let(:tax2) { create(:tax, organization:, rate: 12) }
   let(:tax3) { create(:tax, organization:, rate: 5, applied_to_organization: true) }
 
-  let(:applied_tax1) { create(:applied_tax, customer:, tax: tax1) }
-  let(:applied_tax2) { create(:applied_tax, customer:, tax: tax2) }
+  let(:applied_tax1) { create(:customer_applied_tax, customer:, tax: tax1) }
+  let(:applied_tax2) { create(:customer_applied_tax, customer:, tax: tax2) }
 
   before do
     applied_tax1
@@ -26,16 +26,16 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
   end
 
   describe 'call' do
-    it 'creates fees_taxes' do
+    it 'creates applied_taxes' do
       result = apply_service.call
 
       aggregate_failures do
         expect(result).to be_success
 
-        fees_taxes = result.fees_taxes
-        expect(fees_taxes.count).to eq(2)
+        applied_taxes = result.applied_taxes
+        expect(applied_taxes.count).to eq(2)
 
-        expect(fees_taxes[0]).to have_attributes(
+        expect(applied_taxes[0]).to have_attributes(
           fee:,
           tax: tax1,
           tax_description: tax1.description,
@@ -46,7 +46,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
           amount_cents: 100,
         )
 
-        expect(fees_taxes[1]).to have_attributes(
+        expect(applied_taxes[1]).to have_attributes(
           fee:,
           tax: tax2,
           tax_description: tax2.description,
@@ -68,16 +68,16 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       let(:applied_tax1) { nil }
       let(:applied_tax2) { nil }
 
-      it 'creates fees_taxes based on the organization taxes' do
+      it 'creates applied_taxes based on the organization taxes' do
         result = apply_service.call
 
         aggregate_failures do
           expect(result).to be_success
 
-          fees_taxes = result.fees_taxes
-          expect(fees_taxes.count).to eq(1)
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(1)
 
-          expect(fees_taxes[0]).to have_attributes(
+          expect(applied_taxes[0]).to have_attributes(
             fee:,
             tax: tax3,
             tax_description: tax3.description,

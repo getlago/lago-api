@@ -50,18 +50,4 @@ namespace :invoices do
       end
     end
   end
-
-  desc 'Fill invoice organization from customers'
-  task fill_organization: :environment do
-    # NOTE: when upgrading from before v0.24.0-beta, versions table does not exists
-    #       but PaperTrail is loaded in the model.
-    #       So we need to turn it off temporary to ensure migration passes
-    PaperTrail.request.disable_model(Invoice)
-
-    Invoice.where(organization_id: nil).find_each do |invoice|
-      invoice.update!(organization_id: invoice.customer.organization_id)
-    end
-
-    PaperTrail.request.enable_model(Invoice)
-  end
 end

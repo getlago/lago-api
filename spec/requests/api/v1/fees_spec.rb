@@ -24,7 +24,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
           taxes_amount_cents: fee.taxes_amount_cents,
           units: fee.units.to_s,
           events_count: fee.events_count,
-          taxes: [],
+          applied_taxes: [],
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,
@@ -52,7 +52,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
             taxes_amount_cents: fee.taxes_amount_cents,
             units: fee.units.to_s,
             events_count: fee.events_count,
-            taxes: [],
+            applied_taxes: [],
           )
           expect(json[:fee][:item]).to include(
             type: fee.fee_type,
@@ -112,7 +112,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
           succeeded_at: fee.succeeded_at&.iso8601,
           failed_at: fee.failed_at&.iso8601,
           refunded_at: fee.refunded_at&.iso8601,
-          taxes: [],
+          applied_taxes: [],
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,

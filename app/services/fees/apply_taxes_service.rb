@@ -9,12 +9,12 @@ module Fees
     end
 
     def call
-      result.fees_taxes = []
-      fee_taxes_amount_cents = 0
-      fee_taxes_rate = 0
+      result.applied_taxes = []
+      applied_taxes_amount_cents = 0
+      applied_taxes_rate = 0
 
       applicable_taxes.each do |tax|
-        fees_tax = FeesTax.new(
+        applied_tax = Fee::AppliedTax.new(
           fee:,
           tax:,
           tax_description: tax.description,
@@ -23,20 +23,20 @@ module Fees
           tax_rate: tax.rate,
           amount_currency: fee.amount_currency,
         )
-        fee.fees_taxes << fees_tax
+        fee.applied_taxes << applied_tax
 
         tax_amount_cents = (fee.amount_cents * tax.rate).fdiv(100)
-        fees_tax.amount_cents = tax_amount_cents.round
-        fees_tax.save! if fee.persisted?
+        applied_tax.amount_cents = tax_amount_cents.round
+        applied_tax.save! if fee.persisted?
 
-        fee_taxes_amount_cents += tax_amount_cents
-        fee_taxes_rate += tax.rate
+        applied_taxes_amount_cents += tax_amount_cents
+        applied_taxes_rate += tax.rate
 
-        result.fees_taxes << fees_tax
+        result.applied_taxes << applied_tax
       end
 
-      fee.taxes_amount_cents = fee_taxes_amount_cents.round
-      fee.taxes_rate = fee_taxes_rate
+      fee.taxes_amount_cents = applied_taxes_amount_cents.round
+      fee.taxes_rate = applied_taxes_rate
 
       result
     rescue ActiveRecord::RecordInvalid => e

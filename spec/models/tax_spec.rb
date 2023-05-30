@@ -12,7 +12,7 @@ RSpec.describe Tax, type: :model do
   describe 'customers_count' do
     let(:customer) { create(:customer, organization: tax.organization) }
 
-    before { create(:applied_tax, customer:, tax:) }
+    before { create(:customer_applied_tax, customer:, tax:) }
 
     it 'returns the number of attached customer' do
       expect(tax.customers_count).to eq(1)
