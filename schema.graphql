@@ -93,6 +93,19 @@ type AppliedCoupon {
   terminatedAt: ISO8601DateTime!
 }
 
+interface AppliedTax {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  tax: Tax!
+  taxCode: String!
+  taxDescription: String
+  taxName: String!
+  taxRate: Float!
+  updatedAt: ISO8601DateTime!
+}
+
 """
 Represents non-fractional signed whole numeric values. Since the value may
 exceed the size of a 32-bit integer, it's encoded as a string.
@@ -1783,7 +1796,7 @@ type CreditNote {
   voidedAt: ISO8601DateTime
 }
 
-type CreditNoteAppliedTax {
+type CreditNoteAppliedTax implements AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
@@ -2910,7 +2923,7 @@ type Fee implements InvoiceItem {
   units: Float!
 }
 
-type FeeAppliedTax {
+type FeeAppliedTax implements AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
@@ -3090,7 +3103,7 @@ type Invoice {
   versionNumber: Int!
 }
 
-type InvoiceAppliedTax {
+type InvoiceAppliedTax implements AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
