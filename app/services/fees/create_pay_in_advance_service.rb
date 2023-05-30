@@ -2,10 +2,11 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
-    def initialize(charge:, event:, estimate: false)
+    def initialize(charge:, event:, estimate: false, invoice: nil)
       @charge = charge
       @event = event
       @estimate = estimate
+      @invoice = invoice
 
       super
     end
@@ -33,7 +34,7 @@ module Fees
 
     private
 
-    attr_reader :charge, :event, :estimate
+    attr_reader :charge, :event, :estimate, :invoice
 
     delegate :billable_metric, to: :charge
     delegate :subscription, :customer, to: :event
@@ -43,6 +44,7 @@ module Fees
       result = apply_charge_model(aggregation_result:, properties:)
 
       fee = Fee.new(
+        invoice:,
         subscription: event.subscription,
         charge:,
         amount_cents: result.amount,
@@ -122,7 +124,7 @@ module Fees
     def deliver_webhooks
       return if estimate
 
-      result.fees.each { |f| SendWebhookJob.perform_later('fee.pay_in_advance_created', f) }
+      result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
     end
   end
 end

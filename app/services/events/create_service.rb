@@ -48,7 +48,15 @@ module Events
         handle_persisted_event if should_handle_persisted_event?
       end
 
-      charges.each { |c| Fees::CreatePayInAdvanceJob.perform_later(charge: c, event:) } if pay_in_advance_charges?
+      if non_invoiceable_charges.any?
+        non_invoiceable_charges.each { |c| Fees::CreatePayInAdvanceJob.perform_later(charge: c, event:) }
+      end
+
+      if invoiceable_charges.any? && applicable_event?
+        invoiceable_charges.each do |c|
+          Invoices::CreatePayInAdvanceChargeJob.perform_later(charge: c, event:, timestamp: event_timestamp)
+        end
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -92,17 +100,31 @@ module Events
     end
 
     def charges
-      @charges ||= event.subscription
+      event.subscription
         .plan
         .charges
         .pay_in_advance
         .joins(:billable_metric)
-        .where(invoiceable: false)
         .where(billable_metric: { code: event.code })
     end
 
-    def pay_in_advance_charges?
-      charges.any?
+    def non_invoiceable_charges
+      @non_invoiceable_charges ||= charges.where(invoiceable: false)
+    end
+
+    def invoiceable_charges
+      @invoiceable_charges ||= charges.where(invoiceable: true)
+    end
+
+    def applicable_event?
+      return false if !billable_metric.count_agg? && event.properties[billable_metric.field_name].nil?
+      return false if billable_metric.sum_agg? && event.properties[billable_metric.field_name]&.to_i&.negative?
+
+      true
+    end
+
+    def billable_metric
+      @billable_metric ||= event.organization.billable_metrics.find_by(code: event.code)
     end
   end
 end

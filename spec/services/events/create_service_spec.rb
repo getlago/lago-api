@@ -398,7 +398,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'when event matches an pay_in_advance charge' do
+    context 'when event matches an pay_in_advance charge that is not invoiceable' do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) do
         create(
@@ -460,6 +460,120 @@ RSpec.describe Events::CreateService, type: :service do
               metadata: {},
             )
           end.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
+        end
+      end
+    end
+
+    context 'when event matches a pay_in_advance charge that is invoiceable' do
+      let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization: customer.organization,
+          aggregation_type: 'sum_agg',
+          field_name: 'item_id',
+        )
+      end
+
+      let(:create_args) do
+        {
+          customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          properties: { billable_metric.field_name => '12' },
+          timestamp: Time.zone.now.to_i,
+        }
+      end
+
+      before { charge }
+
+      it 'enqueues a job to create the pay_in_advance charge invoice' do
+        expect do
+          create_service.call(
+            organization:,
+            params: create_args,
+            timestamp:,
+            metadata: {},
+          )
+        end.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+      end
+
+      context 'when charge is not invoiceable' do
+        before { charge.update!(invoiceable: false) }
+
+        it 'does not enqueue a job to create the pay_in_advance charge invoice' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+      end
+
+      context 'when multiple charges have the billable metric' do
+        before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
+
+        it 'enqueues a job for each charge' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob).twice
+        end
+      end
+
+      context 'when value for sum_agg is negative' do
+        let(:create_args) do
+          {
+            customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            properties: { billable_metric.field_name => '-5' },
+            timestamp: Time.zone.now.to_i,
+          }
+        end
+
+        it 'does not enqueue a job' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+      end
+
+      context 'when event field name does not batch the BM one' do
+        let(:create_args) do
+          {
+            customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            properties: { 'wrong_field_name' => '5' },
+            timestamp: Time.zone.now.to_i,
+          }
+        end
+
+        it 'does not enqueue a job' do
+          expect do
+            create_service.call(
+              organization:,
+              params: create_args,
+              timestamp:,
+              metadata: {},
+            )
+          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
     end
