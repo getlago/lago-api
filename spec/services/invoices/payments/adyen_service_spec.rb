@@ -13,6 +13,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
   let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
   let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
   let(:payments_response) { generate(:adyen_payments_response) }
+  let(:payment_methods_response) { generate(:adyen_payment_methods_response) }
 
   let(:invoice) do
     create(
@@ -38,10 +39,12 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         .and_return(payments_api)
       allow(payments_api).to receive(:payments)
         .and_return(payments_response)
+      allow(payments_api).to receive(:payment_methods)
+        .and_return(payment_methods_response)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
-    it 'creates an adyen payment' do
+    fit 'creates an adyen payment' do
       result = adyen_service.create
 
       expect(result).to be_success
@@ -58,7 +61,9 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.currency)
         expect(result.payment.status).to eq('Authorised')
-        expect(adyen_customer.reload.payment_method_id).to eq(result["pspReference"])
+
+        expect(adyen_customer.reload.payment_method_id).
+          to eq(payment_methods_response.response['storedPaymentMethods'].first['id'])
       end
 
       expect(payments_api).to have_received(:payments)

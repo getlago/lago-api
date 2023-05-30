@@ -40,4 +40,47 @@ FactoryBot.define do
       }
     )
   end
+
+  sequence :adyen_payment_methods_response do
+    OpenStruct.new(
+      response: {
+        "paymentMethods" => [
+          {
+            "brands" => [
+              "amex",
+              "bcmc",
+              "cartebancaire",
+              "mc",
+              "visa",
+              "visadankort"
+            ],
+            "name" => "Credit Card",
+            "type" => "scheme"
+          }
+        ],
+        "storedPaymentMethods" => [
+          {
+            "brand" => "visa",
+            "expiryMonth" => "03",
+            "expiryYear" => "30",
+            "holderName" => "Checkout Shopper PlaceHolder",
+            "id" => "#{SecureRandom.uuid}",
+            "lastFour" => "1234",
+            "name" => "VISA",
+            "networkTxReference" => "#{SecureRandom.uuid}",
+            "supportedRecurringProcessingModels" => [
+                "CardOnFile",
+                "Subscription",
+                "UnscheduledCardOnFile"
+            ],
+            "supportedShopperInteractions" => [
+                "Ecommerce",
+                "ContAuth"
+            ],
+            "type" => "scheme"
+          }
+        ]
+      }
+    )
+  end
 end
