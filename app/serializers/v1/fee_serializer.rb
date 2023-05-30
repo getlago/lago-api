@@ -16,8 +16,8 @@ module V1
           lago_item_id: model.item_id,
           item_type: model.item_type,
         },
-        pay_in_advance: calculate_pay_in_advance,
-        invoiceable: model.charge? ? model.charge&.invoiceable : true,
+        pay_in_advance: pay_in_advance,
+        invoiceable: invoiceable,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         taxes_amount_cents: model.taxes_amount_cents,
@@ -81,7 +81,7 @@ module V1
       ::V1::Legacy::FeeSerializer.new(model).serialize
     end
 
-    def calculate_pay_in_advance
+    def pay_in_advance
       if model.charge?
         model.pay_in_advance
       elsif model.subscription?
@@ -89,6 +89,10 @@ module V1
       else
         false
       end
+    end
+
+    def invoiceable
+      model.charge? ? model.charge&.invoiceable : true
     end
   end
 end

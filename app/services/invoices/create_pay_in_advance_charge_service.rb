@@ -7,7 +7,7 @@ module Invoices
       @event = event
       @timestamp = timestamp
 
-      super(nil)
+      super
     end
 
     def call
@@ -33,7 +33,7 @@ module Invoices
         create_fees(invoice)
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
