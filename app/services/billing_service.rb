@@ -127,11 +127,22 @@ class BillingService
     # we need to take all days up to 31 into account
     ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
 
-    base_subscription_scope
+    result = base_subscription_scope
       .anniversary
       .merge(Plan.monthly)
-      .where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
-      .to_sql
+
+    # TODO: Use timezone for days.
+    result = if days.count > 1
+      result.where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
+    else
+      result.where(
+        "DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) = \
+        DATE_PART('day', (#{today_shift_sql}))",
+        today,
+      )
+    end
+
+    result.to_sql
   end
 
   def yearly_anniversary
