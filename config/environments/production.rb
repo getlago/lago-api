@@ -57,12 +57,6 @@ Rails.application.configure do
     config.cache_store = :redis_cache_store, cache_store_config
   end
 
-  config.license_url = if ENV['LAGO_CLOUD'] == 'true'
-    'http://license-web.default.svc.cluster.local'
-  else
-    'https://license.getlago.com'
-  end
-
   if ENV['LAGO_SMTP_ADDRESS'].present? && !ENV['LAGO_SMTP_ADDRESS'].empty?
     config.action_mailer.delivery_method = :smtp
     config.action_mailer.smtp_settings = {

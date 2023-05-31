@@ -2,6 +2,6 @@
 
 require 'lago_utils'
 
-License = LagoUtils::License.new(Rails.application.config.license_url)
+License = LagoUtils::License.new(ENV['LAGO_LICENSE_URL'])
 
 License.verify unless Rails.env.test?
