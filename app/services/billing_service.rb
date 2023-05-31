@@ -152,12 +152,27 @@ class BillingService
     # If we are not in leap year and we are on 28/02 take 29/02 into account
     days << 29 if !Date.leap?(today.year) && today.day == 28 && today.month == 2
 
-    base_subscription_scope
+    result = base_subscription_scope
       .anniversary
       .merge(Plan.yearly)
-      .where("DATE_PART('month', (#{Subscription.subscription_at_in_timezone_sql})) = ?", today.month)
-      .where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
-      .to_sql
+      .where(
+        "DATE_PART('month', (#{Subscription.subscription_at_in_timezone_sql})) = \
+        DATE_PART('month', (#{today_shift_sql}))",
+        today,
+      )
+
+    # TODO: Use timezone for days.
+    result = if days.count > 1
+      result.where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
+    else
+      result.where(
+        "DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) = \
+        DATE_PART('day', (#{today_shift_sql}))",
+        today,
+      )
+    end
+
+    result.to_sql
   end
 
   def yearly_with_monthly_charges_anniversary
@@ -167,11 +182,22 @@ class BillingService
     # we need to take all days up to 31 into account
     ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
 
-    base_subscription_scope
+    result = base_subscription_scope
       .anniversary
       .merge(Plan.yearly.where(bill_charges_monthly: true))
-      .where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
-      .to_sql
+
+    # TODO: Use timezone for days.
+    result = if days.count > 1
+      result.where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
+    else
+      result.where(
+        "DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) = \
+        DATE_PART('day', (#{today_shift_sql}))",
+        today,
+      )
+    end
+
+    result.to_sql
   end
 
   def today_shift_sql(customer: 'customers', organization: 'organizations')
