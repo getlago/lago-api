@@ -57,7 +57,7 @@ Rails.application.configure do
     config.cache_store = :redis_cache_store, cache_store_config
   end
 
-  config.license_url = if ENV['LAGO_CLOUD'] == 'true'
+  config.license_url = if ENV['LAGO_CLOUD'] == 'true' && ENV['RAILS_ENV'] == 'staging'
     'http://license-web.default.svc.cluster.local'
   else
     'https://license.getlago.com'
