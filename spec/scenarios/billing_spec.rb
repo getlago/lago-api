@@ -213,49 +213,34 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       subscription = customer.subscriptions.first
 
       ### 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
-      mar118 = DateTime.new(2023, 3, 1, 18, 0)
-      travel_to(mar118) do
+      travel_to(DateTime.new(2023, 3, 1, 18, 0)) do
         BillingService.new.call
+        expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
-
-      perform_all_enqueued_jobs
-      expect(subscription.invoices.count).to be_zero
 
       ### 1st of Mar 19:00 UTC - 2nd of Mar 00:30 Asia/Kolkata
-      mar119 = DateTime.new(2023, 3, 1, 19, 0)
-      travel_to(mar119) do
+      travel_to(DateTime.new(2023, 3, 1, 19, 0)) do
         BillingService.new.call
+        expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
-
-      perform_all_enqueued_jobs
-      expect(subscription.reload.invoices.count).to be_zero
 
       ### 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
-      mar200 = DateTime.new(2023, 3, 2, 0, 0)
-      travel_to(mar200) do
+      travel_to(DateTime.new(2023, 3, 2, 0, 0)) do
         BillingService.new.call
+        expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
-
-      perform_all_enqueued_jobs
-      expect(subscription.reload.invoices.count).to eq(1)
 
       ### 2nd of Mar 18:00 UTC - 2nd of Mar 23:30 Asia/Kolkata
-      mar218 = DateTime.new(2023, 2, 2, 18, 0)
-      travel_to(mar218) do
+      travel_to(DateTime.new(2023, 3, 2, 18, 0)) do
         BillingService.new.call
+        expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
-
-      perform_all_enqueued_jobs
-      expect(subscription.reload.invoices.count).to eq(1)
 
       ### 2nd of Mar 19:00 UTC - 3rd of Mar 00:30 Asia/Kolkata
-      mar219 = DateTime.new(2023, 2, 1, 19, 0)
-      travel_to(mar219) do
+      travel_to(DateTime.new(2023, 3, 2, 19, 0)) do
         BillingService.new.call
+        expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
-
-      perform_all_enqueued_jobs
-      expect(subscription.reload.invoices.count).to eq(1)
     end
   end
 
