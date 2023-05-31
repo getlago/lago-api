@@ -112,7 +112,11 @@ class BillingService
     base_subscription_scope
       .anniversary
       .merge(Plan.weekly)
-      .where("EXTRACT(ISODOW FROM (#{Subscription.subscription_at_in_timezone_sql})) = ?", today.wday)
+      .where(
+        "EXTRACT(ISODOW FROM (#{Subscription.subscription_at_in_timezone_sql})) = \
+        EXTRACT(ISODOW FROM (#{today_shift_sql}))",
+        today,
+      )
       .to_sql
   end
 
