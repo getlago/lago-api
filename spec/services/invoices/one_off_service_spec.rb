@@ -94,6 +94,41 @@ RSpec.describe Invoices::OneOffService, type: :service do
       end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
+    context 'when invoice amount in cents is zero' do
+      let(:fees) do
+        [
+          {
+            add_on_code: add_on_first.code,
+            unit_amount_cents: 0,
+            units: 2,
+            description: 'desc-123',
+          },
+        ]
+      end
+
+      it 'creates an succeeded invoice' do
+        result = invoice_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+          expect(result.invoice.invoice_type).to eq('one_off')
+          expect(result.invoice.payment_status).to eq('succeeded')
+          expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(1)
+          expect(result.invoice.fees.pluck(:description)).to contain_exactly('desc-123')
+
+          expect(result.invoice.currency).to eq('EUR')
+          expect(result.invoice.fees_amount_cents).to eq(0)
+          expect(result.invoice.taxes_amount_cents).to eq(0)
+          expect(result.invoice.taxes_rate).to eq(20)
+          expect(result.invoice.total_amount_cents).to eq(0)
+
+          expect(result.invoice).to be_finalized
+        end
+      end
+    end
+
     context 'with lago_premium' do
       around { |test| lago_premium!(&test) }
 

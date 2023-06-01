@@ -27,7 +27,6 @@ module Invoices
           customer:,
           issuing_date:,
           invoice_type: :one_off,
-          payment_status: :pending,
           currency:,
           taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
@@ -36,6 +35,7 @@ module Invoices
 
         create_one_off_fees(invoice)
         Invoices::ComputeAmountsFromFees.call(invoice:)
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
 
         invoice.save!
       end
