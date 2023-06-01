@@ -5,6 +5,8 @@ require Rails.root.join('lib/lago_http_client/lago_http_client')
 class SendWebhookJob < ApplicationJob
   queue_as 'webhook'
 
+  retry_on ActiveJob::DeserializationError, wait: :exponentially_longer, attempts: 6
+
   WEBHOOK_SERVICES = {
     'invoice.created' => Webhooks::Invoices::CreatedService,
     'invoice.one_off_created' => Webhooks::Invoices::OneOffCreatedService,
