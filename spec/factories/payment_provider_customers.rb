@@ -12,4 +12,10 @@ FactoryBot.define do
 
     provider_customer_id { SecureRandom.uuid }
   end
+
+  factory :adyen_customer, class: 'PaymentProviderCustomers::AdyenCustomer' do
+    customer
+
+    provider_customer_id { SecureRandom.uuid }
+  end
 end

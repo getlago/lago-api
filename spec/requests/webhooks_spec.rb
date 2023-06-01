@@ -152,4 +152,72 @@ RSpec.describe WebhooksController, type: :request do
       end
     end
   end
+
+  describe 'POST /adyen' do
+    let(:organization) { create(:organization) }
+
+    let(:adyen_provider) do
+      create(:adyen_provider, organization:)
+    end
+
+    let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
+
+    let(:body) do
+      path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_response.json')
+      JSON.parse(File.read(path))
+    end
+
+    let(:result) do
+      result = BaseService::Result.new
+      result.body = body
+      result
+    end
+
+    before do
+      allow(PaymentProviders::AdyenService).to receive(:new)
+        .and_return(adyen_service)
+      allow(adyen_service).to receive(:handle_incoming_webhook)
+        .with(
+          organization_id: organization.id,
+          body: body["notificationItems"].first&.dig("NotificationRequestItem")
+        )
+        .and_return(result)
+    end
+
+    it 'handle adyen webhooks' do
+      post(
+        "/webhooks/adyen/#{adyen_provider.organization_id}",
+        params: body.to_json,
+        headers: {
+          'Content-Type' => 'application/json',
+        },
+      )
+
+      expect(response).to have_http_status(:success)
+
+      expect(PaymentProviders::AdyenService).to have_received(:new)
+      expect(adyen_service).to have_received(:handle_incoming_webhook)
+    end
+
+    context 'when failing to handle adyen event' do
+      let(:result) do
+        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+      end
+
+      it 'returns a bad request' do
+        post(
+          "/webhooks/adyen/#{adyen_provider.organization_id}",
+          params: body.to_json,
+          headers: {
+            'Content-Type' => 'application/json'
+          },
+        )
+
+        expect(response).to have_http_status(:bad_request)
+
+        expect(PaymentProviders::AdyenService).to have_received(:new)
+        expect(adyen_service).to have_received(:handle_incoming_webhook)
+      end
+    end
+  end
 end

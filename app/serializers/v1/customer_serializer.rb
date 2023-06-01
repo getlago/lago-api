@@ -57,6 +57,9 @@ module V1
       elsif model.payment_provider&.to_sym == :gocardless
         configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id
         configuration.merge!(model.gocardless_customer&.settings || {})
+      elsif model.payment_provider&.to_sym == :adyen
+        configuration[:provider_customer_id] = model.adyen_customer&.provider_customer_id
+        configuration.merge!(model.adyen_customer&.settings || {})
       end
 
       configuration

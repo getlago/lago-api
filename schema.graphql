@@ -3995,6 +3995,7 @@ input ProviderCustomerInput {
 }
 
 enum ProviderTypeEnum {
+  adyen
   gocardless
   stripe
 }
