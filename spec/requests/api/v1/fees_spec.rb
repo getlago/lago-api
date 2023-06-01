@@ -85,9 +85,12 @@ RSpec.describe Api::V1::FeesController, type: :request do
   describe 'PUT /fees/:id' do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:fee) { create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil) }
-
     let(:update_params) { { payment_status: 'succeeded' } }
+    let(:fee) do
+      create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
+    end
+
+    before { fee.charge.update!(invoiceable: false) }
 
     it 'updates the fee' do
       put_with_token(organization, "/api/v1/fees/#{fee.id}", fee: update_params)
