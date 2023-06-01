@@ -7,6 +7,16 @@ RSpec.describe Plan, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
+  describe 'Validations' do
+    it 'requires the pay_in_advance' do
+      plan.pay_in_advance = nil
+      expect(plan).not_to be_valid
+
+      plan.pay_in_advance = true
+      expect(plan).to be_valid
+    end
+  end
+
   describe '.has_trial?' do
     it 'returns true when trial_period' do
       expect(plan).to have_trial

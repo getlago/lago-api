@@ -32,6 +32,7 @@ class Plan < ApplicationRecord
   validates :code,
             presence: true,
             uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+  validates :pay_in_advance, inclusion: { in: [true, false] }
 
   default_scope -> { kept }
 
