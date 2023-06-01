@@ -38,6 +38,7 @@ gem 'graphql'
 gem 'graphql-pagination'
 
 # Payment processing
+gem 'adyen-ruby-api-library'
 gem 'gocardless_pro', '~> 2.34'
 gem 'stripe'
 

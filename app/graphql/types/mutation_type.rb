@@ -47,6 +47,8 @@ module Types
 
     field :add_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless
 
+    field :add_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen
+
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
     field :update_credit_note, mutation: Mutations::CreditNotes::Update
