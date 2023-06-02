@@ -30,10 +30,10 @@ module Invoices
           invoice:,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
-          amount_cents: adyen_result.dig("amount", "value"),
-          amount_currency: adyen_result.dig("amount", "currency"),
-          provider_payment_id: adyen_result["pspReference"],
-          status: adyen_result["resultCode"],
+          amount_cents: adyen_result.dig('amount', 'value'),
+          amount_currency: adyen_result.dig('amount', 'currency'),
+          provider_payment_id: adyen_result['pspReference'],
+          status: adyen_result['resultCode'],
         )
         payment.save!
 
@@ -79,7 +79,7 @@ module Invoices
         @client ||= Adyen::Client.new(
           api_key: adyen_payment_provider.api_key,
           env: adyen_payment_provider.environment,
-          live_url_prefix: adyen_payment_provider.live_prefix
+          live_url_prefix: adyen_payment_provider.live_prefix,
         )
       end
 
@@ -91,7 +91,7 @@ module Invoices
         result = client.checkout.payments_api.payment_methods(payment_method_params).response
 
         if (payment_method_id = result['storedPaymentMethods']&.first&.dig('id'))
-          customer.adyen_customer.update! payment_method_id: payment_method_id
+          customer.adyen_customer.update!(payment_method_id:)
         end
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
@@ -120,17 +120,17 @@ module Invoices
         prms = {
           amount: {
             currency: invoice.currency.upcase,
-            value: invoice.total_amount_cents
+            value: invoice.total_amount_cents,
           },
           reference: invoice.number,
           paymentMethod: {
-            type: "scheme",
-            storedPaymentMethodId: customer.adyen_customer.payment_method_id
+            type: 'scheme',
+            storedPaymentMethodId: customer.adyen_customer.payment_method_id,
           },
           shopperReference: customer.external_id,
           merchantAccount: adyen_payment_provider.merchant_account,
-          shopperInteraction: "ContAuth",
-          recurringProcessingModel: "UnscheduledCardOnFile"
+          shopperInteraction: 'ContAuth',
+          recurringProcessingModel: 'UnscheduledCardOnFile',
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
@@ -169,8 +169,8 @@ module Invoices
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
             message: adyen_error.msg,
-            error_code: adyen_error.code
-          }
+            error_code: adyen_error.code,
+          },
         )
       end
     end

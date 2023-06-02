@@ -14,7 +14,7 @@ module PaymentProviderCustomers
 
       adyen_result = generate_checkout_url
 
-      result.checkout_url = adyen_result.response["url"]
+      result.checkout_url = adyen_result.response['url']
       result
     end
 
@@ -24,10 +24,10 @@ module PaymentProviderCustomers
       SendWebhookJob.perform_later(
         'customer.checkout_url_generated',
         customer,
-        checkout_url: res.response["url"]
+        checkout_url: res.response['url'],
       )
 
-      return res
+      res
     rescue Adyen::AdyenError => e
       deliver_error_webhook(e)
 
@@ -36,20 +36,18 @@ module PaymentProviderCustomers
 
     def preauthorise(organization, event)
       shopper_reference = shopper_reference_from_event(event)
-      payment_method_id = event.dig("additionalData", "recurring.recurringDetailReference")
+      payment_method_id = event.dig('additionalData', 'recurring.recurringDetailReference')
 
-      @adyen_customer = PaymentProviderCustomers::AdyenCustomer.
-        joins(:customer).
-        where(customers: { external_id: shopper_reference, organization_id: organization.id }).
-        first
+      @adyen_customer = PaymentProviderCustomers::AdyenCustomer
+        .joins(:customer)
+        .where(customers: { external_id: shopper_reference, organization_id: organization.id })
+        .first
 
       return handle_missing_customer(shopper_reference) unless adyen_customer
 
       adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
 
-      if organization.webhook_url?
-        SendWebhookJob.perform_later('customer.payment_provider_created', customer)
-      end
+      SendWebhookJob.perform_later('customer.payment_provider_created', customer) if organization.webhook_url?
 
       result.adyen_customer = adyen_customer
       result
@@ -73,26 +71,26 @@ module PaymentProviderCustomers
       @client ||= Adyen::Client.new(
         api_key: adyen_payment_provider.api_key,
         env: adyen_payment_provider.environment,
-        live_url_prefix: adyen_payment_provider.live_prefix
+        live_url_prefix: adyen_payment_provider.live_prefix,
       )
     end
 
     def shopper_reference_from_event(event)
-      event.dig("additionalData", "shopperReference") ||
-        event.dig("additionalData", "recurring.shopperReference")
+      event.dig('additionalData', 'shopperReference') ||
+        event.dig('additionalData', 'recurring.shopperReference')
     end
 
     def payment_link_params
       prms = {
-        reference: "authorization customer #{customer.external_id}",
+        reference: 'authorization customer #{customer.external_id}',
         amount: {
           value: 0, # pre-authorization
-          currency: customer.currency.presence || "USD"
+          currency: customer.currency.presence || 'USD',
         },
         merchantAccount: adyen_payment_provider.merchant_account,
         shopperReference: customer.external_id,
-        storePaymentMethodMode: "enabled",
-        recurringProcessingModel: "UnscheduledCardOnFile",
+        storePaymentMethodMode: 'enabled',
+        recurringProcessingModel: 'UnscheduledCardOnFile',
         expiresAt: Time.current + 70.days
       }
       prms[:shopperEmail] = customer.email if customer.email
@@ -106,8 +104,8 @@ module PaymentProviderCustomers
         'customer.payment_provider_error',
         customer,
         provider_error: {
-          message: adyen_error.request&.dig("msg") || adyen_error.msg,
-          error_code: adyen_error.request&.dig("code") || adyen_error.code
+          message: adyen_error.request&.dig('msg') || adyen_error.msg,
+          error_code: adyen_error.request&.dig('code') || adyen_error.code
         }
       )
     end

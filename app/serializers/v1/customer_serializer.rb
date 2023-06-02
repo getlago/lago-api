@@ -51,13 +51,14 @@ module V1
         document_locale: model.document_locale,
       }
 
-      if model.payment_provider&.to_sym == :stripe
+      case model.payment_provider&.to_sym
+      when :stripe
         configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
         configuration.merge!(model.stripe_customer&.settings || {})
-      elsif model.payment_provider&.to_sym == :gocardless
+      when :gocardless
         configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id
         configuration.merge!(model.gocardless_customer&.settings || {})
-      elsif model.payment_provider&.to_sym == :adyen
+      when :adyen
         configuration[:provider_customer_id] = model.adyen_customer&.provider_customer_id
         configuration.merge!(model.adyen_customer&.settings || {})
       end

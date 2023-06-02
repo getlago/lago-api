@@ -38,25 +38,23 @@ class WebhooksController < ApplicationController
   end
 
   def adyen
-    signature = adyen_params.dig("additionalData", "hmacSignature")
+    signature = adyen_params.dig('additionalData', 'hmacSignature')
 
     result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
-      body: adyen_params
+      body: adyen_params,
     )
 
     unless result.success?
-      if result.error.code == 'webhook_error'
-        return head(:bad_request)
-      end
+      return head(:bad_request) if result.error.code == 'webhook_error'
 
       result.raise_if_error!
     end
 
-    render json: "[accepted]"
+    render(json: '[accepted]')
   end
 
   def adyen_params
-    params["notificationItems"].first&.dig("NotificationRequestItem").permit!
+    params['notificationItems'].first&.dig('NotificationRequestItem')&.permit!
   end
 end
