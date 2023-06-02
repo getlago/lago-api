@@ -3,7 +3,7 @@
 class BillingService
   def call
     # Keep track of billing time for retry and tracking purpose
-    billing_timestamp = Time.current.to_i
+    billing_timestamp = today.to_i
 
     billable_subscriptions.group_by(&:customer_id).each do |_customer_id, customer_subscriptions|
       billing_subscriptions = []
@@ -33,204 +33,230 @@ class BillingService
 
   # NOTE: Retrieve list of subscriptions that should be billed today
   def billable_subscriptions
-    sql = [
-      # NOTE: Calendar subscriptions
-      weekly_calendar,
-      monthly_calendar,
-      yearly_with_monthly_charges_calendar,
-      yearly_calendar,
+    sql = <<-SQL
+      WITH
+        billable_subscriptions AS (
+          -- Calendar subscriptions
+          (#{weekly_calendar})
+          UNION
+          (#{monthly_calendar})
+          UNION
+          (#{yearly_with_monthly_charges_calendar})
+          UNION
+          (#{yearly_calendar})
 
-      # NOTE: Anniversary subscriptions
-      weekly_anniversary,
-      monthly_anniversary,
-      yearly_with_monthly_charges_anniversary,
-      yearly_anniversary,
-    ]
+          UNION
+          -- Anniversary subscriptions
+          (#{weekly_anniversary})
+          UNION
+          (#{monthly_anniversary})
+          UNION
+          (#{yearly_with_monthly_charges_anniversary})
+          UNION
+          (#{yearly_anniversary})
+        ),
+        -- Filter subscriptions already billed today (in customer's applicable timezone)
+        already_billed_today AS (#{already_billed_today})
 
-    # NOTE: Prevent double billing by excluding subscription already billed
-    #       or started today
-    sql_ids = Subscription.where("subscriptions.id in (#{sql.join(' UNION ')})")
-      .joins(customer: :organization) \
-      # NOTE: exclude subscription that have already been billed today
-      .joins("LEFT JOIN (#{already_billed_filter_sql}) insub ON insub.subscription_id = subscriptions.id")
-      .where(insub: { invoiced_count: nil }) \
-      # NOTE: Do not bill subscriptions that started this day, they are billed by another job
-      .where.not("DATE(#{Subscription.started_at_in_timezone_sql}) = ?", today.to_date)
-      .group(:id)
-      .select(:id)
-      .to_sql
+      SELECT DISTINCT(subscriptions.*)
+      FROM subscriptions
+        INNER JOIN billable_subscriptions ON billable_subscriptions.subscription_id = subscriptions.id
+        LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
+      WHERE already_billed_today.invoiced_count IS NULL -- Exclude subscriptions already billed today
+      GROUP BY subscriptions.id
+    SQL
 
-    Subscription.where("id in (#{sql_ids})")
+    Subscription.find_by_sql([sql, { today: }])
   end
 
-  def base_subscription_scope
-    Subscription
-      .active
-      .joins(:plan, customer: :organization)
-      .group('subscriptions.id')
-      .select(:id)
+  def base_subscription_scope(billing_time: nil, interval: nil, conditions: nil)
+    <<-SQL
+      SELECT subscriptions.id AS subscription_id
+      FROM subscriptions
+        INNER JOIN plans ON plans.id = subscriptions.plan_id
+        INNER JOIN customers ON customers.id = subscriptions.customer_id
+        INNER JOIN organizations ON organizations.id = customers.organization_id
+      WHERE
+        -- Ensure subscription is active
+        subscriptions.status = #{Subscription.statuses[:active]}
+        -- Filters by billing time (calendar, anniversary)
+        AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
+        -- Filters by interval (weekly, monthly, yearly)
+        AND plans.interval = #{Plan.intervals[interval]}
+        -- Do not bill subscriptions that started this day, they are billed by another job
+        AND DATE(subscriptions.started_at#{at_time_zone}) != DATE(:today#{at_time_zone})
+        -- Injects other conditions
+        AND #{conditions.join(' AND ')}
+      GROUP BY subscriptions.id
+    SQL
   end
 
   # NOTE: For weekly interval we send invoices on Monday (ISODOW = 1)
   def weekly_calendar
-    base_subscription_scope
-      .calendar
-      .merge(Plan.weekly)
-      .where("EXTRACT(ISODOW FROM (#{today_shift_sql})) = 1", today)
-      .to_sql
+    base_subscription_scope(
+      billing_time: :calendar,
+      interval: :weekly,
+      conditions: ["EXTRACT(ISODOW FROM (:today#{at_time_zone})) = 1"],
+    )
   end
 
   # NOTE: Billed monthly on 1st day of the month
   def monthly_calendar
-    base_subscription_scope
-      .calendar
-      .merge(Plan.monthly)
-      .where("DATE_PART('day', (#{today_shift_sql})) = 1", today)
-      .to_sql
+    base_subscription_scope(
+      billing_time: :calendar,
+      interval: :monthly,
+      conditions: ["DATE_PART('day', (:today#{at_time_zone})) = 1"],
+    )
   end
 
   # NOTE: Bill charges monthly for yearly plans on 1st day of the month
   def yearly_with_monthly_charges_calendar
-    base_subscription_scope
-      .calendar
-      .merge(Plan.yearly.where(bill_charges_monthly: true))
-      .where("DATE_PART('day', (#{today_shift_sql})) = 1", today)
-      .to_sql
+    base_subscription_scope(
+      billing_time: :calendar,
+      interval: :yearly,
+      conditions: [
+        "DATE_PART('day', (:today#{at_time_zone})) = 1",
+        "plans.bill_charges_monthly = 't'",
+      ],
+    )
   end
 
   # NOTE: Billed yearly on first day of the year
   def yearly_calendar
-    base_subscription_scope
-      .calendar
-      .merge(Plan.yearly)
-      .where("DATE_PART('month', (#{today_shift_sql})) = 1", today)
-      .where("DATE_PART('day', (#{today_shift_sql})) = 1", today)
-      .to_sql
+    base_subscription_scope(
+      billing_time: :calendar,
+      interval: :yearly,
+      conditions: [
+        "DATE_PART('month', (:today#{at_time_zone})) = 1",
+        "DATE_PART('day', (:today#{at_time_zone})) = 1",
+      ],
+    )
   end
 
   def weekly_anniversary
-    base_subscription_scope
-      .anniversary
-      .merge(Plan.weekly)
-      .where(
-        "EXTRACT(ISODOW FROM (#{Subscription.subscription_at_in_timezone_sql})) = \
-        EXTRACT(ISODOW FROM (#{today_shift_sql}))",
-        today,
-      )
-      .to_sql
+    base_subscription_scope(
+      billing_time: :anniversary,
+      interval: :weekly,
+      conditions: [
+        "EXTRACT(ISODOW FROM (subscriptions.subscription_at#{at_time_zone})) =
+        EXTRACT(ISODOW FROM (:today#{at_time_zone}))",
+      ],
+    )
   end
 
   def monthly_anniversary
-    days = [today.day]
-
-    # If today is the last day of the month and month count less than 31 days,
-    # we need to take all days up to 31 into account
-    ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
-
-    result = base_subscription_scope
-      .anniversary
-      .merge(Plan.monthly)
-
-    # TODO: Use timezone for days.
-    result = if days.count > 1
-      result.where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
-    else
-      result.where(
-        "DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) = \
-        DATE_PART('day', (#{today_shift_sql}))",
-        today,
-      )
-    end
-
-    result.to_sql
+    base_subscription_scope(
+      billing_time: :anniversary,
+      interval: :monthly,
+      conditions: [<<-SQL],
+        DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
+          -- Check if today is the last day of the month
+          CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
+          THEN
+            -- If so and if it counts less than 31 days, we need to take all days up to 31 into account
+            (SELECT ARRAY(SELECT generate_series(DATE_PART('day', :today#{at_time_zone})::integer, 31)))
+          ELSE
+            -- Otherwise, we just need the current day
+            (SELECT ARRAY[DATE_PART('day', :today#{at_time_zone})])
+          END
+        )
+      SQL
+    )
   end
 
   def yearly_anniversary
-    # Billed yearly
-    days = [today.day]
+    billing_month = <<-SQL
+      -- Ensure we are on the billing month
+      DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) = DATE_PART('month', :today#{at_time_zone})
+    SQL
 
-    # If we are not in leap year and we are on 28/02 take 29/02 into account
-    days << 29 if !Date.leap?(today.year) && today.day == 28 && today.month == 2
-
-    result = base_subscription_scope
-      .anniversary
-      .merge(Plan.yearly)
-      .where(
-        "DATE_PART('month', (#{Subscription.subscription_at_in_timezone_sql})) = \
-        DATE_PART('month', (#{today_shift_sql}))",
-        today,
+    billing_day = <<-SQL
+      -- Check if we are not in a leap year when today is february the 28th
+      DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
+        CASE WHEN (
+          DATE_PART('month', :today#{at_time_zone}) = 2
+          AND DATE_PART('day', :today#{at_time_zone}) = 28
+          AND DATE_PART('day', (#{end_of_month})) = 28
+        )
+        THEN
+          -- If not a leap year, we have to take february the 29th into account
+          ARRAY[28, 29]
+        ELSE
+          -- Otherwise, we just need the current day
+          ARRAY[DATE_PART('day', :today#{at_time_zone})]
+        END
       )
+    SQL
 
-    # TODO: Use timezone for days.
-    result = if days.count > 1
-      result.where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
-    else
-      result.where(
-        "DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) = \
-        DATE_PART('day', (#{today_shift_sql}))",
-        today,
-      )
-    end
-
-    result.to_sql
+    base_subscription_scope(
+      billing_time: :anniversary,
+      interval: :yearly,
+      conditions: [billing_month, billing_day],
+    )
   end
 
   def yearly_with_monthly_charges_anniversary
-    days = [today.day]
-
-    # If today is the last day of the month and month count less than 31 days,
-    # we need to take all days up to 31 into account
-    ((today.day + 1)..31).each { |day| days << day } if today.day == today.end_of_month.day
-
-    result = base_subscription_scope
-      .anniversary
-      .merge(Plan.yearly.where(bill_charges_monthly: true))
-
-    # TODO: Use timezone for days.
-    result = if days.count > 1
-      result.where("DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) IN (?)", days)
-    else
-      result.where(
-        "DATE_PART('day', (#{Subscription.subscription_at_in_timezone_sql})) = \
-        DATE_PART('day', (#{today_shift_sql}))",
-        today,
-      )
-    end
-
-    result.to_sql
-  end
-
-  def today_shift_sql(customer: 'customers', organization: 'organizations')
-    <<-SQL
-      ?::timestamptz AT TIME ZONE
-      COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
-    SQL
-  end
-
-  def already_billed_filter_sql
-    # TODO: A migration to unify type of the timestamp property must performed
-    timestamp_condition = <<-SQL
-      (CASE
-        WHEN invoice_subscriptions.properties->>'timestamp' ~ '^[0-9\.]+$'
+    billing_day = <<-SQL
+      DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
+        -- Check if today is the last day of the month
+        CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
         THEN
-          to_timestamp((invoice_subscriptions.properties->>'timestamp')::integer)::timestamptz
+          -- If so and if it counts less than 31 days, we need to take all days up to 31 into account
+          (SELECT ARRAY(SELECT generate_series(DATE_PART('day', :today#{at_time_zone})::integer, 31)))
         ELSE
-          (invoice_subscriptions.properties->>'timestamp')::timestamptz
-      END) AT TIME ZONE COALESCE(cus.timezone, org.timezone, 'UTC')
+          -- Otherwise, we just need the current day
+          (SELECT ARRAY[DATE_PART('day', :today#{at_time_zone})])
+        END
+      )
     SQL
 
-    InvoiceSubscription
-      .joins('INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id')
-      .joins('INNER JOIN customers AS cus ON sub.customer_id = cus.id')
-      .joins('INNER JOIN organizations AS org ON cus.organization_id = org.id')
-      .where("invoice_subscriptions.properties->>'timestamp' IS NOT NULL")
-      .where(
-        "DATE(#{Arel.sql(timestamp_condition)}) = DATE(#{today_shift_sql(customer: 'cus', organization: 'org')})",
-        today,
-      )
-      .recurring
-      .group(:subscription_id)
-      .select('invoice_subscriptions.subscription_id, COUNT(invoice_subscriptions.id) AS invoiced_count')
-      .to_sql
+    base_subscription_scope(
+      billing_time: :anniversary,
+      interval: :yearly,
+      conditions: [
+        "plans.bill_charges_monthly = 't'",
+        billing_day,
+      ],
+    )
+  end
+
+  def at_time_zone(customer: 'customers', organization: 'organizations')
+    <<-SQL
+    ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
+    SQL
+  end
+
+  def end_of_month
+    <<-SQL
+      (DATE_TRUNC('month', :today#{at_time_zone}) + INTERVAL '1 month - 1 day')::date
+    SQL
+  end
+
+  def already_billed_today
+    <<-SQL
+      SELECT
+        invoice_subscriptions.subscription_id,
+        COUNT(invoice_subscriptions.id) AS invoiced_count
+      FROM invoice_subscriptions
+        INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id
+        INNER JOIN customers AS cus ON sub.customer_id = cus.id
+        INNER JOIN organizations AS org ON cus.organization_id = org.id
+      WHERE invoice_subscriptions.recurring = 't'
+        AND invoice_subscriptions.properties->>'timestamp' IS NOT NULL
+        AND DATE(
+          (
+            -- TODO: A migration to unify type of the timestamp property must performed
+            CASE WHEN invoice_subscriptions.properties->>'timestamp' ~ '^[0-9\.]+$'
+            THEN
+              -- Timestamp is stored as an integer
+              to_timestamp((invoice_subscriptions.properties->>'timestamp')::integer)::timestamptz
+            ELSE
+              -- Timestamp is stored as a string representing a datetime
+              (invoice_subscriptions.properties->>'timestamp')::timestamptz
+            END
+          )#{at_time_zone(customer: 'cus', organization: 'org')}
+        ) = DATE(:today#{at_time_zone(customer: 'cus', organization: 'org')})
+      GROUP BY invoice_subscriptions.subscription_id
+    SQL
   end
 end

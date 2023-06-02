@@ -42,13 +42,6 @@ class Subscription < ApplicationRecord
     SQL
   end
 
-  def self.started_at_in_timezone_sql
-    <<-SQL
-      subscriptions.started_at::timestamptz AT TIME ZONE
-      COALESCE(customers.timezone, organizations.timezone, 'UTC')
-    SQL
-  end
-
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     active!
