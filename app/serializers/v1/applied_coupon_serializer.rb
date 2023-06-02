@@ -7,6 +7,7 @@ module V1
         lago_id: model.id,
         lago_coupon_id: model.coupon.id,
         coupon_code: model.coupon.code,
+        coupon_name: model.coupon.name,
         lago_customer_id: model.customer.id,
         external_customer_id: model.customer.external_id,
         status: model.status,
