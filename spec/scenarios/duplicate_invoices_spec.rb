@@ -26,25 +26,25 @@ describe 'Duplicate Invoices Scenarios', :scenarios, type: :request do
 
       ### 23rd of May 20:00 UTC - 23rd of May 22:00 Europe/Paris
       travel_to(DateTime.new(2023, 5, 23, 20, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
 
       ### 23rd of May 21:00 UTC - 23rd of May 23:00 Europe/Paris
       travel_to(DateTime.new(2023, 5, 23, 21, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 23rd of May 22:59 UTC - 24th of May 00:59 Europe/Paris
       travel_to(DateTime.new(2023, 5, 23, 22, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 24th of May 00:10 UTC - 24th of May 02:10 Europe/Paris
       travel_to(DateTime.new(2023, 5, 24, 0, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
     end
@@ -71,25 +71,25 @@ describe 'Duplicate Invoices Scenarios', :scenarios, type: :request do
 
       ### 2nd of May 20:00 UTC - 2nd of May 22:00 Europe/Paris
       travel_to(DateTime.new(2023, 5, 2, 20, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
 
       ### 2nd of May 21:00 UTC - 2nd of May 23:00 Europe/Paris
       travel_to(DateTime.new(2023, 5, 2, 21, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 2nd of May 22:59 UTC - 3rd of May 00:59 Europe/Paris
       travel_to(DateTime.new(2023, 5, 2, 22, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 3rd of May 00:10 UTC - 3rd of May 02:10 Europe/Paris
       travel_to(DateTime.new(2023, 5, 3, 0, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
     end
@@ -116,25 +116,25 @@ describe 'Duplicate Invoices Scenarios', :scenarios, type: :request do
 
       ### 2nd of April 20:00 UTC - 2nd of April 22:00 Europe/Paris
       travel_to(DateTime.new(2023, 4, 2, 20, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
 
       ### 2nd of April 21:00 UTC - 2nd of April 23:00 Europe/Paris
       travel_to(DateTime.new(2023, 4, 2, 21, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 2nd of April 22:59 UTC - 3rd of April 00:59 Europe/Paris
       travel_to(DateTime.new(2023, 4, 2, 22, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 3rd of April 00:10 UTC - 3rd of April 02:10 Europe/Paris
       travel_to(DateTime.new(2023, 4, 3, 0, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
     end
@@ -161,25 +161,25 @@ describe 'Duplicate Invoices Scenarios', :scenarios, type: :request do
 
       ### 2nd of April 20:00 UTC - 2nd of April 22:00 Europe/Paris
       travel_to(DateTime.new(2023, 4, 2, 20, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
 
       ### 2nd of April 21:00 UTC - 2nd of April 23:00 Europe/Paris
       travel_to(DateTime.new(2023, 4, 2, 21, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 2nd of April 22:59 UTC - 3rd of April 00:59 Europe/Paris
       travel_to(DateTime.new(2023, 4, 2, 22, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 3rd of April 00:10 UTC - 3rd of April 02:10 Europe/Paris
       travel_to(DateTime.new(2023, 4, 3, 0, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
     end
@@ -206,25 +206,25 @@ describe 'Duplicate Invoices Scenarios', :scenarios, type: :request do
 
       ### 1st of June 20:00 UTC - 23rd of May 22:00 Europe/Paris
       travel_to(DateTime.new(2023, 6, 1, 20, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
 
       ### 1st of June 21:00 UTC - 1st of June 23:00 Europe/Paris
       travel_to(DateTime.new(2023, 6, 1, 21, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 1st of June 22:59 UTC - 2nd of June 00:59 Europe/Paris
       travel_to(DateTime.new(2023, 6, 1, 22, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 2nd of June 00:10 UTC - 2nd of June 02:10 Europe/Paris
       travel_to(DateTime.new(2023, 6, 2, 0, 10)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
     end

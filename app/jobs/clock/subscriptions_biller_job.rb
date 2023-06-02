@@ -5,7 +5,7 @@ module Clock
     queue_as 'clock'
 
     def perform
-      BillingService.new.call
+      Subscriptions::BillingService.call
     end
   end
 end

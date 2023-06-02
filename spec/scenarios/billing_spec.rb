@@ -29,7 +29,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 1st of Mar 00:00 UTC - 31 Feb 19:00 America/Bogota
       mar100 = DateTime.new(2023, 3, 1, 0, 0)
       travel_to(mar100) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -38,7 +38,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 1st of Mar 05:00 UTC - 1st of Mar 00:00 America/Bogota
       mar105 = DateTime.new(2023, 3, 1, 5, 0)
       travel_to(mar105) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -47,7 +47,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 1st of Mar 06:00 UTC - 1st of Mar 01:00 America/Bogota
       mar106 = DateTime.new(2023, 3, 1, 6, 0)
       travel_to(mar106) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -56,7 +56,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 2nd of Mar 00:00 UTC - 1st of Mar 19:00 America/Bogota
       mar200 = DateTime.new(2023, 3, 2, 0, 0)
       travel_to(mar200) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -88,7 +88,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 28 of Feb 18:00 UTC - 28 Feb 23:30 Asia/Kolkata
       feb2818 = DateTime.new(2023, 2, 28, 18, 0)
       travel_to(feb2818) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -97,7 +97,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 28 of Feb 19:00 UTC - 1st of Mar 00:30 Asia/Kolkata
       feb2819 = DateTime.new(2023, 2, 28, 19, 0)
       travel_to(feb2819) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -106,7 +106,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 1st of Mar 00:00 UTC - 1st of Mar 05:30 Asia/Kolkata
       mar100 = DateTime.new(2023, 3, 1, 0, 0)
       travel_to(mar100) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -115,7 +115,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
       mar118 = DateTime.new(2023, 2, 1, 18, 0)
       travel_to(mar118) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -124,7 +124,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 1st of Mar 19:00 UTC - 2nd of Mar 00:30 Asia/Kolkata
       mar119 = DateTime.new(2023, 2, 1, 19, 0)
       travel_to(mar119) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -156,7 +156,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 31th of Feb 23:00 UTC - 1st of Mar 19:00 America/Bogota
       feb3123 = DateTime.new(2023, 2, 28, 23, 0)
       travel_to(feb3123) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -165,7 +165,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 2nd of Mar 06:00 UTC - 2nd of Mar 01:00 America/Bogota
       mar206 = DateTime.new(2023, 3, 2, 6, 0)
       travel_to(mar206) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -174,7 +174,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 2nd of Mar 07:00 UTC - 2nd of Mar 02:00 America/Bogota
       mar207 = DateTime.new(2023, 3, 2, 6, 0)
       travel_to(mar207) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -183,7 +183,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 3rd of Mar 00:00 UTC - 2nd of Mar 19:00 America/Bogota
       mar300 = DateTime.new(2023, 3, 3, 0, 0)
       travel_to(mar300) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -214,31 +214,31 @@ describe 'Billing Scenarios', :scenarios, type: :request do
 
       ### 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
       travel_to(DateTime.new(2023, 3, 1, 18, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 1st of Mar 19:00 UTC - 2nd of Mar 00:30 Asia/Kolkata
       travel_to(DateTime.new(2023, 3, 1, 19, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }.from(0).to(1)
       end
 
       ### 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
       travel_to(DateTime.new(2023, 3, 2, 0, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 2nd of Mar 18:00 UTC - 2nd of Mar 23:30 Asia/Kolkata
       travel_to(DateTime.new(2023, 3, 2, 18, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
 
       ### 2nd of Mar 19:00 UTC - 3rd of Mar 00:30 Asia/Kolkata
       travel_to(DateTime.new(2023, 3, 2, 19, 0)) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
         expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
       end
     end
@@ -291,7 +291,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 30 of Apr- Bill subscription
       apr30 = DateTime.new(2023, 4, 30, 12)
       travel_to(apr30) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
@@ -302,7 +302,7 @@ describe 'Billing Scenarios', :scenarios, type: :request do
       ### 30 of Apr- Bill subscription
       apr30 = DateTime.new(2024, 3, 31, 12)
       travel_to(apr30) do
-        BillingService.new.call
+        Subscriptions::BillingService.new.call
       end
 
       perform_all_enqueued_jobs
