@@ -2,13 +2,11 @@
 
 module PaymentProviders
   class AdyenService < BaseService
-    WEBHOOKS_EVENTS = [
-      'AUTHORISATION', 'REFUND', 'REFUND_FAILED'
-    ].freeze
+    WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED].freeze
 
     def create_or_update(**args)
       adyen_provider = PaymentProviders::AdyenProvider.find_or_initialize_by(
-        organization_id: args[:organization].id
+        organization_id: args[:organization].id,
       )
 
       api_key = adyen_provider.api_key
@@ -70,7 +68,7 @@ module PaymentProviders
         service = CreditNotes::Refunds::AdyenService.new
 
         provider_refund_id = event['pspReference']
-        status = event['success'] == 'true' ? :succeeded : :failed
+        status = (event['success'] == 'true') ? :succeeded : :failed
 
         result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error! || result
@@ -89,8 +87,9 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, adyen_provider:)
       PaymentProviderCustomers::AdyenCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: })
-        .update_all(payment_provider_id: adyen_provider.id)
+        .where(payment_provider_id: nil, customers: { organization_id: }).each do |c|
+          c.update(payment_provider_id: adyen_provider.id)
+        end
     end
   end
 end

@@ -8,7 +8,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventJob, type: :job do
   let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
-  let(:event_json) { "{}" }
+  let(:event_json) { '{}' }
 
   before do
     allow(PaymentProviders::AdyenService).to receive(:new)

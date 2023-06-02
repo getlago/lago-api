@@ -179,7 +179,7 @@ RSpec.describe WebhooksController, type: :request do
       allow(adyen_service).to receive(:handle_incoming_webhook)
         .with(
           organization_id: organization.id,
-          body: body["notificationItems"].first&.dig("NotificationRequestItem")
+          body: body['notificationItems'].first&.dig('NotificationRequestItem'),
         )
         .and_return(result)
     end
@@ -209,7 +209,7 @@ RSpec.describe WebhooksController, type: :request do
           "/webhooks/adyen/#{adyen_provider.organization_id}",
           params: body.to_json,
           headers: {
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
           },
         )
 

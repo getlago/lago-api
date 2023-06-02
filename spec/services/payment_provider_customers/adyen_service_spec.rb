@@ -17,7 +17,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
   end
 
   describe '#create' do
-    subject { adyen_service.create }
+    subject(:adyen_service_create) { adyen_service.create }
 
     before do
       allow(Adyen::Client).to receive(:new).and_return(adyen_client)
@@ -28,22 +28,22 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
 
     context 'when customer does not have an adyen customer id yet' do
       it 'calls adyen api client payment links' do
-        subject
+        adyen_service_create
         expect(payment_links_api).to have_received(:payment_links)
       end
 
       it 'creates a payment link' do
-        expect(subject.checkout_url).to eq('https://test.adyen.link/test')
+        expect(adyen_service_create.checkout_url).to eq('https://test.adyen.link/test')
       end
 
       it 'delivers a success webhook' do
-        expect { subject }.to enqueue_job(SendWebhookJob).
-          with(
+        expect { adyen_service_create }.to enqueue_job(SendWebhookJob)
+          .with(
             'customer.checkout_url_generated',
-            customer, checkout_url:
-            'https://test.adyen.link/test'
-          ).
-          on_queue(:webhook)
+            customer,
+            checkout_url: 'https://test.adyen.link/test',
+          )
+          .on_queue(:webhook)
       end
     end
 
@@ -59,8 +59,8 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
 
     context 'when failing to generate the checkout link' do
       before do
-        allow(payment_links_api).
-          to receive(:payment_links).and_raise(Adyen::AdyenError.new(nil, nil, 'error'))
+        allow(payment_links_api)
+          .to receive(:payment_links).and_raise(Adyen::AdyenError.new(nil, nil, 'error'))
       end
 
       it 'delivers an error webhook' do

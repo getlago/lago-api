@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   sequence :adyen_payments_response do
     OpenStruct.new(
@@ -68,15 +70,8 @@ FactoryBot.define do
             'lastFour' => '1234',
             'name' => 'VISA',
             'networkTxReference' => SecureRandom.uuid,
-            'supportedRecurringProcessingModels' => [
-              'CardOnFile',
-              'Subscription',
-              'UnscheduledCardOnFile',
-            ],
-            'supportedShopperInteractions' => [
-              'Ecommerce',
-              'ContAuth',
-            ],
+            'supportedRecurringProcessingModels' => %w[CardOnFile Subscription UnscheduledCardOnFile],
+            'supportedShopperInteractions' => %w[Ecommerce ContAuth],
             'type' => 'scheme',
           },
         ],

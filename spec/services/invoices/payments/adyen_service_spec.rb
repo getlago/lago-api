@@ -22,7 +22,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       customer:,
       total_amount_cents: 1000,
       currency: 'USD',
-      ready_for_payment_processing: true
+      ready_for_payment_processing: true,
     )
   end
 
@@ -44,7 +44,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
-    fit 'creates an adyen payment' do
+    it 'creates an adyen payment' do
       result = adyen_service.create
 
       expect(result).to be_success
@@ -62,8 +62,8 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         expect(result.payment.amount_currency).to eq(invoice.currency)
         expect(result.payment.status).to eq('Authorised')
 
-        expect(adyen_customer.reload.payment_method_id).
-          to eq(payment_methods_response.response['storedPaymentMethods'].first['id'])
+        expect(adyen_customer.reload.payment_method_id)
+          .to eq(payment_methods_response.response['storedPaymentMethods'].first['id'])
       end
 
       expect(payments_api).to have_received(:payments)
@@ -149,7 +149,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
 
       it 'delivers an error webhook' do
-        expect { adyen_service.send(:create_adyen_payment) }
+        expect { adyen_service.public_send(:create_adyen_payment) }
           .to raise_error(Adyen::AdyenError)
 
         expect(SendWebhookJob).to have_been_enqueued
@@ -217,7 +217,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       it 'does not update the status of invoice and payment' do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: ['Authorised', 'SentForSettle', 'SettleScheduled', 'Settled', 'Refunded'].sample
+          status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample,
         )
 
         expect(result).to be_success

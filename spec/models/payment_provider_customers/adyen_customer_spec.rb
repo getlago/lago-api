@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe PaymentProviderCustomers::AdyenCustomer, type: :model do
   describe '#payment_method_id' do
-    subject { adyen_customer.payment_method_id }
+    subject(:customer_payment_method_id) { adyen_customer.payment_method_id }
 
     let(:adyen_customer) { FactoryBot.build_stubbed(:adyen_customer) }
     let(:payment_method_id) { SecureRandom.uuid }
@@ -12,7 +12,7 @@ RSpec.describe PaymentProviderCustomers::AdyenCustomer, type: :model do
     before { adyen_customer.payment_method_id = payment_method_id }
 
     it 'returns the payment method id' do
-      expect(subject).to eq payment_method_id
+      expect(customer_payment_method_id).to eq payment_method_id
     end
   end
 end

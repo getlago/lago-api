@@ -76,7 +76,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
     it 'checks the webhook' do
       result = adyen_service.handle_incoming_webhook(
         organization_id: organization.id,
-        body:
+        body:,
       )
 
       expect(result).to be_success
@@ -87,13 +87,13 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
 
     context 'when failing to validate the signature' do
       before do
-        organization.adyen_payment_provider.update! hmac_key: "123"
+        organization.adyen_payment_provider.update! hmac_key: '123'
       end
 
       it 'returns an error' do
         result = adyen_service.handle_incoming_webhook(
           organization_id: organization.id,
-          body:
+          body:,
         )
 
         aggregate_failures do
@@ -124,8 +124,8 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
 
     context 'when succeeded authorisation event' do
       let(:event_json) do
-        JSON.parse(event_response_json)['notificationItems'].
-          first&.dig('NotificationRequestItem').to_json
+        JSON.parse(event_response_json)['notificationItems']
+          .first&.dig('NotificationRequestItem').to_json
       end
 
       let(:event_response_json) do
