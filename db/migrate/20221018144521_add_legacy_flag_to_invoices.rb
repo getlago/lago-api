@@ -8,7 +8,12 @@ class AddLegacyFlagToInvoices < ActiveRecord::Migration[7.0]
     end
 
     execute "UPDATE invoices SET legacy = 'true';"
-    MigrationTaskJob.set(wait: 40.seconds).perform_later('invoices:fill_vat_rate')
+
+    execute <<-SQL
+      UPDATE invoices
+      SET vat_rate = ROUND((vat_amount_cents::decimal / amount_cents) * 100, 2)
+      WHERE vat_rate IS NULL;
+    SQL
   end
 
   def down
