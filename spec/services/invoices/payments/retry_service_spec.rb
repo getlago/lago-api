@@ -24,7 +24,7 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
 
     context 'with one_off invoice type' do
       let(:invoice) do
-        create(:invoice, customer:, status: 'finalized', organization: customer.organization, invoice_type: 'one_off')
+        create(:invoice, customer:, organization: customer.organization, invoice_type: 'one_off')
       end
 
       it 'enqueues SendWebhookJob with correct type' do
