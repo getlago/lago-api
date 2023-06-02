@@ -149,7 +149,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
 
       it 'delivers an error webhook' do
-        expect { adyen_service.public_send(:create_adyen_payment) }
+        expect { adyen_service.__send__(:create_adyen_payment) }
           .to raise_error(Adyen::AdyenError)
 
         expect(SendWebhookJob).to have_been_enqueued
