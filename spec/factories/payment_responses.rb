@@ -48,14 +48,7 @@ FactoryBot.define do
       response: {
         'paymentMethods' => [
           {
-            'brands' => [
-              'amex',
-              'bcmc',
-              'cartebancaire',
-              'mc',
-              'visa',
-              'visadankort',
-            ],
+            'brands' => %w[amex bcmc cartebancaire mc visa visadankort],
             'name' => 'Credit Card',
             'type' => 'scheme',
           },
