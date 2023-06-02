@@ -22,6 +22,18 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
+    context 'with one_off invoice type' do
+      let(:invoice) do
+        create(:invoice, customer:, status: 'finalized', organization: customer.organization, invoice_type: 'one_off')
+      end
+
+      it 'enqueues SendWebhookJob with correct type' do
+        expect do
+          retry_service.call
+        end.to have_enqueued_job(SendWebhookJob).with('invoice.one_off_created', Invoice)
+      end
+    end
+
     context 'with gocardless payment provider' do
       let(:payment_provider) { 'gocardless' }
 
