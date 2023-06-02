@@ -82,7 +82,7 @@ module PaymentProviderCustomers
 
     def payment_link_params
       prms = {
-        reference: 'authorization customer #{customer.external_id}',
+        reference: "authorization customer #{customer.external_id}",
         amount: {
           value: 0, # pre-authorization
           currency: customer.currency.presence || 'USD',
@@ -91,7 +91,7 @@ module PaymentProviderCustomers
         shopperReference: customer.external_id,
         storePaymentMethodMode: 'enabled',
         recurringProcessingModel: 'UnscheduledCardOnFile',
-        expiresAt: Time.current + 70.days
+        expiresAt: Time.current + 70.days,
       }
       prms[:shopperEmail] = customer.email if customer.email
       prms
@@ -105,8 +105,8 @@ module PaymentProviderCustomers
         customer,
         provider_error: {
           message: adyen_error.request&.dig('msg') || adyen_error.msg,
-          error_code: adyen_error.request&.dig('code') || adyen_error.code
-        }
+          error_code: adyen_error.request&.dig('code') || adyen_error.code,
+        },
       )
     end
 

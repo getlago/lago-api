@@ -51,16 +51,16 @@ module PaymentProviders
 
     def handle_event(organization:, event_json:)
       event = JSON.parse(event_json)
-      unless WEBHOOKS_EVENTS.include?(event["eventCode"])
+      unless WEBHOOKS_EVENTS.include?(event['eventCode'])
         return result.service_failure!(
           code: 'webhook_error',
-          message: "Invalid adyen event code: #{event["eventCode"]}",
+          message: "Invalid adyen event code: #{event['eventCode']}",
         )
       end
 
-      case event["eventCode"]
+      case event['eventCode']
       when 'AUTHORISATION'
-        return result if event["success"] != "true" || event.dig("amount", "value") != 0
+        return result if event['success'] != 'true' || event.dig('amount', 'value') != 0
 
         service = PaymentProviderCustomers::AdyenService.new
 
@@ -69,17 +69,17 @@ module PaymentProviders
       when 'REFUND'
         service = CreditNotes::Refunds::AdyenService.new
 
-        provider_refund_id = event["pspReference"]
-        status = event["success"] == "true" ? :succeeded : :failed
+        provider_refund_id = event['pspReference']
+        status = event['success'] == 'true' ? :succeeded : :failed
 
         result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error! || result
       when 'REFUND_FAILED'
-        return result if event["success"] != "true"
+        return result if event['success'] != 'true'
 
         service = CreditNotes::Refunds::AdyenService.new
 
-        provider_refund_id = event["pspReference"]
+        provider_refund_id = event['pspReference']
 
         result = service.update_status(provider_refund_id:, status: :failed)
         result.raise_if_error! || result
