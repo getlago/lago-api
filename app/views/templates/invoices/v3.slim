@@ -395,6 +395,8 @@ html
               | #{organization.legal_name}
             - else
               | #{organization.name}
+          - if organization.legal_number.present?
+            .body-2 #{organization.legal_number}
           .body-2 = organization.address_line1
           .body-2 = organization.address_line2
           .body-2
@@ -416,6 +418,8 @@ html
               | #{customer.legal_name}
             - else
               | #{customer.name}
+          - if customer.legal_number.present?
+            .body-2 #{customer.legal_number}
           .body-2 = customer.address_line1
           .body-2 = customer.address_line2
           .body-2
