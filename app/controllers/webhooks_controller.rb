@@ -36,4 +36,23 @@ class WebhooksController < ApplicationController
 
     head(:ok)
   end
+
+  def adyen
+    result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
+      organization_id: params[:organization_id],
+      body: adyen_params,
+    )
+
+    unless result.success?
+      return head(:bad_request) if result.error.code == 'webhook_error'
+
+      result.raise_if_error!
+    end
+
+    render(json: '[accepted]')
+  end
+
+  def adyen_params
+    params['notificationItems'].first&.dig('NotificationRequestItem')&.permit!
+  end
 end
