@@ -58,28 +58,11 @@ module PaymentProviders
 
       case event['eventCode']
       when 'AUTHORISATION'
-        return result if event['success'] != 'true' || event.dig('amount', 'value') != 0
+        return result if event.dig('amount', 'value') != 0
 
         service = PaymentProviderCustomers::AdyenService.new
 
         result = service.preauthorise(organization, event)
-        result.raise_if_error! || result
-      when 'REFUND'
-        service = CreditNotes::Refunds::AdyenService.new
-
-        provider_refund_id = event['pspReference']
-        status = (event['success'] == 'true') ? :succeeded : :failed
-
-        result = service.update_status(provider_refund_id:, status:)
-        result.raise_if_error! || result
-      when 'REFUND_FAILED'
-        return result if event['success'] != 'true'
-
-        service = CreditNotes::Refunds::AdyenService.new
-
-        provider_refund_id = event['pspReference']
-
-        result = service.update_status(provider_refund_id:, status: :failed)
         result.raise_if_error! || result
       end
     end
