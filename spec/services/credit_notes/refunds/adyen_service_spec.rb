@@ -33,7 +33,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
       invoice:,
       refund_amount_cents: 134,
       refund_amount_currency: 'CHF',
-      refund_status: :pending
+      refund_status: :pending,
     )
   end
 

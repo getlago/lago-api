@@ -145,8 +145,8 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
 
       let(:event_json) do
-        JSON.parse(event_response_json)['notificationItems'].
-          first&.dig('NotificationRequestItem').to_json
+        JSON.parse(event_response_json)['notificationItems']
+          .first&.dig('NotificationRequestItem').to_json
       end
 
       let(:event_response_json) do

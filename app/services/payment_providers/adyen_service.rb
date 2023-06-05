@@ -67,17 +67,17 @@ module PaymentProviders
       when 'REFUND'
         service = CreditNotes::Refunds::AdyenService.new
 
-        provider_refund_id = event["pspReference"]
-        status = event["success"] == "true" ? :succeeded : :failed
+        provider_refund_id = event['pspReference']
+        status = (event['success'] == 'true') ? :succeeded : :failed
 
         result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error! || result
       when 'REFUND_FAILED'
-        return result if event["success"] != "true"
+        return result if event['success'] != 'true'
 
         service = CreditNotes::Refunds::AdyenService.new
 
-        provider_refund_id = event["pspReference"]
+        provider_refund_id = event['pspReference']
 
         result = service.update_status(provider_refund_id:, status: :failed)
         result.raise_if_error! || result

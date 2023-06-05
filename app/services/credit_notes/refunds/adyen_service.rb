@@ -66,7 +66,7 @@ module CreditNotes
         @client ||= Adyen::Client.new(
           api_key: payment.payment_provider.api_key,
           env: payment.payment_provider.environment,
-          live_url_prefix: payment.payment_provider.live_prefix
+          live_url_prefix: payment.payment_provider.live_prefix,
         )
       end
 
@@ -86,9 +86,9 @@ module CreditNotes
       end
 
       def create_adyen_refund
-        result = client.checkout.modifications_api.refund_captured_payment(
+        client.checkout.modifications_api.refund_captured_payment(
           adyen_refund_params,
-          payment.provider_payment_id
+          payment.provider_payment_id,
         )
       rescue Adyen::AdyenError => e
         deliver_error_webhook(message: e.msg, code: e.code)
@@ -103,8 +103,8 @@ module CreditNotes
           merchantAccount: payment.payment_provider.merchant_account,
           amount: {
             value: credit_note.refund_amount_cents,
-            currency: credit_note.credit_amount_currency.upcase
-          }
+            currency: credit_note.credit_amount_currency.upcase,
+          },
         }
       end
 
