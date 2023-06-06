@@ -20,12 +20,12 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
           THEN CASE
             WHEN properties->>'timestamp' ~ '^[0-9\.]+$' /* unix timestamp */
             THEN
-              to_timestamp((properties->>'timestamp')::integer)::timestamp(0)
+              to_timestamp((properties->>'timestamp')::integer)::timestamp
             ELSE
-              (properties->>'timestamp')::timestamp(0)
+              (properties->>'timestamp')::timestamp
             END
           ELSE
-            created_at::timestamp(0)
+            created_at::timestamp
           END);
 
           UPDATE invoice_subscriptions
@@ -35,9 +35,9 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
             THEN CASE
               WHEN properties->>'timestamp' ~ '^[0-9\.]+$' /* unix timestamp */
               THEN
-                to_timestamp((properties->>'timestamp')::integer)::timestamp(0)
+                to_timestamp((properties->>'timestamp')::integer)::timestamp
               ELSE
-                (properties->>'timestamp')::timestamp(0)
+                (properties->>'timestamp')::timestamp
               END
             ELSE /* null timestamp */
               (SELECT(properties->>'timestamp')
@@ -45,7 +45,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               WHERE fees.subscription_id = invoice_subscriptions.subscription_id
               AND fees.invoice_id = invoice_subscriptions.invoice_id
               ORDER BY fees.created_at ASC
-              LIMIT 1)::timestamp(0)
+              LIMIT 1)::timestamp
             END,
           /* Set from_datetime on invoice_subscriptions */
           from_datetime = CASE
@@ -53,9 +53,9 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
             THEN CASE
               WHEN properties->>'from_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
               THEN
-                to_timestamp((properties->>'from_datetime')::integer)::timestamp(0)
+                to_timestamp((properties->>'from_datetime')::integer)::timestamp
               ELSE
-                (properties->>'from_datetime')::timestamp(0)
+                (properties->>'from_datetime')::timestamp
               END
             ELSE /* null timestamp */
               (SELECT(properties->>'from_datetime')
@@ -63,7 +63,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               WHERE fees.subscription_id = invoice_subscriptions.subscription_id
               AND fees.invoice_id = invoice_subscriptions.invoice_id
               ORDER BY fees.created_at ASC
-              LIMIT 1)::timestamp(0)
+              LIMIT 1)::timestamp
             END,
           /* Set to_datetime on invoice_subscriptions */
           to_datetime = CASE
@@ -71,9 +71,9 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
             THEN CASE
               WHEN properties->>'to_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
               THEN
-                to_timestamp((properties->>'to_datetime')::integer)::timestamp(0)
+                to_timestamp((properties->>'to_datetime')::integer)::timestamp
               ELSE
-                (properties->>'to_datetime')::timestamp(0)
+                (properties->>'to_datetime')::timestamp
               END
             ELSE /* null timestamp */
               (SELECT(properties->>'to_datetime')
@@ -81,7 +81,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               WHERE fees.subscription_id = invoice_subscriptions.subscription_id
               AND fees.invoice_id = invoice_subscriptions.invoice_id
               ORDER BY fees.created_at ASC
-              LIMIT 1)::timestamp(0)
+              LIMIT 1)::timestamp
             END,
           /* Set charges_from_datetime on invoice_subscriptions */
           charges_from_datetime = CASE
@@ -89,9 +89,9 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
             THEN CASE
               WHEN properties->>'charges_from_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
               THEN
-                to_timestamp((properties->>'charges_from_datetime')::integer)::timestamp(0)
+                to_timestamp((properties->>'charges_from_datetime')::integer)::timestamp
               ELSE
-                (properties->>'charges_from_datetime')::timestamp(0)
+                (properties->>'charges_from_datetime')::timestamp
               END
             ELSE /* null timestamp */
               (SELECT(properties->>'charges_from_datetime')
@@ -99,7 +99,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               WHERE fees.subscription_id = invoice_subscriptions.subscription_id
               AND fees.invoice_id = invoice_subscriptions.invoice_id
               ORDER BY fees.created_at ASC
-              LIMIT 1)::timestamp(0)
+              LIMIT 1)::timestamp
             END,
           /* Set charges_to_datetime on invoice_subscriptions */
           charges_to_datetime = CASE
@@ -107,9 +107,9 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
             THEN CASE
               WHEN properties->>'charges_to_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
               THEN
-                to_timestamp((properties->>'charges_to_datetime')::integer)::timestamp(0)
+                to_timestamp((properties->>'charges_to_datetime')::integer)::timestamp
               ELSE
-                (properties->>'charges_to_datetime')::timestamp(0)
+                (properties->>'charges_to_datetime')::timestamp
               END
             ELSE /* null timestamp */
               (SELECT(properties->>'charges_to_datetime')
@@ -117,7 +117,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               WHERE fees.subscription_id = invoice_subscriptions.subscription_id
               AND fees.invoice_id = invoice_subscriptions.invoice_id
               ORDER BY fees.created_at ASC
-              LIMIT 1)::timestamp(0)
+              LIMIT 1)::timestamp
             END
         SQL
       end
