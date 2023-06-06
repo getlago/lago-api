@@ -13,6 +13,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           name,
           code,
           aggregationType,
+          recurring
           organization { id },
           group
         }
@@ -31,6 +32,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           code: 'new_metric',
           description: 'New metric description',
           aggregationType: 'count_agg',
+          recurring: false,
         },
       },
     )
@@ -43,6 +45,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
       expect(result_data['code']).to eq('new_metric')
       expect(result_data['organization']['id']).to eq(membership.organization_id)
       expect(result_data['aggregationType']).to eq('count_agg')
+      expect(result_data['recurring']).to eq(false)
     end
   end
 

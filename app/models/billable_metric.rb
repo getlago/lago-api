@@ -24,6 +24,8 @@ class BillableMetric < ApplicationRecord
 
   enum aggregation_type: AGGREGATION_TYPES
 
+  validate :validate_recurring, if: -> { count_agg? || max_agg? || recurring_count_agg? }
+
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
   validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.map(&:to_s) }
@@ -78,5 +80,11 @@ class BillableMetric < ApplicationRecord
 
   def should_have_field_name?
     !count_agg?
+  end
+
+  def validate_recurring
+    return unless recurring?
+
+    errors.add(:recurring, :not_compatible_with_aggregation_type)
   end
 end

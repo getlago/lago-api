@@ -15,6 +15,7 @@ module Mutations
       argument :group, GraphQL::Types::JSON, required: false
       argument :id, String, required: true
       argument :name, String, required: true
+      argument :recurring, Boolean, required: false
 
       type Types::BillableMetrics::Object
 
