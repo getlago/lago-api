@@ -570,5 +570,41 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
     end
+
+    context 'when invoice subscription already exists' do
+      let(:date_service) do
+        Subscriptions::DatesService.new_instance(
+          subscription,
+          Time.zone.at(timestamp),
+          current_usage: false,
+        )
+      end
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          recurring: true,
+          properties: {
+            timestamp: timestamp.to_i,
+            from_datetime: date_service.from_datetime,
+            to_datetime: date_service.to_datetime,
+          },
+        )
+      end
+
+      before { invoice_subscription }
+
+      it 'returns a service failure' do
+        result = invoice_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('duplicated_invoices')
+          expect(result.error.error_message).to be_present
+        end
+      end
+    end
   end
 end

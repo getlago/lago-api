@@ -17,9 +17,16 @@ module Invoices
     end
 
     def call
+      if duplicated_invoices?
+        return result.service_failure!(
+          code: 'duplicated_invoices',
+          message: 'Invoice subscription already exists with the boundaries',
+        )
+      end
+
       ActiveRecord::Base.transaction do
         subscriptions.each do |subscription|
-          boundaries = calculate_boundaries(subscription)
+          boundaries = subscriptions_boundaries[subscription.id]
 
           InvoiceSubscription.create!(
             invoice:,
@@ -67,6 +74,30 @@ module Invoices
         Time.zone.at(timestamp),
         current_usage: subscription.terminated? && subscription.upgraded?,
       )
+    end
+
+    def subscriptions_boundaries
+      @subscriptions_boundaries ||= subscriptions.each_with_object({}) do |subscription, boundaries|
+        boundaries[subscription.id] = calculate_boundaries(subscription)
+      end
+    end
+
+    def duplicated_invoices?
+      # TODO(duplicated_invoices): Migrate conditions to datetime columns
+      subscriptions_boundaries.any? do |subscription_id, boundaries|
+        InvoiceSubscription
+          .where(subscription_id:)
+          .recurring
+          .where(
+            "(invoice_subscriptions.properties->>'from_datetime')::timestamp(0) = (?)::timestamp(0)",
+            boundaries[:from_datetime],
+          )
+          .where(
+            "(invoice_subscriptions.properties->>'to_datetime')::timestamp(0) = (?)::timestamp(0)",
+            boundaries[:to_datetime],
+          )
+          .exists?
+      end
     end
 
     def create_subscription_fee(subscription, boundaries)
