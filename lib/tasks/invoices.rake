@@ -19,7 +19,7 @@ namespace :invoices do
 
       next if invoice_subscription
 
-      InvoiceSubscription.create!(invoice_id: invoice.id, subscription_id:)
+      InvoiceSubscription.create!(invoice_id: invoice.id, subscription_id:, timestamp: Time.current)
     end
   end
 

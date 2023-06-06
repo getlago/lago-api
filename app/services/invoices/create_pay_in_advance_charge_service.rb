@@ -27,6 +27,7 @@ module Invoices
         InvoiceSubscription.create!(
           invoice:,
           subscription: event.subscription,
+          timestamp:,
           recurring: false,
         )
 
