@@ -1,6 +1,3 @@
-# TODO:
-# [] Use datetime instead of timestamp when setting fees
-
 # frozen_string_literal: true
 
 class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
