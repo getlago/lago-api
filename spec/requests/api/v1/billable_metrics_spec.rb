@@ -23,6 +23,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         description: 'description',
         aggregation_type: 'sum_agg',
         field_name: 'amount_sum',
+        recurring: true,
       }
     end
 
@@ -34,6 +35,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:code]).to eq(create_params[:code])
       expect(json[:billable_metric][:name]).to eq(create_params[:name])
       expect(json[:billable_metric][:created_at]).to be_present
+      expect(json[:billable_metric][:recurring]).to eq(create_params[:recurring])
       expect(json[:billable_metric][:group]).to eq({})
     end
 

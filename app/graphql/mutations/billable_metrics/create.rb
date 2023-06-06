@@ -9,12 +9,7 @@ module Mutations
       graphql_name 'CreateBillableMetric'
       description 'Creates a new Billable metric'
 
-      argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
-      argument :code, String, required: true
-      argument :description, String
-      argument :field_name, String, required: false
-      argument :group, GraphQL::Types::JSON, required: false
-      argument :name, String, required: true
+      input_object_class Types::BillableMetrics::CreateInput
 
       type Types::BillableMetrics::Object
 
