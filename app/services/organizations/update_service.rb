@@ -13,6 +13,9 @@ module Organizations
       organization.email = params[:email] if params.key?(:email)
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
+      if params.key?(:tax_identification_number)
+        organization.tax_identification_number = params[:tax_identification_number]
+      end
       organization.address_line1 = params[:address_line1] if params.key?(:address_line1)
       organization.address_line2 = params[:address_line2] if params.key?(:address_line2)
       organization.zipcode = params[:zipcode] if params.key?(:zipcode)
