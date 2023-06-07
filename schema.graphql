@@ -2635,6 +2635,7 @@ type Customer {
     """
     status: [StatusTypeEnum!]
   ): [Subscription!]!
+  taxIdentificationNumber: String
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String
@@ -3881,6 +3882,7 @@ type Organization {
   name: String!
   state: String
   stripePaymentProvider: StripeProvider
+  taxIdentificationNumber: String
 
   """
   Query taxes of an organization

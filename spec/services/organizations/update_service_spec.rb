@@ -18,6 +18,7 @@ RSpec.describe Organizations::UpdateService do
       webhook_url: 'http://foo.bar',
       legal_name: 'Foobar',
       legal_number: '1234',
+      tax_identification_number: '2246',
       email: 'foo@bar.com',
       address_line1: 'Line 1',
       address_line2: 'Line 2',
@@ -45,6 +46,7 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.webhook_url).to eq('http://foo.bar')
         expect(result.organization.legal_name).to eq('Foobar')
         expect(result.organization.legal_number).to eq('1234')
+        expect(result.organization.tax_identification_number).to eq('2246')
         expect(result.organization.email).to eq('foo@bar.com')
         expect(result.organization.address_line1).to eq('Line 1')
         expect(result.organization.address_line2).to eq('Line 2')

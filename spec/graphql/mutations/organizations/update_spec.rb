@@ -11,6 +11,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           webhookUrl
           legalNumber
           legalName
+          taxIdentificationNumber
           email
           addressLine1
           addressLine2
@@ -36,6 +37,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           webhookUrl: 'http://foo.bar',
           legalNumber: '1234',
           legalName: 'Foobar',
+          taxIdentificationNumber: '2246',
           email: 'foo@bar.com',
           addressLine1: 'Line 1',
           addressLine2: 'Line 2',
@@ -58,6 +60,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['webhookUrl']).to eq('http://foo.bar')
       expect(result_data['legalNumber']).to eq('1234')
       expect(result_data['legalName']).to eq('Foobar')
+      expect(result_data['taxIdentificationNumber']).to eq('2246')
       expect(result_data['email']).to eq('foo@bar.com')
       expect(result_data['addressLine1']).to eq('Line 1')
       expect(result_data['addressLine2']).to eq('Line 2')
