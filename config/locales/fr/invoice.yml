@@ -16,6 +16,7 @@ fr:
     coupons: Réduction(s)
     prepaid_credits: Crédit(s) prépayé(s)
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
+    tax_identification_number: "ID fiscal: %{tax_identification_number}"
     total_due: Total dû
     powered_by: Document généré par
     item: Article

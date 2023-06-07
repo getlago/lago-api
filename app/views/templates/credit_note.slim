@@ -327,6 +327,8 @@ html
             .body-2 = organization.state
           .body-2 = ISO3166::Country.new(customer.country)&.common_name
           .body-2 = organization.email
+          - if organization.tax_identification_number.present?
+            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: organization.tax_identification_number)
         .billing-information-column
           .body-1 = I18n.t('credit_note.credit_to')
           .body-2
@@ -349,6 +351,8 @@ html
           .body-2 = customer.state
           .body-2 = ISO3166::Country.new(customer.country)&.common_name
           .body-2 = customer.email
+          - if customer.tax_identification_number.present?
+            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)
 
       .mb-24
         h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))

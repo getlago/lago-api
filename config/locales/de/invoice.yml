@@ -16,6 +16,7 @@ de:
     coupons: Coupons
     prepaid_credits: Prepaid-Guthaben
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
+    tax_identification_number: "Steuer ID: %{tax_identification_number}"
     total_due: Insgesamt fällig
     powered_by: Bereitgestellt von
     item: Artikel

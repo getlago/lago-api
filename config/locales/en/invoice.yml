@@ -16,6 +16,7 @@ en:
     coupons: Coupons
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
+    tax_identification_number: "Tax ID: %{tax_identification_number}"
     total_due: Total due
     powered_by: Powered by
     item: Item
