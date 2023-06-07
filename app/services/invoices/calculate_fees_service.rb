@@ -32,6 +32,11 @@ module Invoices
             invoice:,
             subscription:,
             properties: boundaries,
+            timestamp: boundaries[:timestamp],
+            from_datetime: boundaries[:from_datetime],
+            to_datetime: boundaries[:to_datetime],
+            charges_from_datetime: boundaries[:charges_from_datetime],
+            charges_to_datetime: boundaries[:charges_to_datetime],
             recurring:,
           )
 
@@ -219,7 +224,7 @@ module Invoices
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
-        timestamp:,
+        timestamp: Time.zone.at(timestamp),
       }
     end
 

@@ -418,6 +418,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_06_085050) do
     t.datetime "updated_at", null: false
     t.jsonb "properties", default: "{}", null: false
     t.boolean "recurring"
+    t.datetime "timestamp", precision: nil
+    t.datetime "from_datetime", precision: nil
+    t.datetime "to_datetime", precision: nil
+    t.datetime "charges_from_datetime", precision: nil
+    t.datetime "charges_to_datetime", precision: nil
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
   end
