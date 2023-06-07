@@ -19,6 +19,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       {
         id: customer.id,
         name: 'Updated customer name',
+        tax_identification_number: '2246',
         external_id:,
         billing_configuration: {
           vat_rate: 20,
@@ -32,6 +33,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       updated_customer = result.customer
       aggregate_failures do
         expect(updated_customer.name).to eq('Updated customer name')
+        expect(updated_customer.tax_identification_number).to eq('2246')
 
         billing = update_args[:billing_configuration]
         expect(updated_customer.vat_rate).to eq(billing[:vat_rate])

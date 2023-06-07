@@ -43,6 +43,7 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['metadata'].first['key']).to eq(metadata.key)
       expect(result['customer']['metadata'].first['value']).to eq(metadata.value)
       expect(result['customer']['metadata'].first['display_in_invoice']).to eq(metadata.display_in_invoice)
+      expect(result['customer']['tax_identification_number']).to eq(customer.tax_identification_number)
     end
   end
 end
