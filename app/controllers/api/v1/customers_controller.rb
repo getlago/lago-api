@@ -111,6 +111,7 @@ module Api
           :logo_url,
           :legal_name,
           :legal_number,
+          :tax_identification_number,
           :currency,
           :timezone,
           billing_configuration: [

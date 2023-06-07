@@ -27,6 +27,9 @@ module Customers
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
+        if params.key?(:tax_identification_number)
+          customer.tax_identification_number = params[:tax_identification_number]
+        end
 
         assign_premium_attributes(customer, params)
 

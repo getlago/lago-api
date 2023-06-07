@@ -22,6 +22,7 @@ module Customers
         old_payment_provider = customer.payment_provider
 
         customer.name = args[:name] if args.key?(:name)
+        customer.tax_identification_number = args[:tax_identification_number] if args.key?(:tax_identification_number)
         customer.country = args[:country]&.upcase if args.key?(:country)
         customer.address_line1 = args[:address_line1] if args.key?(:address_line1)
         customer.address_line2 = args[:address_line2] if args.key?(:address_line2)
