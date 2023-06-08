@@ -144,6 +144,32 @@ RSpec.describe Webhooks::BaseService, type: :service do
         end
       end
     end
+
+    context 'when request fails with a non HTTP error' do
+      before do
+        allow(LagoHttpClient::Client).to receive(:new)
+          .with(organization.webhook_url)
+          .and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response)
+          .and_raise(Net::ReadTimeout)
+      end
+
+      it 'creates a failed webhook' do
+        webhook_service.call
+
+        webhook = Webhook.order(created_at: :desc).first
+
+        aggregate_failures do
+          expect(webhook).to be_failed
+          expect(webhook.http_status).to be_nil
+          expect(webhook.response).to be_present
+        end
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect { webhook_service.call }.to have_enqueued_job(SendWebhookJob)
+      end
+    end
   end
 
   describe '.generate_headers' do
