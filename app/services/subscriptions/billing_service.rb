@@ -242,19 +242,9 @@ module Subscriptions
           INNER JOIN customers AS cus ON sub.customer_id = cus.id
           INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE invoice_subscriptions.recurring = 't'
-          AND invoice_subscriptions.properties->>'timestamp' IS NOT NULL
+          AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
-            (
-              -- TODO: A migration to unify type of the timestamp property must performed
-              CASE WHEN invoice_subscriptions.properties->>'timestamp' ~ '^[0-9\.]+$'
-              THEN
-                -- Timestamp is stored as an integer
-                to_timestamp((invoice_subscriptions.properties->>'timestamp')::integer)::timestamptz
-              ELSE
-                -- Timestamp is stored as a string representing a datetime
-                (invoice_subscriptions.properties->>'timestamp')::timestamptz
-              END
-            )#{at_time_zone(customer: 'cus', organization: 'org')}
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: 'cus', organization: 'org')}
           ) = DATE(:today#{at_time_zone(customer: 'cus', organization: 'org')})
         GROUP BY invoice_subscriptions.subscription_id
       SQL

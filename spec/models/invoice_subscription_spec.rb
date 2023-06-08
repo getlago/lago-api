@@ -3,7 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe InvoiceSubscription, type: :model do
-  let(:invoice_subscription) { create(:invoice_subscription, properties:) }
+  let(:invoice_subscription) do
+    create(
+      :invoice_subscription,
+      from_datetime:,
+      to_datetime:,
+      charges_from_datetime:,
+      charges_to_datetime:,
+    )
+  end
+
   let(:invoice) { invoice_subscription.invoice }
   let(:subscription) { invoice_subscription.subscription }
 
@@ -12,15 +21,6 @@ RSpec.describe InvoiceSubscription, type: :model do
   let(:charges_from_datetime) { '2022-01-01 00:00:00' }
   let(:charges_to_datetime) { '2022-01-31 23:59:59' }
 
-  let(:properties) do
-    {
-      from_datetime:,
-      to_datetime:,
-      charges_from_datetime:,
-      charges_to_datetime:,
-    }
-  end
-
   describe '#fees' do
     it 'returns corresponding fees' do
       first_fee = create(:fee, subscription_id: subscription.id, invoice_id: invoice.id)
@@ -28,54 +28,6 @@ RSpec.describe InvoiceSubscription, type: :model do
       create(:fee, invoice_id: invoice.id)
 
       expect(invoice_subscription.fees).to eq([first_fee])
-    end
-  end
-
-  describe '#from_datetime' do
-    it 'returns properties from_datetime' do
-      expect(invoice_subscription.from_datetime).to match_datetime('2022-01-01 00:00:00')
-    end
-
-    context 'when properties from_datetime is empty' do
-      let(:from_datetime) { nil }
-
-      it { expect(invoice_subscription.from_datetime).to be_nil }
-    end
-  end
-
-  describe '#to_datetime' do
-    it 'returns properties to_datetime' do
-      expect(invoice_subscription.to_datetime).to match_datetime('2022-01-31 12 23:59:59')
-    end
-
-    context 'when properties to_datetime is empty' do
-      let(:to_datetime) { nil }
-
-      it { expect(invoice_subscription.to_datetime).to be_nil }
-    end
-  end
-
-  describe '#charges_from_datetime' do
-    it 'returns properties charges_from_datetime' do
-      expect(invoice_subscription.charges_from_datetime).to match_datetime('2022-01-01 00:00:00')
-    end
-
-    context 'when properties charges_from_datetime is empty' do
-      let(:charges_from_datetime) { nil }
-
-      it { expect(invoice_subscription.charges_from_datetime).to be_nil }
-    end
-  end
-
-  describe '#charges_to_datetime' do
-    it 'returns properties charges_to_datetime' do
-      expect(invoice_subscription.charges_to_datetime).to match_datetime('2022-01-31 23:59:59')
-    end
-
-    context 'when properties charges_to_datetime is empty' do
-      let(:charges_to_datetime) { nil }
-
-      it { expect(invoice_subscription.charges_to_datetime).to be_nil }
     end
   end
 

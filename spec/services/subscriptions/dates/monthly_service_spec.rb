@@ -297,9 +297,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
             create(
               :invoice_subscription,
               subscription:,
-              properties: {
-                charges_to_datetime: '2022-01-31T23:59:59Z',
-              },
+              charges_to_datetime: '2022-01-31T23:59:59Z',
             )
           end
 
