@@ -21,6 +21,8 @@ module Invoices
         increment_payment_attempts
 
         stripe_result = create_stripe_payment
+        # NOTE: return if payment was not processed
+        return result unless stripe_result
 
         payment = Payment.new(
           invoice:,
@@ -107,11 +109,9 @@ module Invoices
             idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}",
           },
         )
-      rescue Stripe::CardError, Stripe::InvalidRequestError => e
+      rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-
-        raise
       end
 
       def stripe_payment_payload
