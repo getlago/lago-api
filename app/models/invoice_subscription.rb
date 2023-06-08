@@ -16,9 +16,7 @@ class InvoiceSubscription < ApplicationRecord
   scope :order_by_charges_to_datetime,
         lambda {
           condition = <<-SQL
-            COALESCE(
-              (invoice_subscriptions.properties->>\'to_datetime\')::timestamp, invoice_subscriptions.created_at
-            ) DESC
+            COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.created_at) DESC
           SQL
 
           order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
@@ -33,22 +31,6 @@ class InvoiceSubscription < ApplicationRecord
       subscription_id: subscription.id,
       invoice_id: invoice.id,
     )
-  end
-
-  def from_datetime
-    properties['from_datetime']&.to_datetime
-  end
-
-  def to_datetime
-    properties['to_datetime']&.to_datetime
-  end
-
-  def charges_from_datetime
-    properties['charges_from_datetime']&.to_datetime
-  end
-
-  def charges_to_datetime
-    properties['charges_to_datetime']&.to_datetime
   end
 
   def charge_amount_cents

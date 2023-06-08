@@ -31,7 +31,6 @@ module Invoices
           InvoiceSubscription.create!(
             invoice:,
             subscription:,
-            properties: boundaries,
             timestamp: boundaries[:timestamp],
             from_datetime: boundaries[:from_datetime],
             to_datetime: boundaries[:to_datetime],
@@ -93,14 +92,8 @@ module Invoices
         InvoiceSubscription
           .where(subscription_id:)
           .recurring
-          .where(
-            "(invoice_subscriptions.properties->>'from_datetime')::timestamp(0) = (?)::timestamp(0)",
-            boundaries[:from_datetime],
-          )
-          .where(
-            "(invoice_subscriptions.properties->>'to_datetime')::timestamp(0) = (?)::timestamp(0)",
-            boundaries[:to_datetime],
-          )
+          .where(from_datetime: boundaries[:from_datetime])
+          .where(to_datetime: boundaries[:to_datetime])
           .exists?
       end
     end

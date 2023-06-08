@@ -267,9 +267,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
             create(
               :invoice_subscription,
               subscription:,
-              properties: {
-                charges_to_datetime: '2020-12-31T22:59:59Z',
-              },
+              charges_to_datetime: '2020-12-31T22:59:59Z',
             )
           end
 

@@ -71,10 +71,10 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       aggregate_failures do
         expect(result).to be_success
 
-        expect(result.invoice.invoice_subscriptions.first.properties['to_datetime'])
-          .to eq (timestamp - 1.day).end_of_day.as_json
-        expect(result.invoice.invoice_subscriptions.first.properties['from_datetime'])
-          .to eq (timestamp - 1.month).beginning_of_day.as_json
+        expect(result.invoice.invoice_subscriptions.first.to_datetime)
+          .to match_datetime((timestamp - 1.day).end_of_day)
+        expect(result.invoice.invoice_subscriptions.first.from_datetime)
+          .to match_datetime((timestamp - 1.month).beginning_of_day)
 
         expect(result.invoice.subscriptions.first).to eq(subscription)
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
