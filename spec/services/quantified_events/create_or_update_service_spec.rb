@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
+RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
   subject(:create_service) do
     described_class.new(event)
   end
@@ -40,25 +40,25 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
     let(:service_result) { create_service.call }
 
     context 'with add operation type' do
-      it 'creates a persisted metric' do
+      it 'creates a quantified metric' do
         aggregate_failures do
-          expect { service_result }.to change(PersistedEvent, :count).by(1)
+          expect { service_result }.to change(QuantifiedEvent, :count).by(1)
 
           expect(service_result).to be_success
 
-          persisted_event = service_result.persisted_event
-          expect(persisted_event.customer).to eq(event.customer)
-          expect(persisted_event.external_subscription_id).to eq(event.subscription.external_id)
-          expect(persisted_event.external_id).to eq('ext_12345')
-          expect(persisted_event.properties).to eq(event.properties)
-          expect(persisted_event.added_at.to_s).to eq(event.timestamp.to_s)
+          quantified_event = service_result.quantified_event
+          expect(quantified_event.customer).to eq(event.customer)
+          expect(quantified_event.external_subscription_id).to eq(event.subscription.external_id)
+          expect(quantified_event.external_id).to eq('ext_12345')
+          expect(quantified_event.properties).to eq(event.properties)
+          expect(quantified_event.added_at.to_s).to eq(event.timestamp.to_s)
         end
       end
 
-      context 'when a persisted metric was removed on the day' do
-        let(:persisted_event) do
+      context 'when a quantified metric was removed on the day' do
+        let(:quantified_event) do
           create(
-            :persisted_event,
+            :quantified_event,
             customer: event.customer,
             billable_metric:,
             external_subscription_id: event.subscription.external_id,
@@ -67,23 +67,23 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
           )
         end
 
-        before { persisted_event }
+        before { quantified_event }
 
-        it 'reactivate the persisted metric' do
+        it 'reactivate the quantified metric' do
           aggregate_failures do
-            expect { service_result }.to change(PersistedEvent, :count).by(0)
+            expect { service_result }.to change(QuantifiedEvent, :count).by(0)
 
             expect(service_result).to be_success
-            expect(persisted_event.reload.removed_at).to be_nil
+            expect(quantified_event.reload.removed_at).to be_nil
           end
         end
       end
     end
 
     context 'with remove operation type' do
-      let(:persisted_event) do
+      let(:quantified_event) do
         create(
-          :persisted_event,
+          :quantified_event,
           customer: event.customer,
           billable_metric:,
           external_subscription_id: event.subscription.external_id,
@@ -93,23 +93,23 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
 
       let(:operation_type) { 'remove' }
 
-      before { persisted_event }
+      before { quantified_event }
 
-      it 'updates the active persisted metric' do
+      it 'updates the active quantified metric' do
         aggregate_failures do
           service_result
 
           expect(service_result).to be_success
 
-          expect(service_result.persisted_event).to eq(persisted_event)
-          expect(service_result.persisted_event.removed_at.to_s).to eq(event.timestamp.to_s)
+          expect(service_result.quantified_event).to eq(quantified_event)
+          expect(service_result.quantified_event.removed_at.to_s).to eq(event.timestamp.to_s)
         end
       end
 
       context 'with already removed and an active events' do
         before do
           create(
-            :persisted_event,
+            :quantified_event,
             customer: event.customer,
             billable_metric:,
             external_subscription_id: event.subscription.external_id,
@@ -117,17 +117,17 @@ RSpec.describe PersistedEvents::CreateOrUpdateService, type: :service do
             removed_at: (Time.current - 1.hour).to_i,
           )
 
-          persisted_event
+          quantified_event
         end
 
-        it 'updates the active persisted metric' do
+        it 'updates the active quantified metric' do
           aggregate_failures do
             service_result
 
             expect(service_result).to be_success
 
-            expect(service_result.persisted_event).to eq(persisted_event)
-            expect(service_result.persisted_event.removed_at.to_s).to eq(event.timestamp.to_s)
+            expect(service_result.quantified_event).to eq(quantified_event)
+            expect(service_result.quantified_event.removed_at.to_s).to eq(event.timestamp.to_s)
           end
         end
       end

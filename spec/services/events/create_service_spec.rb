@@ -356,7 +356,7 @@ RSpec.describe Events::CreateService, type: :service do
         }
       end
 
-      it 'creates a persisted metric' do
+      it 'creates a quantified metric' do
         expect do
           create_service.call(
             organization:,
@@ -364,7 +364,7 @@ RSpec.describe Events::CreateService, type: :service do
             timestamp:,
             metadata: {},
           )
-        end.to change(PersistedEvent, :count).by(1)
+        end.to change(QuantifiedEvent, :count).by(1)
       end
 
       context 'when a validation error occurs' do

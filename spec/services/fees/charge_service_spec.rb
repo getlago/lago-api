@@ -455,7 +455,7 @@ RSpec.describe Fees::ChargeService do
         }
 
         create(
-          :persisted_event,
+          :quantified_event,
           customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
@@ -469,7 +469,7 @@ RSpec.describe Fees::ChargeService do
           },
         )
         create(
-          :persisted_event,
+          :quantified_event,
           customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
@@ -483,7 +483,7 @@ RSpec.describe Fees::ChargeService do
           },
         )
         create(
-          :persisted_event,
+          :quantified_event,
           customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,

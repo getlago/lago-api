@@ -210,7 +210,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
           }
         end
 
-        it 'creates a persisted metric' do
+        it 'creates a quantified metric' do
           expect do
             create_batch_service.call(
               organization:,
@@ -218,7 +218,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               timestamp:,
               metadata: {},
             )
-          end.to change(PersistedEvent, :count).by(2)
+          end.to change(QuantifiedEvent, :count).by(2)
         end
       end
     end

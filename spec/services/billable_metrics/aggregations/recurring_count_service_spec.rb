@@ -40,9 +40,9 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
   let(:added_at) { from_datetime - 1.month }
   let(:removed_at) { nil }
-  let(:persisted_event) do
+  let(:quantified_event) do
     create(
-      :persisted_event,
+      :quantified_event,
       customer:,
       added_at:,
       removed_at:,
@@ -51,7 +51,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
     )
   end
 
-  before { persisted_event }
+  before { quantified_event }
 
   describe '#aggregate' do
     let(:result) { recurring_service.aggregate(from_datetime:, to_datetime:) }
@@ -417,7 +417,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
       before do
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           added_at:,
           removed_at:,
@@ -430,7 +430,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
         )
 
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           added_at:,
           removed_at:,
@@ -443,7 +443,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
         )
 
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           added_at:,
           removed_at:,
