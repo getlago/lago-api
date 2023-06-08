@@ -40,7 +40,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       # Does not create invoices before the billing day
       before_billing_times.each do |time|
         travel_to(time) do
-          BillingService.new.call
+          Subscriptions::BillingService.new.call
           expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
         end
       end
@@ -49,7 +49,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       expect do
         billing_times.each do |time|
           travel_to(time) do
-            BillingService.new.call
+            Subscriptions::BillingService.new.call
             perform_all_enqueued_jobs
           end
         end
@@ -58,7 +58,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       # Does not create invoices after the billing day
       before_billing_times.each do |time|
         travel_to(time) do
-          BillingService.new.call
+          Subscriptions::BillingService.new.call
           expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
         end
       end
