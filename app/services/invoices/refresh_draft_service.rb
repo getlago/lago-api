@@ -58,11 +58,11 @@ module Invoices
     attr_accessor :invoice, :subscription_ids, :recurring, :context
 
     def fetch_timestamp
-      value = invoice.fees.first&.properties&.[]('timestamp') ||
-              invoice.created_at.to_i + 1.second # NOTE: Adding 1 second because of to_i rounding.
+      fee = invoice.fees.first
+      # NOTE: Adding 1 second because of to_i rounding.
+      return invoice.created_at + 1.second unless fee&.properties&.[]('timestamp')
 
-      # TODO: A migration to unify type of the timestamp property must be performed
-      value.is_a?(String) ? DateTime.parse(value) : value
+      DateTime.parse(fee.properties['timestamp'])
     end
   end
 end
