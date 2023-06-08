@@ -25,7 +25,7 @@ gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'paper_trail'
 gem 'pg'
-gem 'ransack'
+gem 'ransack', '~> 3.2.1'
 gem 'with_advisory_lock'
 
 # Currencies, Countries, Timezones...
