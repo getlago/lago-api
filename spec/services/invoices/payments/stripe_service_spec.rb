@@ -187,8 +187,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'delivers an error webhook' do
-        expect { stripe_service.create }
-          .to raise_error(Stripe::CardError)
+        stripe_service.create
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
