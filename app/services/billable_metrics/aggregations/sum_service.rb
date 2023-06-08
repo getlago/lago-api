@@ -68,15 +68,17 @@ module BillableMetrics
 
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
-        if current_aggregation > old_max
+        result = if current_aggregation > old_max
           update_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
 
-          return BigDecimal(current_aggregation - old_max)
+          current_aggregation - old_max
         else
           update_event_metadata(current_aggregation:, max_aggregation: old_max)
 
-          return BigDecimal(0)
+          0
         end
+
+        BigDecimal(result)
       end
 
       private
