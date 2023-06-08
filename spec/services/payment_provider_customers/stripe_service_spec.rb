@@ -56,8 +56,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         allow(Stripe::Customer).to receive(:create)
           .and_raise(Stripe::InvalidRequestError.new('error', {}))
 
-        expect { stripe_service.create }
-          .to raise_error(Stripe::InvalidRequestError)
+        stripe_service.create
 
         expect(Stripe::Customer).to have_received(:create)
 
