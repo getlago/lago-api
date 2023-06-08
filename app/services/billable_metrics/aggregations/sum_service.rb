@@ -64,7 +64,7 @@ module BillableMetrics
         end
 
         current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) +
-          BigDecimal(event.properties.fetch(billable_metric.field_name, 0).to_s)
+                              BigDecimal(event.properties.fetch(billable_metric.field_name, 0).to_s)
 
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
@@ -92,13 +92,12 @@ module BillableMetrics
       end
 
       def previous_event
-        @previous_event ||= begin
+        @previous_event ||=
           events_scope(from_datetime: date_service.charges_from_datetime, to_datetime: date_service.charges_to_datetime)
             .where("#{sanitized_field_name} IS NOT NULL")
             .where.not(id: event.id)
             .order(created_at: :desc)
             .first
-        end
       end
 
       def update_event_metadata(current_aggregation: nil, max_aggregation: nil)

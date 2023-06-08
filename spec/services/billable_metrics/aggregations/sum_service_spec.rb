@@ -302,7 +302,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
           metadata: {
             current_aggregation: '4',
             max_aggregation: '10',
-          }
+          },
         )
       end
 
@@ -330,7 +330,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
           metadata: {
             current_aggregation: '4',
             max_aggregation: '10',
-          }
+          },
         )
       end
 
