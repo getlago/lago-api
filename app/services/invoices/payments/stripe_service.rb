@@ -112,6 +112,7 @@ module Invoices
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
+        nil
       end
 
       def stripe_payment_payload
