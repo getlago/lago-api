@@ -197,7 +197,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
     let(:aggregation_type) { 'sum_agg' }
     let(:field_name) { 'amount' }
 
-    it 'creates an pay_in_advance fee' do
+    it 'creates a pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 

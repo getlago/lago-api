@@ -42,6 +42,9 @@ module Fees
     def create_fee(properties:, group: nil)
       ActiveRecord::Base.transaction do
         aggregation_result = aggregate(properties:, group:)
+
+        update_event_metadata(aggregation_result:)
+
         result = apply_charge_model(aggregation_result:, properties:)
 
         fee = Fee.new(
@@ -80,7 +83,7 @@ module Fees
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        Time.current,
+        event.timestamp,
         current_usage: true,
       )
     end
@@ -127,6 +130,18 @@ module Fees
       return if estimate
 
       result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+    end
+
+    def update_event_metadata(aggregation_result:)
+      unless aggregation_result.current_aggregation.nil?
+        event.metadata['current_aggregation'] = aggregation_result.current_aggregation
+      end
+
+      unless aggregation_result.max_aggregation.nil?
+        event.metadata['max_aggregation'] = aggregation_result.max_aggregation
+      end
+
+      event.save!
     end
   end
 end

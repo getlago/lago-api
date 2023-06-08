@@ -58,7 +58,7 @@ module BillableMetrics
 
         unless previous_event
           value = event.properties.fetch(billable_metric.field_name, 0).to_s
-          update_event_metadata(current_aggregation: value, max_aggregation: value)
+          handle_event_metadata(current_aggregation: value, max_aggregation: value)
 
           return BigDecimal(value)
         end
@@ -69,11 +69,11 @@ module BillableMetrics
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
         result = if current_aggregation > old_max
-          update_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
+          handle_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
 
           current_aggregation - old_max
         else
-          update_event_metadata(current_aggregation:, max_aggregation: old_max)
+          handle_event_metadata(current_aggregation:, max_aggregation: old_max)
 
           0
         end
@@ -86,11 +86,14 @@ module BillableMetrics
       def date_service
         @date_service ||= Subscriptions::DatesService.new_instance(
           subscription,
-          Time.current,
+          event.timestamp,
           current_usage: true,
         )
       end
 
+      # This method fetches the latest event in current period. If such a event exists we know that metadata
+      # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
+      # would help us in pay in advance value calculation without iterating through all events in current period
       def previous_event
         @previous_event ||=
           events_scope(from_datetime: date_service.charges_from_datetime, to_datetime: date_service.charges_to_datetime)
@@ -100,11 +103,9 @@ module BillableMetrics
             .first
       end
 
-      def update_event_metadata(current_aggregation: nil, max_aggregation: nil)
-        event.metadata['current_aggregation'] = current_aggregation unless current_aggregation.nil?
-        event.metadata['max_aggregation'] = max_aggregation unless max_aggregation.nil?
-
-        event.save!
+      def handle_event_metadata(current_aggregation: nil, max_aggregation: nil)
+        result.current_aggregation = current_aggregation unless current_aggregation.nil?
+        result.max_aggregation = max_aggregation unless max_aggregation.nil?
       end
     end
   end
