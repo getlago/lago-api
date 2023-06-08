@@ -64,7 +64,7 @@ module Webhooks
       response = http_client.post_with_response(payload, headers)
 
       succeed_webhook(current_webhook, response)
-    rescue LagoHttpClient::HttpError => e
+    rescue LagoHttpClient::HttpError, Net::ReadTimeout, Errno::ECONNRESET, SocketError => e
       fail_webhook(current_webhook, e)
 
       # NOTE: By default, Lago is retrying 3 times a webhook
@@ -119,8 +119,12 @@ module Webhooks
     end
 
     def fail_webhook(webhook, error)
-      webhook.http_status = error.error_code
-      webhook.response = error.error_body
+      if error.is_a?(LagoHttpClient::HttpError)
+        webhook.http_status = error.error_code
+        webhook.response = error.error_body
+      else
+        webhook.response = error.message
+      end
       webhook.failed!
     end
 
