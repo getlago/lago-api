@@ -4,7 +4,9 @@ module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
       def aggregate(from_datetime:, to_datetime:, options: {})
-        events = events_scope(from_datetime:, to_datetime:)
+        charges_from_date = billable_metric.recurring? ? subscription.started_at : from_datetime
+
+        events = events_scope(from_datetime: charges_from_date, to_datetime:)
           .where("#{sanitized_field_name} IS NOT NULL")
 
         result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
@@ -54,7 +56,54 @@ module BillableMetrics
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
 
-        BigDecimal(event.properties.fetch(billable_metric.field_name, 0).to_s)
+        unless previous_event
+          value = event.properties.fetch(billable_metric.field_name, 0).to_s
+          update_event_metadata(current_aggregation: value, max_aggregation: value)
+
+          return BigDecimal(value)
+        end
+
+        current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) +
+          BigDecimal(event.properties.fetch(billable_metric.field_name, 0).to_s)
+
+        old_max = BigDecimal(previous_event.metadata['max_aggregation'])
+
+        if current_aggregation > old_max
+          update_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
+
+          return BigDecimal(current_aggregation - old_max)
+        else
+          update_event_metadata(current_aggregation:, max_aggregation: old_max)
+
+          return BigDecimal(0)
+        end
+      end
+
+      private
+
+      def date_service
+        @date_service ||= Subscriptions::DatesService.new_instance(
+          subscription,
+          Time.current,
+          current_usage: true,
+        )
+      end
+
+      def previous_event
+        @previous_event ||= begin
+          events_scope(from_datetime: date_service.charges_from_datetime, to_datetime: date_service.charges_to_datetime)
+            .where("#{sanitized_field_name} IS NOT NULL")
+            .where.not(id: event.id)
+            .order(created_at: :desc)
+            .first
+        end
+      end
+
+      def update_event_metadata(current_aggregation: nil, max_aggregation: nil)
+        event.metadata['current_aggregation'] = current_aggregation unless current_aggregation.nil?
+        event.metadata['max_aggregation'] = max_aggregation unless max_aggregation.nil?
+
+        event.save!
       end
     end
   end
