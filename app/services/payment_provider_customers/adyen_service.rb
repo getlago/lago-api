@@ -45,10 +45,12 @@ module PaymentProviderCustomers
 
       return handle_missing_customer(shopper_reference) unless adyen_customer
 
-      status = (event['success'] == 'true') ? :succeeded : :failed
-      adyen_customer.update!(payment_method_id:, status:, provider_customer_id: shopper_reference)
-
-      SendWebhookJob.perform_later('customer.payment_provider_created', customer) if organization.webhook_url?
+      if event['success'] == 'true'
+        adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
+        SendWebhookJob.perform_later('customer.payment_provider_created', customer) if organization.webhook_url?
+      else
+        deliver_error_webhook(Adyen::AdyenError.new(nil, nil, event['reason'], event['eventCode']))
+      end
 
       result.adyen_customer = adyen_customer
       result
