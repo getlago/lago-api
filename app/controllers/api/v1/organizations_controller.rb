@@ -11,6 +11,7 @@ module Api
             json: ::V1::OrganizationSerializer.new(
               result.organization,
               root_name: 'organization',
+              includes: %i[taxes],
             ),
           )
         else
@@ -38,8 +39,10 @@ module Api
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
-            :vat_rate,
             :document_locale,
+
+            # NOTE(legacy): vat has been moved to tax model
+            :vat_rate,
           ],
         )
       end
