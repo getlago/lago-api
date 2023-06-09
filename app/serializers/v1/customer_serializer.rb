@@ -27,9 +27,10 @@ module V1
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
         billing_configuration:,
-      }
+      }.merge(legacy_values.except(:billing_configuration))
 
       payload = payload.merge(metadata) if include?(:metadata)
+      payload = payload.merge(taxes) if include?(:taxes)
 
       payload
     end
@@ -50,7 +51,7 @@ module V1
         payment_provider: model.payment_provider,
         vat_rate: model.vat_rate,
         document_locale: model.document_locale,
-      }
+      }.merge(legacy_values[:billing_configuration])
 
       case model.payment_provider&.to_sym
       when :stripe
@@ -65,6 +66,14 @@ module V1
       end
 
       configuration
+    end
+
+    def legacy_values
+      @legacy_values ||= ::V1::Legacy::CustomerSerializer.new(model).serialize
+    end
+
+    def taxes
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
     end
   end
 end
