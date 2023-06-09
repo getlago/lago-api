@@ -6,6 +6,9 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
+
+  before { tax }
 
   describe 'POST /invoices' do
     let(:add_on_first) { create(:add_on, organization:) }

@@ -4,6 +4,9 @@ require 'rails_helper'
 
 describe 'Invoices Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
+
+  before { tax }
 
   context 'when timezone is negative and not the same day as UTC' do
     let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }

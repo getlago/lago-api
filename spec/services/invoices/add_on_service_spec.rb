@@ -8,7 +8,14 @@ RSpec.describe Invoices::AddOnService, type: :service do
   end
 
   let(:datetime) { Time.zone.now }
-  let(:applied_add_on) { create(:applied_add_on) }
+
+  let(:customer) { create(:customer) }
+  let(:organization) { customer.organization }
+  let(:applied_add_on) { create(:applied_add_on, customer:) }
+
+  let(:tax) { create(:tax, rate: 20, organization:) }
+
+  before { tax }
 
   describe 'create' do
     before do
