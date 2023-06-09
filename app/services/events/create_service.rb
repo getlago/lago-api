@@ -45,7 +45,7 @@ module Events
         event.save!
 
         result.event = event
-        handle_persisted_event if should_handle_persisted_event?
+        handle_quantified_event if should_handle_quantified_event?
       end
 
       if non_invoiceable_charges.any?
@@ -86,16 +86,16 @@ module Events
       end
     end
 
-    def persisted_event_service
-      @persisted_event_service ||= QuantifiedEvents::CreateOrUpdateService.new(result.event)
+    def quantified_event_service
+      @quantified_event_service ||= QuantifiedEvents::CreateOrUpdateService.new(result.event)
     end
 
-    def should_handle_persisted_event?
-      persisted_event_service.matching_billable_metric?
+    def should_handle_quantified_event?
+      quantified_event_service.matching_billable_metric?
     end
 
-    def handle_persisted_event
-      service_result = persisted_event_service.call
+    def handle_quantified_event
+      service_result = quantified_event_service.call
       service_result.raise_if_error!
     end
 

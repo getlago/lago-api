@@ -145,6 +145,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       feb17 = DateTime.new(2023, 2, 17)
 
       travel_to(feb17) do
+        # Logic has changed here. We do not persist events that are not unique. Instead, error is returned.
         expect do
           create_event(
             {
@@ -154,16 +155,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
               properties: { unique_id: 'id_1' },
             },
           )
-        end.to change { subscription.reload.fees.count }.from(1).to(2)
-
-        fee = subscription.fees.order(created_at: :desc).first
-
-        expect(fee.invoice_id).to be_nil
-        expect(fee.charge_id).to eq(charge.id)
-        expect(fee.pay_in_advance).to eq(true)
-        expect(fee.units).to eq(0)
-        expect(fee.events_count).to eq(1)
-        expect(fee.amount_cents).to eq(0)
+        end.not_to change { subscription.reload.fees.count }
       end
 
       ### 18 february: Send an other event.
@@ -179,7 +171,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
               properties: { unique_id: 'id_2' },
             },
           )
-        end.to change { subscription.reload.fees.count }.from(2).to(3)
+        end.to change { subscription.reload.fees.count }.from(1).to(2)
 
         fee = subscription.fees.order(created_at: :desc).first
 

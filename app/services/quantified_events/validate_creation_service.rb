@@ -26,7 +26,10 @@ module QuantifiedEvents
     delegate :customer, to: :subscription
 
     def operation_type
-      @operation_type ||= args.dig('properties', 'operation_type')&.to_sym
+      @operation_type ||= begin
+        event_type = args.dig('properties', 'operation_type')&.to_sym
+        event_type.nil? && billable_metric.unique_count_agg? ? :add : event_type
+      end
     end
 
     def external_id
@@ -49,7 +52,7 @@ module QuantifiedEvents
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).none?
 
-      add_error(field: billable_metric.field_name, error_code: 'recurring_resource_already_added')
+      add_error(field: billable_metric.field_name, error_code: 'resource_already_added')
     end
 
     def validate_removal
@@ -61,7 +64,7 @@ module QuantifiedEvents
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).exists?
 
-      add_error(field: billable_metric.field_name, error_code: 'recurring_resource_not_found')
+      add_error(field: billable_metric.field_name, error_code: 'resource_not_found')
     end
   end
 end
