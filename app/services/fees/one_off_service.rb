@@ -28,7 +28,6 @@ module Fees
             unit_amount_cents:,
             amount_cents: (unit_amount_cents * units).round,
             amount_currency: invoice.currency,
-            taxes_rate: customer.applicable_vat_rate,
             fee_type: :add_on,
             invoiceable_type: 'AddOn',
             invoiceable: add_on,
@@ -36,7 +35,9 @@ module Fees
             payment_status: :pending,
           )
 
-          fee.compute_vat
+          taxes_result = Fees::ApplyTaxesService.call(fee:)
+          taxes_result.raise_if_error!
+
           fee.save!
 
           fees_result << fee

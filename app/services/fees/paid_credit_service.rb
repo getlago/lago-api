@@ -26,11 +26,11 @@ module Fees
         units: 1,
         payment_status: :pending,
 
-        # NOTE: No VAT should be applied on as it can be considered as an advance
+        # NOTE: No taxes should be applied on as it can be considered as an advance
         taxes_rate: 0,
+        taxes_amount_cents: 0,
       )
 
-      new_fee.compute_vat
       new_fee.save!
 
       result.fee = new_fee

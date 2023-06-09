@@ -9,7 +9,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, vat_rate: 20) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:customer) { create(:customer, organization:) }
   let(:customer_id) { customer&.id }
   let(:subscription_id) { subscription&.id }
   let(:plan) { create(:plan, interval: 'monthly') }
@@ -54,6 +55,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       )
       allow(Rails).to receive(:cache).and_return(memory_store)
       Rails.cache.clear
+
+      tax
     end
 
     it 'uses the Rails cache' do
