@@ -162,19 +162,12 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
             name: 'John Doe',
             externalId: 'john_doe_2',
             city: 'London',
-            country: 'GB',
-            vatRate: -12,
+            country: 0,
           },
         },
       )
 
-      aggregate_failures do
-        expect(result['errors']).to be_present
-
-        error = result['errors'].map(&:deep_symbolize_keys).first
-        expect(error[:extensions][:code]).to eq('unprocessable_entity')
-        expect(error[:extensions][:details][:vatRate]).to be_present
-      end
+      expect(result['errors']).to be_present
     end
   end
 end

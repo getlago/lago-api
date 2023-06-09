@@ -29,7 +29,6 @@ module Types
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
-      field :vat_rate, Float, null: true
       field :zipcode, String, null: true
 
       field :metadata, [Types::Customers::Metadata::Object], null: true
