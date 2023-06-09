@@ -11,6 +11,9 @@ RSpec.describe Fees::SubscriptionService do
     )
   end
 
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
   let(:started_at) { Time.zone.parse('2022-01-01 00:01') }
   let(:created_at) { started_at }
   let(:subscription_at) { started_at }
@@ -18,11 +21,12 @@ RSpec.describe Fees::SubscriptionService do
   let(:plan) do
     create(
       :plan,
+      organization:,
       amount_cents: 100,
       amount_currency: 'EUR',
     )
   end
-  let(:invoice) { create(:invoice, organization: customer.organization) }
+  let(:invoice) { create(:invoice, organization:, customer:) }
   let(:boundaries) do
     {
       from_datetime: Time.zone.parse('2022-03-01 00:00:00'),
@@ -30,8 +34,6 @@ RSpec.describe Fees::SubscriptionService do
       timestamp: Time.zone.parse('2022-04-02 00:00').end_of_month.to_i,
     }
   end
-
-  let(:customer) { create(:customer) }
 
   let(:subscription) do
     create(
@@ -45,6 +47,8 @@ RSpec.describe Fees::SubscriptionService do
     )
   end
 
+  before { tax }
+
   context 'when invoice is on a full period' do
     it 'creates a fee' do
       result = fees_subscription_service.create
@@ -55,11 +59,13 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.invoice_id).to eq(invoice.id)
         expect(created_fee.amount_cents).to eq(plan.amount_cents)
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
-        expect(created_fee.taxes_amount_cents).to eq(20)
-        expect(created_fee.taxes_rate).to eq(20.0)
         expect(created_fee.units).to eq(1)
         expect(created_fee.events_count).to be_nil
         expect(created_fee.payment_status).to eq('pending')
+
+        expect(created_fee.taxes_amount_cents).to eq(20)
+        expect(created_fee.taxes_rate).to eq(20.0)
+        expect(created_fee.applied_taxes.count).to eq(1)
       end
     end
 
@@ -129,9 +135,11 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(plan.amount_cents)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
+            expect(created_fee.units).to eq(1)
+
             expect(created_fee.taxes_amount_cents).to eq(20)
             expect(created_fee.taxes_rate).to eq(20.0)
-            expect(created_fee.units).to eq(1)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
 
@@ -211,9 +219,11 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(71)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
+            expect(created_fee.units).to eq(1)
+
             expect(created_fee.taxes_amount_cents).to eq(14)
             expect(created_fee.taxes_rate).to eq(20.0)
-            expect(created_fee.units).to eq(1)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
 
@@ -327,9 +337,11 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(plan.amount_cents)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
+            expect(created_fee.units).to eq(1)
+
             expect(created_fee.taxes_amount_cents).to eq(20)
             expect(created_fee.taxes_rate).to eq(20.0)
-            expect(created_fee.units).to eq(1)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
 
@@ -416,9 +428,11 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(55)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
+            expect(created_fee.units).to eq(1)
+
             expect(created_fee.taxes_amount_cents).to eq(11)
             expect(created_fee.taxes_rate).to eq(20.0)
-            expect(created_fee.units).to eq(1)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
 
@@ -562,8 +576,10 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(plan.amount_cents)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
             expect(created_fee.taxes_amount_cents).to eq(20)
             expect(created_fee.taxes_rate).to eq(20.0)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
 
@@ -601,8 +617,10 @@ RSpec.describe Fees::SubscriptionService do
             expect(created_fee.invoice_id).to eq(invoice.id)
             expect(created_fee.amount_cents).to eq(80)
             expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
             expect(created_fee.taxes_amount_cents).to eq(16)
             expect(created_fee.taxes_rate).to eq(20.0)
+            expect(created_fee.applied_taxes.count).to eq(1)
           end
         end
 
@@ -808,8 +826,10 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.invoice_id).to eq(invoice.id)
         expect(created_fee.amount_cents).to eq(65)
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
         expect(created_fee.taxes_amount_cents).to eq(13)
         expect(created_fee.taxes_rate).to eq(20.0)
+        expect(created_fee.applied_taxes.count).to eq(1)
       end
     end
 
@@ -835,8 +855,10 @@ RSpec.describe Fees::SubscriptionService do
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.amount_cents).to eq(43)
           expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
           expect(created_fee.taxes_amount_cents).to eq(9)
           expect(created_fee.taxes_rate).to eq(20.0)
+          expect(created_fee.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -855,8 +877,10 @@ RSpec.describe Fees::SubscriptionService do
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.amount_cents).to eq(65)
           expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
           expect(created_fee.taxes_amount_cents).to eq(13)
           expect(created_fee.taxes_rate).to eq(20.0)
+          expect(created_fee.applied_taxes.count).to eq(1)
         end
       end
     end
@@ -934,8 +958,10 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.invoice_id).to eq(invoice.id)
         expect(created_fee.amount_cents).to eq(55)
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
         expect(created_fee.taxes_amount_cents).to eq(11)
         expect(created_fee.taxes_rate).to eq(20.0)
+        expect(created_fee.applied_taxes.count).to eq(1)
       end
     end
 
