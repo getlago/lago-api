@@ -14,6 +14,13 @@ RSpec.describe Customers::AppliedTaxes::CreateService, type: :service do
       expect { create_service.call }.to change(Customer::AppliedTax, :count).by(1)
     end
 
+    context 'when already applied to the customer' do
+      it 'does not apply the tax once again' do
+        create(:customer_applied_tax, tax:, customer:)
+        expect { create_service.call }.not_to change(Customer::AppliedTax, :count)
+      end
+    end
+
     context 'when customer is not found' do
       let(:customer) { nil }
 
