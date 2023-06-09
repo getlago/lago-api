@@ -3,9 +3,14 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::OrganizationSerializer do
-  subject(:serializer) { described_class.new(org, root_name: 'organization') }
+  subject(:serializer) do
+    described_class.new(org, root_name: 'organization', includes: %i[taxes])
+  end
 
   let(:org) { create(:organization) }
+  let(:tax) { create(:tax, organization: org, applied_to_organization: true) }
+
+  before { tax }
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -29,6 +34,8 @@ RSpec.describe ::V1::OrganizationSerializer do
       expect(result['organization']['billing_configuration']['document_locale']).to eq(org.document_locale)
       expect(result['organization']['tax_identification_number']).to eq(org.tax_identification_number)
       expect(result['organization']['timezone']).to eq(org.timezone)
+
+      expect(result['organization']['taxes'].count).to eq(1)
     end
   end
 end
