@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_06_08_085013) do
+ActiveRecord::Schema[7.0].define(version: 2023_06_08_154821) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -423,6 +423,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_08_085013) do
     t.datetime "charges_from_datetime", precision: nil
     t.datetime "charges_to_datetime", precision: nil
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
+    t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
+    t.index ["subscription_id", "from_datetime", "to_datetime"], name: "index_invoice_subscriptions_on_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
     t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
   end
 
