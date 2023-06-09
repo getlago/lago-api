@@ -21,7 +21,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           country
           timezone
           emailSettings
-          billingConfiguration { vatRate, invoiceFooter, invoiceGracePeriod, documentLocale }
+          billingConfiguration { invoiceFooter, invoiceGracePeriod, documentLocale }
         }
       }
     GQL
@@ -46,7 +46,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           city: 'Foobar',
           country: 'FR',
           billingConfiguration: {
-            vatRate: 12.5,
             invoiceFooter: 'invoice footer',
             documentLocale: 'fr',
           },
@@ -70,7 +69,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['country']).to eq('FR')
       expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')
       expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(0)
-      expect(result_data['billingConfiguration']['vatRate']).to eq(12.5)
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
       expect(result_data['timezone']).to eq('TZ_UTC')
     end
