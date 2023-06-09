@@ -32,6 +32,7 @@ module Api
           :city,
           :legal_name,
           :legal_number,
+          :tax_identification_number,
           :timezone,
           email_settings: [],
           billing_configuration: [

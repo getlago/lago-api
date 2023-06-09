@@ -26,6 +26,7 @@ module Types
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :phone, String, null: true
       field :state, String, null: true
+      field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
       field :vat_rate, Float, null: true

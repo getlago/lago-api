@@ -11,6 +11,7 @@ module Types
     field :legal_number, String
     field :logo_url, String
     field :name, String, null: false
+    field :tax_identification_number, String, null: true
 
     field :address_line1, String
     field :address_line2, String

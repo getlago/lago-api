@@ -13,6 +13,7 @@ module PaymentProviderCustomers
       return result if stripe_customer.provider_customer_id?
 
       stripe_result = create_stripe_customer
+      return result unless stripe_result
 
       stripe_customer.update!(
         provider_customer_id: stripe_result.id,
@@ -93,10 +94,9 @@ module PaymentProviderCustomers
           idempotency_key: customer.id,
         },
       )
-    rescue Stripe::InvalidRequestError => e
+    rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
-
-      raise
+      nil
     end
 
     def stripe_create_payload

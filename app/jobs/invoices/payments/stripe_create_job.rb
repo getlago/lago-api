@@ -7,6 +7,8 @@ module Invoices
 
       unique :until_executed
 
+      retry_on Stripe::RateLimitError, wait: :exponentially_longer, attempts: 6
+
       def perform(invoice)
         result = Invoices::Payments::StripeService.new(invoice).create
         result.raise_if_error!

@@ -12,8 +12,9 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     <<~GQL
       mutation($input: UpdateCustomerInput!) {
         updateCustomer(input: $input) {
-          id,
-          name,
+          id
+          name
+          taxIdentificationNumber
           externalId
           paymentProvider
           currency
@@ -39,6 +40,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
         input: {
           id: customer.id,
           name: 'Updated customer',
+          taxIdentificationNumber: '2246',
           externalId: external_id,
           paymentProvider: 'stripe',
           currency: 'EUR',
@@ -64,6 +66,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated customer')
+      expect(result_data['taxIdentificationNumber']).to eq('2246')
       expect(result_data['externalId']).to eq(external_id)
       expect(result_data['paymentProvider']).to eq('stripe')
       expect(result_data['currency']).to eq('EUR')
