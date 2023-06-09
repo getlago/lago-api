@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :persisted_event do
+  factory :quantified_event do
     customer
     billable_metric
 

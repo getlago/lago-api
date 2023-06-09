@@ -87,7 +87,7 @@ module Events
     end
 
     def persisted_event_service
-      @persisted_event_service ||= PersistedEvents::CreateOrUpdateService.new(result.event)
+      @persisted_event_service ||= QuantifiedEvents::CreateOrUpdateService.new(result.event)
     end
 
     def should_handle_persisted_event?

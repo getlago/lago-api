@@ -27,7 +27,7 @@ class Customer < ApplicationRecord
   has_many :payment_provider_customers,
            class_name: 'PaymentProviderCustomers::BaseCustomer',
            dependent: :destroy
-  has_many :persisted_events
+  has_many :quantified_events
 
   has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes

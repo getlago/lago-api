@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PersistedEvents
+module QuantifiedEvents
   class ValidateCreationService < BaseValidator
     def initialize(result:, subscription:, billable_metric:, args:)
       @subscription = subscription
@@ -42,8 +42,8 @@ module PersistedEvents
     def validate_addition
       return unless operation_type == :add
 
-      # NOTE: Ensure no active persisted metric exists with the same external id
-      return if PersistedEvent.where(
+      # NOTE: Ensure no active quantified metric exists with the same external id
+      return if QuantifiedEvent.where(
         customer_id: customer.id,
         external_id:,
         external_subscription_id: subscription.external_id,
@@ -55,7 +55,7 @@ module PersistedEvents
     def validate_removal
       return unless operation_type == :remove
 
-      return if PersistedEvent.where(
+      return if QuantifiedEvent.where(
         customer_id: customer.id,
         external_id:,
         external_subscription_id: subscription.external_id,

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
+RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
   subject(:validation_service) do
     described_class.new(
       subscription:,
@@ -65,10 +65,10 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
   context 'when operation type is add' do
     it { expect(validation_service).to be_valid }
 
-    context 'with an active persisted metric' do
+    context 'with an active quantified metric' do
       before do
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           external_id:,
           external_subscription_id: subscription.external_id,
@@ -85,10 +85,10 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       end
     end
 
-    context 'with removed persisted metric' do
+    context 'with removed quantified metric' do
       before do
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           external_id:,
           external_subscription_id: subscription.external_id,
@@ -103,7 +103,7 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
   context 'when operation type is remove' do
     let(:operation_type) { 'remove' }
 
-    context 'without persisted metric' do
+    context 'without quantified metric' do
       it 'fails' do
         aggregate_failures do
           expect(validation_service).not_to be_valid
@@ -113,10 +113,10 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       end
     end
 
-    context 'with an active persisted metric' do
+    context 'with an active quantified metric' do
       before do
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           external_id:,
           external_subscription_id: subscription.external_id,
@@ -126,10 +126,10 @@ RSpec.describe PersistedEvents::ValidateCreationService, type: :service do
       it { expect(validation_service).to be_valid }
     end
 
-    context 'with a removed persisted metric' do
+    context 'with a removed quantified metric' do
       before do
         create(
-          :persisted_event,
+          :quantified_event,
           customer:,
           external_id:,
           external_subscription_id: subscription.external_id,

@@ -149,7 +149,7 @@ module Events
     def persisted_event_validation(subscription)
       return {} unless billable_metric.recurring_count_agg?
 
-      validation_service = PersistedEvents::ValidateCreationService.new(
+      validation_service = QuantifiedEvents::ValidateCreationService.new(
         result:,
         subscription:,
         billable_metric:,
