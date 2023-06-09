@@ -4,6 +4,9 @@ module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
       def aggregate(from_datetime:, to_datetime:, options: {})
+        @from_datetime = from_datetime
+        @to_datetime = to_datetime
+
         charges_from_date = billable_metric.recurring? ? subscription.started_at : from_datetime
 
         events = events_scope(from_datetime: charges_from_date, to_datetime:)
@@ -83,20 +86,14 @@ module BillableMetrics
 
       private
 
-      def date_service
-        @date_service ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          event.timestamp,
-          current_usage: true,
-        )
-      end
+      attr_reader :from_datetime, :to_datetime
 
       # This method fetches the latest event in current period. If such a event exists we know that metadata
       # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
       # would help us in pay in advance value calculation without iterating through all events in current period
       def previous_event
         @previous_event ||=
-          events_scope(from_datetime: date_service.charges_from_datetime, to_datetime: date_service.charges_to_datetime)
+          events_scope(from_datetime:, to_datetime:)
             .where("#{sanitized_field_name} IS NOT NULL")
             .where.not(id: event.id)
             .order(created_at: :desc)

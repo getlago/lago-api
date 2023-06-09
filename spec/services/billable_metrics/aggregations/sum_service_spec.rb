@@ -307,11 +307,9 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       end
 
       it 'assigns a pay_in_advance aggregation' do
-        travel_to(to_datetime - 1.day) do
-          result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate(from_datetime:, to_datetime:)
 
-          expect(result.pay_in_advance_aggregation).to eq(4)
-        end
+        expect(result.pay_in_advance_aggregation).to eq(4)
       end
     end
 
@@ -335,11 +333,9 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       end
 
       it 'assigns a pay_in_advance aggregation' do
-        travel_to(to_datetime - 1.day) do
-          result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate(from_datetime:, to_datetime:)
 
-          expect(result.pay_in_advance_aggregation).to eq(0)
-        end
+        expect(result.pay_in_advance_aggregation).to eq(0)
       end
     end
 
