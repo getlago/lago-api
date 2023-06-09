@@ -30,11 +30,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
 
     it 'creates a new customer' do
-      result = customers_service.create_from_api(
-        organization:,
-        params: create_args,
-      )
-
+      result = customers_service.create_from_api(organization:, params: create_args)
       expect(result).to be_success
 
       aggregate_failures do
@@ -631,6 +627,96 @@ RSpec.describe Customers::CreateService, type: :service do
             expect(customer.payment_provider).to be_nil
             expect(customer.stripe_customer).not_to be_present
             expect(customer.gocardless_customer).not_to be_present
+          end
+        end
+      end
+    end
+
+    context 'with legacy vat_rate' do
+      let(:vat_rate) { 12.5 }
+      let(:params) do
+        {
+          external_id:,
+          name: 'Foo Bar',
+          currency: 'EUR',
+          billing_configuration: {
+            vat_rate:,
+            document_locale: 'fr',
+          },
+        }
+      end
+
+      it 'assigns the vat_rate and creates a tax' do
+        result = customers_service.create_from_api(organization:, params:)
+
+        aggregate_failures do
+          expect(result.customer.vat_rate).to eq(vat_rate)
+          expect(result.customer.taxes.count).to eq(1)
+
+          tax = result.customer.taxes.first
+          expect(tax.rate).to eq(vat_rate)
+        end
+      end
+
+      context 'when customer has multiple taxes' do
+        let(:customer) { create(:customer, organization:, external_id:) }
+
+        before do
+          first_tax = create(:tax, organization:, rate: 14)
+          second_tax = create(:tax, organization:, rate: 15)
+          create(:customer_applied_tax, customer:, tax: first_tax)
+          create(:customer_applied_tax, customer:, tax: second_tax)
+        end
+
+        it 'raises a validation error' do
+          result = customers_service.create_from_api(organization:, params:)
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:vat_rate]).to eq(['multiple_taxes'])
+          end
+        end
+      end
+
+      context 'when customer already has a tax' do
+        let(:customer) { create(:customer, organization:, external_id:) }
+
+        before do
+          tax = create(:tax, organization:, rate: 14)
+          create(:customer_applied_tax, customer:, tax:)
+        end
+
+        it 'creates a new tax' do
+          result = customers_service.create_from_api(organization:, params:)
+
+          aggregate_failures do
+            expect(result.customer.vat_rate).to eq(vat_rate)
+            expect(result.customer.organization.taxes.count).to eq(2)
+            expect(result.customer.reload.taxes.count).to eq(1)
+          end
+        end
+      end
+
+      context 'when tax exists but is not applied yet to the customer' do
+        let(:customer) { create(:customer, organization:, external_id:) }
+        let(:vat_rate) { 20 }
+
+        before do
+          create(:tax, organization:, rate: 10, code: 'tax_10')
+          initial_tax = create(:tax, organization:, rate: 15, code: 'tax_15')
+          create(:tax, organization:, rate: 20, code: 'tax_20')
+
+          create(:customer_applied_tax, customer:, tax: initial_tax)
+        end
+
+        it 'updates the customer\'s tax' do
+          result = customers_service.create_from_api(organization:, params:)
+
+          aggregate_failures do
+            expect(result.customer.vat_rate).to eq(vat_rate)
+            expect(result.customer.taxes.count).to eq(1)
+            expect(result.customer.taxes.first.code).to eq('tax_20')
           end
         end
       end
