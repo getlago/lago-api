@@ -7,6 +7,7 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
   let(:organization) { membership.organization }
   let(:currency) { 'EUR' }
   let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:fees) do
@@ -38,6 +39,8 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
       }
     GQL
   end
+
+  before { tax }
 
   it 'creates one-off invoice' do
     result = execute_graphql(

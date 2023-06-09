@@ -21,7 +21,9 @@ module Fees
         f.group_id = nil
         f.true_up_parent_fee = fee
       end
-      true_up_fee.compute_vat
+
+      taxes_result = Fees::ApplyTaxesService.call(fee: true_up_fee)
+      taxes_result.raise_if_error!
 
       result.true_up_fee = true_up_fee
       result
