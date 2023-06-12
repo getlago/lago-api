@@ -9,7 +9,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
   before { tax }
 
   context 'when timezone is negative and not the same day as UTC' do
-    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:organization) { create(:organization, webhook_url: nil) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: 'America/Denver') } # UTC-6
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
 
@@ -31,7 +32,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
   end
 
   context 'when timezone is negative but same day as UTC' do
-    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:organization) { create(:organization, webhook_url: nil) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: 'America/Halifax') } # UTC-3
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
 
@@ -53,7 +55,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
   end
 
   context 'when timezone is positive but same day as UTC' do
-    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:organization) { create(:organization, webhook_url: nil) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: 'Europe/Paris') } # UTC+2
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
 
@@ -75,7 +78,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
   end
 
   context 'when timezone is positive and not the same day as UTC' do
-    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:organization) { create(:organization, webhook_url: nil) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: 'Asia/Karachi') } # UTC+5
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
 
