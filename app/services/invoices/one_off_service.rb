@@ -28,7 +28,6 @@ module Invoices
           issuing_date:,
           invoice_type: :one_off,
           currency:,
-          taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
           status: :finalized,
         )

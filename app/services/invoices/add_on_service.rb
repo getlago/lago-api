@@ -19,20 +19,18 @@ module Invoices
           invoice_type: :add_on,
           payment_status: :pending,
           currency:,
-          taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
         )
 
         create_add_on_fee(invoice)
-
         compute_amounts(invoice)
 
         invoice.save!
 
-        track_invoice_created(invoice)
         result.invoice = invoice
       end
 
+      track_invoice_created(result.invoice)
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
@@ -52,10 +50,12 @@ module Invoices
     def compute_amounts(invoice)
       fee_amounts = invoice.fees.select(:amount_cents, :taxes_amount_cents)
 
-      invoice.currency = applied_add_on.amount_currency
       invoice.fees_amount_cents = fee_amounts.sum(&:amount_cents)
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-      invoice.taxes_amount_cents = fee_amounts.sum(&:taxes_amount_cents)
+
+      taxes_result = Invoices::ApplyTaxesService.call(invoice:)
+      taxes_result.raise_if_error!
+
       invoice.sub_total_including_taxes_amount_cents = (
         invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
       )
