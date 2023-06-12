@@ -42,6 +42,8 @@ RSpec.describe Invoices::AddOnService, type: :service do
           total_amount_cents: 240,
         )
 
+        expect(result.invoice.applied_taxes.count).to eq(1)
+
         expect(result.invoice).to be_finalized
       end
     end
