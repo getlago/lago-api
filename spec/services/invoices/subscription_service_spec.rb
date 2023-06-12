@@ -91,8 +91,11 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         expect(result.invoice.currency).to eq('EUR')
         expect(result.invoice.fees_amount_cents).to eq(100)
+
         expect(result.invoice.taxes_amount_cents).to eq(20)
         expect(result.invoice.taxes_rate).to eq(20)
+        expect(result.invoice.applied_taxes.count).to eq(1)
+
         expect(result.invoice.total_amount_cents).to eq(120)
         expect(result.invoice.version_number).to eq(3)
         expect(result.invoice).to be_finalized
