@@ -94,8 +94,8 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
             amount_cents: 3,
           )
 
-          expect(result.taxes_amount_cents.round).to eq(10)
-          expect(result.taxes_rate).to eq(17.71429)
+          expect(result.precise_taxes_amount_cents.round).to eq(10)
+          expect(result.taxes_rate.round(5)).to eq(17.71429)
           expect(result.coupons_adjustment_amount_cents.round).to eq(12)
         end
       end
