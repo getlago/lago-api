@@ -81,8 +81,11 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
         expect(result.invoice.currency).to eq(customer.currency)
         expect(result.invoice.fees_amount_cents).to eq(10)
+
         expect(result.invoice.taxes_amount_cents).to eq(2)
         expect(result.invoice.taxes_rate).to eq(20)
+        expect(result.invoice.applied_taxes.count).to eq(1)
+
         expect(result.invoice.total_amount_cents).to eq(12)
 
         expect(result.invoice).to be_finalized

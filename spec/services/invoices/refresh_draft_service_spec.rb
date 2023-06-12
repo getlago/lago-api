@@ -8,7 +8,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:invoice) do
-      create(:invoice, status:, organization:, customer:,)
+      create(:invoice, status:, organization:, customer:)
     end
 
     let(:started_at) { 1.month.ago }

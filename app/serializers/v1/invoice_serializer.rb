@@ -64,7 +64,11 @@ module V1
     end
 
     def applied_taxes
-      ::CollectionSerializer.new(model.applied_taxes, ::V1::Invoices::AppliedTaxSerializer, collection_name: 'applied_taxes').serialize
+      ::CollectionSerializer.new(
+        model.applied_taxes,
+        ::V1::Invoices::AppliedTaxSerializer,
+        collection_name: 'applied_taxes',
+      ).serialize
     end
 
     def legacy_values
