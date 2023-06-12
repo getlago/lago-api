@@ -26,15 +26,14 @@ module Invoices
         )
 
         create_credit_fee(invoice)
-
         compute_amounts(invoice)
 
         invoice.save!
 
-        track_invoice_created(invoice)
         result.invoice = invoice
       end
 
+      track_invoice_created(result.invoice)
       SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
