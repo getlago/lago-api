@@ -42,6 +42,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
           total_amount_cents: 1500,
         )
 
+        expect(result.invoice.applied_taxes.count).to eq(0)
+
         expect(result.invoice).to be_finalized
       end
     end
