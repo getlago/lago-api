@@ -5,11 +5,19 @@ require 'rails_helper'
 RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
   subject(:compute_amounts) { described_class.new(invoice:) }
 
-  let(:invoice) { create(:invoice) }
+  let(:organization) { create(:organization) }
+  let(:invoice) { create(:invoice, organization:) }
+
+  let(:tax1) { create(:tax, organization:, rate: 10) }
+  let(:tax2) { create(:tax, organization:, rate: 20) }
 
   before do
-    create(:fee, invoice:, amount_cents: 151, taxes_rate: 10)
-    create(:fee, invoice:, amount_cents: 379, taxes_rate: 20)
+    fee1 = create(:fee, invoice:, amount_cents: 151, taxes_rate: 10)
+    create(:fee_applied_tax, fee: fee1, tax: tax1, amount_cents: 151, tax_rate: 10)
+
+    fee2 = create(:fee, invoice:, amount_cents: 379, taxes_rate: 20)
+    create(:fee_applied_tax, fee: fee2, tax: tax2, amount_cents: 379, tax_rate: 20)
+
     create(:credit, invoice:, amount_cents: 100)
   end
 

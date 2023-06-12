@@ -96,7 +96,10 @@ module Invoices
 
     def compute_amounts
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
-      invoice.taxes_amount_cents = invoice.fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
+
+      taxes_result = Invoices::ApplyTaxesService.call(invoice:)
+      taxes_result.raise_if_error!
+
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
     end
 
