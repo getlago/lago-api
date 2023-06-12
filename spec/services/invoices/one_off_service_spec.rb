@@ -53,6 +53,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
         expect(result.invoice.taxes_amount_cents).to eq(560)
         expect(result.invoice.taxes_rate).to eq(20)
         expect(result.invoice.total_amount_cents).to eq(3360)
+        expect(result.invoice.applied_taxes.count).to eq(1)
 
         expect(result.invoice).to be_finalized
       end

@@ -17,6 +17,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   let(:event) { create(:event, subscription:, customer:, organization:) }
   let(:group) { nil }
 
+  before { create(:tax, organization:, applied_to_organization: true) }
+
   describe 'call' do
     let(:aggregation_result) do
       BaseService::Result.new.tap do |result|

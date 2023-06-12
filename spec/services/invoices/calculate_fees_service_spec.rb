@@ -21,6 +21,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     let(:invoice) do
       create(
         :invoice,
+        organization:,
         currency: 'EUR',
         issuing_date: Time.zone.at(timestamp).to_date,
         customer: subscription.customer,

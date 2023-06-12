@@ -8,22 +8,30 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:invoice) do
-      create(:invoice, status:, organization: subscription.organization)
+      create(:invoice, status:, organization:, customer:,)
     end
 
     let(:started_at) { 1.month.ago }
+    let(:customer) { create(:customer) }
+    let(:organization) { customer.organization }
+
     let(:subscription) do
       create(
         :subscription,
+        customer:,
+        organization:,
         subscription_at: started_at,
         started_at:,
         created_at: started_at,
       )
     end
+
     let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, recurring: true) }
+    let(:tax) { create(:tax, organization:, rate: 15) }
 
     before do
       invoice_subscription
+      tax
       allow(Invoices::CalculateFeesService).to receive(:call).and_call_original
     end
 
@@ -58,8 +66,6 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     end
 
     it 'updates taxes_rate' do
-      invoice.customer.update(vat_rate: 15)
-
       expect { refresh_service.call }
         .to change { invoice.reload.taxes_rate }.from(0.0).to(15)
     end
