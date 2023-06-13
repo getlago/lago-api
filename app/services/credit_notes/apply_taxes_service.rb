@@ -36,8 +36,8 @@ module CreditNotes
         taxes_rate += pro_rated_taxes_rate(tax)
       end
 
-      result.precise_taxes_amount_cents = applied_taxes_amount_cents
-      result.taxes_rate = taxes_rate
+      result.taxes_amount_cents = applied_taxes_amount_cents
+      result.taxes_rate = taxes_rate.round(5)
 
       result
     end

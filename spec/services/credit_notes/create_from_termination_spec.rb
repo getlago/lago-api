@@ -50,6 +50,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:invoice) do
     create(
       :invoice,
+      organization:,
       customer:,
       currency: 'EUR',
       fees_amount_cents: 100,
@@ -57,8 +58,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     )
   end
 
+  let(:tax) { create(:tax, organization:, rate: 20) }
+
   describe '#call' do
-    before { subscription_fee }
+    before { create(:fee_applied_tax, tax:, fee: subscription_fee) }
 
     it 'creates a credit note' do
       result = create_service.call
@@ -369,6 +372,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:invoice) do
         create(
           :invoice,
+          organization:,
           customer:,
           currency: 'EUR',
           fees_amount_cents: 100,
