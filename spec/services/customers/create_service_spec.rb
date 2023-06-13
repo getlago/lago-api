@@ -16,6 +16,7 @@ RSpec.describe Customers::CreateService, type: :service do
         external_id:,
         name: 'Foo Bar',
         currency: 'EUR',
+        tax_identification_number: '123456789',
         billing_configuration: {
           vat_rate: 20,
           document_locale: 'fr',
@@ -43,6 +44,7 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
         expect(customer.currency).to eq(create_args[:currency])
+        expect(customer.tax_identification_number).to eq(create_args[:tax_identification_number])
         expect(customer.timezone).to be_nil
 
         billing = create_args[:billing_configuration]
