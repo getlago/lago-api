@@ -93,6 +93,7 @@ module Customers
         payment_provider: args[:payment_provider],
         currency: args[:currency],
         document_locale: billing_configuration[:document_locale],
+        tax_identification_number: args[:tax_identification_number],
       )
 
       assign_premium_attributes(customer, args)

@@ -19,6 +19,7 @@ module Types
       argument :name, String, required: true
       argument :phone, String, required: false
       argument :state, String, required: false
+      argument :tax_identification_number, String, required: false
       argument :timezone, Types::TimezoneEnum, required: false
       argument :url, String, required: false
       argument :vat_rate, Float, required: false
