@@ -87,7 +87,8 @@ module Invoices
     end
 
     def duplicated_invoices?
-      # TODO(duplicated_invoices): Migrate conditions to datetime columns
+      return false unless recurring
+
       subscriptions_boundaries.any? do |subscription_id, boundaries|
         InvoiceSubscription
           .where(subscription_id:)
