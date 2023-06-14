@@ -12,7 +12,7 @@ en:
     sub_total_without_tax: Sub total (excl. tax)
     tax: Tax
     sub_total_with_tax: Sub total (incl. tax)
-    credit_notes: Credit Notes
+    credit_notes: Credit notes
     coupons: Coupons
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
@@ -23,6 +23,11 @@ en:
     unit: Unit
     unit_price: Unit price
     amount: Amount
+    amount_with_tax: Amount (incl. tax)
+    amount_without_tax: Amount (excl. tax)
+    fees_from_to_date: Fees from %{from_date} to %{to_date}
+    tax_rate: Tax rate
+    tax_name_with_details: "%{name} (%{rate}%)"
 
     details: "%{resource} details"
     subscription: Subscription
@@ -38,6 +43,7 @@ en:
     list_of_charges: List of charges used from %{from} to %{to}
     see_breakdown: See breakdown for total unit
     total_unit_interval: "Total unit: %{events_count} events for %{units}"
+    total_events: "Total events: %{count}"
     total_unit: "Total unit: %{units}"
     total: Total
     breakdown: Breakdown
