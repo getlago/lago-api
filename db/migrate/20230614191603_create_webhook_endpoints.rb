@@ -22,6 +22,7 @@ class CreateWebhookEndpoints < ActiveRecord::Migration[7.0]
   end
 
   def down
-    raise ActiveRecord::IrreversibleMigration
+    remove_reference :webhooks, :webhook_endpoint, index: true
+    drop_table :webhook_endpoints
   end
 end
