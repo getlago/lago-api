@@ -8,5 +8,8 @@ class Invoice
 
     belongs_to :invoice
     belongs_to :tax
+
+    monetize :amount_cents
+    validates :amount_cents, numericality: { greater_than: 0 }
   end
 end

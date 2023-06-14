@@ -23,6 +23,11 @@ nb:
     unit: Enhet
     unit_price: Enhetspris
     amount: Beløp
+    amount_with_tax: Beløp (inkl. MVA)
+    amount_without_tax: Beløp (ekskl. MVA)
+    fees_from_to_date: Gebyrer fra %{from_date} til %{to_date}
+    tax_rate: Skattesats
+    tax_name_with_details: "%{name} (%{rate}%)"
 
     details: "%{resource} detaljer"
     subscription: Abonnement
@@ -38,6 +43,7 @@ nb:
     list_of_charges: Oversikt over kostnader fra %{from} til %{to}
     see_breakdown: Se oversikt for antall enheter
     total_unit_interval: "Antall enheter: %{events_count} hendelser for %{units}"
+    total_events: "Totalt antall hendelser: %{count}"
     total_unit: "Antall enheter: %{units}"
     total: Totalt
     breakdown: Oversikt
