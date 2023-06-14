@@ -23,6 +23,11 @@ de:
     unit: Einheit
     unit_price: Stückpreis
     amount: Betrag
+    amount_with_tax: Betrag (inkl. Steuern)
+    amount_without_tax: Betrag (ohne Steuern)
+    fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}
+    tax_rate: Steuersatz
+    tax_name_with_details: "%{name} (%{rate}%)"
 
     details: "%{resource} Details"
     subscription: Abonnement
@@ -38,6 +43,7 @@ de:
     list_of_charges: Liste der Gebühren vom %{from} bis %{to}
     see_breakdown: Siehe Aufschlüsselung für Gesamtübersicht
     total_unit_interval: "Gesamte Einheiten: %{events_count} Ereignisse für %{units}"
+    total_events: "Ereignisse insgesamt: %{count}"
     total_unit: "Gesamte Einheiten: %{units}"
     total: Gesamt
     breakdown: Aufschlüsselung
