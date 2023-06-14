@@ -27,7 +27,8 @@ class Organization < ApplicationRecord
   has_many :taxes
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
-  has_many :webhooks
+  has_many :webhook_endpoints
+  has_many :webhooks, through: :webhook_endpoints
 
   has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
   has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
@@ -77,6 +78,16 @@ class Organization < ApplicationRecord
       adyen_payment_provider
     end
   end
+
+  # TODO: uncomment these and fix all the specs
+  # def webhook_url?
+  #   webhook_endpoints.any?
+  # end
+
+  # # TODO: deprecated
+  # def webhook_url
+  #   webhook_endpoints&.first&.webhook_url
+  # end
 
   private
 

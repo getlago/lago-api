@@ -722,6 +722,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
+  create_table "webhook_endpoints", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "webhook_url", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_webhook_endpoints_on_organization_id"
+  end
+
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "object_id"
     t.string "object_type"
@@ -736,7 +744,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "organization_id", null: false
+    t.uuid "webhook_endpoint_id"
     t.index ["organization_id"], name: "index_webhooks_on_organization_id"
+    t.index ["webhook_endpoint_id"], name: "index_webhooks_on_webhook_endpoint_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -813,4 +823,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
+  add_foreign_key "webhook_endpoints", "organizations"
+  add_foreign_key "webhooks", "webhook_endpoints"
 end

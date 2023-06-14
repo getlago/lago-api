@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :webhook do
     organization
+    association :webhook_endpoint, factory: :webhook_endpoint
     association :object, factory: :invoice
 
     payload { Faker::Json.shallow_json(width: 3) }
