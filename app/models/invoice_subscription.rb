@@ -12,6 +12,7 @@ class InvoiceSubscription < ApplicationRecord
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
+  monetize :total_including_taxes_amount_cents, disable_validation: true, allow_nil: true
 
   scope :order_by_charges_to_datetime,
         lambda {
@@ -38,7 +39,15 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def subscription_amount_cents
-    fees.subscription_kind.first&.amount_cents || 0
+    subscription_fee&.amount_cents || 0
+  end
+
+  def subscription_taxes_rate
+    subscription_fee&.taxes_rate || 0.0
+  end
+
+  def subscription_fee
+    fees.subscription_kind.first
   end
 
   def total_amount_cents
@@ -47,6 +56,10 @@ class InvoiceSubscription < ApplicationRecord
 
   def total_amount_currency
     subscription.plan.amount_currency
+  end
+
+  def total_including_taxes_amount_cents
+    fees.charge_kind.sum(&:total_amount_cents) + (fees.subscription_kind.first&.total_amount_cents || 0)
   end
 
   alias charge_amount_currency total_amount_currency
