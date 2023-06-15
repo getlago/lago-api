@@ -6,6 +6,7 @@ class BillableMetricsQuery < BaseQuery
 
     metrics = base_scope.result
     metrics = metrics.where(id: filters[:ids]) if filters[:ids].present?
+    metrics = metrics.where(recurring: filters[:recurring]) unless filters[:recurring].nil?
     metrics = metrics.where(aggregation_type: filters[:aggregation_types]) if filters[:aggregation_types].present?
     metrics = metrics.order(created_at: :desc).page(page).per(limit)
 

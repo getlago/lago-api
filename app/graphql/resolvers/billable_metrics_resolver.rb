@@ -10,13 +10,21 @@ module Resolvers
     argument :ids, [String], required: false, description: 'List of plan ID to fetch'
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+    argument :recurring, Boolean, required: false
     argument :search_term, String, required: false
 
     argument :aggregation_types, [Types::BillableMetrics::AggregationTypeEnum], required: false
 
     type Types::BillableMetrics::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, search_term: nil, aggregation_types: nil)
+    def resolve( # rubocop:disable Metrics/ParameterLists
+      ids: nil,
+      page: nil,
+      limit: nil,
+      search_term: nil,
+      aggregation_types: nil,
+      recurring: nil
+    )
       validate_organization!
 
       query = ::BillableMetricsQuery.new(organization: current_organization)
@@ -26,6 +34,7 @@ module Resolvers
         limit:,
         filters: {
           ids:,
+          recurring:,
           aggregation_types:,
         },
       )

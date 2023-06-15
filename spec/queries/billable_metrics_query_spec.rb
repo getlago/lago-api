@@ -39,6 +39,44 @@ RSpec.describe BillableMetricsQuery, type: :query do
     end
   end
 
+  context 'when searching for recurring billable metrics' do
+    let(:billable_metric_recurring) do
+      create(
+        :billable_metric,
+        organization:,
+        aggregation_type: 'unique_count_agg',
+        name: 'defghz',
+        code: '55',
+        field_name: 'test',
+        recurring: true,
+      )
+    end
+
+    before { billable_metric_recurring }
+
+    it 'returns 1 billable metric' do
+      result = billable_metric_query.call(
+        search_term: nil,
+        page: 1,
+        limit: 10,
+        filters: {
+          recurring: true,
+        },
+      )
+
+      returned_ids = result.billable_metrics.pluck(:id)
+
+      aggregate_failures do
+        expect(result.billable_metrics.count).to eq(1)
+        expect(returned_ids).not_to include(billable_metric_first.id)
+        expect(returned_ids).not_to include(billable_metric_second.id)
+        expect(returned_ids).not_to include(billable_metric_third.id)
+        expect(returned_ids).not_to include(billable_metric_fourth.id)
+        expect(returned_ids).to include(billable_metric_recurring.id)
+      end
+    end
+  end
+
   context 'when searching for count_agg aggregation type' do
     it 'returns 3 billable metrics' do
       result = billable_metric_query.call(
