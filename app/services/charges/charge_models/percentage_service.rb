@@ -52,11 +52,11 @@ module Charges
 
       # NOTE: FE divides percentage rate with 100 and sends to BE.
       def rate
-        BigDecimal(properties['rate'])
+        BigDecimal(properties['rate'].to_s)
       end
 
       def fixed_amount
-        @fixed_amount ||= BigDecimal(properties['fixed_amount'] || 0)
+        @fixed_amount ||= BigDecimal((properties['fixed_amount'] || 0).to_s)
       end
     end
   end
