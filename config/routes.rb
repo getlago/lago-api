@@ -62,6 +62,7 @@ Rails.application.routes.draw do
 
       put '/organizations', to: 'organizations#update'
 
+      resources :webhook_endpoints
       resources :webhooks, only: %i[] do
         get :public_key, on: :collection
         get :json_public_key, on: :collection

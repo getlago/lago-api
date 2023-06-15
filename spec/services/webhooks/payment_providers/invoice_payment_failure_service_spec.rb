@@ -8,9 +8,9 @@ RSpec.describe Webhooks::PaymentProviders::InvoicePaymentFailureService do
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
-  let(:organization) { create(:organization, webhook_url:) }
+  let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url:) }
+  let(:organization) { webhook_endpoint.organization.reload }
   let(:webhook_url) { 'http://foo.bar' }
-
   let(:webhook_options) { { provider_error: { message: 'message', error_code: 'code' } } }
 
   describe '.call' do
@@ -18,7 +18,7 @@ RSpec.describe Webhooks::PaymentProviders::InvoicePaymentFailureService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(organization.webhook_url)
+        .with(webhook_endpoint.webhook_url)
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response)
     end
@@ -27,7 +27,7 @@ RSpec.describe Webhooks::PaymentProviders::InvoicePaymentFailureService do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
-        .with(organization.webhook_url)
+        .with(webhook_endpoint.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
         expect(payload[:webhook_type]).to eq('invoice.payment_failure')
         expect(payload[:object_type]).to eq('payment_provider_invoice_payment_error')

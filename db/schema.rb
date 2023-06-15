@@ -502,7 +502,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "api_key"
-    t.string "webhook_url"
     t.float "vat_rate", default: 0.0, null: false
     t.string "country"
     t.string "address_line1"
@@ -520,6 +519,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.string "document_locale", default: "en", null: false
     t.string "email_settings", default: [], null: false, array: true
     t.string "tax_identification_number"
+    t.string "webhook_url"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end
@@ -743,9 +743,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "last_retried_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "organization_id", null: false
     t.uuid "webhook_endpoint_id"
-    t.index ["organization_id"], name: "index_webhooks_on_organization_id"
     t.index ["webhook_endpoint_id"], name: "index_webhooks_on_webhook_endpoint_id"
   end
 

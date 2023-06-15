@@ -14,24 +14,27 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:webhook_endpoint) { create(:webhook_endpoint) }
+  let(:organization) { webhook_endpoint.organization.reload }
+  let(:membership) { create(:membership, organization:) }
+  # let(:organization) { membership.organization }
 
   before do
-    create_list(:webhook, 5, :succeeded, organization:)
+    create_list(:webhook, 5, :succeeded, webhook_endpoint:)
   end
 
   it 'returns a list of webhooks' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      webhook_endpoint_id: webhook_endpoint.id,
       query:,
     )
 
     webhooks_response = result['data']['webhooks']
 
     aggregate_failures do
-      expect(webhooks_response['collection'].count).to eq(organization.webhooks.count)
+      expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
       expect(webhooks_response['metadata']['currentPage']).to eq(1)
     end
   end

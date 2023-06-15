@@ -11,7 +11,9 @@ class CreateWebhookEndpoints < ActiveRecord::Migration[7.0]
 
     add_reference :webhooks, :webhook_endpoint, type: :uuid, foreign_key: true, index: true
 
-    Organization.find_each do |organization|
+    Organization.all.find_each do |organization|
+      next if organization.webhook_url.blank?
+
       webhook_endpoint = WebhookEndpoint
         .where(organization:, webhook_url: organization.webhook_url).first_or_create!
 
@@ -19,10 +21,14 @@ class CreateWebhookEndpoints < ActiveRecord::Migration[7.0]
         webhook.update!(webhook_endpoint:)
       end
     end
+
+    remove_reference :webhooks, :organization, index: true
   end
 
   def down
     remove_reference :webhooks, :webhook_endpoint, index: true
     drop_table :webhook_endpoints
+
+    add_reference :webhooks, :organization, type: :uuid, index: true, null: false # rubocop:disable Rails/NotNullColumn
   end
 end

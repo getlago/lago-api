@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :webhook do
-    organization
+    # organization
     association :webhook_endpoint, factory: :webhook_endpoint
     association :object, factory: :invoice
 
