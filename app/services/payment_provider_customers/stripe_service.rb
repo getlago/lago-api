@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class StripeService < BaseService
+    CHECKOUT_SUCCESS_URL = 'https://www.getlago.com'
+
     def initialize(stripe_customer = nil)
       @stripe_customer = stripe_customer
 
@@ -20,6 +22,7 @@ module PaymentProviderCustomers
       )
 
       deliver_success_webhook
+      PaymentProviderCustomers::StripeCheckoutUrlJob.perform_later(stripe_customer)
 
       result.stripe_customer = stripe_customer
       result
@@ -72,6 +75,30 @@ module PaymentProviderCustomers
       result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
     end
 
+    def generate_checkout_url
+      return result unless customer.organization.webhook_url?
+
+      res = Stripe::Checkout::Session.create(
+        checkout_link_params,
+        {
+          api_key:,
+        },
+      )
+
+      result.checkout_url = res['url']
+
+      SendWebhookJob.perform_later(
+        'customer.checkout_url_generated',
+        customer,
+        checkout_url: result.checkout_url,
+      )
+
+      result
+    rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
+      deliver_error_webhook(e)
+      result
+    end
+
     private
 
     attr_accessor :stripe_customer
@@ -84,6 +111,15 @@ module PaymentProviderCustomers
 
     def api_key
       organization.stripe_payment_provider.secret_key
+    end
+
+    def checkout_link_params
+      {
+        success_url: CHECKOUT_SUCCESS_URL,
+        mode: 'setup',
+        payment_method_types: ['card'],
+        customer: stripe_customer.provider_customer_id,
+      }
     end
 
     def create_stripe_customer

@@ -41,9 +41,9 @@ module Invoices
           timestamp:,
           recurring:,
         ).call
-      end
 
-      result.raise_if_error!
+        result.raise_if_error!
+      end
 
       if grace_period?
         SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?

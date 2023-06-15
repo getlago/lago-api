@@ -582,7 +582,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
     end
 
-    context 'when invoice subscription already exists' do
+    context 'when invoice subscription already exists for recurring billing' do
+      let(:recurring) { true }
+
       let(:date_service) do
         Subscriptions::DatesService.new_instance(
           subscription,

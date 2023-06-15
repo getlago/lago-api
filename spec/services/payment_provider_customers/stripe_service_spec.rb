@@ -13,7 +13,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     create(:stripe_customer, customer:, provider_customer_id: nil)
   end
 
-  describe '.create' do
+  describe '#create' do
     it 'creates the stripe customer' do
       allow(Stripe::Customer).to receive(:create)
         .and_return(Stripe::Customer.new(id: 'cus_123456'))
@@ -73,7 +73,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     end
   end
 
-  describe '.update_payment_method' do
+  describe '#update_payment_method' do
     subject(:stripe_service) { described_class.new }
 
     let(:stripe_customer) do
@@ -174,7 +174,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     end
   end
 
-  describe '.delete_payment_method' do
+  describe '#delete_payment_method' do
     subject(:stripe_service) { described_class.new }
 
     let(:payment_method_id) { 'card_12345' }
@@ -269,7 +269,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     end
   end
 
-  describe '.check_payment_method' do
+  describe '#check_payment_method' do
     let(:payment_method_id) { 'card_12345' }
 
     let(:stripe_customer) do
@@ -322,6 +322,22 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           expect(Stripe::Customer).to have_received(:new)
           expect(stripe_api_customer).to have_received(:retrieve_payment_method)
         end
+      end
+    end
+  end
+
+  describe '#generate_checkout_url' do
+    before do
+      allow(Stripe::Checkout::Session).to receive(:create)
+        .and_return({ 'url' => 'https://example.com' })
+    end
+
+    it 'delivers a webhook with checkout url' do
+      stripe_service.generate_checkout_url
+
+      aggregate_failures do
+        expect(SendWebhookJob).to have_been_enqueued
+          .with('customer.checkout_url_generated', customer, checkout_url: 'https://example.com')
       end
     end
   end
