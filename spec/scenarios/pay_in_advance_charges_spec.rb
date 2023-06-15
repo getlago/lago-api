@@ -193,6 +193,98 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
     end
   end
 
+  describe 'with sum_agg / standard' do
+    let(:aggregation_type) { 'sum_agg' }
+    let(:field_name) { 'amount' }
+
+    it 'creates a pay_in_advance fee' do
+      ### 24 january: Create subscription.
+      jan24 = DateTime.new(2023, 1, 24)
+
+      travel_to(jan24) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      charge = create(
+        :standard_charge,
+        :pay_in_advance,
+        invoiceable: true,
+        plan:,
+        billable_metric:,
+        properties: { amount: '1' },
+      )
+
+      subscription = customer.subscriptions.first
+
+      ### 15 february: Send an event.
+      feb15 = DateTime.new(2023, 2, 15)
+
+      travel_to(feb15) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '10' },
+            },
+          )
+        end.to change { subscription.reload.fees.count }.from(0).to(1)
+
+        fee = subscription.fees.first
+
+        expect(fee.invoice_id).not_to be_nil
+        expect(fee.charge_id).to eq(charge.id)
+        expect(fee.pay_in_advance).to eq(true)
+        expect(fee.units).to eq(10)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(1000)
+      end
+
+      travel_to(DateTime.new(2023, 2, 17)) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '-4' },
+            },
+          )
+        end.to change { subscription.reload.fees.count }.from(1).to(2)
+
+        fee = subscription.fees.order(created_at: :desc).first
+        expect(fee.units).to eq(0)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(0)
+      end
+
+      travel_to(DateTime.new(2023, 2, 18)) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '8' },
+            },
+          )
+        end.to change { subscription.reload.fees.count }.from(2).to(3)
+
+        fee = subscription.fees.order(created_at: :desc).first
+        expect(fee.units).to eq(4)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(400)
+      end
+    end
+  end
+
   describe 'with sum_agg / package' do
     let(:aggregation_type) { 'sum_agg' }
     let(:field_name) { 'amount' }

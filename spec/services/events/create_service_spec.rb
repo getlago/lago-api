@@ -541,7 +541,7 @@ RSpec.describe Events::CreateService, type: :service do
           }
         end
 
-        it 'does not enqueue a job' do
+        it 'enqueues a job' do
           expect do
             create_service.call(
               organization:,
@@ -549,7 +549,7 @@ RSpec.describe Events::CreateService, type: :service do
               timestamp:,
               metadata: {},
             )
-          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          end.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
 
