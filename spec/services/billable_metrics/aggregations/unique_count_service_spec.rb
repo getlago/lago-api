@@ -228,6 +228,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     end
 
     context 'when event is given' do
+      let(:properties) { { unique_id: '111' } }
       let(:pay_in_advance_event) do
         create(
           :event,
@@ -251,8 +252,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
 
       before { new_quantified_event }
-
-      let(:properties) { { unique_id: '111' } }
 
       it 'assigns an pay_in_advance aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:)

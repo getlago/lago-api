@@ -80,7 +80,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
       end
     end
 
-    context 'context without operation type for unique_count_agg' do
+    context 'without operation type for unique_count_agg' do
       let(:operation_type) { nil }
       let(:billable_metric) do
         create(

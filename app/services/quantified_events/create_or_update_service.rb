@@ -31,7 +31,7 @@ module QuantifiedEvents
 
     def event_operation_type
       operation_type = event.properties['operation_type']&.to_sym
-      operation_type.nil? && matching_billable_metric&.unique_count_agg? ? :add : operation_type
+      (operation_type.nil? && matching_billable_metric&.unique_count_agg?) ? :add : operation_type
     end
 
     def add_metric

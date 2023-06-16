@@ -19,7 +19,7 @@ module BillableMetrics
         return 0 if event.properties.blank?
 
         unless previous_event
-          res = operation_type == :add ? 1 : 0
+          res = (operation_type == :add) ? 1 : 0
           handle_event_metadata(current_aggregation: res, max_aggregation: res)
 
           return res
@@ -28,16 +28,16 @@ module BillableMetrics
         old_aggregation = BigDecimal(previous_event.metadata['current_aggregation'])
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
-        current_aggregation = operation_type == :add ? (old_aggregation + 1) : (old_aggregation - 1)
+        current_aggregation = (operation_type == :add) ? (old_aggregation + 1) : (old_aggregation - 1)
 
         if current_aggregation > old_max
-         handle_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
+          handle_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
 
-         1
+          1
         else
-         handle_event_metadata(current_aggregation:, max_aggregation: old_max)
+          handle_event_metadata(current_aggregation:, max_aggregation: old_max)
 
-         0
+          0
         end
       end
 
@@ -74,7 +74,7 @@ module BillableMetrics
             .or(
               query
                 .where('quantified_events.removed_at::timestamp(0) >= ?', from_datetime)
-                .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime)
+                .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime),
             )
 
           query.first
@@ -98,11 +98,11 @@ module BillableMetrics
         queries = [
           # NOTE: Billed on the full period. We will replace 1::numeric with proration_coefficient::numeric
           # in the next part
-          persisted.select("SUM(1::numeric)").to_sql,
+          persisted.select('SUM(1::numeric)').to_sql,
 
           # NOTE: Added during the period, We will replace 1::numeric with proration_coefficient::numeric
           # in the next part
-          added.select("SUM(1::numeric)").to_sql,
+          added.select('SUM(1::numeric)').to_sql,
         ]
 
         "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
