@@ -56,7 +56,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
           let(:timezone) { 'America/New_York' }
 
           it 'returns the start date' do
-            expect(result).to eq('2021-02-07 00:00:00 UTC')
+            expect(result).to eq('2021-02-06 05:00:00 UTC')
           end
         end
       end

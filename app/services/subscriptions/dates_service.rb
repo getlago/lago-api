@@ -34,7 +34,9 @@ module Subscriptions
       # NOTE: On first billing period, subscription might start after the computed start of period
       #       ie: if we bill on beginning of period, and user registered on the 15th, the invoice should
       #       start on the 15th (subscription date) and not on the 1st
-      @from_datetime = subscription.started_at if @from_datetime < subscription.started_at
+      if @from_datetime < subscription.started_at
+        @from_datetime = subscription.started_at.in_time_zone(customer.applicable_timezone).beginning_of_day.utc
+      end
 
       @from_datetime
     end
@@ -66,7 +68,9 @@ module Subscriptions
         datetime = new_datetime if ((datetime.in_time_zone - new_datetime.in_time_zone) / 1.hour).abs < 26
       end
 
-      datetime = subscription.started_at if datetime < subscription.started_at
+      if datetime < subscription.started_at
+        datetime = subscription.started_at.in_time_zone(customer.applicable_timezone).beginning_of_day.utc
+      end
 
       datetime
     end
