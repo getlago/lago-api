@@ -6,7 +6,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        webhooks(limit: 5) {
+        webhooks(limit: 5, webhookEndpointId: "#{webhook_endpoint.id}") {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -28,6 +28,8 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
       current_organization: organization,
       query:,
     )
+
+    p result
 
     webhooks_response = result['data']['webhooks']
 
