@@ -26,6 +26,9 @@ module Resolvers
         page:,
         limit:,
         status:,
+        filters: {
+          webhook_endpoint_id:,
+        },
       )
 
       result.webhooks

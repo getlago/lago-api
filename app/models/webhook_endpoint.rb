@@ -4,7 +4,7 @@ class WebhookEndpoint < ApplicationRecord
   LIMIT = 5
 
   belongs_to :organization
-  has_many :webhooks
+  has_many :webhooks, dependent: :destroy
 
   validates :webhook_url, presence: true, url: true
   validate :max_webhook_endpoints, on: :create

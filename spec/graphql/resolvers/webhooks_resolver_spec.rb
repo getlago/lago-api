@@ -17,7 +17,6 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
   let(:webhook_endpoint) { create(:webhook_endpoint) }
   let(:organization) { webhook_endpoint.organization.reload }
   let(:membership) { create(:membership, organization:) }
-  # let(:organization) { membership.organization }
 
   before do
     create_list(:webhook, 5, :succeeded, webhook_endpoint:)
@@ -27,7 +26,6 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      webhook_endpoint_id: webhook_endpoint.id,
       query:,
     )
 
