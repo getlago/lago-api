@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :quantified_event do
     customer
     billable_metric
+    event
 
     external_id { SecureRandom.uuid }
     added_at { Time.current - 10.days }

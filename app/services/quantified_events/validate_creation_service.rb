@@ -27,8 +27,8 @@ module QuantifiedEvents
 
     def operation_type
       @operation_type ||= begin
-        event_type = args.dig('properties', 'operation_type')&.to_sym
-        event_type.nil? && billable_metric.unique_count_agg? ? :add : event_type
+        type = args.dig('properties', 'operation_type')&.to_sym
+        type.nil? && billable_metric.unique_count_agg? ? :add : type
       end
     end
 

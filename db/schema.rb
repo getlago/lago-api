@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_06_08_154821) do
+ActiveRecord::Schema[7.0].define(version: 2023_06_15_183805) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -595,10 +595,12 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_08_154821) do
     t.uuid "billable_metric_id"
     t.jsonb "properties", default: {}, null: false
     t.datetime "deleted_at"
+    t.uuid "event_id"
     t.index ["billable_metric_id"], name: "index_quantified_events_on_billable_metric_id"
     t.index ["customer_id", "external_subscription_id", "billable_metric_id"], name: "index_search_quantified_events"
     t.index ["customer_id"], name: "index_quantified_events_on_customer_id"
     t.index ["deleted_at"], name: "index_quantified_events_on_deleted_at"
+    t.index ["event_id"], name: "index_quantified_events_on_event_id"
     t.index ["external_id"], name: "index_quantified_events_on_external_id"
   end
 
