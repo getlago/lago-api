@@ -1824,6 +1824,7 @@ type CreditNote {
 type CreditNoteAppliedTax implements AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  baseAmountCents: BigInt!
   createdAt: ISO8601DateTime!
   creditNote: CreditNote!
   id: ID!

@@ -5,6 +5,9 @@ de:
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
     credit_from: Von
+    item: Artikel
+    tax_rate: Tax rate
+    amount: Betrag (ohne Steuern)
     credit_to: Gutschrift für
     refunded_notice: Erstattung am %{issuing_date}
     credited_notice: Gutschrift auf Kundenguthaben am %{issuing_date}
@@ -12,8 +15,8 @@ de:
     subscription: Abonnement
     coupon_adjustment: Coupons
     sub_total_without_tax: Zwischensumme (ohne Steuern)
-    tax: Steuern
+    tax: "%{name} (%{rate}% on %{amount})"
     credited_on_customer_balance: Auf Kundenguthaben gutgeschrieben
     refunded: Erstattet
-    total_due: Insgesamt fällig
+    total: Insgesamt
     powered_by: Bereitgestellt von
