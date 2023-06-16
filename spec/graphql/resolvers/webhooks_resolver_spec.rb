@@ -29,8 +29,6 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
       query:,
     )
 
-    p result
-
     webhooks_response = result['data']['webhooks']
 
     aggregate_failures do
