@@ -23299,20 +23299,6 @@
               ]
             },
             {
-              "name": "organization",
-              "description": null,
-              "type": {
-                "kind": "OBJECT",
-                "name": "Organization",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "payload",
               "description": null,
               "type": {
@@ -23395,6 +23381,20 @@
               ]
             },
             {
+              "name": "webhookEndpoint",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "WebhookEndpoint",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "webhookType",
               "description": null,
               "type": {
@@ -23460,6 +23460,105 @@
                 "ofType": {
                   "kind": "OBJECT",
                   "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "WebhookEndpoint",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "organization",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "updatedAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "webhookUrl",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
                   "ofType": null
                 }
               },

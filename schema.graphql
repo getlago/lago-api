@@ -5542,18 +5542,26 @@ type Webhook {
   id: ID!
   lastRetriedAt: ISO8601DateTime
   objectType: String!
-  organization: Organization
   payload: String
   response: String
   retries: Int!
   status: WebhookStatusEnum!
   updatedAt: ISO8601DateTime!
+  webhookEndpoint: WebhookEndpoint
   webhookType: String!
 }
 
 type WebhookCollection {
   collection: [Webhook!]!
   metadata: CollectionMetadata!
+}
+
+type WebhookEndpoint {
+  createdAt: ISO8601DateTime!
+  id: ID!
+  organization: Organization
+  updatedAt: ISO8601DateTime!
+  webhookUrl: String!
 }
 
 enum WebhookStatusEnum {
