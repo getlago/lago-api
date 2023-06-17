@@ -25,12 +25,31 @@ RSpec.describe Webhooks::BaseService, type: :service do
       allow(lago_client).to receive(:post_with_response).and_return(response)
     end
 
-    it 'calls the endpoint webhook url' do
-      webhook_service.call
+    context 'when organization has one webhook endpoint' do
+      subject(:webhook_service) { DummyClass.new(object:) }
 
-      expect(LagoHttpClient::Client).to have_received(:new)
-        .with(webhook_endpoint.webhook_url)
-      expect(lago_client).to have_received(:post_with_response)
+      it 'calls the webhook' do
+        webhook_service.call
+
+        expect(LagoHttpClient::Client).to have_received(:new)
+          .with(webhook_endpoint.webhook_url).once
+        expect(lago_client).to have_received(:post_with_response).once
+      end
+    end
+
+    context 'when organization has 2 webhook endpoints' do
+      subject(:webhook_service) { DummyClass.new(object:) }
+
+      let(:another_webhook_endpoint) { create(:webhook_endpoint, organization:) }
+
+      it 'calls 2 webhooks' do
+        webhook_service.call
+
+        organization.reload.webhook_endpoints.each do |endpoint|
+          expect(LagoHttpClient::Client).to have_received(:new).with(endpoint.webhook_url)
+          expect(lago_client).to have_received(:post_with_response)
+        end
+      end
     end
 
     it 'builds payload with the object type root key' do
