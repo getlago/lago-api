@@ -9,7 +9,7 @@ module Mutations
       graphql_name 'CreateWebhookEndpoint'
       description 'Create a new webhook endpoint'
 
-      argument :webhook_url, String, required: true
+      input_object_class Types::WebhookEndpoints::CreateInput
 
       type Types::WebhookEndpoints::Object
 
@@ -20,7 +20,7 @@ module Mutations
           organization: current_organization,
           params: args,
         )
-        result.success? ? result.tax : result_error(result)
+        result.success? ? result.webhook_endpoint : result_error(result)
       end
     end
   end
