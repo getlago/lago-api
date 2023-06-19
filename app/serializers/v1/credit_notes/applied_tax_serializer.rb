@@ -12,6 +12,7 @@ module V1
           tax_code: model.tax_code,
           tax_rate: model.tax_rate,
           tax_description: model.tax_description,
+          base_amount_cents: model.base_amount_cents,
           amount_cents: model.amount_cents,
           amount_currency: model.amount_currency,
           created_at: model.created_at.iso8601,

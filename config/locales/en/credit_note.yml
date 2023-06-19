@@ -6,14 +6,17 @@ en:
     issue_date: Issue date
     credit_from: From
     credit_to: Credit to
+    item: Item
+    tax_rate: Tax rate
+    amount: Amount (excl. tax)
     refunded_notice: Refunded on %{issuing_date}
     credited_notice: Credited on customer balance on %{issuing_date}
     credited_refunded_notice: Credited on customer balance and refunded on %{issuing_date}
     subscription: Subscription
     coupon_adjustment: Coupons
     sub_total_without_tax: Sub total (excl. tax)
-    tax: Tax
+    tax: "%{name} (%{rate}% on %{amount})"
     credited_on_customer_balance: Credited on customer balance
     refunded: Refunded
-    total_due: Total due
+    total: Total
     powered_by: Powered by
