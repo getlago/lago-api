@@ -41,10 +41,7 @@ module CreditNotes
         create_items
         return result unless result.success?
 
-        credit_note.precise_coupons_adjustment_amount_cents = adjustement_result.coupons_adjustment_amount_cents
-        credit_note.coupons_adjustment_amount_cents = credit_note.precise_coupons_adjustment_amount_cents.round
-        credit_note.precise_taxes_amount_cents = adjustement_result.taxes_amount_cents
-        credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
+        compute_amounts_and_taxes
 
         valid_credit_note?
         result.raise_if_error!
@@ -189,11 +186,19 @@ module CreditNotes
       end
     end
 
-    def adjustement_result
-      @adjustement_result ||= CreditNotes::ComputeAmountService.call(
+    def compute_amounts_and_taxes
+      taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice:,
         items: credit_note.items,
       )
+
+      credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
+      credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
+      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.taxes_amount_cents = taxes_result.taxes_amount_cents.round
+      credit_note.taxes_rate = taxes_result.taxes_rate
+
+      taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
     end
   end
 end
