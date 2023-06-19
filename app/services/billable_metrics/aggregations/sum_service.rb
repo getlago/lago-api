@@ -7,12 +7,13 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        charges_from_date = billable_metric.recurring? ? subscription.started_at : from_datetime
+        aggregation_result = if options[:is_pay_in_advance] && options[:is_current_usage]
+          previous_event ? BigDecimal(previous_event.metadata['max_aggregation']) : BigDecimal(0)
+        else
+          events.sum("(#{sanitized_field_name})::numeric")
+        end
 
-        events = events_scope(from_datetime: charges_from_date, to_datetime:)
-          .where("#{sanitized_field_name} IS NOT NULL")
-
-        result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
+        result.aggregation = aggregation_result
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = events.count
         result.options = { running_total: running_total(events, options) }
@@ -88,16 +89,25 @@ module BillableMetrics
 
       attr_reader :from_datetime, :to_datetime
 
+      def events
+        @events ||= begin
+          charges_from_date = billable_metric.recurring? ? subscription.started_at : from_datetime
+
+          events_scope(from_datetime: charges_from_date, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+        end
+      end
+
       # This method fetches the latest event in current period. If such a event exists we know that metadata
       # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
       # would help us in pay in advance value calculation without iterating through all events in current period
       def previous_event
-        @previous_event ||=
-          events_scope(from_datetime:, to_datetime:)
-            .where("#{sanitized_field_name} IS NOT NULL")
-            .where.not(id: event.id)
-            .order(created_at: :desc)
-            .first
+        @previous_event ||= begin
+          scope = events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+
+          scope = scope.where.not(id: event.id) if event.present?
+
+          scope.order(created_at: :desc).first
+        end
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil)
