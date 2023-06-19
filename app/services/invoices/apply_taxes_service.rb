@@ -68,7 +68,7 @@ module Invoices
       end
     end
 
-    # NOTE: Tax might not be applied to all taxes of the invoice.
+    # NOTE: Tax might not be applied to all fees of the invoice.
     #       In order to compute the invoice#taxes_rate, we have to apply
     #       a pro-rata of the fees attached to the tax on the invoices#fees_amount_cents
     def pro_rated_taxes_rate(tax)
