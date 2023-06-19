@@ -4051,6 +4051,7 @@ type Query {
     ids: [String!]
     limit: Int
     page: Int
+    recurring: Boolean
     searchTerm: String
   ): BillableMetricCollection!
 
