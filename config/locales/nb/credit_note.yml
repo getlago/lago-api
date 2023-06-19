@@ -6,14 +6,17 @@ nb:
     issue_date: Dato
     credit_from: Fra
     credit_to: Til
+    item: Vare
+    tax_rate: Tax rate
+    amount: Beløp (ekskl. MVA)
     refunded_notice: Refundert %{issuing_date}
     credited_notice: Kreditert til kontobalanse %{issuing_date}
     credited_refunded_notice: Kreditert til kontobalanse og refundert %{issuing_date}
     subscription: Abonnement
     coupon_adjustment: Kuponger
     sub_total_without_tax: Sub total (ekskl. MVA)
-    tax: Merverdiavgift
+    tax: "%{name} (%{rate}% on %{amount})"
     credited_on_customer_balance: Kreditert til kontobalanse
     refunded: Refundert
-    total_due: Beløp
+    total: Beløp
     powered_by: Fakturering drevet av
