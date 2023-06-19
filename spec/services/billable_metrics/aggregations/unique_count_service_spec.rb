@@ -101,7 +101,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
       before { new_quantified_event }
 
-      it 'returns the only the number of events ingested in current period' do
+      it 'returns only the number of events ingested in the current period' do
         expect(result.aggregation).to eq(1)
       end
     end
