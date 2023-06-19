@@ -5,6 +5,94 @@ require 'rails_helper'
 describe 'Invoices Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
+  context 'when timezone is negative and not the same day as UTC' do
+    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:customer) { create(:customer, organization:, timezone: 'America/Denver') } # UTC-6
+    let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
+
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2023, 6, 16, 5)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        subscription = customer.subscriptions.first
+        invoice = subscription.invoices.first
+        expect(invoice.total_amount_cents).to eq(400) # 4 days
+      end
+    end
+  end
+
+  context 'when timezone is negative but same day as UTC' do
+    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:customer) { create(:customer, organization:, timezone: 'America/Halifax') } # UTC-3
+    let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
+
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2023, 6, 16, 5)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        subscription = customer.subscriptions.first
+        invoice = subscription.invoices.first
+        expect(invoice.total_amount_cents).to eq(300) # 3 days
+      end
+    end
+  end
+
+  context 'when timezone is positive but same day as UTC' do
+    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:customer) { create(:customer, organization:, timezone: 'Europe/Paris') } # UTC+2
+    let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
+
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2023, 6, 16, 20)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        subscription = customer.subscriptions.first
+        invoice = subscription.invoices.first
+        expect(invoice.total_amount_cents).to eq(300) # 3 days
+      end
+    end
+  end
+
+  context 'when timezone is positive and not the same day as UTC' do
+    let(:organization) { create(:organization, webhook_url: nil, vat_rate: 0) }
+    let(:customer) { create(:customer, organization:, timezone: 'Asia/Karachi') } # UTC+5
+    let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'weekly') }
+
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2023, 6, 16, 20)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        subscription = customer.subscriptions.first
+        invoice = subscription.invoices.first
+        expect(invoice.total_amount_cents).to eq(200) # 2 days
+      end
+    end
+  end
+
   context 'when subscription is terminated with a grace period' do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
