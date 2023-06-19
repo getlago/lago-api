@@ -98,17 +98,17 @@ module BillableMetrics
         queries = [
           # NOTE: Billed on the full period. We will replace 1::numeric with proration_coefficient::numeric
           # in the next part
-          persisted.select('SUM(1::numeric)').to_sql,
+          persisted_query.select('SUM(1::numeric)').to_sql,
 
           # NOTE: Added during the period, We will replace 1::numeric with proration_coefficient::numeric
           # in the next part
-          added.select('SUM(1::numeric)').to_sql,
+          added_query.select('SUM(1::numeric)').to_sql,
         ]
 
         "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
       end
 
-      def persisted
+      def persisted_query
         return QuantifiedEvent.none unless billable_metric.recurring?
 
         base_scope
@@ -116,7 +116,7 @@ module BillableMetrics
           .where('quantified_events.removed_at IS NULL OR quantified_events.removed_at::timestamp(0) > ?', to_datetime)
       end
 
-      def added
+      def added_query
         base_scope
           .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
           .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
