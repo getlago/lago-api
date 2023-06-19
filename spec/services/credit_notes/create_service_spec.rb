@@ -14,9 +14,14 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     )
   end
 
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+
   let(:invoice) do
     create(
       :invoice,
+      organization:,
+      customer:,
       currency: 'EUR',
       total_amount_cents: 24,
       payment_status: :succeeded,
@@ -24,6 +29,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       version_number: 2,
     )
   end
+
+  let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:automatic) { true }
   let(:fee1) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
@@ -43,6 +50,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     ]
   end
 
+  before do
+    create(:fee_applied_tax, tax:, fee: fee1)
+    create(:fee_applied_tax, tax:, fee: fee2)
+  end
+
   describe '.call' do
     it 'creates a credit note' do
       result = create_service.call
@@ -54,6 +66,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.invoice).to eq(invoice)
         expect(credit_note.customer).to eq(invoice.customer)
         expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
+
+        expect(credit_note.coupons_adjustment_amount_cents).to eq(0)
+        expect(credit_note.taxes_amount_cents).to eq(3)
+        expect(credit_note.taxes_rate).to eq(20)
+        expect(credit_note.applied_taxes.count).to eq(1)
 
         expect(credit_note.total_amount_currency).to eq(invoice.currency)
         expect(credit_note.total_amount_cents).to eq(18)
@@ -253,6 +270,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             create(
               :invoice,
               :draft,
+              organization:,
+              customer:,
               currency: 'EUR',
               fees_amount_cents: 20,
               total_amount_cents: 24,
@@ -337,6 +356,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       let(:invoice) do
         create(
           :invoice,
+          organization:,
+          customer:,
           currency: 'EUR',
           fees_amount_cents: 20,
           coupons_amount_cents: 10,
@@ -381,7 +402,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             credit_amount_cents: 6,
             refund_amount_cents: 3,
             balance_amount_cents: 6,
+            coupons_adjustment_amount_cents: 8,
+            taxes_amount_cents: 2,
+            taxes_rate: 20,
           )
+          expect(credit_note.applied_taxes.count).to eq(1)
 
           expect(credit_note.items.count).to eq(2)
 
