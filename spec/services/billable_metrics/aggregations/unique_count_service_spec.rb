@@ -12,7 +12,18 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     )
   end
 
-  let(:subscription) { create(:subscription) }
+  let(:subscription) do
+    create(
+      :subscription,
+      started_at:,
+      subscription_at:,
+      billing_time: :anniversary,
+    )
+  end
+
+  let(:pay_in_advance_event) { nil }
+  let(:subscription_at) { DateTime.parse('2022-06-09') }
+  let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
@@ -22,157 +33,318 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       :billable_metric,
       organization:,
       aggregation_type: 'unique_count_agg',
-      field_name: 'anonymous_id',
+      field_name: 'unique_id',
+      recurring: true,
     )
   end
 
-  let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
-  let(:to_datetime) { Time.current.end_of_day }
+  let(:from_datetime) { DateTime.parse('2022-07-09 00:00:00 UTC') }
+  let(:to_datetime) { DateTime.parse('2022-08-08 23:59:59 UTC') }
 
-  let(:pay_in_advance_event) { nil }
-
-  before do
-    create_list(
-      :event,
-      4,
-      code: billable_metric.code,
+  let(:added_at) { from_datetime - 1.month }
+  let(:removed_at) { nil }
+  let(:quantified_event) do
+    create(
+      :quantified_event,
       customer:,
-      subscription:,
-      timestamp: Time.zone.now - 1.day,
-      properties: {
-        anonymous_id: 'foo_bar',
-      },
+      added_at:,
+      removed_at:,
+      external_subscription_id: subscription.external_id,
+      billable_metric:,
     )
   end
 
-  it 'aggregates the events' do
-    result = count_service.aggregate(from_datetime:, to_datetime:)
+  before { quantified_event }
 
-    expect(result.aggregation).to eq(1)
-    expect(result.count).to eq(4)
-  end
+  describe '#aggregate' do
+    let(:result) { count_service.aggregate(from_datetime:, to_datetime:) }
 
-  context 'when events are out of bounds' do
-    let(:to_datetime) { Time.zone.now - 2.days }
+    context 'when there is persisted event and event added in period' do
+      let(:new_quantified_event) do
+        create(
+          :quantified_event,
+          customer:,
+          added_at: from_datetime + 10.days,
+          removed_at:,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
 
-    it 'does not take events into account' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
+      before { new_quantified_event }
 
-      expect(result.aggregation).to eq(0)
-      expect(result.count).to eq(0)
-    end
-  end
-
-  context 'when properties is not found on events' do
-    before do
-      billable_metric.update!(field_name: 'foo_bar')
-    end
-
-    it 'counts as zero' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
-
-      expect(result.aggregation).to eq(0)
-      expect(result.count).to eq(0)
-    end
-  end
-
-  context 'when group_id is given' do
-    let(:group) do
-      create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+      it 'returns the correct number' do
+        expect(result.aggregation).to eq(2)
+      end
     end
 
-    before do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.zone.now,
-        properties: {
-          anonymous_id: 'foo_bar',
-          region: 'europe',
-        },
-      )
+    context 'when there is persisted event and event added in period but billable metric is not recurring' do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization:,
+          aggregation_type: 'unique_count_agg',
+          field_name: 'unique_id',
+          recurring: false,
+        )
+      end
+      let(:new_quantified_event) do
+        create(
+          :quantified_event,
+          customer:,
+          added_at: from_datetime + 10.days,
+          removed_at:,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
 
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.zone.now,
-        properties: {
-          anonymous_id: 'foo_bar',
-          region: 'europe',
-        },
-      )
+      before { new_quantified_event }
 
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.zone.now,
-        properties: {
-          anonymous_id: 'foo_bar',
-          region: 'africa',
-        },
-      )
+      it 'returns only the number of events ingested in the current period' do
+        expect(result.aggregation).to eq(1)
+      end
     end
 
-    it 'aggregates the events' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
+    context 'with persisted metric on full period' do
+      it 'returns the number of persisted metric' do
+        expect(result.aggregation).to eq(1)
+      end
 
-      expect(result.aggregation).to eq(1)
-      expect(result.count).to eq(2)
+      context 'when subscription was terminated in the period' do
+        let(:subscription) do
+          create(
+            :subscription,
+            started_at:,
+            subscription_at:,
+            billing_time: :anniversary,
+            terminated_at: to_datetime,
+            status: :terminated,
+          )
+        end
+        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+
+        it 'returns the correct number' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
+
+      context 'when subscription was upgraded in the period' do
+        let(:subscription) do
+          create(
+            :subscription,
+            started_at:,
+            subscription_at:,
+            billing_time: :anniversary,
+            terminated_at: to_datetime,
+            status: :terminated,
+          )
+        end
+        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+
+        before do
+          create(
+            :subscription,
+            previous_subscription: subscription,
+            organization:,
+            customer:,
+            started_at: to_datetime,
+          )
+        end
+
+        it 'returns the correct number' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
+
+      context 'when subscription was started in the period' do
+        let(:started_at) { DateTime.parse('2022-08-01') }
+        let(:from_datetime) { started_at }
+
+        it 'returns the correct number' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
+
+      context 'when plan is pay in advance' do
+        before do
+          subscription.plan.update!(pay_in_advance: true)
+        end
+
+        it 'returns the correct number' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
     end
-  end
 
-  context 'when event is given' do
-    let(:pay_in_advance_event) do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.zone.now - 1.day,
-        properties:,
-      )
+    context 'with persisted metrics added in the period' do
+      let(:added_at) { from_datetime + 15.days }
+
+      it 'returns the correct number' do
+        expect(result.aggregation).to eq(1)
+      end
+
+      context 'when added on the first day of the period' do
+        let(:added_at) { from_datetime }
+
+        it 'returns the correct number' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
     end
 
-    let(:properties) { { anonymous_id: 'unknown' } }
+    context 'with persisted metrics terminated in the period' do
+      let(:removed_at) { to_datetime - 15.days }
 
-    it 'assigns an pay_in_advance aggregation' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
+      it 'returns the correct number' do
+        expect(result.aggregation).to eq(0)
+      end
 
-      expect(result.pay_in_advance_aggregation).to eq(1)
+      context 'when removed on the last day of the period' do
+        let(:removed_at) { to_datetime }
+
+        it 'returns the correct number' do
+          expect(result.aggregation).to eq(0)
+        end
+      end
     end
 
-    context 'when event property is already known' do
-      before do
+    context 'with persisted metrics added and terminated in the period' do
+      let(:added_at) { from_datetime + 1.day }
+      let(:removed_at) { to_datetime - 1.day }
+
+      it 'returns the correct number' do
+        expect(result.aggregation).to eq(0)
+      end
+
+      context 'when added and removed the same day' do
+        let(:added_at) { from_datetime + 1.day }
+        let(:removed_at) { added_at.end_of_day }
+
+        it 'returns a correct number' do
+          expect(result.aggregation).to eq(0)
+        end
+      end
+    end
+
+    context 'when event is given' do
+      let(:properties) { { unique_id: '111' } }
+      let(:pay_in_advance_event) do
         create(
           :event,
           code: billable_metric.code,
           customer:,
           subscription:,
-          timestamp: Time.zone.now - 1.day,
+          timestamp: from_datetime + 10.days,
           properties:,
         )
       end
-
-      it 'assigns zero as pay_in_advance aggregation' do
-        result = count_service.aggregate(from_datetime:, to_datetime:)
-
-        expect(result.pay_in_advance_aggregation).to be_zero
+      let(:new_quantified_event) do
+        create(
+          :quantified_event,
+          customer:,
+          added_at: from_datetime + 10.days,
+          removed_at:,
+          event: pay_in_advance_event,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
       end
-    end
 
-    context 'when event is missing properties' do
-      let(:properties) { {} }
+      before { new_quantified_event }
 
-      it 'assigns 0 as pay_in_advance aggregation' do
+      it 'assigns an pay_in_advance aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:)
 
-        expect(result.pay_in_advance_aggregation).to be_zero
+        expect(result.pay_in_advance_aggregation).to eq(1)
+      end
+
+      context 'when event is missing properties' do
+        let(:properties) { {} }
+
+        it 'assigns 0 as pay_in_advance aggregation' do
+          result = count_service.aggregate(from_datetime:, to_datetime:)
+
+          expect(result.pay_in_advance_aggregation).to be_zero
+        end
+      end
+
+      context 'when current period aggregation is greater than period maximum' do
+        let(:previous_event) do
+          create(
+            :event,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 5.days,
+            properties: {
+              unique_id: '000',
+            },
+            metadata: {
+              current_aggregation: '7',
+              max_aggregation: '7',
+            },
+          )
+        end
+        let(:previous_quantified_event) do
+          create(
+            :quantified_event,
+            customer:,
+            added_at: from_datetime + 5.days,
+            removed_at:,
+            external_id: '000',
+            event: previous_event,
+            external_subscription_id: subscription.external_id,
+            billable_metric:,
+          )
+        end
+
+        before { previous_quantified_event }
+
+        it 'assigns a pay_in_advance aggregation' do
+          result = count_service.aggregate(from_datetime:, to_datetime:)
+
+          expect(result.pay_in_advance_aggregation).to eq(1)
+        end
+      end
+
+      context 'when current period aggregation is less than period maximum' do
+        let(:previous_event) do
+          create(
+            :event,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 5.days,
+            properties: {
+              unique_id: '000',
+            },
+            metadata: {
+              current_aggregation: '4',
+              max_aggregation: '7',
+            },
+          )
+        end
+        let(:previous_quantified_event) do
+          create(
+            :quantified_event,
+            customer:,
+            added_at: from_datetime + 5.days,
+            removed_at:,
+            external_id: '000',
+            event: previous_event,
+            external_subscription_id: subscription.external_id,
+            billable_metric:,
+          )
+        end
+
+        before { previous_quantified_event }
+
+        it 'assigns a pay_in_advance aggregation' do
+          result = count_service.aggregate(from_datetime:, to_datetime:)
+
+          expect(result.pay_in_advance_aggregation).to eq(0)
+        end
       end
     end
   end

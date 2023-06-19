@@ -11,6 +11,8 @@ class Event < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :subscription
 
+  has_one :quantified_event
+
   validates :transaction_id, presence: true, uniqueness: { scope: :subscription_id }
   validates :code, presence: true
 

@@ -20,7 +20,7 @@ module QuantifiedEvents
     end
 
     def matching_billable_metric?
-      matching_billable_metric&.recurring_count_agg?
+      matching_billable_metric&.recurring_count_agg? || matching_billable_metric&.unique_count_agg?
     end
 
     private
@@ -30,7 +30,8 @@ module QuantifiedEvents
     delegate :customer, :subscription, :organization, to: :event
 
     def event_operation_type
-      event.properties['operation_type']&.to_sym
+      operation_type = event.properties['operation_type']&.to_sym
+      (operation_type.nil? && matching_billable_metric&.unique_count_agg?) ? :add : operation_type
     end
 
     def add_metric
@@ -48,6 +49,7 @@ module QuantifiedEvents
           external_id: event.properties[matching_billable_metric.field_name],
           properties: event.properties,
           added_at: event.timestamp,
+          event:,
         )
       end
     end
