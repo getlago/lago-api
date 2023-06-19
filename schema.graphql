@@ -4359,6 +4359,29 @@ type Query {
   ): WalletCollection!
 
   """
+  Query a single webhook endpoint
+  """
+  webhookEndpoint(
+    """
+    Uniq ID of the webhook endpoint
+    """
+    id: ID!
+  ): WebhookEndpoint
+
+  """
+  Query webhook endpoints of an organization
+  """
+  webhookEndpoints(
+    """
+    List of webhook endpoint IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    searchTerm: String
+  ): WebhookEndpointCollection!
+
+  """
   Query Webhooks
   """
   webhooks(limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, webhookEndpointId: String!): WebhookCollection!
@@ -5604,6 +5627,11 @@ type WebhookEndpoint {
   organization: Organization
   updatedAt: ISO8601DateTime!
   webhookUrl: String!
+}
+
+type WebhookEndpointCollection {
+  collection: [WebhookEndpoint!]!
+  metadata: CollectionMetadata!
 }
 
 """
