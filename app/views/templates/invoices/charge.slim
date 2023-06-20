@@ -189,13 +189,6 @@ html
         font-size: 9px;
         line-height: 16px;
       }
-      .prepaid-amount {
-        font-size: 10px;
-        font-family: Inter;
-        color: #008559;
-        font-weight: 400;
-        line-height: 16px;
-      }
 
       .mb-4 {
         margin-bottom: 4px;
@@ -423,15 +416,15 @@ html
         table.invoice-resume-table width="100%"
           tr
             td.body-2 = I18n.t('invoice.item')
-            td.body-2 style="text-align: left;"
-            td.body-2 style="text-align: left;" = I18n.t('invoice.unit')
-            td.body-2 style="text-align: right;" = I18n.t('invoice.amount')
+            td.body-2 = I18n.t('invoice.unit')
+            td.body-2 = I18n.t('invoice.tax_rate')
+            td.body-2 = I18n.t('invoice.amount_without_tax')
           - fees.each do |fee|
             tr
               td.body-1 = fee.billable_metric.name
-              td.body-2 style="text-align: left;"
-              td.body-2 style="text-align: left;" = fee.units
-              td.body-2 style="text-align: right;" = MoneyHelper.format(fee.amount)
+              td.body-2 = fee.units
+              td.body-2 == TaxHelper.applied_taxes(fee)
+              td.body-2 = MoneyHelper.format(fee.amount)
 
         table.total-table width="100%"
           - if coupons_amount_cents.positive?
@@ -445,10 +438,11 @@ html
             td.body-2
             td.body-2 width="70%" = I18n.t('invoice.sub_total_without_tax')
             td.body-2 width="30%" = MoneyHelper.format(sub_total_excluding_taxes_amount)
-          tr
-            td.body-2
-            td.body-2 #{I18n.t('invoice.tax')} (#{taxes_rate || 0}%)
-            td.body-2 = MoneyHelper.format(taxes_amount)
+          - applied_taxes.each do |applied_tax|
+            tr
+              td.body-2
+              td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
+              td.body-1 = MoneyHelper.format(applied_tax.amount)
           tr
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_with_tax')
@@ -457,18 +451,16 @@ html
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.credit_notes')
-              td.body-2 style="text-align: right; color: #008559;"
-                = MoneyHelper.format(credit_notes_amount)
+              td.body-2 = '-' +  MoneyHelper.format(credit_notes_amount)
           - if wallet_transactions.exists?
             tr
               td.body-2
-              td.body-2 width="70%" = I18n.t('invoice.prepaid_credits')
-              td.prepaid-amount width="30%" = MoneyHelper.format(prepaid_credit_amount)
+              td.body-2 = I18n.t('invoice.prepaid_credits')
+              td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
           tr
             td.body-2
-            td.body-1 width="70%" = I18n.t('invoice.total_due')
-            td.body-1 width="30%" = MoneyHelper.format(total_amount)
-
+            td.body-1 = I18n.t('invoice.total_due')
+            td.body-1 = MoneyHelper.format(total_amount)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
