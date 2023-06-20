@@ -41,6 +41,8 @@ module QuantifiedEvents
       #       prevent wrong units count
       if quantified_removed_on_event_day.present?
         quantified_removed_on_event_day.update!(removed_at: nil)
+
+        quantified_removed_on_event_day
       else
         QuantifiedEvent.create!(
           customer:,
@@ -49,7 +51,6 @@ module QuantifiedEvents
           external_id: event.properties[matching_billable_metric.field_name],
           properties: event.properties,
           added_at: event.timestamp,
-          event:,
         )
       end
     end

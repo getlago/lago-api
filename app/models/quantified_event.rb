@@ -7,7 +7,8 @@ class QuantifiedEvent < ApplicationRecord
 
   belongs_to :customer
   belongs_to :billable_metric
-  belongs_to :event
+
+  has_many :events
 
   validates :external_id, presence: true
   validates :added_at, presence: true

@@ -237,6 +237,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           subscription:,
           timestamp: from_datetime + 10.days,
           properties:,
+          quantified_event: new_quantified_event,
         )
       end
       let(:new_quantified_event) do
@@ -245,13 +246,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           customer:,
           added_at: from_datetime + 10.days,
           removed_at:,
-          event: pay_in_advance_event,
           external_subscription_id: subscription.external_id,
           billable_metric:,
         )
       end
 
-      before { new_quantified_event }
+      before { pay_in_advance_event }
 
       it 'assigns an pay_in_advance aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:)
@@ -277,6 +277,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             customer:,
             subscription:,
             timestamp: from_datetime + 5.days,
+            quantified_event: previous_quantified_event,
             properties: {
               unique_id: '000',
             },
@@ -293,13 +294,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
-            event: previous_event,
             external_subscription_id: subscription.external_id,
             billable_metric:,
           )
         end
 
-        before { previous_quantified_event }
+        before { previous_event }
 
         it 'assigns a pay_in_advance aggregation' do
           result = count_service.aggregate(from_datetime:, to_datetime:)
@@ -316,6 +316,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             customer:,
             subscription:,
             timestamp: from_datetime + 5.days,
+            quantified_event: previous_quantified_event,
             properties: {
               unique_id: '000',
             },
@@ -332,13 +333,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
-            event: previous_event,
             external_subscription_id: subscription.external_id,
             billable_metric:,
           )
         end
 
-        before { previous_quantified_event }
+        before { previous_event }
 
         it 'assigns a pay_in_advance aggregation' do
           result = count_service.aggregate(from_datetime:, to_datetime:)

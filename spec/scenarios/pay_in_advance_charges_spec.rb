@@ -186,9 +186,9 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
         expect(fee.pay_in_advance).to eq(true)
-        expect(fee.units).to eq(1)
+        expect(fee.units).to eq(0)
         expect(fee.events_count).to eq(1)
-        expect(fee.amount_cents).to eq(1200)
+        expect(fee.amount_cents).to eq(0)
       end
 
       ### 18 february: Send an other event.
