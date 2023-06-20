@@ -72,7 +72,7 @@ module Fees
         fee_type: :charge,
         invoiceable_type: 'Charge',
         invoiceable: charge,
-        units: amount_result.units,
+        units: (is_current_usage && charge.pay_in_advance?) ? amount_result.current_usage_units : amount_result.units,
         properties: boundaries.to_h,
         events_count: amount_result.count,
         group_id: group&.id,

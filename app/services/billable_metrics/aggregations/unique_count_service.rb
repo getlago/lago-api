@@ -7,13 +7,13 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        aggregation_result = if options[:is_pay_in_advance] && options[:is_current_usage]
-          previous_event ? BigDecimal(previous_event.metadata['max_aggregation']) : BigDecimal(0)
+        if options[:is_pay_in_advance] && options[:is_current_usage]
+          result.aggregation = BigDecimal(previous_event ? previous_event.metadata['max_aggregation'] : 0)
+          result.current_usage_units = BigDecimal(previous_event ? previous_event.metadata['current_aggregation'] : 0)
         else
-          compute_aggregation.ceil(5)
+          result.aggregation = compute_aggregation.ceil(5)
         end
 
-        result.aggregation = aggregation_result
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
         result.options = { running_total: running_total(options) }
         result.count = result.aggregation
@@ -83,8 +83,7 @@ module BillableMetrics
                 .where('quantified_events.removed_at::timestamp(0) >= ?', from_datetime)
                 .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime),
             )
-
-          query.first
+            .first
         end
       end
 

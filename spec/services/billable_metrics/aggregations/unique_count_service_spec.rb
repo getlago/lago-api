@@ -238,6 +238,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           customer:,
           subscription:,
           timestamp: from_datetime + 5.days,
+          quantified_event: previous_quantified_event,
           properties: {
             unique_id: '000',
           },
@@ -254,13 +255,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           added_at: from_datetime + 5.days,
           removed_at:,
           external_id: '000',
-          event: previous_event,
           external_subscription_id: subscription.external_id,
           billable_metric:,
         )
       end
 
-      before { previous_quantified_event }
+      before { previous_event }
 
       it 'returns period maximum as aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:, options:)

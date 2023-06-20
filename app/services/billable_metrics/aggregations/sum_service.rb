@@ -7,13 +7,13 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        aggregation_result = if options[:is_pay_in_advance] && options[:is_current_usage]
-          previous_event ? BigDecimal(previous_event.metadata['max_aggregation']) : BigDecimal(0)
+        if options[:is_pay_in_advance] && options[:is_current_usage]
+          result.aggregation = BigDecimal(previous_event ? previous_event.metadata['max_aggregation'] : 0)
+          result.current_usage_units = BigDecimal(previous_event ? previous_event.metadata['current_aggregation'] : 0)
         else
-          events.sum("(#{sanitized_field_name})::numeric")
+          result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
         end
 
-        result.aggregation = aggregation_result
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = events.count
         result.options = { running_total: running_total(events, options) }
