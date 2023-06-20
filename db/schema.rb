@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_06_08_154821) do
+ActiveRecord::Schema[7.0].define(version: 2023_06_19_101701) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -215,6 +215,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_08_154821) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "base_amount_cents", default: 0, null: false
     t.index ["credit_note_id"], name: "index_credit_notes_taxes_on_credit_note_id"
     t.index ["tax_id"], name: "index_credit_notes_taxes_on_tax_id"
   end

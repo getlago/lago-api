@@ -29,7 +29,10 @@ module CreditNotes
         )
         result.applied_taxes << applied_tax
 
-        tax_amount_cents = compute_tax_amount_cents(tax)
+        base_amount_cents = compute_base_amount_cents(tax)
+        applied_tax.base_amount_cents = base_amount_cents.round
+
+        tax_amount_cents = (base_amount_cents * tax.rate).fdiv(100)
         applied_tax.amount_cents = tax_amount_cents.round
 
         applied_taxes_amount_cents += tax_amount_cents
@@ -73,7 +76,7 @@ module CreditNotes
       invoice.coupons_amount_cents.fdiv(invoice.fees_amount_cents) * items_amount_cents
     end
 
-    def compute_tax_amount_cents(tax)
+    def compute_base_amount_cents(tax)
       indexed_items[tax.id].map do |item|
         # NOTE: Part of the item from to the total items amount
         item_rate = item.precise_amount_cents.fdiv(items_amount_cents)
@@ -81,8 +84,8 @@ module CreditNotes
         # NOTE: Part of the coupons applied to the item
         prorated_coupon_amount = result.coupons_adjustment_amount_cents * item_rate
 
-        (item.precise_amount_cents - prorated_coupon_amount) * tax.rate
-      end.sum.fdiv(100)
+        item.precise_amount_cents - prorated_coupon_amount
+      end.sum
     end
 
     # NOTE: Tax might not be applied to all items of the credit note.

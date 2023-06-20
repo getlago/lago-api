@@ -8,5 +8,8 @@ class CreditNote
 
     belongs_to :credit_note
     belongs_to :tax
+
+    monetize :amount_cents
+    monetize :base_amount_cents, with_model_currency: :amount_currency
   end
 end
