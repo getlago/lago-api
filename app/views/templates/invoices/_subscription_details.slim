@@ -15,9 +15,7 @@
         tr
           td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.name)
           td.body-2 = 1
-          td.body-2
-            - invoice_subscription(subscription.id).subscription_fee.applied_taxes.each do |applied_tax|
-              div = "#{applied_tax.tax_rate}%"
+          td.body-2 == TaxHelper.applied_taxes(invoice_subscription(subscription.id).subscription_fee)
           td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
         /* TODO: tr charge pay in advance */
 
@@ -50,9 +48,7 @@
                         - if fee.charge.percentage?
                           = I18n.t('invoice.total_events', count: fee.events_count)
                   td.body-2 = fee.units
-                  td.body-2
-                    - fee.applied_taxes.each do |applied_tax|
-                      div = "#{applied_tax.tax_rate}%"
+                  td.body-2 == TaxHelper.applied_taxes(fee)
                   td.body-2 = MoneyHelper.format(fee.amount)
                 - if fee.true_up_fee.present?
                   tr
@@ -60,9 +56,7 @@
                       .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)
                       .body-3 = I18n.t('invoice.true_up_details', min_amount: MoneyHelper.format(fee.charge.min_amount))
                     td.body-2 = fee.true_up_fee.units
-                    td.body-2
-                      - fee.true_up_fee.applied_taxes.each do |applied_tax|
-                        div = "#{applied_tax.tax_rate}%"
+                    td.body-2 == TaxHelper.applied_taxes(fee.true_up_fee)
                     td.body-2 = MoneyHelper.format(fee.true_up_fee.amount)
             - else
               tr
@@ -73,9 +67,7 @@
                         - if fee.charge.percentage?
                           = I18n.t('invoice.total_events', count: fee.events_count)
                 td.body-2 = fees.sum(&:units)
-                td.body-2
-                  - fee.applied_taxes.each do |applied_tax|
-                    div = "#{applied_tax.tax_rate}%"
+                td.body-2 == TaxHelper.applied_taxes(fee)
                 td.body-2 = MoneyHelper.format(fees.sum(&:amount))
               - if fee.true_up_fee.present?
                 tr
@@ -83,9 +75,7 @@
                     .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)
                     .body-3 = I18n.t('invoice.true_up_details', min_amount: MoneyHelper.format(fee.charge.min_amount))
                   td.body-2 = fee.true_up_fee.units
-                  td.body-2
-                    - fee.true_up_fee.applied_taxes.each do |applied_tax|
-                      div = "#{applied_tax.tax_rate}%"
+                  td.body-2 == TaxHelper.applied_taxes(fee.true_up_fee)
                   td.body-2 = MoneyHelper.format(fee.true_up_fee.amount)
 
     .invoice-resume.mb-24.overflow-auto
