@@ -97,6 +97,9 @@ module Events
     def handle_quantified_event
       service_result = quantified_event_service.call
       service_result.raise_if_error!
+
+      event.quantified_event = service_result.quantified_event
+      event.save!
     end
 
     def charges
