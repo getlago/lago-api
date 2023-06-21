@@ -5,9 +5,7 @@ require 'rails_helper'
 RSpec.describe Webhooks::Events::ErrorService do
   subject(:webhook_service) { described_class.new(object:) }
 
-  let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url:) }
-  let(:organization) { webhook_endpoint.organization.reload }
-  let(:webhook_url) { 'http://foo.bar' }
+  let(:organization) { create(:organization) }
   let(:object) do
     {
       input_params: {
@@ -25,7 +23,7 @@ RSpec.describe Webhooks::Events::ErrorService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response)
     end
@@ -34,7 +32,7 @@ RSpec.describe Webhooks::Events::ErrorService do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
         expect(payload[:webhook_type]).to eq('event.error')
         expect(payload[:object_type]).to eq('event_error')

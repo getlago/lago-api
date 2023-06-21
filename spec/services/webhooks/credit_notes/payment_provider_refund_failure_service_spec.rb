@@ -5,13 +5,10 @@ require 'rails_helper'
 RSpec.describe Webhooks::CreditNotes::PaymentProviderRefundFailureService do
   subject(:webhook_service) { described_class.new(object: credit_note, options: webhook_options) }
 
-  let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url:) }
-  let(:organization) { webhook_endpoint.organization.reload }
+  let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:credit_note) { create(:credit_note, customer:, invoice:) }
-  let(:webhook_url) { 'http://foo.bar' }
-
   let(:webhook_options) { { provider_error: { message: 'message', error_code: 'code' } } }
 
   describe '.call' do
@@ -19,7 +16,7 @@ RSpec.describe Webhooks::CreditNotes::PaymentProviderRefundFailureService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response)
     end
@@ -28,7 +25,7 @@ RSpec.describe Webhooks::CreditNotes::PaymentProviderRefundFailureService do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
         expect(payload[:webhook_type]).to eq('credit_note.refund_failure')
         expect(payload[:object_type]).to eq('credit_note_payment_provider_refund_error')

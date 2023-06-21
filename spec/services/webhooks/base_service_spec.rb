@@ -5,12 +5,10 @@ require 'rails_helper'
 RSpec.describe Webhooks::BaseService, type: :service do
   subject(:webhook_service) { DummyClass.new(object:, webhook_id: previous_webhook&.id) }
 
-  let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url:) }
-  let(:organization) { webhook_endpoint.organization.reload }
+  let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
-  let(:webhook_url) { 'http://foo.bar' }
   let(:object) { invoice }
   let(:previous_webhook) { nil }
 
@@ -20,7 +18,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_return(response)
     end
@@ -32,7 +30,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         webhook_service.call
 
         expect(LagoHttpClient::Client).to have_received(:new)
-          .with(webhook_endpoint.webhook_url).once
+          .with(organization.webhook_endpoints.first.webhook_url).once
         expect(lago_client).to have_received(:post_with_response).once
       end
     end
@@ -56,7 +54,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
         expect(payload['dummy']).to be_present
       end
@@ -71,7 +69,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         expect(webhook).to be_succeeded
         expect(webhook.retries).to be_zero
         expect(webhook.webhook_type).to eq('dummy.test')
-        expect(webhook.endpoint).to eq(webhook_endpoint.webhook_url)
+        expect(webhook.endpoint).to eq(webhook.webhook_endpoint.webhook_url)
         expect(webhook.object_id).to eq(invoice.id)
         expect(webhook.object_type).to eq('Invoice')
         expect(webhook.http_status).to eq(200)
@@ -80,7 +78,9 @@ RSpec.describe Webhooks::BaseService, type: :service do
     end
 
     context 'with a previous failed webhook' do
-      let(:previous_webhook) { create(:webhook, :failed, webhook_endpoint:, endpoint: webhook_url) }
+      let(:previous_webhook) do
+        create(:webhook, :failed, webhook_endpoint: organization.webhook_endpoints.first)
+      end
 
       it 'succeeds the retried webhook' do
         webhook_service.call
@@ -99,6 +99,10 @@ RSpec.describe Webhooks::BaseService, type: :service do
     context 'without webhook endpoint' do
       let(:organization) { create(:organization) }
 
+      before do
+        organization.webhook_endpoints.destroy_all
+      end
+
       it 'does not call the webhook' do
         webhook_service.call
 
@@ -113,6 +117,8 @@ RSpec.describe Webhooks::BaseService, type: :service do
           message: 'forbidden',
         }
       end
+
+      let(:webhook_endpoint) { organization.webhook_endpoints.first }
 
       before do
         allow(LagoHttpClient::Client).to receive(:new)
@@ -140,7 +146,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
       end
 
       context 'with a previous failed webhook' do
-        let(:previous_webhook) { create(:webhook, :failed, webhook_endpoint:, endpoint: webhook_url) }
+        let(:previous_webhook) { create(:webhook, :failed, webhook_endpoint:) }
 
         it 'fails the retried webhooks' do
           webhook_service.call
@@ -156,7 +162,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         end
 
         context 'when the previous failed webhook have been retried 3 times' do
-          let(:previous_webhook) { create(:webhook, :failed, webhook_endpoint:, retries: 2, endpoint: webhook_url) }
+          let(:previous_webhook) { create(:webhook, :failed, webhook_endpoint:, retries: 2) }
 
           it 'does not enqueue a SendWebhookJob' do
             expect { webhook_service.call }.not_to have_enqueued_job(SendWebhookJob)
@@ -168,7 +174,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
     context 'when request fails with a non HTTP error' do
       before do
         allow(LagoHttpClient::Client).to receive(:new)
-          .with(webhook_endpoint.webhook_url)
+          .with(organization.webhook_endpoints.first.webhook_url)
           .and_return(lago_client)
         allow(lago_client).to receive(:post_with_response)
           .and_raise(Net::ReadTimeout)

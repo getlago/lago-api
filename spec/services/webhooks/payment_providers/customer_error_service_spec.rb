@@ -6,9 +6,7 @@ RSpec.describe Webhooks::PaymentProviders::CustomerErrorService do
   subject(:webhook_service) { described_class.new(object: customer, options: webhook_options) }
 
   let(:customer) { create(:customer, organization:) }
-  let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url:) }
-  let(:organization) { webhook_endpoint.organization.reload }
-  let(:webhook_url) { 'http://foo.bar' }
+  let(:organization) { create(:organization) }
   let(:webhook_options) { { provider_error: { message: 'message', error_code: 'code' } } }
 
   describe '.call' do
@@ -16,7 +14,7 @@ RSpec.describe Webhooks::PaymentProviders::CustomerErrorService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(webhook_endpoint.webhook_url)
+        .with(organization.webhook_endpoints.first.webhook_url)
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response)
     end
@@ -26,7 +24,7 @@ RSpec.describe Webhooks::PaymentProviders::CustomerErrorService do
 
       aggregate_failures do
         expect(LagoHttpClient::Client).to have_received(:new)
-          .with(webhook_endpoint.webhook_url)
+          .with(organization.webhook_endpoints.first.webhook_url)
         expect(lago_client).to have_received(:post_with_response) do |payload|
           expect(payload[:webhook_type]).to eq('customer.payment_provider_error')
           expect(payload[:object_type]).to eq('payment_provider_customer_error')

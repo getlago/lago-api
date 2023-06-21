@@ -108,7 +108,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
     end
 
     context 'when organization does not have a webhook endpoint' do
-      before { applied_add_on.customer.organization.webhook_endpoints.destroy }
+      before { applied_add_on.customer.organization.webhook_endpoints.destroy_all }
 
       it 'does not enqueues a SendWebhookJob' do
         expect do
