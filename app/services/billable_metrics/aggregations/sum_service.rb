@@ -62,6 +62,7 @@ module BillableMetrics
 
         unless previous_event
           value = event.properties.fetch(billable_metric.field_name, 0).to_s
+          value = BigDecimal(value).negative? ? '0' : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value)
 
           return BigDecimal(value)
@@ -77,7 +78,8 @@ module BillableMetrics
 
           current_aggregation - old_max
         else
-          handle_event_metadata(current_aggregation:, max_aggregation: old_max)
+          agg = current_aggregation.negative? ? BigDecimal(0) : current_aggregation
+          handle_event_metadata(current_aggregation: agg, max_aggregation: old_max)
 
           0
         end
