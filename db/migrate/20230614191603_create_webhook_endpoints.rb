@@ -11,16 +11,17 @@ class CreateWebhookEndpoints < ActiveRecord::Migration[7.0]
 
     add_reference :webhooks, :webhook_endpoint, type: :uuid, foreign_key: true, index: true
 
-    Organization.all.find_each do |organization|
-      next if organization.webhook_url.blank?
+    execute(<<~SQL.squish)
+      insert into webhook_endpoints(organization_id, webhook_url, created_at, updated_at)
+      select id, webhook_url, NOW(), NOW() from organizations where (webhook_url is not null or webhook_url <> '');
+    SQL
 
-      webhook_endpoint = WebhookEndpoint
-        .where(organization:, webhook_url: organization.webhook_url).first_or_create!
-
-      Webhook.where(organization_id: organization.id).find_each do |webhook|
-        webhook.update!(webhook_endpoint:)
-      end
-    end
+    execute(<<~SQL.squish)
+      update webhooks
+      set webhook_endpoint_id = whe.id
+      from (select id, organization_id from webhook_endpoints) as whe
+      where webhooks.organization_id = whe.organization_id;
+    SQL
 
     remove_reference :webhooks, :organization, index: true
   end
