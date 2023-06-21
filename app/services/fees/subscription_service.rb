@@ -97,21 +97,21 @@ module Fees
     end
 
     def first_subscription_amount
-      from_date = boundaries.from_datetime.to_date
-      to_date = boundaries.to_datetime.to_date
+      from_datetime = boundaries.from_datetime
+      to_datetime = boundaries.to_datetime
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
-        return 0 if subscription.trial_end_date >= to_date
+        return 0 if subscription.trial_end_date >= to_datetime
 
         # NOTE: from_date is the trial end date if it happens during the period
-        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          from_date = subscription.trial_end_date
+        if (subscription.trial_end_date > from_datetime) && (subscription.trial_end_date < to_datetime)
+          from_datetime = subscription.initial_started_at + plan.trial_period.days
         end
       end
 
       # NOTE: Number of days of the first period since subscription creation
-      days_to_bill = (to_date + 1.day - from_date).to_i
+      days_to_bill = (to_datetime + 1.day - from_datetime).to_i / 1.day.seconds
 
       days_to_bill * single_day_price(subscription)
     end

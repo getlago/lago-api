@@ -341,7 +341,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime(subscription.started_at.end_of_month),
-              from_datetime: match_datetime(subscription.started_at),
+              from_datetime: match_datetime(subscription.started_at.beginning_of_day),
             )
           end
         end

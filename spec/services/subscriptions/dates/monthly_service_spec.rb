@@ -48,7 +48,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         let(:started_at) { DateTime.parse('07 Feb 2022 05:00:00') }
 
         it 'returns the start date' do
-          expect(result).to eq(started_at.utc.to_s)
+          expect(result).to eq(started_at.beginning_of_day.utc.to_s)
         end
 
         context 'with customer timezone' do
