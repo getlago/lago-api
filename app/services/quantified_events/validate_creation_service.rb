@@ -11,7 +11,6 @@ module QuantifiedEvents
 
     def valid?
       validate_operation_type
-      validate_addition
       validate_removal
 
       errors.blank?
@@ -40,19 +39,6 @@ module QuantifiedEvents
       return if %i[add remove].include?(operation_type)
 
       add_error(field: :operation_type, error_code: 'invalid_operation_type')
-    end
-
-    def validate_addition
-      return unless operation_type == :add
-
-      # NOTE: Ensure no active quantified metric exists with the same external id
-      return if QuantifiedEvent.where(
-        customer_id: customer.id,
-        external_id:,
-        external_subscription_id: subscription.external_id,
-      ).where(removed_at: nil).none?
-
-      add_error(field: billable_metric.field_name, error_code: 'resource_already_added')
     end
 
     def validate_removal

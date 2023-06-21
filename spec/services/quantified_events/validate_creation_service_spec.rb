@@ -76,44 +76,6 @@ RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
     end
   end
 
-  context 'when operation type is add' do
-    it { expect(validation_service).to be_valid }
-
-    context 'with an active quantified metric' do
-      before do
-        create(
-          :quantified_event,
-          customer:,
-          external_id:,
-          external_subscription_id: subscription.external_id,
-        )
-      end
-
-      it 'fails' do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.errors.keys).to include(billable_metric.field_name.to_sym)
-          expect(validation_service.errors[billable_metric.field_name.to_sym])
-            .to eq(['resource_already_added'])
-        end
-      end
-    end
-
-    context 'with removed quantified metric' do
-      before do
-        create(
-          :quantified_event,
-          customer:,
-          external_id:,
-          external_subscription_id: subscription.external_id,
-          removed_at: Time.current - 3.days,
-        )
-      end
-
-      it { expect(validation_service).to be_valid }
-    end
-  end
-
   context 'when operation type is remove' do
     let(:operation_type) { 'remove' }
 

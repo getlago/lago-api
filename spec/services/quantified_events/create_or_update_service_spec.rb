@@ -10,7 +10,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
   let(:billable_metric) do
     create(
       :billable_metric,
-      aggregation_type: 'recurring_count_agg',
+      aggregation_type: 'unique_count_agg',
       field_name: 'item_id',
     )
   end
@@ -173,6 +173,26 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
       end
 
       it { expect(create_service).not_to be_matching_billable_metric }
+    end
+  end
+
+  describe '#process_event?' do
+    it { expect(create_service).to be_process_event }
+
+    context 'with an active quantified metric' do
+      before do
+        create(
+          :quantified_event,
+          customer: event.customer,
+          billable_metric:,
+          external_subscription_id: event.subscription.external_id,
+          external_id: 'ext_12345',
+        )
+      end
+
+      it 'does not add quantified event for the same external id' do
+        expect(create_service).not_to be_process_event
+      end
     end
   end
 end
