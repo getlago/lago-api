@@ -19,7 +19,7 @@ module Invoices
         invoice.credit_notes.each(&:finalized!)
       end
 
-      SendWebhookJob.perform_later('invoice.created', result.invoice) if invoice.organization.webhook_url?
+      SendWebhookJob.perform_later('invoice.created', result.invoice) if invoice.organization.webhook_endpoints.any?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
       track_invoice_created(invoice)

@@ -47,7 +47,7 @@ module PaymentProviderCustomers
 
       if event['success'] == 'true'
         adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
-        SendWebhookJob.perform_later('customer.payment_provider_created', customer) if organization.webhook_url?
+        SendWebhookJob.perform_later('customer.payment_provider_created', customer) if organization.webhook_endpoints.any?
       else
         deliver_error_webhook(Adyen::AdyenError.new(nil, nil, event['reason'], event['eventCode']))
       end
@@ -101,7 +101,7 @@ module PaymentProviderCustomers
     end
 
     def deliver_error_webhook(adyen_error)
-      return unless organization.webhook_url?
+      return unless organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later(
         'customer.payment_provider_error',

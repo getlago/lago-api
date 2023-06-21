@@ -7,6 +7,7 @@ class WebhookEndpoint < ApplicationRecord
   has_many :webhooks, dependent: :destroy
 
   validates :webhook_url, presence: true, url: true
+  validates :webhook_url, uniqueness: { scope: :organization_id }
   validate :max_webhook_endpoints, on: :create
 
   private

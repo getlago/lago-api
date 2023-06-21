@@ -56,7 +56,7 @@ module Events
         rescue ActiveRecord::RecordInvalid => e
           result.record_validation_failure!(record: e.record)
 
-          if organization.webhook_url?
+          if organization.webhook_endpoints.any?
             SendWebhookJob.perform_later(
               :event,
               { input_params: params, error: result.error, organization_id: organization.id },

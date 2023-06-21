@@ -151,7 +151,7 @@ module Invoices
       end
 
       def deliver_error_webhook(stripe_error)
-        return unless invoice.organization.webhook_url?
+        return unless invoice.organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
           'invoice.payment_failure',

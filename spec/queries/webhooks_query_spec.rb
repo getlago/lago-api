@@ -5,7 +5,6 @@ require 'rails_helper'
 RSpec.describe WebhooksQuery, type: :query do
   subject(:webhook_query) { described_class.new(webhook_endpoint:) }
 
-  # let(:membership) { create(:membership) }
   let(:organization) { webhook_endpoint.organization.reload }
   let(:webhook_endpoint) { create(:webhook_endpoint) }
   let(:webhook_succeeded) { create(:webhook, :succeeded, webhook_endpoint:) }

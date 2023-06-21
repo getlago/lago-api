@@ -73,7 +73,7 @@ module Invoices
     end
 
     def should_deliver_webhook?
-      customer.organization.webhook_url?
+      customer.organization.webhook_endpoints.any?
     end
 
     def create_payment(invoice)

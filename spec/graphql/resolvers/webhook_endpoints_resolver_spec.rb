@@ -15,12 +15,7 @@ RSpec.describe Resolvers::WebhookEndpointsResolver, type: :graphql do
   end
 
   let(:membership) { create(:membership) }
-  let(:webhook_endpoint) { build(:webhook_endpoint, organization:) }
   let(:organization) { membership.organization }
-
-  before do
-    organization.webhook_endpoints << webhook_endpoint
-  end
 
   it 'returns a list of webhook endpoints' do
     result = execute_graphql(
@@ -33,8 +28,8 @@ RSpec.describe Resolvers::WebhookEndpointsResolver, type: :graphql do
 
     aggregate_failures do
       expect(webhook_endpoints_response['collection'].first).to include(
-        'id' => webhook_endpoint.id,
-        'webhookUrl' => webhook_endpoint.webhook_url,
+        'id' => organization.webhook_endpoints.first.id,
+        'webhookUrl' => organization.webhook_endpoints.first.webhook_url,
       )
 
       expect(webhook_endpoints_response['metadata']).to include(

@@ -155,8 +155,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    context 'when organization does not have a webhook url' do
-      before { customer.organization.update!(webhook_url: nil) }
+    context 'when organization does not have a webhook endpoint' do
+      before { customer.organization.webhook_endpoints.destroy }
 
       it 'does not enqueues a SendWebhookJob' do
         expect do

@@ -79,16 +79,6 @@ class Organization < ApplicationRecord
     end
   end
 
-  # TODO: uncomment these and fix all the specs
-  # def webhook_url?
-  #   webhook_endpoints.any?
-  # end
-
-  # # TODO: deprecated
-  # def webhook_url
-  #   webhook_endpoints&.first&.webhook_url
-  # end
-
   private
 
   def generate_api_key

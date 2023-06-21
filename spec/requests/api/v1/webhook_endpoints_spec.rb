@@ -34,7 +34,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
 
       aggregate_failures do
         expect(response).to have_http_status(:ok)
-        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(3)
       end
     end
   end

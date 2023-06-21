@@ -121,8 +121,8 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       expect(payment_create_service).to have_received(:call)
     end
 
-    context 'when organization does not have a webhook url' do
-      before { invoice.organization.update!(webhook_url: nil) }
+    context 'when organization does not have a webhook endpoint' do
+      before { invoice.organization.webhook_endpoints.destroy }
 
       it 'does not enqueue a SendWebhookJob' do
         expect do
