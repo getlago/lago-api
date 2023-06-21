@@ -23,6 +23,18 @@ module QuantifiedEvents
       matching_billable_metric&.recurring_count_agg? || matching_billable_metric&.unique_count_agg?
     end
 
+    def process_event?
+      return true unless event_operation_type == :add
+      return true unless matching_billable_metric&.unique_count_agg?
+
+      # NOTE: Ensure no active quantified metric exists with the same external id
+      QuantifiedEvent.where(
+        customer_id: customer.id,
+        external_id: event.properties[matching_billable_metric.field_name],
+        external_subscription_id: subscription.external_id,
+      ).where(removed_at: nil).none?
+    end
+
     private
 
     attr_accessor :event

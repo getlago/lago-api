@@ -45,7 +45,13 @@ module Events
         event.save!
 
         result.event = event
-        handle_quantified_event if should_handle_quantified_event?
+
+        if should_handle_quantified_event?
+          # For unique count if repeated event got ingested, we want to store this event but prevent further processing
+          return result unless quantified_event_service.process_event?
+
+          handle_quantified_event
+        end
       end
 
       if non_invoiceable_charges.any?
