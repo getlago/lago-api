@@ -328,9 +328,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_19_101701) do
     t.uuid "group_id"
     t.uuid "pay_in_advance_event_id"
     t.integer "payment_status", default: 0, null: false
-    t.datetime "succeeded_at", precision: nil
-    t.datetime "failed_at", precision: nil
-    t.datetime "refunded_at", precision: nil
+    t.datetime "succeeded_at"
+    t.datetime "failed_at"
+    t.datetime "refunded_at"
     t.uuid "true_up_parent_fee_id"
     t.uuid "add_on_id"
     t.string "description"
@@ -418,11 +418,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_19_101701) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "recurring"
-    t.datetime "timestamp", precision: nil
-    t.datetime "from_datetime", precision: nil
-    t.datetime "to_datetime", precision: nil
-    t.datetime "charges_from_datetime", precision: nil
-    t.datetime "charges_to_datetime", precision: nil
+    t.datetime "timestamp"
+    t.datetime "from_datetime"
+    t.datetime "to_datetime"
+    t.datetime "charges_from_datetime"
+    t.datetime "charges_to_datetime"
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
     t.index ["subscription_id", "from_datetime", "to_datetime"], name: "index_invoice_subscriptions_on_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
