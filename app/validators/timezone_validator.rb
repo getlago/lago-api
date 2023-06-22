@@ -2,7 +2,7 @@
 
 class TimezoneValidator < ActiveModel::EachValidator
   def validate_each(record, attribute, value)
-    record.errors.add(attribute, :timezone_invalid) unless valid?(value)
+    record.errors.add(attribute, :invalid_timezone) unless valid?(value)
   end
 
   protected
