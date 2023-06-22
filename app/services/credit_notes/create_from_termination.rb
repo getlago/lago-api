@@ -88,13 +88,13 @@ module CreditNotes
         items: [
           CreditNoteItem.new(
             fee_id: last_subscription_fee.id,
-            precise_amount_cents: item_amount.truncate(DB_PRECISION_SCALE),
+            precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE),
           ),
         ],
       )
 
       (
-        item_amount.truncate(DB_PRECISION_SCALE) -
+        item_amount.truncate(CreditNote::DB_PRECISION_SCALE) -
         taxes_result.coupons_adjustment_amount_cents +
         taxes_result.taxes_amount_cents
       ).round
