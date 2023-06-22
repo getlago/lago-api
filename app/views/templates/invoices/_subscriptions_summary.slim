@@ -1,11 +1,11 @@
 table.invoice-resume-table width="100%"
   tr
     td.body-2 = I18n.t('invoice.item')
-    td.body-2 = I18n.t('invoice.amount_with_tax')
+    td.body-2 = I18n.t('invoice.amount_without_tax')
   - subscriptions.each do |subscription|
     tr
       td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.name)
-      td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).total_including_taxes_amount)
+      td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).total_excluding_taxes_amount)
 
 table.total-table width="100%"
   - unless credit?

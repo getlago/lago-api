@@ -420,7 +420,9 @@ html
         .body-1 = I18n.t('invoice.due_date', date: I18n.l(issuing_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
-        - if subscriptions.count == 1
+        - if credit?
+          == SlimHelper.render('templates/invoices/_credit', self)
+        - elsif subscriptions.count == 1
           == SlimHelper.render('templates/invoices/_subscription_details', self)
         - else
           == SlimHelper.render('templates/invoices/_subscriptions_summary', self)
