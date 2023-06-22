@@ -22,7 +22,6 @@ module Organizations
       organization.city = params[:city] if params.key?(:city)
       organization.state = params[:state] if params.key?(:state)
       organization.country = params[:country] if params.key?(:country)
-      organization.webhook_url = params[:webhook_url] if params.key?(:webhook_url)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)

@@ -15,7 +15,6 @@ RSpec.describe Organizations::UpdateService do
 
   let(:params) do
     {
-      webhook_url: 'http://foo.bar',
       legal_name: 'Foobar',
       legal_number: '1234',
       tax_identification_number: '2246',
@@ -42,7 +41,6 @@ RSpec.describe Organizations::UpdateService do
       result = update_service.call
 
       aggregate_failures do
-        expect(result.organization.webhook_url).to eq('http://foo.bar')
         expect(result.organization.legal_name).to eq('Foobar')
         expect(result.organization.legal_number).to eq('1234')
         expect(result.organization.tax_identification_number).to eq('2246')

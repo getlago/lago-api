@@ -8,7 +8,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     <<~GQL
       mutation($input: UpdateOrganizationInput!) {
         updateOrganization(input: $input) {
-          webhookUrl
           legalNumber
           legalName
           taxIdentificationNumber
@@ -34,7 +33,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          webhookUrl: 'http://foo.bar',
           legalNumber: '1234',
           legalName: 'Foobar',
           taxIdentificationNumber: '2246',
@@ -56,7 +54,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     result_data = result['data']['updateOrganization']
 
     aggregate_failures do
-      expect(result_data['webhookUrl']).to eq('http://foo.bar')
       expect(result_data['legalNumber']).to eq('1234')
       expect(result_data['legalName']).to eq('Foobar')
       expect(result_data['taxIdentificationNumber']).to eq('2246')
@@ -131,23 +128,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(3)
         end
       end
-    end
-  end
-
-  context 'with invalid webhook url' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            webhookUrl: 'bad_url',
-          },
-        },
-      )
-
-      expect_graphql_error(result:, message: :unprocessable_entity)
     end
   end
 

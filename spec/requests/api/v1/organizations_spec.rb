@@ -8,7 +8,6 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
   describe 'update' do
     let(:update_params) do
       {
-        webhook_url: 'http://test.example',
         country: 'pl',
         address_line1: 'address1',
         address_line2: 'address2',
@@ -29,6 +28,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       }
     end
 
+    let(:webhook_urls) { organization.webhook_endpoints.map(&:webhook_url) }
+
     it 'updates an organization' do
       put_with_token(
         organization,
@@ -40,7 +41,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
       aggregate_failures do
         expect(json[:organization][:name]).to eq(organization.name)
-        expect(json[:organization][:webhook_url]).to eq(update_params[:webhook_url])
+        expect(json[:organization][:webhook_url]).to eq(webhook_urls.first)
+        expect(json[:organization][:webhook_urls]).to eq(webhook_urls)
         expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
         # TODO(:timezone): Timezone update is turned off for now
         # expect(json[:organization][:timezone]).to eq(update_params[:timezone])
