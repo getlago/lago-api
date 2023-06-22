@@ -7,11 +7,12 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
+        aggregation = events.sum("(#{sanitized_field_name})::numeric")
+
         if options[:is_pay_in_advance] && options[:is_current_usage]
-          result.aggregation = BigDecimal(previous_event ? previous_event.metadata['max_aggregation'] : 0)
-          result.current_usage_units = BigDecimal(previous_event ? previous_event.metadata['current_aggregation'] : 0)
+          handle_in_advance_current_usage(aggregation)
         else
-          result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
+          result.aggregation = aggregation
         end
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
@@ -62,10 +63,10 @@ module BillableMetrics
 
         unless previous_event
           value = event.properties.fetch(billable_metric.field_name, 0).to_s
-          value = BigDecimal(value).negative? ? '0' : value
+          return_value = BigDecimal(value).negative? ? '0' : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value)
 
-          return BigDecimal(value)
+          return BigDecimal(return_value)
         end
 
         current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) +
@@ -74,12 +75,12 @@ module BillableMetrics
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
         result = if current_aggregation > old_max
-          handle_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
+          diff = [current_aggregation, current_aggregation - old_max].max
+          handle_event_metadata(current_aggregation:, max_aggregation: diff)
 
           current_aggregation - old_max
         else
-          agg = current_aggregation.negative? ? BigDecimal(0) : current_aggregation
-          handle_event_metadata(current_aggregation: agg, max_aggregation: old_max)
+          handle_event_metadata(current_aggregation:, max_aggregation: old_max)
 
           0
         end
@@ -93,9 +94,13 @@ module BillableMetrics
 
       def events
         @events ||= begin
-          charges_from_date = billable_metric.recurring? ? subscription.started_at : from_datetime
+          query = if billable_metric.recurring?
+            recurring_events_scope(to_datetime:)
+          else
+            events_scope(from_datetime:, to_datetime:)
+          end
 
-          events_scope(from_datetime: charges_from_date, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+          query.where("#{sanitized_field_name} IS NOT NULL")
         end
       end
 

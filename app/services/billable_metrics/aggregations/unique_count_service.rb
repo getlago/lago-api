@@ -7,11 +7,12 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
+        aggregation = compute_aggregation.ceil(5)
+
         if options[:is_pay_in_advance] && options[:is_current_usage]
-          result.aggregation = BigDecimal(previous_event ? previous_event.metadata['max_aggregation'] : 0)
-          result.current_usage_units = BigDecimal(previous_event ? previous_event.metadata['current_aggregation'] : 0)
+          handle_in_advance_current_usage(aggregation)
         else
-          result.aggregation = compute_aggregation.ceil(5)
+          result.aggregation = aggregation
         end
 
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
@@ -138,10 +139,7 @@ module BillableMetrics
 
         return quantified_events unless group
 
-        quantified_events = quantified_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
-        return quantified_events unless group.parent
-
-        quantified_events.where('properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        group_scope(quantified_events)
       end
 
       def sanitized_operation_type

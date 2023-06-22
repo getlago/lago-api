@@ -243,8 +243,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             unique_id: '000',
           },
           metadata: {
-            current_aggregation: '7',
-            max_aggregation: '10',
+            current_aggregation: '1',
+            max_aggregation: '3',
           },
         )
       end
@@ -265,11 +265,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       it 'returns period maximum as aggregation' do
         result = count_service.aggregate(from_datetime:, to_datetime:, options:)
 
-        expect(result.aggregation).to eq(10)
+        expect(result.aggregation).to eq(4)
       end
 
       context 'when previous event does not exist' do
         let(:previous_quantified_event) { nil }
+
+        before { billable_metric.update!(recurring: false) }
 
         it 'returns zero as aggregation' do
           result = count_service.aggregate(from_datetime:, to_datetime:, options:)

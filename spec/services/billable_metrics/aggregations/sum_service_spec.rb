@@ -226,23 +226,27 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
         subscription:,
         timestamp: to_datetime - 3.days,
         properties: {
-          total_count: -6,
+          total_count: 4,
         },
         metadata: {
           current_aggregation: '4',
-          max_aggregation: '10',
+          max_aggregation: '6',
         },
       )
     end
 
+    before { billable_metric.update!(recurring: true) }
+
     it 'returns period maximum as aggregation' do
       result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
 
-      expect(result.aggregation).to eq(10)
+      expect(result.aggregation).to eq(11)
     end
 
     context 'when previous event does not exist' do
       let(:latest_events) { nil }
+
+      before { billable_metric.update!(recurring: false) }
 
       it 'returns zero as aggregation' do
         result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
@@ -301,6 +305,42 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       expect(result.aggregation).to eq(20)
       expect(result.count).to eq(2)
       expect(result.options).to eq({ running_total: [12, 20] })
+    end
+  end
+
+  context 'when subscription was upgraded in the period' do
+    let(:old_subscription) do
+      create(
+        :subscription,
+        external_id: subscription.external_id,
+        organization:,
+        customer:,
+        started_at: from_datetime - 10.days,
+        terminated_at: from_datetime,
+        status: :terminated,
+      )
+    end
+
+    before do
+      old_subscription
+      subscription.update!(previous_subscription: old_subscription)
+      billable_metric.update!(recurring: true)
+      create(
+        :event,
+        code: billable_metric.code,
+        customer:,
+        subscription: old_subscription,
+        timestamp: from_datetime - 5.days,
+        properties: {
+          total_count: 10,
+        },
+      )
+    end
+
+    it 'returns the correct number' do
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+
+      expect(result.aggregation).to eq(63)
     end
   end
 
