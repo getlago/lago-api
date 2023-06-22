@@ -2,11 +2,15 @@
 
 class TaxHelper
   def self.applied_taxes(object)
-    slim_template = <<-SLIM_TEMPLATE
-- (applied_taxes.present? ? applied_taxes.pluck(:tax_rate) : [0.0]).each do |tax|
-  div = tax.to_s + "%"
-SLIM_TEMPLATE
+    template = if object.nil?
+      'div = "0.0%"'
+    else
+      <<~SLIM_TEMPLATE
+        - (applied_taxes.present? ? applied_taxes.pluck(:tax_rate) : [0.0]).each do |tax|
+          div = tax.to_s + "%"
+      SLIM_TEMPLATE
+    end
 
-    Slim::Template.new { slim_template }.render(object)
+    Slim::Template.new { template }.render(object)
   end
 end
