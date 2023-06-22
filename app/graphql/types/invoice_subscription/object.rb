@@ -13,6 +13,9 @@ module Types
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :fees, [Types::Fees::Object], null: true
+
+      field :charges_from_datetime, GraphQL::Types::ISO8601DateTime, null: true
+      field :charges_to_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
     end
