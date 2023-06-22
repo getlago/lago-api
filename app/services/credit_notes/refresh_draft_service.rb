@@ -13,18 +13,33 @@ module CreditNotes
       result.credit_note = credit_note
       return result unless credit_note.draft?
 
+      credit_note.applied_taxes.destroy_all
       credit_note.items.update_all(fee_id: fee.id) # rubocop:disable Rails/SkipsModelValidations
 
-      amount_cents = credit_note.items.sum(:amount_cents)
-      credit_amount_cents = (amount_cents + (amount_cents * fee.taxes_rate).fdiv(100)).round
-      return result if credit_amount_cents == credit_note.credit_amount_cents
-
-      credit_note.update!(
-        taxes_amount_cents: credit_note.items.sum { |i| i.amount_cents * i.fee.taxes_rate }.fdiv(100).round,
-        credit_amount_cents:,
-        balance_amount_cents: credit_amount_cents,
-        total_amount_cents: credit_amount_cents + credit_note.refund_amount_cents,
+      taxes_result = CreditNotes::ApplyTaxesService.call(
+        invoice: fee.invoice,
+        items: credit_note.items,
       )
+
+      credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
+      credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
+      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.taxes_amount_cents = taxes_result.taxes_amount_cents.round
+      credit_note.taxes_rate = taxes_result.taxes_rate
+
+      taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
+
+      credit_note.credit_amount_cents = (
+        credit_note.items.sum(:precise_amount_cents).truncate(CreditNote::DB_PRECISION_SCALE) -
+        taxes_result.coupons_adjustment_amount_cents +
+        taxes_result.taxes_amount_cents
+      ).round
+
+      credit_note.balance_amount_cents = credit_note.credit_amount_cents
+      credit_note.total_amount_cents = credit_note.credit_amount_cents + credit_note.refund_amount_cents
+
+      credit_note.save!
+
       result
     end
 

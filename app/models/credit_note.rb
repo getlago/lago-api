@@ -5,6 +5,8 @@ class CreditNote < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
 
+  DB_PRECISION_SCALE = 5
+
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
