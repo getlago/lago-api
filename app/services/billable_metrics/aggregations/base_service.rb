@@ -61,19 +61,16 @@ module BillableMetrics
 
       def handle_in_advance_current_usage(total_aggregation)
         if previous_event
-          BigDecimal(previous_event.metadata['max_aggregation']) >
-          BigDecimal(previous_event.metadata['current_aggregation'])
-
           aggregation = total_aggregation -
                         BigDecimal(previous_event.metadata['current_aggregation']) +
                         BigDecimal(previous_event.metadata['max_aggregation'])
 
           result.aggregation = aggregation
-          result.current_usage_units = total_aggregation
         else
           result.aggregation = total_aggregation
-          result.current_usage_units = total_aggregation
         end
+
+        result.current_usage_units = total_aggregation
 
         result.aggregation = 0 if result.aggregation.negative?
         result.current_usage_units = 0 if result.current_usage_units.negative?

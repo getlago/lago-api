@@ -114,7 +114,6 @@ module Invoices
         .where
         .not(pay_in_advance: true, billable_metric: { recurring: false })
         .each do |charge|
-
         if charge.pay_in_advance? &&
            charge.billable_metric.recurring? &&
            subscription.terminated? &&
