@@ -431,18 +431,17 @@ html
             - credits.coupon_kind.order(created_at: :asc).each do |credit|
               tr
                 td.body-2
-                td.body-2 width="70%"  #{credit.invoice_coupon_display_name}
-                td.body-2 width="30%" style="text-align: right; color: #008559;"
-                  = MoneyHelper.format(credit.amount)
+                td.body-2 #{credit.invoice_coupon_display_name}
+                td.body-2 = '-' +  MoneyHelper.format(credit.amount)
           tr
             td.body-2
-            td.body-2 width="70%" = I18n.t('invoice.sub_total_without_tax')
-            td.body-2 width="30%" = MoneyHelper.format(sub_total_excluding_taxes_amount)
+            td.body-2 = I18n.t('invoice.sub_total_without_tax')
+            td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
           - applied_taxes.each do |applied_tax|
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
-              td.body-1 = MoneyHelper.format(applied_tax.amount)
+              td.body-2 = MoneyHelper.format(applied_tax.amount)
           tr
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_with_tax')
