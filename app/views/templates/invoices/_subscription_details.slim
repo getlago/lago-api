@@ -92,16 +92,16 @@
           tr
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_without_tax')
-            td.body-1 = MoneyHelper.format(sub_total_excluding_taxes_amount)
+            td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
           - applied_taxes.each do |applied_tax|
             tr
               td.body-2
               td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
-              td.body-1 = MoneyHelper.format(applied_tax.amount)
+              td.body-2 = MoneyHelper.format(applied_tax.amount)
           tr
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_with_tax')
-            td.body-1 = MoneyHelper.format(sub_total_including_taxes_amount)
+            td.body-2 = MoneyHelper.format(sub_total_including_taxes_amount)
           - if credits.credit_note_kind.any?
             tr
               td.body-2
@@ -114,7 +114,7 @@
               td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
           tr
             td.body-2
-            td.body-1 = I18n.t('invoice.total')
+            td.body-1 = I18n.t('invoice.total_due')
             td.body-1
               = MoneyHelper.format(sub_total_including_taxes_amount)
         - else
