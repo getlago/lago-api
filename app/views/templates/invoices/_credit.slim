@@ -1,5 +1,4 @@
 - invoiceable = fees.first.invoiceable
-
 table.invoice-resume-table width="100%"
   tr
     td.body-2 = I18n.t('invoice.item')
@@ -11,6 +10,8 @@ table.invoice-resume-table width="100%"
     td.body-2 = invoiceable.credit_amount
     td.body-2 = invoiceable.wallet.rate_amount
     td.body-2 = MoneyHelper.format(fees.first.amount)
+
+table.total-table width="100%"
   tr
     td.body-2
     td.body-1 = I18n.t('invoice.total_due')

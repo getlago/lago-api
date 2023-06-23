@@ -238,15 +238,15 @@ html
         width: 50%;
       }
 
+      .credit-note-resume-table tr {
+        border-bottom: 1px solid #D9DEE7;
+      }
       .credit-note-resume-table tr td {
         padding-top: 8px;
         padding-bottom: 8px;
       }
       .credit-note-resume-table tr td:last-child {
         text-align: right;
-      }
-      .credit-note-resume-table tr td {
-        box-shadow: inset 0px -1px 0px #D9DEE7;
       }
       .credit-note-resume table {
         border-collapse: collapse;
@@ -257,18 +257,18 @@ html
         padding-bottom: 8px;
         text-align: right;
       }
-      .credit-note-resume  .total-table td:first-child {
+      .credit-note-resume .total-table td:first-child {
         width: 50%;
       }
       .credit-note-resume .total-table tr:not(:last-child) td:nth-child(2) {
-        box-shadow: inset 0px -1px 0px #D9DEE7;
+        border-bottom: 1px solid #D9DEE7;
         text-align: left;
         width: 35%;
       }
       .credit-note-resume .total-table tr:not(:last-child) td:nth-child(3) {
-        box-shadow: inset 0px -1px 0px #D9DEE7;
+        border-bottom: 1px solid #D9DEE7;
         text-align: right;
-        width: 15%;
+        width: 35%;
       }
       .credit-note-resume .total-table tr:last-child td:nth-child(2) {
         text-align: left;
@@ -389,14 +389,13 @@ html
 
           - subscription_ids.each do |subscription_id|
             - if subscription_id.present?
-              tr
-                td.body-1 width="60%"
-                  | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
-                td.body-2 width="20%"
-                  - subscription_item(subscription_id).applied_taxes.each do |applied_tax|
-                    div = "#{applied_tax.tax_rate}%"
-                td.body-2 width="20%" style="text-align: right;"
-                  = MoneyHelper.format(subscription_item(subscription_id).amount)
+              - if subscription_item(subscription_id).amount.positive?
+                tr
+                  td.body-1 width="60%"
+                    | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
+                  td.body-2 width="20%" == TaxHelper.applied_taxes(subscription_item(subscription_id))
+                  td.body-2 width="20%" style="text-align: right;"
+                    = MoneyHelper.format(subscription_item(subscription_id).amount)
               - subscription_charge_items(subscription_id).each do |item|
                 tr
                   - if item.fee.true_up_parent_fee_id?
@@ -404,9 +403,7 @@ html
                   - else
                     td.body-1 = item.fee.item_name
 
-                  td.body-2 width="20%"
-                    - item.applied_taxes.each do |applied_tax|
-                      div = "#{applied_tax.tax_rate}%"
+                  td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                   td.body-2 width="20%" style="text-align: right;"
                     = MoneyHelper.format(item.amount)
             - else
@@ -418,9 +415,7 @@ html
                     - else
                       | #{item.fee.item_name}
 
-                  td.body-2 width="20%"
-                    - item.applied_taxes.each do |applied_tax|
-                      div = "#{applied_tax.tax_rate}%"
+                  td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                   td.body-2 width="20%" style="text-align: right;"
                     = MoneyHelper.format(item.amount)
 
