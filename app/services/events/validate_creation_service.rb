@@ -36,10 +36,10 @@ module Events
       return invalid_code_error unless valid_code?
       return invalid_properties_error unless valid_properties?
 
-      invalid_persisted_events = params[:external_subscription_ids]
+      invalid_quantified_events = params[:external_subscription_ids]
         .map { |external_id| organization.subscriptions.find_by(external_id:) }
         .each_with_object({}) do |subscription, errors|
-          validation_result = persisted_event_validation(subscription)
+          validation_result = quantified_event_validation(subscription)
           next errors if validation_result.blank?
 
           validation_result.each do |field, codes|
@@ -47,7 +47,7 @@ module Events
           end
           errors
         end
-      return invalid_persisted_event_error(invalid_persisted_events) if invalid_persisted_events.present?
+      return invalid_quantified_event_error(invalid_quantified_events) if invalid_quantified_events.present?
 
       nil
     end
@@ -59,8 +59,8 @@ module Events
       return invalid_properties_error unless valid_properties?
 
       subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
-      invalid_persisted_event = persisted_event_validation(subscription || customer.active_subscriptions.first)
-      return invalid_persisted_event_error(invalid_persisted_event) if invalid_persisted_event.present?
+      invalid_quantified_event = quantified_event_validation(subscription || customer.active_subscriptions.first)
+      return invalid_quantified_event_error(invalid_quantified_event) if invalid_quantified_event.present?
     end
 
     def valid_subscription?
@@ -137,7 +137,7 @@ module Events
       send_webhook_notice
     end
 
-    def invalid_persisted_event_error(errors)
+    def invalid_quantified_event_error(errors)
       result.validation_failure!(errors:)
       send_webhook_notice
     end
@@ -146,8 +146,8 @@ module Events
       @billable_metric ||= organization.billable_metrics.find_by(code: params[:code])
     end
 
-    def persisted_event_validation(subscription)
-      return {} unless billable_metric.recurring_count_agg?
+    def quantified_event_validation(subscription)
+      return {} unless billable_metric.recurring_count_agg? || billable_metric.unique_count_agg?
 
       validation_service = QuantifiedEvents::ValidateCreationService.new(
         result:,

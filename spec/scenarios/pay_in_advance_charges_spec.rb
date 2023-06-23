@@ -114,7 +114,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         properties: { amount: '12' },
       )
 
-      subscription = customer.subscriptions.first
+      subscription = customer.subscriptions.order(created_at: :desc).first
 
       ### 15 february: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
@@ -131,7 +131,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
-        fee = subscription.fees.first
+        fee = subscription.fees.order(created_at: :desc).first
 
         expect(fee.invoice_id).to be_nil
         expect(fee.charge_id).to eq(charge.id)
@@ -139,6 +139,31 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1200)
+      end
+
+      ### 16 february: Send an event.
+      feb16 = DateTime.new(2023, 2, 16)
+
+      travel_to(feb16) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { unique_id: 'id_1', operation_type: 'remove' },
+            },
+          )
+        end.to change { subscription.reload.fees.count }.from(1).to(2)
+
+        fee = subscription.fees.order(created_at: :desc).first
+
+        expect(fee.invoice_id).to be_nil
+        expect(fee.charge_id).to eq(charge.id)
+        expect(fee.pay_in_advance).to eq(true)
+        expect(fee.units).to eq(0)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(0)
       end
 
       ### 17 february: Send an other event.
@@ -154,7 +179,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
               properties: { unique_id: 'id_1' },
             },
           )
-        end.to change { subscription.reload.fees.count }.from(1).to(2)
+        end.to change { subscription.reload.fees.count }.from(2).to(3)
 
         fee = subscription.fees.order(created_at: :desc).first
 
@@ -179,7 +204,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
               properties: { unique_id: 'id_2' },
             },
           )
-        end.to change { subscription.reload.fees.count }.from(2).to(3)
+        end.to change { subscription.reload.fees.count }.from(3).to(4)
 
         fee = subscription.fees.order(created_at: :desc).first
 
@@ -189,6 +214,72 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1200)
+      end
+
+      ### 19 february: Send an other event. Event uses the same value so it is ignored.
+      feb18 = DateTime.new(2023, 2, 19)
+
+      travel_to(feb18) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { unique_id: 'id_2' },
+            },
+          )
+        end.not_to change { subscription.reload.fees.count }
+      end
+
+      ### 20 february: Send an other event.
+      feb20 = DateTime.new(2023, 2, 20)
+
+      travel_to(feb20) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { unique_id: 'id_3' },
+            },
+          )
+        end.to change { subscription.reload.fees.count }.from(4).to(5)
+
+        fee = subscription.fees.order(created_at: :desc).first
+
+        expect(fee.invoice_id).to be_nil
+        expect(fee.charge_id).to eq(charge.id)
+        expect(fee.pay_in_advance).to eq(true)
+        expect(fee.units).to eq(1)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(1200)
+      end
+
+      ### 21 february: Send an event.
+      feb21 = DateTime.new(2023, 2, 21)
+
+      travel_to(feb21) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { unique_id: 'id_3', operation_type: 'remove' },
+            },
+          )
+        end.to change { subscription.reload.fees.count }.from(5).to(6)
+
+        fee = subscription.fees.order(created_at: :desc).first
+
+        expect(fee.invoice_id).to be_nil
+        expect(fee.charge_id).to eq(charge.id)
+        expect(fee.pay_in_advance).to eq(true)
+        expect(fee.units).to eq(0)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(0)
       end
     end
   end
