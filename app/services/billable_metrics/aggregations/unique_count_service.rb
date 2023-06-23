@@ -7,7 +7,14 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        result.aggregation = compute_aggregation.ceil(5)
+        aggregation = compute_aggregation.ceil(5)
+
+        if options[:is_pay_in_advance] && options[:is_current_usage]
+          handle_in_advance_current_usage(aggregation)
+        else
+          result.aggregation = aggregation
+        end
+
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
         result.options = { running_total: running_total(options) }
         result.count = result.aggregation
@@ -64,10 +71,11 @@ module BillableMetrics
           query = events_scope(from_datetime:, to_datetime:)
             .joins(:quantified_event)
             .where("#{sanitized_field_name} IS NOT NULL")
-            .where.not(id: event.id)
             .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
             .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
-            .order(created_at: :desc)
+
+          query = query.where.not(id: event.id) if event.present?
+          query = query.order(created_at: :desc)
 
           query
             .where('quantified_events.removed_at::timestamp(0) IS NULL')
@@ -76,8 +84,7 @@ module BillableMetrics
                 .where('quantified_events.removed_at::timestamp(0) >= ?', from_datetime)
                 .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime),
             )
-
-          query.first
+            .first
         end
       end
 
@@ -132,10 +139,7 @@ module BillableMetrics
 
         return quantified_events unless group
 
-        quantified_events = quantified_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
-        return quantified_events unless group.parent
-
-        quantified_events.where('properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        group_scope(quantified_events)
       end
 
       def sanitized_operation_type

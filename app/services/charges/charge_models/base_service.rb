@@ -16,6 +16,7 @@ module Charges
 
       def apply
         result.units = aggregation_result.aggregation
+        result.current_usage_units = aggregation_result.current_usage_units
         result.count = aggregation_result.count
         result.amount = compute_amount
         result

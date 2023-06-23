@@ -6,6 +6,7 @@ module Fees
       @invoice = invoice
       @charge = charge
       @subscription = subscription
+      @is_current_usage = false
       @boundaries = OpenStruct.new(boundaries)
       super(nil)
     end
@@ -24,13 +25,15 @@ module Fees
     end
 
     def current_usage
+      @is_current_usage = true
+
       init_fees
       result
     end
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :is_current_usage
 
     delegate :customer, to: :invoice
     delegate :billable_metric, to: :charge
@@ -69,7 +72,7 @@ module Fees
         fee_type: :charge,
         invoiceable_type: 'Charge',
         invoiceable: charge,
-        units: amount_result.units,
+        units: (is_current_usage && charge.pay_in_advance?) ? amount_result.current_usage_units : amount_result.units,
         properties: boundaries.to_h,
         events_count: amount_result.count,
         group_id: group&.id,
@@ -100,6 +103,8 @@ module Fees
       {
         free_units_per_events: properties['free_units_per_events'].to_i,
         free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
+        is_current_usage:,
+        is_pay_in_advance: charge.pay_in_advance?,
       }
     end
 

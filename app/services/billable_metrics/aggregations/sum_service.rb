@@ -7,12 +7,14 @@ module BillableMetrics
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        charges_from_date = billable_metric.recurring? ? subscription.started_at : from_datetime
+        aggregation = events.sum("(#{sanitized_field_name})::numeric")
 
-        events = events_scope(from_datetime: charges_from_date, to_datetime:)
-          .where("#{sanitized_field_name} IS NOT NULL")
+        if options[:is_pay_in_advance] && options[:is_current_usage]
+          handle_in_advance_current_usage(aggregation)
+        else
+          result.aggregation = aggregation
+        end
 
-        result.aggregation = events.sum("(#{sanitized_field_name})::numeric")
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = events.count
         result.options = { running_total: running_total(events, options) }
@@ -61,9 +63,10 @@ module BillableMetrics
 
         unless previous_event
           value = event.properties.fetch(billable_metric.field_name, 0).to_s
+          return_value = BigDecimal(value).negative? ? '0' : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value)
 
-          return BigDecimal(value)
+          return BigDecimal(return_value)
         end
 
         current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) +
@@ -72,7 +75,8 @@ module BillableMetrics
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
         result = if current_aggregation > old_max
-          handle_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
+          diff = [current_aggregation, current_aggregation - old_max].max
+          handle_event_metadata(current_aggregation:, max_aggregation: diff)
 
           current_aggregation - old_max
         else
@@ -88,16 +92,29 @@ module BillableMetrics
 
       attr_reader :from_datetime, :to_datetime
 
+      def events
+        @events ||= begin
+          query = if billable_metric.recurring?
+            recurring_events_scope(to_datetime:)
+          else
+            events_scope(from_datetime:, to_datetime:)
+          end
+
+          query.where("#{sanitized_field_name} IS NOT NULL")
+        end
+      end
+
       # This method fetches the latest event in current period. If such a event exists we know that metadata
       # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
       # would help us in pay in advance value calculation without iterating through all events in current period
       def previous_event
-        @previous_event ||=
-          events_scope(from_datetime:, to_datetime:)
-            .where("#{sanitized_field_name} IS NOT NULL")
-            .where.not(id: event.id)
-            .order(created_at: :desc)
-            .first
+        @previous_event ||= begin
+          scope = events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+
+          scope = scope.where.not(id: event.id) if event.present?
+
+          scope.order(created_at: :desc).first
+        end
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil)

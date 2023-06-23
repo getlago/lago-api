@@ -5,6 +5,7 @@ module BillableMetrics
     class CountService < BillableMetrics::Aggregations::BaseService
       def aggregate(from_datetime:, to_datetime:, options: {})
         result.aggregation = events_scope(from_datetime:, to_datetime:).count
+        result.current_usage_units = result.aggregation
         result.count = result.aggregation
         result.pay_in_advance_aggregation = BigDecimal(1)
         result.options = { running_total: running_total(options) }

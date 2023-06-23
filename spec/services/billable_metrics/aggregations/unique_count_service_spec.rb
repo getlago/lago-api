@@ -227,6 +227,60 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
     end
 
+    context 'when current usage context and charge is pay in advance' do
+      let(:options) do
+        { is_pay_in_advance: true, is_current_usage: true }
+      end
+      let(:previous_event) do
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: from_datetime + 5.days,
+          quantified_event: previous_quantified_event,
+          properties: {
+            unique_id: '000',
+          },
+          metadata: {
+            current_aggregation: '1',
+            max_aggregation: '3',
+          },
+        )
+      end
+      let(:previous_quantified_event) do
+        create(
+          :quantified_event,
+          customer:,
+          added_at: from_datetime + 5.days,
+          removed_at:,
+          external_id: '000',
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
+
+      before { previous_event }
+
+      it 'returns period maximum as aggregation' do
+        result = count_service.aggregate(from_datetime:, to_datetime:, options:)
+
+        expect(result.aggregation).to eq(4)
+      end
+
+      context 'when previous event does not exist' do
+        let(:previous_quantified_event) { nil }
+
+        before { billable_metric.update!(recurring: false) }
+
+        it 'returns zero as aggregation' do
+          result = count_service.aggregate(from_datetime:, to_datetime:, options:)
+
+          expect(result.aggregation).to eq(0)
+        end
+      end
+    end
+
     context 'when event is given' do
       let(:properties) { { unique_id: '111' } }
       let(:pay_in_advance_event) do
