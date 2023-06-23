@@ -13,6 +13,8 @@ module Customers
 
         applied_tax.destroy!
 
+        Invoices::RefreshBatchJob.perform_later(applied_tax.customer.invoices.draft.pluck(:id))
+
         result.applied_tax = applied_tax
         result
       end
