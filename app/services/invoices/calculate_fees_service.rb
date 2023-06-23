@@ -114,16 +114,18 @@ module Invoices
         .where
         .not(pay_in_advance: true, billable_metric: { recurring: false })
         .each do |charge|
-        if charge.pay_in_advance? &&
-           charge.billable_metric.recurring? &&
-           subscription.terminated? &&
-           subscription.next_subscription.present?
-          next
-        end
+        next if should_not_create_charge_fee?(charge, subscription)
 
         fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
         fee_result.raise_if_error!
       end
+    end
+
+    def should_not_create_charge_fee?(charge, subscription)
+      charge.pay_in_advance? &&
+      charge.billable_metric.recurring? &&
+      subscription.terminated? &&
+      subscription.upgraded?
     end
 
     def should_create_subscription_fee?(subscription)
