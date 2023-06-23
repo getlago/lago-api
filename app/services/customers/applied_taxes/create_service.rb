@@ -15,6 +15,8 @@ module Customers
 
         applied_tax = customer.applied_taxes.find_or_create_by!(tax:)
 
+        Invoices::RefreshBatchJob.perform_later(customer.invoices.draft.pluck(:id))
+
         result.applied_tax = applied_tax
         result
       end
