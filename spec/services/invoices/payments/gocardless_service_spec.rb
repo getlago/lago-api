@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::Payments::GocardlessService, type: :service do
-  subject(:gocardless_service) { described_class.new(invoice) }
+  subject(:gocardless_service) { described_class.new(argument) }
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
@@ -13,6 +13,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
   let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
   let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
   let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
+  let(:argument) { invoice }
 
   let(:invoice) do
     create(
@@ -242,6 +243,24 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           expect(result.error.messages.keys).to include(:payment_status)
           expect(result.error.messages[:payment_status]).to include('value_is_invalid')
         end
+      end
+    end
+
+    context 'when invoice is not passed to constructor' do
+      let(:argument) { nil }
+
+      it 'updates the payment and invoice payment_status' do
+        result = gocardless_service.update_payment_status(
+          provider_payment_id: 'ch_123456',
+          status: 'paid_out',
+        )
+
+        expect(result).to be_success
+        expect(result.payment.status).to eq('paid_out')
+        expect(result.invoice.reload).to have_attributes(
+          payment_status: 'succeeded',
+          ready_for_payment_processing: false,
+        )
       end
     end
   end
