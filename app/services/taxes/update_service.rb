@@ -12,6 +12,10 @@ module Taxes
     def call
       return result.not_found_failure!(resource: 'tax') unless tax
 
+      draft_invoice_ids = tax.organization.invoices.where(
+        customer_id: tax.applicable_customers.select(:id),
+      ).draft.pluck(:id)
+
       tax.name = params[:name] if params.key?(:name)
       tax.code = params[:code] if params.key?(:code)
       tax.rate = params[:rate] if params.key?(:rate)
@@ -31,12 +35,5 @@ module Taxes
     private
 
     attr_reader :tax, :params
-
-    def draft_invoice_ids
-      @draft_invoice_ids ||= tax.organization.invoices
-        .where(customer_id: tax.applicable_customers.select(:id))
-        .draft
-        .pluck(:id)
-    end
   end
 end
