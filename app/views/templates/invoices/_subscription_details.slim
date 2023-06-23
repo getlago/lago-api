@@ -78,56 +78,56 @@
                   td.body-2 = fee.true_up_fee.units
                   td.body-2 == TaxHelper.applied_taxes(fee.true_up_fee)
                   td.body-2 = MoneyHelper.format(fee.true_up_fee.amount)
-
-        table.total-table width="100%"
-          - if subscriptions.count == 1
-            - unless credit?
-              - if coupons_amount_cents.positive?
-                - credits.coupon_kind.order(created_at: :asc).each do |credit|
-                  tr
-                    td.body-2
-                    td.body-2 #{credit.invoice_coupon_display_name}
-                    td.body-2 = '-' +  MoneyHelper.format(credit.amount)
-            tr
-              td.body-2
-              td.body-2 = I18n.t('invoice.sub_total_without_tax')
-              td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
-            - if applied_taxes.present?
-              - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+    .invoice-resume.overflow-auto
+      table.total-table width="100%"
+        - if subscriptions.count == 1
+          - unless credit?
+            - if coupons_amount_cents.positive?
+              - credits.coupon_kind.order(created_at: :asc).each do |credit|
                 tr
                   td.body-2
-                  td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
-                  td.body-2 = MoneyHelper.format(applied_tax.amount)
-            - else
+                  td.body-2 #{credit.invoice_coupon_display_name}
+                  td.body-2 = '-' +  MoneyHelper.format(credit.amount)
+          tr
+            td.body-2
+            td.body-2 = I18n.t('invoice.sub_total_without_tax')
+            td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
+          - if applied_taxes.present?
+            - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
               tr
                 td.body-2
-                td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
-                td.body-2 = MoneyHelper.format(0.to_money(currency))
-            tr
-              td.body-2
-              td.body-2 = I18n.t('invoice.sub_total_with_tax')
-              td.body-2 = MoneyHelper.format(sub_total_including_taxes_amount)
-            - if credits.credit_note_kind.any?
-              tr
-                td.body-2
-                td.body-2 = I18n.t('invoice.credit_notes')
-                td.body-2 = '-' +  MoneyHelper.format(credit_notes_amount)
-            - if subscription? && wallet_transactions.exists?
-              tr
-                td.body-2
-                td.body-2 = I18n.t('invoice.prepaid_credits')
-                td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
-            tr
-              td.body-2
-              td.body-1 = I18n.t('invoice.total_due')
-              td.body-1
-                = MoneyHelper.format(sub_total_including_taxes_amount)
+                td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
+                td.body-2 = MoneyHelper.format(applied_tax.amount)
           - else
             tr
               td.body-2
-              td.body-1 = I18n.t('invoice.total')
-              td.body-1
-                = MoneyHelper.format(invoice_subscription(subscription.id).total_amount)
+              td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
+              td.body-2 = MoneyHelper.format(0.to_money(currency))
+          tr
+            td.body-2
+            td.body-2 = I18n.t('invoice.sub_total_with_tax')
+            td.body-2 = MoneyHelper.format(sub_total_including_taxes_amount)
+          - if credits.credit_note_kind.any?
+            tr
+              td.body-2
+              td.body-2 = I18n.t('invoice.credit_notes')
+              td.body-2 = '-' +  MoneyHelper.format(credit_notes_amount)
+          - if subscription? && wallet_transactions.exists?
+            tr
+              td.body-2
+              td.body-2 = I18n.t('invoice.prepaid_credits')
+              td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
+          tr
+            td.body-2
+            td.body-1 = I18n.t('invoice.total_due')
+            td.body-1
+              = MoneyHelper.format(total_amount)
+        - else
+          tr
+            td.body-2
+            td.body-1 = I18n.t('invoice.total')
+            td.body-1
+              = MoneyHelper.format(invoice_subscription(subscription.id).total_amount)
 
     - if subscription? && subscription_fees(subscription.id).charge_kind.any?
       .invoice-resume.mb-24.overflow-auto
