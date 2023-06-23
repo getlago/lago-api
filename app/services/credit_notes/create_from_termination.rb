@@ -2,8 +2,6 @@
 
 module CreditNotes
   class CreateFromTermination < BaseService
-    DB_PRECISION_SCALE = 5
-
     def initialize(subscription:, reason: 'order_change')
       @subscription = subscription
       @reason = reason
@@ -27,7 +25,7 @@ module CreditNotes
         items: [
           CreditNoteItem.new(
             fee_id: last_subscription_fee.id,
-            precise_amount_cents: amount.truncate(DB_PRECISION_SCALE),
+            precise_amount_cents: amount.truncate(CreditNote::DB_PRECISION_SCALE),
           ),
         ],
       )
@@ -39,7 +37,7 @@ module CreditNotes
         items: [
           {
             fee_id: last_subscription_fee.id,
-            amount_cents: amount.truncate(DB_PRECISION_SCALE),
+            amount_cents: amount.truncate(CreditNote::DB_PRECISION_SCALE),
           },
         ],
         reason: reason.to_sym,
