@@ -14,6 +14,14 @@ RSpec.describe Customers::AppliedTaxes::CreateService, type: :service do
       expect { create_service.call }.to change(Customer::AppliedTax, :count).by(1)
     end
 
+    it 'refreshes draft invoices' do
+      draft_invoice = create(:invoice, :draft, organization:, customer:)
+
+      expect do
+        create_service.call
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+    end
+
     context 'when already applied to the customer' do
       it 'does not apply the tax once again' do
         create(:customer_applied_tax, tax:, customer:)
