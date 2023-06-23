@@ -430,12 +430,18 @@ html
             td.body-2
             td.body-2 width="70%" = I18n.t('credit_note.sub_total_without_tax')
             td.body-2 width="30%" = MoneyHelper.format(sub_total_excluding_taxes_amount)
-          - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
-            tr
-              td.body-2
-              td.body-2
-                = I18n.t('credit_note.tax', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.base_amount))
-              td.body-2 = MoneyHelper.format(applied_tax.amount)
+          - if applied_taxes.present?
+              - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+                tr
+                  td.body-2
+                  td.body-2
+                    = I18n.t('credit_note.tax', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.base_amount))
+                  td.body-2 = MoneyHelper.format(applied_tax.amount)
+            - else
+              tr
+                td.body-2
+                td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
+                td.body-2 = MoneyHelper.format(0.to_money(currency))
           - if credited?
             tr
               td.body-2
