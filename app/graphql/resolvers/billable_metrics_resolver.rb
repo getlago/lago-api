@@ -17,26 +17,14 @@ module Resolvers
 
     type Types::BillableMetrics::Object.collection_type, null: false
 
-    def resolve( # rubocop:disable Metrics/ParameterLists
-      ids: nil,
-      page: nil,
-      limit: nil,
-      search_term: nil,
-      aggregation_types: nil,
-      recurring: nil
-    )
+    def resolve(**args)
       validate_organization!
 
-      query = ::BillableMetricsQuery.new(organization: current_organization)
-      result = query.call(
-        search_term:,
-        page:,
-        limit:,
-        filters: {
-          ids:,
-          recurring:,
-          aggregation_types:,
-        },
+      result = ::BillableMetricsQuery.new(organization: current_organization).call(
+        search_term: args[:search_term],
+        page: args[:page],
+        limit: args[:limit],
+        filters: args.slice(args[:ids], args[:recurring], args[:aggregation_types]),
       )
 
       result.billable_metrics
