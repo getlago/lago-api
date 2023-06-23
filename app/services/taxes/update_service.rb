@@ -12,17 +12,17 @@ module Taxes
     def call
       return result.not_found_failure!(resource: 'tax') unless tax
 
-      draft_invoice_ids = tax.organization.invoices.where(
-        customer_id: tax.applicable_customers.select(:id),
-      ).draft.pluck(:id)
+      customer_ids = tax.applicable_customers.select(:id)
 
       tax.name = params[:name] if params.key?(:name)
       tax.code = params[:code] if params.key?(:code)
       tax.rate = params[:rate] if params.key?(:rate)
       tax.description = params[:description] if params.key?(:description)
       tax.applied_to_organization = params[:applied_to_organization] if params.key?(:applied_to_organization)
-
       tax.save!
+
+      customer_ids = (customer_ids + tax.reload.applicable_customers.select(:id)).uniq
+      draft_invoice_ids = tax.organization.invoices.where(customer_id: customer_ids).draft.pluck(:id)
 
       Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
 
