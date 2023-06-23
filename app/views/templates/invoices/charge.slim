@@ -437,11 +437,17 @@ html
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_without_tax')
             td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
-          - applied_taxes.each do |applied_tax|
+          - if applied_taxes.present?
+            - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+              tr
+                td.body-2
+                td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
+                td.body-2 = MoneyHelper.format(applied_tax.amount)
+          - else
             tr
               td.body-2
-              td.body-2 = I18n.t('invoice.tax_name_with_details', name: applied_tax.tax_name, rate: applied_tax.tax_rate)
-              td.body-2 = MoneyHelper.format(applied_tax.amount)
+              td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
+              td.body-2 = MoneyHelper.format(0.to_money(currency))
           tr
             td.body-2
             td.body-2 = I18n.t('invoice.sub_total_with_tax')
