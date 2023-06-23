@@ -138,15 +138,15 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
-        result = Invoices::UpdateService.call(
-          invoice:,
+        update_invoice_result = Invoices::UpdateService.call(
+          invoice: result.invoice,
           params: {
             payment_status:,
             ready_for_payment_processing: payment_status.to_sym != :succeeded,
           },
           webhook_notification: deliver_webhook,
         )
-        result.raise_if_error!
+        update_invoice_result.raise_if_error!
       end
 
       def increment_payment_attempts
