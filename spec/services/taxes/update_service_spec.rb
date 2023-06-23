@@ -39,6 +39,35 @@ RSpec.describe Taxes::UpdateService, type: :service do
       expect(result.tax).to be_a(Tax)
     end
 
+    context 'when applied_to_organization is updated to false' do
+      let(:params) do
+        { applied_to_organization: false }
+      end
+
+      it 'refreshes draft invoices' do
+        draft_invoice = create(:invoice, :draft, organization:, customer:)
+
+        expect do
+          update_service.call
+        end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+      end
+    end
+
+    context 'when applied_to_organization is updated to true' do
+      let(:tax) { create(:tax, organization:, applied_to_organization: false) }
+      let(:params) do
+        { applied_to_organization: true }
+      end
+
+      it 'refreshes draft invoices' do
+        draft_invoice = create(:invoice, :draft, organization:, customer:)
+
+        expect do
+          update_service.call
+        end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+      end
+    end
+
     it 'refreshes draft invoices' do
       draft_invoice = create(:invoice, :draft, organization:, customer:)
 
