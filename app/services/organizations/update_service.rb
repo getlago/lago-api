@@ -30,6 +30,11 @@ module Organizations
       # NOTE(legacy): keep accepting vat_rate field temporary by converting it into tax rate
       handle_legacy_vat_rate(billing[:vat_rate]) if billing.key?(:vat_rate)
 
+      if params.key?(:webhook_url)
+        webhook_endpoint = organization.webhook_endpoints.first_or_initialize
+        webhook_endpoint.update! webhook_url: params[:webhook_url]
+      end
+
       if License.premium? && billing.key?(:invoice_grace_period)
         Organizations::UpdateInvoiceGracePeriodService.call(
           organization:,

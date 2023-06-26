@@ -34,7 +34,7 @@ module Api
           :legal_number,
           :tax_identification_number,
           :timezone,
-          webhook_urls: [],
+          :webhook_url,
           email_settings: [],
           billing_configuration: [
             :invoice_footer,
