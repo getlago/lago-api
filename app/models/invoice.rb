@@ -112,7 +112,7 @@ class Invoice < ApplicationRecord
 
   def recurring_breakdown(fee)
     result = BillableMetrics::Aggregations::RecurringCountService.new(
-      billable_metric: fee.charge.billable_metric,
+      charge: fee.charge,
       subscription: fee.subscription,
       group: fee.group,
     ).breakdown(

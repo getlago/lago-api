@@ -100,7 +100,7 @@ module Fees
 
     def aggregate(properties:, group:)
       aggregation_result = BillableMetrics::PayInAdvanceAggregationService.call(
-        billable_metric:, boundaries:, group:, properties:, event:,
+        charge:, boundaries:, group:, properties:, event:,
       )
       aggregation_result.raise_if_error!
       aggregation_result

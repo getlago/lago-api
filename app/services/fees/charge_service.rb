@@ -134,7 +134,7 @@ module Fees
                              raise(NotImplementedError)
       end
 
-      @aggregator = aggregator_service.new(billable_metric:, subscription:, group:)
+      @aggregator = aggregator_service.new(charge:, subscription:, group:)
     end
 
     def apply_charge_model_service(aggregation_result, properties)

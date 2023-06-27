@@ -4,10 +4,11 @@ require 'rails_helper'
 
 RSpec.describe BillableMetrics::PayInAdvanceAggregationService, type: :service do
   subject(:agg_service) do
-    described_class.new(billable_metric:, boundaries:, group:, properties:, event:)
+    described_class.new(charge:, boundaries:, group:, properties:, event:)
   end
 
   let(:billable_metric) { create(:billable_metric, aggregation_type:, field_name: 'item_id') }
+  let(:charge) { create(:standard_charge, billable_metric:) }
   let(:group) { create(:group) }
   let(:aggregation_type) { 'count_agg' }
   let(:event) { create(:event, subscription:) }
@@ -36,7 +37,7 @@ RSpec.describe BillableMetrics::PayInAdvanceAggregationService, type: :service d
         agg_service.call
 
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
-          .with(billable_metric:, subscription:, group:, event:)
+          .with(charge:, subscription:, group:, event:)
 
         expect(count_service).to have_received(:aggregate).with(
           from_datetime: boundaries[:charges_from_datetime],
@@ -59,7 +60,7 @@ RSpec.describe BillableMetrics::PayInAdvanceAggregationService, type: :service d
         agg_service.call
 
         expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
-          .with(billable_metric:, subscription:, group:, event:)
+          .with(charge:, subscription:, group:, event:)
 
         expect(sum_service).to have_received(:aggregate).with(
           from_datetime: boundaries[:charges_from_datetime],
@@ -81,7 +82,7 @@ RSpec.describe BillableMetrics::PayInAdvanceAggregationService, type: :service d
         agg_service.call
 
         expect(BillableMetrics::Aggregations::UniqueCountService).to have_received(:new)
-          .with(billable_metric:, subscription:, group:, event:)
+          .with(charge:, subscription:, group:, event:)
 
         expect(unique_count_service).to have_received(:aggregate).with(
           from_datetime: boundaries[:charges_from_datetime],

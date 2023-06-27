@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   subject(:max_service) do
     described_class.new(
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
     )
@@ -15,6 +15,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
+  let(:charge) { create(:standard_charge, billable_metric:) }
 
   let(:billable_metric) do
     create(

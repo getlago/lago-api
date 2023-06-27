@@ -2,8 +2,8 @@
 
 module BillableMetrics
   class PayInAdvanceAggregationService < BaseService
-    def initialize(billable_metric:, boundaries:, properties:, event:, group: nil)
-      @billable_metric = billable_metric
+    def initialize(charge:, boundaries:, properties:, event:, group: nil)
+      @charge = charge
       @boundaries = boundaries
       @properties = properties
       @event = event
@@ -13,7 +13,7 @@ module BillableMetrics
     end
 
     def call
-      aggregator = aggregator_service.new(billable_metric:, subscription:, group:, event:)
+      aggregator = aggregator_service.new(charge:, subscription:, group:, event:)
       aggregator.aggregate(
         from_datetime: boundaries[:charges_from_datetime],
         to_datetime: boundaries[:charges_to_datetime],
@@ -23,9 +23,10 @@ module BillableMetrics
 
     private
 
-    attr_reader :billable_metric, :boundaries, :group, :properties, :event
+    attr_reader :charge, :boundaries, :group, :properties, :event
 
     delegate :subscription, to: :event
+    delegate :billable_metric, to: :charge
 
     def aggregator_service
       @aggregator_service ||= case billable_metric.aggregation_type.to_sym

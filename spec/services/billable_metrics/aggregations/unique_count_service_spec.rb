@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service do
   subject(:count_service) do
     described_class.new(
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       event: pay_in_advance_event,
@@ -27,6 +27,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
+  let(:charge) { create(:standard_charge, billable_metric:) }
 
   let(:billable_metric) do
     create(
