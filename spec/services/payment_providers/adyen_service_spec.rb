@@ -85,6 +85,21 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       expect(PaymentProviders::Adyen::HandleEventJob).to have_been_enqueued
     end
 
+    context 'when organization does not exist' do
+      subject(:result) do
+        adyen_service.handle_incoming_webhook(organization_id: '123456789', body:)
+      end
+
+      it 'returns an error' do
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq('organization')
+          expect(result.error.error_code).to eq('organization_not_found')
+        end
+      end
+    end
+
     context 'when failing to validate the signature' do
       before do
         organization.adyen_payment_provider.update! hmac_key: '123'
