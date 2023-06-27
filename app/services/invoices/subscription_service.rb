@@ -30,7 +30,6 @@ module Invoices
           issuing_date:,
           invoice_type: :subscription,
           currency:,
-          taxes_rate: customer.applicable_vat_rate,
           timezone: customer.applicable_timezone,
           status: invoice_status,
         )
