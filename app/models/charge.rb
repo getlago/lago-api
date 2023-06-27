@@ -105,9 +105,9 @@ class Charge < ApplicationRecord
   # - for pay_in_idvance, price model cannot be package and percentage and volume
   def validate_prorated
     return unless prorated?
-    return if pay_in_advance? && (standard? || graduated?)
-    return if !pay_in_advance? && (standard? || graduated? || volume?)
+    return if billable_metric.recurring? && pay_in_advance? && (standard? || graduated?)
+    return if billable_metric.recurring? && !pay_in_advance? && (standard? || graduated? || volume?)
 
-    errors.add(:prorated, :invalid_aggregation_type_or_charge_model)
+    errors.add(:prorated, :invalid_billable_metric_or_charge_model)
   end
 end
