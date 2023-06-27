@@ -19,7 +19,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
         Organization.where('vat_rate > 0').find_each do |organization|
           Tax.create_with(
             organization_id: organization.id,
-            name: "Tax (#{organization.vat_rate}%)",
+            name: 'Tax',
             rate: organization.vat_rate,
             applied_to_organization: true,
           ).find_or_create_by!(code: "tax_#{organization.vat_rate}")
@@ -28,7 +28,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
         # NOTE: migrate customers taxes
         Customer.where.not(vat_rate: nil).find_each do |customer|
           tax = Tax.create_with(
-            name: "Tax (#{customer.vat_rate}%)",
+            name: 'Tax',
             rate: customer.vat_rate,
           ).find_or_create_by!(
             organization_id: customer.organization_id,
@@ -78,7 +78,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
         indexed_rows.each do |organization_id, taxes|
           taxes.each do |tax_rate, rows|
             tax = Tax.create_with(
-              name: "Tax (#{tax_rate})%",
+              name: 'Tax',
               rate: tax_rate,
             ).find_or_create_by!(
               organization_id:,
@@ -133,7 +133,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
         indexed_rows.each do |organization_id, taxes|
           taxes.each do |tax_rate, rows|
             tax = Tax.create_with(
-              name: "Tax (#{tax_rate})%",
+              name: 'Tax',
               rate: tax_rate,
             ).find_or_create_by!(
               organization_id:,
@@ -189,7 +189,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
         indexed_rows.each do |organization_id, taxes|
           taxes.each do |tax_rate, rows|
             tax = Tax.create_with(
-              name: "Tax (#{tax_rate})%",
+              name: 'Tax',
               rate: tax_rate,
             ).find_or_create_by!(
               organization_id:,
