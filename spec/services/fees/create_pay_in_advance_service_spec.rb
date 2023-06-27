@@ -15,7 +15,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:group) { nil }
 
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
-  let(:event) { create(:event, subscription:, customer:) }
+  let(:event) { create(:event, subscription:, customer:, organization:) }
   let(:estimate) { false }
 
   before { tax }
@@ -293,7 +293,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
     context 'when in invoice mode' do
       subject(:fee_service) { described_class.new(charge:, event:, estimate:, invoice:) }
 
-      let(:invoice) { create(:invoice) }
+      let(:invoice) { create(:invoice, customer:, organization:) }
 
       it 'creates a fee with invoice attached' do
         result = fee_service.call

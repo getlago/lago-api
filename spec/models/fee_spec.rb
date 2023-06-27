@@ -5,16 +5,6 @@ require 'rails_helper'
 RSpec.describe Fee, type: :model do
   subject(:fee_model) { described_class }
 
-  describe '.compute_vat' do
-    it 'computes the vat' do
-      fee = fee_model.new(amount_cents: 132, amount_currency: 'USD', taxes_rate: 20.0)
-      fee.compute_vat
-
-      expect(fee.taxes_amount_cents).to eq(26)
-      expect(fee.taxes_amount.currency).to eq('USD')
-    end
-  end
-
   describe '.item_code' do
     context 'when it is a subscription fee' do
       let(:subscription) { create(:subscription) }

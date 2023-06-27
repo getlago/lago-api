@@ -11,7 +11,8 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
   let(:plan) { create(:plan, organization:) }
 
   let(:charge) { create(:standard_charge, plan:, min_amount_cents: 1000) }
-  let(:fee) { create(:charge_fee, amount_cents:, customer:, charge:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:fee) { create(:charge_fee, amount_cents:, customer:, charge:, invoice:) }
   let(:amount_cents) { 700 }
 
   before { tax }
