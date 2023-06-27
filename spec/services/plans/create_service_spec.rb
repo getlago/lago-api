@@ -10,8 +10,9 @@ RSpec.describe Plans::CreateService, type: :service do
 
   describe 'create' do
     let(:plan_name) { 'Some plan name' }
-    let(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
-    let(:group) { create(:group, billable_metric: billable_metrics.first) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+    let(:group) { create(:group, billable_metric:) }
     let(:create_args) do
       {
         name: plan_name,
@@ -23,7 +24,7 @@ RSpec.describe Plans::CreateService, type: :service do
         amount_currency: 'EUR',
         charges: [
           {
-            billable_metric_id: billable_metrics.first.id,
+            billable_metric_id: billable_metric.id,
             charge_model: 'standard',
             min_amount_cents: 100,
             group_properties: [
@@ -34,7 +35,7 @@ RSpec.describe Plans::CreateService, type: :service do
             ],
           },
           {
-            billable_metric_id: billable_metrics.last.id,
+            billable_metric_id: sum_billable_metric.id,
             charge_model: 'graduated',
             pay_in_advance: true,
             invoiceable: false,
@@ -167,7 +168,7 @@ RSpec.describe Plans::CreateService, type: :service do
     end
 
     context 'with metrics from other organization' do
-      let(:billable_metrics) { create_list(:billable_metric, 2) }
+      let(:billable_metric) { create(:billable_metric) }
 
       it 'returns an error' do
         result = plans_service.create(**create_args)
