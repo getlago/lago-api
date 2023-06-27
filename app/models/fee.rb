@@ -52,10 +52,6 @@ class Fee < ApplicationRecord
             .where('COALESCE(invoices.organization_id, customers.organization_id) = ?', organization.id)
         }
 
-  def compute_vat
-    self.taxes_amount_cents = (amount_cents * taxes_rate).fdiv(100).round
-  end
-
   def item_id
     return billable_metric.id if charge?
     return add_on.id if add_on?
