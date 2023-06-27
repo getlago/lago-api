@@ -32,6 +32,7 @@ class Charge < ApplicationRecord
 
   validate :validate_group_properties
   validate :validate_pay_in_advance
+  validate :validate_prorated
   validate :validate_min_amount_cents
 
   monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
@@ -97,5 +98,16 @@ class Charge < ApplicationRecord
     return unless pay_in_advance? && min_amount_cents.positive?
 
     errors.add(:min_amount_cents, :not_compatible_with_pay_in_advance)
+  end
+
+  # NOTE: A prorated charge cannot be created in the following cases:
+  # - for pay_in_arrear, price model cannot be package and percentage
+  # - for pay_in_idvance, price model cannot be package and percentage and volume
+  def validate_prorated
+    return unless prorated?
+    return if pay_in_advance? && (standard? || graduated?)
+    return if !pay_in_advance? && (standard? || graduated? || volume?)
+
+    errors.add(:prorated, :invalid_aggregation_type_or_charge_model)
   end
 end

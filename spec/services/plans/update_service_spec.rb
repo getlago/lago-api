@@ -164,6 +164,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               billable_metric_id: billable_metrics.first.id,
               charge_model: 'standard',
               pay_in_advance: true,
+              prorated: true,
               invoiceable: false,
               group_properties: [
                 {
@@ -189,10 +190,11 @@ RSpec.describe Plans::UpdateService, type: :service do
           .to change(Charge, :count).by(1)
       end
 
-      it 'updates group properties' do
+      it 'updates existing charge' do
         expect { plans_service.call }
           .to change(GroupProperty, :count).by(1)
 
+        expect(existing_charge.reload.prorated).to eq(true)
         expect(existing_charge.reload.group_properties.first).to have_attributes(
           group_id: group.id,
           values: { 'amount' => '100' },

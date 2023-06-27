@@ -38,6 +38,7 @@ RSpec.describe Plans::CreateService, type: :service do
             charge_model: 'graduated',
             pay_in_advance: true,
             invoiceable: false,
+            prorated: true,
             properties: {
               graduated_ranges: [
                 {
@@ -77,7 +78,12 @@ RSpec.describe Plans::CreateService, type: :service do
       standard_charge = plan.charges.standard.first
       graduated_charge = plan.charges.graduated.first
 
-      expect(standard_charge).to have_attributes(pay_in_advance: false, min_amount_cents: 0, invoiceable: true)
+      expect(standard_charge).to have_attributes(
+        pay_in_advance: false,
+        prorated: false,
+        min_amount_cents: 0,
+        invoiceable: true,
+      )
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
@@ -85,7 +91,7 @@ RSpec.describe Plans::CreateService, type: :service do
         },
       )
 
-      expect(graduated_charge).to have_attributes(pay_in_advance: true, invoiceable: true)
+      expect(graduated_charge).to have_attributes(pay_in_advance: true, invoiceable: true, prorated: true)
     end
 
     it 'calls SegmentTrackJob' do

@@ -179,6 +179,7 @@ type Charge {
   minAmountCents: BigInt!
   payInAdvance: Boolean!
   properties: Properties
+  prorated: Boolean!
   updatedAt: ISO8601DateTime!
 }
 
@@ -191,6 +192,7 @@ input ChargeInput {
   minAmountCents: BigInt
   payInAdvance: Boolean
   properties: PropertiesInput
+  prorated: Boolean
 }
 
 enum ChargeModelEnum {

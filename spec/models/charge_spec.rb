@@ -401,4 +401,32 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '#validate_prorated' do
+    it 'does not return error if prorated is false and price model is percentage' do
+      expect(build(:percentage_charge, prorated: false)).to be_valid
+    end
+
+    context 'when charge is package, pay_in_advance and prorated' do
+      it 'returns an error' do
+        charge = build(:package_charge, :pay_in_advance, prorated: true)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:prorated]).to include('invalid_aggregation_type_or_charge_model')
+        end
+      end
+    end
+
+    context 'when charge is percentage, pay_in_arrear and prorated' do
+      it 'returns an error' do
+        charge = build(:percentage_charge, prorated: true)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:prorated]).to include('invalid_aggregation_type_or_charge_model')
+        end
+      end
+    end
+  end
 end
