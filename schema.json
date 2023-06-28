@@ -1735,6 +1735,24 @@
               ]
             },
             {
+              "name": "prorated",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "updatedAt",
               "description": null,
               "type": {
@@ -1834,6 +1852,18 @@
             },
             {
               "name": "payInAdvance",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "prorated",
               "description": null,
               "type": {
                 "kind": "SCALAR",
