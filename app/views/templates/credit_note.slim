@@ -395,15 +395,29 @@ html
                     | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
                   td.body-2 width="20%" == TaxHelper.applied_taxes(subscription_item(subscription_id))
                   td.body-2 width="20%" = MoneyHelper.format(subscription_item(subscription_id).amount)
-              - subscription_charge_items(subscription_id).each do |item|
-                tr
-                  - if item.fee.true_up_parent_fee_id?
-                    td.body-1 = I18n.t('invoice.true_up_metric', metric: item.fee.item_name)
-                  - else
-                    td.body-1 = item.fee.item_name
-
-                  td.body-2 width="20%" == TaxHelper.applied_taxes(item)
-                  td.body-2 width="20%" = MoneyHelper.format(item.amount)
+              - subscription_charge_items(subscription_id).group_by { |i| i.fee.charge_id }.each do |_charge_id, items|
+                - item = items.first
+                - if items.all? { |i| i.fee.group_id? }
+                  tr
+                    - if item.fee.true_up_parent_fee_id?
+                      td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: item.fee.item_name)
+                    - else
+                      td.body-1 width="60%" = item.fee.item_name
+                    td
+                    td
+                  - items.each do |item|
+                    tr
+                      td.body-1 style="padding-left: 16px;" = item.fee.group.name
+                      td.body-2 width="20%" == TaxHelper.applied_taxes(item)
+                      td.body-2 width="20%" = MoneyHelper.format(item.amount)
+                - else
+                  tr
+                    - if item.fee.true_up_parent_fee_id?
+                      td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: item.fee.item_name)
+                    - else
+                      td.body-1 width="60%" = item.fee.item_name
+                    td.body-2 width="20%" == TaxHelper.applied_taxes(item)
+                    td.body-2 width="20%" = MoneyHelper.format(item.amount)
             - else
               - add_on_items.each do |item|
                 tr
