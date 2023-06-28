@@ -383,9 +383,9 @@ html
       .credit-note-resume.mb-24.overflow-auto
         table.credit-note-resume-table width="100%"
           tr
-            td.body-3 style="text-align: left;"  = I18n.t('credit_note.item')
-            td.body-3 style="text-align: left;" = I18n.t('credit_note.tax_rate')
-            td.body-3 style="text-align: right;" = I18n.t('credit_note.amount')
+            td.body-3 = I18n.t('credit_note.item')
+            td.body-3 = I18n.t('credit_note.tax_rate')
+            td.body-3 = I18n.t('credit_note.amount')
 
           - subscription_ids.each do |subscription_id|
             - if subscription_id.present?
@@ -394,8 +394,7 @@ html
                   td.body-1 width="60%"
                     | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
                   td.body-2 width="20%" == TaxHelper.applied_taxes(subscription_item(subscription_id))
-                  td.body-2 width="20%" style="text-align: right;"
-                    = MoneyHelper.format(subscription_item(subscription_id).amount)
+                  td.body-2 width="20%" = MoneyHelper.format(subscription_item(subscription_id).amount)
               - subscription_charge_items(subscription_id).each do |item|
                 tr
                   - if item.fee.true_up_parent_fee_id?
@@ -404,8 +403,7 @@ html
                     td.body-1 = item.fee.item_name
 
                   td.body-2 width="20%" == TaxHelper.applied_taxes(item)
-                  td.body-2 width="20%" style="text-align: right;"
-                    = MoneyHelper.format(item.amount)
+                  td.body-2 width="20%" = MoneyHelper.format(item.amount)
             - else
               - add_on_items.each do |item|
                 tr
@@ -416,8 +414,7 @@ html
                       | #{item.fee.item_name}
 
                   td.body-2 width="20%" == TaxHelper.applied_taxes(item)
-                  td.body-2 width="20%" style="text-align: right;"
-                    = MoneyHelper.format(item.amount)
+                  td.body-2 width="20%" = MoneyHelper.format(item.amount)
 
         table.total-table width="100%"
           - if coupons_adjustment_amount_cents.positive?
