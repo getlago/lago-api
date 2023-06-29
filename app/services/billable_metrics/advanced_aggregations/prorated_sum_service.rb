@@ -35,7 +35,7 @@ module BillableMetrics
 
         number_of_days = to_datetime.in_time_zone(customer.applicable_timezone) -
                          event.timestamp.in_time_zone(customer.applicable_timezone)
-        proration_coefficient = ((number_of_days).fdiv(86400).round).fdiv(period_duration)
+        proration_coefficient = (number_of_days.fdiv(86_400).round).fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
@@ -54,12 +54,12 @@ module BillableMetrics
 
       def aggregation_query
         queries = [
-          #NOTE: Billed on the full period
+          # NOTE: Billed on the full period
           persisted_query
             .select("SUM((CAST(#{sanitized_field_name} AS FLOAT)) * (#{persisted_pro_rata}))::numeric")
             .to_sql,
 
-          #NOTE: Added during the period
+          # NOTE: Added during the period
           period_query
             .select("SUM((CAST(#{sanitized_field_name} AS FLOAT)) * "\
                     "(#{duration_ratio_sql('events.timestamp', to_datetime)}))::numeric")
