@@ -14,6 +14,7 @@ module Coupons
         organization_id:,
         name: args[:name],
         code: args[:code],
+        description: args[:description],
         coupon_type: args[:coupon_type],
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],

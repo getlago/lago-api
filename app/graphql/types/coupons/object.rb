@@ -12,6 +12,7 @@ module Types
       field :amount_currency, Types::CurrencyEnum, null: true
       field :code, String, null: true
       field :coupon_type, Types::Coupons::CouponTypeEnum, null: false
+      field :description, String, null: true
       field :frequency, Types::Coupons::FrequencyEnum, null: false
       field :frequency_duration, Integer, null: true
       field :name, String, null: false

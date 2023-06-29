@@ -1475,6 +1475,7 @@ type Coupon {
   Number of customers using this coupon
   """
   customerCount: Int!
+  description: String
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
   frequency: CouponFrequency!
@@ -1598,6 +1599,7 @@ input CreateCouponInput {
   clientMutationId: String
   code: String
   couponType: CouponTypeEnum!
+  description: String
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
   frequency: CouponFrequency!
@@ -5284,6 +5286,7 @@ input UpdateCouponInput {
   clientMutationId: String
   code: String
   couponType: CouponTypeEnum!
+  description: String
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
   frequency: CouponFrequency!

@@ -15,6 +15,7 @@ RSpec.describe Coupons::CreateService, type: :service do
       {
         name: 'Super Coupon',
         code: coupon_code,
+        description: 'This is a description',
         organization_id: organization.id,
         coupon_type: 'fixed_amount',
         frequency: 'once',
