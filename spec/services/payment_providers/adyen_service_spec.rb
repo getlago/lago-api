@@ -93,9 +93,9 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       it 'returns an error' do
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq('organization')
-          expect(result.error.error_code).to eq('organization_not_found')
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('webhook_error')
+          expect(result.error.error_message).to eq('Organization not found')
         end
       end
     end
