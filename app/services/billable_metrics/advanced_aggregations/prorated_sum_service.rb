@@ -35,7 +35,7 @@ module BillableMetrics
 
         number_of_days = to_datetime.in_time_zone(customer.applicable_timezone) -
                          event.timestamp.in_time_zone(customer.applicable_timezone)
-        proration_coefficient = (number_of_days.fdiv(86_400).round).fdiv(period_duration)
+        proration_coefficient = number_of_days.fdiv(86_400).round.fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
