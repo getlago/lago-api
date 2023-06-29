@@ -4,10 +4,11 @@ require 'rails_helper'
 
 RSpec.describe BillableMetrics::PayInAdvanceAggregationService, type: :service do
   subject(:agg_service) do
-    described_class.new(billable_metric:, boundaries:, group:, properties:, event:)
+    described_class.new(charge:, boundaries:, group:, properties:, event:)
   end
 
   let(:billable_metric) { create(:billable_metric, aggregation_type:, field_name: 'item_id') }
+  let(:charge) { create(:standard_charge, billable_metric:) }
   let(:group) { create(:group) }
   let(:aggregation_type) { 'count_agg' }
   let(:event) { create(:event, subscription:) }

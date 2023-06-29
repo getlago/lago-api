@@ -62,6 +62,12 @@ module Fees
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
 
+      units = if is_current_usage && (charge.pay_in_advance? || charge.prorated?)
+        amount_result.current_usage_units
+      else
+        amount_result.units
+      end
+
       new_fee = Fee.new(
         invoice:,
         subscription:,
@@ -72,7 +78,7 @@ module Fees
         fee_type: :charge,
         invoiceable_type: 'Charge',
         invoiceable: charge,
-        units: (is_current_usage && charge.pay_in_advance?) ? amount_result.current_usage_units : amount_result.units,
+        units: units,
         properties: boundaries.to_h,
         events_count: amount_result.count,
         group_id: group&.id,
@@ -125,7 +131,11 @@ module Fees
                            when :max_agg
                              BillableMetrics::Aggregations::MaxService
                            when :sum_agg
-                             BillableMetrics::Aggregations::SumService
+                             if charge.prorated?
+                               BillableMetrics::AdvancedAggregations::ProratedSumService
+                             else
+                               BillableMetrics::Aggregations::SumService
+                             end
                            when :unique_count_agg
                              BillableMetrics::Aggregations::UniqueCountService
                            when :recurring_count_agg
