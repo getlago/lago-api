@@ -59,7 +59,7 @@ module Invoices
     end
 
     def charge?
-      invoice.fees.all?(&:pay_in_advance?)
+      invoice.fees.present? && invoice.fees.all?(&:pay_in_advance?)
     end
   end
 end
