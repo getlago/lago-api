@@ -14,6 +14,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           id,
           name,
           code,
+          description,
           amountCents,
           amountCurrency,
           expiration,
@@ -38,6 +39,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
         input: {
           name: 'Super Coupon',
           code: 'free-beer',
+          description: 'This is a description',
           couponType: 'fixed_amount',
           frequency: 'once',
           amountCents: 5000,
@@ -58,6 +60,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Super Coupon')
       expect(result_data['code']).to eq('free-beer')
+      expect(result_data['description']).to eq('This is a description')
       expect(result_data['amountCents']).to eq('5000')
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['expiration']).to eq('time_limit')

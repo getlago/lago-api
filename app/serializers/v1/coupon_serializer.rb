@@ -7,6 +7,7 @@ module V1
         lago_id: model.id,
         name: model.name,
         code: model.code,
+        description: model.description,
         coupon_type: model.coupon_type,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,

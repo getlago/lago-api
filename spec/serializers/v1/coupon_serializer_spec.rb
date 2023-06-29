@@ -17,6 +17,7 @@ RSpec.describe ::V1::CouponSerializer do
       expect(result['coupon']['lago_id']).to eq(coupon.id)
       expect(result['coupon']['name']).to eq(coupon.name)
       expect(result['coupon']['code']).to eq(coupon.code)
+      expect(result['coupon']['description']).to eq(coupon.description)
       expect(result['coupon']['amount_cents']).to eq(coupon.amount_cents)
       expect(result['coupon']['amount_currency']).to eq(coupon.amount_currency)
       expect(result['coupon']['limited_plans']).to eq(coupon.limited_plans)

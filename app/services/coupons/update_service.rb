@@ -46,6 +46,7 @@ module Coupons
         end
 
         coupon.code = params[:code] if params.key?(:code)
+        coupon.description = params[:description] if params.key?(:description)
         coupon.coupon_type = params[:coupon_type] if params.key?(:coupon_type)
         coupon.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         coupon.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
