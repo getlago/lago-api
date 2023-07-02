@@ -54,6 +54,8 @@ GEM
       erubi (~> 1.4)
       rails-dom-testing (~> 2.0)
       rails-html-sanitizer (~> 1.1, >= 1.2.0)
+    active_model_validates_intersection_of (3.0.1)
+      activemodel (>= 5.0.0)
     activejob (7.0.5)
       activesupport (= 7.0.5)
       globalid (>= 0.3.6)
@@ -463,6 +465,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  active_model_validates_intersection_of
   activejob-traceable
   activejob-uniqueness
   adyen-ruby-api-library

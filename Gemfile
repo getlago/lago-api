@@ -21,6 +21,7 @@ gem 'oauth2'
 gem 'rack-cors'
 
 # Database
+gem 'active_model_validates_intersection_of'
 gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'paper_trail'
