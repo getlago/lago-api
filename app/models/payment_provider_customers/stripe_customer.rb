@@ -5,7 +5,7 @@ module PaymentProviderCustomers
     ALLOWED_PAYMENT_METHODS = %w[card sepa_debit].freeze
 
     validates :provider_payment_methods, presence: true
-    validates_intersection_of :provider_payment_methods, in: ALLOWED_PAYMENT_METHODS
+    validate :allowed_provider_payment_methods
 
     def payment_method_id
       get_from_settings('payment_method_id')
@@ -21,6 +21,14 @@ module PaymentProviderCustomers
 
     def provider_payment_methods=(provider_payment_methods)
       push_to_settings(key: 'provider_payment_methods', value: provider_payment_methods.to_a)
+    end
+
+    private
+
+    def allowed_provider_payment_methods
+      if (provider_payment_methods - ALLOWED_PAYMENT_METHODS).present?
+        errors.add(:provider_payment_methods, :invalid)
+      end
     end
   end
 end
