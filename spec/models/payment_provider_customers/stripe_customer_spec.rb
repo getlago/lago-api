@@ -40,7 +40,7 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
 
       let(:errors) { stripe_customer.errors }
 
-      before { subject }
+      before { valid }
 
       context 'when it is an empty array' do
         let(:provider_payment_methods) { [] }
