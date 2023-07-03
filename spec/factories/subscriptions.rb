@@ -18,6 +18,7 @@ FactoryBot.define do
 
     factory :terminated_subscription do
       status { :terminated }
+      started_at { 1.month.ago }
       terminated_at { Time.zone.now }
     end
   end

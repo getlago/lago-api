@@ -19,11 +19,11 @@ module Events
       return result unless result.success?
 
       event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_i : timestamp)
-      subscription = Subscription
-        .where(external_id: params[:external_subscription_id])
-        .where('started_at <= ?', event_timestamp)
+      subs = customer ? customer.subscriptions : Subscription.where(external_id: params[:external_subscription_id])
+      subscription = subs.where('started_at <= ?', event_timestamp)
+        .where('terminated_at IS NULL OR terminated_at >= ?', event_timestamp)
         .order(started_at: :desc)
-        .first || customer&.active_subscriptions&.first
+        .first
 
       ActiveRecord::Base.transaction do
         event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
