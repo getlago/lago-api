@@ -26,9 +26,9 @@ module PaymentProviderCustomers
     private
 
     def allowed_provider_payment_methods
-      if (provider_payment_methods - ALLOWED_PAYMENT_METHODS).present?
-        errors.add(:provider_payment_methods, :invalid)
-      end
+      return if (provider_payment_methods - ALLOWED_PAYMENT_METHODS).blank?
+
+      errors.add(:provider_payment_methods, :invalid)
     end
   end
 end
