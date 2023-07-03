@@ -32,55 +32,61 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
 
   describe 'validation' do
     describe 'of provider payment methods' do
-      subject(:stripe_customer) do
+      subject(:valid) { stripe_customer.valid? }
+
+      let(:stripe_customer) do
         FactoryBot.build_stubbed(:stripe_customer, provider_payment_methods:)
       end
+
+      let(:errors) { stripe_customer.errors }
+
+      before { subject }
 
       context 'when it is an empty array' do
         let(:provider_payment_methods) { [] }
 
-        it 'is invalid' do
-          expect(stripe_customer).to be_invalid
+        it 'adds error on provider payment methods' do
+          expect(errors.where(:provider_payment_methods, :blank)).to be_present
         end
       end
 
       context 'when it is nil' do
         let(:provider_payment_methods) { nil }
 
-        it 'is invalid' do
-          expect(stripe_customer).to be_invalid
+        it 'adds error on provider payment methods' do
+          expect(errors.where(:provider_payment_methods, :blank)).to be_present
         end
       end
 
-      context 'when it contains invalid value' do
+      context 'when it contains only invalid value' do
         let(:provider_payment_methods) { %w[invalid] }
 
-        it 'is invalid' do
-          expect(stripe_customer).to be_invalid
+        it 'adds error on provider payment methods' do
+          expect(errors.where(:provider_payment_methods, :invalid)).to be_present
         end
       end
 
       context 'when it contains both valid and invalid values' do
         let(:provider_payment_methods) { %w[card cash] }
 
-        it 'is invalid' do
-          expect(stripe_customer).to be_invalid
+        it 'adds error on provider payment methods' do
+          expect(errors.where(:provider_payment_methods, :invalid)).to be_present
         end
       end
 
-      context 'when it contains valid value' do
+      context 'when it contains only valid value' do
         let(:provider_payment_methods) { %w[card] }
 
-        it 'is valid' do
-          expect(stripe_customer).to be_valid
+        it 'does not add error on provider payment methods' do
+          expect(errors.where(:provider_payment_methods, :invalid)).not_to be_present
         end
       end
 
       context 'when it contains multiple valid values' do
         let(:provider_payment_methods) { described_class::ALLOWED_PAYMENT_METHODS }
 
-        it 'is valid' do
-          expect(stripe_customer).to be_valid
+        it 'does not add error on provider payment methods' do
+          expect(errors.where(:provider_payment_methods, :invalid)).not_to be_present
         end
       end
     end
