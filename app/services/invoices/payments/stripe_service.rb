@@ -169,7 +169,11 @@ module Invoices
         return result unless metadata&.key?(:lago_invoice_id)
 
         # NOTE: Invoice does not belong to this lago instance
-        return result if Invoice.find_by(id: metadata[:lago_invoice_id]).nil?
+        invoice = Invoice.find_by(id: metadata[:lago_invoice_id])
+        return result if invoice.nil?
+
+        # NOTE: Invoice exists but status is failed
+        return result if invoice.failed?
 
         result.not_found_failure!(resource: 'stripe_payment')
       end
