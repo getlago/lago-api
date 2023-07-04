@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_04_112230) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -118,6 +118,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_112230) do
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
+  end
+
+  create_table "charges_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "charge_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["charge_id"], name: "index_charges_taxes_on_charge_id"
+    t.index ["tax_id"], name: "index_charges_taxes_on_tax_id"
   end
 
   create_table "coupon_targets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -603,6 +612,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_112230) do
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end
 
+  create_table "plans_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "plan_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["plan_id"], name: "index_plans_taxes_on_plan_id"
+    t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
+  end
+
   create_table "refunds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "payment_id", null: false
     t.uuid "credit_note_id", null: false
@@ -729,6 +747,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_112230) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
+  add_foreign_key "charges_taxes", "charges"
+  add_foreign_key "charges_taxes", "taxes"
   add_foreign_key "coupon_targets", "billable_metrics"
   add_foreign_key "coupon_targets", "coupons"
   add_foreign_key "coupon_targets", "plans"
@@ -781,6 +801,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_112230) do
   add_foreign_key "persisted_events", "customers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
+  add_foreign_key "plans_taxes", "plans"
+  add_foreign_key "plans_taxes", "taxes"
   add_foreign_key "refunds", "credit_notes"
   add_foreign_key "refunds", "payment_provider_customers"
   add_foreign_key "refunds", "payment_providers"
