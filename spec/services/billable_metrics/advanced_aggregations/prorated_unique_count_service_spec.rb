@@ -80,7 +80,7 @@ RSpec.describe BillableMetrics::AdvancedAggregations::ProratedUniqueCountService
         before { new_quantified_event }
 
         it 'returns the correct number' do
-          expect(result.aggregation).to eq((1 + (21.fdiv(31))).ceil(5))
+          expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
         end
       end
 
@@ -218,7 +218,7 @@ RSpec.describe BillableMetrics::AdvancedAggregations::ProratedUniqueCountService
       before { new_quantified_event }
 
       it 'returns correct result' do
-        expect(result.aggregation).to eq((1 + (21.fdiv(31))).ceil(5))
+        expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
         expect(result.current_usage_units).to eq(2)
       end
     end
