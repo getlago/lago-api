@@ -63,7 +63,7 @@ module Api
             ::V1::PlanSerializer,
             collection_name: 'plans',
             meta: pagination_metadata(plans),
-            includes: %i[charges],
+            includes: %i[charges taxes],
           ),
         )
       end
@@ -106,7 +106,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: 'plan',
-            includes: %i[charges],
+            includes: %i[charges taxes],
           ),
         )
       end
