@@ -150,8 +150,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_27_080605) do
     t.decimal "percentage_rate", precision: 10, scale: 5
     t.integer "frequency", default: 0, null: false
     t.integer "frequency_duration"
-    t.datetime "expiration_at"
     t.boolean "reusable", default: true, null: false
+    t.datetime "expiration_at"
     t.boolean "limited_plans", default: false, null: false
     t.datetime "deleted_at"
     t.boolean "limited_billable_metrics", default: false, null: false
@@ -325,16 +325,16 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_27_080605) do
     t.decimal "units", default: "0.0", null: false
     t.uuid "applied_add_on_id"
     t.jsonb "properties", default: {}, null: false
+    t.integer "events_count"
     t.integer "fee_type"
     t.string "invoiceable_type"
     t.uuid "invoiceable_id"
-    t.integer "events_count"
     t.uuid "group_id"
     t.uuid "pay_in_advance_event_id"
     t.integer "payment_status", default: 0, null: false
-    t.datetime "succeeded_at"
-    t.datetime "failed_at"
-    t.datetime "refunded_at"
+    t.datetime "succeeded_at", precision: nil
+    t.datetime "failed_at", precision: nil
+    t.datetime "refunded_at", precision: nil
     t.uuid "true_up_parent_fee_id"
     t.uuid "add_on_id"
     t.string "description"
@@ -422,11 +422,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_27_080605) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "recurring"
-    t.datetime "timestamp"
-    t.datetime "from_datetime"
-    t.datetime "to_datetime"
-    t.datetime "charges_from_datetime"
-    t.datetime "charges_to_datetime"
+    t.datetime "timestamp", precision: nil
+    t.datetime "from_datetime", precision: nil
+    t.datetime "to_datetime", precision: nil
+    t.datetime "charges_from_datetime", precision: nil
+    t.datetime "charges_to_datetime", precision: nil
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
     t.index ["subscription_id", "from_datetime", "to_datetime"], name: "index_invoice_subscriptions_on_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
@@ -452,11 +452,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_27_080605) do
     t.boolean "ready_for_payment_processing", default: true, null: false
     t.uuid "organization_id", null: false
     t.integer "version_number", default: 3, null: false
-    t.string "currency"
     t.bigint "fees_amount_cents", default: 0, null: false
     t.bigint "coupons_amount_cents", default: 0, null: false
     t.bigint "credit_notes_amount_cents", default: 0, null: false
     t.bigint "prepaid_credit_amount_cents", default: 0, null: false
+    t.string "currency"
     t.bigint "sub_total_excluding_taxes_amount_cents", default: 0, null: false
     t.bigint "sub_total_including_taxes_amount_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
@@ -579,12 +579,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_27_080605) do
     t.float "trial_period"
     t.boolean "pay_in_advance", default: false, null: false
     t.boolean "bill_charges_monthly"
+    t.uuid "overridden_plan_id"
     t.uuid "parent_id"
     t.datetime "deleted_at"
     t.boolean "pending_deletion", default: false, null: false
     t.index ["deleted_at"], name: "index_plans_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
+    t.index ["overridden_plan_id"], name: "index_plans_on_overridden_plan_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end
 
@@ -782,6 +784,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_27_080605) do
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
   add_foreign_key "plans", "organizations"
+  add_foreign_key "plans", "plans", column: "overridden_plan_id"
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "quantified_events", "customers"
   add_foreign_key "refunds", "credit_notes"
