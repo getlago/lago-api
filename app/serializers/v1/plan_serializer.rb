@@ -19,7 +19,8 @@ module V1
         draft_invoices_count:,
       }
 
-      payload = payload.merge(charges) if include?(:charges)
+      payload.merge!(charges) if include?(:charges)
+      payload.merge!(taxes) if include?(:taxes)
 
       payload
     end
@@ -27,7 +28,12 @@ module V1
     private
 
     def charges
-      ::CollectionSerializer.new(model.charges, ::V1::ChargeSerializer, collection_name: 'charges').serialize
+      ::CollectionSerializer.new(
+        model.charges,
+        ::V1::ChargeSerializer,
+        collection_name: 'charges',
+        includes: include?(:taxes) ? %i[taxes] : [],
+      ).serialize
     end
 
     def active_subscriptions_count
@@ -41,6 +47,14 @@ module V1
         .select(:invoice_id)
         .distinct
         .count
+    end
+
+    def taxes
+      ::CollectionSerializer.new(
+        model.taxes,
+        ::V1::TaxSerializer,
+        collection_name: 'taxes',
+      ).serialize
     end
   end
 end
