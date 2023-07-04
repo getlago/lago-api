@@ -17,6 +17,9 @@ class Plan < ApplicationRecord
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
 
+  has_many :applied_taxes, class_name: 'Plan::AppliedTax', dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+
   INTERVALS = %i[
     weekly
     monthly
