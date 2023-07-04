@@ -33,8 +33,8 @@ fr:
     subscription: Abonnement
     date_from: Du
     date_to: au
-    monthly: mensuelle
-    yearly: annuelle
+    monthly: mensuel
+    yearly: annuel
     weekly: hebdomadaire
     sub_total: Sous total
     subscription_interval: Abonnement %{plan_interval} - %{plan_name}
