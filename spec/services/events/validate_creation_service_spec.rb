@@ -9,6 +9,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       params:,
       result:,
       customer:,
+      subscriptions: [subscription],
       batch:,
     )
   end
@@ -16,14 +17,13 @@ RSpec.describe Events::ValidateCreationService, type: :service do
   let(:organization) { create(:organization) }
   let(:result) { BaseService::Result.new }
   let(:customer) { create(:customer, organization:) }
+  let!(:subscription) { create(:active_subscription, customer:, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:params) do
     { external_customer_id: customer.external_id, code: billable_metric.code }
   end
 
   describe '.call' do
-    let!(:subscription) { create(:active_subscription, customer:, organization:) }
-
     context 'when batch is false' do
       let(:batch) { false }
 
@@ -58,7 +58,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when customer is not given' do
+      context 'when customer is not given but subscription is present' do
         let(:params) do
           { code: billable_metric.code }
         end
@@ -69,27 +69,27 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             params:,
             result:,
             customer: nil,
+            subscriptions: [subscription],
           )
         end
 
-        it 'returns a customer_not_found error' do
-          validate_event
-
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq('customer_not_found')
-          end
-        end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+        it 'does not return any validation errors' do
+          expect(validate_event).to be_nil
+          expect(result).to be_success
         end
       end
 
       context 'when there are two active subscriptions but external_subscription_id is not given' do
-        before do
-          create(:active_subscription, customer:, organization:)
+        let(:subscription2) { create(:active_subscription, customer:, organization:) }
+
+        let(:validate_event) do
+          described_class.call(
+            organization:,
+            params:,
+            result:,
+            customer:,
+            subscriptions: [subscription, subscription2],
+          )
         end
 
         it 'returns a subscription_not_found error' do
@@ -116,8 +116,16 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           }
         end
 
-        before do
-          create(:active_subscription, customer:, organization:)
+        let(:subscription2) { create(:active_subscription, customer:, organization:) }
+
+        let(:validate_event) do
+          described_class.call(
+            organization:,
+            params:,
+            result:,
+            customer:,
+            subscriptions: [subscription, subscription2],
+          )
         end
 
         it 'returns a not found error' do
@@ -364,6 +372,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             params:,
             result:,
             customer: nil,
+            subscriptions: [subscription],
             batch:,
           )
         end
