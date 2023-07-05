@@ -16,6 +16,7 @@ class Plan < ApplicationRecord
   has_many :children, class_name: 'Plan', foreign_key: :parent_id
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
+  has_many :invoices, through: :subscriptions
 
   has_many :applied_taxes, class_name: 'Plan::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
