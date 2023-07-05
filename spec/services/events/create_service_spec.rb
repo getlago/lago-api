@@ -10,6 +10,7 @@ RSpec.describe Events::CreateService, type: :service do
   let(:customer) { create(:customer, organization:) }
 
   describe '#validate_params' do
+    let!(:subscription) { create(:active_subscription, customer:, organization:, started_at: 1.month.ago) }
     let(:params) do
       {
         transaction_id: SecureRandom.uuid,
@@ -19,7 +20,6 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     before do
-      create(:active_subscription, customer:, organization:)
       allow(Events::ValidateCreationService).to receive(:call).and_call_original
     end
 
@@ -30,6 +30,7 @@ RSpec.describe Events::CreateService, type: :service do
         organization:,
         params:,
         customer:,
+        subscriptions: [subscription],
         result: kind_of(BaseService::Result),
         send_webhook: false,
       )

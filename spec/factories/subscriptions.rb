@@ -9,7 +9,7 @@ FactoryBot.define do
 
     factory :active_subscription do
       status { :active }
-      started_at { Time.zone.now }
+      started_at { 1.day.ago }
     end
 
     factory :pending_subscription do
