@@ -132,7 +132,7 @@ module Fees
                              BillableMetrics::Aggregations::MaxService
                            when :sum_agg
                              if charge.prorated?
-                               BillableMetrics::AdvancedAggregations::ProratedSumService
+                               BillableMetrics::ProratedAggregations::SumService
                              else
                                BillableMetrics::Aggregations::SumService
                              end

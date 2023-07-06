@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module BillableMetrics
-  module AdvancedAggregations
-    class ProratedSumService < BillableMetrics::Aggregations::SumService
+  module ProratedAggregations
+    class SumService < BillableMetrics::Aggregations::SumService
       def aggregate(from_datetime:, to_datetime:, options: {})
         @from_datetime = from_datetime
         @to_datetime = to_datetime
@@ -33,9 +33,11 @@ module BillableMetrics
 
         result_without_proration = super
 
-        number_of_days = to_datetime.in_time_zone(customer.applicable_timezone) -
-                         event.timestamp.in_time_zone(customer.applicable_timezone)
-        proration_coefficient = number_of_days.fdiv(86_400).round.fdiv(period_duration)
+        number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
+                            event.timestamp.in_time_zone(customer.applicable_timezone)
+        # In order to get proration coefficient we have to divide number of seconds with number
+        # of seconds in one day (86400). That way we will get number of days when the service was used.
+        proration_coefficient = number_of_seconds.fdiv(86_400).round.fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
@@ -111,6 +113,8 @@ module BillableMetrics
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
       end
 
+      # In event metadata we also need to store max_aggregation_with_proration. We will use this attribute for
+      # presenting current usage if charge is pay_in_advance
       def extend_event_metadata(prorated_value)
         unless previous_event
           result.max_aggregation_with_proration = prorated_value.to_s
@@ -126,6 +130,9 @@ module BillableMetrics
         end
       end
 
+      # In current usage section two main values are presented, number of units in period and amount.
+      # Proration affects only amount (calculated from aggregation) and number of units shows full number of units
+      # (calculated from current_usage_units).
       def handle_current_usage(result_without_proration, result_with_proration, is_pay_in_advance)
         value_without_proration = result_without_proration.aggregation
 
