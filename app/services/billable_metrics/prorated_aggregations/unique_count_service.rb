@@ -31,9 +31,11 @@ module BillableMetrics
 
         result_without_proration = super
 
-        number_of_days = to_datetime.in_time_zone(customer.applicable_timezone) -
-                         event.timestamp.in_time_zone(customer.applicable_timezone)
-        proration_coefficient = number_of_days.fdiv(86_400).round.fdiv(period_duration)
+        number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
+                            event.timestamp.in_time_zone(customer.applicable_timezone)
+        # In order to get proration coefficient we have to divide number of seconds with number
+        # of seconds in one day (86400). That way we will get number of days when the service was used.
+        proration_coefficient = number_of_seconds.fdiv(86_400).round.fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
