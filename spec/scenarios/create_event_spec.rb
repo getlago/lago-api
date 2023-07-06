@@ -120,6 +120,25 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
+  context 'with external_customer_id and external_subscription_id and multiple subscriptions' do
+    let(:subscription2) { create(:active_subscription, customer:, started_at: subscription.started_at - 1.day) }
+
+    before { subscription2 }
+
+    it 'creates the event on the corresponding subscription' do
+      expect do
+        create_event(
+          params.merge(
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription2.external_id,
+          ),
+        )
+      end.to change { subscription2.events.reload.count }
+
+      expect(subscription.events.count).to eq(0)
+    end
+  end
+
   context 'with external_subscription_id but multiple subscriptions' do
     let(:subscription2) do
       create(
