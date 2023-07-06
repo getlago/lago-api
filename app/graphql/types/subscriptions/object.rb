@@ -26,6 +26,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :next_plan, Types::Plans::Object
+      field :next_subscription, Types::Subscriptions::Object
 
       field :fees, [Types::Fees::Object], null: true
 
