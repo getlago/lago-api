@@ -119,7 +119,7 @@ module Api
       end
 
       def index_filters
-        params.permit(:external_customer_id, :plan_code)
+        params.permit(:external_customer_id, :plan_code, status: [])
       end
     end
   end
