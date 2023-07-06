@@ -66,7 +66,7 @@ module Fees
       return @subscriptions if defined? @subscriptions
 
       timestamp = Time.current
-      subscriptions = if customer
+      subscriptions = if customer && params[:external_subscription_id].blank?
         customer.subscriptions
       else
         organization.subscriptions.where(external_id: params[:external_subscription_id])

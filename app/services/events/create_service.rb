@@ -93,7 +93,7 @@ module Events
     def subscriptions(organization:, customer:, params:, timestamp:)
       return @subscriptions if defined? @subscriptions
 
-      subscriptions = if customer
+      subscriptions = if customer && params[:external_subscription_id].blank?
         customer.subscriptions
       else
         organization.subscriptions.where(external_id: params[:external_subscription_id])
