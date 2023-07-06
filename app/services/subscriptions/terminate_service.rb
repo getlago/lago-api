@@ -14,6 +14,8 @@ module Subscriptions
 
       if subscription.starting_in_the_future?
         subscription.mark_as_terminated!
+      elsif subscription.pending?
+        subscription.mark_as_canceled!
       elsif !subscription.terminated?
         subscription.mark_as_terminated!
 
