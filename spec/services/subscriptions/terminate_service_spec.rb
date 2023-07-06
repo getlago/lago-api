@@ -40,6 +40,20 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
+    context 'when downgrade subscription is pending' do
+      let(:subscription) { create(:pending_subscription, previous_subscription: create(:subscription)) }
+
+      it 'does cancel it' do
+        result = terminate_service.call
+
+        aggregate_failures do
+          expect(result.subscription).to be_present
+          expect(result.subscription).to be_canceled
+          expect(result.subscription.canceled_at).to be_present
+        end
+      end
+    end
+
     context 'when subscription is not found' do
       let(:subscription) { nil }
 
