@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module BillableMetrics
-  module AdvancedAggregations
-    class ProratedUniqueCountService < BillableMetrics::Aggregations::UniqueCountService
+  module ProratedAggregations
+    class UniqueCountService < BillableMetrics::Aggregations::UniqueCountService
       def aggregate(from_datetime:, to_datetime:, options: {})
         @from_datetime = from_datetime
         @to_datetime = to_datetime
@@ -141,6 +141,8 @@ module BillableMetrics
         "SUM((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}) + 1)::numeric / #{period_duration})::numeric"
       end
 
+      # We need to extend event metadata with max_aggregation_with_proration. This attribute will be used
+      # for current usage in pay_in_advance case
       def extend_event_metadata(prorated_value)
         unless previous_event
           result.max_aggregation_with_proration = prorated_value.to_s
@@ -156,6 +158,9 @@ module BillableMetrics
         end
       end
 
+      # In current usage section two main values are presented, number of units in period and amount.
+      # Proration affects only amount (calculated from aggregation) and number of units shows full number of units
+      # (calculated from current_usage_units).
       def handle_current_usage(result_without_proration, result_with_proration, is_pay_in_advance)
         value_without_proration = result_without_proration.aggregation
 

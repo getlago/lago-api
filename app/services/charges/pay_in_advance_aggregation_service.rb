@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module BillableMetrics
+module Charges
   class PayInAdvanceAggregationService < BaseService
     def initialize(charge:, boundaries:, properties:, event:, group: nil)
       @charge = charge
@@ -36,7 +36,7 @@ module BillableMetrics
                                 BillableMetrics::Aggregations::SumService
                               when :unique_count_agg
                                 if charge.prorated?
-                                  BillableMetrics::AdvancedAggregations::ProratedUniqueCountService
+                                  BillableMetrics::ProratedAggregations::UniqueCountService
                                 else
                                   BillableMetrics::Aggregations::UniqueCountService
                                 end

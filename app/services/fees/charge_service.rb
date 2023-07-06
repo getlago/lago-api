@@ -134,7 +134,7 @@ module Fees
                              BillableMetrics::Aggregations::SumService
                            when :unique_count_agg
                              if charge.prorated?
-                               BillableMetrics::AdvancedAggregations::ProratedUniqueCountService
+                               BillableMetrics::ProratedAggregations::UniqueCountService
                              else
                                BillableMetrics::Aggregations::UniqueCountService
                              end
