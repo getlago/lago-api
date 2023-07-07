@@ -28,9 +28,16 @@ RSpec.describe Plans::AppliedTaxes::CreateService, type: :service do
     end
 
     context 'when already applied to the plan' do
+      before { create(:plan_applied_tax, tax:, plan:) }
+
       it 'does not apply the tax once again' do
-        create(:plan_applied_tax, tax:, plan:)
         expect { create_service.call }.not_to change(Plan::AppliedTax, :count)
+      end
+
+      it 'does not refresh draft invoices' do
+        expect do
+          create_service.call
+        end.not_to have_enqueued_job(Invoices::RefreshBatchJob)
       end
     end
 
