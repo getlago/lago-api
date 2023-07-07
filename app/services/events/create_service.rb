@@ -100,8 +100,9 @@ module Events
       end
       return unless subscriptions
 
-      @subscriptions = subscriptions.where('started_at <= ?', timestamp)
-        .where('terminated_at IS NULL OR terminated_at >= ?', timestamp)
+      @subscriptions = subscriptions
+        .where('started_at::timestamp(0) <= ?', timestamp)
+        .where('terminated_at IS NULL OR terminated_at::timestamp(0) >= ?', timestamp)
         .order(started_at: :desc)
     end
 
