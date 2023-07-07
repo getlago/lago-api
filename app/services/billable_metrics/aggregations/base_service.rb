@@ -31,12 +31,13 @@ module BillableMetrics
         group_scope(events)
       end
 
-      def recurring_events_scope(to_datetime:)
+      def recurring_events_scope(to_datetime:, from_datetime: nil)
         events = Event
           .joins(:subscription)
           .where(subscription: { external_id: subscription.external_id })
-          .to_datetime(to_datetime)
           .where(code: billable_metric.code)
+          .to_datetime(to_datetime)
+        events = events.from_datetime(from_datetime) unless from_datetime.nil?
         return events unless group
 
         group_scope(events)
