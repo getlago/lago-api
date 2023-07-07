@@ -189,16 +189,9 @@ html
         font-size: 9px;
         line-height: 16px;
       }
-      .prepaid-amount {
-        font-size: 10px;
-        font-family: Inter;
-        color: #008559;
-        font-weight: 400;
-        line-height: 16px;
-      }
 
-      .mb-8 {
-        margin-bottom: 8px;
+      .mb-4 {
+        margin-bottom: 4px;
       }
       .mb-24 {
         margin-bottom: 24px;
@@ -245,86 +238,63 @@ html
         width: 50%;
       }
 
-      .invoice-resume-table tr td {
-        padding-bottom: 12px;
+      .invoice-resume-table tr:first-child td {
+        color: #66758F;
+      }
+      .invoice-resume-table td {
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+      .invoice-resume-table td:first-child {
+        width: 50%;
+      }
+      .invoice-resume-table td:nth-child(2) {
+        width: 14%;
+      }
+      .invoice-resume-table td:nth-child(3) {
+        width: 18%;
+      }
+      .invoice-resume-table td:nth-child(4) {
+        width: 18%;
       }
       .invoice-resume-table tr td:last-child {
         text-align: right;
       }
-      .invoice-resume-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
+      .invoice-resume-table tr {
+        border-bottom: 1px solid #D9DEE7;
       }
       .invoice-resume table {
         border-collapse: collapse;
       }
-      .invoice-resume .total-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
-      .invoice-resume .total-table tr:first-child td {
-        padding-top: 24px;
-      }
       .invoice-resume .total-table tr td {
-        padding-bottom: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         text-align: right;
       }
-      .invoice-resume .total-table tr td:first-of-type {
+      .invoice-resume .total-table td:first-child {
+        width: 50%;
+      }
+      .invoice-resume .total-table tr:not(:last-child) td:nth-child(2) {
+        border-bottom: 1px solid #D9DEE7;
         text-align: left;
-        padding-left: 50%;
+        width: 25%;
+      }
+      .invoice-resume .total-table tr:not(:last-child) td:nth-child(3) {
+        border-bottom: 1px solid #D9DEE7;
+        text-align: right;
+        width: 25%;
+      }
+      .invoice-resume .total-table tr:last-child td:nth-child(2) {
+        text-align: left;
+        width: 25%;
+      }
+      .invoice-resume .total-table tr:last-child td:nth-child(3) {
+        text-align: right;
+        width: 25%;
       }
 
       .invoice-details-title {
         page-break-before: always;
-      }
-
-      .subscription-details-table tr td:last-child {
-        text-align: right;
-      }
-      .subscription-details-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
-      .subscription-details table {
-        border-collapse: collapse;
-      }
-      .subscription-details .total-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
-      .subscription-details .total-table tr:first-child td {
-        padding-top: 24px;
-      }
-      .subscription-details .total-table tr td {
-        text-align: right;
-      }
-
-      .charge-details-table tr td {
-        padding-bottom: 12px;
-      }
-      .charge-details-table tr td:last-child {
-        text-align: right;
-      }
-      .charge-details-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
-      .charge-details table {
-        border-collapse: collapse;
-      }
-      .charge-details .total-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
-      .charge-details .total-table tr:first-child td {
-        padding-top: 24px;
-      }
-      .charge-details .total-table tr td {
-        text-align: right;
-      }
-      .charge-details-resume .total-table tr td:first-of-type {
-        text-align: left;
-        padding-left: 50%;
       }
 
       .breakdown-details table {
@@ -439,65 +409,16 @@ html
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)
 
       .mb-24
-        h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+        h2.title-2.mb-4 = MoneyHelper.format(total_amount)
         .body-1 = I18n.t('invoice.due_date', date: I18n.l(issuing_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
-        table.invoice-resume-table width="100%"
-          tr
-            td width="70%"
-              .body-1
-                - if add_on?
-                  | #{fees.first.add_on.name}
-                - elsif credit?
-                  = I18n.t('invoice.prepaid_credits_with_value', wallet_name: fees.first.invoiceable.wallet.name)
-                  .body-3
-                    = I18n.t('invoice.total_credits_with_value', credit_amount: fees.first.invoiceable.credit_amount)
-                - elsif subscription?
-                  = I18n.t('invoice.all_subscriptions')
-            - if add_on? || credit?
-              td.body-1 style="text-align: right;" width="30%"
-                = fees.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            - elsif subscription?
-              td.body-1 style="text-align: right;" width="30%"
-                = subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          - if fees.charge_kind.any?
-            tr
-              td width="70%"
-                .body-1 = I18n.t('invoice.all_usage_based_fees')
-              td.body-1 style="text-align: right;" width="30%"
-                = charge_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-
-        table.total-table width="100%"
-          - unless credit?
-            - if coupons_amount_cents.positive?
-              - credits.coupon_kind.order(created_at: :asc).each do |credit|
-                tr
-                  td.body-2 width="70%"  #{credit.invoice_coupon_display_name}
-                  td.body-2 width="30%" style="text-align: right; color: #008559;"
-                    = credit.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            tr
-              td.body-2 width="70%" = I18n.t('invoice.sub_total_without_tax')
-              td.body-2 width="30%" = sub_total_excluding_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            tr
-              td.body-2 #{I18n.t('invoice.tax')} (#{taxes_rate || 0}%)
-              td.body-2 = taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            tr
-              td.body-2 = I18n.t('invoice.sub_total_with_tax')
-              td.body-2 = sub_total_including_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          - if credits.credit_note_kind.any?
-            tr
-              td.body-2 = I18n.t('invoice.credit_notes')
-              td.body-2 style="text-align: right; color: #008559;"
-                = credit_notes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          - if subscription? && wallet_transactions.exists?
-            tr
-              td.body-2 width="70%" = I18n.t('invoice.prepaid_credits')
-              td.prepaid-amount width="30%" = prepaid_credit_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          tr
-            td.body-1 width="70%" = I18n.t('invoice.total_due')
-            td.body-1 width="30%" = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-
+        - if credit?
+          == SlimHelper.render('templates/invoices/_credit', self)
+        - elsif subscriptions.count == 1
+          == SlimHelper.render('templates/invoices/_subscription_details', self)
+        - else
+          == SlimHelper.render('templates/invoices/_subscriptions_summary', self)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
@@ -520,138 +441,5 @@ html
             clipPath id="c"
               path fill="#fff" d="M0 0h9.25v9.263H0z"
 
-      - if subscription?
-        - subscriptions.each do |subscription|
-          - if subscription.name.present?
-            h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.name)
-          - else
-            h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.plan.name)
-          .body-1 = I18n.t('invoice.subscription')
-          .mb-24.body-3
-            | #{I18n.t('invoice.date_from')} #{I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default)} #{I18n.t('invoice.date_to')} #{I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default)}
-
-          .invoice-resume.mb-24.overflow-auto
-            table.invoice-resume-table width="100%"
-              tr
-                td width="70%"
-                  .body-1
-                    = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.name)
-                td.body-1 style="text-align: right;" width="30%"
-                  = subscription_fees(subscription.id).subscription_kind.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-            table.total-table width="100%"
-              tr
-                td.body-2 width="70%" = I18n.t('invoice.sub_total')
-                td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-
-          - if subscription? && subscription_fees(subscription.id).charge_kind.any?
-            .body-1 = I18n.t('invoice.usage_based_fees')
-            .mb-24.body-3
-              = I18n.t('invoice.list_of_charges', from: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
-            .charge-details.mb-24
-              table.charge-details-table width="100%"
-                - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).group_by(&:charge_id).each do |_charge_id, fees|
-                  - fee = fees.first
-                  - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
-                    tr
-                      td width="70%"
-                        .body-1 = fee.billable_metric.name
-                        .body-3
-                          - if fee.billable_metric.recurring_count_agg?
-                            = I18n.t('invoice.see_breakdown')
-                          - elsif fee.charge.percentage?
-                            = I18n.t('invoice.total_unit_interval', events_count: fees.sum(&:events_count), units: fees.sum(&:units))
-                          - else
-                            = I18n.t('invoice.total_unit', units: fees.sum(&:units))
-                      td width="30%"
-
-                    - fees.select { |f| f.units.positive? }.each do |fee|
-                      tr
-                        td width="70%" style="padding-left: 16px;"
-                          .body-1 = fee.group.name
-                          - unless fee.billable_metric.recurring_count_agg?
-                            .body-3
-                              - if fee.charge.percentage?
-                                = I18n.t('invoice.total_unit_interval', events_count: fee.events_count, units: fee.units)
-                              - else
-                                = I18n.t('invoice.total_unit', units: fee.units)
-                        td.body-1 width="30%" = fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-                      - if fee.true_up_fee.present?
-                        tr
-                          td width="70%"
-                            .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)
-                            .body-3 = I18n.t('invoice.true_up_details', min_amount: fee.charge.min_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator')))
-                          td.body-1 width="30%" = fee.true_up_fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-                  - else
-                    tr
-                      td width="70%"
-                        .body-1 = fee.billable_metric.name
-                        .body-3
-                          - if fee.billable_metric.recurring_count_agg? && fees.sum(&:units) > 0
-                            = I18n.t('invoice.see_breakdown')
-                          - elsif fee.charge.percentage?
-                            = I18n.t('invoice.total_unit_interval', events_count: fees.sum(&:events_count), units: fees.sum(&:units))
-                          - else
-                            = I18n.t('invoice.total_unit', units: fees.sum(&:units))
-                      td.body-1 width="30%" = fees.sum(&:amount).format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-                    - if fee.true_up_fee.present?
-                      tr
-                        td width="70%"
-                          .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)
-                          .body-3 = I18n.t('invoice.true_up_details', min_amount: fee.charge.min_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator')))
-                        td.body-1 width="30%" = fee.true_up_fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-
-              .charge-details-resume
-                table.total-table width="100%"
-                  tr
-                    td.body-2 width="70%" = I18n.t('invoice.sub_total')
-                    td.body-1 width="30%" = invoice_subscription(subscription.id).charge_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-                table.total-table width="100%"
-                  tr
-                    td.body-2 width="70%" = I18n.t('invoice.total')
-                    td.body-1 width="30%" = invoice_subscription(subscription.id).total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-
-            - recurring_fees(subscription.id).group_by(&:charge_id).each do |_charge_id, fees|
-              - if fees.sum(&:units) > 0
-                - if subscription.name.present?
-                  h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.name)
-                - else
-                  h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.plan.name)
-
-                - if fees.all? { |f| f.group_id? }
-                  - fees.select { |f| f.units.positive? }.each do |fee|
-                    .body-3 = fees.first.billable_metric.name
-                    .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_group_name: fee.group.name)
-                    .breakdown-details.mb-24
-                      table.breakdown-details-table width="100%"
-                        - recurring_breakdown(fee).each do |breakdown|
-                          tr
-                            td.body-3 width="15%" = I18n.l(breakdown.date, format: :default)
-                            td.body-1 width="65%"
-                              - if breakdown.action.to_sym == :add
-                                | +#{breakdown.count} #{fee.item_name}
-                              - elsif breakdown.action.to_sym == :remove
-                                | -#{breakdown.count} #{fee.item_name}
-                              - else
-                                | +/-#{breakdown.count} #{fee.item_name}
-                            td.body-3 width="20%"
-                              = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
-                - else
-                  .body-3 = fees.first.billable_metric.name
-                  .body-1.mb-24 = I18n.t('invoice.breakdown')
-                  .breakdown-details.mb-24
-                    table.breakdown-details-table width="100%"
-                      - fees.each do |fee|
-                        - recurring_breakdown(fee).each do |breakdown|
-                          tr
-                            td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
-                            td.body-1 width="65%"
-                              - if breakdown.action.to_sym == :add
-                                | +#{breakdown.count} #{fee.item_name}
-                              - elsif breakdown.action.to_sym == :remove
-                                | -#{breakdown.count} #{fee.item_name}
-                              - else
-                                | +/-#{breakdown.count} #{fee.item_name}
-                            td.body-3 width="20%"
-                              = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
-
-                .alert.body-3 = I18n.t('invoice.notice')
+      - if subscriptions.count > 1
+        == SlimHelper.render('templates/invoices/_subscription_details', self)

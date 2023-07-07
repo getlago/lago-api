@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::PlanSerializer do
-  subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges]) }
+  subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges taxes]) }
 
   let(:plan) { create(:plan) }
   let(:charge) { create(:standard_charge, plan:) }
@@ -29,6 +29,8 @@ RSpec.describe ::V1::PlanSerializer do
       expect(result['plan']['draft_invoices_count']).to eq(0)
       expect(result['plan']['charges'].first['lago_id']).to eq(charge.id)
       expect(result['plan']['charges'].first['group_properties']).to eq([])
+
+      expect(result['plan']['taxes']).to eq([])
     end
   end
 end

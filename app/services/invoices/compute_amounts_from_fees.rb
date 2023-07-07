@@ -14,14 +14,8 @@ module Invoices
         invoice.fees_amount_cents - invoice.coupons_amount_cents
       )
 
-      invoice.taxes_amount_cents = invoice.fees.sum do |fee|
-        # NOTE: Because coupons are applied before VAT,
-        #       we have to distribute the coupons amount at prorata of each fees
-        #       compared to the invoice total fees amount
-        fee_rate = invoice.fees_amount_cents.zero? ? 0 : fee.amount_cents.fdiv(invoice.fees_amount_cents)
-        prorated_coupon_amount = fee_rate * invoice.coupons_amount_cents
-        (fee.amount_cents - prorated_coupon_amount) * fee.taxes_rate
-      end.fdiv(100).round
+      taxes_result = Invoices::ApplyTaxesService.call(invoice:)
+      taxes_result.raise_if_error!
 
       invoice.sub_total_including_taxes_amount_cents = (
         invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents

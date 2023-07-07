@@ -15,6 +15,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
           id,
           name,
           code,
+          description
           status,
           amountCents,
           amountCurrency,
@@ -41,6 +42,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
           couponType: 'fixed_amount',
           frequency: 'once',
           code: 'new_code',
+          description: 'This is a description',
           amountCents: 123,
           amountCurrency: 'USD',
           expiration: 'time_limit',
@@ -58,6 +60,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
       expect(result_data['code']).to eq('new_code')
+      expect(result_data['description']).to eq('This is a description')
       expect(result_data['status']).to eq('active')
       expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('USD')

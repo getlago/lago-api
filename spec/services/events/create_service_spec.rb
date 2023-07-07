@@ -10,6 +10,7 @@ RSpec.describe Events::CreateService, type: :service do
   let(:customer) { create(:customer, organization:) }
 
   describe '#validate_params' do
+    let!(:subscription) { create(:active_subscription, customer:, organization:, started_at: 1.month.ago) }
     let(:params) do
       {
         transaction_id: SecureRandom.uuid,
@@ -19,7 +20,6 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     before do
-      create(:active_subscription, customer:, organization:)
       allow(Events::ValidateCreationService).to receive(:call).and_call_original
     end
 
@@ -30,6 +30,7 @@ RSpec.describe Events::CreateService, type: :service do
         organization:,
         params:,
         customer:,
+        subscriptions: [subscription],
         result: kind_of(BaseService::Result),
         send_webhook: false,
       )
@@ -65,12 +66,23 @@ RSpec.describe Events::CreateService, type: :service do
         code: billable_metric.code,
         transaction_id: SecureRandom.uuid,
         properties: { foo: 'bar' },
-        timestamp: Time.zone.now.to_i,
+        timestamp:,
       }
     end
-    let(:timestamp) { Time.zone.now.to_i }
+    let(:timestamp) { (subscription.started_at + 1.second).to_i }
 
     before { subscription }
+
+    context 'when subscription is terminated' do
+      let(:subscription) { create(:terminated_subscription, customer:, organization:, plan:) }
+
+      it 'creates an event' do
+        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+
+        expect(result).to be_success
+        expect(result.event.timestamp).to eq(Time.zone.at(timestamp))
+      end
+    end
 
     context 'when timestamp is not present in the payload' do
       let(:create_args) do
@@ -216,7 +228,7 @@ RSpec.describe Events::CreateService, type: :service do
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
           properties: { foo: 'bar' },
-          timestamp: Time.zone.now.to_i,
+          timestamp:,
         }
       end
 
@@ -251,7 +263,7 @@ RSpec.describe Events::CreateService, type: :service do
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription2.external_id,
           properties: { foo: 'bar' },
-          timestamp: Time.zone.now.to_i,
+          timestamp:,
         }
       end
 
@@ -305,7 +317,7 @@ RSpec.describe Events::CreateService, type: :service do
           external_customer_id: customer.external_id,
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          timestamp: Time.zone.now.to_i,
+          timestamp:,
         }
       end
 
@@ -352,7 +364,7 @@ RSpec.describe Events::CreateService, type: :service do
             billable_metric.field_name => 'ext_12345',
             'operation_type' => 'add',
           },
-          timestamp: Time.zone.now.to_i,
+          timestamp:,
         }
       end
 
@@ -389,7 +401,7 @@ RSpec.describe Events::CreateService, type: :service do
             properties: {
               'operation_type' => 'add',
             },
-            timestamp: Time.zone.now.to_i,
+            timestamp:,
           }
         end
 
@@ -428,7 +440,7 @@ RSpec.describe Events::CreateService, type: :service do
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           properties: { billable_metric.field_name => '12' },
-          timestamp: Time.zone.now.to_i,
+          timestamp:,
         }
       end
 
@@ -494,7 +506,7 @@ RSpec.describe Events::CreateService, type: :service do
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           properties: { billable_metric.field_name => '12' },
-          timestamp: Time.zone.now.to_i,
+          timestamp:,
         }
       end
 
@@ -549,7 +561,7 @@ RSpec.describe Events::CreateService, type: :service do
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             properties: { billable_metric.field_name => '-5' },
-            timestamp: Time.zone.now.to_i,
+            timestamp:,
           }
         end
 
@@ -573,7 +585,7 @@ RSpec.describe Events::CreateService, type: :service do
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             properties: { 'wrong_field_name' => '5' },
-            timestamp: Time.zone.now.to_i,
+            timestamp:,
           }
         end
 

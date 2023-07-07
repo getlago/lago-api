@@ -28,6 +28,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:customer) { create(:customer, organization:) }
   let(:subscription) do
@@ -63,6 +64,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
   before do
     subscription
     charge
+    tax
 
     create_list(
       :event,

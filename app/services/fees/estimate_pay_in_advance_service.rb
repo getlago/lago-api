@@ -10,7 +10,7 @@ module Fees
     end
 
     def call
-      Events::ValidateCreationService.call(organization:, params:, customer:, result:)
+      Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
       return result unless result.success?
 
       if charges.none?
@@ -45,7 +45,7 @@ module Fees
       @event = organization.events.new(
         code: params[:code],
         customer:,
-        subscription:,
+        subscription: subscriptions.first,
         properties: params[:properties] || {},
         transaction_id: SecureRandom.uuid,
         timestamp: Time.current,
@@ -62,14 +62,20 @@ module Fees
       end
     end
 
-    def subscription
-      organization
-        .subscriptions
-        .active
-        .where(external_id: params[:external_subscription_id])
-        .where('started_at <= ?', Time.current)
+    def subscriptions
+      return @subscriptions if defined? @subscriptions
+
+      timestamp = Time.current
+      subscriptions = if customer && params[:external_subscription_id].blank?
+        customer.subscriptions
+      else
+        organization.subscriptions.where(external_id: params[:external_subscription_id])
+      end
+      return unless subscriptions
+
+      @subscriptions = subscriptions.where('started_at <= ?', timestamp)
+        .where('terminated_at IS NULL OR terminated_at >= ?', timestamp)
         .order(started_at: :desc)
-        .first || customer&.active_subscriptions&.first
     end
 
     def charges

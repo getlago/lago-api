@@ -15,18 +15,18 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
         execute <<-SQL
           /* Unify fees->timestamp to be a required timestamp */
           UPDATE fees
-          SET properties['timestamp'] = to_jsonb(CASE
-          WHEN properties?'timestamp'
-          THEN CASE
-            WHEN properties->>'timestamp' ~ '^[0-9\.]+$' /* unix timestamp */
-            THEN
-              to_timestamp((properties->>'timestamp')::integer)::timestamp
-            ELSE
-              (properties->>'timestamp')::timestamp
+          SET properties = jsonb_set(properties, '{timestamp}', to_jsonb(
+            CASE
+              WHEN properties ? 'timestamp'
+              THEN
+                CASE
+                  WHEN properties->>'timestamp' ~ '^[0-9\.]+$' -- unix timestamp
+                  THEN to_timestamp((properties->>'timestamp')::integer)::timestamp
+                  ELSE (properties->>'timestamp')::timestamp
+                END
+              ELSE created_at::timestamp
             END
-          ELSE
-            created_at::timestamp
-          END);
+          ), true);
 
           UPDATE invoice_subscriptions
           /* Set timestamp on invoice_subscriptions */

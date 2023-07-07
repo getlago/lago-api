@@ -67,8 +67,8 @@ module ScenariosHelper
 
   def create_event(params)
     post_with_token(organization, '/api/v1/events', { event: params })
-
     perform_all_enqueued_jobs
+    JSON.parse(response.body) unless response.body.empty?
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.

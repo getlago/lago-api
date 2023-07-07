@@ -238,29 +238,45 @@ html
         width: 50%;
       }
 
+      .credit-note-resume-table tr {
+        border-bottom: 1px solid #D9DEE7;
+      }
       .credit-note-resume-table tr td {
-        padding-bottom: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
       }
       .credit-note-resume-table tr td:last-child {
         text-align: right;
       }
-      .credit-note-resume-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
       .credit-note-resume table {
         border-collapse: collapse;
       }
-      .credit-note-resume .total-table tr:last-child td {
-        border-bottom: 1px solid #d9dee7;
-        padding-bottom: 24px;
-      }
-      .credit-note-resume .total-table tr:first-child td {
-        padding-top: 24px;
-      }
+
       .credit-note-resume .total-table tr td {
-        padding-bottom: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         text-align: right;
+      }
+      .credit-note-resume .total-table td:first-child {
+        width: 50%;
+      }
+      .credit-note-resume .total-table tr:not(:last-child) td:nth-child(2) {
+        border-bottom: 1px solid #D9DEE7;
+        text-align: left;
+        width: 35%;
+      }
+      .credit-note-resume .total-table tr:not(:last-child) td:nth-child(3) {
+        border-bottom: 1px solid #D9DEE7;
+        text-align: right;
+        width: 35%;
+      }
+      .credit-note-resume .total-table tr:last-child td:nth-child(2) {
+        text-align: left;
+        width: 35%;
+      }
+      .credit-note-resume .total-table tr:last-child td:nth-child(3) {
+        text-align: right;
+        width: 15%;
       }
 
       .powered-by {
@@ -355,7 +371,7 @@ html
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)
 
       .mb-24
-        h2.title-2.mb-8 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+        h2.title-2.mb-8 = MoneyHelper.format(total_amount)
         .body-1
           - if credited? && refunded?
             = I18n.t('credit_note.credited_refunded_notice', issuing_date: I18n.l(issuing_date, format: :default))
@@ -366,21 +382,48 @@ html
 
       .credit-note-resume.mb-24.overflow-auto
         table.credit-note-resume-table width="100%"
+          tr
+            td.body-3 = I18n.t('credit_note.item')
+            td.body-3 = I18n.t('credit_note.tax_rate')
+            td.body-3 = I18n.t('credit_note.amount')
+
           - subscription_ids.each do |subscription_id|
             - if subscription_id.present?
-              tr
-                td.body-1 width="70%"
-                  | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
-                td.body-1 width="30%" style="text-align: right;"
-                  = subscription_item(subscription_id).amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-              - subscription_charge_items(subscription_id).each do |item|
+              - if subscription_item(subscription_id).amount.positive?
                 tr
-                  - if item.fee.true_up_parent_fee_id?
-                    td.body-1 = I18n.t('invoice.true_up_metric', metric: item.fee.item_name)
-                  - else
-                    td.body-1 = item.fee.item_name
-                  td.body-1 width="30%" style="text-align: right;"
-                    = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+                  td.body-1 width="60%"
+                    | #{I18n.t('credit_note.subscription')} - #{Subscription.find_by(id: subscription_id)&.display_name}
+                  td.body-2 width="20%" == TaxHelper.applied_taxes(subscription_item(subscription_id))
+                  td.body-2 width="20%" = MoneyHelper.format(subscription_item(subscription_id).amount)
+              - subscription_charge_items(subscription_id).where(fees: { true_up_parent_fee: nil }).group_by { |i| i.fee.charge_id }.each do |_charge_id, items|
+                - item = items.first
+                - if items.all? { |i| i.fee.group_id? }
+                  tr
+                    td.body-1 width="60%" = item.fee.item_name
+                    td
+                    td
+                  - items.each do |item|
+                    tr
+                      td.body-1 style="padding-left: 16px;" = item.fee.group.name
+                      td.body-2 width="20%" == TaxHelper.applied_taxes(item)
+                      td.body-2 width="20%" = MoneyHelper.format(item.amount)
+                  - items.select { |i| i.fee.true_up_fee.present? }.each do |item|
+                    - if true_up_item = subscription_charge_items(subscription_id).find_by(fee: item.fee.true_up_fee)
+                      tr
+                        td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: true_up_item.fee.item_name)
+                        td.body-2 width="20%" == TaxHelper.applied_taxes(true_up_item)
+                        td.body-2 width="20%" = MoneyHelper.format(true_up_item.amount)
+                - else
+                  tr
+                    td.body-1 width="60%" = item.fee.item_name
+                    td.body-2 width="20%" == TaxHelper.applied_taxes(item)
+                    td.body-2 width="20%" = MoneyHelper.format(item.amount)
+                  - if item.fee.true_up_fee.present?
+                    - if true_up_item = subscription_charge_items(subscription_id).find_by(fee: item.fee.true_up_fee)
+                      tr
+                        td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: true_up_item.fee.item_name)
+                        td.body-2 width="20%" == TaxHelper.applied_taxes(true_up_item)
+                        td.body-2 width="20%" = MoneyHelper.format(true_up_item.amount)
             - else
               - add_on_items.each do |item|
                 tr
@@ -389,32 +432,47 @@ html
                       | #{I18n.t('invoice.true_up_metric', metric: item.fee.item_name)}
                     - else
                       | #{item.fee.item_name}
-                  td.body-1 width="30%" style="text-align: right;"
-                    = item.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+
+                  td.body-2 width="20%" == TaxHelper.applied_taxes(item)
+                  td.body-2 width="20%" = MoneyHelper.format(item.amount)
 
         table.total-table width="100%"
           - if coupons_adjustment_amount_cents.positive?
             tr
+              td.body-2
               td.body-2 width="70%" = I18n.t('credit_note.coupon_adjustment')
-              td.body-1 width="30%"
-                | -#{coupons_adjustment_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))}
+              td.body-2 width="30%"
+                | -#{MoneyHelper.format(coupons_adjustment_amount)}
           tr
+            td.body-2
             td.body-2 width="70%" = I18n.t('credit_note.sub_total_without_tax')
-            td.body-1 width="30%" = sub_total_excluding_taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          tr
-            td.body-2 #{I18n.t('credit_note.tax')} (#{invoice.taxes_rate || 0}%)
-            td.body-1 = taxes_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-2 width="30%" = MoneyHelper.format(sub_total_excluding_taxes_amount)
+          - if applied_taxes.present?
+            - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+              tr
+                td.body-2
+                td.body-2
+                  = I18n.t('credit_note.tax', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.base_amount))
+                td.body-2 = MoneyHelper.format(applied_tax.amount)
+          - else
+            tr
+              td.body-2
+              td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
+              td.body-2 = MoneyHelper.format(0.to_money(currency))
           - if credited?
             tr
+              td.body-2
               td.body-2 = I18n.t('credit_note.credited_on_customer_balance')
-              td.body-1 = credit_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 = MoneyHelper.format(credit_amount)
           - if refunded?
             tr
+              td.body-2
               td.body-2 = I18n.t('credit_note.refunded')
-              td.body-1 = refund_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+              td.body-2 = MoneyHelper.format(refund_amount)
           tr
-            td.body-1 = I18n.t('credit_note.total_due')
-            td.body-1 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+            td.body-2
+            td.body-1 = I18n.t('credit_note.total')
+            td.body-1 = MoneyHelper.format(total_amount)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 

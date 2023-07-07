@@ -136,6 +136,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
   describe 'GET /customers/:customer_id/current_usage' do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
+    let(:tax) { create(:tax, organization:, rate: 20) }
     let(:subscription) do
       create(
         :subscription,
@@ -169,6 +170,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     before do
       subscription
       charge
+      tax
 
       create_list(
         :event,
@@ -454,6 +456,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:ok)
         expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:customers][0][:taxes]).not_to be_nil
       end
     end
   end
@@ -475,6 +478,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:ok)
         expect(json[:customer][:lago_id]).to eq(customer.id)
+        expect(json[:customer][:taxes]).not_to be_nil
       end
     end
 

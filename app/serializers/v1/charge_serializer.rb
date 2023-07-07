@@ -3,7 +3,7 @@
 module V1
   class ChargeSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         lago_billable_metric_id: model.billable_metric_id,
         billable_metric_code: model.billable_metric.code,
@@ -14,7 +14,13 @@ module V1
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
         properties: model.properties,
-      }.merge(group_properties)
+      }
+
+      payload.merge!(group_properties)
+
+      payload.merge!(taxes) if include?(:taxes)
+
+      payload
     end
 
     private
@@ -24,6 +30,14 @@ module V1
         model.group_properties,
         ::V1::GroupPropertiesSerializer,
         collection_name: 'group_properties',
+      ).serialize
+    end
+
+    def taxes
+      ::CollectionSerializer.new(
+        model.taxes,
+        ::V1::TaxSerializer,
+        collection_name: 'taxes',
       ).serialize
     end
   end

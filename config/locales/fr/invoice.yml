@@ -23,13 +23,18 @@ fr:
     unit: Unité
     unit_price: Prix unitaire
     amount: Montant
+    amount_with_tax: Montant (TTC)
+    amount_without_tax: Montant (HT)
+    fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
+    tax_rate: Taux de taxe
+    tax_name_with_details: "%{name} (%{rate}%)"
 
     details: "Détails de %{resource}"
     subscription: Abonnement
     date_from: Du
     date_to: au
-    monthly: mensuelle
-    yearly: annuelle
+    monthly: mensuel
+    yearly: annuel
     weekly: hebdomadaire
     sub_total: Sous total
     subscription_interval: Abonnement %{plan_interval} - %{plan_name}
@@ -38,6 +43,7 @@ fr:
     list_of_charges: Liste des frais de consommation du %{from} au %{to}
     see_breakdown: Consultez le détail ci-après
     total_unit_interval: "Nombre total d'unités: %{events_count} événement(s) pour %{units}"
+    total_events: "Nombre total d'événements: %{count}"
     total_unit: "Nombre total d'unités: %{units}"
     total: Total
     breakdown: Détails de consommation

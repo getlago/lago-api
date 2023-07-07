@@ -60,12 +60,6 @@ class Customer < ApplicationRecord
     subscriptions.active.order(started_at: :desc)
   end
 
-  def applicable_vat_rate
-    return vat_rate if vat_rate.present?
-
-    organization.vat_rate || 0
-  end
-
   def applicable_timezone
     return timezone if timezone.present?
 

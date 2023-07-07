@@ -10,6 +10,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
   let(:timestamp) { Time.zone.now.beginning_of_month }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
   let(:currency) { 'EUR' }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
@@ -29,6 +30,8 @@ RSpec.describe Invoices::OneOffService, type: :service do
 
   describe 'create' do
     before do
+      tax
+
       allow(SegmentTrackJob).to receive(:perform_later)
       CurrentContext.source = 'api'
     end
@@ -47,8 +50,11 @@ RSpec.describe Invoices::OneOffService, type: :service do
 
         expect(result.invoice.currency).to eq('EUR')
         expect(result.invoice.fees_amount_cents).to eq(2800)
+
         expect(result.invoice.taxes_amount_cents).to eq(560)
         expect(result.invoice.taxes_rate).to eq(20)
+        expect(result.invoice.applied_taxes.count).to eq(1)
+
         expect(result.invoice.total_amount_cents).to eq(3360)
 
         expect(result.invoice).to be_finalized

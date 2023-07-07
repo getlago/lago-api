@@ -8,7 +8,14 @@ RSpec.describe Invoices::AddOnService, type: :service do
   end
 
   let(:datetime) { Time.zone.now }
-  let(:applied_add_on) { create(:applied_add_on) }
+
+  let(:customer) { create(:customer) }
+  let(:organization) { customer.organization }
+  let(:applied_add_on) { create(:applied_add_on, customer:) }
+
+  let(:tax) { create(:tax, rate: 20, organization:) }
+
+  before { tax }
 
   describe 'create' do
     before do
@@ -34,6 +41,8 @@ RSpec.describe Invoices::AddOnService, type: :service do
           sub_total_including_taxes_amount_cents: 240,
           total_amount_cents: 240,
         )
+
+        expect(result.invoice.applied_taxes.count).to eq(1)
 
         expect(result.invoice).to be_finalized
       end

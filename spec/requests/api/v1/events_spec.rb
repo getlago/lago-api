@@ -7,7 +7,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:active_subscription, customer:, organization:, plan:) }
+  let(:subscription) { create(:active_subscription, customer:, organization:, plan:, started_at: 1.month.ago) }
 
   before { subscription }
 
@@ -20,7 +20,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           code: metric.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          timestamp: Time.zone.now.to_i,
+          timestamp: Time.current.to_i,
           properties: {
             foo: 'bar',
           },

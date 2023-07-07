@@ -12,6 +12,9 @@ class Charge < ApplicationRecord
   has_many :fees
   has_many :group_properties, dependent: :destroy
 
+  has_many :applied_taxes, class_name: 'Charge::AppliedTax', dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+
   CHARGE_MODELS = %i[
     standard
     graduated

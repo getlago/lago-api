@@ -5,9 +5,17 @@ require 'rails_helper'
 RSpec.describe Fees::CreateTrueUpService, type: :service do
   subject(:create_service) { described_class.new(fee:, amount_cents:) }
 
-  let(:charge) { create(:standard_charge, min_amount_cents: 1000) }
-  let(:fee) { create(:charge_fee, amount_cents:, charge:) }
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:plan) { create(:plan, organization:) }
+
+  let(:charge) { create(:standard_charge, plan:, min_amount_cents: 1000) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:fee) { create(:charge_fee, amount_cents:, customer:, charge:, invoice:) }
   let(:amount_cents) { 700 }
+
+  before { tax }
 
   describe '#call' do
     context 'when fee is nil' do
@@ -39,7 +47,6 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             subscription: fee.subscription,
             charge: fee.charge,
             amount_currency: fee.currency,
-            taxes_rate: fee.taxes_rate,
             fee_type: 'charge',
             invoiceable: fee.charge,
             properties: fee.properties,
@@ -48,8 +55,10 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             events_count: 0,
             group: nil,
             amount_cents: 300,
-            taxes_amount_cents: 0,
             true_up_parent_fee_id: fee.id,
+
+            taxes_rate: tax.rate,
+            taxes_amount_cents: 60,
           )
         end
       end

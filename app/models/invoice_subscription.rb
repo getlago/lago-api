@@ -38,7 +38,11 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def subscription_amount_cents
-    fees.subscription_kind.first&.amount_cents || 0
+    subscription_fee&.amount_cents || 0
+  end
+
+  def subscription_fee
+    fees.subscription_kind.first
   end
 
   def total_amount_cents

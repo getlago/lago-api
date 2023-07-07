@@ -53,7 +53,6 @@ module Fees
           charge:,
           amount_cents: result.amount,
           amount_currency: subscription.plan.amount_currency,
-          taxes_rate: customer.applicable_vat_rate,
           fee_type: :charge,
           invoiceable: charge,
           units: result.units,
@@ -64,7 +63,10 @@ module Fees
           payment_status: :pending,
           pay_in_advance: true,
         )
-        fee.compute_vat
+
+        taxes_result = Fees::ApplyTaxesService.call(fee:)
+        taxes_result.raise_if_error!
+
         fee.save! unless estimate
 
         fee

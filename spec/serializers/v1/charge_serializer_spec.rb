@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::ChargeSerializer do
-  subject(:serializer) { described_class.new(charge, root_name: 'charge') }
+  subject(:serializer) { described_class.new(charge, root_name: 'charge', includes: %i[taxes]) }
 
   let(:charge) { create(:standard_charge) }
 
@@ -18,6 +18,8 @@ RSpec.describe ::V1::ChargeSerializer do
       expect(result['charge']['charge_model']).to eq(charge.charge_model)
       expect(result['charge']['pay_in_advance']).to eq(charge.pay_in_advance)
       expect(result['charge']['properties']).to eq(charge.properties)
+
+      expect(result['charge']['taxes']).to eq([])
     end
   end
 end

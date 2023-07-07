@@ -6,14 +6,17 @@ fr:
     issue_date: Date d'émission
     credit_from: De
     credit_to: Crédité à
+    item: Article
+    tax_rate: Taux de taxe
+    amount: Montant (HT)
     refunded_notice: Remboursé le %{issuing_date}
     credited_notice: Crédité sur le solde du client le %{issuing_date}
     credited_refunded_notice: Crédité sur le solde du client et remboursée le %{issuing_date}
     subscription: Souscription
     coupon_adjustment: Coupons
     sub_total_without_tax: Sous total (HT)
-    tax: Taxe
+    tax: "%{name} (%{rate}% sur %{amount})"
     credited_on_customer_balance: Crédit sur le solde du client
     refunded: Remboursement
-    total_due: Total dû
+    total: Total
     powered_by: Généré par

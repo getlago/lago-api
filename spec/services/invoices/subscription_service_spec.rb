@@ -11,11 +11,16 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     )
   end
 
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, organization:, rate: 20) }
+
   describe 'create' do
     let(:subscription) do
       create(
         :subscription,
         plan:,
+        customer:,
         subscription_at: started_at.to_date,
         started_at:,
         created_at: started_at,
@@ -31,6 +36,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     let(:pay_in_advance) { false }
 
     before do
+      tax
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
 
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -85,8 +91,11 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         expect(result.invoice.currency).to eq('EUR')
         expect(result.invoice.fees_amount_cents).to eq(100)
+
         expect(result.invoice.taxes_amount_cents).to eq(20)
         expect(result.invoice.taxes_rate).to eq(20)
+        expect(result.invoice.applied_taxes.count).to eq(1)
+
         expect(result.invoice.total_amount_cents).to eq(120)
         expect(result.invoice.version_number).to eq(3)
         expect(result.invoice).to be_finalized

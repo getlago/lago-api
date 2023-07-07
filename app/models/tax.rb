@@ -6,12 +6,16 @@ class Tax < ApplicationRecord
   has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :customers, through: :applied_taxes
 
-  has_many :fees_taxes
+  has_many :fees_taxes, class_name: 'Fee::AppliedTax', dependent: :destroy
   has_many :fees, through: :fees_taxes
-  has_many :invoices_taxes
+  has_many :invoices_taxes, class_name: 'Invoice::AppliedTax', dependent: :destroy
   has_many :invoices, through: :invoices_taxes
-  has_many :credit_notes_taxes
+  has_many :credit_notes_taxes, class_name: 'CreditNote::AppliedTax', dependent: :destroy
   has_many :credit_notes, through: :credit_notes_taxes
+  has_many :plans_taxes, class_name: 'Plan::AppliedTax', dependent: :destroy
+  has_many :plans, through: :plans_taxes
+  has_many :charges_taxes, class_name: 'Charge::AppliedTax', dependent: :destroy
+  has_many :charges, through: :charges_taxes
 
   belongs_to :organization
 

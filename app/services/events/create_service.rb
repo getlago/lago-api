@@ -3,10 +3,15 @@
 module Events
   class CreateService < BaseService
     def validate_params(organization:, params:)
+      customer = customer(organization:, params:)
+      timestamp = Time.zone.at((params[:timestamp] || Time.current).to_i)
+      subscriptions = subscriptions(organization:, customer:, params:, timestamp:)
+
       Events::ValidateCreationService.call(
         organization:,
         params:,
-        customer: customer(organization:, params:),
+        customer:,
+        subscriptions:,
         result:,
         send_webhook: false,
       )
@@ -15,18 +20,17 @@ module Events
 
     def call(organization:, params:, timestamp:, metadata:)
       customer = customer(organization:, params:)
-      Events::ValidateCreationService.call(organization:, params:, customer:, result:)
+      event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_i : timestamp)
+      subscriptions = subscriptions(organization:, customer:, params:, timestamp: event_timestamp)
+
+      Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
       return result unless result.success?
 
-      event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_i : timestamp)
-      subscription = Subscription
-        .where(external_id: params[:external_subscription_id])
-        .where('started_at <= ?', event_timestamp)
-        .order(started_at: :desc)
-        .first || customer&.active_subscriptions&.first
-
       ActiveRecord::Base.transaction do
-        event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
+        event = organization.events.find_by(
+          transaction_id: params[:transaction_id],
+          subscription_id: subscriptions.first.id,
+        )
 
         if event
           result.event = event
@@ -37,7 +41,7 @@ module Events
         event.code = params[:code]
         event.transaction_id = params[:transaction_id]
         event.customer = customer
-        event.subscription_id = subscription.id
+        event.subscription_id = subscriptions.first.id
         event.properties = params[:properties] || {}
         event.metadata = metadata || {}
         event.timestamp = event_timestamp
@@ -90,6 +94,21 @@ module Events
       else
         Customer.find_by(external_id: params[:external_customer_id], organization_id: organization.id)
       end
+    end
+
+    def subscriptions(organization:, customer:, params:, timestamp:)
+      return @subscriptions if defined? @subscriptions
+
+      subscriptions = if customer && params[:external_subscription_id].blank?
+        customer.subscriptions
+      else
+        organization.subscriptions.where(external_id: params[:external_subscription_id])
+      end
+      return unless subscriptions
+
+      @subscriptions = subscriptions.where('started_at <= ?', timestamp)
+        .where('terminated_at IS NULL OR terminated_at >= ?', timestamp)
+        .order(started_at: :desc)
     end
 
     def quantified_event_service

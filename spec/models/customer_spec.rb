@@ -54,35 +54,6 @@ RSpec.describe Customer, type: :model do
     end
   end
 
-  describe 'applicable_vat_rate' do
-    subject(:customer) do
-      described_class.new(organization:, vat_rate: 12)
-    end
-
-    it 'returns the customer vat_rate' do
-      expect(customer.applicable_vat_rate).to eq(12)
-    end
-
-    context 'when customer does not have a vat_rate' do
-      let(:organization_vat_rate) { 14 }
-
-      before do
-        customer.vat_rate = nil
-        customer.organization.vat_rate = organization_vat_rate
-      end
-
-      it 'returns the organization vat_rate' do
-        expect(customer.applicable_vat_rate).to eq(14)
-      end
-
-      context 'when organization does not have a vat_rate' do
-        let(:organization_vat_rate) { nil }
-
-        it { expect(customer.applicable_vat_rate).to eq(0) }
-      end
-    end
-  end
-
   describe 'preferred_document_locale' do
     subject(:customer) do
       described_class.new(
