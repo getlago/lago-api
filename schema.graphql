@@ -4085,11 +4085,13 @@ input PropertiesInput {
 type ProviderCustomer {
   id: ID!
   providerCustomerId: ID
+  providerPaymentMethods: [String!]!
   syncWithProvider: Boolean
 }
 
 input ProviderCustomerInput {
   providerCustomerId: ID
+  providerPaymentMethods: [String!]!
   syncWithProvider: Boolean
 }
 
