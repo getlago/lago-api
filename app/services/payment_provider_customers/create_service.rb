@@ -22,14 +22,6 @@ module PaymentProviderCustomers
         provider_customer.sync_with_provider = params[:sync_with_provider].presence
       end
 
-      if provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
-        if (params || {}).key?(:provider_payment_methods)
-          provider_customer.provider_payment_methods = params[:provider_payment_methods].presence
-        elsif !provider_customer.persisted?
-          provider_customer.provider_payment_methods = PaymentProviderCustomers::StripeCustomer::ALLOWED_PAYMENT_METHODS
-        end
-      end
-
       provider_customer.save!
 
       result.provider_customer = provider_customer
