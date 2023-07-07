@@ -101,9 +101,10 @@ module Events
       return unless subscriptions
 
       @subscriptions = subscriptions
-        .where('started_at::timestamp(0) <= ?', timestamp)
-        .where('terminated_at IS NULL OR terminated_at::timestamp(0) >= ?', timestamp)
+        .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
+        .where("terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?", timestamp)
         .order(started_at: :desc)
+      @subscriptions
     end
 
     def persisted_event_service

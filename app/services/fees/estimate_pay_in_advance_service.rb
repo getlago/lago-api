@@ -73,8 +73,9 @@ module Fees
       end
       return unless subscriptions
 
-      @subscriptions = subscriptions.where('started_at <= ?', timestamp)
-        .where('terminated_at IS NULL OR terminated_at >= ?', timestamp)
+      @subscriptions = subscriptions
+        .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
+        .where("terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?", timestamp)
         .order(started_at: :desc)
     end
 
