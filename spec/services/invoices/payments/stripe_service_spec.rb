@@ -55,8 +55,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       allow(provider_customer_service).to receive(:check_payment_method)
         .and_return(provider_customer_service_result)
 
-      stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}").
-        to_return(status: 200, body: customer_response, headers: {})
+      stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}")
+        .to_return(status: 200, body: customer_response, headers: {})
     end
 
     it 'creates a stripe payment and a payment' do
@@ -146,7 +146,15 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       let(:stripe_customer) { create(:stripe_customer, customer:) }
 
       before do
-        allow(stripe_service).to receive(:update_payment_method_id).and_return(nil)
+        allow(Stripe::Customer).to receive(:retrieve)
+          .and_return(Stripe::StripeObject.construct_from(
+            {
+              invoice_settings: {
+                default_payment_method: nil
+              },
+              default_source: nil,
+            },
+          ))
 
         allow(Stripe::PaymentMethod).to receive(:list)
           .and_return(Stripe::ListObject.construct_from(

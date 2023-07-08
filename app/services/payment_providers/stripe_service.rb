@@ -112,7 +112,8 @@ module PaymentProviders
           )
         result.raise_if_error! || result
       when 'customer.updated'
-        payment_method_id = event.data.object.invoice_settings.default_payment_method || event.data.object.default_source
+        payment_method_id = event.data.object.invoice_settings.default_payment_method ||
+                            event.data.object.default_source
 
         result = PaymentProviderCustomers::StripeService
           .new
