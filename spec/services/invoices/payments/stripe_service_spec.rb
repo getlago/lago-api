@@ -150,7 +150,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           .and_return(Stripe::StripeObject.construct_from(
             {
               invoice_settings: {
-                default_payment_method: nil
+                default_payment_method: nil,
               },
               default_source: nil,
             },
