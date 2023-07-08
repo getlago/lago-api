@@ -277,6 +277,41 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
     end
 
+    context 'when customer updated event' do
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/customer_updated_event.json')
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentProviderCustomers::StripeService).to receive(:new)
+          .and_return(provider_customer_service)
+        allow(provider_customer_service).to receive(:update_payment_method)
+          .and_return(service_result)
+      end
+
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization:,
+          event_json: event,
+        )
+
+        expect(result).to be_success
+
+        expect(PaymentProviderCustomers::StripeService).to have_received(:new)
+        expect(provider_customer_service).to have_received(:update_payment_method)
+          .with(
+            metadata: {
+              customer_id: 'test_5',
+              lago_customer_id: '123456-1234-1234-1234-1234567890',
+            },
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_123456789',
+            payment_method_id: 'card_123456789',
+          )
+      end
+    end
+
     context 'when payment method detached event' do
       let(:event) do
         path = Rails.root.join('spec/fixtures/stripe/payment_method_detached_event.json')

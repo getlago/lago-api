@@ -89,7 +89,7 @@ module Invoices
         payment_method = Stripe::PaymentMethod.list(
           {
             customer: customer.stripe_customer.provider_customer_id,
-            type: 'card', # TODO: Supported payment method type
+            # type: 'card', # TODO: Supported payment method type
           },
           {
             api_key: stripe_api_key,
@@ -101,7 +101,25 @@ module Invoices
         payment_method&.id
       end
 
+      def update_payment_method_id
+        result = Stripe::Customer.retrieve(
+          customer.stripe_customer.provider_customer_id,
+          {
+            api_key: stripe_api_key,
+          },
+        )
+
+        if (payment_method_id = result.invoice_settings.default_payment_method || result.default_source)
+          customer.stripe_customer.update!(payment_method_id:)
+        end
+      rescue Stripe::StripeError => e
+        deliver_error_webhook(e)
+        raise
+      end
+
       def create_stripe_payment
+        update_payment_method_id
+
         Stripe::PaymentIntent.create(
           stripe_payment_payload,
           {

@@ -21,7 +21,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           timezone
           canEditAttributes
           invoiceGracePeriod
-          providerCustomer { id, providerCustomerId }
+          providerCustomer { id, providerCustomerId, providerPaymentMethods }
           billingConfiguration { id, documentLocale }
           metadata { id, key, value, displayInInvoice }
         }
@@ -46,6 +46,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           currency: 'EUR',
           providerCustomer: {
             providerCustomerId: 'cu_12345',
+            providerPaymentMethods: ['card', 'sepa_debit'],
           },
           billingConfiguration: {
             documentLocale: 'fr',
@@ -74,6 +75,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['invoiceGracePeriod']).to be_nil
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
+      expect(result_data['providerCustomer']['providerPaymentMethods']).to eq(['card', 'sepa_debit'])
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
       expect(result_data['billingConfiguration']['id']).to eq("#{customer.id}-c0nf")
       expect(result_data['metadata'][0]['key']).to eq('test-key')

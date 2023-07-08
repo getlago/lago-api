@@ -17,7 +17,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           city
           country
           paymentProvider
-          providerCustomer { id, providerCustomerId }
+          providerCustomer { id, providerCustomerId providerPaymentMethods }
           currency
           taxIdentificationNumber
           timezone
@@ -48,6 +48,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           currency: 'EUR',
           providerCustomer: {
             providerCustomerId: 'cu_12345',
+            providerPaymentMethods: ['card'],
           },
           billingConfiguration: {
             documentLocale: 'fr',
@@ -76,6 +77,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['paymentProvider']).to eq('stripe')
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
+      expect(result_data['providerCustomer']['providerPaymentMethods']).to eq(['card'])
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
       expect(result_data['metadata'].count).to eq(1)
       expect(result_data['metadata'][0]['value']).to eq('John Doe')
@@ -103,6 +105,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
             timezone: 'TZ_EUROPE_PARIS',
             providerCustomer: {
               providerCustomerId: 'cu_12345',
+              providerPaymentMethods: ['card'],
             },
           },
         },
