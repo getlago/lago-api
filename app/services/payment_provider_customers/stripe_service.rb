@@ -117,7 +117,7 @@ module PaymentProviderCustomers
       {
         success_url: CHECKOUT_SUCCESS_URL,
         mode: 'setup',
-        payment_method_types: ['card'],
+        payment_method_types: stripe_customer.provider_payment_methods,
         customer: stripe_customer.provider_customer_id,
       }
     end

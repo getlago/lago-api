@@ -95,5 +95,37 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
         end.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
       end
     end
+
+    context 'when provider customer id is set and sync with provider is blank' do
+      context 'when customer type is stripe' do
+        it 'does not enqueue a job to create the customer on the provider' do
+          pending
+        end
+
+        it 'generates checkout url' do
+          pending
+        end
+      end
+
+      context 'when customer type is adyen' do
+        it 'does not enqueue a job to create the customer on the provider' do
+          pending
+        end
+
+        it 'generates checkout url' do
+          pending
+        end
+      end
+
+      context 'when customer type is gocardless' do
+        it 'does not enqueue a job to create the customer on the provider' do
+          pending
+        end
+
+        it 'generates checkout url' do
+          pending
+        end
+      end
+    end
   end
 end

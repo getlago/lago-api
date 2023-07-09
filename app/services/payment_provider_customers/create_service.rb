@@ -34,7 +34,11 @@ module PaymentProviderCustomers
 
       result.provider_customer = provider_customer
 
-      create_customer_on_provider_service(async)
+      if should_create_provider_customer?
+        create_customer_on_provider_service(async)
+      elsif should_generate_checkout_url?
+        generate_checkout_url
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -48,15 +52,6 @@ module PaymentProviderCustomers
     delegate :organization, to: :customer
 
     def create_customer_on_provider_service(async)
-      # NOTE: the customer already exists on the service provider
-      return if result.provider_customer.provider_customer_id?
-
-      # NOTE: the customer id was removed from the customer
-      return if result.provider_customer.provider_customer_id_previously_changed?
-
-      # NOTE: customer sync with provider setting is not set to true
-      return if result.provider_customer.sync_with_provider.blank?
-
       if result.provider_customer.type == 'PaymentProviderCustomers::StripeCustomer'
         return PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer) if async
 
@@ -70,6 +65,26 @@ module PaymentProviderCustomers
 
         PaymentProviderCustomers::GocardlessCreateJob.perform_now(result.provider_customer)
       end
+    end
+
+    private
+
+    def generate_checkout_url
+      service_class = result.provider_customer.type.gsub(/Customer\z/, 'Service').constantize
+      service_class.new(result.provider_customer).generate_checkout_url
+    end
+
+    def should_create_provider_customer?
+      # NOTE: the customer does not exists on the service provider
+      # and the customer id was not removed from the customer
+      # customer sync with provider setting is set to true
+      !result.provider_customer.provider_customer_id? &&
+        !result.provider_customer.provider_customer_id_previously_changed? &&
+        result.provider_customer.sync_with_provider.present?
+    end
+
+    def should_generate_checkout_url?
+      result.provider_customer.provider_customer_id? && result.provider_customer.sync_with_provider.blank?
     end
   end
 end
