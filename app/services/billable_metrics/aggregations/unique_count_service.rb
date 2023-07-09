@@ -59,7 +59,14 @@ module BillableMetrics
         (1..result.aggregation).to_a
       end
 
-      private
+      def get_previous_event_in_interval(from_datetime:, to_datetime:)
+        @from_datetime = from_datetime
+        @to_datetime = to_datetime
+
+        previous_event
+      end
+
+      protected
 
       attr_reader :from_datetime, :to_datetime
 

@@ -1,0 +1,83 @@
+# frozen_string_literal: true
+
+module BillableMetrics
+  module ProratedAggregations
+    class BaseService < BillableMetrics::Aggregations::BaseService
+      def aggregation_without_proration
+        @aggregation_without_proration ||= base_aggregator.aggregate(from_datetime:, to_datetime:, options:)
+      end
+
+      def previous_event
+        @previous_event ||= base_aggregator.get_previous_event_in_interval(from_datetime:, to_datetime:)
+      end
+
+      def compute_pay_in_advance_aggregation
+        return BigDecimal(0) unless event
+        return BigDecimal(0) if event.properties.blank?
+
+        result_without_proration = aggregation_without_proration.pay_in_advance_aggregation
+
+        number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
+                            event.timestamp.in_time_zone(customer.applicable_timezone)
+        # In order to get proration coefficient we have to divide number of seconds with number
+        # of seconds in one day (86400). That way we will get number of days when the service was used.
+        proration_coefficient = number_of_seconds.fdiv(86_400).round.fdiv(period_duration)
+
+        value = (result_without_proration * proration_coefficient).ceil(5)
+
+        extend_event_metadata(value)
+
+        value
+      end
+
+      # We need to extend event metadata with max_aggregation_with_proration. This attribute will be used
+      # for current usage in pay_in_advance case
+      def extend_event_metadata(prorated_value)
+        result.max_aggregation = aggregation_without_proration.max_aggregation
+        result.current_aggregation = aggregation_without_proration.current_aggregation
+
+        unless previous_event
+          result.max_aggregation_with_proration = prorated_value.to_s
+
+          return
+        end
+
+        if BigDecimal(aggregation_without_proration.max_aggregation) >
+           BigDecimal(previous_event.metadata['max_aggregation'])
+          result.max_aggregation_with_proration =
+            (
+              BigDecimal(previous_event.metadata['max_aggregation_with_proration']) +
+              prorated_value
+            ).to_s
+        else
+          result.max_aggregation_with_proration =
+            BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
+        end
+      end
+
+      # In current usage section two main values are presented, number of units in period and amount.
+      # Proration affects only amount (calculated from aggregation) and number of units shows full number of units
+      # (calculated from current_usage_units).
+      def handle_current_usage(result_with_proration, is_pay_in_advance)
+        value_without_proration = aggregation_without_proration.aggregation
+
+        if !is_pay_in_advance
+          result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
+          result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
+        elsif previous_event
+          result.current_usage_units = aggregation_without_proration.current_usage_units
+          result.aggregation = aggregation_without_proration.current_usage_units -
+            BigDecimal(previous_event.metadata['current_aggregation']) +
+            BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
+        else
+          result.aggregation = value_without_proration
+          result.current_usage_units = aggregation_without_proration.current_usage_units
+        end
+      end
+
+      private
+
+      attr_reader :base_aggregator
+    end
+  end
+end

@@ -2,53 +2,40 @@
 
 module BillableMetrics
   module ProratedAggregations
-    class SumService < BillableMetrics::Aggregations::SumService
+    class SumService < BillableMetrics::ProratedAggregations::BaseService
+      def initialize(**args)
+        @base_aggregator = BillableMetrics::Aggregations::SumService.new(**args)
+
+        super(**args)
+      end
+
       def aggregate(from_datetime:, to_datetime:, options: {})
         @from_datetime = from_datetime
         @to_datetime = to_datetime
+        @options = options
 
         # For charges that are pay in advance on billing date we always bill full amount
-        return super if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
+        return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
 
         aggregation = compute_aggregation.ceil(5)
 
         if options[:is_current_usage]
-          result_without_proration = super
-          handle_current_usage(result_without_proration, aggregation, options[:is_pay_in_advance])
+          handle_current_usage(aggregation, options[:is_pay_in_advance])
         else
           result.aggregation = aggregation
         end
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
-        result.count = events.count
+        result.count = aggregation_without_proration.count
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
-      def compute_pay_in_advance_aggregation
-        return BigDecimal(0) unless event
-        return BigDecimal(0) if event.properties.blank?
-
-        result_without_proration = super
-
-        number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
-                            event.timestamp.in_time_zone(customer.applicable_timezone)
-        # In order to get proration coefficient we have to divide number of seconds with number
-        # of seconds in one day (86400). That way we will get number of days when the service was used.
-        proration_coefficient = number_of_seconds.fdiv(86_400).round.fdiv(period_duration)
-
-        value = (result_without_proration * proration_coefficient).ceil(5)
-
-        extend_event_metadata(value)
-
-        value
-      end
-
       private
 
-      attr_reader :from_datetime, :to_datetime
+      attr_reader :from_datetime, :to_datetime, :options
 
       def compute_aggregation
         ActiveRecord::Base.connection.execute(aggregation_query).first['aggregation_result']
@@ -111,43 +98,6 @@ module BillableMetrics
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
-      end
-
-      # In event metadata we also need to store max_aggregation_with_proration. We will use this attribute for
-      # presenting current usage if charge is pay_in_advance
-      def extend_event_metadata(prorated_value)
-        unless previous_event
-          result.max_aggregation_with_proration = prorated_value.to_s
-
-          return
-        end
-
-        if BigDecimal(result.max_aggregation) > BigDecimal(previous_event.metadata['max_aggregation'])
-          result.max_aggregation_with_proration =
-            (BigDecimal(previous_event.metadata['max_aggregation_with_proration']) + prorated_value).to_s
-        else
-          result.max_aggregation_with_proration = BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
-        end
-      end
-
-      # In current usage section two main values are presented, number of units in period and amount.
-      # Proration affects only amount (calculated from aggregation) and number of units shows full number of units
-      # (calculated from current_usage_units).
-      def handle_current_usage(result_without_proration, result_with_proration, is_pay_in_advance)
-        value_without_proration = result_without_proration.aggregation
-
-        if !is_pay_in_advance
-          result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
-          result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
-        elsif previous_event
-          result.current_usage_units = result_without_proration.current_usage_units
-          result.aggregation = result_without_proration.current_usage_units -
-                               BigDecimal(previous_event.metadata['current_aggregation']) +
-                               BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
-        else
-          result.aggregation = value_without_proration
-          result.current_usage_units = result_without_proration.current_usage_units
-        end
       end
     end
   end
