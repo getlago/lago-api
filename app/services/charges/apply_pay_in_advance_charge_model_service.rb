@@ -23,6 +23,7 @@ module Charges
       amount_cents = rounded_amount * currency.subunit_to_unit
 
       result.units = aggregation_result.pay_in_advance_aggregation
+      result.full_units_number = aggregation_result.full_units_number
       result.count = 1
       result.amount = amount_cents
       result

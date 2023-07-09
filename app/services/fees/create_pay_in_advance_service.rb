@@ -47,6 +47,12 @@ module Fees
 
         result = apply_charge_model(aggregation_result:, properties:)
 
+        units = if charge.prorated?
+          result.full_units_number
+        else
+          result.units
+        end
+
         fee = Fee.new(
           invoice:,
           subscription: event.subscription,
@@ -55,7 +61,7 @@ module Fees
           amount_currency: subscription.plan.amount_currency,
           fee_type: :charge,
           invoiceable: charge,
-          units: result.units,
+          units:,
           properties: boundaries,
           events_count: result.count,
           group_id: group&.id,

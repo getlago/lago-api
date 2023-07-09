@@ -64,6 +64,8 @@ module Fees
 
       units = if is_current_usage && (charge.pay_in_advance? || charge.prorated?)
         amount_result.current_usage_units
+      elsif charge.prorated?
+        amount_result.full_units_number.nil? ? amount_result.units : amount_result.full_units_number
       else
         amount_result.units
       end

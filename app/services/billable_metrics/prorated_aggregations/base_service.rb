@@ -16,6 +16,7 @@ module BillableMetrics
         return BigDecimal(0) if event.properties.blank?
 
         result_without_proration = aggregation_without_proration.pay_in_advance_aggregation
+        result.full_units_number = result_without_proration
 
         number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
                             event.timestamp.in_time_zone(customer.applicable_timezone)

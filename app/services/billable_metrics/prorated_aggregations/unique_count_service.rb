@@ -18,6 +18,7 @@ module BillableMetrics
         return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
 
         aggregation = compute_prorated_aggregation.ceil(5)
+        result.full_units_number = aggregation_without_proration.aggregation if event.nil?
 
         if options[:is_current_usage]
           handle_current_usage(aggregation, options[:is_pay_in_advance])
