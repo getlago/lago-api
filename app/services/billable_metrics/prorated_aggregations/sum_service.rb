@@ -73,25 +73,6 @@ module BillableMetrics
         end
       end
 
-      # NOTE: when subscription is terminated or upgraded,
-      #       we want to bill the persisted metrics at prorata of the full period duration.
-      #       ie: the number of day of the terminated period divided by number of days without termination
-      def persisted_pro_rata
-        ((to_datetime.to_time - from_datetime.to_time) / 1.day).ceil.fdiv(period_duration)
-      end
-
-      # NOTE: Full period duration to take upgrade, terminate
-      #       or start on non-anniversary day into account
-      def period_duration
-        @period_duration ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?,
-        ).charges_duration_in_days
-
-        @period_duration
-      end
-
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
       #       Dates are in customer timezone to make sure the duration is good
       def duration_ratio_sql(from, to)

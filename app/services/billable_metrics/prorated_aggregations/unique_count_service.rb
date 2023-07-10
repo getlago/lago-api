@@ -65,23 +65,6 @@ module BillableMetrics
         "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
       end
 
-      # NOTE: Full period duration to take upgrade, terminate
-      #       or start on non-anniversary day into account
-      def period_duration
-        @period_duration ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?,
-        ).charges_duration_in_days
-      end
-
-      # NOTE: when subscription is terminated or upgraded,
-      #       we want to bill the persisted metrics at prorata of the full period duration.
-      #       ie: the number of day of the terminated period divided by number of days without termination
-      def persisted_pro_rata
-        ((to_datetime.to_time - from_datetime.to_time) / 1.day).ceil.fdiv(period_duration)
-      end
-
       def prorated_persisted_query
         base_scope
           .where('quantified_events.added_at::timestamp(0) < ?', from_datetime)
