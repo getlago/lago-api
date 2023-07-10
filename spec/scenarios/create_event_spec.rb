@@ -80,17 +80,37 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     let(:subscription) { create(:active_subscription, customer:, started_at: 1.day.from_now) }
 
     it 'returns a subscription not found error' do
-      result = create_event params
+      result = create_event(params.merge(external_subscription_id: subscription.external_id))
       expect(result['code']).to eq('subscription_not_found')
     end
   end
 
+  context 'with subscription started in the same second' do
+    let(:subscription) { create(:active_subscription, customer:, started_at: Time.current) }
+
+    it 'creates the event successfully' do
+      expect do
+        create_event(params.merge(external_subscription_id: subscription.external_id))
+      end.to change(Event, :count)
+    end
+  end
+
   context 'with terminated subscription' do
-    let(:subscription) { create(:terminated_subscription, customer:) }
+    let(:subscription) { create(:terminated_subscription, customer:, terminated_at: 1.hour.ago) }
 
     it 'returns a subscription not found error' do
-      result = create_event params
+      result = create_event(params.merge(external_subscription_id: subscription.external_id))
       expect(result['code']).to eq('subscription_not_found')
+    end
+  end
+
+  context 'with subscription terminated in the same second' do
+    let(:subscription) { create(:terminated_subscription, customer:, terminated_at: Time.current) }
+
+    it 'creates the event successfully' do
+      expect do
+        create_event(params.merge(external_subscription_id: subscription.external_id))
+      end.to change(Event, :count)
     end
   end
 

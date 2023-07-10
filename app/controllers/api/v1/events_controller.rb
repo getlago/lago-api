@@ -14,7 +14,7 @@ module Api
         Events::CreateJob.perform_later(
           current_organization,
           create_params,
-          Time.zone.now.to_i,
+          Time.current.to_i,
           event_metadata,
         )
 

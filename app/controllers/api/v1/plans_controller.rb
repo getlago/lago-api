@@ -4,7 +4,7 @@ module Api
   module V1
     class PlansController < Api::BaseController
       def create
-        service = Plans::CreateService.new
+        service = ::Plans::CreateService.new
         result = service.create(
           **input_params
             .merge(organization_id: current_organization.id)
@@ -21,7 +21,7 @@ module Api
 
       def update
         plan = current_organization.plans.find_by(code: params[:code])
-        result = Plans::UpdateService.call(plan:, params: input_params)
+        result = ::Plans::UpdateService.call(plan:, params: input_params)
 
         if result.success?
           render_plan(result.plan)
@@ -32,7 +32,7 @@ module Api
 
       def destroy
         plan = current_organization.plans.find_by(code: params[:code])
-        result = Plans::PrepareDestroyService.call(plan:)
+        result = ::Plans::PrepareDestroyService.call(plan:)
 
         if result.success?
           render_plan(result.plan)
