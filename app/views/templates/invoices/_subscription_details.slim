@@ -19,7 +19,7 @@
           td.body-2 == TaxHelper.applied_taxes(invoice_subscription(subscription.id).subscription_fee)
           td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
 
-    - if subscription? && subscription_fees(subscription.id).charge_kind.any? && subscription.plan.charges.where(pay_in_advance: false).any?
+    - if subscription? && subscription_fees(subscription.id).charge_kind.any? && (subscription.plan.charges.where(pay_in_advance: false).any? || (subscription.plan.charges.where(pay_in_advance: true).any? && subscription.plan.pay_in_advance?))
       .invoice-resume.overflow-auto
         table.invoice-resume-table width="100%"
           tr
@@ -29,7 +29,7 @@
             td.body-2 = I18n.t('invoice.amount_without_tax')
           - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).group_by(&:charge_id).each do |_charge_id, fees|
             - fee = fees.first
-            - next if fee.charge.pay_in_advance?
+            - next if fee.charge.pay_in_advance? && !fee.charge.plan.pay_in_advance?
 
             - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
               tr
@@ -79,7 +79,7 @@
                   td.body-2 = fee.true_up_fee.units
                   td.body-2 == TaxHelper.applied_taxes(fee.true_up_fee)
                   td.body-2 = MoneyHelper.format(fee.true_up_fee.amount)
-    - if subscription? && subscription_fees(subscription.id).charge_kind.any? && subscription.plan.charges.where(pay_in_advance: true).any?
+    - if subscription? && subscription_fees(subscription.id).charge_kind.any? && subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance?
       .invoice-resume.overflow-auto
         table.invoice-resume-table width="100%"
           tr
@@ -200,6 +200,7 @@
             - else
               h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.plan.name)
 
+            - number_of_days_in_period = 0
             - if fees.all? { |f| f.group_id? }
               - fees.select { |f| f.units.positive? }.each do |fee|
                 .body-3 = fees.first.billable_metric.name
@@ -207,6 +208,7 @@
                 .breakdown-details.mb-24
                   table.breakdown-details-table width="100%"
                     - recurring_breakdown(fee).each do |breakdown|
+                      - number_of_days_in_period = breakdown.total_duration
                       tr
                         td width="20%"
                           .body-1 = I18n.l(breakdown.date, format: :default)
@@ -225,6 +227,7 @@
                 table.breakdown-details-table width="100%"
                   - fees.each do |fee|
                     - recurring_breakdown(fee).each do |breakdown|
+                      - number_of_days_in_period = breakdown.total_duration
                       tr
                         td width="20%"
                           .body-1 = breakdown.date.strftime('%b %d, %Y')
@@ -238,6 +241,6 @@
                             | +/-#{breakdown.amount} #{fee.item_name}
 
             - if fees.first.charge.prorated?
-              .alert.body-3 = I18n.t('invoice.notice_prorated')
+              .alert.body-3 = I18n.t('invoice.notice_prorated', days_in_month: number_of_days_in_period)
             - else
               .alert.body-3 = I18n.t('invoice.notice_full')

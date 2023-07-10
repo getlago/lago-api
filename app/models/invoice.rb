@@ -133,6 +133,28 @@ class Invoice < ApplicationRecord
     ).breakdown
   end
 
+  def charge_pay_in_advance_proration_range(fee, timestamp)
+    date_service = Subscriptions::DatesService.new_instance(
+      fee.subscription,
+      Time.zone.at(timestamp),
+      current_usage: true,
+    )
+
+    event = Event.find_by(id: fee.pay_in_advance_event_id)
+
+    return {} unless event
+
+    number_of_seconds = date_service.charges_to_datetime.in_time_zone(customer.applicable_timezone) -
+                        event.timestamp.in_time_zone(customer.applicable_timezone)
+
+    number_of_days = number_of_seconds.fdiv(86_400).round
+
+    {
+      number_of_days:,
+      period_duration: date_service.charges_duration_in_days,
+    }
+  end
+
   def charge_pay_in_advance_interval(timestamp, subscription)
     date_service = Subscriptions::DatesService.new_instance(
       subscription,

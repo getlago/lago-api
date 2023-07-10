@@ -182,6 +182,24 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#charge_pay_in_advance_proration_range' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:timestamp) { DateTime.parse('2023-07-25 00:00:00 UTC') }
+    let(:event) { create(:event, subscription:, timestamp:) }
+    let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, pay_in_advance_event_id: event.id) }
+    let(:charge) do
+      create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true, prorated: true)
+    end
+
+    it 'returns the fees of the corresponding invoice_subscription' do
+      expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)[:period_duration]).to eq(31)
+      expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)[:number_of_days]).to eq(7)
+    end
+  end
+
   describe '#creditable_amount_cents' do
     context 'when invoice v1' do
       it 'returns 0' do
