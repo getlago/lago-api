@@ -23,7 +23,6 @@ module Api
 
       def input_params
         params.require(:organization).permit(
-          :webhook_url,
           :country,
           :address_line1,
           :address_line2,
@@ -35,6 +34,7 @@ module Api
           :legal_number,
           :tax_identification_number,
           :timezone,
+          :webhook_url,
           email_settings: [],
           billing_configuration: [
             :invoice_footer,

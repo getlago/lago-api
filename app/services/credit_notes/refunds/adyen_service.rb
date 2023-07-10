@@ -109,7 +109,7 @@ module CreditNotes
       end
 
       def deliver_error_webhook(message:, code:)
-        return unless organization.webhook_url?
+        return unless organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
           'credit_note.provider_refund_failure',

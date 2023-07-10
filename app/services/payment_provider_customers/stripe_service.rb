@@ -76,7 +76,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url
-      return result unless customer.organization.webhook_url?
+      return result unless customer.organization.webhook_endpoints.any?
 
       res = Stripe::Checkout::Session.create(
         checkout_link_params,
@@ -156,7 +156,7 @@ module PaymentProviderCustomers
     end
 
     def deliver_success_webhook
-      return unless customer.organization.webhook_url?
+      return unless customer.organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later(
         'customer.payment_provider_created',
@@ -165,7 +165,7 @@ module PaymentProviderCustomers
     end
 
     def deliver_error_webhook(stripe_error)
-      return unless customer.organization.webhook_url?
+      return unless customer.organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later(
         'customer.payment_provider_error',

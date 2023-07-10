@@ -3,14 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe WebhooksQuery, type: :query do
-  subject(:webhook_query) { described_class.new(organization:) }
+  subject(:webhook_query) { described_class.new(webhook_endpoint:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-
-  let(:webhook_succeeded) { create(:webhook, :succeeded, organization:) }
-  let(:webhook_failed) { create(:webhook, :failed, organization:) }
-  let(:webhook_other_type) { create(:webhook, :succeeded, organization:, webhook_type: 'invoice.generated') }
+  let(:organization) { webhook_endpoint.organization.reload }
+  let(:webhook_endpoint) { create(:webhook_endpoint) }
+  let(:webhook_succeeded) { create(:webhook, :succeeded, webhook_endpoint:) }
+  let(:webhook_failed) { create(:webhook, :failed, webhook_endpoint:) }
+  let(:webhook_other_type) { create(:webhook, :succeeded, webhook_endpoint:, webhook_type: 'invoice.generated') }
 
   before do
     webhook_succeeded

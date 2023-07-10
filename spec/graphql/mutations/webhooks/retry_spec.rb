@@ -3,9 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:webhook) { create(:webhook, :failed, organization:) }
+  let(:webhook) { create(:webhook, :failed, webhook_endpoint:) }
+  let(:webhook_endpoint) { create(:webhook_endpoint) }
+  let(:organization) { webhook_endpoint.organization.reload }
+  let(:membership) { create(:membership, organization:) }
 
   let(:mutation) do
     <<-GQL

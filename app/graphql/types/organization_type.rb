@@ -45,5 +45,9 @@ module Types
         document_locale: object&.document_locale,
       }
     end
+
+    def webhook_url
+      object.webhook_endpoints.map(&:webhook_url).first
+    end
   end
 end

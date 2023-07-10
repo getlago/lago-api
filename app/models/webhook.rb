@@ -5,8 +5,10 @@ class Webhook < ApplicationRecord
 
   STATUS = %i[pending succeeded failed].freeze
 
-  belongs_to :organization
+  belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true
+
+  delegate :organization, to: :webhook_endpoint
 
   enum status: STATUS
 end

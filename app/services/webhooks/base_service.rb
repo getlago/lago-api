@@ -13,7 +13,7 @@ module Webhooks
 
     def call
       return resend if webhook_id.present?
-      return unless current_organization&.webhook_url?
+      return if current_organization.webhook_endpoints.none?
 
       payload = {
         webhook_type:,
@@ -21,21 +21,22 @@ module Webhooks
         object_type => object_serializer.serialize,
       }
 
-      preprocess_webhook(current_webhook, payload)
-
-      send_webhook(current_organization.webhook_url, payload)
+      current_organization.webhook_endpoints.each do |webhook_endpoint|
+        webhook = initialize_webhook(webhook_endpoint, payload)
+        send_webhook(webhook, webhook_endpoint, payload)
+      end
     end
 
     def resend
-      return if current_webhook.blank?
-      return unless current_webhook.organization.webhook_url?
+      webhook = Webhook.find_by(id: webhook_id)
+      return if webhook.blank?
 
-      current_webhook.retries += 1 if current_webhook.failed?
-      current_webhook.last_retried_at = Time.zone.now if current_webhook.retries.positive?
-      current_webhook.endpoint = current_webhook.organization.webhook_url
+      webhook.retries += 1 if webhook.failed?
+      webhook.last_retried_at = Time.zone.now if webhook.retries.positive?
+      webhook.endpoint = webhook.webhook_endpoint.webhook_url
 
-      payload = JSON.parse(current_webhook.payload)
-      send_webhook(current_webhook.organization.webhook_url, payload)
+      payload = JSON.parse(webhook.payload)
+      send_webhook(webhook, webhook.webhook_endpoint, payload)
     end
 
     private
@@ -58,20 +59,20 @@ module Webhooks
       # Empty
     end
 
-    def send_webhook(url, payload)
-      http_client = LagoHttpClient::Client.new(url)
+    def send_webhook(webhook, webhook_endpoint, payload)
+      http_client = LagoHttpClient::Client.new(webhook_endpoint.webhook_url)
       headers = generate_headers(payload)
       response = http_client.post_with_response(payload, headers)
 
-      succeed_webhook(current_webhook, response)
+      succeed_webhook(webhook, response)
     rescue LagoHttpClient::HttpError, Net::ReadTimeout, Errno::ECONNRESET, SocketError => e
-      fail_webhook(current_webhook, e)
+      fail_webhook(webhook, e)
 
       # NOTE: By default, Lago is retrying 3 times a webhook
-      return if current_webhook.retries >= ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i
+      return if webhook.retries >= ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i
 
-      SendWebhookJob.set(wait: wait_value)
-        .perform_later(webhook_type, object, options, current_webhook.id)
+      SendWebhookJob.set(wait: wait_value(webhook))
+        .perform_later(webhook_type, object, options, webhook.id)
     end
 
     def generate_headers(payload)
@@ -95,26 +96,21 @@ module Webhooks
       ENV['LAGO_API_URL']
     end
 
-    def current_webhook
-      @current_webhook ||= Webhook.find_or_initialize_by(
-        id: webhook_id,
-      )
-    end
-
-    def preprocess_webhook(webhook, payload)
-      webhook.organization_id = current_organization.id
+    def initialize_webhook(webhook_endpoint, payload)
+      webhook = Webhook.new(webhook_endpoint:)
       webhook.webhook_type = webhook_type
-      webhook.endpoint = current_organization.webhook_url
+      webhook.endpoint = webhook_endpoint.webhook_url
       webhook.object_id = object.is_a?(Hash) ? object.fetch(:id, nil) : object&.id
       webhook.object_type = object.is_a?(Hash) ? object.fetch(:class, nil) : object&.class&.to_s
       webhook.payload = payload.to_json
       webhook.retries += 1 if webhook.failed?
       webhook.last_retried_at = Time.zone.now if webhook.retries.positive?
+      webhook
     end
 
     def succeed_webhook(webhook, response)
       webhook.http_status = response&.code&.to_i
-      webhook.response = response&.body&.presence || {}
+      webhook.response = response&.body.presence || {}
       webhook.succeeded!
     end
 
@@ -128,9 +124,9 @@ module Webhooks
       webhook.failed!
     end
 
-    def wait_value
+    def wait_value(webhook)
       # NOTE: This is based on the Rails Active Job wait algorithm
-      executions = current_webhook.retries
+      executions = webhook.retries
       ((executions**4) + (Kernel.rand * (executions**4) * 0.15)) + 2
     end
   end

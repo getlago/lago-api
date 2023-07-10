@@ -6,7 +6,7 @@ module Types
       graphql_name 'Webhook'
 
       field :id, ID, null: false
-      field :organization, Types::OrganizationType
+      field :webhook_endpoint, Types::WebhookEndpoints::Object
 
       field :endpoint, String, null: false
       field :object_type, String, null: false
