@@ -19651,7 +19651,7 @@
             },
             {
               "name": "chargesCount",
-              "description": "Number fo charges using this tax",
+              "description": "Number of charges using this tax",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,

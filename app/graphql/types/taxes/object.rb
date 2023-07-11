@@ -18,9 +18,17 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :charges_count, Integer, null: false, description: 'Number fo charges using this tax'
+      field :charges_count, Integer, null: false, description: 'Number of charges using this tax'
       field :customers_count, Integer, null: false, description: 'Number of customers using this tax'
       field :plans_count, Integer, null: false, description: 'Number of plans using this tax'
+
+      def charges_count
+        object.charges.count
+      end
+
+      def plans_count
+        object.plans.count
+      end
     end
   end
 end

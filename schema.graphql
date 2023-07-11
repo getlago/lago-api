@@ -4533,7 +4533,7 @@ type Tax {
   appliedToOrganization: Boolean!
 
   """
-  Number fo charges using this tax
+  Number of charges using this tax
   """
   chargesCount: Int!
   code: String!
