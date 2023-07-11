@@ -77,4 +77,19 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount).to eq(200)
     end
   end
+
+  context 'when charge is prorated' do
+    let(:aggregation) { 198.6 }
+    let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
+
+    before do
+
+      charge.update!(prorated: true, billable_metric:)
+      aggregation_result.full_units_number = 300
+    end
+
+    it 'applies unit amount the third range' do
+      expect(apply_volume_service.amount).to eq(149.3)
+    end
+  end
 end
