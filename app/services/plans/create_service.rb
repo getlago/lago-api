@@ -33,7 +33,8 @@ module Plans
             new_charge = create_charge(plan, charge)
 
             if charge[:tax_codes].present?
-              Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
+              taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
+              return taxes_result unless taxes_result.success?
             end
           end
         end
