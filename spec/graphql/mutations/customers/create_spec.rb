@@ -30,6 +30,18 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
     GQL
   end
 
+  let(:body) do
+    {
+      object: 'event',
+      data: { url: 'test.url' },
+    }
+  end
+
+  before do
+    stub_request(:post, 'https://api.stripe.com/v1/checkout/sessions')
+      .to_return(status: 200, body: body.to_json, headers: {})
+  end
+
   it 'creates a customer' do
     stripe_provider
 

@@ -4,7 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::CustomersController, type: :request do
   describe 'create' do
-    let(:organization) { create(:organization) }
+    let(:organization) { stripe_provider.organization }
+    let(:stripe_provider) { create(:stripe_provider) }
     let(:create_params) do
       {
         external_id: SecureRandom.uuid,
@@ -65,6 +66,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             document_locale: 'fr',
           },
         }
+      end
+
+      before do
+        stub_request(:post, 'https://api.stripe.com/v1/checkout/sessions')
+          .to_return(status: 200, body: body.to_json, headers: {})
+
+        allow(Stripe::Checkout::Session).to receive(:create)
+          .and_return({ 'url' => 'https://example.com' })
       end
 
       it 'returns a success' do
