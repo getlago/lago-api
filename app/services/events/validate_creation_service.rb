@@ -88,7 +88,7 @@ module Events
 
     def send_webhook_notice
       return unless send_webhook
-      return unless organization.webhook_url?
+      return unless organization.webhook_endpoints.any?
 
       status = result.error.is_a?(BaseService::NotFoundFailure) ? 404 : 422
 

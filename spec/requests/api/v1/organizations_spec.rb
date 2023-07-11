@@ -4,11 +4,11 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::OrganizationsController, type: :request do
   let(:organization) { create(:organization) }
+  let(:webhook_url) { Faker::Internet.url }
 
   describe 'update' do
     let(:update_params) do
       {
-        webhook_url: 'http://test.example',
         country: 'pl',
         address_line1: 'address1',
         address_line2: 'address2',
@@ -19,6 +19,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         legal_name: 'test1',
         legal_number: '123',
         timezone: 'Europe/Paris',
+        webhook_url:,
         email_settings: ['invoice.finalized'],
         billing_configuration: {
           invoice_footer: 'footer',
@@ -40,7 +41,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
       aggregate_failures do
         expect(json[:organization][:name]).to eq(organization.name)
-        expect(json[:organization][:webhook_url]).to eq(update_params[:webhook_url])
+        expect(json[:organization][:webhook_url]).to eq(webhook_url)
+        expect(json[:organization][:webhook_urls]).to eq([webhook_url])
         expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
         # TODO(:timezone): Timezone update is turned off for now
         # expect(json[:organization][:timezone]).to eq(update_params[:timezone])

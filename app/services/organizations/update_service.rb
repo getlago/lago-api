@@ -21,8 +21,7 @@ module Organizations
       organization.zipcode = params[:zipcode] if params.key?(:zipcode)
       organization.city = params[:city] if params.key?(:city)
       organization.state = params[:state] if params.key?(:state)
-      organization.country = params[:country] if params.key?(:country)
-      organization.webhook_url = params[:webhook_url] if params.key?(:webhook_url)
+      organization.country = params[:country]&.upcase if params.key?(:country)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
@@ -30,6 +29,11 @@ module Organizations
 
       # NOTE(legacy): keep accepting vat_rate field temporary by converting it into tax rate
       handle_legacy_vat_rate(billing[:vat_rate]) if billing.key?(:vat_rate)
+
+      if params.key?(:webhook_url)
+        webhook_endpoint = organization.webhook_endpoints.first_or_initialize
+        webhook_endpoint.update! webhook_url: params[:webhook_url]
+      end
 
       if License.premium? && billing.key?(:invoice_grace_period)
         Organizations::UpdateInvoiceGracePeriodService.call(

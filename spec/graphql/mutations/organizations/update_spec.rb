@@ -8,7 +8,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     <<~GQL
       mutation($input: UpdateOrganizationInput!) {
         updateOrganization(input: $input) {
-          webhookUrl
           legalNumber
           legalName
           taxIdentificationNumber
@@ -21,6 +20,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           country
           timezone
           emailSettings
+          webhookUrl
           billingConfiguration { invoiceFooter, invoiceGracePeriod, documentLocale }
         }
       }
@@ -34,7 +34,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          webhookUrl: 'http://foo.bar',
           legalNumber: '1234',
           legalName: 'Foobar',
           taxIdentificationNumber: '2246',
@@ -45,6 +44,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode: 'FOO1234',
           city: 'Foobar',
           country: 'FR',
+          webhookUrl: 'https://app.test.dev',
           billingConfiguration: {
             invoiceFooter: 'invoice footer',
             documentLocale: 'fr',
@@ -56,7 +56,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     result_data = result['data']['updateOrganization']
 
     aggregate_failures do
-      expect(result_data['webhookUrl']).to eq('http://foo.bar')
       expect(result_data['legalNumber']).to eq('1234')
       expect(result_data['legalName']).to eq('Foobar')
       expect(result_data['taxIdentificationNumber']).to eq('2246')
@@ -67,6 +66,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['zipcode']).to eq('FOO1234')
       expect(result_data['city']).to eq('Foobar')
       expect(result_data['country']).to eq('FR')
+      expect(result_data['webhookUrl']).to eq('https://app.test.dev')
       expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')
       expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(0)
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
@@ -131,23 +131,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(3)
         end
       end
-    end
-  end
-
-  context 'with invalid webhook url' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            webhookUrl: 'bad_url',
-          },
-        },
-      )
-
-      expect_graphql_error(result:, message: :unprocessable_entity)
     end
   end
 

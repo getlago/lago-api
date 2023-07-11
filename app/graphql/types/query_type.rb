@@ -41,5 +41,7 @@ module Types
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
     field :wallets, resolver: Resolvers::WalletsResolver
     field :webhooks, resolver: Resolvers::WebhooksResolver
+    field :webhook_endpoint, resolver: Resolvers::WebhookEndpointResolver
+    field :webhook_endpoints, resolver: Resolvers::WebhookEndpointsResolver
   end
 end

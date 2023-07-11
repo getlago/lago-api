@@ -84,6 +84,11 @@ group :development, :test do
   gem 'webmock'
 end
 
+group :test do
+  gem 'rspec-graphql_matchers'
+  gem 'shoulda-matchers'
+end
+
 group :development do
   gem 'coffee-rails'
   gem 'graphiql-rails', git: 'https://github.com/rmosolgo/graphiql-rails.git'

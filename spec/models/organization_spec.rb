@@ -12,6 +12,9 @@ RSpec.describe Organization, type: :model do
     )
   end
 
+  it { is_expected.to have_many(:webhook_endpoints) }
+  it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
+
   it_behaves_like 'paper_trail traceable'
 
   describe 'Validations' do
@@ -21,24 +24,6 @@ RSpec.describe Organization, type: :model do
 
     it 'is not valid without name' do
       organization.name = nil
-
-      expect(organization).not_to be_valid
-    end
-
-    it 'is valid with valid http webhook url' do
-      organization.webhook_url = 'http://foo.bar'
-
-      expect(organization).to be_valid
-    end
-
-    it 'is valid with valid https webhook url' do
-      organization.webhook_url = 'https://foo.bar'
-
-      expect(organization).to be_valid
-    end
-
-    it 'is invalid with invalid webhook url' do
-      organization.webhook_url = 'foobar'
 
       expect(organization).not_to be_valid
     end

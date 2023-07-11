@@ -24,7 +24,7 @@ module Invoices
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')
         end
 
-        deliver_webhook if customer&.organization&.webhook_url?
+        deliver_webhook if customer&.organization&.webhook_endpoints&.any?
         Invoices::Payments::CreateService.new(invoice).call
 
         result.invoice = invoice

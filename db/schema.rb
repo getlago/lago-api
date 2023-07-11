@@ -342,9 +342,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.uuid "group_id"
     t.uuid "pay_in_advance_event_id"
     t.integer "payment_status", default: 0, null: false
-    t.datetime "succeeded_at"
-    t.datetime "failed_at"
-    t.datetime "refunded_at"
+    t.datetime "succeeded_at", precision: nil
+    t.datetime "failed_at", precision: nil
+    t.datetime "refunded_at", precision: nil
     t.uuid "true_up_parent_fee_id"
     t.uuid "add_on_id"
     t.string "description"
@@ -432,11 +432,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "recurring"
-    t.datetime "timestamp"
-    t.datetime "from_datetime"
-    t.datetime "to_datetime"
-    t.datetime "charges_from_datetime"
-    t.datetime "charges_to_datetime"
+    t.datetime "timestamp", precision: nil
+    t.datetime "from_datetime", precision: nil
+    t.datetime "to_datetime", precision: nil
+    t.datetime "charges_from_datetime", precision: nil
+    t.datetime "charges_to_datetime", precision: nil
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
     t.index ["subscription_id", "from_datetime", "to_datetime"], name: "index_invoice_subscriptions_on_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
@@ -506,7 +506,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "api_key"
-    t.string "webhook_url"
     t.float "vat_rate", default: 0.0, null: false
     t.string "country"
     t.string "address_line1"
@@ -524,6 +523,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.string "document_locale", default: "en", null: false
     t.string "email_settings", default: [], null: false, array: true
     t.string "tax_identification_number"
+    t.string "webhook_url"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end
@@ -726,6 +726,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
+  create_table "webhook_endpoints", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "webhook_url", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_webhook_endpoints_on_organization_id"
+    t.index ["webhook_url", "organization_id"], name: "index_webhook_endpoints_on_webhook_url_and_organization_id", unique: true
+  end
+
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "object_id"
     t.string "object_type"
@@ -739,8 +748,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "last_retried_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "organization_id", null: false
-    t.index ["organization_id"], name: "index_webhooks_on_organization_id"
+    t.uuid "webhook_endpoint_id"
+    t.index ["webhook_endpoint_id"], name: "index_webhooks_on_webhook_endpoint_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -817,4 +826,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
+  add_foreign_key "webhook_endpoints", "organizations"
+  add_foreign_key "webhooks", "webhook_endpoints"
 end

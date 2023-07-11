@@ -7,7 +7,8 @@ module V1
         lago_id: model.id,
         name: model.name,
         created_at: model.created_at.iso8601,
-        webhook_url: model.webhook_url,
+        webhook_url: webhook_urls.first.to_s,
+        webhook_urls:,
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
@@ -48,6 +49,12 @@ module V1
         ::V1::TaxSerializer,
         collection_name: 'taxes',
       ).serialize
+    end
+
+    private
+
+    def webhook_urls
+      model.webhook_endpoints.map(&:webhook_url)
     end
   end
 end

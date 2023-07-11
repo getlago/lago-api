@@ -348,11 +348,18 @@ GEM
       rack (>= 1.4)
     retriable (3.1.2)
     rexml (3.2.5)
+    rspec (3.12.0)
+      rspec-core (~> 3.12.0)
+      rspec-expectations (~> 3.12.0)
+      rspec-mocks (~> 3.12.0)
     rspec-core (3.12.1)
       rspec-support (~> 3.12.0)
     rspec-expectations (3.12.2)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
+    rspec-graphql_matchers (2.0.0.pre.rc.0)
+      graphql (~> 2.0)
+      rspec (~> 3.0)
     rspec-mocks (3.12.5)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
@@ -387,6 +394,8 @@ GEM
     sentry-sidekiq (5.3.1)
       sentry-ruby-core (~> 5.3.1)
       sidekiq (>= 3.0)
+    shoulda-matchers (5.3.0)
+      activesupport (>= 5.2.0)
     sidekiq (7.0.8)
       concurrent-ruby (< 2)
       connection_pool (>= 2.3.0)
@@ -492,11 +501,13 @@ DEPENDENCIES
   rack-cors
   rails (~> 7.0.5)
   ransack (~> 3.2.1)
+  rspec-graphql_matchers
   rspec-rails
   sass-rails
   sentry-rails
   sentry-ruby
   sentry-sidekiq
+  shoulda-matchers
   sidekiq
   simplecov
   slim

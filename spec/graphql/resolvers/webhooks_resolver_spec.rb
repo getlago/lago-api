@@ -6,7 +6,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        webhooks(limit: 5) {
+        webhooks(limit: 5, webhookEndpointId: "#{webhook_endpoint.id}") {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -14,11 +14,12 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:webhook_endpoint) { create(:webhook_endpoint) }
+  let(:organization) { webhook_endpoint.organization.reload }
+  let(:membership) { create(:membership, organization:) }
 
   before do
-    create_list(:webhook, 5, :succeeded, organization:)
+    create_list(:webhook, 5, :succeeded, webhook_endpoint:)
   end
 
   it 'returns a list of webhooks' do
@@ -31,7 +32,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     webhooks_response = result['data']['webhooks']
 
     aggregate_failures do
-      expect(webhooks_response['collection'].count).to eq(organization.webhooks.count)
+      expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
       expect(webhooks_response['metadata']['currentPage']).to eq(1)
     end
   end

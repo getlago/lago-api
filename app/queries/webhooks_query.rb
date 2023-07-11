@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 class WebhooksQuery < BaseQuery
+  def initialize(webhook_endpoint:, pagination: Pagination.new, filters: Filters.new)
+    @webhook_endpoint = webhook_endpoint
+    super(organization: webhook_endpoint.organization, pagination:, filters:)
+  end
+
   def call(search_term:, page:, limit:, status: nil)
     @search_term = search_term
 
@@ -14,10 +19,10 @@ class WebhooksQuery < BaseQuery
 
   private
 
-  attr_reader :search_term
+  attr_reader :search_term, :webhook_endpoint
 
   def base_scope
-    organization.webhooks.ransack(search_params)
+    webhook_endpoint.webhooks.ransack(search_params)
   end
 
   def search_params
