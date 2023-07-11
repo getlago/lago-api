@@ -184,6 +184,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
   describe 'update' do
     let(:plan) { create(:plan, organization:) }
     let(:code) { 'plan_code' }
+    let(:tax_codes) { [tax.code] }
     let(:update_params) do
       {
         name: 'P1',
@@ -201,7 +202,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             properties: {
               amount: '0.22',
             },
-            tax_codes: [tax.code],
+            tax_codes:,
           },
         ],
       }
