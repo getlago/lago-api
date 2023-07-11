@@ -11,7 +11,7 @@ RSpec.describe Organizations::UpdateService do
   let(:email_settings) { [] }
   let(:invoice_grace_period) { 0 }
   let(:logo) { nil }
-  let(:country) { 'FR' }
+  let(:country) { 'fr' }
 
   let(:params) do
     {
