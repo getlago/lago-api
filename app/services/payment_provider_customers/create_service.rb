@@ -67,8 +67,6 @@ module PaymentProviderCustomers
       end
     end
 
-    private
-
     def generate_checkout_url
       service_class = result.provider_customer.type.gsub(/Customer\z/, 'Service').constantize
       service_class.new(result.provider_customer).generate_checkout_url
