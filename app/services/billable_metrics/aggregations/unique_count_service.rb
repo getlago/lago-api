@@ -25,9 +25,10 @@ module BillableMetrics
         return 0 unless event
         return 0 if event.properties.blank?
 
+        res = (operation_type == :add) ? 1 : 0
+
         unless previous_event
-          res = (operation_type == :add) ? 1 : 0
-          handle_event_metadata(current_aggregation: res, max_aggregation: res)
+          handle_event_metadata(current_aggregation: res, max_aggregation: res, units_applied: res)
 
           return res
         end
@@ -42,7 +43,7 @@ module BillableMetrics
 
           1
         else
-          handle_event_metadata(current_aggregation:, max_aggregation: old_max)
+          handle_event_metadata(current_aggregation:, max_aggregation: old_max, units_applied: res)
 
           0
         end
@@ -99,9 +100,10 @@ module BillableMetrics
         @operation_type ||= event.properties.fetch('operation_type', 'add')&.to_sym
       end
 
-      def handle_event_metadata(current_aggregation: nil, max_aggregation: nil)
+      def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)
         result.current_aggregation = current_aggregation unless current_aggregation.nil?
         result.max_aggregation = max_aggregation unless max_aggregation.nil?
+        result.units_applied = units_applied unless units_applied.nil?
       end
 
       def compute_aggregation

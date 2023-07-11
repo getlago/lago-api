@@ -17,6 +17,7 @@ module BillableMetrics
 
         result_without_proration = aggregation_without_proration.pay_in_advance_aggregation
         result.full_units_number = result_without_proration
+        result.units_applied = aggregation_without_proration.units_applied
 
         number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
                             event.timestamp.in_time_zone(customer.applicable_timezone)

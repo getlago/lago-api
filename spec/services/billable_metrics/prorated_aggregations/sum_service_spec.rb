@@ -381,6 +381,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         result = sum_service.aggregate(from_datetime:, to_datetime:)
 
         expect(result.pay_in_advance_aggregation).to eq(0)
+        expect(result.units_applied).to eq('-2')
       end
     end
 
