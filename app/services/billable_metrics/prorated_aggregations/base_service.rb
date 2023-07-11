@@ -69,8 +69,8 @@ module BillableMetrics
         elsif previous_event
           result.current_usage_units = aggregation_without_proration.current_usage_units
           result.aggregation = aggregation_without_proration.current_usage_units -
-            BigDecimal(previous_event.metadata['current_aggregation']) +
-            BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
+                               BigDecimal(previous_event.metadata['current_aggregation']) +
+                               BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
         else
           result.aggregation = value_without_proration
           result.current_usage_units = aggregation_without_proration.current_usage_units
