@@ -97,6 +97,7 @@ module Api
                 { values: {} },
               ],
             },
+            { tax_codes: [] },
           ],
         )
       end

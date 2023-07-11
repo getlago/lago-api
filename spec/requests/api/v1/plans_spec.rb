@@ -3,8 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::PlansController, type: :request do
+  let(:tax) { create(:tax, organization:) }
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:plan) { create(:plan, code: 'plan_code') }
 
   describe 'create' do
     let(:create_params) do
@@ -24,6 +26,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             properties: {
               amount: '0.22',
             },
+            tax_codes: [tax.code],
           },
         ],
       }
