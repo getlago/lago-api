@@ -16,6 +16,12 @@ RSpec.describe Charges::ApplyTaxesService, type: :service do
       expect { apply_service.call }.to change { charge.applied_taxes.count }.from(0).to(2)
     end
 
+    it 'unassigns existing taxes' do
+      existing = create(:charge_applied_tax, charge:)
+      apply_service.call
+      expect(Charge::AppliedTax.find_by(id: existing.id)).to be_nil
+    end
+
     it 'refreshes draft invoices' do
       subscription = create(:subscription, plan:)
       invoice = create(:invoice, :draft, organization: plan.organization)

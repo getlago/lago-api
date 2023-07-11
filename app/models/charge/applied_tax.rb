@@ -4,8 +4,6 @@ class Charge
   class AppliedTax < ApplicationRecord
     self.table_name = 'charges_taxes'
 
-    include PaperTrailTraceable
-
     belongs_to :charge
     belongs_to :tax
   end
