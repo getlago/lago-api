@@ -46,13 +46,13 @@ module BillableMetrics
         date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
 
         added_list = period_query.group(Arel.sql("DATE(#{date_field})"))
-                                 .order(Arel.sql("DATE(#{date_field}) ASC"))
-                                 .pluck(Arel.sql(
-                                   [
-                                     "DATE(#{date_field}) as date",
-                                     "SUM(CAST(#{sanitized_field_name} AS FLOAT))::numeric",
-                                   ].join(', '),
-                                 ))
+          .order(Arel.sql("DATE(#{date_field}) ASC"))
+          .pluck(Arel.sql(
+            [
+              "DATE(#{date_field}) as date",
+              "SUM(CAST(#{sanitized_field_name} AS FLOAT))::numeric",
+            ].join(', '),
+          ))
 
         added_list.map do |aggregation|
           OpenStruct.new(

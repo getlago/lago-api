@@ -116,9 +116,9 @@ class Invoice < ApplicationRecord
   def recurring_breakdown(fee)
     service = case fee.charge.billable_metric.aggregation_type.to_sym
               when :sum_agg
-                 BillableMetrics::Breakdown::SumService
+                BillableMetrics::Breakdown::SumService
               when :unique_count_agg
-                 BillableMetrics::Breakdown::UniqueCountService
+                BillableMetrics::Breakdown::UniqueCountService
               else
                 raise(NotImplementedError)
               end

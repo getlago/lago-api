@@ -48,13 +48,13 @@ module BillableMetrics
         date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.added_at')
 
         added_list = prorated_added_query.group(Arel.sql("DATE(#{date_field})"))
-                                         .order(Arel.sql("DATE(#{date_field}) ASC"))
-                                         .pluck(Arel.sql(
-                                           [
-                                             "DATE(#{date_field}) as date",
-                                             'COUNT(quantified_events.id) as metric_count',
-                                          ].join(', '),
-                                         ))
+          .order(Arel.sql("DATE(#{date_field}) ASC"))
+          .pluck(Arel.sql(
+            [
+              "DATE(#{date_field}) as date",
+              'COUNT(quantified_events.id) as metric_count',
+            ].join(', '),
+          ))
 
         added_list.map do |aggregation|
           OpenStruct.new(
@@ -71,13 +71,13 @@ module BillableMetrics
         date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
 
         removed_list = prorated_removed_query.group(Arel.sql("DATE(#{date_field})"))
-                                             .order(Arel.sql("DATE(#{date_field}) ASC"))
-                                             .pluck(Arel.sql(
-                                              [
-                                                "DATE(#{date_field}) as date",
-                                                'COUNT(quantified_events.id) as metric_count',
-                                              ].join(', '),
-                                              ))
+          .order(Arel.sql("DATE(#{date_field}) ASC"))
+          .pluck(Arel.sql(
+            [
+              "DATE(#{date_field}) as date",
+              'COUNT(quantified_events.id) as metric_count',
+            ].join(', '),
+          ))
 
         removed_list.map do |aggregation|
           OpenStruct.new(
@@ -96,9 +96,9 @@ module BillableMetrics
 
         added_and_removed_list = prorated_added_and_removed_query.group(
           Arel.sql("DATE(#{added_field}), DATE(#{removed_field})"),
-          ).order(
+        ).order(
           Arel.sql("DATE(#{added_field}) ASC, DATE(#{removed_field}) ASC"),
-          ).pluck(Arel.sql(
+        ).pluck(Arel.sql(
           [
             "DATE(#{added_field}) as added_at",
             "DATE(#{removed_field}) as removed_at",
