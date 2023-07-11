@@ -20,7 +20,7 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
     let(:stripe_customer) { FactoryBot.build_stubbed(:stripe_customer) }
 
     let(:payment_methods) do
-      described_class::ALLOWED_PAYMENT_METHODS.sample Faker::Number.between(from: 1, to: 2)
+      described_class::PAYMENT_METHODS.sample Faker::Number.between(from: 1, to: 2)
     end
 
     before { stripe_customer.provider_payment_methods = payment_methods }
@@ -83,7 +83,7 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
       end
 
       context 'when it contains multiple valid values' do
-        let(:provider_payment_methods) { described_class::ALLOWED_PAYMENT_METHODS }
+        let(:provider_payment_methods) { described_class::PAYMENT_METHODS }
 
         it 'does not add error on provider payment methods' do
           expect(errors.where(:provider_payment_methods, :invalid)).not_to be_present

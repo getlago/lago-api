@@ -2,7 +2,7 @@
 
 module PaymentProviderCustomers
   class StripeCustomer < BaseCustomer
-    ALLOWED_PAYMENT_METHODS = %w[card sepa_debit].freeze
+    PAYMENT_METHODS = %w[card sepa_debit].freeze
 
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
@@ -26,7 +26,7 @@ module PaymentProviderCustomers
     private
 
     def allowed_provider_payment_methods
-      return if (provider_payment_methods - ALLOWED_PAYMENT_METHODS).blank?
+      return if (provider_payment_methods - PAYMENT_METHODS).blank?
 
       errors.add(:provider_payment_methods, :invalid)
     end
