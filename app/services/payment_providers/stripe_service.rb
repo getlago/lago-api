@@ -102,14 +102,24 @@ module PaymentProviders
 
       case event.type
       when 'setup_intent.succeeded'
-        result = PaymentProviderCustomers::StripeService
-          .new
+        service = PaymentProviderCustomers::StripeService.new
+
+        result = service
+          .update_provider_default_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: event.data.object.customer,
+            payment_method_id: event.data.object.payment_method,
+          )
+        result.raise_if_error!
+
+        result = service
           .update_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
             metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
+
         result.raise_if_error! || result
       when 'customer.updated'
         payment_method_id = event.data.object.invoice_settings.default_payment_method ||

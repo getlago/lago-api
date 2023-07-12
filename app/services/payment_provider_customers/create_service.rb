@@ -37,7 +37,7 @@ module PaymentProviderCustomers
       if should_create_provider_customer?
         create_customer_on_provider_service(async)
       elsif should_generate_checkout_url?
-        generate_checkout_url
+        generate_checkout_url(async)
       end
 
       result
@@ -67,9 +67,14 @@ module PaymentProviderCustomers
       end
     end
 
-    def generate_checkout_url
-      service_class = result.provider_customer.type.gsub(/Customer\z/, 'Service').constantize
-      service_class.new(result.provider_customer).generate_checkout_url
+    def generate_checkout_url(async)
+      job_class = result.provider_customer.type.gsub(/Customer\z/, 'CheckoutUrlJob').constantize
+
+      if async
+        job_class.perform_later(result.provider_customer)
+      else
+        job_class.new.perform(result.provider_customer)
+      end
     end
 
     def should_create_provider_customer?

@@ -262,6 +262,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           .and_return(provider_customer_service)
         allow(provider_customer_service).to receive(:update_payment_method)
           .and_return(service_result)
+        allow(provider_customer_service).to receive(:update_provider_default_payment_method)
+          .and_return(service_result)
       end
 
       it 'routes the event to an other service' do
@@ -274,6 +276,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(PaymentProviderCustomers::StripeService).to have_received(:new)
         expect(provider_customer_service).to have_received(:update_payment_method)
+        expect(provider_customer_service).to have_received(:update_provider_default_payment_method)
       end
     end
 
