@@ -30,6 +30,7 @@ module QuantifiedEvents
       # NOTE: Ensure no active quantified metric exists with the same external id
       QuantifiedEvent.where(
         customer_id: customer.id,
+        billable_metric_id: matching_billable_metric.id,
         external_id: event.properties[matching_billable_metric.field_name],
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).none?
