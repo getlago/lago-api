@@ -54,5 +54,51 @@ RSpec.describe SubscriptionsQuery, type: :query do
         end
       end
     end
+
+    context 'with plan filter' do
+      let(:query_filters) { { plan_code: plan.code } }
+
+      it 'applies the filter' do
+        result = subscriptions_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.subscriptions.count).to eq(1)
+        end
+      end
+    end
+
+    context 'with status filter' do
+      let(:query_filters) { { status: [:active, :pending] } }
+
+      it 'returns correct subscriptions' do
+        create(:pending_subscription, customer:, plan:)
+        create(:subscription, customer:, plan:, status: :canceled)
+        result = subscriptions_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.subscriptions.count).to eq(2)
+          expect(result.subscriptions.active.count).to eq(1)
+          expect(result.subscriptions.pending.count).to eq(1)
+          expect(result.subscriptions.canceled.count).to eq(0)
+        end
+      end
+    end
+
+    context 'with pending subscription' do
+      it 'returns both active and pending subscriptions' do
+        create(:pending_subscription, customer:, plan:)
+
+        result = subscriptions_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.subscriptions.count).to eq(2)
+          expect(result.subscriptions.active.count).to eq(1)
+          expect(result.subscriptions.pending.count).to eq(1)
+        end
+      end
+    end
   end
 end
