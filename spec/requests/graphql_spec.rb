@@ -138,7 +138,7 @@ RSpec.describe GraphqlController, type: :request do
         GQL
       end
       let(:token) do
-        ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE']).generate(customer.id, expires_in: 12.hours)
+        ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE']).generate(customer.id, expires_in: 1.year)
       end
 
       it 'retrieves the correct end user and returns success status code' do
