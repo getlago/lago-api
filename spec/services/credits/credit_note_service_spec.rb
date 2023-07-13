@@ -55,6 +55,7 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit1.credit_note).to eq(credit_note1)
         expect(credit1.amount_cents).to eq(20)
         expect(credit1.amount_currency).to eq('EUR')
+        expect(credit1.before_taxes).to eq(false)
         expect(credit_note1.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
 
@@ -63,6 +64,7 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit2.credit_note).to eq(credit_note2)
         expect(credit2.amount_cents).to eq(50)
         expect(credit2.amount_currency).to eq('EUR')
+        expect(credit2.before_taxes).to eq(false)
         expect(credit_note2.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
 
