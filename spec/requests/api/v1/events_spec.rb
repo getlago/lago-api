@@ -150,8 +150,12 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
   describe 'POST /events/estimate_fees' do
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric: metric) }
+    let(:tax) { create(:tax, organization:) }
 
-    before { charge }
+    before do
+      charge
+      tax
+    end
 
     it 'returns a success' do
       post_with_token(
