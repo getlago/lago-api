@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe ::V1::CustomerSerializer do
   subject(:serializer) do
-    described_class.new(customer, root_name: 'customer', includes: %i[metadata taxes])
+    described_class.new(customer, root_name: 'customer', includes: %i[taxes])
   end
 
   let(:customer) { create(:customer) }

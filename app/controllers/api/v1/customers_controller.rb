@@ -69,7 +69,7 @@ module Api
             ::V1::CustomerSerializer,
             collection_name: 'customers',
             meta: pagination_metadata(customers),
-            includes: %i[metadata taxes],
+            includes: %i[taxes],
           ),
         )
       end
@@ -139,7 +139,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[metadata taxes],
+            includes: %i[taxes],
           ),
         )
       end
