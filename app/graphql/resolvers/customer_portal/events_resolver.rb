@@ -23,7 +23,7 @@ module Resolvers
           .joins('LEFT OUTER JOIN billable_metrics ON billable_metrics.code = events.code')
           .where(billable_metrics: { deleted_at: nil })
           .where(
-            billable_metrics: { customer_id: current_customer }
+            events: { customer_id: current_customer }
           )
           .select(
             [

@@ -4039,6 +4039,11 @@ type Query {
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
 
   """
+  Query events for a customer
+  """
+  customerPortalEvents(limit: Int, page: Int): EventCollection
+
+  """
   Query invoices of a customer
   """
   customerPortalInvoices(limit: Int, page: Int, searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
@@ -4052,11 +4057,6 @@ type Query {
   Query a customer portal user
   """
   customerPortalUser: Customer
-
-  """
-  Query a customer portal events
-  """
-  customerPortalEvents(limit: Int, page: Int): EventCollection
 
   """
   Query the usage of the customer on the current billing period
