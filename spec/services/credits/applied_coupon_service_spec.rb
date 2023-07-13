@@ -29,6 +29,7 @@ RSpec.describe Credits::AppliedCouponService do
         expect(result.credit.amount_currency).to eq('EUR')
         expect(result.credit.invoice).to eq(invoice)
         expect(result.credit.applied_coupon).to eq(applied_coupon)
+        expect(result.credit.before_taxes).to eq(true)
       end
     end
 
