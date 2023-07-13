@@ -10,6 +10,8 @@ module Api
     before_action :set_context_source
     include Trackable
 
+    rescue_from ActionController::ParameterMissing, with: :bad_request_error
+
     private
 
     def authenticate

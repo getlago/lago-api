@@ -3,6 +3,16 @@
 module ApiErrors
   extend ActiveSupport::Concern
 
+  def bad_request_error(error)
+    render(
+      json: {
+        status: 400,
+        error: "BadRequest: #{error.message}",
+      },
+      status: :bad_request,
+    )
+  end
+
   def unauthorized_error
     render(
       json: {
