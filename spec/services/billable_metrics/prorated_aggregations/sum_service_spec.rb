@@ -223,6 +223,52 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
   end
 
+  context 'when current usage context and charge is pay in advance and just upgraded' do
+    let(:from_datetime) { DateTime.parse('2023-05-15 00:00:00') }
+    let(:options) do
+      { is_pay_in_advance: true, is_current_usage: true }
+    end
+    let(:latest_events) { nil }
+
+    it 'returns correct values' do
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+
+      expect(result.aggregation).to eq((5 * 17.fdiv(31)).ceil(5))
+      expect(result.current_usage_units).to eq(5)
+    end
+  end
+
+  context 'when current usage context and charge is pay in advance and just upgraded and new event in period' do
+    let(:from_datetime) { DateTime.parse('2023-05-15 00:00:00') }
+    let(:options) do
+      { is_pay_in_advance: true, is_current_usage: true }
+    end
+    let(:latest_events) do
+      create(
+        :event,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: to_datetime - 10.days,
+        properties: {
+          total_count: 4,
+        },
+        metadata: {
+          current_aggregation: '4',
+          max_aggregation: '6',
+          max_aggregation_with_proration: '3.8',
+        },
+      )
+    end
+
+    it 'returns correct values' do
+      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+
+      expect(result.aggregation).to eq((5 * 17.fdiv(31)).ceil(5) + 3.8)
+      expect(result.current_usage_units).to eq(9)
+    end
+  end
+
   context 'when group_id is given' do
     let(:group) do
       create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')

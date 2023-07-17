@@ -66,6 +66,13 @@ module BillableMetrics
         if !is_pay_in_advance
           result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
           result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
+        elsif previous_event && persisted_pro_rata < 1
+          result.current_usage_units = aggregation_without_proration.current_usage_units
+
+          persisted_units_without_proration = aggregation_without_proration.current_usage_units -
+                                              BigDecimal(previous_event.metadata['current_aggregation'])
+          result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
+                               BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
         elsif previous_event
           result.current_usage_units = aggregation_without_proration.current_usage_units
           result.aggregation = aggregation_without_proration.current_usage_units -
