@@ -4,7 +4,8 @@ module Fees
   class EstimatePayInAdvanceService < BaseService
     def initialize(organization:, params:)
       @organization = organization
-      @params = params
+      # NOTE: validation is shared with event creation and is expecting a transaction_id
+      @params = params.merge(transaction_id: SecureRandom.uuid)
 
       super
     end

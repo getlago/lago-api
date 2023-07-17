@@ -57,15 +57,28 @@ module Events
       return invalid_customer_error if params[:external_customer_id] && !customer
       return missing_subscription_error if params[:external_subscription_id].blank? && subscriptions.count > 1
       return missing_subscription_error if subscriptions.empty?
-      if params[:external_subscription_id] && !subscriptions.pluck(:external_id).include?(params[:external_subscription_id])
+
+      if params[:external_subscription_id] &&
+         subscriptions.pluck(:external_id).exclude?(params[:external_subscription_id])
         return missing_subscription_error
       end
+
+      return transaction_id_error unless valid_transaction_id?
       return invalid_code_error unless valid_code?
       return invalid_properties_error unless valid_properties?
 
       subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
       invalid_persisted_event = persisted_event_validation(subscription || subscriptions.first)
       return invalid_persisted_event_error(invalid_persisted_event) if invalid_persisted_event.present?
+    end
+
+    def valid_transaction_id?
+      return false if params[:transaction_id].blank?
+
+      organization.events.where(
+        transaction_id: params[:transaction_id],
+        subscription_id: subscriptions.first.id,
+      ).none?
     end
 
     def valid_code?
@@ -104,6 +117,11 @@ module Events
 
     def missing_subscription_error
       result.not_found_failure!(resource: 'subscription')
+      send_webhook_notice
+    end
+
+    def transaction_id_error
+      result.validation_failure!(errors: { transaction_id: ['value_is_missing_or_already_exists'] })
       send_webhook_notice
     end
 
