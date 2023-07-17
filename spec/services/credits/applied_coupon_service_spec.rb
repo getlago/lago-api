@@ -4,24 +4,37 @@ require 'rails_helper'
 
 RSpec.describe Credits::AppliedCouponService do
   subject(:credit_service) do
-    described_class.new(invoice:, applied_coupon:, base_amount_cents:)
+    described_class.new(invoice:, applied_coupon:)
   end
+
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
 
   let(:invoice) do
     create(
       :invoice,
+      organization:,
+      customer:,
       currency: 'EUR',
-      total_amount_cents: amount_cents,
+      sub_total_excluding_taxes_amount_cents: base_amount_cents,
     )
   end
-  let(:amount_cents) { 123 }
-  let(:base_amount_cents) { invoice.total_amount_cents }
+  let(:base_amount_cents) { 300 }
 
-  let(:applied_coupon) { create(:applied_coupon, amount_cents: 12) }
+  let(:coupon) { create(:coupon, organization:) }
+  let(:applied_coupon) { create(:applied_coupon, amount_cents: 12, coupon:, customer:) }
 
-  describe 'create' do
+  let(:fee1) { create(:fee, amount_cents: base_amount_cents / 3 * 2, invoice:) }
+  let(:fee2) { create(:fee, amount_cents: base_amount_cents / 3, invoice:) }
+
+  before do
+    fee1
+    fee2
+  end
+
+  describe 'call' do
     it 'creates a credit' do
-      result = credit_service.create
+      result = credit_service.call
 
       aggregate_failures do
         expect(result).to be_success
@@ -30,28 +43,34 @@ RSpec.describe Credits::AppliedCouponService do
         expect(result.credit.invoice).to eq(invoice)
         expect(result.credit.applied_coupon).to eq(applied_coupon)
         expect(result.credit.before_taxes).to eq(true)
+
+        expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
+        expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
       end
     end
 
     it 'terminates the applied coupon' do
-      result = credit_service.create
+      result = credit_service.call
 
       expect(result).to be_success
       expect(applied_coupon.reload).to be_terminated
     end
 
     context 'when coupon amount is higher than invoice amount' do
-      let(:amount_cents) { 10 }
+      let(:base_amount_cents) { 6 }
 
       it 'limits the credit amount to the invoice amount' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
-        expect(result.credit.amount_cents).to eq(10)
+        expect(result.credit.amount_cents).to eq(6)
+
+        expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
+        expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
       end
 
       it 'does not terminate the applied coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(applied_coupon.reload).not_to be_terminated
@@ -70,7 +89,7 @@ RSpec.describe Credits::AppliedCouponService do
       end
 
       it 'does not create another credit' do
-        expect { credit_service.create }
+        expect { credit_service.call }
           .not_to change(Credit, :count)
       end
     end
@@ -80,24 +99,27 @@ RSpec.describe Credits::AppliedCouponService do
         create(
           :credit,
           applied_coupon:,
-          amount_cents: 10,
+          amount_cents: 6,
         )
       end
 
       it 'applies the remaining amount' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(2)
+          expect(result.credit.amount_cents).to eq(6)
           expect(result.credit.amount_currency).to eq('EUR')
           expect(result.credit.invoice).to eq(invoice)
           expect(result.credit.applied_coupon).to eq(applied_coupon)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
         end
       end
 
       it 'terminates the applied coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(applied_coupon.reload).to be_terminated
@@ -112,19 +134,22 @@ RSpec.describe Credits::AppliedCouponService do
       end
 
       it 'creates a credit' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(25)
+          expect(result.credit.amount_cents).to eq(60)
           expect(result.credit.amount_currency).to eq('EUR')
           expect(result.credit.invoice).to eq(invoice)
           expect(result.credit.applied_coupon).to eq(applied_coupon)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
         end
       end
 
       it 'terminates the applied coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(applied_coupon.reload).to be_terminated
@@ -146,7 +171,7 @@ RSpec.describe Credits::AppliedCouponService do
       end
 
       it 'creates a credit' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -156,24 +181,30 @@ RSpec.describe Credits::AppliedCouponService do
           expect(result.credit.applied_coupon).to eq(applied_coupon)
           expect(result.credit.applied_coupon.frequency_duration).to eq(3)
           expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
         end
       end
 
       it 'does not terminate the applied coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(applied_coupon.reload).not_to be_terminated
       end
 
       context 'when coupon amount is higher than invoice amount' do
-        let(:amount_cents) { 10 }
+        let(:base_amount_cents) { 6 }
 
         it 'limits the credit amount to the invoice amount' do
-          result = credit_service.create
+          result = credit_service.call
 
           expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(10)
+          expect(result.credit.amount_cents).to eq(6)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
         end
       end
     end
@@ -193,7 +224,7 @@ RSpec.describe Credits::AppliedCouponService do
       end
 
       it 'creates a credit' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -203,24 +234,30 @@ RSpec.describe Credits::AppliedCouponService do
           expect(result.credit.applied_coupon).to eq(applied_coupon)
           expect(result.credit.applied_coupon.frequency_duration).to eq(0)
           expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
         end
       end
 
       it 'does not terminate the applied coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(applied_coupon.reload).not_to be_terminated
       end
 
       context 'when coupon amount is higher than invoice amount' do
-        let(:amount_cents) { 10 }
+        let(:base_amount_cents) { 6 }
 
         it 'limits the credit amount to the invoice amount' do
-          result = credit_service.create
+          result = credit_service.call
 
           expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(10)
+          expect(result.credit.amount_cents).to eq(6)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
         end
       end
     end
@@ -242,21 +279,24 @@ RSpec.describe Credits::AppliedCouponService do
       end
 
       it 'creates a credit' do
-        result = credit_service.create
+        result = credit_service.call
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(25)
+          expect(result.credit.amount_cents).to eq(60)
           expect(result.credit.amount_currency).to eq('EUR')
           expect(result.credit.invoice).to eq(invoice)
           expect(result.credit.applied_coupon).to eq(applied_coupon)
           expect(result.credit.applied_coupon.frequency_duration).to eq(3)
           expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
         end
       end
 
       it 'does not terminate the applied coupon' do
-        result = credit_service.create
+        result = credit_service.call
 
         expect(result).to be_success
         expect(applied_coupon.reload).not_to be_terminated
@@ -275,24 +315,124 @@ RSpec.describe Credits::AppliedCouponService do
         end
 
         it 'creates a credit' do
-          result = credit_service.create
+          result = credit_service.call
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(25)
+            expect(result.credit.amount_cents).to eq(60)
             expect(result.credit.amount_currency).to eq('EUR')
             expect(result.credit.invoice).to eq(invoice)
             expect(result.credit.applied_coupon).to eq(applied_coupon)
             expect(result.credit.applied_coupon.frequency_duration).to eq(3)
             expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
+
+            expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
+            expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
           end
         end
 
         it 'terminates the applied coupon' do
-          result = credit_service.create
+          result = credit_service.call
 
           expect(result).to be_success
           expect(applied_coupon.reload).to be_terminated
+        end
+      end
+    end
+
+    context 'when currencies does not matches' do
+      let(:applied_coupon) do
+        create(
+          :applied_coupon,
+          customer:,
+          amount_cents: 10,
+          amount_currency: 'NOK',
+        )
+      end
+
+      it 'does not create a credit' do
+        result = credit_service.call
+
+        expect(result).to be_success
+        expect(result.credit).to be_nil
+      end
+    end
+
+    context 'when coupon have plan limitations' do
+      let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+      let(:plan) { create(:plan, organization:) }
+      let(:coupon_target) { create(:coupon_plan, coupon:, plan:) }
+
+      let(:subscription) { create(:subscription, plan:, customer:) }
+      let(:fee1) { create(:fee, amount_cents: base_amount_cents, invoice:, subscription:) }
+
+      before { coupon_target }
+
+      it 'creates a credit' do
+        result = credit_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(12)
+          expect(result.credit.amount_currency).to eq('EUR')
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.before_taxes).to eq(true)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(12)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(0)
+        end
+      end
+
+      context 'when plan limitation does not applies' do
+        let(:subscription) { create(:subscription, customer:) }
+
+        it 'does not create a credit' do
+          result = credit_service.call
+
+          expect(result).to be_success
+          expect(result.credit).to be_nil
+        end
+      end
+    end
+
+    context 'when coupon have billable metric limitations' do
+      let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', limited_billable_metrics: true) }
+      let(:plan) { create(:plan, organization:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:charge) { create(:standard_charge, billable_metric:, plan:) }
+
+      let(:coupon_target) { create(:coupon_billable_metric, coupon:, billable_metric:) }
+
+      let(:subscription) { create(:subscription, plan:, customer:) }
+      let(:fee1) { create(:charge_fee, charge:, amount_cents: base_amount_cents, invoice:, subscription:) }
+
+      before { coupon_target }
+
+      it 'creates a credit' do
+        result = credit_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(12)
+          expect(result.credit.amount_currency).to eq('EUR')
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.before_taxes).to eq(true)
+
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(12)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(0)
+        end
+      end
+
+      context 'when plan limitation does not applies' do
+        let(:charge) { create(:standard_charge, plan:) }
+
+        it 'does not create a credit' do
+          result = credit_service.call
+
+          expect(result).to be_success
+          expect(result.credit).to be_nil
         end
       end
     end

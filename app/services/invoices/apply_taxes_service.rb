@@ -68,25 +68,21 @@ module Invoices
     end
 
     # NOTE: Because coupons are applied before VAT,
-    #       we have to distribute the coupons amount at prorata on each fees
-    #       compared to the invoice total fees amount
+    #       we have to take the coupons amount pro-rated at fee level into account
     def compute_tax_amount_cents(tax)
-      indexed_fees[tax.id].sum do |fee|
-        # NOTE: ratio of the fee on the fees total amount
-        fee_rate = invoice.fees_amount_cents.zero? ? 0 : fee.amount_cents.fdiv(invoice.fees_amount_cents)
-        prorated_coupon_amount = fee_rate * invoice.coupons_amount_cents
-        (fee.amount_cents - prorated_coupon_amount) * tax.rate
-      end.fdiv(100)
+      indexed_fees[tax.id]
+        .sum { |fee| fee.sub_total_excluding_taxes_amount_cents * tax.rate }
+        .fdiv(100)
     end
 
     # NOTE: Tax might not be applied to all fees of the invoice.
     #       In order to compute the invoice#taxes_rate, we have to apply
     #       a pro-rata of the fees attached to the tax on the invoices#fees_amount_cents
     def pro_rated_taxes_rate(tax)
-      fees_amount_cents = indexed_fees[tax.id].sum(&:amount_cents)
+      fees_amount_cents = indexed_fees[tax.id].sum(&:sub_total_excluding_taxes_amount_cents)
 
-      fees_rate = if invoice.fees_amount_cents.positive?
-        fees_amount_cents.fdiv(invoice.fees_amount_cents)
+      fees_rate = if invoice.sub_total_excluding_taxes_amount_cents.positive?
+        fees_amount_cents.fdiv(invoice.sub_total_excluding_taxes_amount_cents)
       else
         # NOTE: when invoice have a 0 amount. The prorata is on the number of fees
         indexed_fees[tax.id].count.fdiv(invoice.fees.count)

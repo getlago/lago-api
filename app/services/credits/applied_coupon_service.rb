@@ -2,18 +2,17 @@
 
 module Credits
   class AppliedCouponService < BaseService
-    def initialize(invoice:, applied_coupon:, base_amount_cents:)
+    def initialize(invoice:, applied_coupon:)
       @invoice = invoice
       @applied_coupon = applied_coupon
-      # base_amount_cents represents maximum value that can be credited. It is either equal to invoice
-      # total_amount_cents or sum of the fees related to some plan (for coupons with plan limitations)
-      @base_amount_cents = base_amount_cents
 
       super(nil)
     end
 
-    def create
+    def call
+      return result unless matches_currency?
       return result if already_applied?
+      return result unless fees.any?
 
       credit_amount = compute_amount
 
@@ -25,12 +24,20 @@ module Credits
         before_taxes: true,
       )
 
+      fees.each do |fee|
+        fee.precise_coupons_amount_cents += (credit_amount * fee.amount_cents).fdiv(base_amount_cents)
+        fee.save!
+      end
+
       applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?
       if should_terminate_applied_coupon?(credit_amount)
         applied_coupon.mark_as_terminated!
       elsif applied_coupon.recurring?
         applied_coupon.save!
       end
+
+      invoice.coupons_amount_cents += new_credit.amount_cents
+      invoice.sub_total_excluding_taxes_amount_cents -= new_credit.amount_cents
 
       result.credit = new_credit
       result
@@ -40,9 +47,15 @@ module Credits
 
     private
 
-    attr_accessor :invoice, :applied_coupon, :base_amount_cents
+    attr_accessor :invoice, :applied_coupon
 
     delegate :coupon, to: :applied_coupon
+
+    def matches_currency?
+      return true unless applied_coupon.coupon.fixed_amount?
+
+      applied_coupon.amount_currency == invoice.currency
+    end
 
     def already_applied?
       invoice.credits.where(applied_coupon_id: applied_coupon.id).exists?
@@ -81,6 +94,36 @@ module Credits
       else
         applied_coupon.frequency_duration_remaining <= 0
       end
+    end
+
+    # TODO: ensure targeted amount is right with BM/plan limitation
+    def base_amount_cents
+      if applied_coupon.coupon.limited_billable_metrics? || applied_coupon.coupon.limited_plans?
+        return fees.sum(:amount_cents)
+      end
+
+      invoice.sub_total_excluding_taxes_amount_cents
+    end
+
+    def fees
+      @fees ||= if applied_coupon.coupon.limited_billable_metrics?
+        billable_metric_related_fees
+      elsif applied_coupon.coupon.limited_plans?
+        plan_related_fees
+      else
+        invoice.fees
+      end
+    end
+
+    def plan_related_fees
+      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_targets.select(:plan_id) })
+    end
+
+    def billable_metric_related_fees
+      invoice
+        .fees
+        .joins(charge: :billable_metric)
+        .where(billable_metric: { id: applied_coupon.coupon.coupon_targets.select(:billable_metric_id) })
     end
   end
 end

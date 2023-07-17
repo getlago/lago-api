@@ -88,6 +88,10 @@ class Fee < ApplicationRecord
     amount_currency
   end
 
+  def sub_total_excluding_taxes_amount_cents
+    amount_cents - precise_coupons_amount_cents
+  end
+
   def total_amount_cents
     amount_cents + taxes_amount_cents
   end

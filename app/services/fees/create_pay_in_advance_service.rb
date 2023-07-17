@@ -62,10 +62,13 @@ module Fees
           pay_in_advance_event_id: event.id,
           payment_status: :pending,
           pay_in_advance: true,
+          taxes_amount_cents: 0,
         )
 
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
-        taxes_result.raise_if_error!
+        if estimate || invoice.nil?
+          taxes_result = Fees::ApplyTaxesService.call(fee:)
+          taxes_result.raise_if_error!
+        end
 
         fee.save! unless estimate
 

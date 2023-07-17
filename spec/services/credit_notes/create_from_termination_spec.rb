@@ -383,6 +383,20 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         )
       end
 
+      let(:subscription_fee) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 100,
+          taxes_amount_cents: 20,
+          invoiceable_type: 'Subscription',
+          invoiceable_id: subscription.id,
+          taxes_rate: 20,
+          precise_coupons_amount_cents: 10,
+        )
+      end
+
       it 'takes the coupon into account' do
         result = create_service.call
 

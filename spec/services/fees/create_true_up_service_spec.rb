@@ -56,9 +56,6 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             group: nil,
             amount_cents: 300,
             true_up_parent_fee_id: fee.id,
-
-            taxes_rate: tax.rate,
-            taxes_amount_cents: 60,
           )
         end
       end

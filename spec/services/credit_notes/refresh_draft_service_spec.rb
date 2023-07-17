@@ -24,7 +24,7 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
         total_amount_cents: 100,
       )
     end
-    let(:fee) { create(:fee, invoice:, taxes_rate: 20) }
+    let(:fee) { create(:fee, invoice:, taxes_rate: 20, amount_cents: 100, precise_coupons_amount_cents: 20) }
     let(:applied_tax) { create(:fee_applied_tax, tax:, fee:, amount_cents: 0) }
 
     before do
