@@ -369,6 +369,14 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         )
       end
 
+      let(:fee1) do
+        create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20, precise_coupons_amount_cents: 5)
+      end
+
+      let(:fee2) do
+        create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20, precise_coupons_amount_cents: 5)
+      end
+
       let(:credit_amount_cents) { 6 }
       let(:refund_amount_cents) { 3 }
       let(:items) do

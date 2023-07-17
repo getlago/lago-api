@@ -8,6 +8,12 @@ module Invoices
     end
 
     def call
+      invoice.fees.each do |fee|
+        taxes_result = Fees::ApplyTaxesService.call(fee:)
+        taxes_result.raise_if_error!
+        fee.save!
+      end
+
       invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
       invoice.coupons_amount_cents = invoice.credits.coupon_kind.sum(:amount_cents)
       invoice.sub_total_excluding_taxes_amount_cents = (

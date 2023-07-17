@@ -41,13 +41,14 @@ module Invoices
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
+
+          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents)
+          Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
+
+          Invoices::ComputeAmountsFromFees.call(invoice:)
         end
 
-        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents)
-        Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
-
-        Invoices::ComputeAmountsFromFees.call(invoice:)
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
