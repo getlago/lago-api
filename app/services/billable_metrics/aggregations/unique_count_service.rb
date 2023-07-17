@@ -25,12 +25,16 @@ module BillableMetrics
         return 0 unless event
         return 0 if event.properties.blank?
 
-        res = (operation_type == :add) ? 1 : 0
+        newly_applied_units = (operation_type == :add) ? 1 : 0
 
         unless previous_event
-          handle_event_metadata(current_aggregation: res, max_aggregation: res, units_applied: res)
+          handle_event_metadata(
+            current_aggregation: newly_applied_units,
+            max_aggregation: newly_applied_units,
+            units_applied: newly_applied_units,
+          )
 
-          return res
+          return newly_applied_units
         end
 
         old_aggregation = BigDecimal(previous_event.metadata['current_aggregation'])
@@ -43,7 +47,7 @@ module BillableMetrics
 
           1
         else
-          handle_event_metadata(current_aggregation:, max_aggregation: old_max, units_applied: res)
+          handle_event_metadata(current_aggregation:, max_aggregation: old_max, units_applied: newly_applied_units)
 
           0
         end
@@ -58,13 +62,6 @@ module BillableMetrics
         return [] if free_units_per_events.zero? && free_units_per_total_aggregation.zero?
 
         (1..result.aggregation).to_a
-      end
-
-      def get_previous_event_in_interval(from_datetime:, to_datetime:)
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
-        previous_event
       end
 
       protected

@@ -23,7 +23,7 @@ module BillableMetrics
                             event.timestamp.in_time_zone(customer.applicable_timezone)
         # In order to get proration coefficient we have to divide number of seconds with number
         # of seconds in one day (86400). That way we will get number of days when the service was used.
-        proration_coefficient = number_of_seconds.fdiv(86_400).round.fdiv(period_duration)
+        proration_coefficient = number_of_seconds.fdiv(1.day).round.fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 

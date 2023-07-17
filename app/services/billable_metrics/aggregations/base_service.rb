@@ -76,6 +76,13 @@ module BillableMetrics
         result.aggregation = 0 if result.aggregation.negative?
         result.current_usage_units = 0 if result.current_usage_units.negative?
       end
+
+      def get_previous_event_in_interval(from_datetime:, to_datetime:)
+        @from_datetime = from_datetime
+        @to_datetime = to_datetime
+
+        previous_event
+      end
     end
   end
 end
