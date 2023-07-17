@@ -109,7 +109,7 @@ class Invoice < ApplicationRecord
     subscription_fees(subscription_id)
       .joins(charge: :billable_metric)
       .where(billable_metric: { recurring: true })
-      .where(billable_metric: { aggregation_type: [1, 3] })
+      .where(billable_metric: { aggregation_type: %i[sum_agg unique_count_agg] })
       .where(charge: { pay_in_advance: false })
   end
 
@@ -147,7 +147,7 @@ class Invoice < ApplicationRecord
     number_of_seconds = date_service.charges_to_datetime.in_time_zone(customer.applicable_timezone) -
                         event.timestamp.in_time_zone(customer.applicable_timezone)
 
-    number_of_days = number_of_seconds.fdiv(86_400).round
+    number_of_days = number_of_seconds.fdiv(1.day).round
 
     {
       number_of_days:,

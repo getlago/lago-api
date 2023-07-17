@@ -195,8 +195,10 @@ RSpec.describe Invoice, type: :model do
     end
 
     it 'returns the fees of the corresponding invoice_subscription' do
-      expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)[:period_duration]).to eq(31)
-      expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)[:number_of_days]).to eq(7)
+      expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)).to include(
+        period_duration: 31,
+        number_of_days: 7,
+      )
     end
   end
 

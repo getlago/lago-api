@@ -45,7 +45,7 @@ module BillableMetrics
       def period_breakdown
         date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
 
-        added_list = period_query.group(Arel.sql("DATE(#{date_field})"))
+        list = period_query.group(Arel.sql("DATE(#{date_field})"))
           .order(Arel.sql("DATE(#{date_field}) ASC"))
           .pluck(Arel.sql(
             [
@@ -54,7 +54,7 @@ module BillableMetrics
             ].join(', '),
           ))
 
-        added_list.map do |aggregation|
+        list.map do |aggregation|
           OpenStruct.new(
             date: aggregation.first.to_date,
             action: aggregation.last.negative? ? 'remove' : 'add',
