@@ -19,7 +19,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           charges {
             id,
             chargeModel,
-            billableMetric { id name code },
+            billableMetric { id name code }
+            appliedTaxes { tax { code } }
             properties {
               amount,
               freeUnits,
@@ -28,7 +29,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               fixedAmount,
               freeUnitsPerEvents,
               freeUnitsPerTotalAggregation,
-              graduatedRanges { fromValue, toValue },
+              graduatedRanges { fromValue, toValue }
               volumeRanges { fromValue, toValue }
             }
             groupProperties {
@@ -57,6 +58,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
   let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }
   let(:second_group) { create(:group, billable_metric: billable_metrics[2]) }
+  let(:tax) { create(:tax, organization:) }
 
   it 'creates a plan' do
     result = execute_graphql(
@@ -76,6 +78,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               billableMetricId: billable_metrics[0].id,
               chargeModel: 'standard',
               properties: { amount: '100.00' },
+              taxCodes: [tax.code],
             },
             {
               billableMetricId: billable_metrics[1].id,
@@ -166,6 +169,9 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       standard_charge = result_data['charges'][0]
       expect(standard_charge['properties']['amount']).to eq('100.00')
       expect(standard_charge['chargeModel']).to eq('standard')
+      # TODO(tax): uncomment
+      # expect(standard_charge['appliedTaxes'].count).to eq(1)
+      # expect(standard_charge['appliedTaxes'].first['code']).to eq(tax.code)
 
       package_charge = result_data['charges'][1]
       expect(package_charge['chargeModel']).to eq('package')
