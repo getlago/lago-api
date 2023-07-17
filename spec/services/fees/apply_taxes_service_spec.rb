@@ -10,7 +10,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
 
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents:) }
+  let(:precise_coupons_amount_cents) { 0 }
 
   let(:tax1) { create(:tax, organization:, rate: 10, applied_to_organization: false) }
   let(:tax2) { create(:tax, organization:, rate: 12, applied_to_organization: false) }
@@ -47,6 +48,37 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
           taxes_amount_cents: 50,
           taxes_rate: 5,
         )
+      end
+    end
+
+    context 'when a coupon amount is applied to the fee' do
+      let(:precise_coupons_amount_cents) { 100 }
+
+      it 'takes the coupon amount into account' do
+        result = apply_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(1)
+
+          expect(applied_taxes[0]).to have_attributes(
+            fee:,
+            tax: tax3,
+            tax_description: tax3.description,
+            tax_code: tax3.code,
+            tax_name: tax3.name,
+            tax_rate: 5,
+            amount_currency: fee.currency,
+            amount_cents: 45,
+          )
+
+          expect(fee).to have_attributes(
+            taxes_amount_cents: 45, # (1000 - 100) * 5 / 100
+            taxes_rate: 5,
+          )
+        end
       end
     end
 

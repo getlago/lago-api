@@ -15,7 +15,7 @@ module Fees
 
       new_amount_cents = compute_amount
 
-      new_fee = Fee.new(
+      new_fee = Fee.create!(
         invoice:,
         subscription:,
         amount_cents: new_amount_cents.round,
@@ -26,12 +26,8 @@ module Fees
         units: 1,
         properties: boundaries.to_h,
         payment_status: :pending,
+        taxes_amount_cents: 0,
       )
-
-      taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
-      taxes_result.raise_if_error!
-
-      new_fee.save!
 
       result.fee = new_fee
       result

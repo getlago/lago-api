@@ -8,7 +8,16 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
 
-  let(:invoice) { create(:invoice, organization:, customer:, fees_amount_cents:, coupons_amount_cents:) }
+  let(:invoice) do
+    create(
+      :invoice,
+      organization:,
+      customer:,
+      fees_amount_cents:,
+      coupons_amount_cents:,
+      sub_total_excluding_taxes_amount_cents: fees_amount_cents - coupons_amount_cents,
+    )
+  end
   let(:fees_amount_cents) { 3000 }
   let(:coupons_amount_cents) { 0 }
 
@@ -18,10 +27,10 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
   describe 'call' do
     context 'with non zero fees amount' do
       before do
-        fee1 = create(:fee, invoice:, amount_cents: 1000)
+        fee1 = create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0)
         create(:fee_applied_tax, tax: tax1, fee: fee1, amount_cents: 100)
 
-        fee2 = create(:fee, invoice:, amount_cents: 2000)
+        fee2 = create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0)
         create(:fee_applied_tax, tax: tax1, fee: fee2, amount_cents: 200)
         create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: 240)
       end
@@ -69,10 +78,10 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
       let(:fees_amount_cents) { 0 }
 
       before do
-        fee1 = create(:fee, invoice:, amount_cents: 0)
+        fee1 = create(:fee, invoice:, amount_cents: 0, precise_coupons_amount_cents: 0)
         create(:fee_applied_tax, tax: tax1, fee: fee1, amount_cents: 0)
 
-        fee2 = create(:fee, invoice:, amount_cents: 0)
+        fee2 = create(:fee, invoice:, amount_cents: 0, precise_coupons_amount_cents: 0)
         create(:fee_applied_tax, tax: tax1, fee: fee2, amount_cents: 0)
         create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: 0)
       end
@@ -120,12 +129,12 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
       let(:coupons_amount_cents) { 1000 }
 
       before do
-        fee1 = create(:fee, invoice:, amount_cents: 1000)
-        create(:fee_applied_tax, tax: tax1, fee: fee1, amount_cents: 100)
+        fee1 = create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 1000.fdiv(3))
+        create(:fee_applied_tax, tax: tax1, fee: fee1, amount_cents: ((1000 - 1000.fdiv(3)) * 10).fdiv(100))
 
-        fee2 = create(:fee, invoice:, amount_cents: 2000)
-        create(:fee_applied_tax, tax: tax1, fee: fee2, amount_cents: 200)
-        create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: 240)
+        fee2 = create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 1000.fdiv(3) * 2)
+        create(:fee_applied_tax, tax: tax1, fee: fee2, amount_cents: (2000 - 1000.fdiv(3) * 2 * 10).fdiv(100))
+        create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: (2000 - 1000.fdiv(3) * 2 * 12).fdiv(100))
       end
 
       it 'taxes the coupon at pro-rata of each fees' do

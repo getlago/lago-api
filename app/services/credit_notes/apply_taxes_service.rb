@@ -73,16 +73,19 @@ module CreditNotes
     def coupons_adjustment_amount_cents
       return 0 if invoice.version_number < Invoice::COUPON_BEFORE_VAT_VERSION
 
-      invoice.coupons_amount_cents.fdiv(invoice.fees_amount_cents) * items_amount_cents
+      items.sum do |item|
+        item_fee_rate = item.precise_amount_cents.fdiv(item.fee.amount_cents)
+        item.fee.precise_coupons_amount_cents * item_fee_rate
+      end
     end
 
     def compute_base_amount_cents(tax)
       indexed_items[tax.id].map do |item|
-        # NOTE: Part of the item from to the total items amount
-        item_rate = item.precise_amount_cents.fdiv(items_amount_cents)
+        # NOTE: Part of the item taken from the fee amount
+        item_fee_rate = item.precise_amount_cents.fdiv(item.fee.amount_cents)
 
         # NOTE: Part of the coupons applied to the item
-        prorated_coupon_amount = result.coupons_adjustment_amount_cents * item_rate
+        prorated_coupon_amount = item.fee.precise_coupons_amount_cents * item_fee_rate
 
         item.precise_amount_cents - prorated_coupon_amount
       end.sum
@@ -92,7 +95,6 @@ module CreditNotes
     #       In order to compute the credit_note#taxes_rate, we have to apply
     #       a pro-rata of the items attached to the tax on the total items amount
     def pro_rated_taxes_rate(tax)
-      # TODO: should this also takes proportion of the fee into account??
       tax_items_amount_cents = indexed_items[tax.id].sum(&:precise_amount_cents)
 
       items_rate = tax_items_amount_cents.fdiv(items_amount_cents)
