@@ -4091,7 +4091,7 @@ type ProviderCustomer {
 
 input ProviderCustomerInput {
   providerCustomerId: ID
-  providerPaymentMethods: [String!]!
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]!
   syncWithProvider: Boolean
 }
 
