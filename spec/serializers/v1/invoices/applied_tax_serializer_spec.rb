@@ -22,6 +22,7 @@ RSpec.describe ::V1::Invoices::AppliedTaxSerializer do
       expect(result['applied_tax']['tax_description']).to eq(applied_tax.tax_description)
       expect(result['applied_tax']['amount_cents']).to eq(applied_tax.amount_cents)
       expect(result['applied_tax']['amount_currency']).to eq(applied_tax.amount_currency)
+      expect(result['applied_tax']['fees_amount_cents']).to eq(applied_tax.fees_amount_cents)
       expect(result['applied_tax']['created_at']).to eq(applied_tax.created_at.iso8601)
     end
   end

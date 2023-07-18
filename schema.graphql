@@ -3190,6 +3190,7 @@ type InvoiceAppliedTax implements AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
+  feesAmountCents: BigInt!
   id: ID!
   invoice: Invoice!
   tax: Tax!
