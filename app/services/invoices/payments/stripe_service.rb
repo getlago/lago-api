@@ -89,7 +89,6 @@ module Invoices
         payment_method = Stripe::PaymentMethod.list(
           {
             customer: customer.stripe_customer.provider_customer_id,
-            # type: 'card', # TODO: Supported payment method type
           },
           {
             api_key: stripe_api_key,
@@ -139,6 +138,7 @@ module Invoices
           currency: invoice.currency.downcase,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method: stripe_payment_method,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
           confirm: true,
           off_session: true,
           error_on_requires_action: true,
