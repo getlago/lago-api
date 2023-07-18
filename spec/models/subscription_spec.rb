@@ -165,7 +165,7 @@ RSpec.describe Subscription, type: :model do
           plan:,
           external_id: 'sub_id',
           customer: previous_subscription.customer,
-          )
+        )
       end
       let(:previous_subscription) do
         create(:subscription, started_at: Time.current.last_month, external_id: 'sub_id', status: :terminated)
