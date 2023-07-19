@@ -43,6 +43,16 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
   let(:added_at) { from_datetime - 1.month }
   let(:removed_at) { nil }
+  let(:unique_count_event) do
+    create(
+      :event,
+      code: billable_metric.code,
+      customer:,
+      subscription:,
+      timestamp: added_at,
+      quantified_event:,
+    )
+  end
   let(:quantified_event) do
     create(
       :quantified_event,
@@ -54,7 +64,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     )
   end
 
-  before { quantified_event }
+  before { unique_count_event }
 
   describe '#aggregate' do
     let(:result) { count_service.aggregate(from_datetime:, to_datetime:) }
@@ -70,8 +80,18 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           billable_metric:,
         )
       end
+      let(:new_unique_count_event) do
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: from_datetime + 10.days,
+          quantified_event: new_quantified_event,
+        )
+      end
 
-      before { new_quantified_event }
+      before { new_unique_count_event }
 
       it 'returns the correct number' do
         expect(result.aggregation).to eq(2)
@@ -88,6 +108,16 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           recurring: false,
         )
       end
+      let(:new_unique_count_event) do
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: from_datetime + 10.days,
+          quantified_event: new_quantified_event,
+        )
+      end
       let(:new_quantified_event) do
         create(
           :quantified_event,
@@ -99,7 +129,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         )
       end
 
-      before { new_quantified_event }
+      before { new_unique_count_event }
 
       it 'returns only the number of events ingested in the current period' do
         expect(result.aggregation).to eq(1)

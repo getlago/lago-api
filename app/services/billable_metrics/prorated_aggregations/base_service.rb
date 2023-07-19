@@ -23,7 +23,7 @@ module BillableMetrics
                             event.timestamp.in_time_zone(customer.applicable_timezone)
         # In order to get proration coefficient we have to divide number of seconds with number
         # of seconds in one day (86400). That way we will get number of days when the service was used.
-        proration_coefficient = number_of_seconds.fdiv(1.day).round.fdiv(period_duration)
+        proration_coefficient = number_of_seconds.fdiv(1.day).ceil.fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
@@ -66,11 +66,21 @@ module BillableMetrics
         if !is_pay_in_advance
           result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
           result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
+        elsif previous_event && persisted_pro_rata < 1
+          result.current_usage_units = aggregation_without_proration.current_usage_units
+
+          persisted_units_without_proration = aggregation_without_proration.current_usage_units -
+                                              BigDecimal(previous_event.metadata['current_aggregation'])
+          result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
+                               BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
         elsif previous_event
           result.current_usage_units = aggregation_without_proration.current_usage_units
           result.aggregation = aggregation_without_proration.current_usage_units -
                                BigDecimal(previous_event.metadata['current_aggregation']) +
                                BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
+        elsif persisted_pro_rata < 1
+          result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
+          result.current_usage_units = aggregation_without_proration.current_usage_units
         else
           result.aggregation = value_without_proration
           result.current_usage_units = aggregation_without_proration.current_usage_units

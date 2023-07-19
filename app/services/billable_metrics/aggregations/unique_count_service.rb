@@ -73,7 +73,12 @@ module BillableMetrics
       # would help us in pay in advance value calculation without iterating through all events in current period
       def previous_event
         @previous_event ||= begin
-          query = events_scope(from_datetime:, to_datetime:)
+          query = if billable_metric.recurring?
+            recurring_events_scope(to_datetime:, from_datetime:)
+          else
+            events_scope(from_datetime:, to_datetime:)
+          end
+          query = query
             .joins(:quantified_event)
             .where("#{sanitized_field_name} IS NOT NULL")
             .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
@@ -141,15 +146,27 @@ module BillableMetrics
           .joins(customer: :organization)
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
-          .where(external_subscription_id: subscription.external_id)
+
+        quantified_events = if billable_metric.recurring?
+          quantified_events.where(external_subscription_id: subscription.external_id)
+        else
+          quantified_events.joins(:events).where(events: { subscription_id: subscription.id })
+        end
 
         return quantified_events unless group
 
-        group_scope(quantified_events)
+        count_unique_group_scope(quantified_events)
       end
 
       def sanitized_operation_type
         ActiveRecord::Base.sanitize_sql_for_conditions(['events.properties->>operation_type'])
+      end
+
+      def count_unique_group_scope(events)
+        events = events.where('quantified_events.properties @> ?', { group.key.to_s => group.value }.to_json)
+        return events unless group.parent
+
+        events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
     end
   end
