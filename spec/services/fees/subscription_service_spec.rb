@@ -833,6 +833,39 @@ RSpec.describe Fees::SubscriptionService do
       end
     end
 
+    context 'with customer timezone' do
+      let(:customer) { create(:customer, organization:, timezone: 'Europe/Paris') }
+      let(:from_datetime) do
+        subscription.started_at.to_date.beginning_of_month.in_time_zone(customer.applicable_timezone).utc
+      end
+      let(:to_datetime) do
+        (subscription.started_at + 5.days).to_date.in_time_zone(customer.applicable_timezone).end_of_day.utc
+      end
+      let(:boundaries) do
+        {
+          from_datetime:,
+          to_datetime:,
+          timestamp: (subscription.started_at + 6.days).to_i,
+        }
+      end
+
+      it 'creates a fee' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(65)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
+          expect(created_fee.taxes_amount_cents).to eq(13)
+          expect(created_fee.taxes_rate).to eq(20.0)
+          expect(created_fee.applied_taxes.count).to eq(1)
+        end
+      end
+    end
+
     context 'when plan is weekly' do
       let(:boundaries) do
         {
@@ -962,6 +995,39 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.taxes_amount_cents).to eq(11)
         expect(created_fee.taxes_rate).to eq(20.0)
         expect(created_fee.applied_taxes.count).to eq(1)
+      end
+    end
+
+    context 'with customer timezone' do
+      let(:customer) { create(:customer, organization:, timezone: 'Europe/Paris') }
+      let(:from_datetime) do
+        subscription.started_at.in_time_zone(customer.applicable_timezone).beginning_of_day.utc
+      end
+      let(:to_datetime) do
+        subscription.started_at.end_of_month.to_date.in_time_zone(customer.applicable_timezone).end_of_day.utc
+      end
+      let(:boundaries) do
+        {
+          from_datetime:,
+          to_datetime:,
+          timestamp: (subscription.started_at + 17.days).to_i,
+        }
+      end
+
+      it 'creates a subscription fee' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(55)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+
+          expect(created_fee.taxes_amount_cents).to eq(11)
+          expect(created_fee.taxes_rate).to eq(20.0)
+          expect(created_fee.applied_taxes.count).to eq(1)
+        end
       end
     end
 

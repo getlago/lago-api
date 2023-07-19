@@ -135,6 +135,53 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
+  describe '#trial_end_datetime' do
+    let(:plan) { create(:plan, trial_period: 3) }
+    let(:started_at) { subscription.initial_started_at }
+
+    it 'returns the trial end datetime' do
+      trial_end_datetime = subscription.trial_end_datetime
+
+      aggregate_failures do
+        expect(trial_end_datetime).to be_present
+        expect(trial_end_datetime).to eq(started_at + 3.days)
+      end
+    end
+
+    context 'when plan has no trial' do
+      let(:plan) { create(:plan) }
+
+      it 'returns nil' do
+        expect(subscription.trial_end_datetime).to be_nil
+      end
+    end
+
+    context 'with a previous subscription' do
+      let(:subscription) do
+        create(
+          :active_subscription,
+          previous_subscription:,
+          started_at: Time.zone.yesterday,
+          plan:,
+          external_id: 'sub_id',
+          customer: previous_subscription.customer,
+        )
+      end
+      let(:previous_subscription) do
+        create(:subscription, started_at: Time.current.last_month, external_id: 'sub_id', status: :terminated)
+      end
+
+      it 'takes previous subscription started_at into account' do
+        trial_end_datetime = subscription.trial_end_datetime
+
+        aggregate_failures do
+          expect(trial_end_datetime).to be_present
+          expect(trial_end_datetime).to eq(started_at + 3.days)
+        end
+      end
+    end
+  end
+
   describe '#initial_started_at' do
     let(:customer) { create(:customer) }
     let(:subscription) do

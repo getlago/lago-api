@@ -125,41 +125,40 @@ module Fees
     #       **day_cost** = (plan amount_cents / full period duration)
     #       amount_to_bill = (nb_day * day_cost)
     def terminated_amount
-      from_date = boundaries.from_datetime.to_date
-      to_date = boundaries.to_datetime.to_date
+      from_datetime = boundaries.from_datetime
+      to_datetime = boundaries.to_datetime
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
-        return 0 if subscription.trial_end_date >= to_date
+        return 0 if subscription.trial_end_datetime >= to_datetime
 
         # NOTE: from_date is the trial end date if it happens during the period
-        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          from_date = subscription.trial_end_date
+        if (subscription.trial_end_datetime > from_datetime) && (subscription.trial_end_datetime < to_datetime)
+          from_datetime = subscription.trial_end_datetime
         end
       end
 
       # NOTE: number of days between beginning of the period and the termination date
-      number_of_day_to_bill = (to_date + 1.day - from_date).to_i
+      number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
 
       number_of_day_to_bill * single_day_price(subscription)
     end
 
     def upgraded_amount
-      from_date = boundaries.from_datetime.to_date
-      to_date = boundaries.to_datetime.to_date
+      from_datetime = boundaries.from_datetime
+      to_datetime = boundaries.to_datetime
 
       if plan.has_trial?
-        from_date = to_date + 1.day if subscription.trial_end_date >= to_date
+        return 0 if subscription.trial_end_datetime >= to_datetime
 
         # NOTE: from_date is the trial end date if it happens during the period
-        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          from_date = subscription.trial_end_date
+        if (subscription.trial_end_datetime > from_datetime) && (subscription.trial_end_datetime < to_datetime)
+          from_datetime = subscription.trial_end_datetime
         end
       end
 
       # NOTE: number of days between the upgrade and the end of the period
-      number_of_day_to_bill = (to_date + 1.day - from_date).to_i
-
+      number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
       # NOTE: Subscription is upgraded from another plan
       #       We only bill the days between the upgrade date and the end of the period
       #       A credit note will apply automatically the amount of days from previous plan that were not consumed
