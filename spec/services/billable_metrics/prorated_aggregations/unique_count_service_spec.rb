@@ -385,6 +385,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         it 'assigns a pay_in_advance aggregation' do
           expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.units_applied).to eq(1)
         end
       end
     end

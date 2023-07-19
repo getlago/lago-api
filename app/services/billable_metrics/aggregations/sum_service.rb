@@ -61,16 +61,16 @@ module BillableMetrics
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
 
+        value = event.properties.fetch(billable_metric.field_name, 0).to_s
+
         unless previous_event
-          value = event.properties.fetch(billable_metric.field_name, 0).to_s
           return_value = BigDecimal(value).negative? ? '0' : value
-          handle_event_metadata(current_aggregation: value, max_aggregation: value)
+          handle_event_metadata(current_aggregation: value, max_aggregation: value, units_applied: value)
 
           return BigDecimal(return_value)
         end
 
-        current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) +
-                              BigDecimal(event.properties.fetch(billable_metric.field_name, 0).to_s)
+        current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) + BigDecimal(value)
 
         old_max = BigDecimal(previous_event.metadata['max_aggregation'])
 
@@ -80,7 +80,7 @@ module BillableMetrics
 
           current_aggregation - old_max
         else
-          handle_event_metadata(current_aggregation:, max_aggregation: old_max)
+          handle_event_metadata(current_aggregation:, max_aggregation: old_max, units_applied: value)
 
           0
         end
@@ -88,7 +88,7 @@ module BillableMetrics
         BigDecimal(result)
       end
 
-      private
+      protected
 
       attr_reader :from_datetime, :to_datetime
 
@@ -117,9 +117,10 @@ module BillableMetrics
         end
       end
 
-      def handle_event_metadata(current_aggregation: nil, max_aggregation: nil)
+      def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)
         result.current_aggregation = current_aggregation unless current_aggregation.nil?
         result.max_aggregation = max_aggregation unless max_aggregation.nil?
+        result.units_applied = units_applied unless units_applied.nil?
       end
     end
   end
