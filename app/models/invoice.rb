@@ -106,20 +106,66 @@ class Invoice < ApplicationRecord
   end
 
   def recurring_fees(subscription_id)
-    subscription_fees(subscription_id).joins(charge: :billable_metric)
-      .merge(BillableMetric.recurring_count_agg)
+    subscription_fees(subscription_id)
+      .joins(charge: :billable_metric)
+      .where(billable_metric: { recurring: true })
+      .where(billable_metric: { aggregation_type: %i[sum_agg unique_count_agg] })
+      .where(charge: { pay_in_advance: false })
   end
 
   def recurring_breakdown(fee)
-    result = BillableMetrics::Aggregations::RecurringCountService.new(
+    service = case fee.charge.billable_metric.aggregation_type.to_sym
+              when :sum_agg
+                BillableMetrics::Breakdown::SumService
+              when :unique_count_agg
+                BillableMetrics::Breakdown::UniqueCountService
+              else
+                raise(NotImplementedError)
+              end
+
+    service.new(
       billable_metric: fee.charge.billable_metric,
       subscription: fee.subscription,
       group: fee.group,
     ).breakdown(
       from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
       to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
+    ).breakdown
+  end
+
+  def charge_pay_in_advance_proration_range(fee, timestamp)
+    date_service = Subscriptions::DatesService.new_instance(
+      fee.subscription,
+      Time.zone.at(timestamp),
+      current_usage: true,
     )
-    result.breakdown
+
+    event = Event.find_by(id: fee.pay_in_advance_event_id)
+
+    return {} unless event
+
+    number_of_seconds = date_service.charges_to_datetime.in_time_zone(customer.applicable_timezone) -
+                        event.timestamp.in_time_zone(customer.applicable_timezone)
+
+    number_of_days = number_of_seconds.fdiv(1.day).round
+
+    {
+      number_of_days:,
+      period_duration: date_service.charges_duration_in_days,
+    }
+  end
+
+  def charge_pay_in_advance_interval(timestamp, subscription)
+    date_service = Subscriptions::DatesService.new_instance(
+      subscription,
+      Time.zone.at(timestamp) + 1.day,
+      current_usage: true,
+    )
+
+    {
+      charges_from_date: date_service.charges_from_datetime&.to_date,
+      charges_to_date: date_service.charges_to_datetime&.to_date,
+    }
   end
 
   def creditable_amount_cents

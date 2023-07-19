@@ -32,7 +32,7 @@ module BillableMetrics
         result
       end
 
-      private
+      protected
 
       attr_reader :from_datetime, :to_datetime, :options
 

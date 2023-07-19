@@ -34,7 +34,7 @@ module BillableMetrics
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
-      private
+      protected
 
       attr_reader :from_datetime, :to_datetime, :options
 
