@@ -72,8 +72,14 @@ module BillableMetrics
       # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
       # would help us in pay in advance value calculation without iterating through all events in current period
       def previous_event
+        query = if billable_metric.recurring?
+                  recurring_events_scope(to_datetime:, from_datetime:)
+                else
+                  events_scope(from_datetime:, to_datetime:)
+                end
+
         @previous_event ||= begin
-          query = events_scope(from_datetime:, to_datetime:)
+          query = query
             .joins(:quantified_event)
             .where("#{sanitized_field_name} IS NOT NULL")
             .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
