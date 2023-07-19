@@ -45,9 +45,10 @@ module Subscriptions
       return @to_datetime if @to_datetime
 
       @to_datetime = customer_timezone_shift(compute_to_date, end_of_day: true)
-      terminated_at = subscription.terminated_at
+      terminated_at = subscription.terminated_at&.change(usec: 0)
+      bill_at = billing_at&.change(usec: 0)
 
-      if subscription.terminated? && @to_datetime > terminated_at && billing_at >= terminated_at
+      if subscription.terminated? && @to_datetime > terminated_at && bill_at && bill_at >= terminated_at
         @to_datetime = terminated_at
       end
 

@@ -28,7 +28,16 @@ module Plans
       ActiveRecord::Base.transaction do
         plan.save!
 
-        args[:charges].each { |c| create_charge(plan, c) } if args[:charges].present?
+        if args[:charges].present?
+          args[:charges].each do |charge|
+            new_charge = create_charge(plan, charge)
+
+            if charge[:tax_codes].present?
+              taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
+              return taxes_result unless taxes_result.success?
+            end
+          end
+        end
       end
 
       result.plan = plan

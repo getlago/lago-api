@@ -37,7 +37,13 @@ module Api
 
       # NOTE: We can't destroy a subscription, it will terminate it
       def terminate
-        subscription = current_organization.subscriptions.active.find_by(external_id: params[:external_id])
+        query = current_organization.subscriptions.where(external_id: params[:external_id])
+        subscription = if params[:status] == 'pending'
+          query.pending
+        else
+          query.active
+        end.first
+
         result = Subscriptions::TerminateService.call(subscription:)
 
         if result.success?
@@ -119,7 +125,7 @@ module Api
       end
 
       def index_filters
-        params.permit(:external_customer_id, :plan_code)
+        params.permit(:external_customer_id, :plan_code, status: [])
       end
     end
   end

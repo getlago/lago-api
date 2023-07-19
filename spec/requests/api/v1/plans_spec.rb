@@ -3,8 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::PlansController, type: :request do
+  let(:tax) { create(:tax, organization:) }
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:plan) { create(:plan, code: 'plan_code') }
 
   describe 'create' do
     let(:create_params) do
@@ -24,10 +26,12 @@ RSpec.describe Api::V1::PlansController, type: :request do
             properties: {
               amount: '0.22',
             },
+            tax_codes:,
           },
         ],
       }
     end
+    let(:tax_codes) { [tax.code] }
 
     it 'creates a plan' do
       post_with_token(organization, '/api/v1/plans', { plan: create_params })
@@ -161,11 +165,26 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(json[:plan][:charges].count).to eq(0)
       end
     end
+
+    context 'with unknown tax code on charge' do
+      let(:tax_codes) { ['unknown'] }
+
+      it 'returns a 404 response' do
+        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+
+        aggregate_failures do
+          expect(response).to have_http_status(:not_found)
+          expect(json[:error]).to eq('Not Found')
+          expect(json[:code]).to eq('tax_not_found')
+        end
+      end
+    end
   end
 
   describe 'update' do
     let(:plan) { create(:plan, organization:) }
     let(:code) { 'plan_code' }
+    let(:tax_codes) { [tax.code] }
     let(:update_params) do
       {
         name: 'P1',
@@ -183,6 +202,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             properties: {
               amount: '0.22',
             },
+            tax_codes:,
           },
         ],
       }

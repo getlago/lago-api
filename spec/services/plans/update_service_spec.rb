@@ -12,6 +12,7 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:group) { create(:group, billable_metric: sum_billable_metric) }
   let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:tax) { create(:tax, organization:) }
 
   let(:update_args) do
     {
@@ -32,6 +33,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               values: { amount: '100' },
             },
           ],
+          tax_codes: [tax.code],
         },
         {
           billable_metric_id: billable_metric.id,
@@ -178,6 +180,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               properties: {
                 amount: '300',
               },
+              tax_codes: [tax.code],
             },
           ],
         }
@@ -213,7 +216,9 @@ RSpec.describe Plans::UpdateService, type: :service do
           plans_service.call
 
           expect(existing_charge.reload).to have_attributes(pay_in_advance: true, invoiceable: false)
-          expect(plan.charges.where(pay_in_advance: false).first.min_amount_cents).to eq(100)
+          charge = plan.charges.where(pay_in_advance: false).first
+          expect(charge.min_amount_cents).to eq(100)
+          expect(charge.taxes.pluck(:code)).to eq([tax.code])
         end
       end
     end

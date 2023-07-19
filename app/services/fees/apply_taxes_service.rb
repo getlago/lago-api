@@ -52,8 +52,9 @@ module Fees
     end
 
     def applicable_taxes
-      customer_taxes = customer.taxes
-      return customer_taxes if customer_taxes.any?
+      return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
+      return fee.subscription.plan.taxes if (fee.charge? || fee.subscription?) && fee.subscription.plan.taxes.any?
+      return customer.taxes if customer.taxes.any?
 
       customer.organization.taxes.applied_to_organization
     end

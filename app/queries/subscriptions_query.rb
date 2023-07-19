@@ -2,7 +2,8 @@
 
 class SubscriptionsQuery < BaseQuery
   def call
-    subscriptions = paginate(organization.subscriptions.active)
+    subscriptions = paginate(organization.subscriptions)
+    subscriptions = subscriptions.where(status: filtered_statuses)
     subscriptions = subscriptions.order(started_at: :asc)
 
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
@@ -18,5 +19,15 @@ class SubscriptionsQuery < BaseQuery
 
   def with_plan_code(scope)
     scope.joins(:plan).where(plans: { code: filters.plan_code })
+  end
+
+  def filtered_statuses
+    return [:active] unless valid_status?
+
+    filters.status
+  end
+
+  def valid_status?
+    filters.status.present? && filters.status.all? { |s| Subscription.statuses.key?(s) }
   end
 end

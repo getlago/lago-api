@@ -29,7 +29,7 @@ module V1
         billing_configuration:,
       }.merge(legacy_values.except(:billing_configuration))
 
-      payload = payload.merge(metadata) if include?(:metadata)
+      payload = payload.merge(metadata)
       payload = payload.merge(taxes) if include?(:taxes)
 
       payload

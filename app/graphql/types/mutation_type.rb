@@ -82,6 +82,9 @@ module Types
     field :create_customer_applied_tax, mutation: Mutations::Customers::AppliedTaxes::Create
     field :destroy_customer_applied_tax, mutation: Mutations::Customers::AppliedTaxes::Destroy
 
+    field :create_plan_applied_tax, mutation: Mutations::Plans::AppliedTaxes::Create
+    field :destroy_plan_applied_tax, mutation: Mutations::Plans::AppliedTaxes::Destroy
+
     field :retry_webhook, mutation: Mutations::Webhooks::Retry
 
     field :create_webhook_endpoint, mutation: Mutations::WebhookEndpoints::Create

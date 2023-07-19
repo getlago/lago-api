@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_17_090135) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -239,7 +239,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "credit_note_id"
-    t.boolean "before_vat", default: false, null: false
+    t.boolean "before_taxes", default: false, null: false
     t.index ["applied_coupon_id"], name: "index_credits_on_applied_coupon_id"
     t.index ["credit_note_id"], name: "index_credits_on_credit_note_id"
     t.index ["invoice_id"], name: "index_credits_on_invoice_id"
@@ -342,14 +342,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.uuid "group_id"
     t.uuid "pay_in_advance_event_id"
     t.integer "payment_status", default: 0, null: false
-    t.datetime "succeeded_at", precision: nil
-    t.datetime "failed_at", precision: nil
-    t.datetime "refunded_at", precision: nil
+    t.datetime "succeeded_at"
+    t.datetime "failed_at"
+    t.datetime "refunded_at"
     t.uuid "true_up_parent_fee_id"
     t.uuid "add_on_id"
     t.string "description"
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
+    t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
@@ -432,11 +433,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "recurring"
-    t.datetime "timestamp", precision: nil
-    t.datetime "from_datetime", precision: nil
-    t.datetime "to_datetime", precision: nil
-    t.datetime "charges_from_datetime", precision: nil
-    t.datetime "charges_to_datetime", precision: nil
+    t.datetime "timestamp"
+    t.datetime "from_datetime"
+    t.datetime "to_datetime"
+    t.datetime "charges_from_datetime"
+    t.datetime "charges_to_datetime"
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
     t.index ["subscription_id", "from_datetime", "to_datetime"], name: "index_invoice_subscriptions_on_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
@@ -484,6 +485,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "fees_amount_cents", default: 0, null: false
     t.index ["invoice_id"], name: "index_invoices_taxes_on_invoice_id"
     t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
   end
@@ -506,6 +508,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "api_key"
+    t.string "webhook_url"
     t.float "vat_rate", default: 0.0, null: false
     t.string "country"
     t.string "address_line1"
@@ -523,7 +526,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_04_150108) do
     t.string "document_locale", default: "en", null: false
     t.string "email_settings", default: [], null: false, array: true
     t.string "tax_identification_number"
-    t.string "webhook_url"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
   end

@@ -27,16 +27,6 @@ module Events
       return result unless result.success?
 
       ActiveRecord::Base.transaction do
-        event = organization.events.find_by(
-          transaction_id: params[:transaction_id],
-          subscription_id: subscriptions.first.id,
-        )
-
-        if event
-          result.event = event
-          return result
-        end
-
         event = organization.events.new
         event.code = params[:code]
         event.transaction_id = params[:transaction_id]
@@ -70,14 +60,14 @@ module Events
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      delivor_error_webhook(organization:, params:, message: e.record.errors.messages)
 
-      if organization.webhook_endpoints.any?
-        SendWebhookJob.perform_later(
-          'event.error',
-          { input_params: params, error: result.error.message, organization_id: organization.id },
-        )
-      end
+      # NOTE: Raise error only when validation errors are not transaction_id related
+      result.record_validation_failure!(record: e.record) unless e.record.errors.messages.keys == %i[transaction_id]
+
+      result
+    rescue ActiveRecord::RecordNotUnique
+      delivor_error_webhook(organization:, params:, message: 'transaction_id already exists')
 
       result
     end
@@ -154,6 +144,15 @@ module Events
 
     def billable_metric
       @billable_metric ||= event.organization.billable_metrics.find_by(code: event.code)
+    end
+
+    def delivor_error_webhook(organization:, params:, message:)
+      return unless organization.webhook_endpoints.any?
+
+      SendWebhookJob.perform_later(
+        'event.error',
+        { input_params: params, error: message, organization_id: organization.id, status: 422 },
+      )
     end
   end
 end

@@ -7,6 +7,11 @@ RSpec.describe Api::BaseController, type: :controller do
     def index
       render nothing: true
     end
+
+    def create
+      params.require(:input).permit(:value)
+      render nothing: true
+    end
   end
 
   let(:organization) { create(:organization) }
@@ -35,5 +40,17 @@ RSpec.describe Api::BaseController, type: :controller do
         expect(response).to have_http_status(:unauthorized)
       end
     end
+  end
+
+  it 'catches the missing parameters error' do
+    request.headers['Authorization'] = "Bearer #{organization.api_key}"
+
+    post :create
+
+    expect(response).to have_http_status(:bad_request)
+
+    json = JSON.parse(response.body, symbolize_names: true)
+    expect(json[:status]).to eq(400)
+    expect(json[:error]).to eq('BadRequest: param is missing or the value is empty: input')
   end
 end

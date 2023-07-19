@@ -26,7 +26,7 @@ module Credits
             credit_note:,
             amount_cents: credit_amount,
             amount_currency: invoice.currency,
-            before_vat: false,
+            before_taxes: false,
           )
 
           # NOTE: Consume remaining credit on the credit note

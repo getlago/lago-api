@@ -19,8 +19,9 @@ RSpec.describe Events::ValidateCreationService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let!(:subscription) { create(:active_subscription, customer:, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:transaction_id) { SecureRandom.uuid }
   let(:params) do
-    { external_customer_id: customer.external_id, code: billable_metric.code }
+    { external_customer_id: customer.external_id, code: billable_metric.code, transaction_id: }
   end
 
   describe '.call' do
@@ -36,7 +37,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       context 'when customer has only one active subscription and customer is not given' do
         let(:params) do
-          { code: billable_metric.code, external_subscription_id: subscription.external_id }
+          { code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id: }
         end
 
         it 'does not return any validation errors' do
@@ -49,7 +50,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         before { create(:active_subscription, customer:, organization:) }
 
         let(:params) do
-          { code: billable_metric.code, external_subscription_id: subscription.external_id }
+          { code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id: }
         end
 
         it 'does not return any validation errors' do
@@ -60,7 +61,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       context 'when customer is not given but subscription is present' do
         let(:params) do
-          { code: billable_metric.code }
+          { code: billable_metric.code, transaction_id: }
         end
 
         let(:validate_event) do
@@ -113,6 +114,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             code: billable_metric.code,
             external_subscription_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
+            transaction_id:,
           }
         end
 
@@ -153,6 +155,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             code: billable_metric.code,
             external_subscription_id: external_id,
             external_customer_id: customer.external_id,
+            transaction_id:,
           }
         end
 
@@ -167,9 +170,26 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
+      context 'when transaction_id is already used' do
+        before { create(:event, transaction_id:, subscription:, organization:) }
+
+        it 'returns a validation error' do
+          validate_event
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:transaction_id)
+          expect(result.error.messages[:transaction_id]).to include('value_is_missing_or_already_exists')
+        end
+
+        it 'enqueues a SendWebhookJob' do
+          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
       context 'when code does not exist' do
         let(:params) do
-          { external_customer_id: customer.external_id, code: 'event_code' }
+          { external_customer_id: customer.external_id, code: 'event_code', transaction_id: }
         end
 
         it 'returns an event_not_found error' do
@@ -196,6 +216,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             properties: {
               item_id: 'test',
             },
+            transaction_id:,
           }
         end
 
@@ -222,6 +243,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
               properties: {
                 invalid_key: 'test',
               },
+              transaction_id:,
             }
           end
 
@@ -237,6 +259,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             {
               code: billable_metric.code,
               external_customer_id: customer.external_id,
+              transaction_id:,
             }
           end
 
@@ -266,6 +289,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
               billable_metric.field_name => 'ext_1234',
               'operation_type' => operation_type,
             },
+            transaction_id:,
           }
         end
 
@@ -316,6 +340,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
               billable_metric.field_name => 'ext_1234',
               'operation_type' => 'add',
             },
+            transaction_id:,
           }
         end
 

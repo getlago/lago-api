@@ -13,6 +13,11 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
           subscriptionsCount
           activeSubscriptionsCount
           draftInvoicesCount
+          appliedTaxes { id createdAt tax { id rate } }
+          charges {
+            id
+            appliedTaxes { id createdAt tax { id rate } }
+          }
         }
       }
     GQL

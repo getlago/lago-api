@@ -15,6 +15,8 @@ module Types
 
       argument :group_properties, [Types::Charges::GroupPropertiesInput], required: false
       argument :properties, Types::Charges::PropertiesInput, required: false
+
+      argument :tax_codes, [String], required: false
     end
   end
 end

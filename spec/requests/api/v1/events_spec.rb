@@ -36,7 +36,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/events',
-          event: { external_customer_id: customer.external_id },
+          event: { external_customer_id: customer.external_id, transaction_id: SecureRandom.uuid },
         )
 
         expect(response).to have_http_status(:not_found)
@@ -150,8 +150,12 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
   describe 'POST /events/estimate_fees' do
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric: metric) }
+    let(:tax) { create(:tax, organization:) }
 
-    before { charge }
+    before do
+      charge
+      tax
+    end
 
     it 'returns a success' do
       post_with_token(
@@ -160,6 +164,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         event: {
           code: metric.code,
           external_customer_id: customer.external_id,
+          transaction_id: SecureRandom.uuid,
           properties: {
             foo: 'bar',
           },
