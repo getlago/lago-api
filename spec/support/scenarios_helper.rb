@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module ScenariosHelper
+  ### Billable metrics
+
+  def create_metric(params)
+    post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: params })
+  end
+
   ### Customers
 
   def create_or_update_customer(params)
@@ -20,6 +26,10 @@ module ScenariosHelper
   end
 
   ### Plans
+
+  def create_plan(params)
+    post_with_token(organization, '/api/v1/plans', { plan: params })
+  end
 
   def delete_plan(plan)
     delete_with_token(organization, "/api/v1/plans/#{plan.code}")
@@ -55,6 +65,20 @@ module ScenariosHelper
 
   def apply_coupon(params)
     post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
+  end
+
+  ### Taxes
+
+  def create_tax(params)
+    post_with_token(organization, '/api/v1/taxes', { tax: params })
+  end
+
+  def create_plan_applied_tax(plan_code, tax_code)
+    post_with_token(
+      organization,
+      "/api/v1/plans/#{plan_code}/applied_taxes",
+      { applied_tax: { tax_code: } },
+    )
   end
 
   ### Wallets
