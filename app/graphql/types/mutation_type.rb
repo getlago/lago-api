@@ -79,9 +79,6 @@ module Types
     field :destroy_tax, mutation: Mutations::Taxes::Destroy
     field :update_tax, mutation: Mutations::Taxes::Update
 
-    field :create_customer_applied_tax, mutation: Mutations::Customers::AppliedTaxes::Create
-    field :destroy_customer_applied_tax, mutation: Mutations::Customers::AppliedTaxes::Destroy
-
     field :create_plan_applied_tax, mutation: Mutations::Plans::AppliedTaxes::Create
     field :destroy_plan_applied_tax, mutation: Mutations::Plans::AppliedTaxes::Destroy
 

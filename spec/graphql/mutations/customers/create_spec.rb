@@ -6,6 +6,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
+  let(:tax) { create(:tax, organization:) }
 
   let(:mutation) do
     <<~GQL
@@ -25,6 +26,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           invoiceGracePeriod
           billingConfiguration { documentLocale }
           metadata { id, key, value, displayInInvoice }
+          taxes { code }
         }
       }
     GQL
@@ -59,6 +61,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
               displayInInvoice: true,
             },
           ],
+          taxCodes: [tax.code],
         },
       },
     )
@@ -79,6 +82,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
       expect(result_data['metadata'].count).to eq(1)
       expect(result_data['metadata'][0]['value']).to eq('John Doe')
+      expect(result_data['taxes'][0]['code']).to eq(tax.code)
     end
   end
 

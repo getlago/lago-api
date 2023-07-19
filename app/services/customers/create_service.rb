@@ -45,6 +45,11 @@ module Customers
         ActiveRecord::Base.transaction do
           customer.save!
 
+          if params[:tax_codes]
+            taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: params[:tax_codes])
+            taxes_result.raise_if_error!
+          end
+
           if new_customer && params[:metadata]
             params[:metadata].each { |m| create_metadata(customer:, args: m) }
           elsif params[:metadata]
@@ -102,6 +107,11 @@ module Customers
 
       ActiveRecord::Base.transaction do
         customer.save!
+
+        if args[:tax_codes]
+          taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
+          taxes_result.raise_if_error!
+        end
 
         args[:metadata].each { |m| create_metadata(customer:, args: m) } if args[:metadata].present?
       end
@@ -243,8 +253,7 @@ module Customers
         .create_with(rate: vat_rate, name: "Tax (#{vat_rate}%)")
         .find_or_create_by!(code: "tax_#{vat_rate}")
 
-      Customers::AppliedTaxes::DestroyService.call(applied_tax: customer.applied_taxes&.first)
-      Customers::AppliedTaxes::CreateService.call(customer:, tax:)
+      Customers::ApplyTaxesService.call(customer:, tax_codes: [tax.code])
     end
   end
 end
