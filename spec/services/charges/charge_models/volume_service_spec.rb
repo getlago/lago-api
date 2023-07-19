@@ -83,7 +83,6 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
 
     before do
-
       charge.update!(prorated: true, billable_metric:)
       aggregation_result.full_units_number = 300
     end
