@@ -276,8 +276,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when subscription is billed on anniversary date' do
-        let(:timestamp) { DateTime.parse('07 Mar 2022') }
-        let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
+        let(:timestamp) { DateTime.parse('22 Mar 2022') }
+        let(:started_at) { DateTime.parse('2021-06-06 05:00:00') }
         let(:subscription_at) { started_at }
         let(:billing_time) { 'anniversary' }
 

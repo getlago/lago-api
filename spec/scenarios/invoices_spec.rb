@@ -124,7 +124,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       subscription = customer.subscriptions.first
 
       ### 20 Dec: Terminate subscription + refresh.
-      dec20 = DateTime.new(2022, 12, 20)
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
 
       travel_to(dec20) do
         expect {
