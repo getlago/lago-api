@@ -24,7 +24,6 @@ Rails.application.routes.draw do
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
-          resources :applied_taxes, only: %i[create destroy], param: :tax_code
         end
       end
 

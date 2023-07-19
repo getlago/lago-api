@@ -131,6 +131,7 @@ module Api
             :value,
             :display_in_invoice,
           ],
+          tax_codes: [],
         )
       end
 
