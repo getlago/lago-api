@@ -36,6 +36,11 @@ module Plans
       ActiveRecord::Base.transaction do
         plan.save!
 
+        if params[:tax_codes]
+          taxes_result = Plans::ApplyTaxesService.call(plan:, tax_codes: params[:tax_codes])
+          return taxes_result unless taxes_result.success?
+        end
+
         process_charges(plan, params[:charges]) if params[:charges]
       end
 

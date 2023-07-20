@@ -13,6 +13,8 @@ RSpec.describe Plans::CreateService, type: :service do
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
     let(:group) { create(:group, billable_metric:) }
+    let(:plan_tax) { create(:tax, organization:) }
+    let(:charge_tax) { create(:tax, organization:) }
     let(:create_args) do
       {
         name: plan_name,
@@ -22,11 +24,13 @@ RSpec.describe Plans::CreateService, type: :service do
         pay_in_advance: false,
         amount_cents: 200,
         amount_currency: 'EUR',
+        tax_codes: [plan_tax.code],
         charges: [
           {
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
             min_amount_cents: 100,
+            tax_codes: [charge_tax.code],
             group_properties: [
               {
                 group_id: group.id,
@@ -67,6 +71,9 @@ RSpec.describe Plans::CreateService, type: :service do
     it 'creates a plan' do
       expect { plans_service.create(**create_args) }
         .to change(Plan, :count).by(1)
+
+      plan = Plan.order(:created_at).last
+      expect(plan.taxes.pluck(:code)).to eq([plan_tax.code])
     end
 
     it 'creates charges' do
@@ -84,6 +91,7 @@ RSpec.describe Plans::CreateService, type: :service do
         min_amount_cents: 0,
         invoiceable: true,
       )
+      expect(standard_charge.taxes.pluck(:code)).to eq([charge_tax.code])
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
