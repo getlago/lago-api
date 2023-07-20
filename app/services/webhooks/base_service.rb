@@ -61,7 +61,7 @@ module Webhooks
 
     def send_webhook(webhook, webhook_endpoint, payload)
       http_client = LagoHttpClient::Client.new(webhook_endpoint.webhook_url)
-      headers = generate_headers(payload)
+      headers = generate_headers(webhook_endpoint, payload)
       response = http_client.post_with_response(payload, headers)
 
       succeed_webhook(webhook, response)
@@ -75,13 +75,21 @@ module Webhooks
         .perform_later(webhook_type, object, options, webhook.id)
     end
 
-    def generate_headers(payload)
-      [
-        'X-Lago-Signature' => generate_signature(payload),
-      ]
+    def generate_headers(webhook_endpoint, payload)
+      signature = case webhook_endpoint.signature_algo&.to_sym
+                  when :jwt
+                    jwt_signature(payload)
+                  when :hmac
+                    hmac_signature(payload)
+      end
+
+      {
+        'X-Lago-Signature' => signature,
+        'X-Lago-Signature-Algorithm' => webhook_endpoint.signature_algo.to_s,
+      }
     end
 
-    def generate_signature(payload)
+    def jwt_signature(payload)
       JWT.encode(
         {
           data: payload.to_json,
@@ -90,6 +98,11 @@ module Webhooks
         RsaPrivateKey,
         'RS256',
       )
+    end
+
+    def hmac_signature(payload)
+      hmac = OpenSSL::HMAC.digest('sha-256', current_organization.api_key, payload.to_json)
+      Base64.strict_encode64(hmac)
     end
 
     def issuer

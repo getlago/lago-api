@@ -8,6 +8,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     let(:create_params) do
       {
         webhook_url: Faker::Internet.url,
+        signature_algo: 'jwt',
       }
     end
 
@@ -18,6 +19,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
 
       aggregate_failures do
         expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
+        expect(json[:webhook_endpoint][:signature_algo]).to eq('jwt')
       end
     end
   end
@@ -109,6 +111,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     let(:update_params) do
       {
         webhook_url: 'http://foo.bar',
+        signature_algo: 'hmac',
       }
     end
 
@@ -126,6 +129,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
           expect(response).to have_http_status(:success)
 
           expect(json[:webhook_endpoint][:webhook_url]).to eq('http://foo.bar')
+          expect(json[:webhook_endpoint][:signature_algo]).to eq('hmac')
         end
       end
     end

@@ -7,6 +7,7 @@ module Types
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType
+      field :signature_algo, Types::WebhookEndpoints::SignatureAlgoEnum
       field :webhook_url, String, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
