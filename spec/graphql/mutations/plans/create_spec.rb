@@ -5,6 +5,9 @@ require 'rails_helper'
 RSpec.describe Mutations::Plans::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:plan_tax) { create(:tax, organization:) }
+  let(:charge_tax) { create(:tax, organization:) }
+
   let(:mutation) do
     <<~GQL
       mutation($input: CreatePlanInput!) {
@@ -16,11 +19,12 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           payInAdvance,
           amountCents,
           amountCurrency,
+          taxes { id code rate }
           charges {
             id,
             chargeModel,
             billableMetric { id name code }
-            appliedTaxes { tax { code } }
+            taxes { id code rate }
             properties {
               amount,
               freeUnits,
@@ -73,12 +77,13 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           payInAdvance: false,
           amountCents: 200,
           amountCurrency: 'EUR',
+          taxCodes: [plan_tax.code],
           charges: [
             {
               billableMetricId: billable_metrics[0].id,
               chargeModel: 'standard',
               properties: { amount: '100.00' },
-              taxCodes: [tax.code],
+              taxCodes: [charge_tax.code],
             },
             {
               billableMetricId: billable_metrics[1].id,
@@ -163,15 +168,14 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(result_data['interval']).to eq('monthly')
       expect(result_data['payInAdvance']).to eq(false)
       expect(result_data['amountCents']).to eq('200')
-      expect(result_data['amountCurrency']).to eq('EUR')
+      expect(result_data['taxes'][0]['code']).to eq(plan_tax.code)
       expect(result_data['charges'].count).to eq(5)
 
       standard_charge = result_data['charges'][0]
       expect(standard_charge['properties']['amount']).to eq('100.00')
       expect(standard_charge['chargeModel']).to eq('standard')
-      # TODO(tax): uncomment
-      # expect(standard_charge['appliedTaxes'].count).to eq(1)
-      # expect(standard_charge['appliedTaxes'].first['code']).to eq(tax.code)
+      expect(standard_charge['taxes'].count).to eq(1)
+      expect(standard_charge['taxes'].first['code']).to eq(charge_tax.code)
 
       package_charge = result_data['charges'][1]
       expect(package_charge['chargeModel']).to eq('package')

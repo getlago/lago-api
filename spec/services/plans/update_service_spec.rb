@@ -10,7 +10,9 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:plan) { create(:plan, organization:) }
   let(:plan_name) { 'Updated plan name' }
   let(:group) { create(:group, billable_metric: billable_metrics.first) }
-  let(:tax) { create(:tax, organization:) }
+  let(:tax1) { create(:tax, organization:) }
+  let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax1) }
+  let(:tax2) { create(:tax, organization:) }
 
   let(:billable_metrics) do
     create_list(:billable_metric, 2, organization:)
@@ -24,6 +26,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       pay_in_advance: false,
       amount_cents: 200,
       amount_currency: 'EUR',
+      tax_codes: [tax2.code],
       charges: [
         {
           billable_metric_id: billable_metrics.first.id,
@@ -35,7 +38,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               values: { amount: '100' },
             },
           ],
-          tax_codes: [tax.code],
+          tax_codes: [tax1.code],
         },
         {
           billable_metric_id: billable_metrics.last.id,
@@ -62,12 +65,17 @@ RSpec.describe Plans::UpdateService, type: :service do
   end
 
   describe 'call' do
+    before do
+      applied_tax
+    end
+
     it 'updates a plan' do
       result = plans_service.call
 
       updated_plan = result.plan
       aggregate_failures do
         expect(updated_plan.name).to eq('Updated plan name')
+        expect(updated_plan.taxes.pluck(:code)).to eq([tax2.code])
         expect(plan.charges.count).to eq(2)
       end
     end
@@ -99,6 +107,7 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context 'when plan is not found' do
+      let(:applied_tax) { nil }
       let(:plan) { nil }
 
       it 'returns an error' do
@@ -181,15 +190,17 @@ RSpec.describe Plans::UpdateService, type: :service do
               properties: {
                 amount: '300',
               },
-              tax_codes: [tax.code],
+              tax_codes: [tax1.code],
             },
           ],
         }
       end
 
       it 'updates existing charge and creates an other one' do
-        expect { plans_service.call }
-          .to change(Charge, :count).by(1)
+        expect { plans_service.call }.to change(Charge, :count).by(1)
+
+        charge = plan.charges.where(pay_in_advance: false).first
+        expect(charge.taxes.pluck(:code)).to eq([tax1.code])
       end
 
       it 'updates group properties' do
@@ -218,7 +229,6 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect(existing_charge.reload).to have_attributes(pay_in_advance: true, invoiceable: false)
           charge = plan.charges.where(pay_in_advance: false).first
           expect(charge.min_amount_cents).to eq(100)
-          expect(charge.taxes.pluck(:code)).to eq([tax.code])
         end
       end
     end

@@ -51,11 +51,7 @@ Rails.application.routes.draw do
         put :refresh, on: :member
         put :finalize, on: :member
       end
-      resources :plans, param: :code do
-        scope module: :plans do
-          resources :applied_taxes, only: %i[create destroy], param: :tax_code
-        end
-      end
+      resources :plans, param: :code
       resources :taxes, param: :code
       resources :wallet_transactions, only: :create
       get '/wallets/:id/wallet_transactions', to: 'wallet_transactions#index'

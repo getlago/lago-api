@@ -18,6 +18,7 @@ module Mutations
       argument :name, String, required: true
       argument :parent_id, ID, required: false
       argument :pay_in_advance, Boolean, required: true
+      argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false
 
       argument :charges, [Types::Charges::Input]
