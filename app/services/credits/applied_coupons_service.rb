@@ -35,10 +35,12 @@ module Credits
     def applied_coupons
       return @applied_coupons if @applied_coupons
 
+      # NOTE: We want to apply first coupons limited to the billable metrics, then the ones limited to the plans
+      #       and finally the ones with no limitation
       @applied_coupons = customer
         .applied_coupons.active
         .joins(:coupon)
-        .order(created_at: :asc)
+        .order('coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC')
     end
   end
 end
