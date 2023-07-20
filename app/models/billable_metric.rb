@@ -28,7 +28,7 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
-  validates :aggregation_type, inclusion: { in: %w[count_agg sum_agg max_agg unique_count_agg] }
+  validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.map(&:to_s) }
   validates :code,
             presence: true,
             uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
@@ -40,7 +40,7 @@ class BillableMetric < ApplicationRecord
   end
 
   def aggregation_type=(value)
-    %i[count_agg sum_agg max_agg unique_count_agg].include?(value&.to_sym) ? super : nil
+    AGGREGATION_TYPES.include?(value&.to_sym) ? super : nil
   end
 
   def active_groups
