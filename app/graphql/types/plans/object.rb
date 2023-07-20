@@ -19,8 +19,8 @@ module Types
       field :pay_in_advance, Boolean, null: false
       field :trial_period, Float
 
-      field :applied_taxes, [Types::Plans::AppliedTaxes::Object]
       field :charges, [Types::Charges::Object]
+      field :taxes, [Types::Taxes::Object]
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

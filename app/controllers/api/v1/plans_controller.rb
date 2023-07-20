@@ -81,6 +81,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
+          tax_codes: [],
           charges: [
             :id,
             :billable_metric_id,

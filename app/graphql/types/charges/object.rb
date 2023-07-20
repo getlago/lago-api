@@ -19,7 +19,7 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :applied_taxes, [Types::Charges::AppliedTaxes::Object]
+      field :taxes, [Types::Taxes::Object]
 
       def billable_metric
         return object.billable_metric unless object.discarded?
