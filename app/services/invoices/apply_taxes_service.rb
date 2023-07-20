@@ -26,6 +26,7 @@ module Invoices
 
         tax_amount_cents = compute_tax_amount_cents(tax)
         applied_tax.amount_cents = tax_amount_cents.round
+        applied_tax.fees_amount_cents = indexed_fees[tax.id].sum(&:sub_total_excluding_taxes_amount_cents)
 
         # NOTE: when applied on user current usage, the invoice is
         #       not created in DB
