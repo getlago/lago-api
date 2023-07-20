@@ -64,6 +64,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             provider_customer_id: 'stripe_id',
             vat_rate: 20,
             document_locale: 'fr',
+            provider_payment_methods:,
           },
         }
       end
@@ -74,24 +75,95 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
         allow(Stripe::Checkout::Session).to receive(:create)
           .and_return({ 'url' => 'https://example.com' })
+
+        post_with_token(organization, '/api/v1/customers', { customer: create_params })
       end
 
-      it 'returns a success' do
-        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+      context 'when provider payment methods are not present' do
+        let(:provider_payment_methods) { nil }
 
-        expect(response).to have_http_status(:success)
+        it 'returns a success' do
+          expect(response).to have_http_status(:success)
 
-        expect(json[:customer][:lago_id]).to be_present
-        expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+          expect(json[:customer][:lago_id]).to be_present
+          expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
-        billing = json[:customer][:billing_configuration]
-        aggregate_failures do
-          expect(billing).to be_present
-          expect(billing[:payment_provider]).to eq('stripe')
-          expect(billing[:provider_customer_id]).to eq('stripe_id')
-          expect(billing[:invoice_grace_period]).to eq(3)
-          expect(billing[:vat_rate]).to eq(20)
-          expect(billing[:document_locale]).to eq('fr')
+          billing = json[:customer][:billing_configuration]
+          aggregate_failures do
+            expect(billing).to be_present
+            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:invoice_grace_period]).to eq(3)
+            expect(billing[:vat_rate]).to eq(20)
+            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
+          end
+        end
+      end
+
+      context 'when both provider payment methods are set' do
+        let(:provider_payment_methods) { %w[card sepa_debit] }
+
+        it 'returns a success' do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:customer][:lago_id]).to be_present
+          expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+
+          billing = json[:customer][:billing_configuration]
+          aggregate_failures do
+            expect(billing).to be_present
+            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:invoice_grace_period]).to eq(3)
+            expect(billing[:vat_rate]).to eq(20)
+            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
+          end
+        end
+      end
+
+      context 'when provider payment methods contain only card' do
+        let(:provider_payment_methods) { %w[card] }
+
+        it 'returns a success' do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:customer][:lago_id]).to be_present
+          expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+
+          billing = json[:customer][:billing_configuration]
+          aggregate_failures do
+            expect(billing).to be_present
+            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:invoice_grace_period]).to eq(3)
+            expect(billing[:vat_rate]).to eq(20)
+            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:provider_payment_methods]).to eq(%w[card])
+          end
+        end
+      end
+
+      context 'when provider payment methods contain only sepa_debit' do
+        let(:provider_payment_methods) { %w[sepa_debit] }
+
+        it 'returns a success' do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:customer][:lago_id]).to be_present
+          expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+
+          billing = json[:customer][:billing_configuration]
+          aggregate_failures do
+            expect(billing).to be_present
+            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:invoice_grace_period]).to eq(3)
+            expect(billing[:vat_rate]).to eq(20)
+            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
+          end
         end
       end
     end

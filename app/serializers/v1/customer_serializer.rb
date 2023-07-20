@@ -56,6 +56,7 @@ module V1
       case model.payment_provider&.to_sym
       when :stripe
         configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
+        configuration[:provider_payment_methods] = model.stripe_customer&.provider_payment_methods
         configuration.merge!(model.stripe_customer&.settings || {})
       when :gocardless
         configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id

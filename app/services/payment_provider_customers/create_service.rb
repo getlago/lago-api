@@ -23,10 +23,14 @@ module PaymentProviderCustomers
       end
 
       if provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
-        if (params || {}).key?(:provider_payment_methods)
-          provider_customer.provider_payment_methods = params[:provider_payment_methods].presence
-        elsif !provider_customer.persisted?
-          provider_customer.provider_payment_methods = PaymentProviderCustomers::StripeCustomer::PAYMENT_METHODS
+        if provider_customer.persisted? && (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
+          provider_customer.provider_payment_methods = provider_customer.provider_payment_methods | provider_payment_methods
+        else
+          if (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
+            provider_customer.provider_payment_methods = provider_payment_methods
+          else
+            provider_customer.provider_payment_methods = PaymentProviderCustomers::StripeCustomer::PAYMENT_METHODS
+          end
         end
       end
 
@@ -88,6 +92,9 @@ module PaymentProviderCustomers
 
     def should_generate_checkout_url?
       result.provider_customer.provider_customer_id? && result.provider_customer.sync_with_provider.blank?
+    end
+
+    def assign_provider_payment_methods()
     end
   end
 end

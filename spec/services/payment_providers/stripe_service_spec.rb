@@ -251,6 +251,30 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
     end
 
+    context 'when charge event' do
+      let(:event) do
+        path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
+        File.read(path)
+      end
+
+      it 'routes the event to an other service' do
+        result = stripe_service.handle_event(
+          organization:,
+          event_json: event,
+        )
+
+        expect(result).to be_success
+
+        expect(Invoices::Payments::StripeService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status)
+          .with(
+            provider_payment_id: 'pi_123456',
+            status: 'succeeded',
+            metadata: {},
+          )
+      end
+    end
+
     context 'when setup intent event' do
       let(:event) do
         path = Rails.root.join('spec/fixtures/stripe/setup_intent_event.json')

@@ -10,6 +10,7 @@ module PaymentProviders
       'payment_method.detached',
       'charge.refund.updated',
       'customer.updated',
+      'charge.succeeded',
     ].freeze
 
     def create_or_update(**args)
@@ -135,6 +136,13 @@ module PaymentProviders
           )
 
         result.raise_if_error! || result
+      when 'charge.succeeded'
+        Invoices::Payments::StripeService
+          .new.update_payment_status(
+            provider_payment_id: event.data.object.payment_intent,
+            status: 'succeeded',
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
+          )
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
 
