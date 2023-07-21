@@ -6,7 +6,7 @@ class UpdateProviderPaymentMethodsForStripeCustomers < ActiveRecord::Migration[7
       dir.up do
         execute(<<~SQL.squish)
           UPDATE payment_provider_customers
-          SET settings['provider_payment_methods'] = '["card"]'
+          SET settings = jsonb_set(settings, '{provider_payment_methods}', '["card"]')
           WHERE type = 'PaymentProviderCustomers::StripeCustomer';
         SQL
       end
