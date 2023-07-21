@@ -29,6 +29,7 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
           INNER JOIN subscriptions ON subscriptions.id = events.subscription_id
           INNER JOIN billable_metrics ON billable_metrics.code = events.code
           WHERE events.deleted_at IS NULL
+            AND events.properties ->> billable_metrics.field_name IS NOT NULL
             AND billable_metrics.aggregation_type = 3
             AND billable_metrics.organization_id = events.organization_id
           ORDER BY event_timestamp ASC;
