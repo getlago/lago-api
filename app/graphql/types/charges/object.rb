@@ -14,6 +14,7 @@ module Types
       field :min_amount_cents, GraphQL::Types::BigInt, null: false
       field :pay_in_advance, Boolean, null: false
       field :properties, Types::Charges::Properties, null: true
+      field :prorated, Boolean, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true

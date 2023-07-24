@@ -72,7 +72,7 @@ module Events
     end
 
     def handle_persisted_event(event)
-      persisted_service = PersistedEvents::CreateOrUpdateService.new(event)
+      persisted_service = QuantifiedEvents::CreateOrUpdateService.new(event)
       return unless persisted_service.matching_billable_metric?
 
       service_result = persisted_service.call

@@ -14,7 +14,7 @@ module BillableMetrics
         plan: { id: Charge.with_discarded.where(billable_metric_id: metric.id).pluck(:plan_id) },
       ).update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
 
-      metric.persisted_events.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
+      metric.quantified_events.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

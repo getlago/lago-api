@@ -37,8 +37,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     end
 
     before do
-      allow(BillableMetrics::PayInAdvanceAggregationService).to receive(:call)
-        .with(billable_metric:, boundaries: Hash, group:, properties: Hash, event:)
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call)
+        .with(charge:, boundaries: Hash, group:, properties: Hash, event:)
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)

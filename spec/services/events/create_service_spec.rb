@@ -368,7 +368,7 @@ RSpec.describe Events::CreateService, type: :service do
         }
       end
 
-      it 'creates a persisted metric' do
+      it 'creates a quantified metric' do
         expect do
           create_service.call(
             organization:,
@@ -376,7 +376,19 @@ RSpec.describe Events::CreateService, type: :service do
             timestamp:,
             metadata: {},
           )
-        end.to change(PersistedEvent, :count).by(1)
+        end.to change(QuantifiedEvent, :count).by(1)
+      end
+
+      it 'creates association with quantified event' do
+        result = create_service.call(
+          organization:,
+          params: create_args,
+          timestamp:,
+          metadata: {},
+        )
+
+        expect(result).to be_success
+        expect(result.event.reload.quantified_event).to be_present
       end
 
       context 'when a validation error occurs' do
@@ -553,7 +565,7 @@ RSpec.describe Events::CreateService, type: :service do
           }
         end
 
-        it 'does not enqueue a job' do
+        it 'enqueues a job' do
           expect do
             create_service.call(
               organization:,
@@ -561,7 +573,7 @@ RSpec.describe Events::CreateService, type: :service do
               timestamp:,
               metadata: {},
             )
-          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          end.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
 

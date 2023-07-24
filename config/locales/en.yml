@@ -24,6 +24,7 @@ en:
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
         invalid_aggregation_type_or_charge_model: invalid_aggregation_type_or_charge_model
+        invalid_billable_metric_or_charge_model: invalid_billable_metric_or_charge_model
         invalid_amount: invalid_amount
         invalid_flat_amount: invalid_flat_amount
         invalid_per_unit_amount: invalid_per_unit_amount
@@ -38,6 +39,7 @@ en:
         invalid_free_units_per_total_aggregation: invalid_free_units_per_total_aggregation
         invalid_content_type: invalid_content_type
         invalid_size: invalid_size
+        not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         invalid_timezone: invalid_timezone
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
         value_already_exists: value_already_exists
