@@ -10,6 +10,8 @@ module BillableMetrics
         latest_event = events.first
 
         result.aggregation = latest_event&.properties&.fetch(billable_metric.field_name, 0)
+        result.current_usage_units = result.aggregation
+        result.full_units_number = result.aggregation
         result.count = events.count || 0
         result.options = options
 
