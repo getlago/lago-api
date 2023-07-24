@@ -11,12 +11,13 @@ module BillableMetrics
           result.aggregation = 0
           result.count = 0
           result.options = options
+        else
+          latest_event = events.first
 
-        latest_event = events.first
-
-        result.aggregation = latest_event&.properties&.fetch(billable_metric.field_name, 0)
-        result.count = events.count || 0
-        result.options = options
+          result.aggregation = latest_event&.properties&.fetch(billable_metric.field_name, 0)
+          result.count = events.count || 0
+          result.options = options
+        end
 
         result
       rescue ActiveRecord::StatementInvalid => e
