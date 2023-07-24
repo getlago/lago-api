@@ -5,11 +5,14 @@ module BillableMetrics
         events = events_scope(from_datetime:, to_datetime:)
           .where("#{sanitized_field_name} IS NOT NULL").order(timestamp: :desc)
 
+        if events.count == 0
+          result.aggregation = 0
+          result.count = 0
+          result.options = options
+
         latest_event = events.first
 
         result.aggregation = latest_event&.properties&.fetch(billable_metric.field_name, 0)
-        result.current_usage_units = result.aggregation
-        result.full_units_number = result.aggregation
         result.count = events.count || 0
         result.options = options
 
