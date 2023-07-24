@@ -33,6 +33,8 @@ module BillableMetrics
                                 BillableMetrics::Aggregations::CountService
                               when :sum_agg
                                 BillableMetrics::Aggregations::SumService
+                              when :latest_agg
+                                BillableMetrics::Aggregations::LatestService
                               when :unique_count_agg
                                 BillableMetrics::Aggregations::UniqueCountService
                               else

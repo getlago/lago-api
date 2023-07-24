@@ -27,6 +27,16 @@ module Events
       return result unless result.success?
 
       ActiveRecord::Base.transaction do
+        event = organization.events.find_by(
+          transaction_id: params[:transaction_id],
+          subscription_id: subscriptions.first.id,
+        )
+
+        if event
+          result.event = event
+          return result
+        end
+
         event = organization.events.new
         event.code = params[:code]
         event.transaction_id = params[:transaction_id]
@@ -54,14 +64,14 @@ module Events
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      delivor_error_webhook(organization:, params:, message: e.record.errors.messages)
+      result.record_validation_failure!(record: e.record)
 
-      # NOTE: Raise error only when validation errors are not transaction_id related
-      result.record_validation_failure!(record: e.record) unless e.record.errors.messages.keys == %i[transaction_id]
-
-      result
-    rescue ActiveRecord::RecordNotUnique
-      delivor_error_webhook(organization:, params:, message: 'transaction_id already exists')
+      if organization.webhook_endpoints.any?
+        SendWebhookJob.perform_later(
+          'event.error',
+          { input_params: params, error: result.error.message, organization_id: organization.id },
+        )
+      end
 
       result
     end
@@ -130,21 +140,13 @@ module Events
     def applicable_event?
       return false if !billable_metric.count_agg? && event.properties[billable_metric.field_name].nil?
       return false if billable_metric.sum_agg? && event.properties[billable_metric.field_name]&.to_i&.negative?
+      return false if billable_metric.latest_agg? && (event.properties[billable_metric.field_name]&.to_i&.negative? || event.properties[billable_metric.field_name].nil?)
 
       true
     end
 
     def billable_metric
       @billable_metric ||= event.organization.billable_metrics.find_by(code: event.code)
-    end
-
-    def delivor_error_webhook(organization:, params:, message:)
-      return unless organization.webhook_endpoints.any?
-
-      SendWebhookJob.perform_later(
-        'event.error',
-        { input_params: params, error: message, organization_id: organization.id, status: 422 },
-      )
     end
   end
 end

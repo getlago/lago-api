@@ -20,6 +20,11 @@ FactoryBot.define do
     field_name { 'item_id' }
   end
 
+  factory :latest_billable_metric, parent: :billable_metric do
+    aggregation_type { 'latest_agg' }
+    field_name { 'item_id' }
+  end
+
   factory :max_billable_metric, parent: :billable_metric do
     aggregation_type { 'max_agg' }
     field_name { 'item_id' }
