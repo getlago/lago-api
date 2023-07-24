@@ -440,45 +440,123 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      it 'creates expected fees for unique_count_agg aggregation type' do
-        billable_metric.update!(aggregation_type: :unique_count_agg, field_name: 'foo_bar')
-        result = charge_subscription_service.create
-        expect(result).to be_success
-        created_fees = result.fees
+      context 'when unique_count_agg' do
+        let(:event1) do
+          create(
+            :event,
+            code: charge.billable_metric.code,
+            customer: subscription.customer,
+            subscription:,
+            timestamp: DateTime.parse('2022-03-16'),
+            quantified_event: quantified_event1,
+            properties: { region: 'usa', foo_bar: 12 },
+          )
+        end
+        let(:quantified_event1) do
+          create(
+            :quantified_event,
+            customer: subscription.customer,
+            added_at: DateTime.parse('2022-03-16'),
+            removed_at: nil,
+            external_id: '12',
+            external_subscription_id: subscription.external_id,
+            billable_metric: charge.billable_metric,
+            properties: { region: 'usa', foo_bar: 12 },
+          )
+        end
+        let(:event2) do
+          create(
+            :event,
+            code: charge.billable_metric.code,
+            customer: subscription.customer,
+            subscription:,
+            timestamp: DateTime.parse('2022-03-16'),
+            quantified_event: quantified_event2,
+            properties: { region: 'europe', foo_bar: 10 },
+          )
+        end
+        let(:quantified_event2) do
+          create(
+            :quantified_event,
+            customer: subscription.customer,
+            added_at: DateTime.parse('2022-03-16'),
+            removed_at: nil,
+            external_id: '10',
+            external_subscription_id: subscription.external_id,
+            billable_metric: charge.billable_metric,
+            properties: { region: 'europe', foo_bar: 10 },
+          )
+        end
+        let(:event3) do
+          create(
+            :event,
+            code: charge.billable_metric.code,
+            customer: subscription.customer,
+            subscription:,
+            timestamp: DateTime.parse('2022-03-16'),
+            quantified_event: quantified_event3,
+            properties: { country: 'france', foo_bar: 5 },
+          )
+        end
+        let(:quantified_event3) do
+          create(
+            :quantified_event,
+            customer: subscription.customer,
+            added_at: DateTime.parse('2022-03-16'),
+            removed_at: nil,
+            external_id: '5',
+            external_subscription_id: subscription.external_id,
+            billable_metric: charge.billable_metric,
+            properties: { country: 'france', foo_bar: 5 },
+          )
+        end
 
-        aggregate_failures do
-          expect(created_fees.count).to eq(3)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: 'EUR',
-              taxes_rate: 20.0,
-            ),
-          )
-          expect(created_fees.first).to have_attributes(
-            group: europe,
-            amount_cents: 4000,
-            taxes_amount_cents: 800,
-            units: 2,
-          )
-          expect(created_fees.first.applied_taxes.count).to eq(1)
+        before do
+          event1
+          event2
+          event3
+        end
 
-          expect(created_fees.second).to have_attributes(
-            group: usa,
-            amount_cents: 5000,
-            taxes_amount_cents: 1000,
-            units: 1,
-          )
-          expect(created_fees.second.applied_taxes.count).to eq(1)
+        it 'creates expected fees for unique_count_agg aggregation type' do
+          billable_metric.update!(aggregation_type: :unique_count_agg, field_name: 'foo_bar')
+          result = charge_subscription_service.create
+          expect(result).to be_success
+          created_fees = result.fees
 
-          expect(created_fees.third).to have_attributes(
-            group: france,
-            amount_cents: 4000,
-            taxes_amount_cents: 800,
-            units: 1,
-          )
-          expect(created_fees.third.applied_taxes.count).to eq(1)
+          aggregate_failures do
+            expect(created_fees.count).to eq(3)
+            expect(created_fees).to all(
+              have_attributes(
+                invoice_id: invoice.id,
+                charge_id: charge.id,
+                amount_currency: 'EUR',
+                taxes_rate: 20.0,
+              ),
+            )
+            expect(created_fees.first).to have_attributes(
+              group: europe,
+              amount_cents: 2000,
+              taxes_amount_cents: 400,
+              units: 1,
+            )
+            expect(created_fees.first.applied_taxes.count).to eq(1)
+
+            expect(created_fees.second).to have_attributes(
+              group: usa,
+              amount_cents: 5000,
+              taxes_amount_cents: 1000,
+              units: 1,
+            )
+            expect(created_fees.second.applied_taxes.count).to eq(1)
+
+            expect(created_fees.third).to have_attributes(
+              group: france,
+              amount_cents: 4000,
+              taxes_amount_cents: 800,
+              units: 1,
+            )
+            expect(created_fees.third.applied_taxes.count).to eq(1)
+          end
         end
       end
 
@@ -491,7 +569,7 @@ RSpec.describe Fees::ChargeService do
         }
 
         create(
-          :persisted_event,
+          :quantified_event,
           customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
@@ -505,7 +583,7 @@ RSpec.describe Fees::ChargeService do
           },
         )
         create(
-          :persisted_event,
+          :quantified_event,
           customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
@@ -519,7 +597,7 @@ RSpec.describe Fees::ChargeService do
           },
         )
         create(
-          :persisted_event,
+          :quantified_event,
           customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,

@@ -11,6 +11,7 @@ module V1
         charge_model: model.charge_model,
         invoiceable: model.invoiceable,
         pay_in_advance: model.pay_in_advance,
+        prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
         properties: model.properties,
       }

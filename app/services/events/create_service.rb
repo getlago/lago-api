@@ -49,7 +49,13 @@ module Events
         event.save!
 
         result.event = event
-        handle_persisted_event if should_handle_persisted_event?
+
+        if should_handle_quantified_event?
+          # For unique count if repeated event got ingested, we want to store this event but prevent further processing
+          return result unless quantified_event_service.process_event?
+
+          handle_quantified_event
+        end
       end
 
       if non_invoiceable_charges.any?
@@ -107,17 +113,20 @@ module Events
       @subscriptions
     end
 
-    def persisted_event_service
-      @persisted_event_service ||= PersistedEvents::CreateOrUpdateService.new(result.event)
+    def quantified_event_service
+      @quantified_event_service ||= QuantifiedEvents::CreateOrUpdateService.new(result.event)
     end
 
-    def should_handle_persisted_event?
-      persisted_event_service.matching_billable_metric?
+    def should_handle_quantified_event?
+      quantified_event_service.matching_billable_metric?
     end
 
-    def handle_persisted_event
-      service_result = persisted_event_service.call
+    def handle_quantified_event
+      service_result = quantified_event_service.call
       service_result.raise_if_error!
+
+      event.quantified_event = service_result.quantified_event
+      event.save!
     end
 
     def charges
@@ -139,9 +148,7 @@ module Events
 
     def applicable_event?
       return false if !billable_metric.count_agg? && event.properties[billable_metric.field_name].nil?
-      return false if billable_metric.sum_agg? && event.properties[billable_metric.field_name]&.to_i&.negative?
       return false if billable_metric.latest_agg? && (event.properties[billable_metric.field_name]&.to_i&.negative? || event.properties[billable_metric.field_name].nil?)
-
       true
     end
 

@@ -23,6 +23,7 @@ module Types
       field :active_subscriptions_count, Integer, null: false
       field :draft_invoices_count, Integer, null: false
       field :plans_count, Integer, null: false
+      field :recurring, Boolean, null: false
       field :subscriptions_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

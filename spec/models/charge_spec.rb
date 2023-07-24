@@ -401,4 +401,47 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '#validate_prorated' do
+    let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
+
+    it 'does not return error if prorated is false and price model is percentage' do
+      expect(build(:percentage_charge, prorated: false)).to be_valid
+    end
+
+    context 'when charge is standard, pay_in_advance, prorated but BM is not recurring' do
+      let(:billable_metric) { create(:billable_metric, recurring: false) }
+
+      it 'returns an error' do
+        charge = build(:standard_charge, :pay_in_advance, prorated: true, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:prorated]).to include('invalid_billable_metric_or_charge_model')
+        end
+      end
+    end
+
+    context 'when charge is package, pay_in_advance, prorated and BM is recurring' do
+      it 'returns an error' do
+        charge = build(:package_charge, :pay_in_advance, prorated: true, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:prorated]).to include('invalid_billable_metric_or_charge_model')
+        end
+      end
+    end
+
+    context 'when charge is percentage, pay_in_arrear, prorated and BM is recurring' do
+      it 'returns an error' do
+        charge = build(:percentage_charge, prorated: true, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:prorated]).to include('invalid_billable_metric_or_charge_model')
+        end
+      end
+    end
+  end
 end

@@ -49,7 +49,8 @@ nb:
     breakdown: Oversikt
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
     breakdown_of: "Fordeling av %{fee_group_name}"
-    notice: For eksempel, hvis en enhet legges til med 15 dager igjen på månedsabonnementet ganger vi prisen med 15/31 (antall dager gjenstående delt på antall dager å abonnementet ditt) for å beregne den rette prisen. Samme logikk benyttes når en enhet fjernes etter f.eks 10 dager, da ganger vi prisen med 10/31.
+    notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i planen, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
+    notice_full: Uavhengig av når en hendelse mottas, blir enheten ikke forholdsmessig priset, vi belaster full pris.
     true_up_metric: "%{metric} - Tilpasningskostnader"
     true_up_details: "Minimumsutgift på %{min_amount} beregnet etter antall brukte dager"
 

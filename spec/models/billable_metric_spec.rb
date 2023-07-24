@@ -33,6 +33,26 @@ RSpec.describe BillableMetric, type: :model do
     end
   end
 
+  describe '#validate_recurring' do
+    let(:recurring) { false }
+    let(:billable_metric) { build(:max_billable_metric, recurring:) }
+
+    it 'does not return an error if recurring is false for max_agg' do
+      expect(billable_metric).to be_valid
+    end
+
+    context 'when recurring is true' do
+      let(:recurring) { true }
+
+      it 'returns an error for max_agg' do
+        aggregate_failures do
+          expect(billable_metric).not_to be_valid
+          expect(billable_metric.errors.messages[:recurring]).to include('not_compatible_with_aggregation_type')
+        end
+      end
+    end
+  end
+
   describe '#selectable_groups' do
     context 'without active groups' do
       it 'returns an empty collection' do

@@ -7,6 +7,7 @@ FactoryBot.define do
     description { 'some description' }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
     aggregation_type { 'count_agg' }
+    recurring { false }
     properties { {} }
   end
 

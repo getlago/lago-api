@@ -22,7 +22,7 @@ module Charges
       rounded_amount = amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
 
-      result.units = aggregation_result.pay_in_advance_aggregation
+      result.units = compute_units
       result.count = 1
       result.amount = amount_cents
       result
@@ -62,6 +62,24 @@ module Charges
 
     def currency
       @currency ||= charge.plan.amount.currency
+    end
+
+    def compute_units
+      if display_applied_units_for_zero_invoice?
+        units_applied = BigDecimal(aggregation_result.units_applied)
+        units_applied.negative? ? 0 : units_applied
+      elsif charge.prorated?
+        aggregation_result.full_units_number
+      else
+        aggregation_result.pay_in_advance_aggregation
+      end
+    end
+
+    def display_applied_units_for_zero_invoice?
+      aggregation_result.current_aggregation &&
+        aggregation_result.max_aggregation &&
+        aggregation_result.units_applied &&
+        aggregation_result.current_aggregation <= aggregation_result.max_aggregation
     end
   end
 end

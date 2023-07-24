@@ -49,16 +49,16 @@ module BillableMetrics
           persisted.select("SUM(#{persisted_pro_rata}::numeric)").to_sql,
 
           # NOTE: Added during the period
-          added.select(duration_ratio_sql('persisted_events.added_at', to_datetime)).to_sql,
+          added.select(duration_ratio_sql('quantified_events.added_at', to_datetime)).to_sql,
 
           # NOTE: removed during the period
-          removed.select(duration_ratio_sql(from_datetime, 'persisted_events.removed_at')).to_sql,
+          removed.select(duration_ratio_sql(from_datetime, 'quantified_events.removed_at')).to_sql,
 
           # NOTE: Added and then removed during the period
           added_and_removed.select(
             duration_ratio_sql(
-              'persisted_events.added_at',
-              'persisted_events.removed_at',
+              'quantified_events.added_at',
+              'quantified_events.removed_at',
             ),
           ).to_sql,
         ]
@@ -67,18 +67,18 @@ module BillableMetrics
       end
 
       def base_scope
-        persisted_events = PersistedEvent
+        quantified_events = QuantifiedEvent
           .joins(customer: :organization)
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.external_id)
 
-        return persisted_events unless group
+        return quantified_events unless group
 
-        persisted_events = persisted_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
-        return persisted_events unless group.parent
+        quantified_events = quantified_events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
+        return quantified_events unless group.parent
 
-        persisted_events.where('properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        quantified_events.where('properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
 
       # NOTE: Full period duration to take upgrade, terminate
@@ -100,8 +100,8 @@ module BillableMetrics
 
       def persisted
         base_scope
-          .where('persisted_events.added_at::timestamp(0) < ?', from_datetime)
-          .where('persisted_events.removed_at IS NULL OR persisted_events.removed_at::timestamp(0) > ?', to_datetime)
+          .where('quantified_events.added_at::timestamp(0) < ?', from_datetime)
+          .where('quantified_events.removed_at IS NULL OR quantified_events.removed_at::timestamp(0) > ?', to_datetime)
       end
 
       def persisted_breakdown
@@ -121,20 +121,20 @@ module BillableMetrics
 
       def added
         base_scope
-          .where('persisted_events.added_at::timestamp(0) >= ?', from_datetime)
-          .where('persisted_events.added_at::timestamp(0) <= ?', to_datetime)
-          .where('persisted_events.removed_at::timestamp(0) IS NULL OR persisted_events.removed_at > ?', to_datetime)
+          .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
+          .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
+          .where('quantified_events.removed_at::timestamp(0) IS NULL OR quantified_events.removed_at > ?', to_datetime)
       end
 
       def added_breakdown
-        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'persisted_events.added_at')
+        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.added_at')
 
         added_list = added.group(Arel.sql("DATE(#{date_field})"))
           .order(Arel.sql("DATE(#{date_field}) ASC"))
           .pluck(Arel.sql(
             [
               "DATE(#{date_field}) as date",
-              'COUNT(persisted_events.id) as metric_count',
+              'COUNT(quantified_events.id) as metric_count',
             ].join(', '),
           ))
 
@@ -151,20 +151,20 @@ module BillableMetrics
 
       def removed
         base_scope
-          .where('persisted_events.added_at::timestamp(0) < ?', from_datetime)
-          .where('persisted_events.removed_at::timestamp(0) >= ?', from_datetime)
-          .where('persisted_events.removed_at::timestamp(0) <= ?', to_datetime)
+          .where('quantified_events.added_at::timestamp(0) < ?', from_datetime)
+          .where('quantified_events.removed_at::timestamp(0) >= ?', from_datetime)
+          .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime)
       end
 
       def removed_breadown
-        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'persisted_events.removed_at')
+        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
 
         removed_list = removed.group(Arel.sql("DATE(#{date_field})"))
           .order(Arel.sql("DATE(#{date_field}) ASC"))
           .pluck(Arel.sql(
             [
               "DATE(#{date_field}) as date",
-              'COUNT(persisted_events.id) as metric_count',
+              'COUNT(quantified_events.id) as metric_count',
             ].join(', '),
           ))
 
@@ -181,15 +181,15 @@ module BillableMetrics
 
       def added_and_removed
         base_scope
-          .where('persisted_events.added_at::timestamp(0) >= ?', from_datetime)
-          .where('persisted_events.added_at::timestamp(0) <= ?', to_datetime)
-          .where('persisted_events.removed_at::timestamp(0) >= ?', from_datetime)
-          .where('persisted_events.removed_at::timestamp(0) <= ?', to_datetime)
+          .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
+          .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
+          .where('quantified_events.removed_at::timestamp(0) >= ?', from_datetime)
+          .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime)
       end
 
       def added_and_removed_breakdown
-        added_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'persisted_events.added_at')
-        removed_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'persisted_events.removed_at')
+        added_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.added_at')
+        removed_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
 
         added_and_removed_list = added_and_removed.group(
           Arel.sql("DATE(#{added_field}), DATE(#{removed_field})"),
@@ -199,7 +199,7 @@ module BillableMetrics
           [
             "DATE(#{added_field}) as added_at",
             "DATE(#{removed_field}) as removed_at",
-            'COUNT(persisted_events.id) as metric_count',
+            'COUNT(quantified_events.id) as metric_count',
           ].join(', '),
         ))
 

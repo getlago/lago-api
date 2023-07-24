@@ -9,6 +9,7 @@ module BillableMetrics
           name: args[:name],
           code: args[:code],
           description: args[:description],
+          recurring: args[:recurring] || false,
           aggregation_type: args[:aggregation_type]&.to_sym,
           field_name: args[:field_name],
         )

@@ -11,6 +11,7 @@ module Types
       argument :invoiceable, Boolean, required: false
       argument :min_amount_cents, GraphQL::Types::BigInt, required: false
       argument :pay_in_advance, Boolean, required: false
+      argument :prorated, Boolean, required: false
 
       argument :group_properties, [Types::Charges::GroupPropertiesInput], required: false
       argument :properties, Types::Charges::PropertiesInput, required: false

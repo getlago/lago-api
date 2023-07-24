@@ -68,6 +68,7 @@ module Plans
         amount_currency: params[:amount_currency],
         charge_model: params[:charge_model]&.to_sym,
         pay_in_advance: params[:pay_in_advance] || false,
+        prorated: params[:prorated] || false,
         properties: params[:properties] || {},
         group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )

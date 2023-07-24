@@ -10,7 +10,7 @@ class BillableMetric < ApplicationRecord
   has_many :charges, dependent: :destroy
   has_many :groups, dependent: :delete_all
   has_many :plans, through: :charges
-  has_many :persisted_events
+  has_many :quantified_events
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
 
@@ -23,6 +23,8 @@ class BillableMetric < ApplicationRecord
   ].freeze
 
   enum aggregation_type: AGGREGATION_TYPES
+
+  validate :validate_recurring
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
@@ -78,5 +80,12 @@ class BillableMetric < ApplicationRecord
 
   def should_have_field_name?
     !count_agg?
+  end
+
+  def validate_recurring
+    return unless recurring?
+    return unless count_agg? || max_agg? || recurring_count_agg?
+
+    errors.add(:recurring, :not_compatible_with_aggregation_type)
   end
 end

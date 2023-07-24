@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PersistedEvents
+module QuantifiedEvents
   class CreateOrUpdateService < BaseService
     def initialize(event)
       @event = event
@@ -9,7 +9,7 @@ module PersistedEvents
     end
 
     def call
-      result.persisted_event = case event_operation_type
+      result.quantified_event = case event_operation_type
                                when :add
                                  add_metric
                                when :remove
@@ -20,7 +20,20 @@ module PersistedEvents
     end
 
     def matching_billable_metric?
-      matching_billable_metric&.recurring_count_agg?
+      matching_billable_metric&.recurring_count_agg? || matching_billable_metric&.unique_count_agg?
+    end
+
+    def process_event?
+      return true unless event_operation_type == :add
+      return true unless matching_billable_metric&.unique_count_agg?
+
+      # NOTE: Ensure no active quantified metric exists with the same external id
+      QuantifiedEvent.where(
+        customer_id: customer.id,
+        billable_metric_id: matching_billable_metric.id,
+        external_id: event.properties[matching_billable_metric.field_name],
+        external_subscription_id: subscription.external_id,
+      ).where(removed_at: nil).none?
     end
 
     private
@@ -30,18 +43,21 @@ module PersistedEvents
     delegate :customer, :subscription, :organization, to: :event
 
     def event_operation_type
-      event.properties['operation_type']&.to_sym
+      operation_type = event.properties['operation_type']&.to_sym
+      (operation_type.nil? && matching_billable_metric&.unique_count_agg?) ? :add : operation_type
     end
 
     def add_metric
-      # NOTE: if we add a persisted event removed on the same day,
+      # NOTE: if we add a quantified event removed on the same day,
       #       since the granularity is on day
       #       we just need to set the removed_at field back to nil to
       #       prevent wrong units count
-      if persisted_removed_on_event_day.present?
-        persisted_removed_on_event_day.update!(removed_at: nil)
+      if quantified_removed_on_event_day.present?
+        quantified_removed_on_event_day.update!(removed_at: nil)
+
+        quantified_removed_on_event_day
       else
-        PersistedEvent.create!(
+        QuantifiedEvent.create!(
           customer:,
           billable_metric: matching_billable_metric,
           external_subscription_id: subscription.external_id,
@@ -53,7 +69,7 @@ module PersistedEvents
     end
 
     def remove_metric
-      metric = PersistedEvent.find_by(
+      metric = QuantifiedEvent.find_by(
         customer_id: customer.id,
         billable_metric_id: matching_billable_metric.id,
         external_subscription_id: subscription.external_id,
@@ -73,8 +89,8 @@ module PersistedEvents
       )
     end
 
-    def persisted_removed_on_event_day
-      @persisted_removed_on_event_day ||= PersistedEvent
+    def quantified_removed_on_event_day
+      @quantified_removed_on_event_day ||= QuantifiedEvent
         .where('DATE(removed_at) = ?', event.timestamp.to_date)
         .find_by(
           customer_id: customer.id,

@@ -87,6 +87,7 @@ module Api
             :billable_metric_id,
             :charge_model,
             :pay_in_advance,
+            :prorated,
             :invoiceable,
             :min_amount_cents,
             {

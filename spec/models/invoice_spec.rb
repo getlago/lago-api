@@ -152,12 +152,20 @@ RSpec.describe Invoice, type: :model do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
-    let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+    let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: false) }
     let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
 
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.recurring_fees(subscription.id)).to eq([fee])
+    end
+
+    context 'when charge is pay_in_advance' do
+      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true) }
+
+      it 'returns the fees of the corresponding invoice_subscription' do
+        expect(invoice.recurring_fees(subscription.id)).to eq([])
+      end
     end
   end
 
@@ -165,12 +173,32 @@ RSpec.describe Invoice, type: :model do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
-    let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+    let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: false) }
     let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
 
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.recurring_breakdown(fee)).to eq([])
+    end
+  end
+
+  describe '#charge_pay_in_advance_proration_range' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:timestamp) { DateTime.parse('2023-07-25 00:00:00 UTC') }
+    let(:event) { create(:event, subscription:, timestamp:) }
+    let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, pay_in_advance_event_id: event.id) }
+    let(:charge) do
+      create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true, prorated: true)
+    end
+
+    it 'returns the fees of the corresponding invoice_subscription' do
+      expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)).to include(
+        period_duration: 31,
+        number_of_days: 7,
+      )
     end
   end
 
