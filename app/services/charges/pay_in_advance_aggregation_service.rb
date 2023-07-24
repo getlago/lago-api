@@ -32,8 +32,6 @@ module Charges
       @aggregator_service ||= case billable_metric.aggregation_type.to_sym
                               when :count_agg
                                 BillableMetrics::Aggregations::CountService
-                              when :latest_agg
-                                BillableMetrics::Aggregations::LatestService
                               when :sum_agg
                                 if charge.prorated?
                                   BillableMetrics::ProratedAggregations::SumService
