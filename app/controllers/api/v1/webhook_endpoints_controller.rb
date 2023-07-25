@@ -11,11 +11,23 @@ module Api
 
         result = service.call
 
-        if result.success?
-          render_webhook_endpoint(result.webhook_endpoint)
-        else
-          render_error_response(result)
-        end
+        return render_webhook_endpoint(result.webhook_endpoint) if result.success?
+
+        render_error_response(result)
+      end
+
+      def update
+        service = ::WebhookEndpoints::UpdateService.new(
+          id: params[:id],
+          organization: current_organization,
+          params: update_params,
+        )
+
+        result = service.call
+
+        return render_webhook_endpoint(result.webhook_endpoint) if result.success?
+
+        render_error_response(result) unless result.success?
       end
 
       def index
@@ -57,6 +69,12 @@ module Api
       def create_params
         params.require(:webhook_endpoint).permit(
           :id,
+          :webhook_url,
+        )
+      end
+
+      def update_params
+        params.require(:webhook_endpoint).permit(
           :webhook_url,
         )
       end
