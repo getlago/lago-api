@@ -27,7 +27,7 @@ module Api
 
         return render_webhook_endpoint(result.webhook_endpoint) if result.success?
 
-        render_error_response(result) unless result.success?
+        render_error_response(result)
       end
 
       def index

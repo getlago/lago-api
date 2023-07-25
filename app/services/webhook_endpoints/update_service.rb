@@ -15,7 +15,7 @@ module WebhookEndpoints
 
       return result.not_found_failure!(resource: 'webhook_endpoint') if webhook_endpoint.blank?
 
-      webhook_endpoint.update(
+      webhook_endpoint.update!(
         webhook_url: params[:webhook_url],
       )
 
