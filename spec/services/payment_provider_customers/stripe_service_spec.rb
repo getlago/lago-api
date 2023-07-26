@@ -73,6 +73,83 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     end
   end
 
+  describe '#update_provider_default_payment_method' do
+    subject(:stripe_service) { described_class.new }
+
+    let(:stripe_customer) do
+      create(:stripe_customer, customer:, provider_customer_id: 'cus_123456')
+    end
+
+    before do
+      allow(Stripe::Customer).to receive(:update).and_return(true)
+    end
+
+    it 'updates provider default payment method' do
+      result = stripe_service.update_provider_default_payment_method(
+        organization_id: organization.id,
+        stripe_customer_id: stripe_customer.provider_customer_id,
+        payment_method_id: 'pm_123456',
+      )
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.payment_method).to eq('pm_123456')
+      end
+    end
+
+    context 'when customer is not found' do
+      it 'returns an empty result' do
+        result = stripe_service.update_provider_default_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: 'cus_InvaLid',
+          payment_method_id: 'pm_123456',
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment_method).to be_nil
+        end
+      end
+
+      context 'when customer in metadata is not found' do
+        it 'returns an empty response' do
+          result = stripe_service.update_provider_default_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_InvaLid',
+            payment_method_id: 'pm_123456',
+            metadata: {
+              lago_customer_id: SecureRandom.uuid,
+            },
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.payment_method).to be_nil
+          end
+        end
+      end
+
+      context 'when customer in metadata exists' do
+        it 'returns a not found error' do
+          result = stripe_service.update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: 'cus_InvaLid',
+            payment_method_id: 'pm_123456',
+            metadata: {
+              lago_customer_id: customer.id,
+            },
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('stripe_customer_not_found')
+          end
+        end
+      end
+    end
+  end
+
   describe '#update_payment_method' do
     subject(:stripe_service) { described_class.new }
 
