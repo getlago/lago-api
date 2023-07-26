@@ -110,6 +110,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
         result.raise_if_error!
 
