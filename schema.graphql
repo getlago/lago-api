@@ -3116,6 +3116,7 @@ type Invoice {
   issuingDate: ISO8601Date!
   metadata: [InvoiceMetadata!]
   number: String!
+  paymentDueDate: ISO8601Date!
   paymentStatus: InvoicePaymentStatusTypeEnum!
   prepaidCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!

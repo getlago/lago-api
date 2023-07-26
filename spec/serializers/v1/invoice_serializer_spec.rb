@@ -19,6 +19,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         'sequential_id' => invoice.sequential_id,
         'number' => invoice.number,
         'issuing_date' => invoice.issuing_date.iso8601,
+        'payment_due_date' => invoice.payment_due_date.iso8601,
         'invoice_type' => invoice.invoice_type,
         'status' => invoice.status,
         'payment_status' => invoice.payment_status,

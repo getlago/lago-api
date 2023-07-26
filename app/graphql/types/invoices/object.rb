@@ -32,6 +32,7 @@ module Types
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
+      field :payment_due_date, GraphQL::Types::ISO8601Date, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
