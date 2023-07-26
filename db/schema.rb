@@ -293,10 +293,12 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_27_163611) do
     t.datetime "deleted_at"
     t.string "document_locale"
     t.string "tax_identification_number"
+    t.integer "net_payment_term"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
     t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
+    t.check_constraint "net_payment_term >= 0", name: "check_customers_on_net_payment_term"
   end
 
   create_table "customers_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -479,6 +481,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_27_163611) do
     t.bigint "prepaid_credit_amount_cents", default: 0, null: false
     t.bigint "sub_total_excluding_taxes_amount_cents", default: 0, null: false
     t.bigint "sub_total_including_taxes_amount_cents", default: 0, null: false
+    t.date "payment_due_date"
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
   end
@@ -535,8 +538,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_27_163611) do
     t.string "document_locale", default: "en", null: false
     t.string "email_settings", default: [], null: false, array: true
     t.string "tax_identification_number"
+    t.integer "net_payment_term", default: 0, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
+    t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
   create_table "password_resets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
