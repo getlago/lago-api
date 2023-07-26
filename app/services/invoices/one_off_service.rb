@@ -26,6 +26,7 @@ module Invoices
           organization: customer.organization,
           customer:,
           issuing_date:,
+          payment_due_date:,
           invoice_type: :one_off,
           currency:,
           timezone: customer.applicable_timezone,
@@ -78,6 +79,10 @@ module Invoices
     # NOTE: accounting date must be in customer timezone
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def payment_due_date
+      (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
     def should_deliver_email?

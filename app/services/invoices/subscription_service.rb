@@ -28,6 +28,7 @@ module Invoices
           organization: customer.organization,
           customer:,
           issuing_date:,
+          payment_due_date:,
           invoice_type: :subscription,
           currency:,
           timezone: customer.applicable_timezone,
@@ -67,6 +68,10 @@ module Invoices
       return issuing_date unless grace_period?
 
       issuing_date + customer.applicable_invoice_grace_period.days
+    end
+
+    def payment_due_date
+      (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
     def grace_period?
