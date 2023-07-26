@@ -46,7 +46,7 @@ module PaymentProviderCustomers
       result.record_validation_failure!(record: e.record)
     end
 
-    def update_provider_default_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
+    def update_provider_default_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
         .where(customers: { organization_id: })
