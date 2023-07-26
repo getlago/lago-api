@@ -48,6 +48,7 @@ class Customer < ApplicationRecord
             presence: true,
             uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
@@ -70,6 +71,12 @@ class Customer < ApplicationRecord
     return invoice_grace_period if invoice_grace_period.present?
 
     organization.invoice_grace_period
+  end
+
+  def applicable_net_payment_term
+    return net_payment_term if net_payment_term.present?
+
+    organization.net_payment_term
   end
 
   def editable?
