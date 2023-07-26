@@ -14,7 +14,7 @@ module Invoices
         self.result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         result.raise_if_error!
 
-        invoice.update!(status: :finalized, issuing_date:)
+        invoice.update!(status: :finalized, issuing_date:, payment_due_date:)
 
         invoice.credit_notes.each(&:finalized!)
       end
@@ -38,6 +38,10 @@ module Invoices
 
     def issuing_date
       @issuing_date ||= Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date
+    end
+
+    def payment_due_date
+      @payment_due_date ||= issuing_date + invoice.customer.applicable_net_payment_term.days
     end
 
     def track_invoice_created(invoice)

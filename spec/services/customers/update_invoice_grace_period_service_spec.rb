@@ -47,6 +47,23 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
       travel_to(current_date) do
         expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
           .to(DateTime.parse('23 Jun 2022'))
+          .and change { invoice_to_not_be_finalized.reload.payment_due_date }
+          .to(DateTime.parse('23 Jun 2022'))
+      end
+    end
+
+    context 'when customer has net_payment_term' do
+      let(:customer) { create(:customer, organization:, net_payment_term: 3) }
+
+      it 'updates issuing_date on draft invoices with payment term' do
+        current_date = DateTime.parse('22 Jun 2022')
+
+        travel_to(current_date) do
+          expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+            .to(DateTime.parse('23 Jun 2022'))
+            .and change { invoice_to_not_be_finalized.reload.payment_due_date }
+            .to(DateTime.parse('26 Jun 2022'))
+        end
       end
     end
   end

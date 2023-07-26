@@ -16,6 +16,7 @@ module Invoices
           organization: customer.organization,
           customer:,
           issuing_date:,
+          payment_due_date: issuing_date,
           invoice_type: :credit,
           payment_status: :pending,
           currency:,

@@ -55,6 +55,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         expect(result).to be_success
 
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+        expect(result.invoice.payment_due_date.to_date).to eq(timestamp)
         expect(result.invoice.organization_id).to eq(organization.id)
         expect(result.invoice.customer_id).to eq(customer.id)
         expect(result.invoice.invoice_type).to eq('subscription')
@@ -174,6 +175,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         result = invoice_service.call
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+        expect(result.invoice.payment_due_date.to_s).to eq('2022-11-24')
       end
     end
   end
