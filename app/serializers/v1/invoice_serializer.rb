@@ -8,6 +8,7 @@ module V1
         sequential_id: model.sequential_id,
         number: model.number,
         issuing_date: model.issuing_date.iso8601,
+        payment_due_date: model.payment_due_date.iso8601,
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
