@@ -9,7 +9,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
   let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
 
   let(:create_params) do
-    { provider_customer_id: 'id', sync_with_provider: true }
+    { provider_customer_id: 'id', sync_with_provider: true, provider_payment_methods: %w[card] }
   end
 
   describe '.create_or_update' do
@@ -27,7 +27,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
     context 'when no provider customer id and should create on service' do
       let(:create_params) do
-        { provider_customer_id: nil, sync_with_provider: true }
+        { provider_customer_id: nil, sync_with_provider: true, provider_payment_methods: %w[card] }
       end
 
       it 'enqueues a job to create the customer on the provider' do
@@ -93,6 +93,120 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
             expect(result.provider_customer.provider_customer_id).to be_nil
           end
         end.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
+      end
+    end
+
+    context 'when provider customer id is set' do
+      subject(:create_or_update) do
+        create_service.create_or_update(
+          customer_class:,
+          payment_provider_id: provider.id,
+          params: create_params,
+        )
+      end
+
+      let(:create_params) do
+        { provider_customer_id: 'id', sync_with_provider:, provider_payment_methods: %w[card] }
+      end
+
+      before do
+        allow(create_service).to receive(:generate_checkout_url).and_return(true)
+        allow(create_service).to receive(:create_customer_on_provider_service).and_return(true)
+      end
+
+      context 'when sync with provider is blank' do
+        let(:sync_with_provider) { nil }
+
+        context 'when customer type is stripe' do
+          let(:customer_class) { PaymentProviderCustomers::StripeCustomer }
+          let(:provider) { create(:stripe_provider, organization: customer.organization) }
+
+          it 'generates checkout url' do
+            create_or_update
+            expect(create_service).to have_received(:generate_checkout_url)
+          end
+
+          it 'does not create customer' do
+            create_or_update
+            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+          end
+        end
+
+        context 'when customer type is adyen' do
+          let(:customer_class) { PaymentProviderCustomers::AdyenCustomer }
+          let(:provider) { create(:adyen_provider, organization: customer.organization) }
+
+          it 'generates checkout url' do
+            create_or_update
+            expect(create_service).to have_received(:generate_checkout_url)
+          end
+
+          it 'does not create customer' do
+            create_or_update
+            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+          end
+        end
+
+        context 'when customer type is gocardless' do
+          let(:customer_class) { PaymentProviderCustomers::GocardlessCustomer }
+          let(:provider) { create(:gocardless_provider, organization: customer.organization) }
+
+          it 'generates checkout url' do
+            create_or_update
+            expect(create_service).to have_received(:generate_checkout_url)
+          end
+
+          it 'does not create customer' do
+            create_or_update
+            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+          end
+        end
+      end
+
+      context 'when sync with provider is true' do
+        let(:sync_with_provider) { true }
+
+        context 'when customer type is stripe' do
+          let(:customer_class) { PaymentProviderCustomers::StripeCustomer }
+          let(:provider) { create(:stripe_provider, organization: customer.organization) }
+
+          it 'does not generate checkout url' do
+            create_or_update
+            expect(create_service).not_to have_received(:generate_checkout_url)
+          end
+
+          it 'does not enqueue a job to create the customer on the provider' do
+            expect { create_or_update }.not_to enqueue_job(PaymentProviderCustomers::StripeCreateJob)
+          end
+        end
+
+        context 'when customer type is adyen' do
+          let(:customer_class) { PaymentProviderCustomers::AdyenCustomer }
+          let(:provider) { create(:adyen_provider, organization: customer.organization) }
+
+          it 'does not generate checkout url' do
+            create_or_update
+            expect(create_service).not_to have_received(:generate_checkout_url)
+          end
+
+          it 'does not enqueue a job to create the customer on the provider' do
+            expect { create_or_update }.not_to enqueue_job(PaymentProviderCustomers::AdyenCreateJob)
+          end
+        end
+
+        context 'when customer type is gocardless' do
+          let(:customer_class) { PaymentProviderCustomers::GocardlessCustomer }
+          let(:provider) { create(:gocardless_provider, organization: customer.organization) }
+
+          it 'does not generate checkout url' do
+            create_or_update
+            expect(create_service).not_to have_received(:generate_checkout_url)
+          end
+
+          it 'does not enqueue a job to create the customer on the provider' do
+            expect { create_or_update }.not_to enqueue_job(PaymentProviderCustomers::GocardlessCreateJob)
+          end
+        end
       end
     end
   end

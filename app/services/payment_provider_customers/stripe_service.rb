@@ -46,6 +46,25 @@ module PaymentProviderCustomers
       result.record_validation_failure!(record: e.record)
     end
 
+    def update_provider_default_payment_method(organization_id:, stripe_customer_id:, payment_method_id:)
+      @stripe_customer = PaymentProviderCustomers::StripeCustomer
+        .joins(:customer)
+        .where(customers: { organization_id: })
+        .find_by(provider_customer_id: stripe_customer_id)
+      return handle_missing_customer(metadata) unless stripe_customer
+
+      Stripe::Customer.update(
+        stripe_customer_id,
+        { invoice_settings: { default_payment_method: payment_method_id } },
+        { api_key: },
+      )
+
+      result.payment_method = payment_method_id
+      result
+    rescue Stripe::InvalidRequestError
+      result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
+    end
+
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
@@ -117,7 +136,7 @@ module PaymentProviderCustomers
       {
         success_url: CHECKOUT_SUCCESS_URL,
         mode: 'setup',
-        payment_method_types: ['card'],
+        payment_method_types: stripe_customer.provider_payment_methods,
         customer: stripe_customer.provider_customer_id,
       }
     end

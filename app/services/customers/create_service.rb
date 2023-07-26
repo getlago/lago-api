@@ -61,7 +61,7 @@ module Customers
       # NOTE: handle configuration for configured payment providers
       handle_api_billing_configuration(customer, params, new_customer)
 
-      result.customer = customer
+      result.customer = customer.reload
       track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e

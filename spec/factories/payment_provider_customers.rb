@@ -5,6 +5,7 @@ FactoryBot.define do
     customer
 
     provider_customer_id { SecureRandom.uuid }
+    provider_payment_methods { %w[card sepa_debit] }
   end
 
   factory :gocardless_customer, class: 'PaymentProviderCustomers::GocardlessCustomer' do

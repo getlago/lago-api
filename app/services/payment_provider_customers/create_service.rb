@@ -22,11 +22,27 @@ module PaymentProviderCustomers
         provider_customer.sync_with_provider = params[:sync_with_provider].presence
       end
 
+      if provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
+        if provider_customer.persisted? && (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
+          provider_customer.provider_payment_methods = provider_customer.provider_payment_methods | provider_payment_methods
+        else
+          if (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
+            provider_customer.provider_payment_methods = provider_payment_methods
+          else
+            provider_customer.provider_payment_methods = PaymentProviderCustomers::StripeCustomer::PAYMENT_METHODS
+          end
+        end
+      end
+
       provider_customer.save!
 
       result.provider_customer = provider_customer
 
-      create_customer_on_provider_service(async)
+      if should_create_provider_customer?
+        create_customer_on_provider_service(async)
+      elsif should_generate_checkout_url?
+        generate_checkout_url(async)
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -40,15 +56,6 @@ module PaymentProviderCustomers
     delegate :organization, to: :customer
 
     def create_customer_on_provider_service(async)
-      # NOTE: the customer already exists on the service provider
-      return if result.provider_customer.provider_customer_id?
-
-      # NOTE: the customer id was removed from the customer
-      return if result.provider_customer.provider_customer_id_previously_changed?
-
-      # NOTE: customer sync with provider setting is not set to true
-      return if result.provider_customer.sync_with_provider.blank?
-
       if result.provider_customer.type == 'PaymentProviderCustomers::StripeCustomer'
         return PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer) if async
 
@@ -62,6 +69,32 @@ module PaymentProviderCustomers
 
         PaymentProviderCustomers::GocardlessCreateJob.perform_now(result.provider_customer)
       end
+    end
+
+    def generate_checkout_url(async)
+      job_class = result.provider_customer.type.gsub(/Customer\z/, 'CheckoutUrlJob').constantize
+
+      if async
+        job_class.perform_later(result.provider_customer)
+      else
+        job_class.new.perform(result.provider_customer)
+      end
+    end
+
+    def should_create_provider_customer?
+      # NOTE: the customer does not exists on the service provider
+      # and the customer id was not removed from the customer
+      # customer sync with provider setting is set to true
+      !result.provider_customer.provider_customer_id? &&
+        !result.provider_customer.provider_customer_id_previously_changed? &&
+        result.provider_customer.sync_with_provider.present?
+    end
+
+    def should_generate_checkout_url?
+      result.provider_customer.provider_customer_id? && result.provider_customer.sync_with_provider.blank?
+    end
+
+    def assign_provider_payment_methods()
     end
   end
 end

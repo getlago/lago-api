@@ -9,6 +9,8 @@ module PaymentProviders
       'payment_intent.succeeded',
       'payment_method.detached',
       'charge.refund.updated',
+      'customer.updated',
+      'charge.succeeded',
     ].freeze
 
     def create_or_update(**args)
@@ -101,15 +103,46 @@ module PaymentProviders
 
       case event.type
       when 'setup_intent.succeeded'
-        result = PaymentProviderCustomers::StripeService
-          .new
+        service = PaymentProviderCustomers::StripeService.new
+
+        result = service
+          .update_provider_default_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: event.data.object.customer,
+            payment_method_id: event.data.object.payment_method,
+          )
+        result.raise_if_error!
+
+        result = service
           .update_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
             metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
+
         result.raise_if_error! || result
+      when 'customer.updated'
+        payment_method_id = event.data.object.invoice_settings.default_payment_method ||
+                            event.data.object.default_source
+
+        result = PaymentProviderCustomers::StripeService
+          .new
+          .update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: event.data.object.id,
+            payment_method_id:,
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
+          )
+
+        result.raise_if_error! || result
+      when 'charge.succeeded'
+        Invoices::Payments::StripeService
+          .new.update_payment_status(
+            provider_payment_id: event.data.object.payment_intent,
+            status: 'succeeded',
+            metadata: event.data.object.metadata.to_h.symbolize_keys,
+          )
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
 
