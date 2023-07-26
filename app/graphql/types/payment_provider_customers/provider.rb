@@ -7,7 +7,6 @@ module Types
 
       field :id, ID, null: false
       field :provider_customer_id, ID, null: true
-      field :provider_payment_methods, [Types::PaymentProviderCustomers::ProviderPaymentMethodsEnum], null: false
       field :sync_with_provider, Boolean, null: true
     end
   end

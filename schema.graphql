@@ -3983,19 +3983,12 @@ input PropertiesInput {
 type ProviderCustomer {
   id: ID!
   providerCustomerId: ID
-  providerPaymentMethods: [ProviderPaymentMethodsEnum!]!
   syncWithProvider: Boolean
 }
 
 input ProviderCustomerInput {
   providerCustomerId: ID
-  providerPaymentMethods: [ProviderPaymentMethodsEnum!]!
   syncWithProvider: Boolean
-}
-
-enum ProviderPaymentMethodsEnum {
-  card
-  sepa_debit
 }
 
 enum ProviderTypeEnum {

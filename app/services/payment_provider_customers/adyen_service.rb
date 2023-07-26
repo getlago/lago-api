@@ -12,22 +12,22 @@ module PaymentProviderCustomers
       result.adyen_customer = adyen_customer
       return result if adyen_customer.provider_customer_id?
 
-      result.checkout_url = generate_checkout_url.checkout_url
+      adyen_result = generate_checkout_url
+
+      result.checkout_url = adyen_result.response['url']
       result
     end
 
     def generate_checkout_url
       res = client.checkout.payment_links_api.payment_links(payment_link_params)
-      checkout_url = res.response['url']
 
       SendWebhookJob.perform_later(
         'customer.checkout_url_generated',
         customer,
-        checkout_url:,
+        checkout_url: res.response['url'],
       )
 
-      result.checkout_url = checkout_url
-      result
+      res
     rescue Adyen::AdyenError => e
       deliver_error_webhook(e)
 
