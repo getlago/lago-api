@@ -102,4 +102,44 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
       end
     end
   end
+
+  describe 'PUT /webhook_endpoints/:id' do
+    let(:webhook_endpoint) { create(:webhook_endpoint) }
+    let(:organization) { webhook_endpoint.organization.reload }
+    let(:update_params) do
+      {
+        webhook_url: 'http://foo.bar',
+      }
+    end
+
+    before { webhook_endpoint }
+
+    context 'when webhook endpoint exists' do
+      it 'updates a webhook endpoint' do
+        put_with_token(
+          organization,
+          "/api/v1/webhook_endpoints/#{webhook_endpoint.id}",
+          { webhook_endpoint: update_params },
+        )
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+
+          expect(json[:webhook_endpoint][:webhook_url]).to eq('http://foo.bar')
+        end
+      end
+    end
+
+    context 'when webhook endpoint does not exist' do
+      it 'returns not_found error' do
+        put_with_token(
+          organization,
+          '/api/v1/webhook_endpoints/12345',
+          { webhook_endpoint: update_params },
+        )
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
