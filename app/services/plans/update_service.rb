@@ -80,7 +80,7 @@ module Plans
 
       charge.save!
 
-      if params[:tax_codes].present?
+      if params[:tax_codes]
         taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes: params[:tax_codes])
         taxes_result.raise_if_error!
       end
@@ -109,7 +109,7 @@ module Plans
 
             charge.update!(payload_charge)
 
-            if tax_codes.present?
+            if tax_codes
               taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes:)
               taxes_result.raise_if_error!
             end
