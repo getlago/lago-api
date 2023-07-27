@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::AddOnsController, type: :request do
   let(:organization) { create(:organization) }
+  let(:tax) { create(:tax, organization:) }
 
   describe 'create' do
     let(:create_params) do
@@ -13,6 +14,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         amount_cents: 123,
         amount_currency: 'EUR',
         description: 'description',
+        tax_codes: [tax.code],
       }
     end
 
@@ -25,6 +27,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       expect(json[:add_on][:code]).to eq(create_params[:code])
       expect(json[:add_on][:name]).to eq(create_params[:name])
       expect(json[:add_on][:created_at]).to be_present
+      expect(json[:add_on][:taxes].map { |t| t[:code] }).to contain_exactly(tax.code)
     end
   end
 
@@ -131,8 +134,9 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
   describe 'index' do
     let(:add_on) { create(:add_on, organization:) }
+    let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
 
-    before { add_on }
+    before { add_on_applied_tax }
 
     it 'returns add-ons' do
       get_with_token(organization, '/api/v1/add_ons')
@@ -141,6 +145,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       expect(json[:add_ons].count).to eq(1)
       expect(json[:add_ons].first[:lago_id]).to eq(add_on.id)
       expect(json[:add_ons].first[:code]).to eq(add_on.code)
+      expect(json[:add_ons].first[:taxes].map { |t| t[:code] }).to contain_exactly(tax.code)
     end
 
     context 'with pagination' do

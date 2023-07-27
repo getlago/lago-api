@@ -3,16 +3,24 @@
 module AddOns
   class CreateService < BaseService
     def create(**args)
-      add_on = AddOn.create!(
-        organization_id: args[:organization_id],
-        name: args[:name],
-        code: args[:code],
-        description: args[:description],
-        amount_cents: args[:amount_cents],
-        amount_currency: args[:amount_currency],
-      )
+      ActiveRecord::Base.transaction do
+        add_on = AddOn.create!(
+          organization_id: args[:organization_id],
+          name: args[:name],
+          code: args[:code],
+          description: args[:description],
+          amount_cents: args[:amount_cents],
+          amount_currency: args[:amount_currency],
+        )
 
-      result.add_on = add_on
+        if args[:tax_codes]
+          taxes_result = AddOns::ApplyTaxesService.call(add_on:, tax_codes: args[:tax_codes])
+          return taxes_result unless taxes_result.success?
+        end
+
+        result.add_on = add_on
+      end
+
       track_add_on_created(result.add_on)
       result
     rescue ActiveRecord::RecordInvalid => e

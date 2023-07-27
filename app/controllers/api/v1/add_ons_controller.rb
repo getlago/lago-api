@@ -63,6 +63,7 @@ module Api
             ::V1::AddOnSerializer,
             collection_name: 'add_ons',
             meta: pagination_metadata(add_ons),
+            includes: %i[taxes],
           ),
         )
       end
@@ -76,6 +77,7 @@ module Api
           :amount_cents,
           :amount_currency,
           :description,
+          tax_codes: [],
         )
       end
 
@@ -84,6 +86,7 @@ module Api
           json: ::V1::AddOnSerializer.new(
             add_on,
             root_name: 'add_on',
+            includes: %i[taxes],
           ),
         )
       end
