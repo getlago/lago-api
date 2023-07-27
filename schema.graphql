@@ -3983,7 +3983,7 @@ input PropertiesInput {
 type ProviderCustomer {
   id: ID!
   providerCustomerId: ID
-  providerPaymentMethods: [ProviderPaymentMethodsEnum!]!
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
 }
 
