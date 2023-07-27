@@ -3989,7 +3989,7 @@ type ProviderCustomer {
 
 input ProviderCustomerInput {
   providerCustomerId: ID
-  providerPaymentMethods: [ProviderPaymentMethodsEnum!]!
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
 }
 
