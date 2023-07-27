@@ -8,6 +8,7 @@ RSpec.describe AddOns::CreateService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:add_on_code) { 'free-beer-for-us' }
+  let(:tax) { create(:tax, organization:) }
 
   describe 'create' do
     let(:create_args) do
@@ -18,6 +19,7 @@ RSpec.describe AddOns::CreateService, type: :service do
         organization_id: organization.id,
         amount_cents: 100,
         amount_currency: 'EUR',
+        tax_codes: [tax.code],
       }
     end
 
@@ -28,6 +30,9 @@ RSpec.describe AddOns::CreateService, type: :service do
     it 'creates an add-on' do
       expect { create_service.create(**create_args) }
         .to change(AddOn, :count).by(1)
+
+      add_on = AddOn.order(:created_at).last
+      expect(add_on.taxes.pluck(:code)).to eq([tax.code])
     end
 
     it 'calls SegmentTrackJob' do

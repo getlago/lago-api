@@ -3,7 +3,7 @@
 module V1
   class AddOnSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         name: model.name,
         code: model.code,
@@ -12,6 +12,19 @@ module V1
         created_at: model.created_at.iso8601,
         description: model.description,
       }
+
+      payload.merge!(taxes) if include?(:taxes)
+      payload
+    end
+
+    private
+
+    def taxes
+      ::CollectionSerializer.new(
+        model.taxes,
+        ::V1::TaxSerializer,
+        collection_name: 'taxes',
+      ).serialize
     end
   end
 end
