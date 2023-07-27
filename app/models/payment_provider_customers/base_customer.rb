@@ -29,6 +29,10 @@ module PaymentProviderCustomers
       push_to_settings(key: 'provider_mandate_id', value: provider_mandate_id)
     end
 
+    def provider_payment_methods
+      nil
+    end
+
     def sync_with_provider
       get_from_settings('sync_with_provider')
     end
