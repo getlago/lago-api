@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_21_073114) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_27_163611) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -56,6 +56,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_21_073114) do
     t.index ["deleted_at"], name: "index_add_ons_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_add_ons_on_organization_id"
+  end
+
+  create_table "add_ons_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "add_on_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["add_on_id"], name: "index_add_ons_taxes_on_add_on_id"
+    t.index ["tax_id"], name: "index_add_ons_taxes_on_tax_id"
   end
 
   create_table "applied_add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -757,6 +766,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_21_073114) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "add_ons", "organizations"
+  add_foreign_key "add_ons_taxes", "add_ons"
+  add_foreign_key "add_ons_taxes", "taxes"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
