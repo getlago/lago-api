@@ -40,6 +40,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_cents: 10_000,
             amount_currency: 'EUR',
             pay_in_advance: false,
+            tax_codes: ['banking_rates'],
             charges: [
               {
                 billable_metric_id: fx_transfers.id,
@@ -57,7 +58,6 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             ],
           },
         )
-        create_plan_applied_tax('plan_code', 'banking_rates')
         plan = organization.plans.find_by(code: 'plan_code')
 
         create_subscription(

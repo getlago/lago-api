@@ -73,14 +73,6 @@ module ScenariosHelper
     post_with_token(organization, '/api/v1/taxes', { tax: params })
   end
 
-  def create_plan_applied_tax(plan_code, tax_code)
-    post_with_token(
-      organization,
-      "/api/v1/plans/#{plan_code}/applied_taxes",
-      { applied_tax: { tax_code: } },
-    )
-  end
-
   ### Wallets
 
   def create_wallet(params)
