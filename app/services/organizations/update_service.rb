@@ -22,6 +22,7 @@ module Organizations
       organization.city = params[:city] if params.key?(:city)
       organization.state = params[:state] if params.key?(:state)
       organization.country = params[:country]&.upcase if params.key?(:country)
+      organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
