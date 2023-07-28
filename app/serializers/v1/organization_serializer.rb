@@ -19,6 +19,7 @@ module V1
         legal_name: model.legal_name,
         legal_number: model.legal_number,
         timezone: model.timezone,
+        net_payment_term: model.net_payment_term,
         email_settings: model.email_settings,
         tax_identification_number: model.tax_identification_number,
         billing_configuration:,
