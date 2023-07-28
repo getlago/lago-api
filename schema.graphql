@@ -1654,6 +1654,7 @@ input CreateCustomerInput {
   logoUrl: String
   metadata: [CustomerMetadataInput!]
   name: String!
+  netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   phone: String
   providerCustomer: ProviderCustomerInput
@@ -2617,6 +2618,7 @@ type Customer {
   logoUrl: String
   metadata: [CustomerMetadata!]
   name: String
+  netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   phone: String
   providerCustomer: ProviderCustomer
@@ -5379,6 +5381,7 @@ input UpdateCustomerInput {
   logoUrl: String
   metadata: [CustomerMetadataInput!]
   name: String!
+  netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   phone: String
   providerCustomer: ProviderCustomerInput

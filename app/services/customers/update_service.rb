@@ -35,6 +35,7 @@ module Customers
         customer.logo_url = args[:logo_url] if args.key?(:logo_url)
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
+        customer.net_payment_term = args[:net_payment_term] if args.key?(:net_payment_term)
 
         assign_premium_attributes(customer, args)
 
