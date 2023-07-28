@@ -3890,6 +3890,7 @@ type Organization {
   legalNumber: String
   logoUrl: String
   name: String!
+  netPaymentTerm: Int!
   state: String
   stripePaymentProvider: StripeProvider
   taxIdentificationNumber: String
@@ -5467,6 +5468,7 @@ input UpdateOrganizationInput {
   legalName: String
   legalNumber: String
   logo: String
+  netPaymentTerm: Int
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum

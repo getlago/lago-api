@@ -32,6 +32,7 @@ module Api
           :city,
           :legal_name,
           :legal_number,
+          :net_payment_term,
           :tax_identification_number,
           :timezone,
           :webhook_url,
