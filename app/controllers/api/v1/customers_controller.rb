@@ -114,6 +114,7 @@ module Api
           :tax_identification_number,
           :currency,
           :timezone,
+          :net_payment_term,
           billing_configuration: [
             :invoice_grace_period,
             :payment_provider,

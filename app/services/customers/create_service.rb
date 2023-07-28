@@ -27,6 +27,7 @@ module Customers
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
+        customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
         if params.key?(:tax_identification_number)
           customer.tax_identification_number = params[:tax_identification_number]
         end
@@ -96,6 +97,7 @@ module Customers
         logo_url: args[:logo_url],
         legal_name: args[:legal_name],
         legal_number: args[:legal_number],
+        net_payment_term: args[:net_payment_term],
         vat_rate: args[:vat_rate],
         payment_provider: args[:payment_provider],
         currency: args[:currency],

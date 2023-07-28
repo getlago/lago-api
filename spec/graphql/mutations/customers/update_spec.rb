@@ -20,6 +20,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           paymentProvider
           currency
           timezone
+          netPaymentTerm
           canEditAttributes
           invoiceGracePeriod
           providerCustomer { id, providerCustomerId, providerPaymentMethods }
@@ -58,6 +59,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           externalId: external_id,
           paymentProvider: 'stripe',
           currency: 'EUR',
+          netPaymentTerm: 3,
           providerCustomer: {
             providerCustomerId: 'cu_12345',
             providerPaymentMethods: %w[card sepa_debit],
@@ -87,6 +89,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['paymentProvider']).to eq('stripe')
       expect(result_data['currency']).to eq('EUR')
       expect(result_data['timezone']).to be_nil
+      expect(result_data['netPaymentTerm']).to eq(3)
       expect(result_data['invoiceGracePeriod']).to be_nil
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')

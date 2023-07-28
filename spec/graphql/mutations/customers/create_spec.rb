@@ -22,6 +22,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           currency
           taxIdentificationNumber
           timezone
+          netPaymentTerm
           canEditAttributes
           invoiceGracePeriod
           billingConfiguration { documentLocale }
@@ -60,6 +61,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           paymentProvider: 'stripe',
           taxIdentificationNumber: '123456789',
           currency: 'EUR',
+          netPaymentTerm: 30,
           providerCustomer: {
             providerCustomerId: 'cu_12345',
             providerPaymentMethods: ['card'],
@@ -94,6 +96,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
       expect(result_data['providerCustomer']['providerPaymentMethods']).to eq(['card'])
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
+      expect(result_data['netPaymentTerm']).to eq(30)
       expect(result_data['metadata'].count).to eq(1)
       expect(result_data['metadata'][0]['value']).to eq('John Doe')
       expect(result_data['taxes'][0]['code']).to eq(tax.code)

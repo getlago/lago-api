@@ -23,6 +23,7 @@ module Types
       field :legal_name, String, null: true
       field :legal_number, String, null: true
       field :logo_url, String, null: true
+      field :net_payment_term, Integer, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :phone, String, null: true
       field :state, String, null: true
