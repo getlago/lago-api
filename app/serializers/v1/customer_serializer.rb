@@ -27,6 +27,7 @@ module V1
         tax_identification_number: model.tax_identification_number,
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
+        net_payment_term: model.net_payment_term,
         billing_configuration:,
       }.merge(legacy_values.except(:billing_configuration))
 
