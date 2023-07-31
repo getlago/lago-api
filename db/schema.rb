@@ -481,8 +481,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_08_144739) do
     t.bigint "sub_total_excluding_taxes_amount_cents", default: 0, null: false
     t.bigint "sub_total_including_taxes_amount_cents", default: 0, null: false
     t.date "payment_due_date"
+    t.integer "net_payment_term", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
+    t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
   create_table "invoices_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
