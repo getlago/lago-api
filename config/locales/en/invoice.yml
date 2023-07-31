@@ -3,6 +3,8 @@ en:
     document_name: Invoice
     invoice_number: Invoice Number
     issue_date: Issue Date
+    payment_term: Payment term
+    payment_term_days: "%{net_payment_term} days"
     bill_from: From
     bill_to: Bill to
     due_date: Due %{date}

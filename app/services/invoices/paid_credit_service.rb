@@ -17,6 +17,7 @@ module Invoices
           customer:,
           issuing_date:,
           payment_due_date: issuing_date,
+          net_payment_term: customer.applicable_net_payment_term,
           invoice_type: :credit,
           payment_status: :pending,
           currency:,

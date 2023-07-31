@@ -3,6 +3,8 @@ de:
     document_name: Rechnung
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
+    payment_term: Zahlungsfrist
+    payment_term_days: "%{net_payment_term} Tage"
     bill_from: Von
     bill_to: An
     due_date: Fälligkeit %{date}

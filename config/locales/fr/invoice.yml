@@ -3,6 +3,8 @@ fr:
     document_name: Facture
     invoice_number: Nº de facture
     issue_date: Date d'émission
+    payment_term: Délai de paiement
+    payment_term_days: "%{net_payment_term} jours"
     bill_from: De
     bill_to: Facturé à
     due_date: Date d'échéance le %{date}

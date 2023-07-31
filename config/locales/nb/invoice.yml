@@ -3,6 +3,8 @@ nb:
     document_name: Faktura
     invoice_number: Fakturanummer
     issue_date: Dato
+    payment_term: Betalingsperiode
+    payment_term_days: "%{net_payment_term} dager"
     bill_from: Fra
     bill_to: Til
     due_date: Forfallsdato %{date}
