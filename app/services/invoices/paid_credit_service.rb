@@ -16,7 +16,8 @@ module Invoices
           organization: customer.organization,
           customer:,
           issuing_date:,
-          payment_due_date: issuing_date,
+          payment_due_date:,
+          net_payment_term: customer.applicable_net_payment_term,
           invoice_type: :credit,
           payment_status: :pending,
           currency:,
@@ -95,6 +96,10 @@ module Invoices
 
     def issuing_date
       Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def payment_due_date
+      (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
     def should_deliver_email?
