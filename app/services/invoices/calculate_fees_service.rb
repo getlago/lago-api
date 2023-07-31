@@ -91,12 +91,21 @@ module Invoices
       return false unless recurring
 
       subscriptions_boundaries.any? do |subscription_id, boundaries|
-        InvoiceSubscription
+        subscription = Subscription.includes(:plan).find(subscription_id)
+
+        base_query = InvoiceSubscription
           .where(subscription_id:)
           .recurring
           .where(from_datetime: boundaries[:from_datetime])
           .where(to_datetime: boundaries[:to_datetime])
-          .exists?
+
+        if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+          base_query = base_query
+            .where(charges_from_datetime: boundaries[:charges_from_datetime])
+            .where(charges_to_datetime: boundaries[:charges_to_datetime])
+        end
+
+        base_query.exists?
       end
     end
 
