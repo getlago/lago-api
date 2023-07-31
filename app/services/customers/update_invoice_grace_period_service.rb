@@ -19,8 +19,10 @@ module Customers
 
         # NOTE: Update issuing_date on draft invoices.
         customer.invoices.draft.each do |invoice|
-          invoice.update!(issuing_date: grace_period_issuing_date(invoice))
-          invoice.update!(payment_due_date: grace_period_payment_due_date(invoice))
+          invoice.update!(
+            issuing_date: grace_period_issuing_date(invoice),
+            payment_due_date: grace_period_payment_due_date(invoice),
+          )
         end
 
         result.customer = customer
@@ -41,7 +43,7 @@ module Customers
     end
 
     def grace_period_payment_due_date(invoice)
-      invoice.issuing_date + customer.applicable_net_payment_term.days
+      grace_period_issuing_date(invoice) + customer.applicable_net_payment_term.days
     end
   end
 end
