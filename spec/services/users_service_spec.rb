@@ -51,6 +51,25 @@ RSpec.describe UsersService, type: :service do
         end
       end
     end
+
+    context 'when signup is disabled' do
+      before do
+        ENV['LAGO_SIGNUP_DISABLED'] = 'true'
+      end
+
+      after do
+        ENV['LAGO_SIGNUP_DISABLED'] = nil
+      end
+
+      it 'returns a not allowed error' do
+        result = user_service.register('email', 'password', 'organization_name')
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.message).to eq('signup is disabled')
+        end
+      end
+    end
   end
 
   describe 'register_from_invite' do

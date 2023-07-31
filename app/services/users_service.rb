@@ -17,6 +17,8 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
+    return result.not_allowed_failure!(code: 'signup is disabled') if ENV.fetch('LAGO_SIGNUP_DISABLED', 'false') == 'true'
+
     result.user = User.find_or_initialize_by(email:)
 
     if result.user.id
