@@ -94,7 +94,6 @@ module Invoices
         subscription = Subscription.includes(:plan).find(subscription_id)
 
         base_query = InvoiceSubscription
-          .includes(subscription: :plan)
           .where(subscription_id:)
           .recurring
           .where(from_datetime: boundaries[:from_datetime])
