@@ -4499,6 +4499,10 @@ type Subscription {
 }
 
 type Tax {
+  """
+  Number of add ons using this tax
+  """
+  addOnsCount: Int!
   appliedToOrganization: Boolean!
 
   """
