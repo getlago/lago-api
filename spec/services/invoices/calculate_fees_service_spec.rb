@@ -686,6 +686,61 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.error.error_message).to be_present
         end
       end
+
+      context 'when plan interval is yearly and charges are not paid on monthly basis' do
+        let(:plan) do
+          create(:plan, organization:, interval: 'yearly', pay_in_advance: false, bill_charges_monthly: false)
+        end
+
+        it 'returns a service failure' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ServiceFailure)
+            expect(result.error.code).to eq('duplicated_invoices')
+            expect(result.error.error_message).to be_present
+          end
+        end
+      end
+
+      context 'when plan interval is yearly and charges are paid on monthly basis' do
+        let(:plan) do
+          create(:plan, organization:, interval: 'yearly', pay_in_advance: false, bill_charges_monthly: true)
+        end
+
+        it 'does not return an error' do
+          result = invoice_service.call
+
+          expect(result).to be_success
+        end
+
+        context 'when there is invoice subscriptions record in the same period' do
+          let(:invoice_subscription) do
+            create(
+              :invoice_subscription,
+              subscription:,
+              recurring: true,
+              timestamp: timestamp.to_i,
+              from_datetime: date_service.from_datetime,
+              to_datetime: date_service.to_datetime,
+              charges_from_datetime: date_service.charges_from_datetime,
+              charges_to_datetime: date_service.charges_to_datetime,
+            )
+          end
+
+          it 'returns a service failure' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ServiceFailure)
+              expect(result.error.code).to eq('duplicated_invoices')
+              expect(result.error.error_message).to be_present
+            end
+          end
+        end
+      end
     end
   end
 end
