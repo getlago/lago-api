@@ -17,7 +17,14 @@ module AddOns
       add_on.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
       add_on.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
 
-      add_on.save!
+      ActiveRecord::Base.transaction do
+        add_on.save!
+
+        if params.key?(:tax_codes)
+          taxes_result = AddOns::ApplyTaxesService.call(add_on:, tax_codes: params[:tax_codes])
+          return taxes_result unless taxes_result.success?
+        end
+      end
 
       result.add_on = add_on
       result

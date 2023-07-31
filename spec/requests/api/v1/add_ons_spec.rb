@@ -33,7 +33,9 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
   describe 'update' do
     let(:add_on) { create(:add_on, organization:) }
+    let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
     let(:code) { 'add_on_code' }
+    let(:tax2) { create(:tax, organization:) }
     let(:update_params) do
       {
         name: 'add_on1',
@@ -41,8 +43,11 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         amount_cents: 123,
         amount_currency: 'EUR',
         description: 'description',
+        tax_codes: [tax2.code],
       }
     end
+
+    before { add_on_applied_tax }
 
     it 'updates a add-on' do
       put_with_token(
@@ -54,6 +59,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:add_on][:lago_id]).to eq(add_on.id)
       expect(json[:add_on][:code]).to eq(update_params[:code])
+      expect(json[:add_on][:taxes].map { |t| t[:code] }).to contain_exactly(tax2.code)
     end
 
     context 'when add-on does not exist' do
