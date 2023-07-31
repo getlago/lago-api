@@ -62,6 +62,10 @@ module Customers
           end
         end
 
+        if args.key?(:net_payment_term)
+          Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
+        end
+
         # NOTE: external_id is not editable if customer is attached to subscriptions
         customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 

@@ -43,6 +43,13 @@ module Organizations
         )
       end
 
+      if params.key?(:net_payment_term)
+        Organizations::UpdateInvoicePaymentDueDateService.call(
+          organization:,
+          net_payment_term: params[:net_payment_term],
+        )
+      end
+
       assign_premium_attributes
       handle_base64_logo if params.key?(:logo)
 
