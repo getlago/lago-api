@@ -19672,6 +19672,24 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "addOnsCount",
+              "description": "Number of add ons using this tax",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "appliedToOrganization",
               "description": null,
               "type": {

@@ -12,6 +12,8 @@ class Tax < ApplicationRecord
   has_many :invoices, through: :invoices_taxes
   has_many :credit_notes_taxes, class_name: 'CreditNote::AppliedTax', dependent: :destroy
   has_many :credit_notes, through: :credit_notes_taxes
+  has_many :add_ons_taxes, class_name: 'AddOn::AppliedTax', dependent: :destroy
+  has_many :add_ons, through: :add_ons_taxes
   has_many :plans_taxes, class_name: 'Plan::AppliedTax', dependent: :destroy
   has_many :plans, through: :plans_taxes
   has_many :charges_taxes, class_name: 'Charge::AppliedTax', dependent: :destroy

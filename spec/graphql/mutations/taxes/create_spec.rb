@@ -17,7 +17,7 @@ RSpec.describe Mutations::Taxes::Create, type: :graphql do
     <<-GQL
       mutation($input: TaxCreateInput!) {
         createTax(input: $input) {
-          id name code description rate plansCount chargesCount customersCount
+          id name code description rate addOnsCount plansCount chargesCount customersCount
         }
       }
     GQL
