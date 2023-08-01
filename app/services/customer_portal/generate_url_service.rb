@@ -13,7 +13,7 @@ module CustomerPortal
       return result.not_found_failure!(resource: 'customer') if customer.blank?
 
       public_authenticator = ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE'])
-      message = public_authenticator.generate(customer.id, expires_in: 12.hours)
+      message = public_authenticator.generate(customer.id, expires_in: 1.year)
 
       result.url = "#{ENV['LAGO_FRONT_URL']}/customer-portal/#{message}"
 
