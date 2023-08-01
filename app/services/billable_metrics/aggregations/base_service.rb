@@ -44,10 +44,10 @@ module BillableMetrics
       end
 
       def group_scope(events)
-        events = events.where('properties @> ?', { group.key.to_s => group.value }.to_json)
+        events = events.where('events.properties @> ?', { group.key.to_s => group.value }.to_json)
         return events unless group.parent
 
-        events.where('properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        events.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
 
       def sanitized_name(property)
