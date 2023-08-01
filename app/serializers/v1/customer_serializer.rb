@@ -10,6 +10,7 @@ module V1
         sequential_id: model.sequential_id,
         slug: model.slug,
         created_at: model.created_at.iso8601,
+        updated_at: model.updated_at.iso8601,
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
