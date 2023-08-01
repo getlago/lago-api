@@ -344,7 +344,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
 
       context 'when dimensions are used' do
-        let(:properties) { { unique_id: '111', region: 'europe'} }
+        let(:properties) { { unique_id: '111', region: 'europe' } }
 
         let(:group) do
           create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
