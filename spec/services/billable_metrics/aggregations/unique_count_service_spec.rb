@@ -343,6 +343,20 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         expect(result.pay_in_advance_aggregation).to eq(1)
       end
 
+      context 'when dimensions are used' do
+        let(:properties) { { unique_id: '111', region: 'europe'} }
+
+        let(:group) do
+          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+        end
+
+        it 'assigns an pay_in_advance aggregation' do
+          result = count_service.aggregate(from_datetime:, to_datetime:)
+
+          expect(result.pay_in_advance_aggregation).to eq(1)
+        end
+      end
+
       context 'when event is missing properties' do
         let(:properties) { {} }
 
