@@ -167,12 +167,10 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when timezone is negative and not the same day as UTC and there is coupon that is covering all fees' do
+  context 'when coupons amount is greater than fees total amount' do
     it 'creates an invoice for the expected period' do
       travel_to(DateTime.new(2023, 1, 1)) do
         create_tax(name: 'Banking rates', code: 'banking_rates', rate: 10.0)
-        create_tax(name: 'Sales tax - FR', code: 'sales_tax_fr', rate: 0.0)
-        create_tax(name: 'Sales tax', code: 'sales_tax', rate: 20.0)
 
         create_or_update_customer(external_id: 'customer-1')
 
