@@ -237,7 +237,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'charges are pay in advance and billable metric is recurring' do
+      context 'when charges are pay in advance and billable metric is recurring' do
         let(:billable_metric) do
           create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
         end
