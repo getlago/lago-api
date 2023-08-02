@@ -54,8 +54,8 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:groups]).to contain_exactly(
-          { lago_id: one.id, key: nil, value: one.value },
-          { lago_id: second.id, key: nil, value: second.value },
+          { lago_id: one.id, key: one.key, value: one.value },
+          { lago_id: second.id, key: one.key, value: second.value },
         )
       end
     end
