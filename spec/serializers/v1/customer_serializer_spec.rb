@@ -27,6 +27,7 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['sequential_id']).to eq(customer.sequential_id)
       expect(result['customer']['slug']).to eq(customer.slug)
       expect(result['customer']['created_at']).to eq(customer.created_at.iso8601)
+      expect(result['customer']['updated_at']).to eq(customer.updated_at.iso8601)
       expect(result['customer']['country']).to eq(customer.country)
       expect(result['customer']['address_line1']).to eq(customer.address_line1)
       expect(result['customer']['address_line2']).to eq(customer.address_line2)
