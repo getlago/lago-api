@@ -91,7 +91,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when charge is pay_in_advance, not recurring and invoiceable ' do
+      context 'when charge is pay_in_advance, not recurring and invoiceable' do
         let(:charge) do
           create(
             :standard_charge,
@@ -113,7 +113,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when charge is pay_in_advance, recurring and invoiceable ' do
+      context 'when charge is pay_in_advance, recurring and invoiceable' do
         let(:billable_metric) do
           create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
         end
@@ -234,6 +234,32 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             to_datetime: match_datetime(terminated_at),
             from_datetime: match_datetime(terminated_at.beginning_of_month),
           )
+        end
+      end
+
+      context 'when charges are pay in advance and billable metric is recurring' do
+        let(:billable_metric) do
+          create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
+        end
+        let(:charge) do
+          create(
+            :standard_charge,
+            :pay_in_advance,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: true,
+            billable_metric:,
+          )
+        end
+
+        it 'does not create a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.charge_kind.count).to eq(0)
+          end
         end
       end
 
