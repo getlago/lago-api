@@ -24,7 +24,7 @@ module Credits
         before_taxes: true,
       )
 
-      fees.each do |fee|
+      fees.reload.each do |fee|
         fee.precise_coupons_amount_cents += (credit_amount * fee.amount_cents).fdiv(base_amount_cents)
         fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
         fee.save!

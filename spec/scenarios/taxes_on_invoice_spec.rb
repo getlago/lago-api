@@ -247,4 +247,118 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
       )
     end
   end
+
+  context 'when there are multiple subscriptions and coupons are covering total amount' do
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2023, 1, 1)) do
+        create_tax(name: 'Banking rates', code: 'banking_rates', rate: 10.0)
+
+        create_or_update_customer(external_id: 'customer-1')
+
+        create_plan(
+          {
+            name: 'P1',
+            code: 'plan_code',
+            interval: 'monthly',
+            amount_cents: 10_000,
+            amount_currency: 'EUR',
+            pay_in_advance: false,
+            tax_codes: ['banking_rates'],
+            charges: [],
+          },
+        )
+        plan = organization.plans.find_by(code: 'plan_code')
+
+        create_subscription(
+          {
+            external_customer_id: 'customer-1',
+            external_id: 'sub_external_id',
+            plan_code: plan.code,
+          },
+        )
+
+        create_plan(
+          {
+            name: 'P2',
+            code: 'plan_code2',
+            interval: 'monthly',
+            amount_cents: 5_000,
+            amount_currency: 'EUR',
+            pay_in_advance: false,
+            tax_codes: ['banking_rates'],
+            charges: [],
+          },
+        )
+        plan2 = organization.plans.find_by(code: 'plan_code2')
+
+        create_subscription(
+          {
+            external_customer_id: 'customer-1',
+            external_id: 'sub_external_id2',
+            plan_code: plan2.code,
+          },
+        )
+
+        create_coupon(
+          {
+            name: 'coupon1',
+            code: 'coupon1_code',
+            coupon_type: 'fixed_amount',
+            frequency: 'once',
+            amount_cents: 10_000,
+            amount_currency: 'EUR',
+            expiration: 'time_limit',
+            expiration_at: Time.current + 15.days,
+            reusable: false,
+          },
+        )
+        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon1_code' })
+
+        create_coupon(
+          {
+            name: 'coupon2',
+            code: 'coupon2_code',
+            coupon_type: 'fixed_amount',
+            frequency: 'once',
+            amount_cents: 10_000,
+            amount_currency: 'EUR',
+            expiration: 'time_limit',
+            expiration_at: Time.current + 15.days,
+            reusable: false,
+          },
+        )
+        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon2_code' })
+      end
+
+      travel_to(DateTime.new(2023, 2, 1)) do
+        perform_billing
+      end
+
+      customer = organization.customers.find_by(external_id: 'customer-1')
+      invoice = customer.invoices.first
+      fees = invoice.fees
+      subscription1 = Subscription.find_by(external_id: 'sub_external_id')
+      subscription2 = Subscription.find_by(external_id: 'sub_external_id2')
+
+      expect(invoice.fees.count).to eq(2)
+
+      # Subscription fee1
+      expect(fees.subscription.where(subscription: subscription1).first).to have_attributes(
+        amount_cents: 10_000,
+        taxes_amount_cents: 0,
+        taxes_rate: 10.0,
+        # fee amount cents * coupon amount / total fees amount (100 * 10 / 100)
+        precise_coupons_amount_cents: 10_000,
+      )
+
+      # Subscription fee2
+      expect(fees.subscription.where(subscription: subscription2).first).to have_attributes(
+        amount_cents: 5_000,
+        taxes_amount_cents: 0,
+        taxes_rate: 10.0,
+        # fee amount cents * coupon amount / total fees amount (50 * 5 / 50)
+        precise_coupons_amount_cents: 5_000,
+      )
+    end
+  end
 end
