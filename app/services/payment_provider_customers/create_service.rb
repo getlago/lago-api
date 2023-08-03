@@ -24,7 +24,7 @@ module PaymentProviderCustomers
 
       if provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
         if provider_customer.persisted? && (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
-          provider_customer.provider_payment_methods = provider_customer.provider_payment_methods | provider_payment_methods
+          provider_customer.provider_payment_methods = provider_payment_methods
         else
           if (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
             provider_customer.provider_payment_methods = provider_payment_methods
