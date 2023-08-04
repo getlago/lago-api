@@ -96,7 +96,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             expect(billing[:invoice_grace_period]).to eq(3)
             expect(billing[:vat_rate]).to eq(20)
             expect(billing[:document_locale]).to eq('fr')
-            expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
+            expect(billing[:provider_payment_methods]).to eq(%w[card])
           end
         end
       end
