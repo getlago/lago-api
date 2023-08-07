@@ -1538,6 +1538,7 @@ input CreateAddOnInput {
   code: String!
   description: String
   name: String!
+  taxCodes: [String!]
 }
 
 """
@@ -5301,6 +5302,7 @@ input UpdateAddOnInput {
   description: String
   id: ID!
   name: String!
+  taxCodes: [String!]
 }
 
 """

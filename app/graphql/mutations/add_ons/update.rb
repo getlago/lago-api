@@ -8,12 +8,7 @@ module Mutations
       graphql_name 'UpdateAddOn'
       description 'Update an existing add-on'
 
-      argument :amount_cents, GraphQL::Types::BigInt, required: true
-      argument :amount_currency, Types::CurrencyEnum, required: true
-      argument :code, String, required: true
-      argument :description, String, required: false
-      argument :id, ID, required: true
-      argument :name, String, required: true
+      input_object_class Types::AddOns::UpdateInput
 
       type Types::AddOns::Object
 

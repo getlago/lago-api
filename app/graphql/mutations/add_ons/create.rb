@@ -9,11 +9,7 @@ module Mutations
       graphql_name 'CreateAddOn'
       description 'Creates a new add-on'
 
-      argument :amount_cents, GraphQL::Types::BigInt, required: true
-      argument :amount_currency, Types::CurrencyEnum, required: true
-      argument :code, String, required: true
-      argument :description, String, required: false
-      argument :name, String, required: true
+      input_object_class Types::AddOns::CreateInput
 
       type Types::AddOns::Object
 
