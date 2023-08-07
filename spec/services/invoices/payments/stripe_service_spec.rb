@@ -34,6 +34,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       File.read(Rails.root.join('spec/fixtures/stripe/customer_retrieve_response.json'))
     end
 
+    let(:payment_status) { 'succeeded' }
+
     before do
       stripe_payment_provider
       stripe_customer
@@ -42,7 +44,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         .and_return(
           Stripe::PaymentIntent.construct_from(
             id: 'ch_123456',
-            status: 'succeeded',
+            status: payment_status,
             amount: invoice.total_amount_cents,
             currency: invoice.currency,
           ),
@@ -217,6 +219,32 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               error_code: nil,
             },
           )
+      end
+    end
+
+    context 'when payment status is processing' do
+      let(:payment_status) { 'processing' }
+
+      it 'creates a stripe payment and a payment' do
+        result = stripe_service.create
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          expect(result.invoice).to be_pending
+          expect(result.invoice.payment_attempts).to eq(1)
+          expect(result.invoice.ready_for_payment_processing).to eq(false)
+
+          expect(result.payment.id).to be_present
+          expect(result.payment.invoice).to eq(invoice)
+          expect(result.payment.payment_provider).to eq(stripe_payment_provider)
+          expect(result.payment.payment_provider_customer).to eq(stripe_customer)
+          expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
+          expect(result.payment.amount_currency).to eq(invoice.currency)
+          expect(result.payment.status).to eq('processing')
+        end
+
+        expect(Stripe::PaymentIntent).to have_received(:create)
       end
     end
   end
