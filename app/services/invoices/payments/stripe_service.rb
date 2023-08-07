@@ -3,6 +3,11 @@
 module Invoices
   module Payments
     class StripeService < BaseService
+      PENDING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
+        .freeze
+      SUCCESS_STATUSES = %w[succeeded].freeze
+      FAILED_STATUSES = %w[canceled].freeze
+
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -35,7 +40,10 @@ module Invoices
         )
         payment.save!
 
-        update_invoice_payment_status(payment_status: payment.status.to_sym)
+        update_invoice_payment_status(
+          payment_status: invoice_payment_status(payment.status),
+          processing: payment.status == 'processing',
+        )
 
         result.payment = payment
         result
@@ -51,7 +59,10 @@ module Invoices
 
         payment.update!(status:)
 
-        update_invoice_payment_status(payment_status: status.to_sym)
+        update_invoice_payment_status(
+          payment_status: invoice_payment_status(status),
+          processing: status == 'processing',
+        )
 
         result
       rescue BaseService::FailedResult => e
@@ -152,12 +163,21 @@ module Invoices
         }
       end
 
-      def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+      def invoice_payment_status(payment_status)
+        return :pending if PENDING_STATUSES.include?(payment_status)
+        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
+        return :failed if FAILED_STATUSES.include?(payment_status)
+
+        payment_status&.to_sym
+      end
+
+      def update_invoice_payment_status(payment_status:, deliver_webhook: true, processing: false)
         result = Invoices::UpdateService.call(
           invoice: invoice.presence || @result.invoice,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded,
+            # NOTE: A proper `processing` payment status should be introduced for invoices
+            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded,
           },
           webhook_notification: deliver_webhook,
         )
