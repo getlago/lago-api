@@ -6,8 +6,8 @@ class Charge < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  belongs_to :plan, touch: true
-  belongs_to :billable_metric
+  belongs_to :plan, -> { with_discarded }, touch: true
+  belongs_to :billable_metric, -> { with_discarded }
 
   has_many :fees
   has_many :group_properties, dependent: :destroy
