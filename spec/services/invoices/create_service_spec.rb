@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::OneOffService, type: :service do
-  subject(:invoice_service) do
+RSpec.describe Invoices::CreateService, type: :service do
+  subject(:create_service) do
     described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:)
   end
 
@@ -28,7 +28,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
     ]
   end
 
-  describe 'create' do
+  describe 'call' do
     before do
       tax
 
@@ -37,7 +37,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
     end
 
     it 'creates an invoice' do
-      result = invoice_service.create
+      result = create_service.call
 
       aggregate_failures do
         expect(result).to be_success
@@ -62,7 +62,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = invoice_service.create.invoice
+      invoice = create_service.call.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -82,7 +82,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       allow(payment_create_service)
         .to receive(:call)
 
-      invoice_service.create
+      create_service.call
 
       expect(Invoices::Payments::CreateService).to have_received(:new)
       expect(payment_create_service).to have_received(:call)
@@ -90,13 +90,13 @@ RSpec.describe Invoices::OneOffService, type: :service do
 
     it 'enqueues a SendWebhookJob' do
       expect do
-        invoice_service.create
+        create_service.call
       end.to have_enqueued_job(SendWebhookJob)
     end
 
     it 'does not enqueue an ActionMailer::MailDeliveryJob' do
       expect do
-        invoice_service.create
+        create_service.call
       end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
@@ -113,7 +113,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       end
 
       it 'creates an succeeded invoice' do
-        result = invoice_service.create
+        result = create_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -140,7 +140,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
 
       it 'enqueues an ActionMailer::MailDeliveryJob' do
         expect do
-          invoice_service.create
+          create_service.call
         end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
       end
 
@@ -149,7 +149,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
 
         it 'does not enqueue an ActionMailer::MailDeliveryJob' do
           expect do
-            invoice_service.create
+            create_service.call
           end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
         end
       end
@@ -160,7 +160,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
 
       it 'does not enqueues a SendWebhookJob' do
         expect do
-          invoice_service.create
+          create_service.call
         end.not_to have_enqueued_job(SendWebhookJob)
       end
     end
@@ -171,7 +171,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
 
       it 'assigns the issuing date in the customer timezone' do
-        result = invoice_service.create
+        result = create_service.call
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
       end
@@ -181,7 +181,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       let(:currency) { 'NOK' }
 
       it 'fails' do
-        result = invoice_service.create
+        result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -198,7 +198,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       before { customer.update!(currency: nil) }
 
       it 'fails' do
-        result = invoice_service.create
+        result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -213,7 +213,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       let(:customer) { nil }
 
       it 'returns a not found error' do
-        result = invoice_service.create
+        result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -227,7 +227,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       let(:fees) { [] }
 
       it 'returns a not found error' do
-        result = invoice_service.create
+        result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -253,7 +253,7 @@ RSpec.describe Invoices::OneOffService, type: :service do
       end
 
       it 'returns a not found error' do
-        result = invoice_service.create
+        result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success

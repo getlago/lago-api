@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class OneOffService < BaseService
+  class CreateService < BaseService
     def initialize(customer:, currency:, fees:, timestamp:)
       @customer = customer
       @currency = currency || customer&.currency
@@ -11,7 +11,7 @@ module Invoices
       super(nil)
     end
 
-    def create
+    def call
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'fees') if fees.blank?
       return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
