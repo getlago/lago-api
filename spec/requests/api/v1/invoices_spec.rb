@@ -24,6 +24,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
             unit_amount_cents: 1200,
             units: 2,
             description: 'desc-123',
+            tax_codes: [tax.code],
           },
           {
             add_on_code: add_on_second.code,

@@ -130,6 +130,37 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       end
     end
 
+    context 'when fee is a add_on type with taxes' do
+      let(:add_on) { create(:add_on, organization:) }
+      let(:applied_tax2) { create(:add_on_applied_tax, add_on:, tax: tax2) }
+      let(:subscription) { create(:subscription, organization:, customer:) }
+      let(:fee) { create(:add_on_fee, invoice:, amount_cents: 1000, add_on:, subscription:) }
+
+      before { applied_tax2 }
+
+      it 'creates applied_taxes based on the add_on taxes' do
+        result = apply_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(1)
+
+          expect(applied_taxes[0]).to have_attributes(
+            fee:,
+            tax: tax2,
+            tax_description: tax2.description,
+            tax_code: tax2.code,
+            tax_name: tax2.name,
+            tax_rate: 12,
+            amount_currency: fee.currency,
+            amount_cents: 120,
+          )
+        end
+      end
+    end
+
     context 'when fee is a charge type with taxes applied to the plan' do
       let(:plan) { create(:plan, organization:) }
       let(:charge) { create(:standard_charge, plan:) }
