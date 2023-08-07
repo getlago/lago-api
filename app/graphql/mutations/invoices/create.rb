@@ -21,12 +21,12 @@ module Mutations
           organization_id: current_organization.id,
         )
 
-        result = ::Invoices::OneOffService.new(
+        result = ::Invoices::CreateService.new(
           customer:,
           currency: args[:currency],
           fees: args[:fees],
           timestamp: Time.current.to_i,
-        ).create
+        ).call
 
         result.success? ? result.invoice : result_error(result)
       end
