@@ -4,7 +4,10 @@ require 'rails_helper'
 
 RSpec.describe Mutations::AddOns::Update, type: :graphql do
   let(:membership) { create(:membership) }
-  let(:add_on) { create(:add_on, organization: membership.organization) }
+  let(:organization) { membership.organization }
+  let(:tax) { create(:tax, organization:) }
+  let(:tax2) { create(:tax, organization:) }
+  let(:add_on) { create(:add_on, organization:) }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateAddOnInput!) {
@@ -14,11 +17,14 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
           code,
           description,
           amountCents,
-          amountCurrency
+          amountCurrency,
+          taxes { id code rate }
         }
       }
     GQL
   end
+
+  before { create(:add_on_applied_tax, add_on:, tax:) }
 
   it 'updates an add-on' do
     result = execute_graphql(
@@ -32,6 +38,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
           description: 'desc',
           amountCents: 123,
           amountCurrency: 'USD',
+          taxCodes: [tax2.code],
         },
       },
     )
@@ -44,6 +51,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
       expect(result_data['description']).to eq('desc')
       expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('USD')
+      expect(result_data['taxes'].map { |t| t['code'] }).to contain_exactly(tax2.code)
     end
   end
 

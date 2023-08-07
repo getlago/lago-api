@@ -4,6 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Mutations::AddOns::Create, type: :graphql do
   let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
+  let(:tax) { create(:tax, organization:) }
   let(:mutation) do
     <<-GQL
       mutation($input: CreateAddOnInput!) {
@@ -13,7 +15,8 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
           code,
           description,
           amountCents,
-          amountCurrency
+          amountCurrency,
+          taxes { id code rate }
         }
       }
     GQL
@@ -31,6 +34,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
           description: 'some text',
           amountCents: 5000,
           amountCurrency: 'EUR',
+          taxCodes: [tax.code],
         },
       },
     )
@@ -44,6 +48,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
       expect(result_data['description']).to eq('some text')
       expect(result_data['amountCents']).to eq('5000')
       expect(result_data['amountCurrency']).to eq('EUR')
+      expect(result_data['taxes'].map { |t| t['code'] }).to contain_exactly(tax.code)
     end
   end
 
