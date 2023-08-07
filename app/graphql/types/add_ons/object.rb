@@ -22,6 +22,8 @@ module Types
       field :applied_add_ons_count, Integer, null: false
       field :customer_count, Integer, null: false, description: 'Number of customers using this add-on'
 
+      field :taxes, [Types::Taxes::Object]
+
       def customer_count
         object.applied_add_ons.select(:customer_id).distinct.count
       end

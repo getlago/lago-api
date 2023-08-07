@@ -58,6 +58,7 @@ type AddOn {
   id: ID!
   name: String!
   organization: Organization
+  taxes: [Tax!]
   updatedAt: ISO8601DateTime!
 }
 
