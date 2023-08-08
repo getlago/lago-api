@@ -70,12 +70,14 @@ module Api
         params.require(:webhook_endpoint).permit(
           :id,
           :webhook_url,
+          :signature_algo,
         )
       end
 
       def update_params
         params.require(:webhook_endpoint).permit(
           :webhook_url,
+          :signature_algo,
         )
       end
 

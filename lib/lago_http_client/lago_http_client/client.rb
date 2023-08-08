@@ -35,10 +35,8 @@ module LagoHttpClient
     def post_with_response(body, headers)
       req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/json')
 
-      headers.each do |header|
-        key = header.keys.first
-        value = header[key]
-        req[key] = value
+      headers.keys.each do |key|
+        req[key] = headers[key]
       end
 
       req.body = body.to_json

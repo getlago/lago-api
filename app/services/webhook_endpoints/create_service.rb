@@ -12,6 +12,7 @@ module WebhookEndpoints
     def call
       webhook_endpoint = organization.webhook_endpoints.new(
         webhook_url: params[:webhook_url],
+        signature_algo: params[:signature_algo]&.to_sym || :jwt,
       )
 
       webhook_endpoint.save!

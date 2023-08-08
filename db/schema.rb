@@ -613,6 +613,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_31_095510) do
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end
 
+  create_table "plans_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "plan_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["plan_id"], name: "index_plans_taxes_on_plan_id"
+    t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
+  end
+
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.string "external_subscription_id", null: false
@@ -629,15 +638,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_31_095510) do
     t.index ["customer_id"], name: "index_quantified_events_on_customer_id"
     t.index ["deleted_at"], name: "index_quantified_events_on_deleted_at"
     t.index ["external_id"], name: "index_quantified_events_on_external_id"
-  end
-
-  create_table "plans_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "plan_id", null: false
-    t.uuid "tax_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["plan_id"], name: "index_plans_taxes_on_plan_id"
-    t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
   end
 
   create_table "refunds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -746,6 +746,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_31_095510) do
     t.string "webhook_url", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "signature_algo", default: 0, null: false
     t.index ["organization_id"], name: "index_webhook_endpoints_on_organization_id"
     t.index ["webhook_url", "organization_id"], name: "index_webhook_endpoints_on_webhook_url_and_organization_id", unique: true
   end
@@ -830,9 +831,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_31_095510) do
   add_foreign_key "payments", "payment_providers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
-  add_foreign_key "quantified_events", "customers"
   add_foreign_key "plans_taxes", "plans"
   add_foreign_key "plans_taxes", "taxes"
+  add_foreign_key "quantified_events", "customers"
   add_foreign_key "refunds", "credit_notes"
   add_foreign_key "refunds", "payment_provider_customers"
   add_foreign_key "refunds", "payment_providers"

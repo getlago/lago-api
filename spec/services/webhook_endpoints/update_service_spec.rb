@@ -10,6 +10,7 @@ RSpec.describe WebhookEndpoints::UpdateService, type: :service do
   let(:update_params) do
     {
       webhook_url: 'http://foo.bar',
+      signature_algo: 'hmac',
     }
   end
 
@@ -20,6 +21,7 @@ RSpec.describe WebhookEndpoints::UpdateService, type: :service do
       aggregate_failures do
         expect(result).to be_success
         expect(result.webhook_endpoint.webhook_url).to eq('http://foo.bar')
+        expect(result.webhook_endpoint.signature_algo).to eq('hmac')
       end
     end
 

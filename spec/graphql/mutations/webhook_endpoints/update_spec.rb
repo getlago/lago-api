@@ -2,12 +2,14 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
+RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
+  let(:webhook_endpoint) { create(:webhook_endpoint, organization: membership.organization) }
 
   let(:input) do
     {
+      id: webhook_endpoint.id,
       webhookUrl: webhook_url,
       signatureAlgo: 'hmac',
     }
@@ -15,8 +17,8 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
 
   let(:mutation) do
     <<-GQL
-      mutation($input: WebhookEndpointCreateInput!) {
-        createWebhookEndpoint(input: $input) {
+      mutation($input: WebhookEndpointUpdateInput!) {
+        updateWebhookEndpoint(input: $input) {
           id,
           webhookUrl,
           signatureAlgo,
@@ -25,7 +27,9 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
     GQL
   end
 
-  it 'creates a webhook_endpoint' do
+  before { webhook_endpoint }
+
+  it 'updates a webhook_endpoint' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -33,7 +37,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
       variables: { input: },
     )
 
-    expect(result['data']['createWebhookEndpoint']).to include(
+    expect(result['data']['updateWebhookEndpoint']).to include(
       'id' => String,
       'webhookUrl' => webhook_url,
       'signatureAlgo' => 'hmac',

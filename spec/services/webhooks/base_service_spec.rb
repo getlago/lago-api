@@ -199,6 +199,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
   end
 
   describe '.generate_headers' do
+    let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
     let(:payload) do
       ::V1::InvoiceSerializer.new(
         object,
@@ -208,13 +209,25 @@ RSpec.describe Webhooks::BaseService, type: :service do
     end
 
     it 'generates the query headers' do
-      headers = webhook_service.__send__(:generate_headers, payload)
+      headers = webhook_service.__send__(:generate_headers, webhook_endpoint, payload)
 
-      expect(headers).to include(have_key('X-Lago-Signature'))
+      expect(headers).to have_key('X-Lago-Signature')
+      expect(headers).to have_key('X-Lago-Signature-Algorithm')
+      expect(headers['X-Lago-Signature-Algorithm']).to eq('jwt')
+    end
+  end
+
+  describe '.jwt_signature' do
+    let(:payload) do
+      ::V1::InvoiceSerializer.new(
+        object,
+        root_name: 'invoice',
+        includes: %i[customer subscriptions],
+      ).serialize.merge(webook_type: 'add_on.created')
     end
 
-    it 'generates a correct signature' do
-      signature = webhook_service.__send__(:generate_signature, payload)
+    it 'generates a correct jwt signature' do
+      signature = webhook_service.__send__(:jwt_signature, payload)
 
       decoded_signature = JWT.decode(
         signature,
@@ -228,6 +241,24 @@ RSpec.describe Webhooks::BaseService, type: :service do
       ).first
 
       expect(decoded_signature['data']).to eq(payload.to_json)
+    end
+  end
+
+  describe '.hmac_signature' do
+    let(:payload) do
+      ::V1::InvoiceSerializer.new(
+        object,
+        root_name: 'invoice',
+        includes: %i[customer subscriptions],
+      ).serialize.merge(webook_type: 'add_on.created')
+    end
+
+    it 'generates a correct hmac signature' do
+      signature = webhook_service.__send__(:hmac_signature, payload)
+      hmac = OpenSSL::HMAC.digest('sha-256', organization.api_key, payload.to_json)
+      base64_hmac = Base64.strict_encode64(hmac)
+
+      expect(base64_hmac).to eq(signature)
     end
   end
 end
