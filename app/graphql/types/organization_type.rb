@@ -17,6 +17,7 @@ module Types
     field :address_line2, String
     field :city, String
     field :country, Types::CountryCodeEnum, null: true
+    field :net_payment_term, Integer, null: false
     field :state, String
     field :zipcode, String
 

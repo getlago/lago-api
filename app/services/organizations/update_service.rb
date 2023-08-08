@@ -22,6 +22,7 @@ module Organizations
       organization.city = params[:city] if params.key?(:city)
       organization.state = params[:state] if params.key?(:state)
       organization.country = params[:country]&.upcase if params.key?(:country)
+      organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
@@ -39,6 +40,13 @@ module Organizations
         Organizations::UpdateInvoiceGracePeriodService.call(
           organization:,
           grace_period: billing[:invoice_grace_period],
+        )
+      end
+
+      if params.key?(:net_payment_term)
+        Organizations::UpdateInvoicePaymentDueDateService.call(
+          organization:,
+          net_payment_term: params[:net_payment_term],
         )
       end
 

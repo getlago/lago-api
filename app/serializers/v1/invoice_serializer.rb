@@ -9,6 +9,7 @@ module V1
         number: model.number,
         issuing_date: model.issuing_date&.iso8601,
         payment_due_date: model.payment_due_date&.iso8601,
+        net_payment_term: model.net_payment_term,
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,

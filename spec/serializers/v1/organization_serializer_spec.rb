@@ -36,6 +36,7 @@ RSpec.describe ::V1::OrganizationSerializer do
       expect(result['organization']['billing_configuration']['document_locale']).to eq(org.document_locale)
       expect(result['organization']['tax_identification_number']).to eq(org.tax_identification_number)
       expect(result['organization']['timezone']).to eq(org.timezone)
+      expect(result['organization']['net_payment_term']).to eq(org.net_payment_term)
 
       expect(result['organization']['taxes'].count).to eq(1)
     end

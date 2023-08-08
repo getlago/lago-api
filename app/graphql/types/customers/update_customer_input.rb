@@ -19,6 +19,7 @@ module Types
       argument :legal_number, String, required: false
       argument :logo_url, String, required: false
       argument :name, String, required: true
+      argument :net_payment_term, Integer, required: false
       argument :phone, String, required: false
       argument :state, String, required: false
       argument :tax_codes, [String], required: false

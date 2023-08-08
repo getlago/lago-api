@@ -355,6 +355,9 @@ html
             tr
               td.body-1 = I18n.t('invoice.issue_date')
               td.body-2 = I18n.l(issuing_date, format: :default)
+            tr
+              td.body-1 = I18n.t('invoice.payment_term')
+              td.body-2 = I18n.t('invoice.payment_term_days', net_payment_term:)
         .invoice-information-column
           table.invoice-information-table
             - if customer.metadata.displayable.any?

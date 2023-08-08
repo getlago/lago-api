@@ -18,6 +18,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode
           city
           country
+          netPaymentTerm
           timezone
           emailSettings
           webhookUrl
@@ -40,6 +41,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           email: 'foo@bar.com',
           addressLine1: 'Line 1',
           addressLine2: 'Line 2',
+          netPaymentTerm: 10,
           state: 'Foobar',
           zipcode: 'FOO1234',
           city: 'Foobar',
@@ -66,6 +68,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['zipcode']).to eq('FOO1234')
       expect(result_data['city']).to eq('Foobar')
       expect(result_data['country']).to eq('FR')
+      expect(result_data['netPaymentTerm']).to eq(10)
       expect(result_data['webhookUrl']).to eq('https://app.test.dev')
       expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')
       expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(0)
