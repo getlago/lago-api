@@ -410,7 +410,7 @@ html
 
       .mb-24
         h2.title-2.mb-4 = MoneyHelper.format(total_amount)
-        .body-1 = I18n.t('invoice.due_date', date: I18n.l(payment_due_date, format: :default))
+        .body-1 = I18n.t('invoice.due_date', date: I18n.l(issuing_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
         table.invoice-resume-table width="100%"
