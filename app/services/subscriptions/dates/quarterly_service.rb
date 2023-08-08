@@ -3,7 +3,6 @@
 module Subscriptions
   module Dates
     class QuarterlyService < Subscriptions::DatesService
-
       private
 
       def compute_from_date(date = base_date)
@@ -102,7 +101,7 @@ module Subscriptions
           (subscription_at.month % 12),
           ((subscription_at.month + 3) % 12),
           ((subscription_at.month + 6) % 12),
-          ((subscription_at.month + 9) % 12)
+          ((subscription_at.month + 9) % 12),
         ].sort
 
         # This is the case when we terminate subscription on On February 10 but anniversary date is on
