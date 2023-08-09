@@ -10,7 +10,8 @@ RSpec.describe Fees::OneOffService do
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, organization:) }
+  let(:tax2) { create(:tax, organization:, applied_to_organization: false) }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:fees) do
@@ -20,6 +21,7 @@ RSpec.describe Fees::OneOffService do
         unit_amount_cents: 1200,
         units: 2,
         description: 'desc-123',
+        tax_codes: [tax2.code],
       },
       {
         add_on_code: add_on_second.code,
@@ -51,6 +53,7 @@ RSpec.describe Fees::OneOffService do
         expect(first_fee.amount_currency).to eq('EUR')
         expect(first_fee.fee_type).to eq('add_on')
         expect(first_fee.payment_status).to eq('pending')
+        expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
 
         expect(second_fee.id).not_to be_nil
         expect(second_fee.invoice_id).to eq(invoice.id)
@@ -62,6 +65,7 @@ RSpec.describe Fees::OneOffService do
         expect(second_fee.amount_currency).to eq('EUR')
         expect(second_fee.fee_type).to eq('add_on')
         expect(second_fee.payment_status).to eq('pending')
+        expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
       end
     end
 

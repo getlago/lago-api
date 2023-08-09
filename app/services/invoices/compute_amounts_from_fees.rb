@@ -9,6 +9,8 @@ module Invoices
 
     def call
       invoice.fees.each do |fee|
+        next if fee.applied_taxes.any?
+
         taxes_result = Fees::ApplyTaxesService.call(fee:)
         taxes_result.raise_if_error!
         fee.save!
