@@ -133,10 +133,19 @@ module Invoices
     end
 
     def should_not_create_charge_fee?(charge, subscription)
-      (charge.pay_in_advance? || !charge.prorated?) &&
-        charge.billable_metric.recurring? &&
+      if charge.pay_in_advance?
+        condition = charge.billable_metric.recurring? &&
+                    subscription.terminated? &&
+                    (subscription.upgraded? || subscription.next_subscription.nil?)
+
+        return condition
+      end
+
+      return false if charge.prorated?
+
+      charge.billable_metric.recurring? &&
         subscription.terminated? &&
-        (subscription.upgraded? || subscription.next_subscription.nil?)
+        subscription.upgraded?
     end
 
     def should_create_subscription_fee?(subscription)

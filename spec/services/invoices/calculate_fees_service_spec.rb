@@ -263,6 +263,33 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
+      context 'when charges are pay in arrear and billable metric is recurring' do
+        let(:billable_metric) do
+          create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
+        end
+        let(:charge) do
+          create(
+            :standard_charge,
+            pay_in_advance: false,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: true,
+            billable_metric:,
+            prorated: false,
+          )
+        end
+
+        it 'creates a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.charge_kind.count).to eq(1)
+          end
+        end
+      end
+
       context 'when termination is part of upgrade and charges are not billable' do
         let(:new_subscription) do
           create(
@@ -285,6 +312,45 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             charge_model: 'standard',
             invoiceable: true,
             billable_metric:,
+          )
+        end
+
+        before { new_subscription }
+
+        it 'does not create a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.charge_kind.count).to eq(0)
+          end
+        end
+      end
+
+      context 'when termination is part of upgrade, charges are paid in arrears and BM is recurring' do
+        let(:new_subscription) do
+          create(
+            :subscription,
+            plan:,
+            previous_subscription: subscription,
+            subscription_at: started_at.to_date,
+            started_at: terminated_at + 1.day,
+            created_at: terminated_at + 1.day,
+          )
+        end
+        let(:billable_metric) do
+          create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
+        end
+        let(:charge) do
+          create(
+            :standard_charge,
+            pay_in_advance: false,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: true,
+            billable_metric:,
+            prorated: false,
           )
         end
 
