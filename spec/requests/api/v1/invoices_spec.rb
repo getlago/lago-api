@@ -46,6 +46,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         total_amount_cents: 3360,
         currency: 'EUR',
       )
+      expect(json[:invoice][:applied_taxes][0][:tax_code]).to eq(tax.code)
     end
 
     context 'when customer does not exist' do
