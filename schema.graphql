@@ -2976,6 +2976,7 @@ input FeeInput {
   addOnId: ID!
   description: String
   name: String
+  taxCodes: [String!]
   unitAmountCents: BigInt
   units: Float
 }
