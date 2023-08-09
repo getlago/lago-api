@@ -143,6 +143,147 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     end
   end
 
+  context 'when pay in arrear subscription with recurring charges is terminated' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'does bill the charges' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: false,
+          properties: { amount: '3' },
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Terminate subscription + refresh.
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
+
+      travel_to(dec20) do
+        expect {
+          terminate_subscription(subscription)
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.fees.charge_kind.count).to eq(1)
+      end
+    end
+  end
+
+  context 'when pay in arrear subscription with recurring and prorated charges is terminated' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'does bill the charges' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: true,
+          properties: { amount: '3' },
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Terminate subscription + refresh.
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
+
+      travel_to(dec20) do
+        expect {
+          terminate_subscription(subscription)
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.fees.charge_kind.count).to eq(1)
+      end
+    end
+  end
+
+  context 'when pay in advance subscription with recurring and prorated charges is terminated' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'does not bill the charges' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric: metric,
+          pay_in_advance: true,
+          prorated: true,
+          properties: { amount: '3' },
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Terminate subscription + refresh.
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
+
+      travel_to(dec20) do
+        expect {
+          terminate_subscription(subscription)
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.fees.charge_kind.count).to eq(0)
+      end
+    end
+  end
+
   context 'when invoice is paid in advance and grace period' do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
