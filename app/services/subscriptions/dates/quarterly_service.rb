@@ -31,9 +31,9 @@ module Subscriptions
       end
 
       def compute_duration(from_date:)
-        next_month_date = compute_to_date(from_date)
+        next_to_date = compute_to_date(from_date)
 
-        (next_month_date.to_date + 1.day - from_date.to_date).to_i
+        (next_to_date.to_date + 1.day - from_date.to_date).to_i
       end
 
       alias compute_charges_duration compute_duration
