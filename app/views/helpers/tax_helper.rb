@@ -6,7 +6,7 @@ class TaxHelper
       'div = "0.0%"'
     else
       <<~SLIM_TEMPLATE
-        - (applied_taxes.present? ? applied_taxes.pluck(:tax_rate) : [0.0]).each do |tax|
+        - (applied_taxes.present? ? applied_taxes.order(tax_rate: :desc).pluck(:tax_rate) : [0.0]).each do |tax|
           div = tax.to_s + "%"
       SLIM_TEMPLATE
     end
