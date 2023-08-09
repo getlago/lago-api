@@ -20,7 +20,7 @@ module Fees
 
           unit_amount_cents = fee[:unit_amount_cents] || add_on.amount_cents
           units = fee[:units] || 1
-          tax_codes = fee[:tax_codes] || []
+          tax_codes = fee[:tax_codes]
 
           fee = Fee.new(
             invoice:,
@@ -37,7 +37,7 @@ module Fees
             taxes_amount_cents: 0,
           )
 
-          taxes_result = Fees::ApplyTaxesService.call(fee:, tax_codes:)
+          taxes_result = tax_codes ? Fees::ApplyTaxesService.call(fee:, tax_codes:) : Fees::ApplyTaxesService.call(fee:)
           taxes_result.raise_if_error!
 
           fee.save!

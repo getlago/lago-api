@@ -2,7 +2,7 @@
 
 module Fees
   class ApplyTaxesService < BaseService
-    def initialize(fee:, tax_codes: [])
+    def initialize(fee:, tax_codes: nil)
       @fee = fee
       @tax_codes = tax_codes
 
@@ -53,7 +53,7 @@ module Fees
     end
 
     def applicable_taxes
-      return customer.organization.taxes.where(code: tax_codes) if tax_codes.any?
+      return customer.organization.taxes.where(code: tax_codes) if tax_codes
       return fee.add_on.taxes if fee.add_on? && fee.add_on.taxes.any?
       return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
       return fee.subscription.plan.taxes if (fee.charge? || fee.subscription?) && fee.subscription.plan.taxes.any?

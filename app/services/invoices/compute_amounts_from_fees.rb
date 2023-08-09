@@ -8,12 +8,12 @@ module Invoices
     end
 
     def call
-      invoice.fees.each do |fee|
-        next if fee.applied_taxes.any?
-
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
-        taxes_result.raise_if_error!
-        fee.save!
+      unless invoice.one_off?
+        invoice.fees.each do |fee|
+          taxes_result = Fees::ApplyTaxesService.call(fee:)
+          taxes_result.raise_if_error!
+          fee.save!
+        end
       end
 
       invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
