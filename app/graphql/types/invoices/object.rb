@@ -48,6 +48,10 @@ module Types
       field :fees, [Types::Fees::Object], null: true
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
       field :subscriptions, [Types::Subscriptions::Object]
+
+      def applied_taxes
+        object.applied_taxes.order(tax_rate: :desc)
+      end
     end
   end
 end

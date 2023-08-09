@@ -24,6 +24,10 @@ module Types
       def item_type
         object.fee_type
       end
+
+      def applied_taxes
+        object.applied_taxes.order(tax_rate: :desc)
+      end
     end
   end
 end

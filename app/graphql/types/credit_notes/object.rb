@@ -44,6 +44,10 @@ module Types
       field :can_be_voided, Boolean, null: false, method: :voidable? do
         description 'Check if credit note can be voided'
       end
+
+      def applied_taxes
+        object.applied_taxes.order(tax_rate: :desc)
+      end
     end
   end
 end
