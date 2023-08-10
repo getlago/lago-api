@@ -25,6 +25,7 @@ module Invoices
         invoice.applied_taxes << applied_tax
 
         tax_amount_cents = compute_tax_amount_cents(tax)
+        applied_tax.fees_amount_cents = fees_amount_cents(tax)
         applied_tax.amount_cents = tax_amount_cents.round
 
         # NOTE: when applied on user current usage, the invoice is
@@ -79,16 +80,18 @@ module Invoices
     #       In order to compute the invoice#taxes_rate, we have to apply
     #       a pro-rata of the fees attached to the tax on the invoices#fees_amount_cents
     def pro_rated_taxes_rate(tax)
-      fees_amount_cents = indexed_fees[tax.id].sum(&:sub_total_excluding_taxes_amount_cents)
-
       fees_rate = if invoice.sub_total_excluding_taxes_amount_cents.positive?
-        fees_amount_cents.fdiv(invoice.sub_total_excluding_taxes_amount_cents)
+        fees_amount_cents(tax).fdiv(invoice.sub_total_excluding_taxes_amount_cents)
       else
         # NOTE: when invoice have a 0 amount. The prorata is on the number of fees
         indexed_fees[tax.id].count.fdiv(invoice.fees.count)
       end
 
       fees_rate * tax.rate
+    end
+
+    def fees_amount_cents(tax)
+      indexed_fees[tax.id].sum(&:sub_total_excluding_taxes_amount_cents)
     end
   end
 end
