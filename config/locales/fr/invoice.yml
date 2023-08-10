@@ -30,6 +30,7 @@ fr:
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
     tax_rate: Taux de taxe
     tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name: "%{name} (%{rate}% sur %{amount})"
 
     details: "Détails de %{resource}"
     subscription: Abonnement
