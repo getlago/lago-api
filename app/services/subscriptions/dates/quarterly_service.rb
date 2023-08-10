@@ -52,7 +52,7 @@ module Subscriptions
         day = subscription_at.day - 1
 
         if month > 12
-          month = month % 12
+          month = (month % 12) == 0 ? 12 : (month % 12)
           year += 1
         end
 
@@ -72,7 +72,7 @@ module Subscriptions
 
         month += 3
         if month > 12
-          month = month % 12
+          month = (month % 12) == 0 ? 12 : (month % 12)
           year += 1
         end
 
@@ -98,20 +98,20 @@ module Subscriptions
         end
 
         billing_months = [
-          (subscription_at.month % 12),
-          ((subscription_at.month + 3) % 12),
-          ((subscription_at.month + 6) % 12),
-          ((subscription_at.month + 9) % 12),
+          (subscription_at.month % 12) == 0 ? 12 : (subscription_at.month % 12),
+          ((subscription_at.month + 3) % 12) == 0 ? 12 : ((subscription_at.month + 3) % 12),
+          ((subscription_at.month + 6) % 12) == 0 ? 12 : ((subscription_at.month + 6) % 12),
+          ((subscription_at.month + 9) % 12) == 0 ? 12 : ((subscription_at.month + 9) % 12),
         ].sort
 
         # This is the case when we terminate subscription on On February 10 but anniversary date is on
         # 5 of March. In that case we need to fetch billing period in previous year
-        if (date.month < billing_months[0]) || ((date.month == billing_months[0]) && date.day < day)
+        if should_find_billing_date_in_previous_year?(date, billing_months, day)
           year = date.year - 1
           month = billing_months[3]
           day = Time.days_in_month(month, year) if last_day_of_month?(subscription_at)
         # In case of termination that is in the middle of the year, previous period anniversary date has to be returned
-        elsif date.day < day
+        elsif should_find_previous_billing_date?(date, day)
           year = date.year
           month = billing_months.reverse.find { |m| m < date.month }
           day = Time.days_in_month(month, year) if last_day_of_month?(subscription_at)
@@ -121,6 +121,22 @@ module Subscriptions
         end
 
         build_date(year, month, day)
+      end
+
+      def should_find_billing_date_in_previous_year?(date, billing_months, day)
+        return true if date.month < billing_months[0]
+
+        (date.month == billing_months[0]) && should_find_previous_billing_date?(date, day)
+      end
+
+      def should_find_previous_billing_date?(date, day)
+        return false if last_day_of_month?(date) && last_day_of_month?(subscription_at)
+
+        return true if date.day < day && terminated_pay_in_arrear?
+        return true if (date.day + 1) < day && last_day_of_month?(subscription_at)
+        return true if date.day < day && !last_day_of_month?(subscription_at)
+
+        false
       end
     end
   end
