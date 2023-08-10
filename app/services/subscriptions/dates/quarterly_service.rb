@@ -52,7 +52,7 @@ module Subscriptions
         day = subscription_at.day - 1
 
         if month > 12
-          month = (month % 12) == 0 ? 12 : (month % 12)
+          month = (month % 12).zero? ? 12 : (month % 12)
           year += 1
         end
 
@@ -72,7 +72,7 @@ module Subscriptions
 
         month += 3
         if month > 12
-          month = (month % 12) == 0 ? 12 : (month % 12)
+          month = (month % 12).zero? ? 12 : (month % 12)
           year += 1
         end
 
@@ -98,10 +98,10 @@ module Subscriptions
         end
 
         billing_months = [
-          (subscription_at.month % 12) == 0 ? 12 : (subscription_at.month % 12),
-          ((subscription_at.month + 3) % 12) == 0 ? 12 : ((subscription_at.month + 3) % 12),
-          ((subscription_at.month + 6) % 12) == 0 ? 12 : ((subscription_at.month + 6) % 12),
-          ((subscription_at.month + 9) % 12) == 0 ? 12 : ((subscription_at.month + 9) % 12),
+          (subscription_at.month % 12).zero? ? 12 : (subscription_at.month % 12),
+          ((subscription_at.month + 3) % 12).zero? ? 12 : ((subscription_at.month + 3) % 12),
+          ((subscription_at.month + 6) % 12).zero? ? 12 : ((subscription_at.month + 6) % 12),
+          ((subscription_at.month + 9) % 12).zero? ? 12 : ((subscription_at.month + 9) % 12),
         ].sort
 
         # This is the case when we terminate subscription on On February 10 but anniversary date is on
