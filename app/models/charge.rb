@@ -21,6 +21,7 @@ class Charge < ApplicationRecord
     package
     percentage
     volume
+    graduated_percentage
   ].freeze
 
   enum charge_model: CHARGE_MODELS
@@ -30,6 +31,7 @@ class Charge < ApplicationRecord
   validate :validate_package, if: -> { package? && group_properties.empty? }
   validate :validate_percentage, if: -> { percentage? && group_properties.empty? }
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
+  validate :validate_graduated_percentage, if: -> { graduated_percentage? && group_properties.empty? }
 
   validates :min_amount_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
@@ -68,6 +70,10 @@ class Charge < ApplicationRecord
 
   def validate_volume
     validate_charge_model(Charges::Validators::VolumeService)
+  end
+
+  def validate_graduated_percentage
+    validate_charge_model(Charges::Validators::GraduatedPercentageService)
   end
 
   def validate_charge_model(validator)
