@@ -2,6 +2,14 @@
 
 module Validators
   class DecimalAmountService
+    def self.valid_amount?(amount)
+      new(amount).valid_amount?
+    end
+
+    def self.valid_positive_amount?(amount)
+      new(amount).valid_positive_amount?
+    end
+
     def initialize(amount)
       @amount = amount
     end

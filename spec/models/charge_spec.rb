@@ -310,6 +310,65 @@ RSpec.describe Charge, type: :model do
     end
   end
 
+  describe '#validate_graduated_percentage' do
+    subject(:charge) do
+      build(:graduated_percentage_charge, properties: charge_properties)
+    end
+
+    let(:charge_properties) do
+      { graduated_percentage_ranges: [{ 'foo' => 'bar' }] }
+    end
+    let(:validation_service) { instance_double(Charges::Validators::GraduatedPercentageService) }
+
+    let(:service_response) do
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          rate: ['invalid_rate'],
+          ranges: ['invalid_graduated_percentage_ranges'],
+        },
+      )
+    end
+
+    it 'delegates to a validation service' do
+      allow(Charges::Validators::GraduatedPercentageService).to receive(:new)
+        .and_return(validation_service)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
+        .and_return(service_response)
+
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include('invalid_rate')
+        expect(charge.errors.messages[:properties]).to include('invalid_graduated_percentage_ranges')
+
+        expect(Charges::Validators::GraduatedPercentageService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
+      end
+    end
+
+    context 'when charge model is not graduated percentage' do
+      subject(:charge) { build(:standard_charge) }
+
+      it 'does not apply the validation' do
+        allow(Charges::Validators::GraduatedPercentageService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
+          .and_return(service_response)
+
+        charge.valid?
+
+        expect(Charges::Validators::GraduatedPercentageService).not_to have_received(:new)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
+      end
+    end
+  end
+
   describe '#validate_group_properties' do
     context 'without groups' do
       it 'does not return an error' do
