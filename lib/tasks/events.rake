@@ -25,7 +25,7 @@ namespace :events do
 
   desc 'Fill missing properties on persisted_events'
   task fill_persisted_properties: :environment do
-    PersistedEvent.unscoped.find_each do |persisted_event|
+    QuantifiedEvent.unscoped.find_each do |persisted_event|
       event = Event.unscoped.where(
         organization_id: persisted_event.billable_metric.organization_id,
         customer_id: persisted_event.customer_id,
