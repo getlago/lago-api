@@ -38,6 +38,7 @@ de:
     monthly: Monatlich
     yearly: Jährlich
     weekly: Wöchentlich
+    quarterly: Vierteljährlich
     sub_total: Zwischensumme
     subscription_interval: "%{plan_interval}es Abonnement - %{plan_name}"
 

@@ -49,5 +49,11 @@ RSpec.describe Plan, type: :model do
 
       it { expect(plan.yearly_amount_cents).to eq(5200) }
     end
+
+    context 'when plan is quarterly' do
+      before { plan.interval = 'quarterly' }
+
+      it { expect(plan.yearly_amount_cents).to eq(400) }
+    end
   end
 end

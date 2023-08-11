@@ -38,6 +38,7 @@ fr:
     monthly: mensuel
     yearly: annuel
     weekly: hebdomadaire
+    quarterly: trimestriellement
     sub_total: Sous total
     subscription_interval: Abonnement %{plan_interval} - %{plan_name}
 

@@ -42,6 +42,8 @@ module Subscriptions
             UNION
             (#{monthly_calendar})
             UNION
+            (#{quarterly_calendar})
+            UNION
             (#{yearly_with_monthly_charges_calendar})
             UNION
             (#{yearly_calendar})
@@ -51,6 +53,8 @@ module Subscriptions
             (#{weekly_anniversary})
             UNION
             (#{monthly_anniversary})
+            UNION
+            (#{quarterly_anniversary})
             UNION
             (#{yearly_with_monthly_charges_anniversary})
             UNION
@@ -109,6 +113,28 @@ module Subscriptions
       )
     end
 
+    # NOTE: Billed quarterly on 1st day of the January, April, July and October
+    def quarterly_calendar
+      billing_month = <<-SQL
+        (
+          DATE_PART('month', (:today#{at_time_zone})) = 1
+            OR DATE_PART('month', (:today#{at_time_zone})) = 4
+            OR DATE_PART('month', (:today#{at_time_zone})) = 7
+            OR DATE_PART('month', (:today#{at_time_zone})) = 10
+        )
+      SQL
+
+      billing_day = <<-SQL
+        (DATE_PART('day', (:today#{at_time_zone})) = 1)
+      SQL
+
+      base_subscription_scope(
+        billing_time: :calendar,
+        interval: :quarterly,
+        conditions: [billing_month, billing_day],
+      )
+    end
+
     # NOTE: Bill charges monthly for yearly plans on 1st day of the month
     def yearly_with_monthly_charges_calendar
       base_subscription_scope(
@@ -163,6 +189,47 @@ module Subscriptions
         SQL
       )
     end
+
+    # NOTE: Billed quarterly on anniversary date
+    # rubocop:disable Layout/LineLength
+    def quarterly_anniversary
+      billing_day = <<-SQL
+        DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
+          -- Check if today is the last day of the month
+          CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
+          THEN
+            -- If so and if it counts less than 31 days, we need to take all days up to 31 into account
+            (SELECT ARRAY(SELECT generate_series(DATE_PART('day', :today#{at_time_zone})::integer, 31)))
+          ELSE
+            -- Otherwise, we just need the current day
+            (SELECT ARRAY[DATE_PART('day', :today#{at_time_zone})])
+          END
+        )
+      SQL
+
+      billing_month = <<-SQL
+        (
+          -- We need to avoid zero and instead of it use 12. E.g.: (3 + 9) % 12 = 0 -> 12
+          CASE WHEN MOD(CAST(DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) AS INTEGER), 3) = 0
+          THEN
+            (DATE_PART('month', :today#{at_time_zone}) IN (SELECT unnest(ARRAY[3, 6, 9, 12])))
+          ELSE (
+            DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) + 3 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) + 6 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) + 9 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+          )
+          END
+        )
+      SQL
+
+      base_subscription_scope(
+        billing_time: :anniversary,
+        interval: :quarterly,
+        conditions: [billing_month, billing_day],
+      )
+    end
+    # rubocop:enable Layout/LineLength
 
     def yearly_anniversary
       billing_month = <<-SQL
