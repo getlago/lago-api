@@ -25,41 +25,45 @@ RSpec.describe Plans::UpdateService, type: :service do
       amount_cents: 200,
       amount_currency: 'EUR',
       tax_codes: [tax2.code],
-      charges: [
-        {
-          billable_metric_id: sum_billable_metric.id,
-          charge_model: 'standard',
-          min_amount_cents: 100,
-          group_properties: [
+      charges: charges_args,
+    }
+  end
+
+  let(:charges_args) do
+    [
+      {
+        billable_metric_id: sum_billable_metric.id,
+        charge_model: 'standard',
+        min_amount_cents: 100,
+        group_properties: [
+          {
+            group_id: group.id,
+            values: { amount: '100' },
+          },
+        ],
+        tax_codes: [tax1.code],
+      },
+      {
+        billable_metric_id: billable_metric.id,
+        charge_model: 'graduated',
+        properties: {
+          graduated_ranges: [
             {
-              group_id: group.id,
-              values: { amount: '100' },
+              from_value: 0,
+              to_value: 10,
+              per_unit_amount: '2',
+              flat_amount: '0',
+            },
+            {
+              from_value: 11,
+              to_value: nil,
+              per_unit_amount: '3',
+              flat_amount: '3',
             },
           ],
-          tax_codes: [tax1.code],
         },
-        {
-          billable_metric_id: billable_metric.id,
-          charge_model: 'graduated',
-          properties: {
-            graduated_ranges: [
-              {
-                from_value: 0,
-                to_value: 10,
-                per_unit_amount: '2',
-                flat_amount: '0',
-              },
-              {
-                from_value: 11,
-                to_value: nil,
-                per_unit_amount: '3',
-                flat_amount: '3',
-              },
-            ],
-          },
-        },
-      ],
-    }
+      },
+    ]
   end
 
   describe 'call' do
@@ -128,6 +132,65 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
+      end
+
+      context 'with premium charge model' do
+        let(:plan_name) { 'foo' }
+
+        let(:charges_args) do
+          [
+            {
+              billable_metric_id: sum_billable_metric.id,
+              charge_model: 'graduated_percentage',
+              pay_in_advance: true,
+              invoiceable: false,
+              properties: {
+                graduated_percentage_ranges: [
+                  {
+                    from_value: 0,
+                    to_value: 10,
+                    rate: '3',
+                    fixed_amount: '2',
+                    flat_amount: '0',
+                  },
+                  {
+                    from_value: 11,
+                    to_value: nil,
+                    rate: '2',
+                    fixed_amount: '3',
+                    flat_amount: '3',
+                  },
+                ],
+              },
+            },
+          ]
+        end
+
+        it 'returns an error' do
+          result = plans_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:charge_model]).to eq(['value_is_mandatory'])
+          end
+        end
+
+        context 'when premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'saves premium charge model' do
+            plans_service.call
+
+            expect(plan.charges.graduated_percentage.first).to have_attributes(
+              {
+                pay_in_advance: true,
+                invoiceable: false,
+                charge_model: 'graduated_percentage',
+              },
+            )
+          end
         end
       end
     end
