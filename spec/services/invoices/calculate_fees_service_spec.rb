@@ -714,7 +714,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               :invoice,
               created_at: started_at - 3.months,
               customer: subscription.customer,
-              organization: plan.organization
+              organization: plan.organization,
             )
           end
 
