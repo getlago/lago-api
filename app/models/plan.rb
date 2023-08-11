@@ -13,7 +13,7 @@ class Plan < ApplicationRecord
   has_many :billable_metrics, through: :charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
-  has_many :children, class_name: 'Plan', foreign_key: :parent_id
+  has_many :children, class_name: 'Plan', foreign_key: :parent_id, dependent: :destroy
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :invoices, through: :subscriptions
