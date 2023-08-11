@@ -49,7 +49,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
               base_amount_cents = fees.sum(:amount_cents)
               next if base_amount_cents.zero?
 
-              fee.precise_coupons_amount_cents += (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)
+              fee.precise_coupons_amount_cents = (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)
             end
 
           elsif credit.applied_coupon.coupon.limited_billable_metrics
@@ -63,17 +63,16 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
               base_amount_cents = fees.sum(:amount_cents)
               next if base_amount_cents.zero?
 
-              fee.precise_coupons_amount_cents += (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)
+              fee.precise_coupons_amount_cents = (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)
             end
           else
             fees = credit.invoice.fees
 
             fees.find_each do |fee|
-              base_amount_cents = Fee.where(invoice_id: fee.invoice_id)
-                .sum('fees.amount_cents - fees.precise_coupons_amount_cents')
+              base_amount_cents = fees.sum(:amount_cents)
               next if base_amount_cents.zero?
 
-              fee.precise_coupons_amount_cents += (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)
+              fee.precise_coupons_amount_cents = (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)
               fee.save!
             end
           end
