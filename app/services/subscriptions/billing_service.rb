@@ -116,12 +116,7 @@ module Subscriptions
     # NOTE: Billed quarterly on 1st day of the January, April, July and October
     def quarterly_calendar
       billing_month = <<-SQL
-        (
-          DATE_PART('month', (:today#{at_time_zone})) = 1
-            OR DATE_PART('month', (:today#{at_time_zone})) = 4
-            OR DATE_PART('month', (:today#{at_time_zone})) = 7
-            OR DATE_PART('month', (:today#{at_time_zone})) = 10
-        )
+        (DATE_PART('month', (:today#{at_time_zone})) IN (1, 4, 7, 10))
       SQL
 
       billing_day = <<-SQL
@@ -212,7 +207,7 @@ module Subscriptions
           -- We need to avoid zero and instead of it use 12. E.g.: (3 + 9) % 12 = 0 -> 12
           CASE WHEN MOD(CAST(DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) AS INTEGER), 3) = 0
           THEN
-            (DATE_PART('month', :today#{at_time_zone}) IN (SELECT unnest(ARRAY[3, 6, 9, 12])))
+            (DATE_PART('month', :today#{at_time_zone}) IN (3, 6, 9, 12))
           ELSE (
             DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) = DATE_PART('month', :today#{at_time_zone})
               OR MOD(CAST(DATE_PART('month', (subscriptions.subscription_at#{at_time_zone})) + 3 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
