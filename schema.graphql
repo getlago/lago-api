@@ -3208,7 +3208,10 @@ type InvoiceSubscription {
   chargesToDatetime: ISO8601DateTime
   fees: [Fee!]
   fromDatetime: ISO8601DateTime
+  inAdvanceChargesFromDatetime: ISO8601DateTime
+  inAdvanceChargesToDatetime: ISO8601DateTime
   invoice: Invoice!
+  shouldUseInAdvanceChargesInterval: Boolean!
   subscription: Subscription!
   subscriptionAmountCents: BigInt!
   toDatetime: ISO8601DateTime
