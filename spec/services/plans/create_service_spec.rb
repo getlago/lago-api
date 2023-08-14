@@ -25,43 +25,47 @@ RSpec.describe Plans::CreateService, type: :service do
         amount_cents: 200,
         amount_currency: 'EUR',
         tax_codes: [plan_tax.code],
-        charges: [
-          {
-            billable_metric_id: billable_metric.id,
-            charge_model: 'standard',
-            min_amount_cents: 100,
-            tax_codes: [charge_tax.code],
-            group_properties: [
+        charges: charges_args,
+      }
+    end
+
+    let(:charges_args) do
+      [
+        {
+          billable_metric_id: billable_metric.id,
+          charge_model: 'standard',
+          min_amount_cents: 100,
+          tax_codes: [charge_tax.code],
+          group_properties: [
+            {
+              group_id: group.id,
+              values: { amount: '100' },
+            },
+          ],
+        },
+        {
+          billable_metric_id: sum_billable_metric.id,
+          charge_model: 'graduated',
+          pay_in_advance: true,
+          invoiceable: false,
+          properties: {
+            graduated_ranges: [
               {
-                group_id: group.id,
-                values: { amount: '100' },
+                from_value: 0,
+                to_value: 10,
+                per_unit_amount: '2',
+                flat_amount: '0',
+              },
+              {
+                from_value: 11,
+                to_value: nil,
+                per_unit_amount: '3',
+                flat_amount: '3',
               },
             ],
           },
-          {
-            billable_metric_id: sum_billable_metric.id,
-            charge_model: 'graduated',
-            pay_in_advance: true,
-            invoiceable: false,
-            properties: {
-              graduated_ranges: [
-                {
-                  from_value: 0,
-                  to_value: 10,
-                  per_unit_amount: '2',
-                  flat_amount: '0',
-                },
-                {
-                  from_value: 11,
-                  to_value: nil,
-                  per_unit_amount: '3',
-                  flat_amount: '3',
-                },
-              ],
-            },
-          },
-        ],
-      }
+        },
+      ]
     end
 
     before do
@@ -129,6 +133,47 @@ RSpec.describe Plans::CreateService, type: :service do
     context 'when premium' do
       around { |test| lago_premium!(&test) }
 
+      let(:charges_args) do
+        [
+          {
+            billable_metric_id: billable_metric.id,
+            charge_model: 'standard',
+            min_amount_cents: 100,
+            tax_codes: [charge_tax.code],
+            group_properties: [
+              {
+                group_id: group.id,
+                values: { amount: '100' },
+              },
+            ],
+          },
+          {
+            billable_metric_id: sum_billable_metric.id,
+            charge_model: 'graduated_percentage',
+            pay_in_advance: true,
+            invoiceable: false,
+            properties: {
+              graduated_percentage_ranges: [
+                {
+                  from_value: 0,
+                  to_value: 10,
+                  rate: '3',
+                  fixed_amount: '2',
+                  flat_amount: '0',
+                },
+                {
+                  from_value: 11,
+                  to_value: nil,
+                  rate: '2',
+                  fixed_amount: '3',
+                  flat_amount: '3',
+                },
+              ],
+            },
+          },
+        ]
+      end
+
       it 'saves premium attributes' do
         plan = plans_service.create(**create_args).plan
 
@@ -139,10 +184,11 @@ RSpec.describe Plans::CreateService, type: :service do
             invoiceable: true,
           },
         )
-        expect(plan.charges.graduated.first).to have_attributes(
+        expect(plan.charges.graduated_percentage.first).to have_attributes(
           {
             pay_in_advance: true,
             invoiceable: false,
+            charge_model: 'graduated_percentage',
           },
         )
       end
@@ -170,6 +216,48 @@ RSpec.describe Plans::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
+      end
+
+      context 'with premium charge model' do
+        let(:plan_name) { 'foo' }
+        let(:charges_args) do
+          [
+            {
+              billable_metric_id: sum_billable_metric.id,
+              charge_model: 'graduated_percentage',
+              pay_in_advance: true,
+              invoiceable: false,
+              properties: {
+                graduated_ranges: [
+                  {
+                    from_value: 0,
+                    to_value: 10,
+                    rate: '3',
+                    fixed_amount: '2',
+                    flat_amount: '0',
+                  },
+                  {
+                    from_value: 11,
+                    to_value: nil,
+                    rate: '2',
+                    fixed_amount: '3',
+                    flat_amount: '3',
+                  },
+                ],
+              },
+            },
+          ]
+        end
+
+        it 'returns an error' do
+          result = plans_service.create(**create_args)
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:charge_model]).to eq(['value_is_mandatory'])
+          end
         end
       end
     end

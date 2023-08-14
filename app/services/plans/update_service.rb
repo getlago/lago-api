@@ -66,7 +66,7 @@ module Plans
       charge = plan.charges.new(
         billable_metric_id: params[:billable_metric_id],
         amount_currency: params[:amount_currency],
-        charge_model: params[:charge_model]&.to_sym,
+        charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
         prorated: params[:prorated] || false,
         properties: params[:properties] || {},
@@ -86,6 +86,13 @@ module Plans
       end
 
       charge
+    end
+
+    def charge_model(params)
+      model = params[:charge_model]&.to_sym
+      return if model == :graduated_percentage && !License.premium?
+
+      model
     end
 
     def process_charges(plan, params_charges)
