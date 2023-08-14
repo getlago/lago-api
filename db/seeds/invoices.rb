@@ -11,6 +11,8 @@ end
 
 Invoice.all.find_each do |invoice|
   fee = invoice.fees.sample
+  next if fee.nil?
+
   amount = fee.amount_cents / 2
   next if amount.zero?
 
