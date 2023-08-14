@@ -19,7 +19,6 @@ module Types
 
       field :in_advance_charges_from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :in_advance_charges_to_datetime, GraphQL::Types::ISO8601DateTime, null: true
-      field :should_use_in_advance_charges_interval, Boolean, null: false
 
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
