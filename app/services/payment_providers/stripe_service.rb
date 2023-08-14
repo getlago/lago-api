@@ -140,6 +140,7 @@ module PaymentProviders
       when 'charge.succeeded'
         Invoices::Payments::StripeService
           .new.update_payment_status(
+            organization_id: organization.id,
             provider_payment_id: event.data.object.payment_intent,
             status: 'succeeded',
             metadata: event.data.object.metadata.to_h.symbolize_keys,
@@ -149,6 +150,7 @@ module PaymentProviders
 
         Invoices::Payments::StripeService
           .new.update_payment_status(
+            organization_id: organization.id,
             provider_payment_id: event.data.object.id,
             status:,
             metadata: event.data.object.metadata.to_h.symbolize_keys,

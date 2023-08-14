@@ -242,6 +242,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         expect(Invoices::Payments::StripeService).to have_received(:new)
         expect(payment_service).to have_received(:update_payment_status)
           .with(
+            organization_id: organization.id,
             provider_payment_id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
             status: 'succeeded',
             metadata: {
@@ -268,6 +269,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         expect(Invoices::Payments::StripeService).to have_received(:new)
         expect(payment_service).to have_received(:update_payment_status)
           .with(
+            organization_id: organization.id,
             provider_payment_id: 'pi_123456',
             status: 'succeeded',
             metadata: {},

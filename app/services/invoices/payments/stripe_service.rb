@@ -49,9 +49,9 @@ module Invoices
         result
       end
 
-      def update_payment_status(provider_payment_id:, status:, metadata: {})
+      def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
         payment = Payment.find_by(provider_payment_id:)
-        return handle_missing_payment(metadata) unless payment
+        return handle_missing_payment(organization_id, metadata) unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
@@ -202,12 +202,13 @@ module Invoices
         )
       end
 
-      def handle_missing_payment(metadata)
+      def handle_missing_payment(organization_id, metadata)
         # NOTE: Payment was not initiated by lago
         return result unless metadata&.key?(:lago_invoice_id)
 
-        # NOTE: Invoice does not belong to this lago instance
-        invoice = Invoice.find_by(id: metadata[:lago_invoice_id])
+        # NOTE: Invoice does not belong to this lago organization
+        #       It means the same Stripe secret key is used for multiple organizations
+        invoice = Invoice.find_by(id: metadata[:lago_invoice_id], organization_id:)
         return result if invoice.nil?
 
         # NOTE: Invoice exists but status is failed
