@@ -25,6 +25,7 @@ class Plan < ApplicationRecord
     weekly
     monthly
     yearly
+    quarterly
   ].freeze
 
   enum interval: INTERVALS
@@ -58,6 +59,7 @@ class Plan < ApplicationRecord
   def yearly_amount_cents
     return amount_cents if yearly?
     return amount_cents * 12 if monthly?
+    return amount_cents * 4 if quarterly?
 
     amount_cents * 52
   end

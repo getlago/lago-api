@@ -10,6 +10,8 @@ module Subscriptions
                 Subscriptions::Dates::MonthlyService
               when :yearly
                 Subscriptions::Dates::YearlyService
+              when :quarterly
+                Subscriptions::Dates::QuarterlyService
               else
                 raise(NotImplementedError)
       end

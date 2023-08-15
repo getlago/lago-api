@@ -39,6 +39,7 @@ en:
     monthly: Monthly
     yearly: Yearly
     weekly: Weekly
+    quarterly: Quarterly
     sub_total: Sub total
     subscription_interval: "%{plan_interval} subscription - %{plan_name}"
 

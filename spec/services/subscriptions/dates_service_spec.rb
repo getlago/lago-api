@@ -34,6 +34,14 @@ RSpec.describe Subscriptions::DatesService, type: :service do
       end
     end
 
+    context 'when interval is quarterly' do
+      let(:interval) { :quarterly }
+
+      it 'returns a quarterly service instance' do
+        expect(result).to be_kind_of(Subscriptions::Dates::QuarterlyService)
+      end
+    end
+
     context 'when interval is monthly' do
       let(:interval) { :monthly }
 

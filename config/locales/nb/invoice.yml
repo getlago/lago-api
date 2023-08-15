@@ -39,6 +39,7 @@ nb:
     monthly: Månedlig
     yearly: Årlig
     weekly: Ukentlig
+    quarterly: Kvartalsvis
     sub_total: Sub total
     subscription_interval: "%{plan_interval} abonnement - %{plan_name}"
 
