@@ -109,7 +109,7 @@ class Subscription < ApplicationRecord
 
     # NOTE: We want unique external id per organization.
     used_ids = organization.subscriptions.active.pluck(:external_id)
-    errors.add(:external_id, :value_already_exists) if used_ids&.include?(external_id)
+    errors.add(:external_id, :value_already_exist) if used_ids&.include?(external_id)
   end
 
   def downgrade_plan_date
