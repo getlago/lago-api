@@ -3028,6 +3028,22 @@ type GocardlessProvider {
   webhookSecret: String
 }
 
+type GraduatedPercentageRange {
+  fixedAmount: String!
+  flatAmount: String!
+  fromValue: BigInt!
+  rate: String!
+  toValue: BigInt
+}
+
+input GraduatedPercentageRangeInput {
+  fixedAmount: String!
+  flatAmount: String!
+  fromValue: BigInt!
+  rate: String!
+  toValue: BigInt
+}
+
 type GraduatedRange {
   flatAmount: String!
   fromValue: BigInt!
@@ -3983,6 +3999,7 @@ type Properties {
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
   freeUnitsPerTotalAggregation: String
+  graduatedPercentageRanges: [GraduatedPercentageRange!]
   graduatedRanges: [GraduatedRange!]
   packageSize: BigInt
   rate: String
@@ -3995,6 +4012,7 @@ input PropertiesInput {
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
   freeUnitsPerTotalAggregation: String
+  graduatedPercentageRanges: [GraduatedPercentageRangeInput!]
   graduatedRanges: [GraduatedRangeInput!]
   packageSize: BigInt
   rate: String
