@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_08_11_120622) do
+ActiveRecord::Schema[7.0].define(version: 2023_08_16_091053) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -294,6 +294,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_11_120622) do
     t.string "document_locale"
     t.string "tax_identification_number"
     t.integer "net_payment_term"
+    t.string "external_salesforce_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"

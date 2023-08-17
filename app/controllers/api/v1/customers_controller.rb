@@ -115,6 +115,7 @@ module Api
           :currency,
           :timezone,
           :net_payment_term,
+          :external_salesforce_id,
           billing_configuration: [
             :invoice_grace_period,
             :payment_provider,

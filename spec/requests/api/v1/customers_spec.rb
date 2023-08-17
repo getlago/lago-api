@@ -12,6 +12,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         name: 'Foo Bar',
         currency: 'EUR',
         timezone: 'America/New_York',
+        external_salesforce_id: 'foobar',
       }
     end
 
@@ -26,6 +27,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:name]).to eq(create_params[:name])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
+        expect(json[:customer][:external_salesforce_id]).to eq(create_params[:external_salesforce_id])
       end
     end
 

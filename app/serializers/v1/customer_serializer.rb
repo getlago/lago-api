@@ -28,6 +28,7 @@ module V1
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
         net_payment_term: model.net_payment_term,
+        external_salesforce_id: model.external_salesforce_id,
         billing_configuration:,
       }.merge(legacy_values.except(:billing_configuration))
 
