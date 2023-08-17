@@ -36,6 +36,7 @@ module Customers
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
         customer.net_payment_term = args[:net_payment_term] if args.key?(:net_payment_term)
+        customer.external_salesforce_id = args[:external_salesforce_id] if args.key?(:external_salesforce_id)
 
         assign_premium_attributes(customer, args)
 
