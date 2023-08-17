@@ -9,6 +9,9 @@ module Types
       # NOTE: Graduated charge model
       field :graduated_ranges, [Types::Charges::GraduatedRange], null: true, hash_key: :graduated_ranges
 
+      # NOTE: Graduated percentage modle
+      field :graduated_percentage_ranges, [Types::Charges::GraduatedPercentageRange], null: true
+
       # NOTE: Package charge model
       field :free_units, GraphQL::Types::BigInt, null: true, hash_key: :free_units
       field :package_size, GraphQL::Types::BigInt, null: true, hash_key: :package_size

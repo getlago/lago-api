@@ -9,6 +9,9 @@ module Types
       # NOTE: Graduated charge model
       argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
 
+      # NOTE: Graduated percentage charge model
+      argument :graduated_percentage_ranges, [Types::Charges::GraduatedPercentageRangeInput], required: false
+
       # NOTE: Package charge model
       argument :free_units, GraphQL::Types::BigInt, required: false
       argument :package_size, GraphQL::Types::BigInt, required: false
