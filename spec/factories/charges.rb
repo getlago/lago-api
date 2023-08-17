@@ -66,7 +66,7 @@ FactoryBot.define do
             },
             {
               from_value: 11,
-              to_value: null,
+              to_value: nil,
               rate: '0',
               fixed_amount: '0.00010',
               flat_amount: '300',
