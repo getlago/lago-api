@@ -35,8 +35,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
           .joins(:invoice)
           .joins(applied_coupon: :coupon)
           .where('credits.amount_cents > 0')
-          .where(invoice: { version_number: 3 })
-          .includes(:invoice, applied_coupon: :coupon)
+          .where(invoices: { version_number: 3 })
           .order('credits.created_at ASC')
 
         # NOTE: prevent migration of fees already using the field
@@ -48,7 +47,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
             fees = credit.invoice.fees
               .where.not(id: fees_id)
               .joins(:subscription)
-              .where(subscription: { plan_id: coupon.coupon_targets.where.not(plan_id: nil).select(:plan_id) })
+              .where(subscriptions: { plan_id: coupon.coupon_targets.where.not(plan_id: nil).select(:plan_id) })
 
             fees.find_each do |fee|
               base_amount_cents = fees.sum(:amount_cents)

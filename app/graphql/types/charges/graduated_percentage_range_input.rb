@@ -6,7 +6,6 @@ module Types
       argument :from_value, GraphQL::Types::BigInt, required: true
       argument :to_value, GraphQL::Types::BigInt, required: false
 
-      argument :fixed_amount, String, required: true
       argument :flat_amount, String, required: true
       argument :rate, String, required: true
     end

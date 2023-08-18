@@ -108,7 +108,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
               {
                 from_value: 0,
                 to_value: nil,
-                fixed_amount: '0.01',
                 flat_amount: '0.01',
                 rate: '2',
               },

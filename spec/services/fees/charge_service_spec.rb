@@ -1062,7 +1062,6 @@ RSpec.describe Fees::ChargeService do
                   {
                     from_value: 0,
                     to_value: nil,
-                    fixed_amount: '0.01',
                     flat_amount: '0.01',
                     rate: '2',
                   },
@@ -1077,7 +1076,6 @@ RSpec.describe Fees::ChargeService do
                   {
                     from_value: 0,
                     to_value: nil,
-                    fixed_amount: '0.03',
                     flat_amount: '0.01',
                     rate: '3',
                   },
@@ -1135,13 +1133,13 @@ RSpec.describe Fees::ChargeService do
           )
           expect(created_fees.first).to have_attributes(
             group: europe,
-            amount_cents: 7, # 2 × 0.02 + 0.01 + 2 × 0.01
+            amount_cents: 5, # 2 × 0.02 + 0.01
             units: 2,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
-            amount_cents: 7, # 1 × 0.03 + 0.01 + 1 × 0.03
+            amount_cents: 4, # 1 × 0.03 + 0.01
             units: 1,
           )
         end

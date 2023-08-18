@@ -3029,7 +3029,6 @@ type GocardlessProvider {
 }
 
 type GraduatedPercentageRange {
-  fixedAmount: String!
   flatAmount: String!
   fromValue: BigInt!
   rate: String!
@@ -3037,7 +3036,6 @@ type GraduatedPercentageRange {
 }
 
 input GraduatedPercentageRangeInput {
-  fixedAmount: String!
   flatAmount: String!
   fromValue: BigInt!
   rate: String!

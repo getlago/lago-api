@@ -32,10 +32,6 @@ module Charges
       end
 
       def validate_rate_and_amounts(range)
-        unless ::Validators::DecimalAmountService.valid_amount?(range[:fixed_amount])
-          add_error(field: :fixed_amount, error_code: 'invalid_amount')
-        end
-
         unless ::Validators::DecimalAmountService.valid_amount?(range[:flat_amount])
           add_error(field: :flat_amount, error_code: 'invalid_amount')
         end

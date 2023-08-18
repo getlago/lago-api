@@ -27,21 +27,18 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
             from_value: 0,
             to_value: 10,
             flat_amount: '200',
-            fixed_amount: '0.5',
             rate: '1',
           },
           {
             from_value: 11,
             to_value: 20,
             flat_amount: '300',
-            fixed_amount: '0.4',
             rate: '2',
           },
           {
             from_value: 21,
             to_value: nil,
             flat_amount: '400',
-            fixed_amount: '0.3',
             rate: '3',
           },
         ],
@@ -63,8 +60,8 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     let(:aggregation_count) { 1 }
 
     it 'applies a unit amount for 1 and the flat rate for 1' do
-      # NOTE: 200 + 1 * 0.01 + 1 * 0.5
-      expect(apply_graduated_percentage_service.amount).to eq(200.51)
+      # NOTE: 200 + 1 * 0.01
+      expect(apply_graduated_percentage_service.amount).to eq(200.01)
     end
   end
 
@@ -73,8 +70,8 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     let(:aggregation_count) { 1 }
 
     it 'applies all unit amount up to the top bound' do
-      # NOTE: 200 + 10 * 0.01 + 1 * 0.5
-      expect(apply_graduated_percentage_service.amount).to eq(200.6)
+      # NOTE: 200 + 10 * 0.01
+      expect(apply_graduated_percentage_service.amount).to eq(200.1)
     end
   end
 
@@ -83,8 +80,8 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     let(:aggregation_count) { 1 }
 
     it 'applies next ranges flat amount' do
-      # NOTE: 200 + 300 + 10 * 0.01 + 1 * 0.02 + 1 * 0.4
-      expect(apply_graduated_percentage_service.amount).to eq(500.52)
+      # NOTE: 200 + 300 + 10 * 0.01 + 1 * 0.02
+      expect(apply_graduated_percentage_service.amount).to eq(500.12)
     end
   end
 
@@ -93,8 +90,8 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     let(:aggregation_count) { 1 }
 
     it 'applies next ranges flat amount and range units amount' do
-      # NOTE: 200 + 300 + 10 * 0.01 + 2 * 0.02 + 1 * 0.4
-      expect(apply_graduated_percentage_service.amount).to eq(500.54)
+      # NOTE: 200 + 300 + 10 * 0.01 + 2 * 0.02
+      expect(apply_graduated_percentage_service.amount).to eq(500.14)
     end
   end
 
@@ -103,8 +100,8 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     let(:aggregation_count) { 1 }
 
     it 'applies last unit amount for more unit in last step' do
-      # NOTE: 200 + 300 + 400 + 10 * 0.01 + 10 * 0.02 + 1 * 0.03 + 1 * 0.3
-      expect(apply_graduated_percentage_service.amount).to eq(900.63)
+      # NOTE: 200 + 300 + 400 + 10 * 0.01 + 10 * 0.02 + 1 * 0.03
+      expect(apply_graduated_percentage_service.amount).to eq(900.33)
     end
   end
 end
