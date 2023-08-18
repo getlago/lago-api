@@ -267,8 +267,11 @@ RSpec.describe Plans::UpdateService, type: :service do
         expect { plans_service.call }
           .to change(GroupProperty, :count).by(1)
 
-        expect(existing_charge.reload.prorated).to eq(true)
-        expect(existing_charge.reload.group_properties.first).to have_attributes(
+        expect(existing_charge.reload).to have_attributes(
+          prorated: true,
+          properties: { 'amount' => '0' },
+        )
+        expect(existing_charge.group_properties.first).to have_attributes(
           group_id: group.id,
           values: { 'amount' => '100' },
         )
