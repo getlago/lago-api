@@ -69,6 +69,10 @@ class Coupon < ApplicationRecord
 
   scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!

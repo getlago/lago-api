@@ -35,6 +35,10 @@ class BillableMetric < ApplicationRecord
 
   default_scope -> { kept }
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+
   def attached_to_subscriptions?
     plans.joins(:subscriptions).exists?
   end
