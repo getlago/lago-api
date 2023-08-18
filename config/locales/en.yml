@@ -44,5 +44,4 @@ en:
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
         value_already_exist: value_already_exist
         too_long: value_is_too_long
-        values_not_all_present: values_not_all_present
         unsupported_value: unsupported_value
