@@ -77,6 +77,14 @@ class Invoice < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
+  def self.ransackable_attributes(_ = nil)
+    %w[id number]
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[customer]
+  end
+
   def file_url
     return if file.blank?
 

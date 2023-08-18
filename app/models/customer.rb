@@ -53,6 +53,10 @@ class Customer < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[id name external_id email]
+  end
+
   def active_subscription
     subscriptions.active.order(started_at: :desc).first
   end

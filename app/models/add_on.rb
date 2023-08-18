@@ -25,4 +25,8 @@ class AddOn < ApplicationRecord
   validates :amount_currency, inclusion: { in: currency_list }
 
   default_scope -> { kept }
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
 end

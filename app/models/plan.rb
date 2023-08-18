@@ -41,6 +41,10 @@ class Plan < ApplicationRecord
 
   default_scope -> { kept }
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+
   def pay_in_arrear?
     !pay_in_advance
   end

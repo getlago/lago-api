@@ -26,6 +26,10 @@ class Tax < ApplicationRecord
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+
   def customers_count
     applicable_customers.count
   end
