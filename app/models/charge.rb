@@ -36,7 +36,6 @@ class Charge < ApplicationRecord
   validates :min_amount_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :charge_model, presence: true
 
-  validate :validate_group_properties
   validate :validate_pay_in_advance
   validate :validate_prorated
   validate :validate_min_amount_cents
@@ -84,14 +83,6 @@ class Charge < ApplicationRecord
     instance.result.error.messages.map { |_, codes| codes }
       .flatten
       .each { |code| errors.add(:properties, code) }
-  end
-
-  def validate_group_properties
-    # Group properties should be set for all the selectable groups of a BM
-    bm_group_ids = billable_metric.selectable_groups.pluck(:id).sort
-    gp_group_ids = group_properties.map { |gp| gp[:group_id] }.compact.sort
-
-    errors.add(:group_properties, :values_not_all_present) if bm_group_ids != gp_group_ids
   end
 
   # NOTE: An pay_in_advance charge cannot be created in the following cases:

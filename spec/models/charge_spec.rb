@@ -369,40 +369,6 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '#validate_group_properties' do
-    context 'without groups' do
-      it 'does not return an error' do
-        expect(build(:standard_charge)).to be_valid
-      end
-    end
-
-    context 'with group properties missing for some groups' do
-      it 'returns an error' do
-        create(:group, billable_metric: charge.billable_metric)
-
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:group_properties)
-        expect(charge.errors.messages[:group_properties]).to include('values_not_all_present')
-      end
-    end
-
-    context 'with group properties for all groups' do
-      it 'does not return an error' do
-        metric = create(:billable_metric)
-        group = create(:group, billable_metric: metric)
-
-        charge = create(
-          :standard_charge,
-          billable_metric: metric,
-          properties: {},
-          group_properties: [build(:group_property, group:)],
-        )
-
-        expect(charge).to be_valid
-      end
-    end
-  end
-
   describe '#validate_instant' do
     it 'does not return an error' do
       expect(build(:standard_charge)).to be_valid
