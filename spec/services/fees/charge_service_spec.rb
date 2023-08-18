@@ -226,6 +226,7 @@ RSpec.describe Fees::ChargeService do
           :standard_charge,
           plan: subscription.plan,
           billable_metric:,
+          properties: { amount: '10' },
           group_properties: [
             build(
               :group_property,
@@ -243,19 +244,13 @@ RSpec.describe Fees::ChargeService do
                 amount_currency: 'EUR',
               },
             ),
-            build(
-              :group_property,
-              group: france,
-              values: {
-                amount: '40',
-                amount_currency: 'EUR',
-              },
-            ),
           ],
         )
       end
 
       before do
+        france
+
         create(
           :event,
           organization: subscription.organization,
@@ -323,7 +318,7 @@ RSpec.describe Fees::ChargeService do
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 4000,
+            amount_cents: 1000,
             units: 1,
           )
         end
@@ -358,7 +353,7 @@ RSpec.describe Fees::ChargeService do
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 20_000,
+            amount_cents: 5000,
             units: 5,
           )
         end
@@ -393,7 +388,7 @@ RSpec.describe Fees::ChargeService do
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 20_000,
+            amount_cents: 5000,
             units: 5,
           )
         end
@@ -505,7 +500,7 @@ RSpec.describe Fees::ChargeService do
 
             expect(created_fees.third).to have_attributes(
               group: france,
-              amount_cents: 4000,
+              amount_cents: 1000,
               units: 1,
             )
           end
@@ -591,7 +586,7 @@ RSpec.describe Fees::ChargeService do
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 4000,
+            amount_cents: 1000,
             units: 1,
           )
         end
