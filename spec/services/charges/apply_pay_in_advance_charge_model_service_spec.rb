@@ -97,5 +97,28 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
 
       it_behaves_like 'a charge model'
     end
+
+    describe 'when graduated percentage charge model' do
+      let(:charge) do
+        create(
+          :graduated_percentage_charge,
+          :pay_in_advance,
+          properties: {
+            graduated_percentage_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                flat_amount: '0.01',
+                rate: '2',
+              },
+            ],
+          },
+        )
+      end
+
+      let(:charge_model_class) { Charges::ChargeModels::GraduatedPercentageService }
+
+      it_behaves_like 'a charge model'
+    end
   end
 end

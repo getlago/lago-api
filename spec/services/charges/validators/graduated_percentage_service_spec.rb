@@ -94,7 +94,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
     end
 
     context 'with rate validation' do
-      let(:ranges) { [{ from_value: 0, to_value: nil, rate:, flat_amount: '0', fixed_amount: '0' }] }
+      let(:ranges) { [{ from_value: 0, to_value: nil, rate:, flat_amount: '0' }] }
 
       context 'with no range rate' do
         let(:rate) { nil }
@@ -137,7 +137,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
     end
 
     context 'with flat amount validation' do
-      let(:ranges) { [{ from_value: 0, to_value: nil, rate: 2, flat_amount:, fixed_amount: '0' }] }
+      let(:ranges) { [{ from_value: 0, to_value: nil, rate: 2, flat_amount: }] }
 
       context 'with no range flat amount' do
         let(:flat_amount) { nil }
@@ -179,49 +179,6 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
       end
     end
 
-    context 'with fixed amount validation' do
-      let(:ranges) { [{ from_value: 0, to_value: nil, rate: 2, flat_amount: '2', fixed_amount: }] }
-
-      context 'with no range fixed amount' do
-        let(:fixed_amount) { nil }
-
-        it 'is invalid' do
-          aggregate_failures do
-            expect(graduated_percentage_service).not_to be_valid
-            expect(graduated_percentage_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(graduated_percentage_service.result.error.messages.keys).to include(:fixed_amount)
-            expect(graduated_percentage_service.result.error.messages[:fixed_amount]).to include('invalid_amount')
-          end
-        end
-      end
-
-      context 'with invalid range fixed amount' do
-        let(:fixed_amount) { 'foo' }
-
-        it 'is invalid' do
-          aggregate_failures do
-            expect(graduated_percentage_service).not_to be_valid
-            expect(graduated_percentage_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(graduated_percentage_service.result.error.messages.keys).to include(:fixed_amount)
-            expect(graduated_percentage_service.result.error.messages[:fixed_amount]).to include('invalid_amount')
-          end
-        end
-      end
-
-      context 'with negative range fixed amount' do
-        let(:fixed_amount) { '-4' }
-
-        it 'is invalid' do
-          aggregate_failures do
-            expect(graduated_percentage_service).not_to be_valid
-            expect(graduated_percentage_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(graduated_percentage_service.result.error.messages.keys).to include(:fixed_amount)
-            expect(graduated_percentage_service.result.error.messages[:fixed_amount]).to include('invalid_amount')
-          end
-        end
-      end
-    end
-
     context 'with applicable ranges' do
       let(:ranges) do
         [
@@ -229,21 +186,18 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
             from_value: 0,
             to_value: 10,
             rate: '3',
-            fixed_amount: '0',
             flat_amount: '0',
           },
           {
             from_value: 11,
             to_value: 20,
             rate: '2',
-            fixed_amount: '10',
             flat_amount: '20',
           },
           {
             from_value: 21,
             to_value: nil,
             rate: '1',
-            fixed_amount: '15',
             flat_amount: '30',
           },
         ]

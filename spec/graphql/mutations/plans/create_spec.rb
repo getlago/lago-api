@@ -165,14 +165,12 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                   {
                     fromValue: 0,
                     toValue: 10,
-                    fixedAmount: '2.00',
                     flatAmount: '0',
                     rate: '2',
                   },
                   {
                     fromValue: 11,
                     toValue: nil,
-                    fixedAmount: '3.00',
                     flatAmount: '3.00',
                     rate: '3',
                   },

@@ -38,6 +38,8 @@ module Charges
                           Charges::ChargeModels::StandardService
                         when :graduated
                           Charges::ChargeModels::GraduatedService
+                        when :graduated_percentage
+                          Charges::ChargeModels::GraduatedPercentageService
                         when :package
                           Charges::ChargeModels::PackageService
                         when :percentage

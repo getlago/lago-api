@@ -12,7 +12,6 @@ module Charges
       def compute_amount
         ranges.reduce(0) do |result_amount, range|
           flat_amount = BigDecimal(range[:flat_amount])
-          fixed_amount = BigDecimal(range[:fixed_amount])
           rate = BigDecimal(range[:rate])
 
           # NOTE: Add flat amount to the total
@@ -24,10 +23,7 @@ module Charges
 
           # NOTE: units is between the bounds of the current range,
           #       we must stop the loop
-          if range[:to_value].nil? || range[:to_value] >= units
-            # NOTE: Add fixed amount per event
-            break result_amount + aggregation_result.count * fixed_amount
-          end
+          break result_amount if range[:to_value].nil? || range[:to_value] >= units
 
           result_amount
         end
