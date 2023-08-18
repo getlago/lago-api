@@ -60,7 +60,7 @@ module Plans
         charge_model: charge_model(args),
         pay_in_advance: args[:pay_in_advance] || false,
         prorated: args[:prorated] || false,
-        properties: args[:properties] || {},
+        properties: args[:properties] || Charges::BuildDefaultPropertiesService.call(charge_model(args)),
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
 

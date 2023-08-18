@@ -94,6 +94,7 @@ RSpec.describe Plans::CreateService, type: :service do
         prorated: false,
         min_amount_cents: 0,
         invoiceable: true,
+        properties: { 'amount' => '0' },
       )
       expect(standard_charge.taxes.pluck(:code)).to eq([charge_tax.code])
       expect(standard_charge.group_properties.first).to have_attributes(
