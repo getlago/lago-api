@@ -44,10 +44,11 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
 
         credits.each do |credit|
           if credit.applied_coupon.coupon.limited_plans
+            coupon = credit.applied_coupon.coupon
             fees = credit.invoice.fees
               .where.not(id: fees_id)
               .joins(:subscription)
-              .where(subscription: { plan_id: credit.coupon_targets.where.not(plan_id: nil).select(:plan_id) })
+              .where(subscription: { plan_id: coupon.coupon_targets.where.not(plan_id: nil).select(:plan_id) })
 
             fees.find_each do |fee|
               base_amount_cents = fees.sum(:amount_cents)
@@ -58,11 +59,14 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
             end
 
           elsif credit.applied_coupon.coupon.limited_billable_metrics
+            coupon = credit.applied_coupon.coupon
             fees = credit.invoice.fees
               .where.not(id: fees_id)
               .joins(:charge)
               .where(charge: {
-                billable_metric_id: credit.coupon_targets.not(billable_metric_id: nil).select(:billable_metric_id),
+                billable_metric_id: coupon.coupon_targets
+                                          .where.not(billable_metric_id: nil)
+                                          .select(:billable_metric_id),
               })
 
             fees.find_each do |fee|
