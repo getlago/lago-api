@@ -59,6 +59,8 @@ module Charges
       end
 
       def validate_per_transaction_min_max
+        return unless License.premium?
+
         if properties['per_transaction_min_amount'].present? &&
            !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_min_amount'])
           add_error(field: :per_transaction_min_amount, error_code: 'invalid_amount')
