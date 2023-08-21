@@ -450,4 +450,14 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
     end
   end
+
+  describe '.per_event_aggregation' do
+    let(:added_at) { from_datetime }
+
+    it 'aggregates per events added in the period' do
+      result = count_service.per_event_aggregation
+
+      expect(result.event_aggregation).to eq([1])
+    end
+  end
 end

@@ -133,4 +133,12 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       expect(result.pay_in_advance_aggregation).to eq(1)
     end
   end
+
+  describe '.per_event_aggregation' do
+    it 'aggregates per events' do
+      result = count_service.per_event_aggregation
+
+      expect(result.event_aggregation).to eq([1, 1, 1, 1])
+    end
+  end
 end

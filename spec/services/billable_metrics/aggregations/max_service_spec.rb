@@ -39,7 +39,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       code: billable_metric.code,
       customer:,
       subscription:,
-      timestamp: Time.zone.now - 1.day,
+      timestamp: Time.zone.now - 2.days,
       properties: {
         total_count: rand(10),
       },
@@ -65,7 +65,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   end
 
   context 'when events are out of bounds' do
-    let(:to_datetime) { Time.zone.now - 2.days }
+    let(:to_datetime) { Time.zone.now - 3.days }
 
     it 'does not take events into account' do
       result = max_service.aggregate
@@ -202,6 +202,14 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
 
       expect(result.aggregation).to eq(12)
       expect(result.count).to eq(2)
+    end
+  end
+
+  describe '.per_event_aggregation' do
+    it 'aggregates per events' do
+      result = max_service.per_event_aggregation
+
+      expect(result.event_aggregation).to eq([0, 0, 0, 0, 12])
     end
   end
 end

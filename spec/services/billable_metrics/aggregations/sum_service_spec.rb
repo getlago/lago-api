@@ -451,4 +451,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       end
     end
   end
+
+  describe '.per_event_aggregation' do
+    it 'aggregates per events' do
+      result = sum_service.per_event_aggregation
+
+      expect(result.event_aggregation).to eq([12, 12, 12, 12])
+    end
+  end
 end

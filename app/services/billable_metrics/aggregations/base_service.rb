@@ -16,6 +16,12 @@ module BillableMetrics
         raise(NotImplementedError)
       end
 
+      def per_event_aggregation
+        Result.new.tap do |result|
+          result.event_aggregation = compute_per_event_aggregation
+        end
+      end
+
       protected
 
       attr_accessor :billable_metric, :subscription, :group, :event, :boundaries
@@ -35,6 +41,7 @@ module BillableMetrics
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
           .where(code: billable_metric.code)
+          .order(timestamp: :asc)
         return events unless group
 
         group_scope(events)
