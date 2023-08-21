@@ -69,7 +69,7 @@ module Plans
         charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
         prorated: params[:prorated] || false,
-        properties: params[:properties] || Charges::BuildDefaultPropertiesService.call(charge_model(params)),
+        properties: params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(params)),
         group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
 
@@ -114,7 +114,7 @@ module Plans
 
             charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
             charge.min_amount_cents = min_amount_cents || 0 if License.premium?
-            charge.properties = properties || Charges::BuildDefaultPropertiesService.call(payload_charge[:charge_model])
+            charge.properties = properties.presence || Charges::BuildDefaultPropertiesService.call(payload_charge[:charge_model])
 
             charge.update!(payload_charge)
 
