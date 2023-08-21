@@ -246,5 +246,102 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
 
       it { expect(percentage_service).to be_valid }
     end
+
+    context 'with per_transaction_min_amount' do
+      let(:percentage_properties) do
+        {
+          rate: '0.25',
+          fixed_amount: '2',
+          per_transaction_min_amount:,
+        }
+      end
+
+      context 'when it is not a string' do
+        let(:per_transaction_min_amount) { 2 }
+
+        it 'is invalid' do
+          aggregate_failures do
+            expect(percentage_service).not_to be_valid
+            expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+            expect(percentage_service.result.error.messages.keys).to include(:per_transaction_min_amount)
+            expect(percentage_service.result.error.messages[:per_transaction_min_amount])
+              .to include('invalid_amount')
+          end
+        end
+      end
+
+      context 'when it is negative' do
+        let(:per_transaction_min_amount) { '-3' }
+
+        it 'is invalid' do
+          aggregate_failures do
+            expect(percentage_service).not_to be_valid
+            expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+            expect(percentage_service.result.error.messages.keys).to include(:per_transaction_min_amount)
+            expect(percentage_service.result.error.messages[:per_transaction_min_amount])
+              .to include('invalid_amount')
+          end
+        end
+      end
+    end
+
+    context 'with per_transaction_max_amount' do
+      let(:percentage_properties) do
+        {
+          rate: '0.25',
+          fixed_amount: '2',
+          per_transaction_max_amount:,
+        }
+      end
+
+      context 'when it is not a string' do
+        let(:per_transaction_max_amount) { 2 }
+
+        it 'is invalid' do
+          aggregate_failures do
+            expect(percentage_service).not_to be_valid
+            expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+            expect(percentage_service.result.error.messages.keys).to include(:per_transaction_max_amount)
+            expect(percentage_service.result.error.messages[:per_transaction_max_amount])
+              .to include('invalid_amount')
+          end
+        end
+      end
+
+      context 'when it is negative' do
+        let(:per_transaction_max_amount) { '-3' }
+
+        it 'is invalid' do
+          aggregate_failures do
+            expect(percentage_service).not_to be_valid
+            expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+            expect(percentage_service.result.error.messages.keys).to include(:per_transaction_max_amount)
+            expect(percentage_service.result.error.messages[:per_transaction_max_amount])
+              .to include('invalid_amount')
+          end
+        end
+      end
+    end
+
+    context 'with both per_transaction_min_amount and per_transaction_max_amount' do
+      let(:percentage_properties) do
+        {
+          rate: '0.25',
+          fixed_amount: '2',
+          per_transaction_min_amount: '3',
+          per_transaction_max_amount: '2',
+        }
+      end
+
+      it 'ensures that max is higher than min' do
+        aggregate_failures do
+          expect(percentage_service).not_to be_valid
+          expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(percentage_service.result.error.messages.keys).to include(:per_transaction_max_amount)
+          expect(percentage_service.result.error.messages[:per_transaction_max_amount])
+            .to include('per_transaction_max_lower_than_per_transaction_min')
+        end
+      end
+    end
   end
 end
