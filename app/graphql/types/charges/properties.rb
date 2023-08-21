@@ -17,10 +17,12 @@ module Types
       field :package_size, GraphQL::Types::BigInt, null: true, hash_key: :package_size
 
       # NOTE: Percentage charge model
-      field :fixed_amount, String, null: true, hash_key: :fixed_amount
-      field :free_units_per_events, GraphQL::Types::BigInt, null: true, hash_key: :free_units_per_events
-      field :free_units_per_total_aggregation, String, null: true, hash_key: :free_units_per_total_aggregation
-      field :rate, String, null: true, hash_key: :rate
+      field :fixed_amount, String, null: true
+      field :free_units_per_events, GraphQL::Types::BigInt, null: true
+      field :free_units_per_total_aggregation, String, null: true
+      field :per_transaction_max_amount, String, null: true
+      field :per_transaction_min_amount, String, null: true
+      field :rate, String, null: true
 
       # NOTE: Volume charge model
       field :volume_ranges, [Types::Charges::VolumeRange], null: true, hash_key: :volume_ranges

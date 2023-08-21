@@ -20,6 +20,8 @@ module Types
       argument :fixed_amount, String, required: false
       argument :free_units_per_events, GraphQL::Types::BigInt, required: false
       argument :free_units_per_total_aggregation, String, required: false
+      argument :per_transaction_max_amount, String, required: false
+      argument :per_transaction_min_amount, String, required: false
       argument :rate, String, required: false
 
       # NOTE: Volume charge model
