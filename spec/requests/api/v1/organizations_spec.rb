@@ -78,4 +78,16 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       end
     end
   end
+
+  describe 'GET /grpc_token' do
+    it 'returns the grpc_token' do
+      get_with_token(
+        organization,
+        '/api/v1/organizations/grpc_token',
+      )
+
+      expect(response).to have_http_status(:success)
+      expect(json[:organization][:grpc_token]).not_to be_nil
+    end
+  end
 end
