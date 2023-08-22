@@ -469,4 +469,19 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '#validate_uniqueness_group_properties' do
+    subject(:charge) do
+      build(:standard_charge, group_properties: [build(:group_property, group:), build(:group_property, group:)])
+    end
+
+    let(:group) { create(:group) }
+
+    it 'returns an error for a duplicate' do
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:group_properties]).to include('is duplicated')
+      end
+    end
+  end
 end
