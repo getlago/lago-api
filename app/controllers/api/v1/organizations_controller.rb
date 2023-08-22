@@ -19,6 +19,19 @@ module Api
         end
       end
 
+      def grpc_token
+        payload = { organization_id: current_organization.id }
+        grpc_token = JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
+
+        render(
+          json: {
+            organization: {
+              grpc_token:,
+            },
+          },
+        )
+      end
+
       private
 
       def input_params
