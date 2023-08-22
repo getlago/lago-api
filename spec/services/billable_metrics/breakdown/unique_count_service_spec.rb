@@ -8,6 +8,10 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       billable_metric:,
       subscription:,
       group:,
+      boundaries: {
+        from_datetime:,
+        to_datetime:,
+      },
     )
   end
 
@@ -54,7 +58,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
   before { quantified_event }
 
   describe '#breakdown' do
-    let(:result) { service.breakdown(from_datetime:, to_datetime:).breakdown }
+    let(:result) { service.breakdown.breakdown }
 
     context 'with persisted metric on full period' do
       it 'returns the detail the persisted metrics' do

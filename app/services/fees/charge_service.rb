@@ -96,11 +96,7 @@ module Fees
     end
 
     def compute_amount(properties:, group: nil)
-      aggregation_result = aggregator(group:).aggregate(
-        from_datetime: boundaries.charges_from_datetime,
-        to_datetime: boundaries.charges_to_datetime,
-        options: options(properties),
-      )
+      aggregation_result = aggregator(group:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
       apply_charge_model_service(aggregation_result, properties)
@@ -149,7 +145,15 @@ module Fees
                              raise(NotImplementedError)
       end
 
-      @aggregator = aggregator_service.new(billable_metric:, subscription:, group:)
+      @aggregator = aggregator_service.new(
+        billable_metric:,
+        subscription:,
+        group:,
+        boundaries: {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+        },
+      )
     end
 
     def apply_charge_model_service(aggregation_result, properties)

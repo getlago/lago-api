@@ -3,10 +3,7 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def aggregate(options: {})
         aggregation = events.sum("(#{sanitized_field_name})::numeric")
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
@@ -89,8 +86,6 @@ module BillableMetrics
       end
 
       protected
-
-      attr_reader :from_datetime, :to_datetime
 
       def events
         @events ||= begin

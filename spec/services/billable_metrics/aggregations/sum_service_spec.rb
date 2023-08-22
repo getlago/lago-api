@@ -9,6 +9,10 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       subscription:,
       group:,
       event: pay_in_advance_event,
+      boundaries: {
+        from_datetime:,
+        to_datetime:,
+      },
     )
   end
 
@@ -66,7 +70,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
   end
 
   it 'aggregates the events' do
-    result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+    result = sum_service.aggregate(options:)
 
     expect(result.aggregation).to eq(48)
     expect(result.pay_in_advance_aggregation).to be_zero
@@ -78,7 +82,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     before { billable_metric.update!(recurring: true) }
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(53)
       expect(result.pay_in_advance_aggregation).to be_zero
@@ -91,7 +95,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     let(:options) { {} }
 
     it 'returns an empty running total array' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
       expect(result.options).to eq({ running_total: [] })
     end
   end
@@ -102,7 +106,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns an empty running total array' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
       expect(result.options).to eq({ running_total: [] })
     end
   end
@@ -113,7 +117,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns running total based on per total aggregation' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
       expect(result.options).to eq({ running_total: [12, 24, 36] })
     end
   end
@@ -124,7 +128,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns running total based on per events' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
       expect(result.options).to eq({ running_total: [12, 24] })
     end
   end
@@ -145,7 +149,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'does not take events into account' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -159,7 +163,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'counts as zero' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -182,7 +186,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.aggregation).to eq(52.5)
     end
@@ -203,7 +207,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns a failed result' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       aggregate_failures do
         expect(result).not_to be_success
@@ -238,7 +242,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     before { billable_metric.update!(recurring: true) }
 
     it 'returns period maximum as aggregation' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(11)
     end
@@ -249,7 +253,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       before { billable_metric.update!(recurring: false) }
 
       it 'returns zero as aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+        result = sum_service.aggregate(options:)
 
         expect(result.aggregation).to eq(0)
       end
@@ -300,7 +304,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(20)
       expect(result.count).to eq(2)
@@ -338,7 +342,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     end
 
     it 'returns the correct number' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(63)
     end
@@ -361,7 +365,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
     let(:properties) { { total_count: 10 } }
 
     it 'assigns a pay_in_advance aggregation' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.pay_in_advance_aggregation).to eq(10)
     end
@@ -385,7 +389,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       end
 
       it 'assigns a pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(4)
       end
@@ -411,7 +415,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       end
 
       it 'assigns a pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
       end
@@ -421,7 +425,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       let(:properties) { { total_count: 12.4 } }
 
       it 'assigns a pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(12.4)
       end
@@ -431,7 +435,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       let(:properties) { { final_count: 10 } }
 
       it 'assigns 0 as pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to be_zero
       end
@@ -441,7 +445,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service do
       let(:properties) { {} }
 
       it 'assigns 0 as pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to be_zero
       end

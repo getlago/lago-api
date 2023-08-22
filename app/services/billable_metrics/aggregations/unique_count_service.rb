@@ -3,10 +3,7 @@
 module BillableMetrics
   module Aggregations
     class UniqueCountService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def aggregate(options: {})
         aggregation = compute_aggregation.ceil(5)
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
@@ -65,8 +62,6 @@ module BillableMetrics
       end
 
       protected
-
-      attr_reader :from_datetime, :to_datetime
 
       # This method fetches the latest event in current period. If such a event exists we know that metadata
       # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values

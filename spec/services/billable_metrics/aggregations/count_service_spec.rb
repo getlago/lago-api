@@ -9,6 +9,10 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       subscription:,
       group:,
       event: pay_in_advance_event,
+      boundaries: {
+        from_datetime:,
+        to_datetime:,
+      },
     )
   end
 
@@ -42,7 +46,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   end
 
   it 'aggregates the events' do
-    result = count_service.aggregate(from_datetime:, to_datetime:)
+    result = count_service.aggregate
 
     expect(result.aggregation).to eq(4)
   end
@@ -51,7 +55,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     let(:to_datetime) { Time.zone.now - 2.days }
 
     it 'does not take events into account' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
+      result = count_service.aggregate
 
       expect(result.aggregation).to eq(0)
     end
@@ -114,7 +118,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     end
 
     it 'aggregates the events' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
+      result = count_service.aggregate
 
       expect(result.aggregation).to eq(2)
     end
@@ -124,7 +128,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     let(:pay_in_advance_event) { create(:event, subscription:, customer:) }
 
     it 'assigns an pay_in_advance aggregation' do
-      result = count_service.aggregate(from_datetime:, to_datetime:)
+      result = count_service.aggregate
 
       expect(result.pay_in_advance_aggregation).to eq(1)
     end

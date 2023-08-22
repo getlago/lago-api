@@ -3,20 +3,14 @@
 module BillableMetrics
   module Aggregations
     class RecurringCountService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def aggregate(options: {})
         result.aggregation = compute_aggregation.ceil(5)
         result.count = result.aggregation
         result.options = options
         result
       end
 
-      def breakdown(from_datetime:, to_datetime:)
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def breakdown
         breakdown = persisted_breakdown
         breakdown += added_breakdown
         breakdown += removed_breadown
@@ -28,8 +22,6 @@ module BillableMetrics
       end
 
       private
-
-      attr_reader :from_datetime, :to_datetime
 
       def from_date_in_customer_timezone
         from_datetime.in_time_zone(customer.applicable_timezone).to_date
