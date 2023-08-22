@@ -165,12 +165,12 @@ module Invoices
               code: fee.billable_metric.code,
               aggregation_type: fee.billable_metric.aggregation_type,
             },
-            groups: fees.map do |f|
+            groups: fees.sort_by { |f| f.group&.name }.map do |f|
               next unless f.group
 
               {
                 id: f.group.id,
-                key: f.group.parent&.value,
+                key: f.group.parent&.value || f.group.key,
                 value: f.group.value,
                 units: f.units,
                 amount_cents: f.amount_cents,

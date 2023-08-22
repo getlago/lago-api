@@ -359,12 +359,12 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(groups_usage).to contain_exactly(
             {
               lago_id: aws.id,
-              key: nil,
+              key: 'cloud',
               value: 'aws',
               units: '3.0',
               amount_cents: 3000,
             },
-            { lago_id: google.id, key: nil, value: 'google', units: '1.0', amount_cents: 2000 },
+            { lago_id: google.id, key: 'cloud', value: 'google', units: '1.0', amount_cents: 2000 },
           )
         end
       end
