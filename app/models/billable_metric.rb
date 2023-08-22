@@ -55,7 +55,8 @@ class BillableMetric < ApplicationRecord
 
   # NOTE: 1 dimension: all groups, 2 dimensions: all children.
   def selectable_groups
-    active_groups.children.exists? ? active_groups.children : active_groups
+    groups = active_groups.children.exists? ? active_groups.children : active_groups
+    groups.includes(:parent).reorder('parent.value', 'groups.value')
   end
 
   def active_groups_as_tree

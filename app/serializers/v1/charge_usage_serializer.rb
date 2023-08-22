@@ -19,7 +19,7 @@ module V1
           code: model.billable_metric.code,
           aggregation_type: model.billable_metric.aggregation_type,
         },
-        groups: model.groups.map do |group|
+        groups: model.groups.sort_by(&:name).map do |group|
           {
             lago_id: group.id,
             key: group.key,
