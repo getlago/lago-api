@@ -9,6 +9,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       subscription:,
       group:,
       event: pay_in_advance_event,
+      boundaries: {
+        from_datetime:,
+        to_datetime:,
+      },
     )
   end
 
@@ -65,7 +69,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   end
 
   it 'aggregates the events' do
-    result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+    result = sum_service.aggregate(options:)
 
     expect(result.aggregation).to eq(9.64517) # 5 + (12*6/31) + (12*6/31)
     expect(result.pay_in_advance_aggregation).to be_zero
@@ -78,7 +82,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'aggregates the events without proration' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(29)
       expect(result.pay_in_advance_aggregation).to be_zero
@@ -102,7 +106,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'does not take events into account' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.aggregation).to eq(5)
       expect(result.count).to eq(2)
@@ -115,7 +119,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'counts as zero' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
@@ -137,7 +141,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.aggregation).to eq(9.64517 + 0.14516)
     end
@@ -158,7 +162,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'returns a failed result' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       aggregate_failures do
         expect(result).not_to be_success
@@ -175,7 +179,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'returns period maximum as aggregation' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(9.64517)
       expect(result.current_usage_units).to eq(29)
@@ -205,7 +209,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'returns period maximum as aggregation' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(8.8)
       expect(result.current_usage_units).to eq(9)
@@ -215,7 +219,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       let(:latest_events) { nil }
 
       it 'returns zero as aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+        result = sum_service.aggregate(options:)
 
         expect(result.aggregation).to eq(5)
         expect(result.current_usage_units).to eq(5)
@@ -231,7 +235,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     let(:latest_events) { nil }
 
     it 'returns correct values' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq((5 * 17.fdiv(31)).ceil(5))
       expect(result.current_usage_units).to eq(5)
@@ -262,7 +266,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'returns correct values' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq((5 * 17.fdiv(31)).ceil(5) + 3.8)
       expect(result.current_usage_units).to eq(9)
@@ -313,7 +317,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'aggregates the events' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(0.64517) # (1/31 * 8) + (1/31 * 12)
       expect(result.count).to eq(2)
@@ -349,7 +353,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     it 'returns the correct number' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:, options:)
+      result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(19.64517) # 10 + 5 + (6/31*12) + (6/31*12)
     end
@@ -372,7 +376,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     let(:properties) { { total_count: 10 } }
 
     it 'assigns a pay_in_advance aggregation' do
-      result = sum_service.aggregate(from_datetime:, to_datetime:)
+      result = sum_service.aggregate
 
       expect(result.pay_in_advance_aggregation).to eq(0.64517)
     end
@@ -397,7 +401,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       end
 
       it 'assigns a pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0.25807) # 4 * (2/31)
       end
@@ -424,7 +428,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       end
 
       it 'assigns a pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
         expect(result.units_applied).to eq('-2')
@@ -435,7 +439,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       let(:properties) { { total_count: 12.4 } }
 
       it 'assigns a pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0.8) # 2/31*12.4
       end
@@ -445,7 +449,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       let(:properties) { { final_count: 10 } }
 
       it 'assigns 0 as pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to be_zero
       end
@@ -455,7 +459,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       let(:properties) { {} }
 
       it 'assigns 0 as pay_in_advance aggregation' do
-        result = sum_service.aggregate(from_datetime:, to_datetime:)
+        result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to be_zero
       end

@@ -3,7 +3,7 @@
 module BillableMetrics
   module Aggregations
     class MaxService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
+      def aggregate(options: {})
         events = events_scope(from_datetime:, to_datetime:)
           .where("#{sanitized_field_name} IS NOT NULL")
 

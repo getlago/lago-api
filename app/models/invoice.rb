@@ -135,10 +135,11 @@ class Invoice < ApplicationRecord
       billable_metric: fee.charge.billable_metric,
       subscription: fee.subscription,
       group: fee.group,
-    ).breakdown(
-      from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
-      to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
-    ).breakdown
+      boundaries: {
+        from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
+        to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
+      },
+    ).breakdown.breakdown
   end
 
   def charge_pay_in_advance_proration_range(fee, timestamp)

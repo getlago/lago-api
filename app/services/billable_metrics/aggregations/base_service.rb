@@ -3,23 +3,32 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      def initialize(billable_metric:, subscription:, group: nil, event: nil)
+      def initialize(billable_metric:, subscription:, boundaries:, group: nil, event: nil)
         super(nil)
         @billable_metric = billable_metric
         @subscription = subscription
         @group = group
         @event = event
+        @boundaries = boundaries
       end
 
-      def aggregate(from_date:, to_date:, options: {})
+      def aggregate(options: {})
         raise(NotImplementedError)
       end
 
       protected
 
-      attr_accessor :billable_metric, :subscription, :group, :event
+      attr_accessor :billable_metric, :subscription, :group, :event, :boundaries
 
       delegate :customer, to: :subscription
+
+      def from_datetime
+        boundaries[:from_datetime]
+      end
+
+      def to_datetime
+        boundaries[:to_datetime]
+      end
 
       def events_scope(from_datetime:, to_datetime:)
         events = subscription.events

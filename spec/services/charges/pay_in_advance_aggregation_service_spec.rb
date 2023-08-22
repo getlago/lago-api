@@ -37,11 +37,18 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
         agg_service.call
 
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
-          .with(billable_metric:, subscription:, group:, event:)
+          .with(
+            billable_metric:,
+            subscription:,
+            group:,
+            event:,
+            boundaries: {
+              from_datetime: boundaries[:charges_from_datetime],
+              to_datetime: boundaries[:charges_to_datetime],
+            },
+          )
 
         expect(count_service).to have_received(:aggregate).with(
-          from_datetime: boundaries[:charges_from_datetime],
-          to_datetime: boundaries[:charges_to_datetime],
           options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
         )
       end
@@ -60,11 +67,18 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
         agg_service.call
 
         expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
-          .with(billable_metric:, subscription:, group:, event:)
+          .with(
+            billable_metric:,
+            subscription:,
+            group:,
+            event:,
+            boundaries: {
+              from_datetime: boundaries[:charges_from_datetime],
+              to_datetime: boundaries[:charges_to_datetime],
+            },
+          )
 
         expect(sum_service).to have_received(:aggregate).with(
-          from_datetime: boundaries[:charges_from_datetime],
-          to_datetime: boundaries[:charges_to_datetime],
           options: { free_units_per_events: 3, free_units_per_total_aggregation: 50 },
         )
       end
@@ -82,11 +96,18 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
         agg_service.call
 
         expect(BillableMetrics::Aggregations::UniqueCountService).to have_received(:new)
-          .with(billable_metric:, subscription:, group:, event:)
+          .with(
+            billable_metric:,
+            subscription:,
+            group:,
+            event:,
+            boundaries: {
+              from_datetime: boundaries[:charges_from_datetime],
+              to_datetime: boundaries[:charges_to_datetime],
+            },
+          )
 
         expect(unique_count_service).to have_received(:aggregate).with(
-          from_datetime: boundaries[:charges_from_datetime],
-          to_datetime: boundaries[:charges_to_datetime],
           options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
         )
       end

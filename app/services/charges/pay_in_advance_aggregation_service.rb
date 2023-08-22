@@ -13,12 +13,17 @@ module Charges
     end
 
     def call
-      aggregator = aggregator_service.new(billable_metric:, subscription:, group:, event:)
-      aggregator.aggregate(
-        from_datetime: boundaries[:charges_from_datetime],
-        to_datetime: boundaries[:charges_to_datetime],
-        options: aggregation_options,
+      aggregator = aggregator_service.new(
+        billable_metric:,
+        subscription:,
+        group:,
+        event:,
+        boundaries: {
+          from_datetime: boundaries[:charges_from_datetime],
+          to_datetime: boundaries[:charges_to_datetime],
+        },
       )
+      aggregator.aggregate(options: aggregation_options)
     end
 
     private
