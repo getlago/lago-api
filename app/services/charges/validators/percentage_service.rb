@@ -8,6 +8,7 @@ module Charges
         validate_fixed_amount
         validate_free_units_per_events
         validate_free_units_per_total_aggregation
+        validate_per_transaction_min_max
 
         super
       end
@@ -55,6 +56,26 @@ module Charges
         return if ::Validators::DecimalAmountService.new(free_units_per_total_aggregation).valid_amount?
 
         add_error(field: :free_units_per_total_aggregation, error_code: 'invalid_free_units_per_total_aggregation')
+      end
+
+      def validate_per_transaction_min_max
+        return unless License.premium?
+
+        if properties['per_transaction_min_amount'].present? &&
+           !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_min_amount'])
+          add_error(field: :per_transaction_min_amount, error_code: 'invalid_amount')
+        end
+
+        if properties['per_transaction_max_amount'].present? &&
+           !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_max_amount'])
+          add_error(field: :per_transaction_max_amount, error_code: 'invalid_amount')
+        end
+
+        return if properties['per_transaction_min_amount'].nil? || properties['per_transaction_max_amount'].nil?
+        return if BigDecimal(properties['per_transaction_min_amount']) <=
+                  BigDecimal(properties['per_transaction_max_amount'])
+
+        add_error(field: :per_transaction_max_amount, error_code: 'per_transaction_max_lower_than_per_transaction_min')
       end
     end
   end
