@@ -4000,6 +4000,8 @@ type Properties {
   graduatedPercentageRanges: [GraduatedPercentageRange!]
   graduatedRanges: [GraduatedRange!]
   packageSize: BigInt
+  perTransactionMaxAmount: String
+  perTransactionMinAmount: String
   rate: String
   volumeRanges: [VolumeRange!]
 }
@@ -4013,6 +4015,8 @@ input PropertiesInput {
   graduatedPercentageRanges: [GraduatedPercentageRangeInput!]
   graduatedRanges: [GraduatedRangeInput!]
   packageSize: BigInt
+  perTransactionMaxAmount: String
+  perTransactionMinAmount: String
   rate: String
   volumeRanges: [VolumeRangeInput!]
 }

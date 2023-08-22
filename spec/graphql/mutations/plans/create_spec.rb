@@ -36,6 +36,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               graduatedRanges { fromValue, toValue }
               volumeRanges { fromValue, toValue }
               graduatedPercentageRanges { fromValue toValue }
+              perTransactionMaxAmount
+              perTransactionMinAmount
             }
             groupProperties {
               groupId,
@@ -113,6 +115,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                     fixedAmount: '2',
                     freeUnitsPerEvents: 5,
                     freeUnitsPerTotalAggregation: '50',
+                    perTransactionMaxAmount: '20',
+                    perTransactionMinAmount: '10',
                   },
                 },
               ],
