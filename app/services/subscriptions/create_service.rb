@@ -105,6 +105,8 @@ module Subscriptions
           )
       end
 
+      SendWebhookJob.perform_later('subscription.started', new_subscription) if new_subscription.active?
+
       new_subscription
     end
 
