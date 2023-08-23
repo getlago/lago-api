@@ -27,6 +27,12 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
         .and change(Subscription.active, :count).by(3)
     end
 
+    it 'enqueues a SendWebhookJob' do
+      expect do
+        activate_service.activate_all_pending
+      end.to have_enqueued_job(SendWebhookJob).at_least(1).times
+    end
+
     context 'with customer timezone' do
       let(:timestamp) { DateTime.parse('2022-10-21 00:30:00') }
       let(:pending_subscription) { pending_subscriptions.first }
