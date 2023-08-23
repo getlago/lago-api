@@ -19,7 +19,7 @@ module Subscriptions
 
           SendWebhookJob.perform_later('subscription.started', subscription)
 
-          BillSubscriptionJob.perform_later([subscription], timestamp) if subscription.plan.pay_in_advance?   
+          BillSubscriptionJob.perform_later([subscription], timestamp) if subscription.plan.pay_in_advance?
         end
     end
 
