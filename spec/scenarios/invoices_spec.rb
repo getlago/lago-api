@@ -237,6 +237,123 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     end
   end
 
+  context 'when pay in arrear subscription with recurring charges is upgraded and new plan does not contain same BM' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+    let(:plan_new) { create(:plan, organization:, amount_cents: 2000) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'does bill the charges' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: false,
+          properties: { amount: '3' },
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Upgrade subscription
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
+
+      travel_to(dec20) do
+        expect {
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan_new.code,
+            },
+          )
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.fees.charge_kind.count).to eq(1)
+      end
+    end
+  end
+
+  context 'when pay in arrear subscription with recurring charges is upgraded and new plan contains same BM' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+    let(:plan_new) { create(:plan, organization:, amount_cents: 2000) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'does not bill the charges' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: false,
+          properties: { amount: '3' },
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Upgrade subscription
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
+
+      travel_to(dec20) do
+        create(
+          :standard_charge,
+          plan: plan_new,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: false,
+          properties: { amount: '3' },
+        )
+
+        expect {
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan_new.code,
+            },
+          )
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.fees.charge_kind.count).to eq(0)
+      end
+    end
+  end
+
   context 'when pay in advance subscription with recurring and prorated charges is terminated' do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
