@@ -3,7 +3,7 @@
 module V1
   class SubscriptionSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         external_id: model.external_id,
         lago_customer_id: model.customer_id,
@@ -21,12 +21,25 @@ module V1
         next_plan_code: model.next_subscription&.plan&.code,
         downgrade_plan_date: model.downgrade_plan_date&.iso8601,
       }.merge(legacy_values)
+
+      payload = payload.merge(customer:) if include?(:customer)
+      payload = payload.merge(plan:) if include?(:plan)
+
+      payload
     end
 
     private
 
     def legacy_values
       ::V1::Legacy::SubscriptionSerializer.new(model).serialize
+    end
+
+    def customer
+      ::V1::CustomerSerializer.new(model.customer).serialize
+    end
+
+    def plan
+      ::V1::PlanSerializer.new(model.plan).serialize
     end
   end
 end

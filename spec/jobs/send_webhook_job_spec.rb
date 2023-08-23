@@ -366,4 +366,26 @@ RSpec.describe SendWebhookJob, type: :job do
         .to raise_error(NotImplementedError)
     end
   end
+
+  context 'when webhook type is subscription.started' do
+    let(:webhook_service) { instance_double(Webhooks::Subscriptions::StartedService) }
+    let(:subscription) { create(:subscription) }
+
+    before do
+      allow(Webhooks::Subscriptions::StartedService).to receive(:new)
+        .with(object: subscription, options: {}, webhook_id: nil)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        'subscription.started',
+        subscription,
+      )
+
+      expect(Webhooks::Subscriptions::StartedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
 end

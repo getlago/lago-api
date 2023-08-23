@@ -2,7 +2,7 @@
 
 module Webhooks
   module Subscriptions
-    class TerminatedService < Webhooks::BaseService
+    class StartedService < Webhooks::BaseService
       def current_organization
         @current_organization ||= object.organization
       end
@@ -16,7 +16,7 @@ module Webhooks
       end
 
       def webhook_type
-        'subscription.terminated'
+        'subscription.started'
       end
 
       def object_type

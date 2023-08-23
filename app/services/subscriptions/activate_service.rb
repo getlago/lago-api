@@ -17,6 +17,8 @@ module Subscriptions
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
 
+          SendWebhookJob.perform_later('subscription.started', subscription)
+
           BillSubscriptionJob.perform_later([subscription], timestamp) if subscription.plan.pay_in_advance?
         end
     end
