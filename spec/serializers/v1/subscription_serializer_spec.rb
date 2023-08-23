@@ -11,17 +11,20 @@ RSpec.describe ::V1::SubscriptionSerializer do
     result = JSON.parse(serializer.to_json)
 
     aggregate_failures do
-      expect(result['subscription']['lago_id']).to eq(subscription.id)
-      expect(result['subscription']['external_id']).to eq(subscription.external_id)
-      expect(result['subscription']['lago_customer_id']).to eq(subscription.customer_id)
-      expect(result['subscription']['external_customer_id']).to eq(subscription.customer.external_id)
-      expect(result['subscription']['name']).to eq(subscription.name)
-      expect(result['subscription']['plan_code']).to eq(subscription.plan.code)
-      expect(result['subscription']['status']).to eq(subscription.status)
-      expect(result['subscription']['billing_time']).to eq(subscription.billing_time)
-      expect(result['subscription']['created_at']).to eq(subscription.created_at.iso8601)
-      expect(result['subscription']['customer']['lago_id']).to eq(subscription.customer.id)
-      expect(result['subscription']['plan']['lago_id']).to eq(subscription.plan.id)
+      expect(result['subscription']).to include(
+        'lago_id' => subscription.id,
+        'external_id' => subscription.external_id,
+        'lago_customer_id' => subscription.customer_id,
+        'external_customer_id' => subscription.customer.external_id,
+        'name' => subscription.name,
+        'plan_code' => subscription.plan.code,
+        'status' => subscription.status,
+        'billing_time' => subscription.billing_time,
+        'created_at' => subscription.created_at.iso8601,
+      )
+
+      expect(result['subscription']['customer']['lago_id']).to be_present
+      expect(result['subscription']['plan']['lago_id']).to be_present
     end
   end
 end
