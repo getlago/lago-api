@@ -319,5 +319,77 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
         end
       end
     end
+
+    describe 'with min and max per transaction amount' do
+      around { |test| lago_premium!(&test) }
+
+      it 'returns the expected customer usage' do
+        travel_to(DateTime.new(2023, 3, 5)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+        end
+
+        create(
+          :percentage_charge,
+          plan:,
+          billable_metric:,
+          properties: {
+            rate: '1',
+            fixed_amount: '1',
+            per_transaction_max_amount: '12',
+            per_transaction_min_amount: '1.75',
+          },
+        )
+
+        travel_to(DateTime.new(2023, 3, 6)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '100' },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(240)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('100.0')
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(200)
+
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '1000' },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(1560)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1100.0')
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(1300)
+
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '10000' },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(3000)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('11100.0')
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(2500)
+        end
+      end
+    end
   end
 end
