@@ -27,6 +27,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
   let(:expected_fixed_amount) { (4 - 2) * 2.0 }
 
+  let(:per_transaction_max_amount) { nil }
+  let(:per_transaction_min_amount) { nil }
+
   let(:rate) { '1.3' }
   let(:charge) do
     create(
@@ -36,6 +39,8 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         fixed_amount:,
         free_units_per_events:,
         free_units_per_total_aggregation:,
+        per_transaction_max_amount:,
+        per_transaction_min_amount:,
       },
     )
   end
@@ -125,6 +130,82 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
 
     it 'returns 0' do
       expect(apply_percentage_service.amount).to eq(0)
+    end
+  end
+
+  context 'when applying min / max amount per transaction' do
+    let(:per_transaction_max_amount) { '12' }
+    let(:per_transaction_min_amount) { '1.75' }
+
+    let(:aggregator) do
+      BillableMetrics::Aggregations::SumService.new(billable_metric: nil, subscription: nil, boundaries: nil)
+    end
+
+    let(:aggregation) { 11_100 }
+
+    let(:fixed_amount) { '0' }
+    let(:free_units_per_events) { nil }
+    let(:free_units_per_total_aggregation) { '0' }
+    let(:rate) { '1' }
+
+    let(:per_event_aggregation) { BaseService::Result.new.tap { |r| r.event_aggregation = [100, 1_000, 10_000] } }
+    let(:running_total) { [] }
+
+    before do
+      aggregation_result.aggregator = aggregator
+      aggregation_result.count = 3
+
+      allow(aggregator).to receive(:per_event_aggregation).and_return(per_event_aggregation)
+    end
+
+    it 'does not apply max and min if not premium' do
+      expect(apply_percentage_service.amount).to eq(111) # (100 + 1000 + 10000) * 0.01
+    end
+
+    context 'when premium' do
+      around { |test| lago_premium!(&test) }
+
+      it 'applies the min and max per transaction' do
+        # 1.75 (min as 100 * 0.01 < 1.75) + 10 + 12 (max as 10000 * 0.01 > 12)
+        expect(apply_percentage_service.amount).to eq(23.75)
+      end
+
+      context 'with fixed_amount' do
+        let(:fixed_amount) { '1.0' }
+
+        it 'applies the min and max per transaction' do
+          # 2 + 11 + 12 (max as 10001 * 0.01 > 12)
+          expect(apply_percentage_service.amount).to eq(25)
+        end
+      end
+
+      context 'with free units per events' do
+        let(:free_units_per_events) { 2 }
+
+        it 'applies the min and max only on paying transaction' do
+          # 10000 * 0.01 > 12
+          expect(apply_percentage_service.amount).to eq(12)
+        end
+      end
+
+      context 'with free units per total aggregation' do
+        let(:free_units_per_total_aggregation) { '300' }
+
+        it 'takes the free amount into account' do
+          # (100 + 1000 - 300) * 0.01 + 12 (max as 10000 * 0.01 > 12)
+          expect(apply_percentage_service.amount).to eq(20)
+        end
+      end
+
+      context 'when both free units per events and per total aggregation are applied' do
+        let(:free_units_per_events) { 3 }
+        let(:free_units_per_total_aggregation) { '10000' }
+
+        it 'takes the free amounts into account' do
+          # (100 + 1000 + 10000 - 10000) * 0.01 (max as 10000 * 0.01 > 12)
+          expect(apply_percentage_service.amount).to eq(11)
+        end
+      end
     end
   end
 end

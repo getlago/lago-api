@@ -12,9 +12,18 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
       result.pay_in_advance_aggregation = 1
       result.count = 5
       result.options = {}
+      result.aggregator = aggregator
     end
   end
   let(:properties) { {} }
+
+  let(:aggregator) do
+    BillableMetrics::Aggregations::CountService.new(
+      billable_metric: charge.billable_metric,
+      subscription: nil,
+      boundaries: nil,
+    )
+  end
 
   describe '#call' do
     context 'when charge is not pay_in_advance' do
@@ -38,6 +47,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
           result.aggregation = 9
           result.count = 4
           result.options = {}
+          result.aggregator = aggregator
         end
 
         allow(charge_model_class).to receive(:apply)
@@ -45,7 +55,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
           .and_return(BaseService::Result.new.tap { |r| r.amount = 10 })
 
         allow(charge_model_class).to receive(:apply)
-          .with(charge:, aggregation_result: previous_agg_result, properties:)
+          .with(charge:, aggregation_result: previous_agg_result, properties: properties.merge(ignore_last_event: true))
           .and_return(BaseService::Result.new.tap { |r| r.amount = 8 })
 
         result = charge_service.call
