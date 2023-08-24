@@ -1,0 +1,23 @@
+it:
+  email:
+    questions: Domande? Contattaci all'indirizzo
+    powered_by: Fornito da
+    invoice:
+      finalized:
+        subject: "La tua fattura da %{organization_name} #%{invoice_number}"
+        invoice_from: Fattura da %{organization_name}
+        due_date: Totale dovuto il %{date}
+        invoice_number: Numero Fattura
+        issue_date: Data Emissione
+        download: Scarica la fattura per ulteriori dettagli
+    credit_note:
+      created:
+        subject: "La tua nota di credito da %{organization_name} #%{credit_note_number}"
+        credit_note_from: "Nota di credito da %{organization_name}"
+        credited_refunded_notice: Accreditato sul saldo cliente e rimborsato il %{date}
+        credited_notice: Accreditato sul saldo cliente il %{date}
+        refunded_notice: Rimborsato il %{date}
+        credit_note_number: Numero Nota di Credito
+        invoice_number: Numero Fattura
+        issue_date: Data Emissione
+        download: Scarica la nota di credito per ulteriori dettagli

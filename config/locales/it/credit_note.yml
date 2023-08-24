@@ -1,0 +1,22 @@
+it:
+  credit_note:
+    document_name: Nota di Credito
+    credit_note_number: Numero Nota di Credito
+    invoice_number: Numero Fattura
+    issue_date: Data Emissione
+    credit_from: Da
+    credit_to: Credito a
+    item: Articolo
+    tax_rate: Tasso fiscale
+    amount: Importo (escl. tasse)
+    refunded_notice: Rimborsato il %{issuing_date}
+    credited_notice: Accreditato sul saldo cliente il %{issuing_date}
+    credited_refunded_notice: Accreditato sul saldo cliente e rimborsato il %{issuing_date}
+    subscription: Abbonamento
+    coupon_adjustment: Tagliandi
+    sub_total_without_tax: Subtotale (escl. tasse)
+    tax: "%{name} (%{rate}% su %{amount})"
+    credited_on_customer_balance: Accreditato sul saldo cliente
+    refunded: Rimborsato
+    total: Totale
+    powered_by: Fornito da

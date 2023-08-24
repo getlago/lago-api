@@ -1,0 +1,61 @@
+it:
+  invoice:
+    document_name: Fattura
+    invoice_number: Numero Fattura
+    issue_date: Data Emissione
+    payment_term: Termine di pagamento
+    payment_term_days: "%{net_payment_term} giorni"
+    bill_from: Da
+    bill_to: Fatturare a
+    due_date: Scadenza %{date}
+    total_credits_with_value: "Crediti totali: %{credit_amount} crediti"
+    all_subscriptions: Tutti gli abbonamenti
+    all_usage_based_fees: "Tutte le tariffe basate sull'utilizzo"
+    sub_total_without_tax: Subtotale (escl. tasse)
+    tax: Tassare
+    sub_total_with_tax: Subtotale (incl. tasse)
+    credit_notes: Note di Credito
+    coupons: Tagliandi
+    prepaid_credits: Crediti prepagati
+    prepaid_credits_with_value: Crediti prepagati - %{wallet_name}
+    tax_identification_number: "Tassare ID: %{tax_identification_number}"
+    total_due: Totale dovuto
+    powered_by: Fornito da
+    item: Articolo
+    unit: Unità
+    unit_price: Prezzo unitario
+    amount: Importo
+    amount_with_tax: Importo (incl. tasse)
+    amount_without_tax: Importo (escl. tasse)
+    fees_from_to_date: Tariffe da %{from_date} a %{to_date}
+    tax_rate: Aliquota fiscale
+    tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name: "%{name} (%{rate}% su %{amount})"
+
+    details: Dettagli %{resource}
+    subscription: Abbonamento
+    date_from: Da
+    date_to: a
+    monthly: Mensile
+    yearly: Annuale
+    weekly: Settimanale
+    quarterly: Trimestrale
+    sub_total: Subtotale
+    subscription_interval: "Abbonamento %{plan_interval} - %{plan_name}"
+
+    usage_based_fees: "Tariffe basate sull'utilizzo"
+    list_of_charges: Elenco degli addebiti utilizzati da %{from} a %{to}
+    see_breakdown: "Vedere la ripartizione per l'unità totale"
+    total_unit_interval: "Unità totale: %{events_count} eventi per %{units}"
+    total_events: "Eventi totali: %{count}"
+    total_unit: "Unità totale: %{units}"
+    total: Totale
+    breakdown: Ripartizione
+    breakdown_for_days: "Utilizzati %{breakdown_duration} su %{breakdown_total_duration} giorni"
+    breakdown_of: "Ripartizione di %{fee_group_name}"
+    notice_prorated: "Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni nel piano, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}."
+    notice_full: "Indipendentemente da quando un evento viene ricevuto, l'unità non è prorata, addebitiamo il prezzo intero."
+    true_up_metric: "%{metric} - Allineamento"
+    true_up_details: Spesa minima di %{min_amount} proporzionata sui giorni di utilizzo
+
+    total_credits: Crediti totali
