@@ -3,7 +3,7 @@
 class BillSubscriptionJob < ApplicationJob
   queue_as 'billing'
 
-  retry_on Sequenced::SequenceError
+  retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
 
   def perform(subscriptions, timestamp, recurring: false)
     result = Invoices::SubscriptionService.new(
