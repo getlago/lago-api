@@ -169,6 +169,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
           expect(result).to eq('2023-07-06 00:00:00 UTC')
         end
       end
+
+      context 'when date is not on a billing month and day is less than subscription day' do
+        let(:billing_at) { DateTime.parse('4 Aug 2023') }
+        let(:subscription_at) { DateTime.parse('6 Apr 2023') }
+        let(:current_usage) { true }
+
+        it 'returns the date in previous billing month' do
+          expect(result).to eq('2023-07-06 00:00:00 UTC')
+        end
+      end
     end
   end
 

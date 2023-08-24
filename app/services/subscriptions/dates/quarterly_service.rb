@@ -135,7 +135,7 @@ module Subscriptions
         return true if date.day < day && terminated_pay_in_arrear?
         return true if (date.day + 1) < day && last_day_of_month?(subscription_at)
         return true if date.day < day && !last_day_of_month?(subscription_at)
-        return true if date.day > day && billing_months.exclude?(date.month)
+        return true if billing_months.exclude?(date.month)
 
         false
       end
