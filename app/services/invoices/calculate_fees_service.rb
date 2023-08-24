@@ -149,6 +149,8 @@ module Invoices
         charge_included_in_next_subscription?(charge, subscription)
     end
 
+    # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
+    # the same charge it should not be billed since it is recurring and will be billed at the end of period
     def charge_included_in_next_subscription?(charge, subscription)
       return false if subscription.next_subscription.nil?
 
