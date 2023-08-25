@@ -16,11 +16,6 @@ module Types
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :charges_usage, [Types::Charges::Usage], null: false, method: :fees
-
-      # TODO(cache): Remove after full refresh of cache
-      def currency
-        object.currency || object.amount_currency
-      end
     end
   end
 end
