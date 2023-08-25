@@ -22,6 +22,10 @@ module BillableMetrics
 
         (1..result.aggregation).to_a
       end
+
+      def compute_per_event_aggregation
+        (0...events_scope(from_datetime:, to_datetime:).count).map { |_| 1 }
+      end
     end
   end
 end

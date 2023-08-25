@@ -61,6 +61,10 @@ module BillableMetrics
         (1..result.aggregation).to_a
       end
 
+      def compute_per_event_aggregation
+        (0...added_query.count).map { |_| 1 }
+      end
+
       protected
 
       # This method fetches the latest event in current period. If such a event exists we know that metadata
@@ -80,7 +84,7 @@ module BillableMetrics
             .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
 
           query = query.where.not(id: event.id) if event.present?
-          query = query.order(created_at: :desc)
+          query = query.reorder(created_at: :desc)
 
           query
             .where('quantified_events.removed_at::timestamp(0) IS NULL')

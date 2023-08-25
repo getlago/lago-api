@@ -85,6 +85,10 @@ module BillableMetrics
         BigDecimal(result)
       end
 
+      def compute_per_event_aggregation
+        events_scope(from_datetime:, to_datetime:).pluck(Arel.sql("COALESCE((#{sanitized_field_name})::numeric, 0)"))
+      end
+
       protected
 
       def events
@@ -113,7 +117,7 @@ module BillableMetrics
 
           scope = scope.where.not(id: event.id) if event.present?
 
-          scope.order(created_at: :desc).first
+          scope.reorder(created_at: :desc).first
         end
       end
 
