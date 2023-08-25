@@ -18,19 +18,17 @@ module CreditNotes
         customer: invoice.customer,
         invoice:,
         total_amount_currency: invoice.currency,
-        vat_amount_currency: invoice.currency,
         credit_amount_currency: invoice.currency,
         refund_amount_currency: invoice.currency,
         balance_amount_currency: invoice.currency,
       )
 
-      validate_items
+      validate_items(credit_note)
       return result unless result.success?
 
-      compute_amounts_and_taxes
+      compute_amounts_and_taxes(credit_note)
 
       # TODO: assign creditable and refundable attribute and return them in a serializer
-      credit_note.credit_amount_cents = 0
       credit_note.refund_amount_cents = 0
 
       result.credit_note = credit_note
@@ -39,7 +37,7 @@ module CreditNotes
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :items
 
     delegate :credit_note, to: :result
 
@@ -49,25 +47,27 @@ module CreditNotes
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
 
-    def validate_items
+    def validate_items(credit_note)
       items.each do |item_attr|
         amount_cents = item_attr[:amount_cents] || 0
 
-        item = credit_note.items.new(
+        item = CreditNoteItem.new(
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
           amount_cents: amount_cents.round,
           precise_amount_cents: amount_cents,
           amount_currency: invoice.currency,
         )
+        credit_note.items << item
+
         break unless valid_item?(item)
       end
     end
 
     def valid_item?(item)
-      CreditNote::ValidateItemService.new(result, item:).valid?
+      CreditNotes::ValidateItemService.new(result, item:).valid?
     end
 
-    def compute_amounts_and_taxes
+    def compute_amounts_and_taxes(credit_note)
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice:,
         items: credit_note.items,
@@ -80,6 +80,12 @@ module CreditNotes
       credit_note.taxes_rate = taxes_result.taxes_rate
 
       taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
+
+      credit_note.credit_amount_cents = (
+        credit_note.items.sum(&:amount_cents) -
+        taxes_result.coupons_adjustment_amount_cents +
+        taxes_result.taxes_amount_cents
+      ).round
     end
   end
 end
