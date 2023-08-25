@@ -11,7 +11,7 @@ module CreditNotes
 
     def call
       return result.not_found_failure!(resource: 'invoice') unless invoice
-      return result.forbidden_failure! unless should_create_credit_note?
+      return result.forbidden_failure! unless License.premium?
       return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
 
       credit_note = CreditNote.new(
@@ -27,12 +27,11 @@ module CreditNotes
       validate_items
       return result unless result.success?
 
-      credit_note.precise_coupons_adjustment_amount_cents = coupons_adjustment_amount_cents
-      credit_note.coupons_adjustment_amount_cents = credit_note.precise_coupons_adjustment_amount_cents.round
-      credit_note.precise_vat_amount_cents = vat_amount_cents
-      credit_note.vat_amount_cents = credit_note.precise_vat_amount_cents.round
+      compute_amounts_and_taxes
 
       # TODO: assign creditable and refundable attribute and return them in a serializer
+      credit_note.credit_amount_cents = 0
+      credit_note.refund_amount_cents = 0
 
       result.credit_note = credit_note
       result
@@ -43,11 +42,6 @@ module CreditNotes
     attr_reader :invoice
 
     delegate :credit_note, to: :result
-
-    def should_create_credit_note?
-      # NOTE: credit note is a premium feature
-      License.premium?
-    end
 
     def valid_type_or_status?
       return false if invoice.credit?
@@ -73,21 +67,19 @@ module CreditNotes
       CreditNote::ValidateItemService.new(result, item:).valid?
     end
 
-    def coupons_adjustment_amount_cents
-      return 0 if invoice.version_number < Invoice::COUPON_BEFORE_VAT_VERSION
+    def compute_amounts_and_taxes
+      taxes_result = CreditNotes::ApplyTaxesService.call(
+        invoice:,
+        items: credit_note.items,
+      )
 
-      invoice.coupons_amount_cents.fdiv(invoice.fees_amount_cents) * credit_note.items.sum(&:precise_amount_cents)
-    end
+      credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
+      credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
+      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.taxes_amount_cents = taxes_result.taxes_amount_cents.round
+      credit_note.taxes_rate = taxes_result.taxes_rate
 
-    def vat_amount_cents
-      credit_note.items.sum do |item|
-        # NOTE: Because coupons are applied before VAT,
-        #       we have to discribute the coupon adjustement at prorata of each items
-        #       to compute the VAT
-        item_rate = item.precise_amount_cents.fdiv(credit_note.items.sum(&:precise_amount_cents))
-        prorated_coupon_amount = credit_note.precise_coupons_adjustment_amount_cents * item_rate
-        (item.precise_amount_cents - prorated_coupon_amount) * (item.fee.vat_rate || 0)
-      end.fdiv(100)
+      taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
     end
   end
 end

@@ -123,9 +123,9 @@ module Api
 
         if result.success?
           render(
-            json: ::V1::CreditNoteEstimateSerializer.new(
+            json: ::V1::CreditNotes::EstimateSerializer.new(
               result.credit_note,
-              root_name: 'credit_note',
+              root_name: 'estimated_credit_note',
             ),
           )
         else
