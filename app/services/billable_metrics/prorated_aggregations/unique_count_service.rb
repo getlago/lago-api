@@ -100,7 +100,7 @@ module BillableMetrics
 
         return quantified_events unless group
 
-        group_scope(quantified_events)
+        count_unique_group_scope(quantified_events)
       end
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
