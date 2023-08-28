@@ -143,6 +143,28 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         end
       end
 
+      context 'when dimensions are used' do
+        let(:quantified_event) do
+          create(
+            :quantified_event,
+            customer:,
+            added_at:,
+            removed_at:,
+            external_subscription_id: subscription.external_id,
+            billable_metric:,
+            properties: { unique_id: '111', region: 'europe' },
+          )
+        end
+
+        let(:group) do
+          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+        end
+
+        it 'returns the number of persisted metric' do
+          expect(result.aggregation).to eq(1)
+        end
+      end
+
       context 'when plan is pay in advance' do
         before do
           subscription.plan.update!(pay_in_advance: true)
