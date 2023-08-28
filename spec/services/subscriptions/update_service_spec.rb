@@ -10,10 +10,12 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
   describe 'update' do
     let(:subscription_at) { '2022-07-07T00:00:00Z' }
+    let(:ending_at) { Time.current.beginning_of_day + 1.month }
 
     let(:update_args) do
       {
         name: 'new name',
+        ending_at:,
         subscription_at:,
       }
     end
@@ -27,6 +29,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.subscription.name).to eq('new name')
+        expect(result.subscription.ending_at).to eq(Time.current.beginning_of_day + 1.month)
         expect(result.subscription.subscription_at.to_s).not_to eq('2022-07-07')
       end
     end

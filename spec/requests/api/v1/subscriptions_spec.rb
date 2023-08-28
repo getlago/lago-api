@@ -9,6 +9,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
   describe 'create' do
     let(:subscription_at) { '2022-06-06T12:23:12Z' }
+    let(:ending_at) { '2022-06-09T12:23:12Z' }
     let(:plan_code) { plan.code }
 
     let(:params) do
@@ -19,6 +20,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         external_id: SecureRandom.uuid,
         billing_time: 'anniversary',
         subscription_at:,
+        ending_at:,
       }
     end
 
@@ -37,6 +39,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:started_at]).to be_present
       expect(json[:subscription][:billing_time]).to eq('anniversary')
       expect(json[:subscription][:subscription_at].to_s).to eq('2022-06-06T12:23:12Z')
+      expect(json[:subscription][:ending_at].to_s).to eq('2022-06-09T12:23:12Z')
       expect(json[:subscription][:previous_plan_code]).to be_nil
       expect(json[:subscription][:next_plan_code]).to be_nil
       expect(json[:subscription][:downgrade_plan_date]).to be_nil

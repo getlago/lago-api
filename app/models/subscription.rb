@@ -16,6 +16,7 @@ class Subscription < ApplicationRecord
 
   validates :external_id, presence: true
   validate :validate_external_id, on: :create
+  validate :validate_ending_at
 
   STATUSES = [
     :pending,
@@ -110,6 +111,14 @@ class Subscription < ApplicationRecord
     # NOTE: We want unique external id per organization.
     used_ids = organization.subscriptions.active.pluck(:external_id)
     errors.add(:external_id, :value_already_exist) if used_ids&.include?(external_id)
+  end
+
+  def validate_ending_at
+    return if ending_at.nil?
+    return if started_at.nil?
+    return if (ending_at > created_at) && (started_at.present? && started_at < ending_at)
+
+    errors.add(:ending_at, :invalid_date)
   end
 
   def downgrade_plan_date

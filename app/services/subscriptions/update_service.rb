@@ -6,6 +6,7 @@ module Subscriptions
       return result.not_found_failure!(resource: 'subscription') unless subscription
 
       subscription.name = args[:name] if args.key?(:name)
+      subscription.ending_at = args[:ending_at] if args.key?(:ending_at)
 
       if subscription.starting_in_the_future? && args.key?(:subscription_at)
         subscription.subscription_at = args[:subscription_at]
