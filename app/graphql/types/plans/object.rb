@@ -31,6 +31,10 @@ module Types
       field :draft_invoices_count, Integer, null: false
       field :subscriptions_count, Integer, null: false
 
+      def charges
+        object.charges.order(created_at: :asc)
+      end
+
       def charge_count
         object.charges.count
       end

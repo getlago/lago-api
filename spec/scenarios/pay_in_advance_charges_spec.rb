@@ -743,6 +743,123 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
       end
     end
 
+    describe 'with min / max per transaction' do
+      around { |test| lago_premium!(&test) }
+
+      it 'creates a pay_in_advance fee ' do
+        ### 24 january: Create subscription.
+        jan24 = DateTime.new(2023, 1, 24)
+
+        travel_to(jan24) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+        end
+
+        charge = create(
+          :percentage_charge,
+          :pay_in_advance,
+          invoiceable: false,
+          plan:,
+          billable_metric:,
+          properties: {
+            rate: '1',
+            fixed_amount: '0.5',
+            per_transaction_max_amount: '2',
+            per_transaction_min_amount: '1.75',
+          },
+        )
+
+        subscription = customer.subscriptions.first
+
+        ### 14 february: Send an event.
+        travel_to(DateTime.new(2023, 2, 14)) do
+          expect do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_customer_id: customer.external_id,
+                properties: { amount: '100' },
+              },
+            )
+          end.to change { subscription.reload.fees.count }.from(0).to(1)
+
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: 'charge',
+            pay_in_advance: true,
+            units: 100,
+            events_count: 1,
+            amount_cents: 175, # Apply minimum amount
+          )
+        end
+
+        ### 15 february: Send an event.
+        feb15 = DateTime.new(2023, 2, 15)
+
+        travel_to(feb15) do
+          expect do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_customer_id: customer.external_id,
+                properties: { amount: '1000' },
+              },
+            )
+          end.to change { subscription.reload.fees.count }.from(1).to(2)
+
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: 'charge',
+            pay_in_advance: true,
+            units: 1_000,
+            events_count: 1,
+            amount_cents: 200, # Apply maximum amount
+          )
+        end
+
+        ### 16 february: Send an event.
+        feb16 = DateTime.new(2023, 2, 16)
+
+        travel_to(feb16) do
+          expect do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_customer_id: customer.external_id,
+                properties: { amount: '10000' },
+              },
+            )
+          end.to change { subscription.reload.fees.count }.from(2).to(3)
+
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: 'charge',
+            pay_in_advance: true,
+            units: 10_000,
+            events_count: 1,
+            amount_cents: 200, # Apply maximum amount
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(575)
+        end
+      end
+    end
+
     it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)

@@ -10,6 +10,8 @@ module BillableMetrics
         @group = group
         @event = event
         @boundaries = boundaries
+
+        result.aggregator = self
       end
 
       def aggregate(options: {})

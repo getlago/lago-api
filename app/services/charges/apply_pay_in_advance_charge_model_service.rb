@@ -58,8 +58,13 @@ module Charges
       previous_result.aggregation = aggregation_result.aggregation - aggregation_result.pay_in_advance_aggregation
       previous_result.count = aggregation_result.count - 1
       previous_result.options = aggregation_result.options
+      previous_result.aggregator = aggregation_result.aggregator
 
-      charge_model.apply(charge:, aggregation_result: previous_result, properties:).amount
+      charge_model.apply(
+        charge:,
+        aggregation_result: previous_result,
+        properties: (properties || {}).merge(ignore_last_event: true),
+      ).amount
     end
 
     def currency
