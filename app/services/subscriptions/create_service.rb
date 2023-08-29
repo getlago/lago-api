@@ -22,7 +22,7 @@ module Subscriptions
     end
 
     def call
-      return result unless valid?(customer:, plan:, subscription_at:)
+      return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
 
       # NOTE: in API, it's possible to create a subscription for a new customer
       customer.save! if api_context?

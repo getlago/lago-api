@@ -10,13 +10,15 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription_at) { '2022-07-07T00:00:00Z' }
+  let(:subscription_at) { Time.current.iso8601 }
+  let(:ending_at) { (Time.current + 1.year).iso8601 }
 
   let(:args) do
     {
       customer:,
       plan:,
       subscription_at:,
+      ending_at:,
     }
   end
 
@@ -67,6 +69,35 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
         it 'returns false and result has errors' do
           expect(validate_service).not_to be_valid
           expect(result.error.messages[:subscription_at]).to eq(['invalid_date'])
+        end
+      end
+    end
+
+    context 'with invalid ending_at' do
+      context 'when string cannot be parsed to date' do
+        let(:ending_at) { 'invalid' }
+
+        it 'returns false and result has errors' do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(['invalid_date'])
+        end
+      end
+
+      context 'when ending_at is integer' do
+        let(:ending_at) { 123 }
+
+        it 'returns false and result has errors' do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(['invalid_date'])
+        end
+      end
+
+      context 'when ending_at is less than subscription_at and current time' do
+        let(:ending_at) { (Time.current - 1.year).iso8601 }
+
+        it 'returns false and result has errors' do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(['invalid_date'])
         end
       end
     end

@@ -282,43 +282,6 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe '#validate_ending_at' do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) do
-      build(
-        :active_subscription,
-        plan:,
-        customer: create(:customer, organization:),
-        started_at: Time.current,
-        ending_at: Time.current.beginning_of_day + 1.month,
-      )
-    end
-
-    it 'does not return error if ending_at is valid' do
-      expect(subscription).to be_valid
-    end
-
-    context 'when ending_at is set before stared_at' do
-      let(:subscription) do
-        build(
-          :active_subscription,
-          plan:,
-          customer: create(:customer, organization:),
-          started_at: Time.current,
-          ending_at: Time.current.beginning_of_day - 1.month,
-        )
-      end
-
-      it 'returns an error' do
-        aggregate_failures do
-          expect(subscription).not_to be_valid
-          expect(subscription.errors.messages[:ending_at]).to include('invalid_date')
-        end
-      end
-    end
-  end
-
   describe '#downgrade_plan_date' do
     let(:subscription) { create(:subscription) }
 

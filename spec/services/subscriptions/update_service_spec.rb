@@ -6,7 +6,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
   subject(:update_service) { described_class.new(membership.user) }
 
   let(:membership) { create(:membership) }
-  let(:subscription) { create(:subscription) }
+  let(:subscription) { create(:subscription, subscription_at: Time.current - 1.year) }
 
   describe 'update' do
     let(:subscription_at) { '2022-07-07T00:00:00Z' }
