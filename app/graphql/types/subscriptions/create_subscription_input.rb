@@ -5,6 +5,7 @@ module Types
     class CreateSubscriptionInput < BaseInputObject
       description 'Create Subscription input arguments'
 
+      argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :external_id, String, required: false
       argument :name, String, required: false
       argument :subscription_id, ID, required: false
@@ -14,7 +15,6 @@ module Types
 
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
-      argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
     end
   end
 end
