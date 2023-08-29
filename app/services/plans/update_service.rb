@@ -151,7 +151,7 @@ module Plans
       charge.group_properties.discard_all
 
       # NOTE: Refresh all draft invoices asynchronously.
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
+      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
     end
   end
 end
