@@ -46,8 +46,11 @@ module Subscriptions
     def valid_ending_at?
       return true if args[:ending_at].blank?
 
-      if is_valid_format?(args[:ending_at]) && is_valid_format?(args[:subscription_at])
-        return true if ending_at.to_date > Time.current.to_date && ending_at.to_date > subscription_at.to_date
+      if is_valid_format?(args[:ending_at]) &&
+        is_valid_format?(args[:subscription_at]) &&
+        ending_at.to_date > Time.current.to_date &&
+        ending_at.to_date > subscription_at.to_date
+        return true
       end
 
       add_error(field: :ending_at, error_code: 'invalid_date')
@@ -60,23 +63,21 @@ module Subscriptions
     end
 
     def ending_at
-      @ending_at ||= begin
+      @ending_at ||=
         if args[:ending_at].is_a?(String)
           DateTime.strptime(args[:ending_at])
         else
           args[:ending_at]
         end
-      end
     end
 
     def subscription_at
-      @subscription_at ||= begin
+      @subscription_at ||=
         if args[:subscription_at].is_a?(String)
           DateTime.strptime(args[:subscription_at])
         else
           args[:subscription_at]
         end
-      end
     end
   end
 end
