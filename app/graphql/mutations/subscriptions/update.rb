@@ -8,6 +8,7 @@ module Mutations
       graphql_name 'UpdateSubscription'
       description 'Update a Subscription'
 
+      argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :id, ID, required: true
       argument :name, String, required: false
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false

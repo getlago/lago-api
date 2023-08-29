@@ -20,6 +20,7 @@ module Types
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :started_at, GraphQL::Types::ISO8601DateTime
       field :subscription_at, GraphQL::Types::ISO8601DateTime
+      field :ending_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

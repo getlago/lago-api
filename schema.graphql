@@ -1779,6 +1779,7 @@ input CreateSubscriptionInput {
   """
   clientMutationId: String
   customerId: ID!
+  endingAt: ISO8601DateTime
   externalId: String
   name: String
   planId: ID!
@@ -4521,6 +4522,7 @@ type Subscription {
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
   customer: Customer!
+  endingAt: ISO8601DateTime
   externalId: String!
   fees: [Fee!]
   id: ID!
@@ -5532,6 +5534,7 @@ input UpdateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  endingAt: ISO8601DateTime
   id: ID!
   name: String
   subscriptionAt: ISO8601DateTime
