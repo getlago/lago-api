@@ -26,7 +26,7 @@ module BillableMetrics
       BillableMetrics::DeleteEventsJob.perform_later(metric)
 
       # NOTE: Refresh all draft invoices asynchronously.
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
+      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
 
       track_billable_metric_deleted
 
