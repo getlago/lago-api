@@ -6,6 +6,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
+  let(:ending_at) { Time.current.beginning_of_day + 1.year }
   let(:customer) { create(:customer, organization:) }
   let(:mutation) do
     <<~GQL
@@ -42,7 +43,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           name: 'invoice display name',
           externalId: 'custom-external-id',
           billingTime: 'anniversary',
-          endingAt: Time.current.beginning_of_day + 1.year,
+          endingAt: ending_at.iso8601,
         },
       },
     )
@@ -58,7 +59,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
       expect(result_data['customer']['id']).to eq(customer.id)
       expect(result_data['plan']['id']).to eq(plan.id)
       expect(result_data['billingTime']).to eq('anniversary')
-      expect(result_data['endingAt']).to eq(Time.current.beginning_of_day + 1.year)
+      expect(result_data['endingAt']).to eq(ending_at.iso8601)
     end
   end
 
