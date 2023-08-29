@@ -47,9 +47,9 @@ module Subscriptions
       return true if args[:ending_at].blank?
 
       if is_valid_format?(args[:ending_at]) &&
-        is_valid_format?(args[:subscription_at]) &&
-        ending_at.to_date > Time.current.to_date &&
-        ending_at.to_date > subscription_at.to_date
+         is_valid_format?(args[:subscription_at]) &&
+         ending_at.to_date > Time.current.to_date &&
+         ending_at.to_date > subscription_at.to_date
         return true
       end
 
@@ -63,21 +63,19 @@ module Subscriptions
     end
 
     def ending_at
-      @ending_at ||=
-        if args[:ending_at].is_a?(String)
-          DateTime.strptime(args[:ending_at])
-        else
-          args[:ending_at]
-        end
+      @ending_at ||= if args[:ending_at].is_a?(String)
+        DateTime.strptime(args[:ending_at])
+      else
+        args[:ending_at]
+      end
     end
 
     def subscription_at
-      @subscription_at ||=
-        if args[:subscription_at].is_a?(String)
-          DateTime.strptime(args[:subscription_at])
-        else
-          args[:subscription_at]
-        end
+      @subscription_at ||= if args[:subscription_at].is_a?(String)
+        DateTime.strptime(args[:subscription_at])
+      else
+        args[:subscription_at]
+      end
     end
   end
 end
