@@ -67,7 +67,15 @@ module Groups
       groups_to_discard.discard_all
 
       values.each do |value|
-        billable_metric.groups.find_or_create_by!(key:, value:, parent_group_id:)
+        next if billable_metric.groups.find_by(key:, value:, parent_group_id:)
+
+        discarded = billable_metric.groups.with_discarded.discarded.find_by(key:, value:, parent_group_id:)
+        if discarded
+          discarded.undiscard!
+          next
+        end
+
+        billable_metric.groups.create!(key:, value:, parent_group_id:)
       end
     end
 
