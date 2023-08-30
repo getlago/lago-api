@@ -5,14 +5,11 @@ class Group < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  belongs_to :billable_metric
-  belongs_to :parent, class_name: 'Group', foreign_key: 'parent_group_id', optional: true
+  belongs_to :billable_metric, -> { with_discarded }
+  belongs_to :parent, -> { with_discarded }, class_name: 'Group', foreign_key: 'parent_group_id', optional: true
   has_many :children, class_name: 'Group', foreign_key: 'parent_group_id'
   has_many :properties, class_name: 'GroupProperty'
   has_many :fees
-
-  STATUS = %i[active inactive].freeze
-  enum status: STATUS
 
   validates :key, :value, presence: true
 
