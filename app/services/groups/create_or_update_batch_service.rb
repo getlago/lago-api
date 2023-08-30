@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Groups
-  class CreateBatchService < BaseService
+  class CreateOrUpdateBatchService < BaseService
     def initialize(billable_metric:, group_params:)
       @billable_metric = billable_metric
       @group_params = group_params
@@ -10,16 +10,22 @@ module Groups
     end
 
     def call
-      return result if group_params.empty?
+      if group_params.empty?
+        billable_metric.groups.discard_all
+        return result
+      end
+
       return result.validation_failure!(errors: { group: %w[value_is_invalid] }) unless valid_format?
 
       ActiveRecord::Base.transaction do
         if one_dimension?
-          create_groups(group_params[:key], group_params[:values].uniq)
+          assign_groups(group_params[:key], group_params[:values].uniq)
         else
+          billable_metric.groups.parents.where.not(value: group_params[:values].map { |v| v[:name] }).discard_all
+
           group_params[:values].each do |value|
-            parent_group = billable_metric.groups.create!(key: group_params[:key], value: value[:name])
-            create_groups(value[:key], value[:values].uniq, parent_group.id)
+            parent_group = billable_metric.groups.find_or_create_by!(key: group_params[:key], value: value[:name])
+            assign_groups(value[:key], value[:values].uniq, parent_group.id)
           end
         end
       end
@@ -55,9 +61,13 @@ module Groups
       group_params[:values].map { |e| [e[:name], e[:key], e[:values]] }.flatten.all?(String)
     end
 
-    def create_groups(key, values, parent_group_id = nil)
+    def assign_groups(key, values, parent_group_id = nil)
+      groups_to_discard = billable_metric.groups.where.not(key:, value: values)
+      groups_to_discard = groups_to_discard.where(parent_group_id:).children if parent_group_id
+      groups_to_discard.discard_all
+
       values.each do |value|
-        billable_metric.groups.create!(key:, value:, parent_group_id:)
+        billable_metric.groups.find_or_create_by!(key:, value:, parent_group_id:)
       end
     end
 

@@ -20,7 +20,7 @@ module BillableMetrics
         )
 
         if args[:group].present?
-          group_result = Groups::CreateBatchService.call(
+          group_result = Groups::CreateOrUpdateBatchService.call(
             billable_metric: metric,
             group_params: args[:group].with_indifferent_access,
           )
