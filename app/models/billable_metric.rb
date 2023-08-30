@@ -48,7 +48,7 @@ class BillableMetric < ApplicationRecord
   end
 
   def active_groups
-    scope = groups.active.order(created_at: :asc)
+    scope = groups.order(created_at: :asc)
     scope = scope.with_discarded if discarded?
     scope
   end

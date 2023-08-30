@@ -48,7 +48,7 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
       it 'returns all billable metric\'s active groups' do
         one = create(:group, billable_metric:)
         second = create(:group, billable_metric:)
-        create(:group, billable_metric:, status: :inactive)
+        create(:group, billable_metric:, deleted_at: Time.current)
 
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
@@ -65,7 +65,7 @@ RSpec.describe Api::V1::BillableMetrics::GroupsController, type: :request do
         parent = create(:group, billable_metric:)
         children1 = create(:group, billable_metric:, parent_group_id: parent.id)
         children2 = create(:group, billable_metric:, parent_group_id: parent.id)
-        create(:group, billable_metric:, parent_group_id: parent.id, status: :inactive)
+        create(:group, billable_metric:, parent_group_id: parent.id, deleted_at: Time.current)
 
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}/groups")
 
