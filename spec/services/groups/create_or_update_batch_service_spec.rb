@@ -84,13 +84,13 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
     let(:group_params) do
       { "key": 'region', "values": %w[usa europe usa] }
     end
-    let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+    let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe', deleted_at: Time.current) }
     let(:group2) { create(:group, billable_metric:, key: 'region', value: 'africa') }
 
     before { group1 && group2 }
 
     it 'assigns expected groups' do
-      expect { service }.not_to change(Group, :count)
+      expect { service }.to change(Group, :count).by(1)
 
       expect(billable_metric.reload.groups).to include(group1)
       expect(billable_metric.groups.pluck(:key, :value))
