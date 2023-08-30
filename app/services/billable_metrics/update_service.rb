@@ -15,6 +15,11 @@ module BillableMetrics
       billable_metric.name = params[:name] if params.key?(:name)
       billable_metric.description = params[:description] if params.key?(:description)
 
+      if params.key?(:group)
+        group_result = update_groups(billable_metric, params[:group])
+        return group_result if group_result.error
+      end
+
       # NOTE: Only name and description are editable if billable metric
       #       is attached to a plan
       unless billable_metric.plans.exists?
@@ -27,11 +32,6 @@ module BillableMetrics
         billable_metric.aggregation_type = params[:aggregation_type]&.to_sym if params.key?(:aggregation_type)
         billable_metric.field_name = params[:field_name] if params.key?(:field_name)
         billable_metric.recurring = params[:recurring] if params.key?(:recurring)
-
-        if params.key?(:group)
-          group_result = update_groups(billable_metric, params[:group])
-          return group_result if group_result.error
-        end
       end
 
       billable_metric.save!
@@ -48,9 +48,7 @@ module BillableMetrics
 
     def update_groups(metric, group_params)
       ActiveRecord::Base.transaction do
-        metric.groups.discard_all
-
-        Groups::CreateBatchService.call(
+        Groups::CreateOrUpdateBatchService.call(
           billable_metric: metric,
           group_params: group_params.with_indifferent_access,
         )
