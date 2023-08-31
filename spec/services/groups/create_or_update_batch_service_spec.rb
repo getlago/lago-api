@@ -96,6 +96,17 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
       expect(billable_metric.groups.pluck(:key, :value))
         .to contain_exactly(%w[region usa], %w[region europe])
     end
+
+    it 'enqueues a Invoices::RefreshBatchJob' do
+      invoice = create(:invoice, :draft)
+      subscription = create(:subscription)
+      create(:standard_charge, plan: subscription.plan, billable_metric:)
+      create(:invoice_subscription, subscription:, invoice:)
+
+      expect do
+        service
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+    end
   end
 
   context 'with two dimensions' do
@@ -135,6 +146,17 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
 
       google = groups.find_by(key: 'cloud', value: 'Google')
       expect(google.children.pluck(:key, :value)).to eq([%w[region usa]])
+    end
+
+    it 'enqueues a Invoices::RefreshBatchJob' do
+      invoice = create(:invoice, :draft)
+      subscription = create(:subscription)
+      create(:standard_charge, plan: subscription.plan, billable_metric:)
+      create(:invoice_subscription, subscription:, invoice:)
+
+      expect do
+        service
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
     end
   end
 end

@@ -17,8 +17,8 @@ module BillableMetrics
         metric.discard!
         metric.charges.discard_all
         metric.groups.each do |group|
-          group.discard!
           group.properties.discard_all
+          group.discard!
         end
       end
 
