@@ -3,10 +3,7 @@
 module BillableMetrics
   module Breakdown
     class SumService < BillableMetrics::ProratedAggregations::SumService
-      def breakdown(from_datetime:, to_datetime:)
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def breakdown
         breakdown = persisted_breakdown
         breakdown += period_breakdown
 
@@ -16,8 +13,6 @@ module BillableMetrics
       end
 
       private
-
-      attr_reader :from_datetime, :to_datetime
 
       def from_date_in_customer_timezone
         from_datetime.in_time_zone(customer.applicable_timezone).to_date

@@ -48,7 +48,7 @@ module BillableMetrics
 
     def update_groups(metric, group_params)
       ActiveRecord::Base.transaction do
-        metric.groups.each(&:inactive!)
+        metric.groups.discard_all
 
         Groups::CreateBatchService.call(
           billable_metric: metric,

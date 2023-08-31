@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_08_08_144739) do
+ActiveRecord::Schema[7.0].define(version: 2023_08_30_120517) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -294,6 +294,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_08_144739) do
     t.string "document_locale"
     t.string "tax_identification_number"
     t.integer "net_payment_term"
+    t.string "external_salesforce_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -394,6 +395,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_08_144739) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.index ["charge_id", "group_id"], name: "index_group_properties_on_charge_id_and_group_id", unique: true
     t.index ["charge_id"], name: "index_group_properties_on_charge_id"
     t.index ["deleted_at"], name: "index_group_properties_on_deleted_at"
     t.index ["group_id"], name: "index_group_properties_on_group_id"
@@ -404,7 +406,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_08_144739) do
     t.uuid "parent_group_id"
     t.string "key", null: false
     t.string "value", null: false
-    t.integer "status", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"

@@ -42,13 +42,19 @@ module Fees
     def init_fees
       result.fees = []
 
-      if charge.group_properties.blank?
-        init_fee(properties: charge.properties)
-      else
+      if billable_metric.selectable_groups.any?
+        # NOTE: Create a fee for each groups defined on the charge.
         charge.group_properties.each do |group_properties|
           group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
           init_fee(properties: group_properties.values, group:)
         end
+
+        # NOTE: Create a fee for groups not defined (with default properties).
+        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).each do |group|
+          init_fee(properties: charge.properties, group:)
+        end
+      else
+        init_fee(properties: charge.properties)
       end
     end
 
@@ -96,11 +102,7 @@ module Fees
     end
 
     def compute_amount(properties:, group: nil)
-      aggregation_result = aggregator(group:).aggregate(
-        from_datetime: boundaries.charges_from_datetime,
-        to_datetime: boundaries.charges_to_datetime,
-        options: options(properties),
-      )
+      aggregation_result = aggregator(group:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
       apply_charge_model_service(aggregation_result, properties)
@@ -149,7 +151,15 @@ module Fees
                              raise(NotImplementedError)
       end
 
-      @aggregator = aggregator_service.new(billable_metric:, subscription:, group:)
+      @aggregator = aggregator_service.new(
+        billable_metric:,
+        subscription:,
+        group:,
+        boundaries: {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+        },
+      )
     end
 
     def apply_charge_model_service(aggregation_result, properties)
@@ -158,6 +168,8 @@ module Fees
                         Charges::ChargeModels::StandardService
                       when :graduated
                         Charges::ChargeModels::GraduatedService
+                      when :graduated_percentage
+                        Charges::ChargeModels::GraduatedPercentageService
                       when :package
                         Charges::ChargeModels::PackageService
                       when :percentage

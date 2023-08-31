@@ -655,6 +655,120 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
     end
 
+    context 'when billed quarterly' do
+      let(:timestamp) { Time.zone.now.beginning_of_year }
+      let(:started_at) { Time.zone.now.beginning_of_year - 2.years }
+      let(:interval) { 'quarterly' }
+
+      it 'updates the invoice accordingly' do
+        result = invoice_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription_kind.count).to eq(1)
+          expect(invoice.fees.charge_kind.count).to eq(1)
+
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day),
+            charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            charges_from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day),
+          )
+        end
+      end
+
+      context 'when subscription is billed on anniversary date' do
+        let(:timestamp) { DateTime.parse('07 Jun 2022') }
+        let(:started_at) { DateTime.parse('06 Jun 2020').to_date }
+        let(:subscription_at) { started_at }
+        let(:billing_time) { :anniversary }
+
+        it 'updates the invoice accordingly' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+            expect(invoice.fees.charge_kind.count).to eq(1)
+
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
+              from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              charges_to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
+              charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+            )
+          end
+        end
+
+        context 'when plan is pay in advance' do
+          let(:pay_in_advance) { true }
+          let(:invoice_subscription) { create(:invoice_subscription, invoice: old_invoice, subscription:) }
+          let(:old_invoice) do
+            create(
+              :invoice,
+              created_at: started_at - 3.months,
+              customer: subscription.customer,
+              organization: plan.organization,
+            )
+          end
+
+          before { invoice_subscription }
+
+          it 'updates the invoice accordingly' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.subscriptions.first).to eq(subscription)
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+              expect(invoice.fees.charge_kind.count).to eq(1)
+
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(DateTime.parse('2022-09-05 23:59:59')),
+                from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00')),
+                charges_to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
+                charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              )
+            end
+          end
+        end
+      end
+
+      context 'when billed quarterly on first billing day' do
+        let(:timestamp) { DateTime.parse('01 Jan 2022') }
+        let(:started_at) { DateTime.parse('12 Nov 2021').to_date }
+        let(:subscription_at) { started_at }
+
+        it 'updates the invoice accordingly' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+            expect(invoice.fees.charge_kind.count).to eq(1)
+
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+              charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+              charges_from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+            )
+          end
+        end
+      end
+    end
+
     context 'with credit' do
       let(:credit_note) do
         create(

@@ -31,7 +31,7 @@ module Types
       def group_properties
         scope = object.group_properties
         scope = scope.with_discarded if object.discarded?
-        scope
+        scope.includes(:group).sort_by { |gp| gp.group&.name }
       end
     end
   end

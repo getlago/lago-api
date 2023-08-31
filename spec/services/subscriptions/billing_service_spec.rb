@@ -109,6 +109,33 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       end
     end
 
+    context 'when billed quarterly with calendar billing time' do
+      let(:interval) { :quarterly }
+      let(:billing_time) { :calendar }
+
+      it 'enqueues a job on billing day' do
+        current_date = DateTime.parse('01 Apr 2022')
+
+        travel_to(current_date) do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], current_date.to_i, recurring: true)
+        end
+      end
+
+      it 'does not enqueue a job on other day' do
+        current_date = DateTime.parse('01 May 2022')
+
+        travel_to(current_date) do
+          billing_service.call
+
+          expect(BillSubscriptionJob).not_to have_been_enqueued
+            .with([subscription], current_date.to_i, recurring: true)
+        end
+      end
+    end
+
     context 'when billed yearly with calendar billing time' do
       let(:interval) { :yearly }
       let(:billing_time) { :calendar }
@@ -195,6 +222,55 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       context 'when subscription anniversary is on a 31st' do
         let(:subscription_at) { DateTime.parse('31 Mar 2021') }
         let(:current_date) { DateTime.parse('28 Feb 2022') }
+
+        it 'enqueues a job if the month count less than 31 days' do
+          travel_to(current_date) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription], current_date.to_i, recurring: true)
+          end
+        end
+      end
+    end
+
+    context 'when billed quarterly with anniversary billing time' do
+      let(:interval) { :quarterly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at + 3.months }
+
+      it 'enqueues a job on billing day' do
+        travel_to(current_date) do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], current_date.to_i, recurring: true)
+        end
+      end
+
+      it 'does not enqueue a job on other day' do
+        travel_to(current_date + 1.day) do
+          expect { billing_service.call }.not_to have_enqueued_job
+        end
+      end
+
+      context 'when subscription anniversary is in March' do
+        let(:subscription_at) { DateTime.parse('15 Mar 2021') }
+        let(:current_date) { DateTime.parse('15 Sep 2022') }
+
+        it 'enqueues a job' do
+          travel_to(current_date) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription], current_date.to_i, recurring: true)
+          end
+        end
+      end
+
+      context 'when subscription anniversary is on a 31st' do
+        let(:subscription_at) { DateTime.parse('31 Mar 2021') }
+        let(:current_date) { DateTime.parse('30 Jun 2022') }
 
         it 'enqueues a job if the month count less than 31 days' do
           travel_to(current_date) do

@@ -176,12 +176,12 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         expect(groups_usage).to contain_exactly(
           {
             'id' => aws.id,
-            'key' => nil,
+            'key' => 'cloud',
             'value' => 'aws',
             'units' => 3,
             'amountCents' => '3000',
           },
-          { 'id' => google.id, 'key' => nil, 'value' => 'google', 'units' => 1, 'amountCents' => '2000' },
+          { 'id' => google.id, 'key' => 'cloud', 'value' => 'google', 'units' => 1, 'amountCents' => '2000' },
         )
       end
     end

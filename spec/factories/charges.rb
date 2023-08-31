@@ -52,6 +52,28 @@ FactoryBot.define do
       end
     end
 
+    factory :graduated_percentage_charge do
+      charge_model { 'graduated_percentage' }
+      properties do
+        {
+          graduated_percentage_ranges: [
+            {
+              from_value: 0,
+              to_value: 10,
+              rate: '0',
+              flat_amount: '200',
+            },
+            {
+              from_value: 11,
+              to_value: nil,
+              rate: '0',
+              flat_amount: '300',
+            },
+          ],
+        }
+      end
+    end
+
     trait :pay_in_advance do
       pay_in_advance { true }
     end

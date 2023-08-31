@@ -30,6 +30,7 @@ nb:
     fees_from_to_date: Gebyrer fra %{from_date} til %{to_date}
     tax_rate: Skattesats
     tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name: "%{name} (%{rate}% on %{amount})"
 
     details: "%{resource} detaljer"
     subscription: Abonnement
@@ -38,6 +39,7 @@ nb:
     monthly: Månedlig
     yearly: Årlig
     weekly: Ukentlig
+    quarterly: Kvartalsvis
     sub_total: Sub total
     subscription_interval: "%{plan_interval} abonnement - %{plan_name}"
 

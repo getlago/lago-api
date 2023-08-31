@@ -53,6 +53,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
             tax_rate: 10,
             amount_currency: invoice.currency,
             amount_cents: 300,
+            fees_amount_cents: 3000,
           )
 
           expect(applied_taxes[1]).to have_attributes(
@@ -64,11 +65,13 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
             tax_rate: 12,
             amount_currency: invoice.currency,
             amount_cents: 240,
+            fees_amount_cents: 2000,
           )
 
           expect(invoice).to have_attributes(
             taxes_amount_cents: 540,
             taxes_rate: 18,
+            fees_amount_cents: 3000,
           )
         end
       end
@@ -104,6 +107,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
             tax_rate: 10,
             amount_currency: invoice.currency,
             amount_cents: 0,
+            fees_amount_cents: 0,
           )
 
           expect(applied_taxes[1]).to have_attributes(
@@ -115,11 +119,13 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
             tax_rate: 12,
             amount_currency: invoice.currency,
             amount_cents: 0,
+            fees_amount_cents: 0,
           )
 
           expect(invoice).to have_attributes(
             taxes_amount_cents: 0,
             taxes_rate: 16,
+            fees_amount_cents: 0,
           )
         end
       end
@@ -155,6 +161,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
             tax_rate: 10,
             amount_currency: invoice.currency,
             amount_cents: 200,
+            fees_amount_cents: 2000,
           )
 
           expect(applied_taxes[1]).to have_attributes(
@@ -166,11 +173,13 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
             tax_rate: 12,
             amount_currency: invoice.currency,
             amount_cents: 160,
+            fees_amount_cents: 1333,
           )
 
           expect(invoice).to have_attributes(
             taxes_amount_cents: 360,
             taxes_rate: 18,
+            fees_amount_cents: 3000,
           )
         end
       end

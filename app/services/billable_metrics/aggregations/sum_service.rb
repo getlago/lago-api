@@ -3,10 +3,7 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def aggregate(options: {})
         aggregation = events.sum("(#{sanitized_field_name})::numeric")
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
@@ -88,9 +85,11 @@ module BillableMetrics
         BigDecimal(result)
       end
 
-      protected
+      def compute_per_event_aggregation
+        events_scope(from_datetime:, to_datetime:).pluck(Arel.sql("COALESCE((#{sanitized_field_name})::numeric, 0)"))
+      end
 
-      attr_reader :from_datetime, :to_datetime
+      protected
 
       def events
         @events ||= begin
@@ -118,7 +117,7 @@ module BillableMetrics
 
           scope = scope.where.not(id: event.id) if event.present?
 
-          scope.order(created_at: :desc).first
+          scope.reorder(created_at: :desc).first
         end
       end
 

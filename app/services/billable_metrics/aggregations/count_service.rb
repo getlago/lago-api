@@ -3,7 +3,7 @@
 module BillableMetrics
   module Aggregations
     class CountService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
+      def aggregate(options: {})
         result.aggregation = events_scope(from_datetime:, to_datetime:).count
         result.current_usage_units = result.aggregation
         result.count = result.aggregation
@@ -21,6 +21,10 @@ module BillableMetrics
         return [] if free_units_per_events.zero? && free_units_per_total_aggregation.zero?
 
         (1..result.aggregation).to_a
+      end
+
+      def compute_per_event_aggregation
+        (0...events_scope(from_datetime:, to_datetime:).count).map { |_| 1 }
       end
     end
   end

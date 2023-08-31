@@ -57,10 +57,10 @@ module Plans
     def create_charge(plan, args)
       charge = plan.charges.new(
         billable_metric_id: args[:billable_metric_id],
-        charge_model: args[:charge_model]&.to_sym,
+        charge_model: charge_model(args),
         pay_in_advance: args[:pay_in_advance] || false,
         prorated: args[:prorated] || false,
-        properties: args[:properties] || {},
+        properties: args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args)),
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
 
@@ -71,6 +71,13 @@ module Plans
 
       charge.save!
       charge
+    end
+
+    def charge_model(args)
+      model = args[:charge_model]&.to_sym
+      return if model == :graduated_percentage && !License.premium?
+
+      model
     end
 
     def track_plan_created(plan)

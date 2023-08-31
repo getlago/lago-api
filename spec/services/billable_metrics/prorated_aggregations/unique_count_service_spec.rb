@@ -9,6 +9,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       subscription:,
       group:,
       event: pay_in_advance_event,
+      boundaries: {
+        from_datetime:,
+        to_datetime:,
+      },
     )
   end
 
@@ -58,7 +62,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   before { quantified_event }
 
   describe '#aggregate' do
-    let(:result) { unique_count_service.aggregate(from_datetime:, to_datetime:, options:) }
+    let(:result) { unique_count_service.aggregate(options:) }
 
     context 'with persisted metric on full period' do
       it 'returns the number of persisted metric' do
@@ -136,6 +140,28 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         it 'returns the prorata of the full duration' do
           expect(result.aggregation).to eq(8.fdiv(31).ceil(5))
+        end
+      end
+
+      context 'when dimensions are used' do
+        let(:quantified_event) do
+          create(
+            :quantified_event,
+            customer:,
+            added_at:,
+            removed_at:,
+            external_subscription_id: subscription.external_id,
+            billable_metric:,
+            properties: { unique_id: '111', region: 'europe' },
+          )
+        end
+
+        let(:group) do
+          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+        end
+
+        it 'returns the number of persisted metric' do
+          expect(result.aggregation).to eq(1)
         end
       end
 

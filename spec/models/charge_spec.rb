@@ -310,36 +310,61 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '#validate_group_properties' do
-    context 'without groups' do
-      it 'does not return an error' do
-        expect(build(:standard_charge)).to be_valid
-      end
+  describe '#validate_graduated_percentage' do
+    subject(:charge) do
+      build(:graduated_percentage_charge, properties: charge_properties)
     end
 
-    context 'with group properties missing for some groups' do
-      it 'returns an error' do
-        create(:group, billable_metric: charge.billable_metric)
+    let(:charge_properties) do
+      { graduated_percentage_ranges: [{ 'foo' => 'bar' }] }
+    end
+    let(:validation_service) { instance_double(Charges::Validators::GraduatedPercentageService) }
 
+    let(:service_response) do
+      BaseService::Result.new.validation_failure!(
+        errors: {
+          rate: ['invalid_rate'],
+          ranges: ['invalid_graduated_percentage_ranges'],
+        },
+      )
+    end
+
+    it 'delegates to a validation service' do
+      allow(Charges::Validators::GraduatedPercentageService).to receive(:new)
+        .and_return(validation_service)
+      allow(validation_service).to receive(:valid?)
+        .and_return(false)
+      allow(validation_service).to receive(:result)
+        .and_return(service_response)
+
+      aggregate_failures do
         expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:group_properties)
-        expect(charge.errors.messages[:group_properties]).to include('values_not_all_present')
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include('invalid_rate')
+        expect(charge.errors.messages[:properties]).to include('invalid_graduated_percentage_ranges')
+
+        expect(Charges::Validators::GraduatedPercentageService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
-    context 'with group properties for all groups' do
-      it 'does not return an error' do
-        metric = create(:billable_metric)
-        group = create(:group, billable_metric: metric)
+    context 'when charge model is not graduated percentage' do
+      subject(:charge) { build(:standard_charge) }
 
-        charge = create(
-          :standard_charge,
-          billable_metric: metric,
-          properties: {},
-          group_properties: [build(:group_property, group:)],
-        )
+      it 'does not apply the validation' do
+        allow(Charges::Validators::GraduatedPercentageService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
+          .and_return(service_response)
 
-        expect(charge).to be_valid
+        charge.valid?
+
+        expect(Charges::Validators::GraduatedPercentageService).not_to have_received(:new)
+        expect(validation_service).not_to have_received(:valid?)
+        expect(validation_service).not_to have_received(:result)
       end
     end
   end
@@ -441,6 +466,21 @@ RSpec.describe Charge, type: :model do
           expect(charge).not_to be_valid
           expect(charge.errors.messages[:prorated]).to include('invalid_billable_metric_or_charge_model')
         end
+      end
+    end
+  end
+
+  describe '#validate_uniqueness_group_properties' do
+    subject(:charge) do
+      build(:standard_charge, group_properties: [build(:group_property, group:), build(:group_property, group:)])
+    end
+
+    let(:group) { create(:group) }
+
+    it 'returns an error for a duplicate' do
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:group_properties]).to include('is duplicated')
       end
     end
   end

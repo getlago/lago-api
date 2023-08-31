@@ -5,6 +5,5 @@ FactoryBot.define do
     billable_metric
     key { 'region' }
     value { 'europe' }
-    status { 'active' }
   end
 end

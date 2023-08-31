@@ -33,11 +33,10 @@ module Fees
     delegate :charge, :subscription, to: :fee
 
     def prorated_min_amount_cents
-      from_date = boundaries.charges_from_datetime.to_date
-      to_date = boundaries.charges_to_datetime.to_date
-
       # NOTE: number of days between beginning of the period and the termination date
-      number_of_day_to_bill = (to_date + 1.day - from_date).to_i
+      from_datetime = boundaries.charges_from_datetime.to_time
+      to_datetime = boundaries.charges_to_datetime.to_time
+      number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
 
       date_service.charge_single_day_price(charge:) * number_of_day_to_bill
     end

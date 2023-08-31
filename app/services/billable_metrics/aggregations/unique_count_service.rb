@@ -3,10 +3,7 @@
 module BillableMetrics
   module Aggregations
     class UniqueCountService < BillableMetrics::Aggregations::BaseService
-      def aggregate(from_datetime:, to_datetime:, options: {})
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
+      def aggregate(options: {})
         aggregation = compute_aggregation.ceil(5)
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
@@ -64,9 +61,11 @@ module BillableMetrics
         (1..result.aggregation).to_a
       end
 
-      protected
+      def compute_per_event_aggregation
+        (0...added_query.count).map { |_| 1 }
+      end
 
-      attr_reader :from_datetime, :to_datetime
+      protected
 
       # This method fetches the latest event in current period. If such a event exists we know that metadata
       # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
@@ -85,7 +84,7 @@ module BillableMetrics
             .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
 
           query = query.where.not(id: event.id) if event.present?
-          query = query.order(created_at: :desc)
+          query = query.reorder(created_at: :desc)
 
           query
             .where('quantified_events.removed_at::timestamp(0) IS NULL')
@@ -160,13 +159,6 @@ module BillableMetrics
 
       def sanitized_operation_type
         ActiveRecord::Base.sanitize_sql_for_conditions(['events.properties->>operation_type'])
-      end
-
-      def count_unique_group_scope(events)
-        events = events.where('quantified_events.properties @> ?', { group.key.to_s => group.value }.to_json)
-        return events unless group.parent
-
-        events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
     end
   end

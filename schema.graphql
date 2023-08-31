@@ -200,6 +200,7 @@ input ChargeInput {
 
 enum ChargeModelEnum {
   graduated
+  graduated_percentage
   package
   percentage
   standard
@@ -2976,6 +2977,7 @@ input FeeInput {
   addOnId: ID!
   description: String
   name: String
+  taxCodes: [String!]
   unitAmountCents: BigInt
   units: Float
 }
@@ -3024,6 +3026,20 @@ type GocardlessProvider {
   hasAccessToken: Boolean!
   id: ID!
   webhookSecret: String
+}
+
+type GraduatedPercentageRange {
+  flatAmount: String!
+  fromValue: BigInt!
+  rate: String!
+  toValue: BigInt
+}
+
+input GraduatedPercentageRangeInput {
+  flatAmount: String!
+  fromValue: BigInt!
+  rate: String!
+  toValue: BigInt
 }
 
 type GraduatedRange {
@@ -3206,6 +3222,8 @@ type InvoiceSubscription {
   chargesToDatetime: ISO8601DateTime
   fees: [Fee!]
   fromDatetime: ISO8601DateTime
+  inAdvanceChargesFromDatetime: ISO8601DateTime
+  inAdvanceChargesToDatetime: ISO8601DateTime
   invoice: Invoice!
   subscription: Subscription!
   subscriptionAmountCents: BigInt!
@@ -3968,6 +3986,7 @@ type PlanCollection {
 
 enum PlanInterval {
   monthly
+  quarterly
   weekly
   yearly
 }
@@ -3978,8 +3997,11 @@ type Properties {
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
   freeUnitsPerTotalAggregation: String
+  graduatedPercentageRanges: [GraduatedPercentageRange!]
   graduatedRanges: [GraduatedRange!]
   packageSize: BigInt
+  perTransactionMaxAmount: String
+  perTransactionMinAmount: String
   rate: String
   volumeRanges: [VolumeRange!]
 }
@@ -3990,8 +4012,11 @@ input PropertiesInput {
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
   freeUnitsPerTotalAggregation: String
+  graduatedPercentageRanges: [GraduatedPercentageRangeInput!]
   graduatedRanges: [GraduatedRangeInput!]
   packageSize: BigInt
+  perTransactionMaxAmount: String
+  perTransactionMinAmount: String
   rate: String
   volumeRanges: [VolumeRangeInput!]
 }

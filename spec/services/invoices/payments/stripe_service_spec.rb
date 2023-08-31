@@ -266,6 +266,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
     it 'updates the payment and invoice status' do
       result = stripe_service.update_payment_status(
+        organization_id: organization.id,
         provider_payment_id: 'ch_123456',
         status: 'succeeded',
       )
@@ -281,6 +282,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     context 'when status is failed' do
       it 'updates the payment and invoice status' do
         result = stripe_service.update_payment_status(
+          organization_id: organization.id,
           provider_payment_id: 'ch_123456',
           status: 'failed',
         )
@@ -299,6 +301,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
       it 'does not update the status of invoice and payment' do
         result = stripe_service.update_payment_status(
+          organization_id: organization.id,
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
         )
@@ -311,6 +314,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     context 'with invalid status' do
       it 'does not update the status of invoice and payment' do
         result = stripe_service.update_payment_status(
+          organization_id: organization.id,
           provider_payment_id: 'ch_123456',
           status: 'foo-bar',
         )
@@ -329,6 +333,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
       it 'returns an empty result' do
         result = stripe_service.update_payment_status(
+          organization_id: organization.id,
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
         )
@@ -342,6 +347,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       context 'with invoice id in metadata' do
         it 'returns an empty result' do
           result = stripe_service.update_payment_status(
+            organization_id: organization.id,
             provider_payment_id: 'ch_123456',
             status: 'succeeded',
             metadata: { lago_invoice_id: SecureRandom.uuid },
@@ -353,11 +359,10 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           end
         end
 
-        context 'when invoice belongs to lago' do
-          let(:invoice) { create(:invoice) }
-
+        context 'when the invoice is found for organization' do
           it 'returns a not found failure' do
             result = stripe_service.update_payment_status(
+              organization_id: organization.id,
               provider_payment_id: 'ch_123456',
               status: 'succeeded',
               metadata: { lago_invoice_id: invoice.id },

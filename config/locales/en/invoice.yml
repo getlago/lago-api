@@ -30,6 +30,7 @@ en:
     fees_from_to_date: Fees from %{from_date} to %{to_date}
     tax_rate: Tax rate
     tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name: "%{name} (%{rate}% on %{amount})"
 
     details: "%{resource} details"
     subscription: Subscription
@@ -38,6 +39,7 @@ en:
     monthly: Monthly
     yearly: Yearly
     weekly: Weekly
+    quarterly: Quarterly
     sub_total: Sub total
     subscription_interval: "%{plan_interval} subscription - %{plan_name}"
 

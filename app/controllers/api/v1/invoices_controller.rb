@@ -137,6 +137,7 @@ module Api
                 :unit_amount_cents,
                 :units,
                 :description,
+                { tax_codes: [] },
               ],
             ).to_h.deep_symbolize_keys
       end

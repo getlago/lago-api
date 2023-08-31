@@ -26,7 +26,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
     it 'creates expected credit note and invoice' do
       ### 8 Jan: Create subscription
-      travel_to(DateTime.new(2023, 1, 8)) do
+      travel_to(DateTime.new(2023, 1, 8, 8)) do
         expect {
           create_subscription(
             {
@@ -51,7 +51,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       expect(sub_invoice.total_amount_cents).to eq(4645) # 60 / 31 * 24
 
       ### 25 Feb: Create event and Terminate subscription
-      travel_to(DateTime.new(2023, 2, 25)) do
+      travel_to(DateTime.new(2023, 2, 25, 6)) do
         create_event(
           {
             code: metric.code,
@@ -183,7 +183,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       expect(sub_invoice.total_amount_cents).to eq(4645) # 60 / 31 * 24
 
       ### 25 Feb: Create event and Terminate subscription
-      travel_to(DateTime.new(2023, 2, 25)) do
+      travel_to(DateTime.new(2023, 2, 25, 8)) do
         create_event(
           {
             code: metric.code,

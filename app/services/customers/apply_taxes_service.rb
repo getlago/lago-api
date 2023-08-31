@@ -21,7 +21,8 @@ module Customers
         customer.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code))
       end
 
-      Invoices::RefreshBatchJob.perform_later(customer.invoices.draft.pluck(:id))
+      draft_ids = customer.invoices.draft.pluck(:id)
+      Invoices::RefreshBatchJob.perform_later(draft_ids) if draft_ids.present?
 
       result
     rescue ActiveRecord::RecordInvalid => e

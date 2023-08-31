@@ -21,6 +21,7 @@ class Charge < ApplicationRecord
     package
     percentage
     volume
+    graduated_percentage
   ].freeze
 
   enum charge_model: CHARGE_MODELS
@@ -30,13 +31,15 @@ class Charge < ApplicationRecord
   validate :validate_package, if: -> { package? && group_properties.empty? }
   validate :validate_percentage, if: -> { percentage? && group_properties.empty? }
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
+  validate :validate_graduated_percentage, if: -> { graduated_percentage? && group_properties.empty? }
 
   validates :min_amount_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :charge_model, presence: true
 
-  validate :validate_group_properties
   validate :validate_pay_in_advance
   validate :validate_prorated
   validate :validate_min_amount_cents
+  validate :validate_uniqueness_group_properties
 
   monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
 
@@ -70,6 +73,10 @@ class Charge < ApplicationRecord
     validate_charge_model(Charges::Validators::VolumeService)
   end
 
+  def validate_graduated_percentage
+    validate_charge_model(Charges::Validators::GraduatedPercentageService)
+  end
+
   def validate_charge_model(validator)
     instance = validator.new(charge: self)
     return if instance.valid?
@@ -77,14 +84,6 @@ class Charge < ApplicationRecord
     instance.result.error.messages.map { |_, codes| codes }
       .flatten
       .each { |code| errors.add(:properties, code) }
-  end
-
-  def validate_group_properties
-    # Group properties should be set for all the selectable groups of a BM
-    bm_group_ids = billable_metric.selectable_groups.pluck(:id).sort
-    gp_group_ids = group_properties.map { |gp| gp[:group_id] }.compact.sort
-
-    errors.add(:group_properties, :values_not_all_present) if bm_group_ids != gp_group_ids
   end
 
   # NOTE: An pay_in_advance charge cannot be created in the following cases:
@@ -112,5 +111,10 @@ class Charge < ApplicationRecord
     return if billable_metric.recurring? && !pay_in_advance? && (standard? || volume?)
 
     errors.add(:prorated, :invalid_billable_metric_or_charge_model)
+  end
+
+  def validate_uniqueness_group_properties
+    group_ids = group_properties.map(&:group_id)
+    errors.add(:group_properties, :taken) if group_ids.size > group_ids.uniq.size
   end
 end

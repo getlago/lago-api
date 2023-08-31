@@ -17,7 +17,7 @@ class Fee < ApplicationRecord
   has_one :billable_metric, -> { with_discarded }, through: :charge
   has_one :true_up_fee, class_name: 'Fee', foreign_key: :true_up_parent_fee_id, dependent: :destroy
 
-  has_many :credit_note_items
+  has_many :credit_note_items, dependent: :destroy
   has_many :credit_notes, through: :credit_note_items
 
   has_many :applied_taxes, class_name: 'Fee::AppliedTax', dependent: :destroy

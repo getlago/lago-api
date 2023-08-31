@@ -66,10 +66,10 @@ module Plans
       charge = plan.charges.new(
         billable_metric_id: params[:billable_metric_id],
         amount_currency: params[:amount_currency],
-        charge_model: params[:charge_model]&.to_sym,
+        charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
         prorated: params[:prorated] || false,
-        properties: params[:properties] || {},
+        properties: params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(params)),
         group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
 
@@ -88,6 +88,13 @@ module Plans
       charge
     end
 
+    def charge_model(params)
+      model = params[:charge_model]&.to_sym
+      return if model == :graduated_percentage && !License.premium?
+
+      model
+    end
+
     def process_charges(plan, params_charges)
       created_charges_ids = []
 
@@ -103,9 +110,11 @@ module Plans
             invoiceable = payload_charge.delete(:invoiceable)
             min_amount_cents = payload_charge.delete(:min_amount_cents)
             tax_codes = payload_charge.delete(:tax_codes)
+            properties = payload_charge.delete(:properties)
 
             charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
             charge.min_amount_cents = min_amount_cents || 0 if License.premium?
+            charge.properties = properties.presence || Charges::BuildDefaultPropertiesService.call(payload_charge[:charge_model])
 
             charge.update!(payload_charge)
 
@@ -142,7 +151,7 @@ module Plans
       charge.group_properties.discard_all
 
       # NOTE: Refresh all draft invoices asynchronously.
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids)
+      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
     end
   end
 end

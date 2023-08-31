@@ -10,7 +10,7 @@ gem 'activejob-uniqueness', require: 'active_job/uniqueness/sidekiq_patch'
 gem 'bootsnap', require: false
 gem 'clockwork', require: false
 gem 'puma', '~> 5.6'
-gem 'rails', '~> 7.0.5'
+gem 'rails', '~> 7.0.7'
 gem 'sidekiq'
 
 # Security
@@ -25,7 +25,7 @@ gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'paper_trail'
 gem 'pg'
-gem 'ransack', '~> 3.2.1'
+gem 'ransack', '~> 4.0.0'
 gem 'with_advisory_lock'
 
 # Currencies, Countries, Timezones...

@@ -12,6 +12,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         name: 'Foo Bar',
         currency: 'EUR',
         timezone: 'America/New_York',
+        external_salesforce_id: 'foobar',
       }
     end
 
@@ -26,6 +27,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:name]).to eq(create_params[:name])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
+        expect(json[:customer][:external_salesforce_id]).to eq(create_params[:external_salesforce_id])
       end
     end
 
@@ -357,12 +359,12 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(groups_usage).to contain_exactly(
             {
               lago_id: aws.id,
-              key: nil,
+              key: 'cloud',
               value: 'aws',
               units: '3.0',
               amount_cents: 3000,
             },
-            { lago_id: google.id, key: nil, value: 'google', units: '1.0', amount_cents: 2000 },
+            { lago_id: google.id, key: 'cloud', value: 'google', units: '1.0', amount_cents: 2000 },
           )
         end
       end

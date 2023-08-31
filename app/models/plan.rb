@@ -13,7 +13,7 @@ class Plan < ApplicationRecord
   has_many :billable_metrics, through: :charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
-  has_many :children, class_name: 'Plan', foreign_key: :parent_id
+  has_many :children, class_name: 'Plan', foreign_key: :parent_id, dependent: :destroy
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :invoices, through: :subscriptions
@@ -25,6 +25,7 @@ class Plan < ApplicationRecord
     weekly
     monthly
     yearly
+    quarterly
   ].freeze
 
   enum interval: INTERVALS
@@ -39,6 +40,10 @@ class Plan < ApplicationRecord
   validates :pay_in_advance, inclusion: { in: [true, false] }
 
   default_scope -> { kept }
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
 
   def pay_in_arrear?
     !pay_in_advance
@@ -58,6 +63,7 @@ class Plan < ApplicationRecord
   def yearly_amount_cents
     return amount_cents if yearly?
     return amount_cents * 12 if monthly?
+    return amount_cents * 4 if quarterly?
 
     amount_cents * 52
   end

@@ -11,11 +11,9 @@ RSpec.describe ::V1::CustomerUsageSerializer do
       to_datetime: Time.current.end_of_month.iso8601,
       issuing_date: Time.current.end_of_month.iso8601,
       amount_cents: 5,
-      amount_currency: 'EUR',
+      currency: 'EUR',
       total_amount_cents: 6,
-      total_amount_currency: 'EUR',
-      vat_amount_cents: 1,
-      vat_amount_currency: 'EUR',
+      taxes_amount_cents: 1,
       fees: [
         OpenStruct.new(
           billable_metric: OpenStruct.new(
@@ -44,6 +42,8 @@ RSpec.describe ::V1::CustomerUsageSerializer do
       expect(result['customer_usage']['from_datetime']).to eq(Time.current.beginning_of_month.iso8601)
       expect(result['customer_usage']['to_datetime']).to eq(Time.current.end_of_month.iso8601)
       expect(result['customer_usage']['issuing_date']).to eq(Time.current.end_of_month.iso8601)
+      expect(result['customer_usage']['currency']).to eq('EUR')
+      expect(result['customer_usage']['taxes_amount_cents']).to eq(1)
       expect(result['customer_usage']['amount_cents']).to eq(5)
       expect(result['customer_usage']['amount_currency']).to eq('EUR')
       expect(result['customer_usage']['total_amount_cents']).to eq(6)

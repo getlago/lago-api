@@ -6,6 +6,10 @@ module Charges
       protected
 
       def compute_amount
+        # NOTE: if min/max per transacton are applied, we have to compute amount on a per transaction basis.
+        #       In the future, this logic could also be applied for the free units / amount without min/max
+        return compute_amount_with_transaction_min_max if should_apply_min_max?
+
         compute_percentage_amount + compute_fixed_amount
       end
 
@@ -57,6 +61,83 @@ module Charges
 
       def fixed_amount
         @fixed_amount ||= BigDecimal((properties['fixed_amount'] || 0).to_s)
+      end
+
+      def per_transaction_max_amount?
+        properties['per_transaction_max_amount'].present?
+      end
+
+      def per_transaction_min_amount?
+        properties['per_transaction_min_amount'].present?
+      end
+
+      def per_transaction_max_amount
+        BigDecimal(properties['per_transaction_max_amount'])
+      end
+
+      def per_transaction_min_amount
+        BigDecimal(properties['per_transaction_min_amount'])
+      end
+
+      def should_apply_min_max?
+        return false unless License.premium?
+
+        per_transaction_max_amount? || per_transaction_min_amount?
+      end
+
+      def events_values
+        values = aggregation_result.aggregator.per_event_aggregation.event_aggregation
+
+        # NOTE: when performing aggregation for pay in advance, we have to ignore the last event
+        #       for computing the diff between event included and excluded
+        #       see app/services/charges/apply_pay_in_advance_charge_model_service.rb:18
+        values = values[0...-1] if properties[:ignore_last_event]
+
+        values
+      end
+
+      def compute_amount_with_transaction_min_max
+        remaining_free_events = free_units_per_events
+        remaining_free_amount = free_units_per_total_aggregation
+
+        events_values.reduce(0) do |total_amount, event_value|
+          value = event_value
+
+          # NOTE: apply free events
+          if remaining_free_events.positive? || remaining_free_amount.positive?
+            remaining_free_events -= 1
+
+            next 0 unless remaining_free_amount.positive?
+
+            # NOTE: apply free amount
+            if remaining_free_amount > value
+              remaining_free_amount -= value
+              next 0
+            else
+              value -= remaining_free_amount
+              remaining_free_amount = 0
+              remaining_free_events = 0
+            end
+          end
+
+          # NOTE: apply rate
+          event_amount = (value * rate).fdiv(100)
+
+          # NOTE: apply fixed amount
+          event_amount += fixed_amount
+
+          # NOTE: apply min and max amount per transaction
+          event_amount = apply_min_max(event_amount)
+
+          total_amount + event_amount
+        end
+      end
+
+      def apply_min_max(amount)
+        return per_transaction_min_amount if per_transaction_min_amount? && amount < per_transaction_min_amount
+        return per_transaction_max_amount if per_transaction_max_amount? && amount > per_transaction_max_amount
+
+        amount
       end
     end
   end

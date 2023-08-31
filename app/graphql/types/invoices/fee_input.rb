@@ -8,6 +8,7 @@ module Types
       argument :add_on_id, ID, required: true
       argument :description, String, required: false
       argument :name, String, required: false
+      argument :tax_codes, [String], required: false
       argument :unit_amount_cents, GraphQL::Types::BigInt, required: false
       argument :units, GraphQL::Types::Float, required: false
     end

@@ -9,6 +9,10 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       subscription:,
       group:,
       event: pay_in_advance_event,
+      boundaries: {
+        from_datetime:,
+        to_datetime:,
+      },
     )
   end
 
@@ -67,7 +71,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   before { unique_count_event }
 
   describe '#aggregate' do
-    let(:result) { count_service.aggregate(from_datetime:, to_datetime:) }
+    let(:result) { count_service.aggregate }
 
     context 'when there is persisted event and event added in period' do
       let(:new_quantified_event) do
@@ -293,7 +297,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       before { previous_event }
 
       it 'returns period maximum as aggregation' do
-        result = count_service.aggregate(from_datetime:, to_datetime:, options:)
+        result = count_service.aggregate(options:)
 
         expect(result.aggregation).to eq(4)
       end
@@ -304,7 +308,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         before { billable_metric.update!(recurring: false) }
 
         it 'returns zero as aggregation' do
-          result = count_service.aggregate(from_datetime:, to_datetime:, options:)
+          result = count_service.aggregate(options:)
 
           expect(result.aggregation).to eq(0)
         end
@@ -338,7 +342,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       before { pay_in_advance_event }
 
       it 'assigns an pay_in_advance aggregation' do
-        result = count_service.aggregate(from_datetime:, to_datetime:)
+        result = count_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(1)
       end
@@ -351,7 +355,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         end
 
         it 'assigns an pay_in_advance aggregation' do
-          result = count_service.aggregate(from_datetime:, to_datetime:)
+          result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
         end
@@ -361,7 +365,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:properties) { {} }
 
         it 'assigns 0 as pay_in_advance aggregation' do
-          result = count_service.aggregate(from_datetime:, to_datetime:)
+          result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to be_zero
         end
@@ -400,7 +404,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         before { previous_event }
 
         it 'assigns a pay_in_advance aggregation' do
-          result = count_service.aggregate(from_datetime:, to_datetime:)
+          result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
         end
@@ -439,11 +443,21 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         before { previous_event }
 
         it 'assigns a pay_in_advance aggregation' do
-          result = count_service.aggregate(from_datetime:, to_datetime:)
+          result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(0)
         end
       end
+    end
+  end
+
+  describe '.per_event_aggregation' do
+    let(:added_at) { from_datetime }
+
+    it 'aggregates per events added in the period' do
+      result = count_service.per_event_aggregation
+
+      expect(result.event_aggregation).to eq([1])
     end
   end
 end

@@ -96,14 +96,16 @@ module Subscriptions
 
       if new_subscription.active? && new_subscription.subscription_at.today? && plan.pay_in_advance?
         # NOTE: Since job is laucnhed from inside a db transaction
-        #       we must wait for it to be commited before processing the job
+        #       we must wait for it to be commited before processing the job.
+        #       We do not set offset anymore but instead retry jobs
         BillSubscriptionJob
-          .set(wait: 2.seconds)
           .perform_later(
             [new_subscription],
             Time.zone.now.to_i,
           )
       end
+
+      SendWebhookJob.perform_later('subscription.started', new_subscription) if new_subscription.active?
 
       new_subscription
     end
@@ -142,7 +144,8 @@ module Subscriptions
       # NOTE: Create an invoice for the terminated subscription
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
-      BillSubscriptionJob.set(wait: 2.seconds)
+      #       We do not set offset anymore but instead retry jobs
+      BillSubscriptionJob
         .perform_later(
           [current_subscription],
           Time.zone.now.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
@@ -151,8 +154,8 @@ module Subscriptions
       if plan.pay_in_advance?
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be commited before processing the job
+        #       We do not set offset anymore but instead retry jobs
         BillSubscriptionJob
-          .set(wait: 2.seconds)
           .perform_later(
             [new_subscription],
             Time.zone.now.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.

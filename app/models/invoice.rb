@@ -77,6 +77,14 @@ class Invoice < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
 
+  def self.ransackable_attributes(_ = nil)
+    %w[id number]
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[customer]
+  end
+
   def file_url
     return if file.blank?
 
@@ -127,10 +135,11 @@ class Invoice < ApplicationRecord
       billable_metric: fee.charge.billable_metric,
       subscription: fee.subscription,
       group: fee.group,
-    ).breakdown(
-      from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
-      to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
-    ).breakdown
+      boundaries: {
+        from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
+        to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
+      },
+    ).breakdown.breakdown
   end
 
   def charge_pay_in_advance_proration_range(fee, timestamp)

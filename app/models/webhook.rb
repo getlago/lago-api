@@ -11,4 +11,8 @@ class Webhook < ApplicationRecord
   delegate :organization, to: :webhook_endpoint
 
   enum status: STATUS
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[id webhook_type]
+  end
 end

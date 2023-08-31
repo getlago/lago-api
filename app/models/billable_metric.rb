@@ -35,6 +35,10 @@ class BillableMetric < ApplicationRecord
 
   default_scope -> { kept }
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+
   def attached_to_subscriptions?
     plans.joins(:subscriptions).exists?
   end
@@ -44,14 +48,15 @@ class BillableMetric < ApplicationRecord
   end
 
   def active_groups
-    scope = groups.active.order(created_at: :asc)
+    scope = groups.order(created_at: :asc)
     scope = scope.with_discarded if discarded?
     scope
   end
 
   # NOTE: 1 dimension: all groups, 2 dimensions: all children.
   def selectable_groups
-    active_groups.children.exists? ? active_groups.children : active_groups
+    groups = active_groups.children.exists? ? active_groups.children : active_groups
+    groups.includes(:parent).reorder('parent.value', 'groups.value')
   end
 
   def active_groups_as_tree

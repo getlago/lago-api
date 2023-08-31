@@ -30,6 +30,7 @@ de:
     fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}
     tax_rate: Steuersatz
     tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name: "%{name} (%{rate}% on %{amount})"
 
     details: "%{resource} Details"
     subscription: Abonnement
@@ -38,6 +39,7 @@ de:
     monthly: Monatlich
     yearly: Jährlich
     weekly: Wöchentlich
+    quarterly: Vierteljährlich
     sub_total: Zwischensumme
     subscription_interval: "%{plan_interval}es Abonnement - %{plan_name}"
 

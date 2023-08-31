@@ -35,6 +35,9 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               freeUnitsPerTotalAggregation,
               graduatedRanges { fromValue, toValue }
               volumeRanges { fromValue, toValue }
+              graduatedPercentageRanges { fromValue toValue }
+              perTransactionMaxAmount
+              perTransactionMinAmount
             }
             groupProperties {
               groupId,
@@ -57,12 +60,14 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   end
 
   let(:billable_metrics) do
-    create_list(:billable_metric, 5, organization:)
+    create_list(:billable_metric, 6, organization:)
   end
 
   let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }
   let(:second_group) { create(:group, billable_metric: billable_metrics[2]) }
   let(:tax) { create(:tax, organization:) }
+
+  around { |test| lago_premium!(&test) }
 
   it 'creates a plan' do
     result = execute_graphql(
@@ -110,6 +115,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                     fixedAmount: '2',
                     freeUnitsPerEvents: 5,
                     freeUnitsPerTotalAggregation: '50',
+                    perTransactionMaxAmount: '20',
+                    perTransactionMinAmount: '10',
                   },
                 },
               ],
@@ -154,6 +161,26 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 ],
               },
             },
+            {
+              billableMetricId: billable_metrics[5].id,
+              chargeModel: 'graduated_percentage',
+              properties: {
+                graduatedPercentageRanges: [
+                  {
+                    fromValue: 0,
+                    toValue: 10,
+                    flatAmount: '0',
+                    rate: '2',
+                  },
+                  {
+                    fromValue: 11,
+                    toValue: nil,
+                    flatAmount: '3.00',
+                    rate: '3',
+                  },
+                ],
+              },
+            },
           ],
         },
       },
@@ -169,7 +196,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(result_data['payInAdvance']).to eq(false)
       expect(result_data['amountCents']).to eq('200')
       expect(result_data['taxes'][0]['code']).to eq(plan_tax.code)
-      expect(result_data['charges'].count).to eq(5)
+      expect(result_data['charges'].count).to eq(6)
 
       standard_charge = result_data['charges'][0]
       expect(standard_charge['properties']['amount']).to eq('100.00')
@@ -199,6 +226,10 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       volume_charge = result_data['charges'][4]
       expect(volume_charge['chargeModel']).to eq('volume')
       expect(volume_charge['properties']['volumeRanges'].count).to eq(2)
+
+      graduated_percentage_charge = result_data['charges'][5]
+      expect(graduated_percentage_charge['chargeModel']).to eq('graduated_percentage')
+      expect(graduated_percentage_charge['properties']['graduatedPercentageRanges'].count).to eq(2)
     end
   end
 

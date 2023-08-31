@@ -4,7 +4,7 @@ module BillableMetrics
   module ProratedAggregations
     class BaseService < BillableMetrics::Aggregations::BaseService
       def aggregation_without_proration
-        @aggregation_without_proration ||= base_aggregator.aggregate(from_datetime:, to_datetime:, options:)
+        @aggregation_without_proration ||= base_aggregator.aggregate(options:)
       end
 
       def previous_event

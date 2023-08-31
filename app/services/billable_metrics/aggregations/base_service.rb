@@ -3,29 +3,47 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      def initialize(billable_metric:, subscription:, group: nil, event: nil)
+      def initialize(billable_metric:, subscription:, boundaries:, group: nil, event: nil)
         super(nil)
         @billable_metric = billable_metric
         @subscription = subscription
         @group = group
         @event = event
+        @boundaries = boundaries
+
+        result.aggregator = self
       end
 
-      def aggregate(from_date:, to_date:, options: {})
+      def aggregate(options: {})
         raise(NotImplementedError)
+      end
+
+      def per_event_aggregation
+        Result.new.tap do |result|
+          result.event_aggregation = compute_per_event_aggregation
+        end
       end
 
       protected
 
-      attr_accessor :billable_metric, :subscription, :group, :event
+      attr_accessor :billable_metric, :subscription, :group, :event, :boundaries
 
       delegate :customer, to: :subscription
+
+      def from_datetime
+        boundaries[:from_datetime]
+      end
+
+      def to_datetime
+        boundaries[:to_datetime]
+      end
 
       def events_scope(from_datetime:, to_datetime:)
         events = subscription.events
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
           .where(code: billable_metric.code)
+          .order(timestamp: :asc)
         return events unless group
 
         group_scope(events)
@@ -48,6 +66,13 @@ module BillableMetrics
         return events unless group.parent
 
         events.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+      end
+
+      def count_unique_group_scope(events)
+        events = events.where('quantified_events.properties @> ?', { group.key.to_s => group.value }.to_json)
+        return events unless group.parent
+
+        events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
 
       def sanitized_name(property)

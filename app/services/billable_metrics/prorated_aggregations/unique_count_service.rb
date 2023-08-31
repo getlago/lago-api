@@ -9,9 +9,7 @@ module BillableMetrics
         super(**args)
       end
 
-      def aggregate(from_datetime:, to_datetime:, options: {})
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
+      def aggregate(options: {})
         @options = options
 
         # For charges that are pay in advance on billing date we always bill full amount
@@ -34,7 +32,7 @@ module BillableMetrics
 
       protected
 
-      attr_reader :from_datetime, :to_datetime, :options
+      attr_reader :options
 
       def compute_prorated_aggregation
         ActiveRecord::Base.connection.execute(prorated_aggregation_query).first['aggregation_result']
@@ -102,7 +100,7 @@ module BillableMetrics
 
         return quantified_events unless group
 
-        group_scope(quantified_events)
+        count_unique_group_scope(quantified_events)
       end
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
