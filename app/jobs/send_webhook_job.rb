@@ -8,6 +8,7 @@ class SendWebhookJob < ApplicationJob
   retry_on ActiveJob::DeserializationError, wait: :exponentially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
+    'alert.subscription_to_be_terminated' => Webhooks::Subscriptions::TerminatingSoonService,
     'invoice.created' => Webhooks::Invoices::CreatedService,
     'invoice.one_off_created' => Webhooks::Invoices::OneOffCreatedService,
     'invoice.add_on_added' => Webhooks::Invoices::AddOnCreatedService,
