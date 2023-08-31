@@ -5,7 +5,7 @@ class GroupProperty < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  belongs_to :charge, -> { with_discarded }
+  belongs_to :charge
   belongs_to :group, -> { with_discarded }
 
   validates :values, presence: true

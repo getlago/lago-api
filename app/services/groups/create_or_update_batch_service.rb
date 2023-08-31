@@ -30,6 +30,10 @@ module Groups
         end
       end
 
+      draft_ids = Invoice.draft.joins(plans: [:billable_metrics])
+        .where(billable_metrics: { id: billable_metric.id }).distinct.pluck(:id)
+      Invoices::RefreshBatchJob.perform_later(draft_ids) if draft_ids.present?
+
       result
     end
 
