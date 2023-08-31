@@ -344,8 +344,8 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::Subscriptions::TerminatingSoonService).to receive(:new)
-       .with(object: subscription, options: {}, webhook_id: nil)
-       .and_return(webhook_service)
+        .with(object: subscription, options: {}, webhook_id: nil)
+        .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end
 
