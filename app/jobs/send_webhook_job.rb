@@ -26,7 +26,7 @@ class SendWebhookJob < ApplicationJob
     'credit_note.provider_refund_failure' => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     'subscription.terminated' => Webhooks::Subscriptions::TerminatedService,
     'subscription.started' => Webhooks::Subscriptions::StartedService,
-    'subscription.reaching_termination' => Webhooks::Subscriptions::ReachingTerminationService,
+    'subscription.termination_alert' => Webhooks::Subscriptions::TerminationAlertService,
   }.freeze
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)

@@ -37,14 +37,14 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
           described_class.perform_now
         end
           .to have_enqueued_job(SendWebhookJob)
-          .with('subscription.reaching_termination', Subscription)
+          .with('subscription.termination_alert', Subscription)
           .exactly(:once)
       end
     end
 
     context 'when the same alert webhook had been already triggered' do
       let(:webhook_alert1) do
-        create(:webhook, :succeeded, object_id: subscription1.id, webhook_type: 'subscription.reaching_termination')
+        create(:webhook, :succeeded, object_id: subscription1.id, webhook_type: 'subscription.termination_alert')
       end
 
       before { webhook_alert1 }
@@ -57,7 +57,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
             described_class.perform_now
           end
             .to have_enqueued_job(SendWebhookJob)
-            .with('subscription.reaching_termination', Subscription)
+            .with('subscription.termination_alert', Subscription)
             .exactly(0).times
         end
       end
@@ -78,7 +78,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
             described_class.perform_now
           end
             .to have_enqueued_job(SendWebhookJob)
-            .with('subscription.reaching_termination', Subscription)
+            .with('subscription.termination_alert', Subscription)
             .exactly(0).times
         end
       end
