@@ -8,7 +8,6 @@ class SendWebhookJob < ApplicationJob
   retry_on ActiveJob::DeserializationError, wait: :exponentially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
-    'alert.subscription_to_be_terminated' => Webhooks::Subscriptions::TerminatingSoonService,
     'invoice.created' => Webhooks::Invoices::CreatedService,
     'invoice.one_off_created' => Webhooks::Invoices::OneOffCreatedService,
     'invoice.add_on_added' => Webhooks::Invoices::AddOnCreatedService,
@@ -27,6 +26,7 @@ class SendWebhookJob < ApplicationJob
     'credit_note.provider_refund_failure' => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     'subscription.terminated' => Webhooks::Subscriptions::TerminatedService,
     'subscription.started' => Webhooks::Subscriptions::StartedService,
+    'subscription.reaching_termination' => Webhooks::Subscriptions::ReachingTerminationService,
   }.freeze
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)

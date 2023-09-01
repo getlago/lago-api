@@ -2,7 +2,7 @@
 
 module Webhooks
   module Subscriptions
-    class TerminatingSoonService < Webhooks::BaseService
+    class ReachingTerminationService < Webhooks::BaseService
       def current_organization
         @current_organization ||= object.organization
       end
@@ -16,7 +16,7 @@ module Webhooks
       end
 
       def webhook_type
-        'alert.subscription_to_be_terminated'
+        'subscription.reaching_termination'
       end
 
       def object_type

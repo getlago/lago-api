@@ -8,13 +8,13 @@ module Clock
       Subscription
         .joins(customer: :organization)
         .joins('left join webhooks on subscriptions.id = webhooks.object_id and '\
-               "webhooks.webhook_type = 'alert.subscription_to_be_terminated' and webhooks.status = 1")
+               "webhooks.webhook_type = 'subscription.reaching_termination'")
         .active
         .where("DATE(#{Subscription.ending_at_in_timezone_sql}) = ?", (Time.current + 15.days).to_date)
         .where('webhooks.id IS NULL')
         .find_each do |subscription|
           if subscription.customer.organization.webhook_endpoints.any?
-            SendWebhookJob.perform_later('alert.subscription_to_be_terminated', subscription)
+            SendWebhookJob.perform_later('subscription.reaching_termination', subscription)
           end
         end
     end

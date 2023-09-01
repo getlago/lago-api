@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::Subscriptions::TerminatingSoonService do
+RSpec.describe Webhooks::Subscriptions::ReachingTerminationService do
   subject(:webhook_service) { described_class.new(object: subscription) }
 
   let(:subscription) { create(:subscription, status: :active) }
@@ -18,13 +18,13 @@ RSpec.describe Webhooks::Subscriptions::TerminatingSoonService do
       allow(lago_client).to receive(:post_with_response)
     end
 
-    it 'builds payload with alert.subscription_to_be_terminated webhook type' do
+    it 'builds payload with subscription.reaching_termination webhook type' do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:webhook_type]).to eq('alert.subscription_to_be_terminated')
+        expect(payload[:webhook_type]).to eq('subscription.reaching_termination')
         expect(payload[:object_type]).to eq('subscription')
       end
     end
