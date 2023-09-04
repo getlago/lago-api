@@ -9,7 +9,7 @@ module V1
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer&.external_id,
         code: model.code,
-        timestamp: model.timestamp.iso8601,
+        timestamp: model.timestamp.iso8601(3),
         properties: model.properties,
         lago_subscription_id: model.subscription_id,
         external_subscription_id: model.subscription&.external_id,

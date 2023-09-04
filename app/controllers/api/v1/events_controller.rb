@@ -14,7 +14,7 @@ module Api
         Events::CreateJob.perform_later(
           current_organization,
           create_params,
-          Time.current.to_i,
+          Time.current.to_f,
           event_metadata,
         )
 
@@ -31,7 +31,7 @@ module Api
         Events::CreateBatchJob.perform_later(
           current_organization,
           batch_params,
-          Time.zone.now.to_i,
+          Time.current.to_f,
           event_metadata,
         )
 
