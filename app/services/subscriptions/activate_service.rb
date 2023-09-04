@@ -13,7 +13,7 @@ module Subscriptions
         .joins(customer: :organization)
         .pending
         .where(previous_subscription: nil)
-        .where("DATE(#{Subscription.subscription_at_in_timezone_sql}) = ?", Time.zone.at(timestamp).to_date)
+        .where("DATE(subscriptions.subscription_at#{at_time_zone}) <= DATE(?#{at_time_zone})", Time.zone.at(timestamp))
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
 
@@ -26,5 +26,11 @@ module Subscriptions
     private
 
     attr_reader :timestamp
+
+    def at_time_zone
+      <<-SQL
+      ::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC')
+      SQL
+    end
   end
 end
