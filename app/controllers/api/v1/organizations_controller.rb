@@ -20,8 +20,11 @@ module Api
       end
 
       def grpc_token
-        payload = { organization_id: current_organization.id }
-        grpc_token = JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
+        payload = {
+          organization_id: current_organization.id,
+          aud: 'lago-grpc',
+        }
+        grpc_token = JWT.encode(payload, RsaPrivateKey, 'RS256')
 
         render(
           json: {
