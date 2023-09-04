@@ -19,6 +19,7 @@ module Groups
 
       ActiveRecord::Base.transaction do
         if one_dimension?
+          billable_metric.groups.discard_all if billable_metric.groups.children.any?
           assign_groups(group_params[:key], group_params[:values].uniq)
         else
           billable_metric.groups.parents.where.not(value: group_params[:values].map { |v| v[:name] }).discard_all
