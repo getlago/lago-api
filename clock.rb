@@ -22,7 +22,7 @@ module Clockwork
     Clock::ActivateSubscriptionsJob.perform_later
   end
 
-  every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:5') do
+  every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:05') do
     Clock::TerminateEndedSubscriptionsJob.perform_later
   end
 
