@@ -87,11 +87,16 @@ class Charge < ApplicationRecord
   end
 
   # NOTE: An pay_in_advance charge cannot be created in the following cases:
-  # - billable metric aggregation type is max_agg or recurring_count_agg
+  # - billable metric aggregation type is max_agg, recurring_count_agg or weighted_sum_agg
   # - charge model is volume
   def validate_pay_in_advance
     return unless pay_in_advance?
-    return unless billable_metric.recurring_count_agg? || billable_metric.max_agg? || volume?
+
+    unless %w[recurring_count_agg max_add weighted_sum_agg].include?(billable_metric.aggregation_type) ||
+           billable_metric.max_agg? ||
+           volume?
+      return
+    end
 
     errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
   end
