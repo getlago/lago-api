@@ -11,6 +11,8 @@ unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
     end
   end
 
+  Segment::Analytics::Logging.logger = Logger.new(nil)
+
   SEGMENT_CLIENT = Segment::Analytics.new(
     {
       write_key: ENV['SEGMENT_WRITE_KEY'],
