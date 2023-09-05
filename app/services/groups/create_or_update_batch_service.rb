@@ -11,7 +11,7 @@ module Groups
 
     def call
       if group_params.empty?
-        billable_metric.groups.discard_all
+        billable_metric.groups.each(&:discard_with_properties!)
         return result
       end
 
@@ -19,10 +19,15 @@ module Groups
 
       ActiveRecord::Base.transaction do
         if one_dimension?
-          billable_metric.groups.discard_all if billable_metric.groups.children.any?
+          billable_metric.groups.each(&:discard_with_properties!) if billable_metric.groups.children.any?
           assign_groups(group_params[:key], group_params[:values].uniq)
         else
-          billable_metric.groups.parents.where.not(value: group_params[:values].map { |v| v[:name] }).discard_all
+          billable_metric.groups.parents.where.not(
+            value: group_params[:values].map { |v| v[:name] },
+            key: group_params[:key],
+          ).each(&:discard_with_properties!)
+
+          billable_metric.groups.parents.each { |g| g.properties.discard_all }
 
           group_params[:values].each do |value|
             parent_group = billable_metric.groups.find_or_create_by!(key: group_params[:key], value: value[:name])
@@ -60,8 +65,10 @@ module Groups
     # }
     def valid_format?
       return false unless group_params[:key].is_a?(String) && group_params[:values].is_a?(Array)
+      return false if group_params[:values].empty?
       return true if one_dimension?
       return false unless group_params[:values].all?(Hash)
+      return false if group_params[:values].any? { |v| v[:values].blank? }
 
       group_params[:values].map { |e| [e[:name], e[:key], e[:values]] }.flatten.all?(String)
     end
@@ -69,16 +76,10 @@ module Groups
     def assign_groups(key, values, parent_group_id = nil)
       groups_to_discard = billable_metric.groups.where.not(key:, value: values)
       groups_to_discard = groups_to_discard.where(parent_group_id:).children if parent_group_id
-      groups_to_discard.discard_all
+      groups_to_discard.each(&:discard_with_properties!)
 
       values.each do |value|
         next if billable_metric.groups.find_by(key:, value:, parent_group_id:)
-
-        discarded = billable_metric.groups.with_discarded.discarded.find_by(key:, value:, parent_group_id:)
-        if discarded
-          discarded.undiscard!
-          next
-        end
 
         billable_metric.groups.create!(key:, value:, parent_group_id:)
       end

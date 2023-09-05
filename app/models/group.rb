@@ -20,4 +20,9 @@ class Group < ApplicationRecord
   def name
     parent ? "#{parent.value} • #{value}" : value
   end
+
+  # NOTE: Discard group and children with properties.
+  def discard_with_properties!
+    children.each { |c| c.properties&.discard_all && c.discard! } && properties.discard_all && discard!
+  end
 end
