@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class BaseProvider < ApplicationRecord
+    include PaperTrailTraceable
+
     self.table_name = 'payment_providers'
 
     belongs_to :organization
