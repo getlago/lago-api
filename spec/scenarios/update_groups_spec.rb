@@ -126,8 +126,8 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
           code: 'cards',
           aggregation_type: 'count_agg',
           group: {
-            key: 'country',
-            values: %w[france italy spain],
+            key: 'cloud',
+            values: %w[aws google azure],
           },
         )
         cards = organization.billable_metrics.find_by(code: 'cards')
@@ -145,6 +145,12 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
                 billable_metric_id: cards.id,
                 charge_model: 'standard',
                 properties: { amount: '30' },
+                group_properties: [
+                  {
+                    group_id: cards.groups.find_by(value: 'aws').id,
+                    values: { amount: '10' },
+                  },
+                ],
               },
             ],
           },
@@ -164,7 +170,7 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
             code: cards.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id',
-            properties: { country: 'france' },
+            properties: { cloud: 'aws' },
           },
         )
 
@@ -173,7 +179,7 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
             code: cards.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id',
-            properties: { country: 'spain' },
+            properties: { cloud: 'google' },
           },
         )
 
@@ -182,11 +188,11 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
             code: cards.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id',
-            properties: { region: 'usa', cloud: 'AWS' },
+            properties: { country: 'usa', cloud: 'aws' },
           },
         )
 
-        expect(cards.groups.pluck(:value)).to contain_exactly('france', 'italy', 'spain')
+        expect(cards.groups.pluck(:value)).to contain_exactly('aws', 'google', 'azure')
       end
 
       travel_to(DateTime.new(2023, 2, 1)) do
@@ -194,7 +200,7 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
 
         customer = organization.customers.find_by(external_id: 'customer-1')
         invoice = customer.invoices.first
-        expect(invoice.total_amount_cents).to eq(16_000)
+        expect(invoice.total_amount_cents).to eq(15_000)
 
         cards = organization.billable_metrics.find_by(code: 'cards')
         update_metric(
@@ -202,15 +208,16 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
           group: {
             key: 'cloud',
             values: [
-              { name: 'AWS', key: 'region', values: %w[usa europe] },
-              { name: 'Google', key: 'region', values: ['usa'] },
+              { name: 'aws', key: 'country', values: %w[usa france] },
+              { name: 'google', key: 'country', values: ['usa'] },
             ],
           },
         )
         perform_all_enqueued_jobs
 
-        expect(cards.groups.parents.pluck(:value)).to contain_exactly('AWS', 'Google')
-        expect(cards.groups.children.pluck(:value)).to contain_exactly('usa', 'europe', 'usa')
+        expect(cards.groups.parents.pluck(:value)).to contain_exactly('aws', 'google')
+        expect(cards.groups.children.pluck(:value)).to contain_exactly('usa', 'france', 'usa')
+        expect(cards.charges.first.group_properties.count).to eq(0)
         expect(invoice.reload.total_amount_cents).to eq(13_000)
       end
     end

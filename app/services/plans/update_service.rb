@@ -103,18 +103,30 @@ module Plans
         charge = plan.charges.find_by(id: payload_charge[:id])
 
         if charge
+          group_properties = payload_charge.delete(:group_properties)
+          if group_properties.present?
+            group_result = GroupProperties::CreateOrUpdateBatchService.call(
+              charge:,
+              properties_params: group_properties,
+            )
+            return group_result if group_result.error
+          end
+
+          properties = payload_charge.delete(:properties)
+          charge.update!(
+            properties: properties.presence || Charges::BuildDefaultPropertiesService.call(
+              payload_charge[:charge_model],
+            ),
+          )
+
           # NOTE: charges cannot be edited if plan is attached to a subscription
           unless plan.attached_to_subscriptions?
-            payload_charge[:group_properties]&.map! { |gp| GroupProperty.new(gp) }
-
             invoiceable = payload_charge.delete(:invoiceable)
             min_amount_cents = payload_charge.delete(:min_amount_cents)
             tax_codes = payload_charge.delete(:tax_codes)
-            properties = payload_charge.delete(:properties)
 
             charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
             charge.min_amount_cents = min_amount_cents || 0 if License.premium?
-            charge.properties = properties.presence || Charges::BuildDefaultPropertiesService.call(payload_charge[:charge_model])
 
             charge.update!(payload_charge)
 

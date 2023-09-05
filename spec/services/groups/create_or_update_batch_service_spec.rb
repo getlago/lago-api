@@ -92,7 +92,6 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
     it 'assigns expected groups' do
       expect { service }.to change(Group, :count).by(1)
 
-      expect(billable_metric.reload.groups).to include(group1)
       expect(billable_metric.groups.pluck(:key, :value))
         .to contain_exactly(%w[region usa], %w[region europe])
     end
@@ -137,7 +136,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
     before { group1 && group2 && group3 }
 
     it 'assigns expected groups' do
-      expect { service }.to change { billable_metric.reload.groups.count }.by(1)
+      expect { service }.not_to change { billable_metric.reload.groups.count }
 
       groups = billable_metric.reload.groups
       aws = groups.find_by(key: 'cloud', value: 'AWS')

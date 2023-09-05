@@ -12,9 +12,4 @@ class GroupProperty < ApplicationRecord
   validates :group_id, presence: true, uniqueness: { scope: :charge_id }
 
   default_scope -> { kept }
-  scope :kept, -> { undiscarded.joins(:group).merge(Group.kept) }
-
-  def kept?
-    undiscarded? && group.kept?
-  end
 end
