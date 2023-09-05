@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class BaseCustomer < ApplicationRecord
+    include PaperTrailTraceable
+
     self.table_name = 'payment_provider_customers'
 
     belongs_to :customer

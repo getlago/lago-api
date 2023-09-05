@@ -8,6 +8,8 @@ unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
       @status = status
       @error_message = error_message
       @message = "Status: #{status}, Message: #{error_message}"
+
+      super
     end
   end
 
