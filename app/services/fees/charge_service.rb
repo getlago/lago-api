@@ -131,6 +131,8 @@ module Fees
       aggregator_service = case billable_metric.aggregation_type.to_sym
                            when :count_agg
                              BillableMetrics::Aggregations::CountService
+                           when :latest_agg
+                             BillableMetrics::Aggregations::LatestService
                            when :max_agg
                              BillableMetrics::Aggregations::MaxService
                            when :sum_agg
