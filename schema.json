@@ -654,13 +654,13 @@
               "deprecationReason": null
             },
             {
-              "name": "latest_agg",
+              "name": "max_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "max_agg",
+              "name": "latest_agg",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
