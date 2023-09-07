@@ -4,15 +4,19 @@ module BillableMetrics
   module Aggregations
     class WeightedSumService < BillableMetrics::Aggregations::BaseService
       def aggregate(options: {})
+        events = fetch_events(from_datetime:, to_datetime:)
+
         result.aggregation = compute_aggregation
-        result.current_usage_units = 0
-        result.count = 0
-        result.pay_in_advance_aggregation = BigDecimal(0)
-        result.options = { running_total: 0 }
+        result.count = events.count
+        result.options = options
         result
       end
 
       private
+
+      def fetch_events(from_datetime:, to_datetime:)
+        events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+      end
 
       def compute_aggregation
         # query_result = ActiveRecord::Base.connection.select_all(aggregation_sql)
@@ -30,7 +34,7 @@ module BillableMetrics
             (#{initial_value})
             UNION
             (#{
-              events_scope(from_datetime:, to_datetime:)
+              fetch_events(from_datetime:, to_datetime:)
                 .select("timestamp, (#{sanitized_field_name})::numeric AS difference")
                 .to_sql
             })

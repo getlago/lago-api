@@ -53,6 +53,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     result = aggregator.aggregate
 
     expect(result.aggregation.round(5).to_s).to eq('0.0125')
+    expect(result.count).to eq(7)
   end
 
   context 'with a single event' do
@@ -66,6 +67,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       result = aggregator.aggregate
 
       expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.count).to eq(1)
     end
   end
 
@@ -75,7 +77,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     it 'aggregates the events' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0')
+      expect(result.aggregation.round(5).to_s).to eq('0.0')
+      expect(result.count).to eq(0)
     end
   end
 end
