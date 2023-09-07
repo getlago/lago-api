@@ -12,6 +12,7 @@ module Plans
       return result.not_found_failure!(resource: 'plan') unless plan
 
       plan.name = params[:name] if params.key?(:name)
+      plan.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
       plan.description = params[:description] if params.key?(:description)
 
       # NOTE: Only name and description are editable if plan

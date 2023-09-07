@@ -12,6 +12,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
         updatePlan(input: $input) {
           id,
           name,
+          invoiceDisplayName,
           code,
           interval,
           payInAdvance,
@@ -67,6 +68,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
         input: {
           id: plan.id,
           name: 'Updated plan',
+          invoiceDisplayName: 'Updated plan invoice name',
           code: 'new_plan',
           interval: 'monthly',
           payInAdvance: false,
@@ -157,6 +159,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated plan')
+      expect(result_data['invoiceDisplayName']).to eq('Updated plan invoice name')
       expect(result_data['code']).to eq('new_plan')
       expect(result_data['interval']).to eq('monthly')
       expect(result_data['payInAdvance']).to eq(false)

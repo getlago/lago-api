@@ -16,6 +16,7 @@ RSpec.describe ::V1::PlanSerializer do
     aggregate_failures do
       expect(result['plan']['lago_id']).to eq(plan.id)
       expect(result['plan']['name']).to eq(plan.name)
+      expect(result['plan']['invoice_display_name']).to eq(plan.invoice_display_name)
       expect(result['plan']['created_at']).to eq(plan.created_at.iso8601)
       expect(result['plan']['code']).to eq(plan.code)
       expect(result['plan']['interval']).to eq(plan.interval)

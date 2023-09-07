@@ -73,6 +73,7 @@ module Api
       def input_params
         params.require(:plan).permit(
           :name,
+          :invoice_display_name,
           :code,
           :interval,
           :description,

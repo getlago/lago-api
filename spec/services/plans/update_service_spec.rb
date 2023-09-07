@@ -9,6 +9,7 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
   let(:plan_name) { 'Updated plan name' }
+  let(:plan_invoice_display_name) { 'Updated plan invoice display name' }
   let(:group) { create(:group, billable_metric: sum_billable_metric) }
   let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -19,6 +20,7 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:update_args) do
     {
       name: plan_name,
+      invoice_display_name: plan_invoice_display_name,
       code: 'new_plan',
       interval: 'monthly',
       pay_in_advance: false,
@@ -77,6 +79,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       updated_plan = result.plan
       aggregate_failures do
         expect(updated_plan.name).to eq('Updated plan name')
+        expect(updated_plan.invoice_display_name).to eq(plan_invoice_display_name)
         expect(updated_plan.taxes.pluck(:code)).to eq([tax2.code])
         expect(plan.charges.count).to eq(2)
       end

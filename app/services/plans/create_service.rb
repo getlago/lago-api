@@ -6,6 +6,7 @@ module Plans
       plan = Plan.new(
         organization_id: args[:organization_id],
         name: args[:name],
+        invoice_display_name: args[:invoice_display_name],
         code: args[:code],
         description: args[:description],
         parent_id: args[:parent_id],
@@ -89,6 +90,7 @@ module Plans
         properties: {
           code: plan.code,
           name: plan.name,
+          invoice_display_name: plan.invoice_display_name,
           description: plan.description,
           plan_interval: plan.interval,
           plan_amount_cents: plan.amount_cents,

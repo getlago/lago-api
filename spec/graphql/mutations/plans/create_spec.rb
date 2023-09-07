@@ -14,6 +14,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
         createPlan(input: $input) {
           id,
           name,
+          invoiceDisplayName,
           code,
           interval,
           payInAdvance,
@@ -77,6 +78,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       variables: {
         input: {
           name: 'New Plan',
+          invoiceDisplayName: 'New Plan Invoice Name',
           code: 'new_plan',
           interval: 'monthly',
           payInAdvance: false,
@@ -191,6 +193,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('New Plan')
+      expect(result_data['invoiceDisplayName']).to eq('New Plan Invoice Name')
       expect(result_data['code']).to eq('new_plan')
       expect(result_data['interval']).to eq('monthly')
       expect(result_data['payInAdvance']).to eq(false)

@@ -14,6 +14,7 @@ module Types
       field :code, String, null: false
       field :description, String
       field :interval, Types::Plans::IntervalEnum, null: false
+      field :invoice_display_name, String
       field :name, String, null: false
       field :parent_id, ID, null: true
       field :pay_in_advance, Boolean, null: false

@@ -350,4 +350,50 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#invoice_name' do
+    subject(:subscription_invoice_name) { subscription.invoice_name }
+
+    let(:subscription) { build_stubbed(:subscription, plan:, name:) }
+
+    context 'when plan invoice display name is blank' do
+      let(:plan) { build_stubbed(:plan, invoice_display_name: [nil, ''].sample) }
+
+      context 'when subscription name is blank' do
+        let(:name) { [nil, ''].sample }
+
+        it 'returns plan name' do
+          expect(subscription_invoice_name).to eq(plan.name)
+        end
+      end
+
+      context 'when subscription name is present' do
+        let(:name) { Faker::TvShows::GameOfThrones.characters }
+
+        it 'returns subscription name' do
+          expect(subscription_invoice_name).to eq(subscription.name)
+        end
+      end
+    end
+
+    context 'when plan invoice display name is present' do
+      let(:plan) { build_stubbed(:plan) }
+
+      context 'when subscription name is blank' do
+        let(:name) { [nil, ''].sample }
+
+        it 'returns plan invoice display name' do
+          expect(subscription_invoice_name).to eq(plan.invoice_display_name)
+        end
+      end
+
+      context 'when subscription name is present' do
+        let(:name) { Faker::TvShows::GameOfThrones.characters }
+
+        it 'returns subscription name' do
+          expect(subscription_invoice_name).to eq(subscription.name)
+        end
+      end
+    end
+  end
 end
