@@ -6,7 +6,7 @@ class GroupProperty < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :charge
-  belongs_to :group
+  belongs_to :group, -> { with_discarded }
 
   validates :values, presence: true
   validates :group_id, presence: true, uniqueness: { scope: :charge_id }

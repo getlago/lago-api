@@ -39,8 +39,6 @@ module Types
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
     field :update_add_on, mutation: Mutations::AddOns::Update
 
-    field :create_applied_add_on, mutation: Mutations::AppliedAddOns::Create
-
     field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe
     field :destroy_payment_provider, mutation: Mutations::PaymentProviders::Destroy
 

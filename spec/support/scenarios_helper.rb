@@ -7,6 +7,10 @@ module ScenariosHelper
     post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: params })
   end
 
+  def update_metric(metric, params)
+    put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", { billable_metric: params })
+  end
+
   ### Customers
 
   def create_or_update_customer(params)

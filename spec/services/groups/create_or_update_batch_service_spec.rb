@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Groups::CreateBatchService, type: :service do
-  subject(:create_batch_service) do
+RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
+  subject(:service) do
     described_class.call(billable_metric:, group_params:)
   end
 
@@ -13,7 +13,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
     let(:group_params) { {} }
 
     it 'does not create any groups' do
-      expect { create_batch_service }.not_to change(Group, :count)
+      expect { service }.not_to change(Group, :count)
     end
   end
 
@@ -70,7 +70,7 @@ RSpec.describe Groups::CreateBatchService, type: :service do
     end
 
     it 'returns an error' do
-      result = create_batch_service
+      result = service
 
       aggregate_failures do
         expect(result).not_to be_success
@@ -84,12 +84,27 @@ RSpec.describe Groups::CreateBatchService, type: :service do
     let(:group_params) do
       { "key": 'region', "values": %w[usa europe usa] }
     end
+    let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe', deleted_at: Time.current) }
+    let(:group2) { create(:group, billable_metric:, key: 'region', value: 'africa') }
 
-    it 'creates expected groups' do
-      expect { create_batch_service }.to change(Group, :count).by(2)
+    before { group1 && group2 }
 
-      expect(billable_metric.reload.groups.pluck(:key, :value))
+    it 'assigns expected groups' do
+      expect { service }.to change(Group, :count).by(1)
+
+      expect(billable_metric.groups.pluck(:key, :value))
         .to contain_exactly(%w[region usa], %w[region europe])
+    end
+
+    it 'enqueues a Invoices::RefreshBatchJob' do
+      invoice = create(:invoice, :draft)
+      subscription = create(:subscription)
+      create(:standard_charge, plan: subscription.plan, billable_metric:)
+      create(:invoice_subscription, subscription:, invoice:)
+
+      expect do
+        service
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
     end
   end
 
@@ -112,15 +127,35 @@ RSpec.describe Groups::CreateBatchService, type: :service do
       }
     end
 
-    it 'creates expected groups' do
-      expect { create_batch_service }.to change(Group, :count).by(5)
+    let(:parent_group1) { create(:group, billable_metric:, key: 'cloud', value: 'AWS') }
+    let(:parent_group2) { create(:group, billable_metric:, key: 'cloud', value: 'Microsoft') }
+    let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id: parent_group1.id) }
+    let(:group2) { create(:group, billable_metric:, key: 'region', value: 'africa', parent_group_id: parent_group1.id) }
+    let(:group3) { create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id: parent_group2.id) }
+
+    before { group1 && group2 && group3 }
+
+    it 'assigns expected groups' do
+      expect { service }.not_to change { billable_metric.reload.groups.count }
 
       groups = billable_metric.reload.groups
       aws = groups.find_by(key: 'cloud', value: 'AWS')
+      expect(aws.children).to include(group1)
       expect(aws.children.pluck(:key, :value)).to contain_exactly(%w[region usa], %w[region europe])
 
       google = groups.find_by(key: 'cloud', value: 'Google')
       expect(google.children.pluck(:key, :value)).to eq([%w[region usa]])
+    end
+
+    it 'enqueues a Invoices::RefreshBatchJob' do
+      invoice = create(:invoice, :draft)
+      subscription = create(:subscription)
+      create(:standard_charge, plan: subscription.plan, billable_metric:)
+      create(:invoice_subscription, subscription:, invoice:)
+
+      expect do
+        service
+      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
     end
   end
 end

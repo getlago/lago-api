@@ -8,8 +8,12 @@ unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
       @status = status
       @error_message = error_message
       @message = "Status: #{status}, Message: #{error_message}"
+
+      super
     end
   end
+
+  Segment::Analytics::Logging.logger = Logger.new(nil)
 
   SEGMENT_CLIENT = Segment::Analytics.new(
     {
