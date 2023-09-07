@@ -3,6 +3,10 @@
 
 version: "3.8"
 
+networks:
+  default:
+    name: lago-ci
+
 services:
   db:
     image: postgres:14.0-alpine
@@ -14,6 +18,8 @@ services:
       POSTGRES_PASSWORD: lago
     ports:
       - 5432:5432
+    networks:
+      - lago-ci
     
   redis:
     image: redis:6.2-alpine
@@ -21,6 +27,8 @@ services:
     restart: unless-stopped
     ports:
       - 6379:6379
+    networks:
+      - lago-ci
   
   api:
     image: getlago/api:ci
@@ -40,3 +48,5 @@ services:
       LAGO_LICENSE: ${LAGO_LICENSE}
     ports:
       - 3000:3000
+    networks:
+      - lago-ci
