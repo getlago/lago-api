@@ -39,12 +39,15 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
   before do
     events_values.each do |values|
+      properties = { value: values[:value] }
+      properties[:region] = values[:region] if values[:region]
+
       create(
         :event,
         code: billable_metric.code,
         subscription:,
         timestamp: values[:timestamp],
-        properties: { value: values[:value] },
+        properties:,
       )
     end
   end
@@ -107,6 +110,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       expect(result.count).to eq(0)
       expect(result.variation).to eq(0)
       expect(result.recurring_value).to eq(1000)
+      expect(result.recurring_updated_at).to eq(from_datetime)
     end
 
     context 'without quantified events' do
@@ -119,6 +123,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         expect(result.count).to eq(0)
         expect(result.variation).to eq(0)
         expect(result.recurring_value).to eq(0)
+        expect(result.recurring_updated_at).to eq(from_datetime)
       end
     end
 
@@ -142,7 +147,25 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         expect(result.count).to eq(7)
         expect(result.variation).to eq(0)
         expect(result.recurring_value).to eq(1000)
+        expect(result.recurring_updated_at).to eq('2023-08-01 05:30:00')
       end
+    end
+  end
+
+  context 'with group' do
+    let(:group) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+
+    let(:events_values) do
+      [
+        { timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000, region: 'europe' },
+      ]
+    end
+
+    it 'aggregates the events' do
+      result = aggregator.aggregate
+
+      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.count).to eq(1)
     end
   end
 end

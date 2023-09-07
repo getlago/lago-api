@@ -12,6 +12,7 @@ module BillableMetrics
         if billable_metric.recurring?
           result.variation = events.sum("(#{sanitized_field_name})::numeric") || 0
           result.recurring_value = latest_value + result.variation
+          result.recurring_updated_at = events.last&.timestamp || from_datetime
         end
 
         result
