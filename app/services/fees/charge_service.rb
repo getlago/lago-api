@@ -105,6 +105,7 @@ module Fees
       aggregation_result = aggregator(group:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
+      persist_recurring_value(aggregation_result, group) if billable_metric.recurring?
       apply_charge_model_service(aggregation_result, properties)
     end
 
@@ -185,6 +186,26 @@ module Fees
       end
 
       model_service.apply(charge:, aggregation_result:, properties:)
+    end
+
+    def persist_recurring_value(aggregation_result, group)
+      return if is_current_usage
+      return unless aggregation_result.recurring_value
+
+      result.quantified_events ||= []
+
+      # NOTE: persist current recurring value for next period
+      # TODO: takes group into account
+      result.quantified_events << QuantifiedEvent.find_or_initialize_by(
+        customer_id: customer.id,
+        external_subscription_id: subscription.external_id,
+        external_id: group&.id || customer.external_id, # TODO
+        billable_metric_id: billable_metric.id,
+        added_at: aggregation_result.recurring_updated_at,
+      ) do |event|
+        event.properties['recurring_value'] = aggregation_result.recurring_value
+        event.save!
+      end
     end
   end
 end
