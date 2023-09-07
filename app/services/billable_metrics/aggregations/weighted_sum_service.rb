@@ -8,7 +8,12 @@ module BillableMetrics
 
         result.aggregation = compute_aggregation
         result.count = events.count
-        result.options = options
+
+        if billable_metric.recurring?
+          result.variation = events.sum("(#{sanitized_field_name})::numeric") || 0
+          result.recurring_value = latest_value + result.variation
+        end
+
         result
       end
 
@@ -21,9 +26,7 @@ module BillableMetrics
       def compute_aggregation
         # query_result = ActiveRecord::Base.connection.select_all(aggregation_sql)
         # query_result
-
         # byebug
-
         query_result = ActiveRecord::Base.connection.select_one(aggregation_sql)
         query_result['aggregation']
       end
@@ -52,27 +55,28 @@ module BillableMetrics
               EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
               --
 
-            (
-              -- NOTE: duration in seconds between current event and next one
-              -- TODO: takes weighted interval into account (+ group per interval in CTE ??)
-              CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) = 0
-              THEN
-                0 -- NOTE: duration was null so usage is null
-              ELSE
-                -- NOTE: cumulative sum from previous events in the period
-                (sum(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
-                /
-                -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-                EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp)
-              END
-            ) AS period_ratio
+              (
+                -- NOTE: duration in seconds between current event and next one
+                -- TODO: takes weighted interval into account (+ group per interval in CTE ??)
+                CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) = 0
+                THEN
+                  0 -- NOTE: duration was null so usage is null
+                ELSE
+                  -- NOTE: cumulative sum from previous events in the period
+                  (sum(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
+                  /
+                  -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+                  EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp)
+                END
+              ) AS period_ratio
             FROM events_data
           ) cumulated_ratios
         SQL
       end
 
       def initial_value
-        initial_value = 0 # TODO: when recurring, get last cumul
+        initial_value = 0
+        initial_value = latest_value if billable_metric.recurring?
 
         <<-SQL
           SELECT *
@@ -89,6 +93,17 @@ module BillableMetrics
             VALUES (timestamp without time zone '#{to_datetime}', 0)
           ) AS t(timestamp, difference)
         SQL
+      end
+
+      def latest_value
+        QuantifiedEvent
+          .where(billable_metric_id: billable_metric.id)
+          .where(customer_id: subscription.customer_id)
+          .where(external_subscription_id: subscription.external_id)
+          .where(added_at: ...from_datetime)
+          .order(added_at: :desc)
+          .first
+          &.properties&.[]('recurring_value') || 0
       end
     end
   end
