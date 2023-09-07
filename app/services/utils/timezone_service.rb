@@ -12,5 +12,11 @@ module Utils
 
       "#{sanitized_field_name}::timestamptz AT TIME ZONE '#{sanitized_timezone}'"
     end
+
+    def self.at_time_zone
+      <<-SQL
+        ::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC')
+      SQL
+    end
   end
 end
