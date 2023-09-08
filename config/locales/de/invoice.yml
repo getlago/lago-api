@@ -24,6 +24,7 @@ de:
     item: Artikel
     unit: Einheit
     unit_price: Stückpreis
+    units_per_second: Einheiten pro Sekunde
     amount: Betrag
     amount_with_tax: Betrag (inkl. Steuern)
     amount_without_tax: Betrag (ohne Steuern)

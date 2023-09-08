@@ -24,6 +24,7 @@ fr:
     item: Article
     unit: Unité
     unit_price: Prix unitaire
+    units_per_second: Unités par seconde
     amount: Montant
     amount_with_tax: Montant (TTC)
     amount_without_tax: Montant (HT)
