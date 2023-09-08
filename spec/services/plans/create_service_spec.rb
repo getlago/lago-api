@@ -119,6 +119,7 @@ RSpec.describe Plans::CreateService, type: :service do
         properties: {
           code: plan.code,
           name: plan.name,
+          invoice_display_name: plan.invoice_display_name,
           description: plan.description,
           plan_interval: plan.interval,
           plan_amount_cents: plan.amount_cents,
