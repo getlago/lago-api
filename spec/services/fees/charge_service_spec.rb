@@ -1212,7 +1212,8 @@ RSpec.describe Fees::ChargeService do
           expect(quantified_event.id).not_to be_nil
           expect(quantified_event.customer_id).to eq(customer.id)
           expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
-          expect(quantified_event.external_id).to eq(customer.external_id)
+          expect(quantified_event.external_id).to be_nil
+          expect(quantified_event.group_id).to be_nil
           expect(quantified_event.billable_metric_id).to eq(billable_metric.id)
           expect(quantified_event.added_at).to eq(boundaries[:from_datetime])
           expect(quantified_event.properties['recurring_value']).to eq(0)

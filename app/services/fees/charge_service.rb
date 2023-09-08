@@ -199,7 +199,7 @@ module Fees
       result.quantified_events << QuantifiedEvent.find_or_initialize_by(
         customer_id: customer.id,
         external_subscription_id: subscription.external_id,
-        external_id: group&.id || customer.external_id, # TODO
+        group_id: group&.id,
         billable_metric_id: billable_metric.id,
         added_at: aggregation_result.recurring_updated_at,
       ) do |event|

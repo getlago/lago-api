@@ -372,6 +372,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_11_185900) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "total_aggregated_units"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
@@ -640,7 +641,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_11_185900) do
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.string "external_subscription_id", null: false
-    t.string "external_id", null: false
+    t.string "external_id"
     t.datetime "added_at", null: false
     t.datetime "removed_at"
     t.datetime "created_at", null: false
@@ -648,11 +649,13 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_11_185900) do
     t.uuid "billable_metric_id"
     t.jsonb "properties", default: {}, null: false
     t.datetime "deleted_at"
+    t.uuid "group_id"
     t.index ["billable_metric_id"], name: "index_quantified_events_on_billable_metric_id"
     t.index ["customer_id", "external_subscription_id", "billable_metric_id"], name: "index_search_quantified_events"
     t.index ["customer_id"], name: "index_quantified_events_on_customer_id"
     t.index ["deleted_at"], name: "index_quantified_events_on_deleted_at"
     t.index ["external_id"], name: "index_quantified_events_on_external_id"
+    t.index ["group_id"], name: "index_quantified_events_on_group_id"
   end
 
   create_table "refunds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -850,6 +853,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_11_185900) do
   add_foreign_key "plans_taxes", "plans"
   add_foreign_key "plans_taxes", "taxes"
   add_foreign_key "quantified_events", "customers"
+  add_foreign_key "quantified_events", "groups"
   add_foreign_key "refunds", "credit_notes"
   add_foreign_key "refunds", "payment_provider_customers"
   add_foreign_key "refunds", "payment_providers"
