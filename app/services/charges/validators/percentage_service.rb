@@ -4,6 +4,7 @@ module Charges
   module Validators
     class PercentageService < Charges::Validators::BaseService
       def valid?
+        validate_billable_metric
         validate_rate
         validate_fixed_amount
         validate_free_units_per_events
@@ -17,6 +18,12 @@ module Charges
 
       def rate
         properties['rate']
+      end
+
+      def validate_billable_metric
+        return unless charge.billable_metric.latest_agg?
+
+        add_error(field: :billable_metric, error_code: 'invalid_value')
       end
 
       def validate_rate

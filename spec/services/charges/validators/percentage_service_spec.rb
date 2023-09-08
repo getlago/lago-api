@@ -17,6 +17,26 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
   describe '.valid?' do
     it { expect(percentage_service).to be_valid }
 
+    context 'when billable metric is latest_agg' do
+      let(:billable_metric) { create(:latest_billable_metric) }
+      let(:charge) { build(:percentage_charge, properties: percentage_properties, billable_metric:) }
+      let(:percentage_properties) do
+        {
+          rate: 0.25,
+          fixed_amount: '2',
+        }
+      end
+
+      it 'is invalid' do
+        aggregate_failures do
+          expect(percentage_service).not_to be_valid
+          expect(percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(percentage_service.result.error.messages.keys).to include(:billable_metric)
+          expect(percentage_service.result.error.messages[:billable_metric]).to include('invalid_value')
+        end
+      end
+    end
+
     context 'without rate' do
       let(:percentage_properties) do
         {
