@@ -51,6 +51,18 @@ RSpec.describe BillableMetric, type: :model do
         end
       end
     end
+
+    context 'when recurring is true and aggregation type is latest_agg' do
+      let(:billable_metric) { build(:latest_billable_metric, recurring:) }
+      let(:recurring) { true }
+
+      it 'returns an error' do
+        aggregate_failures do
+          expect(billable_metric).not_to be_valid
+          expect(billable_metric.errors.messages[:recurring]).to include('not_compatible_with_aggregation_type')
+        end
+      end
+    end
   end
 
   describe '#selectable_groups' do

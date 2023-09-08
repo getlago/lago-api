@@ -91,7 +91,9 @@ class Charge < ApplicationRecord
   # - charge model is volume
   def validate_pay_in_advance
     return unless pay_in_advance?
-    return unless billable_metric.recurring_count_agg? || billable_metric.max_agg? || volume?
+    unless billable_metric.recurring_count_agg? || billable_metric.max_agg? || billable_metric.latest_agg? || volume?
+      return
+    end
 
     errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
   end
