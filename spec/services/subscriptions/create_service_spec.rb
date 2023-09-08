@@ -70,6 +70,32 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       )
     end
 
+    context 'when ending_at is passed' do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          ending_at: Time.current.beginning_of_day + 3.months,
+        }
+      end
+
+      it 'creates a subscription with ending_at correctly set' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          subscription = result.subscription
+          expect(subscription.ending_at).to eq(Time.current.beginning_of_day + 3.months)
+        end
+      end
+    end
+
     context 'when external_id is not given in an api context' do
       let(:external_id) { nil }
 
@@ -471,6 +497,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(next_subscription.plan_id).to eq(plan.id)
               expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
               expect(next_subscription.previous_subscription).to eq(subscription)
+              expect(next_subscription.ending_at).to eq(subscription.ending_at)
             end
           end
 
@@ -481,6 +508,32 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result.subscription.id).to eq(subscription.id)
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
+            end
+          end
+
+          context 'when ending_at is overridden' do
+            let(:params) do
+              {
+                external_customer_id:,
+                plan_code:,
+                name:,
+                external_id:,
+                billing_time:,
+                subscription_at:,
+                subscription_id:,
+                ending_at: Time.current.beginning_of_day + 3.months,
+              }
+            end
+
+            it 'creates a new subscription with correctly set ending_at' do
+              result = create_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                next_subscription = result.subscription.next_subscription
+                expect(next_subscription.ending_at).to eq(Time.current.beginning_of_day + 3.months)
+              end
             end
           end
 

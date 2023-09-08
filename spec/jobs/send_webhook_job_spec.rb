@@ -338,6 +338,28 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is subscription.termination_alert' do
+    let(:webhook_service) { instance_double(Webhooks::Subscriptions::TerminationAlertService) }
+    let(:subscription) { create(:subscription) }
+
+    before do
+      allow(Webhooks::Subscriptions::TerminationAlertService).to receive(:new)
+        .with(object: subscription, options: {}, webhook_id: nil)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        'subscription.termination_alert',
+        subscription,
+      )
+
+      expect(Webhooks::Subscriptions::TerminationAlertService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook type is invoice.payment_status_updated' do
     let(:webhook_service) { instance_double(Webhooks::Invoices::PaymentStatusUpdatedService) }
     let(:invoice) { create(:invoice, organization:) }

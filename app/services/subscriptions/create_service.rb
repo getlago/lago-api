@@ -22,7 +22,7 @@ module Subscriptions
     end
 
     def call
-      return result unless valid?(customer:, plan:, subscription_at:)
+      return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
 
       # NOTE: in API, it's possible to create a subscription for a new customer
       customer.save! if api_context?
@@ -84,6 +84,7 @@ module Subscriptions
         name:,
         external_id:,
         billing_time: billing_time || :calendar,
+        ending_at: params[:ending_at],
       )
 
       if new_subscription.subscription_at > Time.current
@@ -125,6 +126,7 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
       )
 
       cancel_pending_subscription if pending_subscription?
@@ -185,6 +187,7 @@ module Subscriptions
         subscription_at: current_subscription.subscription_at,
         status: :pending,
         billing_time: current_subscription.billing_time,
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
       )
 
       current_subscription

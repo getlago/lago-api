@@ -4,8 +4,17 @@ module Subscriptions
   class UpdateService < BaseService
     def update(subscription:, args:)
       return result.not_found_failure!(resource: 'subscription') unless subscription
+      unless valid?(
+        customer: subscription.customer,
+        plan: subscription.plan,
+        subscription_at: args.key?(:subscription_at) ? args[:subscription_at] : subscription.subscription_at,
+        ending_at: args[:ending_at],
+      )
+        return result
+      end
 
       subscription.name = args[:name] if args.key?(:name)
+      subscription.ending_at = args[:ending_at] if args.key?(:ending_at)
 
       if subscription.starting_in_the_future? && args.key?(:subscription_at)
         subscription.subscription_at = args[:subscription_at]
@@ -33,6 +42,10 @@ module Subscriptions
       return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
 
       BillSubscriptionJob.perform_later([subscription], Time.current.to_i)
+    end
+
+    def valid?(args)
+      Subscriptions::ValidateService.new(result, **args).valid?
     end
   end
 end

@@ -8,9 +8,7 @@ module Mutations
       graphql_name 'UpdateSubscription'
       description 'Update a Subscription'
 
-      argument :id, ID, required: true
-      argument :name, String, required: false
-      argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
+      input_object_class Types::Subscriptions::UpdateSubscriptionInput
 
       type Types::Subscriptions::Object
 

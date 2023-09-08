@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe ::V1::SubscriptionSerializer do
   subject(:serializer) { described_class.new(subscription, root_name: 'subscription', includes: %i[customer plan]) }
 
-  let!(:subscription) { create(:subscription) }
+  let!(:subscription) { create(:subscription, ending_at: Time.current + 1.month) }
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -21,6 +21,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
         'status' => subscription.status,
         'billing_time' => subscription.billing_time,
         'created_at' => subscription.created_at.iso8601,
+        'ending_at' => subscription.ending_at.iso8601,
       )
 
       expect(result['subscription']['customer']['lago_id']).to be_present

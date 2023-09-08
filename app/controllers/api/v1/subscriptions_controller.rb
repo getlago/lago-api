@@ -117,11 +117,12 @@ module Api
             :billing_time,
             :subscription_date,
             :subscription_at,
+            :ending_at,
           )
       end
 
       def update_params
-        params.require(:subscription).permit(:name, :subscription_date, :subscription_at)
+        params.require(:subscription).permit(:name, :subscription_date, :subscription_at, :ending_at)
       end
 
       def index_filters
