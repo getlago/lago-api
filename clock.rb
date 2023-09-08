@@ -22,6 +22,10 @@ module Clockwork
     Clock::ActivateSubscriptionsJob.perform_later
   end
 
+  every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:5') do
+    Clock::TerminateEndedSubscriptionsJob.perform_later
+  end
+
   every(1.hour, 'schedule:bill_customers', at: '*:10') do
     Clock::SubscriptionsBillerJob.perform_later
   end
@@ -36,6 +40,10 @@ module Clockwork
 
   every(1.hour, 'schedule:terminate_wallets', at: '*:45') do
     Clock::TerminateWalletsJob.perform_later
+  end
+
+  every(1.hour, 'schedule:termination_alert', at: '*:50') do
+    Clock::SubscriptionsToBeTerminatedJob.perform_later
   end
 
   every(1.day, 'schedule:clean_webhooks', at: '01:00') do
