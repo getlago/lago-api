@@ -45,7 +45,7 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
         travel_to(current_date) do
           described_class.perform_now
           expect(Subscriptions::TerminateService)
-            .not_to have_received(:call).with(subscription: subscription1)
+            .to have_received(:call).with(subscription: subscription1)
           expect(Subscriptions::TerminateService)
             .not_to have_received(:call).with(subscription: subscription2)
           expect(Subscriptions::TerminateService)
