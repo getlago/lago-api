@@ -28,7 +28,7 @@ module Invoices
         subscriptions.each do |subscription|
           boundaries = subscriptions_boundaries[subscription.id]
 
-          if subscription.terminated? && subscription.next_subscription.nil?
+          if subscription.terminated? && subscription.next_subscription.nil? && subscription.plan.pay_in_arrear?
             boundaries = new_termination_boundaries(subscription) || boundaries
           end
 
