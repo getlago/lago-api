@@ -158,6 +158,7 @@ type BillableMetric {
   recurring: Boolean!
   subscriptionsCount: Int!
   updatedAt: ISO8601DateTime!
+  weightedInterval: WeightedIntervalEnum
 }
 
 type BillableMetricCollection {
@@ -1578,6 +1579,7 @@ input CreateBillableMetricInput {
   group: JSON
   name: String!
   recurring: Boolean
+  weightedInterval: WeightedIntervalEnum
 }
 
 """
@@ -5678,4 +5680,8 @@ enum WebhookStatusEnum {
   failed
   pending
   succeeded
+}
+
+enum WeightedIntervalEnum {
+  seconds
 }

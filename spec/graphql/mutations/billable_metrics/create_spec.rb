@@ -15,6 +15,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           recurring
           organization { id },
           group
+          weightedInterval
         }
       }
     GQL
@@ -46,6 +47,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
       expect(result_data['aggregationType']).to eq('count_agg')
       expect(result_data['recurring']).to eq(false)
       expect(result_data['group']).to eq({})
+      expect(result_data['weightedInterval']).to be_nil
     end
   end
 
