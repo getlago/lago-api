@@ -12,30 +12,30 @@ it:
     all_subscriptions: Tutti gli abbonamenti
     all_usage_based_fees: "Tutte le tariffe basate sull'utilizzo"
     sub_total_without_tax: Subtotale (escl. tasse)
-    tax: Tassare
+    tax: Tasse
     sub_total_with_tax: Subtotale (incl. tasse)
     credit_notes: Note di Credito
-    coupons: Tagliandi
+    coupons: Coupon
     prepaid_credits: Crediti prepagati
     prepaid_credits_with_value: Crediti prepagati - %{wallet_name}
-    tax_identification_number: "Tassare ID: %{tax_identification_number}"
+    tax_identification_number: "Identificativo fiscale: %{tax_identification_number}"
     total_due: Totale dovuto
-    powered_by: Fornito da
+    powered_by: Elaborato da
     item: Articolo
     unit: Unità
     unit_price: Prezzo unitario
     amount: Importo
     amount_with_tax: Importo (incl. tasse)
     amount_without_tax: Importo (escl. tasse)
-    fees_from_to_date: Tariffe da %{from_date} a %{to_date}
+    fees_from_to_date: Tariffe dal %{from_date} al %{to_date}
     tax_rate: Aliquota fiscale
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_name: "%{name} (%{rate}% su %{amount})"
 
     details: Dettagli %{resource}
     subscription: Abbonamento
-    date_from: Da
-    date_to: a
+    date_from: Dal
+    date_to: al
     monthly: Mensile
     yearly: Annuale
     weekly: Settimanale
@@ -44,7 +44,7 @@ it:
     subscription_interval: "Abbonamento %{plan_interval} - %{plan_name}"
 
     usage_based_fees: "Tariffe basate sull'utilizzo"
-    list_of_charges: Elenco degli addebiti utilizzati da %{from} a %{to}
+    list_of_charges: Elenco degli addebiti utilizzati dal %{from} al %{to}
     see_breakdown: "Vedere la ripartizione per l'unità totale"
     total_unit_interval: "Unità totale: %{events_count} eventi per %{units}"
     total_events: "Eventi totali: %{count}"

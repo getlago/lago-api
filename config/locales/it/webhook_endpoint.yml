@@ -5,4 +5,4 @@ it:
         webhook_endpoint:
           attributes:
             base:
-              exceeded_limit: Maximum number of webhook endpoints was reached
+              exceeded_limit: È stato raggiunto il numero massimo di endpoint webhook
