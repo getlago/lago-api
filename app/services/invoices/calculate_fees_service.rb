@@ -28,6 +28,10 @@ module Invoices
         subscriptions.each do |subscription|
           boundaries = subscriptions_boundaries[subscription.id]
 
+          if subscription.terminated? && subscription.next_subscription.nil?
+            boundaries = new_termination_boundaries(subscription) || boundaries
+          end
+
           InvoiceSubscription.create!(
             invoice:,
             subscription:,
@@ -94,19 +98,7 @@ module Invoices
       subscriptions_boundaries.any? do |subscription_id, boundaries|
         subscription = Subscription.includes(:plan).find(subscription_id)
 
-        base_query = InvoiceSubscription
-          .where(subscription_id:)
-          .recurring
-          .where(from_datetime: boundaries[:from_datetime])
-          .where(to_datetime: boundaries[:to_datetime])
-
-        if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
-          base_query = base_query
-            .where(charges_from_datetime: boundaries[:charges_from_datetime])
-            .where(charges_to_datetime: boundaries[:charges_to_datetime])
-        end
-
-        base_query.exists?
+        matching_invoice_subscription?(subscription, boundaries)
       end
     end
 
@@ -274,6 +266,53 @@ module Invoices
 
     def not_in_finalizing_process?
       invoice.draft? && context != :finalize
+    end
+
+    def matching_invoice_subscription?(subscription, boundaries)
+      base_query = InvoiceSubscription
+        .where(subscription_id: subscription.id)
+        .recurring
+        .where(from_datetime: boundaries[:from_datetime])
+        .where(to_datetime: boundaries[:to_datetime])
+
+      if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+        base_query = base_query
+          .where(charges_from_datetime: boundaries[:charges_from_datetime])
+          .where(charges_to_datetime: boundaries[:charges_to_datetime])
+      end
+
+      base_query.exists?
+    end
+
+    # This method calculates boundaries for terminated subscription. If termination is happening on billing date
+    # new boundaries will be calculated only if there is no invoice subscription object for previous period.
+    # If subscription is happening on any other day method is returning nil and boundaries are calculate with existing
+    # algorithm
+    def new_termination_boundaries(subscription)
+      # Date service has various checks for terminated subscriptions. We want to avoid it and fetch boundaries
+      # for current usage (current period) but when subscription was active (one day ago)
+      duplicate = subscription.dup.tap { |s| s.status = :active }
+
+      service = Subscriptions::DatesService.new_instance(
+        duplicate,
+        Time.zone.at(timestamp) - 1.day,
+        current_usage: true,
+      )
+
+      one_day_ago = (Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone) - 1.day).to_date
+      return nil if service.to_datetime.to_date != one_day_ago
+
+      boundaries = {
+        from_datetime: service.from_datetime,
+        to_datetime: service.to_datetime,
+        charges_from_datetime: service.charges_from_datetime,
+        charges_to_datetime: service.charges_to_datetime,
+        timestamp: Time.zone.at(timestamp) - 1.day,
+      }
+
+      return nil if matching_invoice_subscription?(subscription, boundaries)
+
+      boundaries
     end
   end
 end
