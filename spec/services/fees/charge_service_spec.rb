@@ -1206,6 +1206,7 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.amount_cents).to eq(0)
           expect(created_fee.amount_currency).to eq('EUR')
           expect(created_fee.units).to eq(0)
+          expect(created_fee.total_aggregated_units).to eq(0)
           expect(created_fee.events_count).to eq(0)
           expect(created_fee.payment_status).to eq('pending')
 
@@ -1216,7 +1217,7 @@ RSpec.describe Fees::ChargeService do
           expect(quantified_event.group_id).to be_nil
           expect(quantified_event.billable_metric_id).to eq(billable_metric.id)
           expect(quantified_event.added_at).to eq(boundaries[:from_datetime])
-          expect(quantified_event.properties['recurring_value']).to eq(0)
+          expect(quantified_event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS]).to eq('0.0')
         end
       end
     end

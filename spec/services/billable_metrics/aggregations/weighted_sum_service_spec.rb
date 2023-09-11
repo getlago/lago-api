@@ -97,7 +97,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         customer:,
         external_subscription_id: subscription.external_id,
         added_at: from_datetime - 1.day,
-        properties: { recurring_value: 1000 },
+        properties: { QuantifiedEvent::RECURRING_TOTAL_UNITS => 1000 },
       )
     end
 
@@ -109,7 +109,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       expect(result.aggregation.round(5).to_s).to eq('0.00037')
       expect(result.count).to eq(0)
       expect(result.variation).to eq(0)
-      expect(result.recurring_value).to eq(1000)
+      expect(result.total_aggregated_units).to eq(1000)
       expect(result.recurring_updated_at).to eq(from_datetime)
     end
 
@@ -122,7 +122,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         expect(result.aggregation.round(5).to_s).to eq('0.0')
         expect(result.count).to eq(0)
         expect(result.variation).to eq(0)
-        expect(result.recurring_value).to eq(0)
+        expect(result.total_aggregated_units).to eq(0)
         expect(result.recurring_updated_at).to eq(from_datetime)
       end
     end
@@ -146,7 +146,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         expect(result.aggregation.round(5).to_s).to eq('2.37399')
         expect(result.count).to eq(7)
         expect(result.variation).to eq(0)
-        expect(result.recurring_value).to eq(1000)
+        expect(result.total_aggregated_units).to eq(1000)
         expect(result.recurring_updated_at).to eq('2023-08-01 05:30:00')
       end
     end

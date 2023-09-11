@@ -119,7 +119,7 @@ RSpec.describe Invoice, type: :model do
     it 'returns the subscriptions amount' do
       create(:fee, invoice:, amount_cents: 200)
       create(:fee, invoice:, amount_cents: 100)
-      create(:fee, invoice:, charge_id: create(:standard_charge).id, fee_type: 'charge')
+      create(:charge_fee, invoice:, charge_id: create(:standard_charge).id)
 
       expect(invoice.subscription_amount.to_s).to eq('3.00')
     end

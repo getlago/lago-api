@@ -412,7 +412,7 @@ RSpec.describe Events::CreateService, type: :service do
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             properties: {
-              'operation_type' => 'add',
+              'operation_type' => 'unknown',
             },
             timestamp:,
           }

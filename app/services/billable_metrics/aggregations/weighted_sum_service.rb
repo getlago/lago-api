@@ -6,12 +6,13 @@ module BillableMetrics
       def aggregate(options: {})
         events = fetch_events(from_datetime:, to_datetime:)
 
-        result.aggregation = compute_aggregation
+        result.aggregation = compute_aggregation.ceil(20)
         result.count = events.count
+        result.variation = events.sum("(#{sanitized_field_name})::numeric") || 0
+        result.total_aggregated_units = result.variation
 
         if billable_metric.recurring?
-          result.variation = events.sum("(#{sanitized_field_name})::numeric") || 0
-          result.recurring_value = latest_value + result.variation
+          result.total_aggregated_units = latest_value + result.variation
           result.recurring_updated_at = events.last&.timestamp || from_datetime
         end
 
@@ -97,14 +98,18 @@ module BillableMetrics
       end
 
       def latest_value
-        QuantifiedEvent
+        quantified_events = QuantifiedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.external_id)
           .where(added_at: ...from_datetime)
           .order(added_at: :desc)
-          .first
-          &.properties&.[]('recurring_value') || 0
+
+        quantified_events = quantified_events.where(group_id: group.id) if group
+
+        quantified_event = quantified_events.first
+
+        BigDecimal(quantified_event&.properties&.[](QuantifiedEvent::RECURRING_TOTAL_UNITS) || 0)
       end
     end
   end

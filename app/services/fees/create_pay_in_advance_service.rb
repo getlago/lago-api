@@ -56,6 +56,7 @@ module Fees
           fee_type: :charge,
           invoiceable: charge,
           units: result.units,
+          total_aggregated_units: result.units,
           properties: boundaries,
           events_count: result.count,
           group_id: group&.id,
