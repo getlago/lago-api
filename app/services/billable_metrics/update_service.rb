@@ -30,6 +30,7 @@ module BillableMetrics
 
         billable_metric.code = params[:code] if params.key?(:code)
         billable_metric.aggregation_type = params[:aggregation_type]&.to_sym if params.key?(:aggregation_type)
+        billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)
         billable_metric.field_name = params[:field_name] if params.key?(:field_name)
         billable_metric.recurring = params[:recurring] if params.key?(:recurring)
         billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)

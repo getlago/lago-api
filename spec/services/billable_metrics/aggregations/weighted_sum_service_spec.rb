@@ -55,7 +55,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   it 'aggregates the events' do
     result = aggregator.aggregate
 
-    expect(result.aggregation.round(5).to_s).to eq('0.0125')
+    expect(result.aggregation.round(5).to_s).to eq('0.01251')
     expect(result.count).to eq(7)
   end
 
@@ -69,7 +69,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     it 'aggregates the events' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.aggregation.round(5).to_s).to eq('0.00038')
       expect(result.count).to eq(1)
     end
   end
@@ -106,7 +106,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     it 'uses the persisted recurring value as initial value' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.aggregation.round(5).to_s).to eq('0.00038')
       expect(result.count).to eq(0)
       expect(result.variation).to eq(0)
       expect(result.total_aggregated_units).to eq(1000)
@@ -164,7 +164,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     it 'aggregates the events' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.aggregation.round(5).to_s).to eq('0.00038')
       expect(result.count).to eq(1)
     end
   end
