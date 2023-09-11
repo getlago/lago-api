@@ -28,7 +28,7 @@ module Invoices
         subscriptions.each do |subscription|
           boundaries = subscriptions_boundaries[subscription.id]
 
-          if subscription.terminated? && subscription.next_subscription.nil? && subscription.plan.pay_in_arrear?
+          if subscription.terminated? && subscription.next_subscription.nil?
             boundaries = new_termination_boundaries(subscription) || boundaries
           end
 
@@ -293,26 +293,24 @@ module Invoices
       # for current usage (current period) but when subscription was active (one day ago)
       duplicate = subscription.dup.tap { |s| s.status = :active }
 
-      service = Subscriptions::DatesService.new_instance(
-        duplicate,
-        Time.zone.at(timestamp) - 1.day,
-        current_usage: true,
-      )
+      current_time = Time.zone.at(timestamp)
 
-      one_day_ago = (Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone) - 1.day).to_date
-      return nil if service.to_datetime.to_date != one_day_ago
+      dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time - 1.day, current_usage: true)
+
+      one_day_ago = (current_time.in_time_zone(customer.applicable_timezone) - 1.day).to_date
+      return nil if dates_service.charges_to_datetime.to_date != one_day_ago
+
+      dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time, current_usage: false)
 
       boundaries = {
-        from_datetime: service.from_datetime,
-        to_datetime: service.to_datetime,
-        charges_from_datetime: service.charges_from_datetime,
-        charges_to_datetime: service.charges_to_datetime,
-        timestamp: Time.zone.at(timestamp) - 1.day,
+        from_datetime: dates_service.from_datetime,
+        to_datetime: dates_service.to_datetime,
+        charges_from_datetime: dates_service.charges_from_datetime,
+        charges_to_datetime: dates_service.charges_to_datetime,
+        timestamp: current_time,
       }
 
-      return nil if matching_invoice_subscription?(subscription, boundaries)
-
-      boundaries
+      matching_invoice_subscription?(subscription, boundaries) ? nil : boundaries
     end
   end
 end

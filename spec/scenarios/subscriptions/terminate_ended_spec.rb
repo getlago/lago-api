@@ -172,7 +172,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
         aggregate_failures do
           expect(subscription.reload).to be_terminated
           expect(subscription.reload.invoices.count).to eq(1)
-          expect(invoice.total_amount_cents).to eq(1000)
+          expect(invoice.total_amount_cents).to eq(968)
           expect(invoice.issuing_date.iso8601).to eq('2023-10-05')
         end
       end
@@ -212,7 +212,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           aggregate_failures do
             expect(subscription.reload).to be_terminated
             expect(subscription.reload.invoices.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(1000)
+            expect(invoice.total_amount_cents).to eq(968)
             expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
           end
         end
