@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_11_185900) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -67,6 +67,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.uuid "tax_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["add_on_id", "tax_id"], name: "index_add_ons_taxes_on_add_on_id_and_tax_id", unique: true
     t.index ["add_on_id"], name: "index_add_ons_taxes_on_add_on_id"
     t.index ["tax_id"], name: "index_add_ons_taxes_on_tax_id"
   end
@@ -141,6 +142,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.uuid "tax_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["charge_id", "tax_id"], name: "index_charges_taxes_on_charge_id_and_tax_id", unique: true
     t.index ["charge_id"], name: "index_charges_taxes_on_charge_id"
     t.index ["tax_id"], name: "index_charges_taxes_on_tax_id"
   end
@@ -241,6 +243,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "base_amount_cents", default: 0, null: false
+    t.index ["credit_note_id", "tax_id"], name: "index_credit_notes_taxes_on_credit_note_id_and_tax_id", unique: true
     t.index ["credit_note_id"], name: "index_credit_notes_taxes_on_credit_note_id"
     t.index ["tax_id"], name: "index_credit_notes_taxes_on_tax_id"
   end
@@ -312,6 +315,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.uuid "tax_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["customer_id", "tax_id"], name: "index_customers_taxes_on_customer_id_and_tax_id", unique: true
     t.index ["customer_id"], name: "index_customers_taxes_on_customer_id"
     t.index ["tax_id"], name: "index_customers_taxes_on_tax_id"
   end
@@ -389,6 +393,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["fee_id", "tax_id"], name: "index_fees_taxes_on_fee_id_and_tax_id", unique: true, where: "(created_at >= '2023-09-12 00:00:00'::timestamp without time zone)"
     t.index ["fee_id"], name: "index_fees_taxes_on_fee_id"
     t.index ["tax_id"], name: "index_fees_taxes_on_tax_id"
   end
@@ -505,6 +510,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "fees_amount_cents", default: 0, null: false
+    t.index ["invoice_id", "tax_id"], name: "index_invoices_taxes_on_invoice_id_and_tax_id", unique: true, where: "(created_at >= '2023-09-12 00:00:00'::timestamp without time zone)"
     t.index ["invoice_id"], name: "index_invoices_taxes_on_invoice_id"
     t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
   end
@@ -626,6 +632,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_05_081225) do
     t.uuid "tax_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["plan_id", "tax_id"], name: "index_plans_taxes_on_plan_id_and_tax_id", unique: true
     t.index ["plan_id"], name: "index_plans_taxes_on_plan_id"
     t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
   end
