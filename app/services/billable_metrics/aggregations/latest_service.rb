@@ -20,7 +20,7 @@ module BillableMetrics
         @events ||=
           events_scope(from_datetime:, to_datetime:)
             .where("#{sanitized_field_name} IS NOT NULL")
-            .reorder(timestamp: :desc)
+            .reorder(timestamp: :desc, created_at: :desc)
       end
 
       def compute_aggregation(latest_event)
