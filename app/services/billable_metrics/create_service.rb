@@ -17,6 +17,7 @@ module BillableMetrics
           recurring: args[:recurring] || false,
           aggregation_type: args[:aggregation_type]&.to_sym,
           field_name: args[:field_name],
+          weighted_interval: args[:weighted_interval]&.to_sym,
         )
 
         if args[:group].present?

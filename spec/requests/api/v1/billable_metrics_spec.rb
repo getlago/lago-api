@@ -65,6 +65,31 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         end
       end
     end
+
+    context 'with weighted sum aggregation' do
+      let(:create_params) do
+        {
+          name: 'BM1',
+          code: 'BM1_code',
+          description: 'description',
+          aggregation_type: 'weighted_sum_agg',
+          field_name: 'amount_sum',
+          recurring: true,
+          weighted_interval: 'seconds',
+        }
+      end
+
+      it 'creates a billable_metric' do
+        post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: create_params })
+
+        expect(response).to have_http_status(:success)
+        expect(json[:billable_metric][:lago_id]).to be_present
+        expect(json[:billable_metric][:recurring]).to eq(create_params[:recurring
+          ])
+        expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
+        expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
+      end
+    end
   end
 
   describe 'update' do
@@ -143,6 +168,34 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    context 'with weighted sum aggregation' do
+      let(:update_params) do
+        {
+          name: 'BM1',
+          code: 'BM1_code',
+          description: 'description',
+          aggregation_type: 'weighted_sum_agg',
+          field_name: 'amount_sum',
+          recurring: true,
+          weighted_interval: 'seconds',
+        }
+      end
+
+      it 'updates a billable_metric' do
+        put_with_token(
+          organization,
+          "/api/v1/billable_metrics/#{billable_metric.code}",
+          { billable_metric: update_params },
+        )
+
+        expect(response).to have_http_status(:success)
+        expect(json[:billable_metric][:lago_id]).to be_present
+        expect(json[:billable_metric][:recurring]).to be_truthy
+        expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
+        expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
       end
     end
   end
