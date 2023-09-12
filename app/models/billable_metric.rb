@@ -18,10 +18,10 @@ class BillableMetric < ApplicationRecord
     count_agg
     sum_agg
     max_agg
-    latest_agg
     unique_count_agg
     recurring_count_agg
     weighted_sum_agg
+    latest_agg
   ].freeze
 
   WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
