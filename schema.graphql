@@ -89,6 +89,7 @@ type AdyenProvider {
 
 enum AggregationTypeEnum {
   count_agg
+  latest_agg
   max_agg
   recurring_count_agg
   sum_agg

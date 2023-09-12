@@ -6,6 +6,8 @@ module Charges
       include ::Validators::RangeBoundsValidator
 
       def valid?
+        validate_billable_metric
+
         if ranges.blank?
           add_error(field: :graduated_percentage_ranges, error_code: 'missing_graduated_percentage_ranges')
         else
@@ -26,6 +28,12 @@ module Charges
       end
 
       private
+
+      def validate_billable_metric
+        return unless charge.billable_metric.latest_agg?
+
+        add_error(field: :billable_metric, error_code: 'invalid_value')
+      end
 
       def ranges
         charge.properties['graduated_percentage_ranges'].map(&:with_indifferent_access)

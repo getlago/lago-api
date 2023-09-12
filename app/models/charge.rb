@@ -92,8 +92,7 @@ class Charge < ApplicationRecord
   def validate_pay_in_advance
     return unless pay_in_advance?
 
-    unless %w[recurring_count_agg max_add weighted_sum_agg].include?(billable_metric.aggregation_type) ||
-           billable_metric.max_agg? ||
+    unless %w[recurring_count_agg max_agg weighted_sum_agg latest_agg].include?(billable_metric.aggregation_type) ||
            volume?
       return
     end

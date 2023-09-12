@@ -15,6 +15,25 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
   let(:ranges) { {} }
 
   describe '.valid?' do
+    context 'when billable metric is latest_agg' do
+      let(:billable_metric) { create(:latest_billable_metric) }
+      let(:charge) { build(:graduated_percentage_charge, properties: graduated_percentage_ranges, billable_metric:) }
+      let(:graduated_percentage_ranges) do
+        {
+          graduated_percentage_ranges: ranges,
+        }
+      end
+
+      it 'is invalid' do
+        aggregate_failures do
+          expect(graduated_percentage_service).not_to be_valid
+          expect(graduated_percentage_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(graduated_percentage_service.result.error.messages.keys).to include(:billable_metric)
+          expect(graduated_percentage_service.result.error.messages[:billable_metric]).to include('invalid_value')
+        end
+      end
+    end
+
     context 'with ranges validation' do
       it 'ensures the presences of ranges' do
         aggregate_failures do

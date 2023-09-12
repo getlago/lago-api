@@ -369,7 +369,7 @@ RSpec.describe Charge, type: :model do
     end
   end
 
-  describe '#validate_instant' do
+  describe '#validate_pay_in_advance' do
     it 'does not return an error' do
       expect(build(:standard_charge)).to be_valid
     end
@@ -389,6 +389,18 @@ RSpec.describe Charge, type: :model do
     context 'when billable metric is max_agg' do
       it 'returns an error' do
         billable_metric = create(:max_billable_metric)
+        charge = build(:standard_charge, :pay_in_advance, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:pay_in_advance]).to include('invalid_aggregation_type_or_charge_model')
+        end
+      end
+    end
+
+    context 'when billable metric is latest_agg' do
+      it 'returns an error' do
+        billable_metric = create(:latest_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
 
         aggregate_failures do

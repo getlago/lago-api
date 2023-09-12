@@ -18,6 +18,7 @@ class BillableMetric < ApplicationRecord
     count_agg
     sum_agg
     max_agg
+    latest_agg
     unique_count_agg
     recurring_count_agg
     weighted_sum_agg
@@ -96,7 +97,7 @@ class BillableMetric < ApplicationRecord
 
   def validate_recurring
     return unless recurring?
-    return unless count_agg? || max_agg? || recurring_count_agg?
+    return unless count_agg? || max_agg? || latest_agg? || recurring_count_agg?
 
     errors.add(:recurring, :not_compatible_with_aggregation_type)
   end

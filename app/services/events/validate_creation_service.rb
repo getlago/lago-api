@@ -88,7 +88,7 @@ module Events
     # This validation checks only field_name value since it is important for aggregation DB query integrity.
     # Other checks are performed later and presented in debugger
     def valid_properties?
-      return true unless billable_metric.max_agg? || billable_metric.sum_agg?
+      return true unless billable_metric.max_agg? || billable_metric.sum_agg? || billable_metric.latest_agg?
 
       valid_number?((params[:properties] || {})[billable_metric.field_name.to_sym])
     end
