@@ -7,6 +7,7 @@ module AddOns
         add_on = AddOn.create!(
           organization_id: args[:organization_id],
           name: args[:name],
+          invoice_display_name: args[:invoice_display_name],
           code: args[:code],
           description: args[:description],
           amount_cents: args[:amount_cents],
@@ -36,6 +37,7 @@ module AddOns
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,
+          addon_invoice_display_name: add_on.invoice_display_name,
           organization_id: add_on.organization_id,
         },
       )

@@ -14,6 +14,7 @@ RSpec.describe AddOns::CreateService, type: :service do
     let(:create_args) do
       {
         name: 'Super Add-on',
+        invoice_display_name: 'Super Add-on Invoice Name',
         code: add_on_code,
         description: 'This is description',
         organization_id: organization.id,
@@ -44,6 +45,7 @@ RSpec.describe AddOns::CreateService, type: :service do
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,
+          addon_invoice_display_name: add_on.invoice_display_name,
           organization_id: add_on.organization_id,
         },
       )
