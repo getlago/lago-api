@@ -172,7 +172,7 @@ RSpec.describe Fees::ChargeService do
       context 'with all types of aggregation' do
         BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
           before do
-            billable_metric.update!(aggregation_type:, field_name: 'foo_bar')
+            billable_metric.update!(aggregation_type:, field_name: 'foo_bar', weighted_interval: 'seconds')
           end
 
           it 'creates fees' do
@@ -1226,7 +1226,7 @@ RSpec.describe Fees::ChargeService do
     context 'with all types of aggregation' do
       BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
         before do
-          billable_metric.update!(aggregation_type:, field_name: 'foo_bar')
+          billable_metric.update!(aggregation_type:, field_name: 'foo_bar', weighted_interval: 'seconds')
 
           charge.update!(min_amount_cents: 1000)
         end

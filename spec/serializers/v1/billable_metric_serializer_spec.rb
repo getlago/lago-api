@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe ::V1::BillableMetricSerializer do
   subject(:serializer) { described_class.new(billable_metric, root_name: 'billable_metric') }
 
-  let(:billable_metric) { create(:billable_metric) }
+  let(:billable_metric) { create(:weighted_sum_billable_metric) }
   let(:result) { JSON.parse(serializer.to_json) }
 
   it 'serializes the object' do
@@ -17,6 +17,7 @@ RSpec.describe ::V1::BillableMetricSerializer do
       expect(result['billable_metric']['aggregation_type']).to eq(billable_metric.aggregation_type)
       expect(result['billable_metric']['field_name']).to eq(billable_metric.field_name)
       expect(result['billable_metric']['created_at']).to eq(billable_metric.created_at.iso8601)
+      expect(result['billable_metric']['weighted_interval']).to eq(billable_metric.weighted_interval)
       expect(result['billable_metric']['group']).to eq({})
       expect(result['billable_metric']['active_subscriptions_count']).to eq(0)
       expect(result['billable_metric']['draft_invoices_count']).to eq(0)

@@ -149,6 +149,8 @@ module Fees
                              end
                            when :recurring_count_agg
                              BillableMetrics::Aggregations::RecurringCountService
+                           when :weighted_sum_agg
+                             BillableMetrics::Aggregations::WeightedSumService
                            else
                              raise(NotImplementedError)
       end

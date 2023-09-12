@@ -30,4 +30,10 @@ FactoryBot.define do
     aggregation_type { 'max_agg' }
     field_name { 'item_id' }
   end
+
+  factory :weighted_sum_billable_metric, parent: :billable_metric do
+    aggregation_type { 'weighted_sum_agg' }
+    weighted_interval { 'seconds' }
+    field_name { 'value' }
+  end
 end

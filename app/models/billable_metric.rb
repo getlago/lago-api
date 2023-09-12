@@ -21,9 +21,13 @@ class BillableMetric < ApplicationRecord
     latest_agg
     unique_count_agg
     recurring_count_agg
+    weighted_sum_agg
   ].freeze
 
+  WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
+
   enum aggregation_type: AGGREGATION_TYPES
+  enum weighted_interval: WEIGHTED_INTERVAL
 
   validate :validate_recurring
 
@@ -33,6 +37,9 @@ class BillableMetric < ApplicationRecord
   validates :code,
             presence: true,
             uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+  validates :weighted_interval,
+            inclusion: { in: WEIGHTED_INTERVAL.values },
+            if: :weighted_sum_agg?
 
   default_scope -> { kept }
 

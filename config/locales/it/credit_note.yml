@@ -13,10 +13,10 @@ it:
     credited_notice: Accreditato sul saldo cliente il %{issuing_date}
     credited_refunded_notice: Accreditato sul saldo cliente e rimborsato il %{issuing_date}
     subscription: Abbonamento
-    coupon_adjustment: Tagliandi
+    coupon_adjustment: Correzione coupon
     sub_total_without_tax: Subtotale (escl. tasse)
     tax: "%{name} (%{rate}% su %{amount})"
     credited_on_customer_balance: Accreditato sul saldo cliente
     refunded: Rimborsato
     total: Totale
-    powered_by: Fornito da
+    powered_by: Elaborato da

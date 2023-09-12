@@ -1,7 +1,7 @@
 it:
   email:
     questions: Domande? Contattaci all'indirizzo
-    powered_by: Fornito da
+    powered_by: Elaborato da
     invoice:
       finalized:
         subject: "La tua fattura da %{organization_name} #%{invoice_number}"

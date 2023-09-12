@@ -100,6 +100,7 @@ module Api
           :code,
           :description,
           :aggregation_type,
+          :weighted_interval,
           :recurring,
           :field_name,
           group: {},

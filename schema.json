@@ -676,6 +676,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "weighted_sum_agg",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -1476,6 +1482,20 @@
                   "name": "ISO8601DateTime",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "weightedInterval",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "WeightedIntervalEnum",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -4631,6 +4651,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "weightedInterval",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "WeightedIntervalEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -24608,6 +24640,23 @@
             },
             {
               "name": "failed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
+          "kind": "ENUM",
+          "name": "WeightedIntervalEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "seconds",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
