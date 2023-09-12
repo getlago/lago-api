@@ -286,7 +286,7 @@ module Invoices
 
     # This method calculates boundaries for terminated subscription. If termination is happening on billing date
     # new boundaries will be calculated only if there is no invoice subscription object for previous period.
-    # If subscription is happening on any other day method is returning nil and boundaries are calculate with existing
+    # If subscription is happening on any other day method is returning nil and boundaries are calculated with existing
     # algorithm
     def new_termination_boundaries(subscription)
       # Date service has various checks for terminated subscriptions. We want to avoid it and fetch boundaries
@@ -300,6 +300,7 @@ module Invoices
       one_day_ago = (current_time.in_time_zone(customer.applicable_timezone) - 1.day).to_date
       return nil if dates_service.charges_to_datetime.to_date != one_day_ago
 
+      # We should calculate boundaries as if subscription was not terminated
       dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time, current_usage: false)
 
       boundaries = {

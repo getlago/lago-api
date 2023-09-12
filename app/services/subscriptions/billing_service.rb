@@ -74,6 +74,10 @@ module Subscriptions
           already_billed_today.invoiced_count IS NULL
           -- Do not bill subscriptions that started this day, they are billed by another job
           AND DATE(subscriptions.started_at#{at_time_zone}) != DATE(:today#{at_time_zone})
+          AND (
+            subscriptions.ending_at IS NULL OR
+            DATE(subscriptions.ending_at#{at_time_zone}) != DATE(:today#{at_time_zone})
+          )
         GROUP BY subscriptions.id
       SQL
 
