@@ -9,6 +9,7 @@ module V1
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
         name: model.name,
+        invoice_display_name: model.invoice_display_name,
         plan_code: model.plan.code,
         status: model.status,
         billing_time: model.billing_time,
