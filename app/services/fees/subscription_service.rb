@@ -2,10 +2,11 @@
 
 module Fees
   class SubscriptionService < BaseService
-    def initialize(invoice:, subscription:, boundaries:)
+    def initialize(invoice:, subscription:, boundaries:, terminated_on_billing_day: false)
       @invoice = invoice
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
+      @terminated_on_billing_day = terminated_on_billing_day
 
       super(nil)
     end
@@ -37,7 +38,7 @@ module Fees
 
     private
 
-    attr_reader :invoice, :subscription, :boundaries
+    attr_reader :invoice, :subscription, :boundaries, :terminated_on_billing_day
 
     delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
@@ -66,6 +67,7 @@ module Fees
 
     def should_compute_terminated_amount?
       return false unless subscription.terminated?
+      return false if terminated_on_billing_day
       return false if subscription.plan.pay_in_advance?
 
       subscription.upgraded? || subscription.next_subscription.nil?
@@ -73,6 +75,7 @@ module Fees
 
     def should_compute_upgraded_amount?
       return false unless subscription.previous_subscription_id?
+      return false if terminated_on_billing_day
       return false if subscription.invoices.count > 1
 
       subscription.previous_subscription.upgraded?
@@ -81,6 +84,7 @@ module Fees
     # NOTE: Subscription has already been billed once and is not terminated
     #        or when it is payed in advance on an anniversary base
     def should_use_full_amount?
+      return true if terminated_on_billing_day
       return true if plan.pay_in_advance? && subscription.anniversary?
       return true if subscription.fees.subscription_kind.where('created_at < ?', invoice.created_at).exists?
       return true if subscription.started_in_past? && plan.pay_in_advance?

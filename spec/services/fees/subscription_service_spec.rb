@@ -8,6 +8,7 @@ RSpec.describe Fees::SubscriptionService do
       invoice:,
       subscription:,
       boundaries:,
+      terminated_on_billing_day:,
     )
   end
 
@@ -17,6 +18,7 @@ RSpec.describe Fees::SubscriptionService do
   let(:started_at) { Time.zone.parse('2022-01-01 00:01') }
   let(:created_at) { started_at }
   let(:subscription_at) { started_at }
+  let(:terminated_on_billing_day) { false }
 
   let(:plan) do
     create(
@@ -798,6 +800,22 @@ RSpec.describe Fees::SubscriptionService do
         expect(created_fee.invoice_id).to eq(invoice.id)
         expect(created_fee.amount_cents).to eq(65)
         expect(created_fee.amount_currency).to eq(plan.amount_currency)
+      end
+    end
+
+    context 'when terminated on billing day' do
+      let(:terminated_on_billing_day) { true }
+
+      it 'creates a fee' do
+        result = fees_subscription_service.create
+        created_fee = result.fee
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.amount_cents).to eq(100)
+          expect(created_fee.amount_currency).to eq(plan.amount_currency)
+        end
       end
     end
 

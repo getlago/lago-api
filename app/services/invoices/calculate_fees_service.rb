@@ -29,7 +29,8 @@ module Invoices
           boundaries = subscriptions_boundaries[subscription.id]
 
           if subscription.terminated? && subscription.next_subscription.nil?
-            boundaries = new_termination_boundaries(subscription) || boundaries
+            termination_boundaries = termination_boundaries(subscription)
+            boundaries = termination_boundaries || boundaries
           end
 
           InvoiceSubscription.create!(
@@ -43,7 +44,10 @@ module Invoices
             recurring:,
           )
 
-          create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
+          if should_create_subscription_fee?(subscription)
+            create_subscription_fee(subscription, boundaries, termination_boundaries.present?)
+          end
+
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
         end
 
@@ -102,8 +106,14 @@ module Invoices
       end
     end
 
-    def create_subscription_fee(subscription, boundaries)
-      fee_result = Fees::SubscriptionService.new(invoice:, subscription:, boundaries:).create
+    def create_subscription_fee(subscription, boundaries, terminated_on_billing_day)
+      fee_result = Fees::SubscriptionService.new(
+        invoice:,
+        subscription:,
+        boundaries:,
+        terminated_on_billing_day:,
+      ).create
+
       fee_result.raise_if_error!
     end
 
@@ -288,7 +298,7 @@ module Invoices
     # new boundaries will be calculated only if there is no invoice subscription object for previous period.
     # If subscription is happening on any other day method is returning nil and boundaries are calculated with existing
     # algorithm
-    def new_termination_boundaries(subscription)
+    def termination_boundaries(subscription)
       # Date service has various checks for terminated subscriptions. We want to avoid it and fetch boundaries
       # for current usage (current period) but when subscription was active (one day ago)
       duplicate = subscription.dup.tap { |s| s.status = :active }
