@@ -15,12 +15,16 @@ RSpec.describe ::V1::CreditSerializer do
       expect(result['credit']['amount_cents']).to eq(credit.amount_cents)
       expect(result['credit']['amount_currency']).to eq(credit.amount_currency)
       expect(result['credit']['before_taxes']).to eq(false)
-      expect(result['credit']['item']['lago_id']).to eq(credit.item_id)
+      expect(result['credit']['item']['lago_item_id']).to eq(credit.item_id)
       expect(result['credit']['item']['type']).to eq(credit.item_type)
       expect(result['credit']['item']['code']).to eq(credit.item_code)
       expect(result['credit']['item']['name']).to eq(credit.item_name)
       expect(result['credit']['invoice']['payment_status']).to eq(credit.invoice.payment_status)
       expect(result['credit']['invoice']['lago_id']).to eq(credit.invoice.id)
+
+      # NOTE: legacy fields
+      expect(result['credit']['before_vat']).to eq(false)
+      expect(result['credit']['item']['lago_id']).to eq(credit.item_id)
     end
   end
 end

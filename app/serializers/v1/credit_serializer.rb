@@ -9,7 +9,7 @@ module V1
         amount_currency: model.amount_currency,
         before_taxes: model.before_taxes,
         item: {
-          lago_id: model.item_id,
+          lago_item_id: model.item_id,
           type: model.item_type,
           code: model.item_code,
           name: model.item_name,
@@ -18,7 +18,7 @@ module V1
           lago_id: model.invoice_id,
           payment_status: model.invoice.payment_status,
         },
-      }.merge(legacy_values)
+      }.deep_merge(legacy_values)
     end
 
     private

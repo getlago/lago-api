@@ -6,6 +6,9 @@ module V1
       def serialize
         {
           before_vat: model.before_taxes,
+          item: {
+            lago_id: model.item_id,
+          },
         }
       end
     end
