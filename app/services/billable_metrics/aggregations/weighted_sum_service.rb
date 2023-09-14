@@ -19,6 +19,10 @@ module BillableMetrics
         result
       end
 
+      def breakdown
+        ActiveRecord::Base.connection.select_all(breakdown_sql).to_a
+      end
+
       private
 
       def fetch_events(from_datetime:, to_datetime:)
@@ -26,17 +30,40 @@ module BillableMetrics
       end
 
       def compute_aggregation
-        # query_result = ActiveRecord::Base.connection.select_all(aggregation_sql)
-        # query_result
-        # byebug
         query_result = ActiveRecord::Base.connection.select_one(aggregation_sql)
         query_result['aggregation']
       end
 
       def aggregation_sql
         <<-SQL
+          #{events_cte_sql}
+
+          SELECT SUM(period_ratio) as aggregation
+          FROM (
+            SELECT (#{period_ratio_sql}) AS period_ratio
+            FROM events_data
+          ) cumulated_ratios
+        SQL
+      end
+
+      def breakdown_sql
+        <<-SQL
+          #{events_cte_sql}
+
+          SELECT
+            timestamp,
+            difference,
+            SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul,
+            EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
+            (#{period_ratio_sql}) AS period_ratio
+          FROM events_data
+        SQL
+      end
+
+      def events_cte_sql
+        <<-SQL
           WITH events_data AS (
-            (#{initial_value})
+            (#{initial_value_sql})
             UNION
             (#{
               fetch_events(from_datetime:, to_datetime:)
@@ -44,39 +71,12 @@ module BillableMetrics
                 .to_sql
             })
             UNION
-            (#{end_of_period_value})
+            (#{end_of_period_value_sql})
           )
-
-          SELECT SUM(period_ratio) as aggregation
-          FROM (
-            SELECT
-              -- TODO: remove when finished
-              timestamp,
-              difference,
-              sum(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumul,
-              EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
-              --
-
-              (
-                -- NOTE: duration in seconds between current event and next one
-                -- TODO: takes weighted interval into account (+ group per interval in CTE ??)
-                CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) = 0
-                THEN
-                  0 -- NOTE: duration was null so usage is null
-                ELSE
-                  -- NOTE: cumulative sum from previous events in the period
-                  (sum(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
-                  /
-                  -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-                  EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp)
-                END
-              ) AS period_ratio
-            FROM events_data
-          ) cumulated_ratios
         SQL
       end
 
-      def initial_value
+      def initial_value_sql
         initial_value = 0
         initial_value = latest_value if billable_metric.recurring?
 
@@ -88,12 +88,29 @@ module BillableMetrics
         SQL
       end
 
-      def end_of_period_value
+      def end_of_period_value_sql
         <<-SQL
           SELECT *
           FROM (
             VALUES (timestamp without time zone '#{to_datetime}', 0)
           ) AS t(timestamp, difference)
+        SQL
+      end
+
+      def period_ratio_sql
+        <<-SQL
+          -- NOTE: duration in seconds between current event and next one
+          -- TODO: takes weighted interval into account (+ group per interval in CTE ??)
+          CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) = 0
+          THEN
+            0 -- NOTE: duration was null so usage is null
+          ELSE
+            -- NOTE: cumulative sum from previous events in the period
+            (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
+            /
+            -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+            EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp)
+          END
         SQL
       end
 

@@ -20,7 +20,10 @@ module Charges
         result.full_units_number = aggregation_result.full_units_number
         result.count = aggregation_result.count
         result.amount = compute_amount
-        result.total_aggregated_units = aggregation_result.total_aggregated_units if aggregation_result.total_aggregated_units
+
+        if aggregation_result.total_aggregated_units
+          result.total_aggregated_units = aggregation_result.total_aggregated_units
+        end
 
         result
       end

@@ -13,10 +13,7 @@ RSpec.describe Charges::ChargeModels::StandardService, type: :service do
 
   before do
     aggregation_result.aggregation = aggregation
-
-    if total_aggregated_units
-      aggregation_result.total_aggregated_units = total_aggregated_units
-    end
+    aggregation_result.total_aggregated_units = total_aggregated_units if total_aggregated_units
   end
 
   let(:aggregation_result) { BaseService::Result.new }
