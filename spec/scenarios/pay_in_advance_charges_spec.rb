@@ -570,13 +570,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
 
     context 'when there is no matching group but default group properties' do
       let(:transaction_id) { SecureRandom.uuid + 'test' }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
-      let(:group2) do
-        create(:group, billable_metric:, key: 'region', value: 'africa', parent_group_id:)
-      end
+      let(:group2) { create(:group, billable_metric:, key: 'country', value: 'italy') }
 
       it 'creates a pay_in_advance fee' do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+        create(:group, billable_metric:, key: 'country', value: 'france')
 
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
@@ -621,7 +618,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '2', region: 'europe' },
+              properties: { amount: '2', country: 'italy' },
             },
           )
 
@@ -635,7 +632,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
           expect(fee.pay_in_advance).to eq(true)
           expect(fee.units).to eq(2)
           expect(fee.events_count).to eq(1)
-          expect(fee.amount_cents).to eq(2000)
+          expect(fee.amount_cents).to eq(4000)
         end
       end
     end
