@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
   let(:membership) { create(:membership) }
-  let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
+  let(:billable_metric) { create(:weighted_sum_billable_metric, organization: membership.organization) }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateBillableMetricInput!) {
@@ -13,6 +13,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           name,
           code,
           aggregationType,
+          weightedInterval
           recurring
           organization { id },
           group
@@ -33,6 +34,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           description: 'New metric description',
           aggregationType: 'count_agg',
           recurring: false,
+          weightedInterval: 'seconds',
         },
       },
     )
@@ -45,6 +47,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
       expect(result_data['code']).to eq('new_metric')
       expect(result_data['organization']['id']).to eq(membership.organization_id)
       expect(result_data['aggregationType']).to eq('count_agg')
+      expect(result_data['weightedInterval']).to eq('seconds')
       expect(result_data['recurring']).to eq(false)
     end
   end

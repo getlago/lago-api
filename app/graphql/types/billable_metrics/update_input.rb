@@ -14,6 +14,7 @@ module Types
       argument :group, GraphQL::Types::JSON, required: false
       argument :name, String, required: true
       argument :recurring, Boolean, required: false
+      argument :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, required: false
     end
   end
 end
