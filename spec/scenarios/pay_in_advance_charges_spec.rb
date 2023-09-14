@@ -376,7 +376,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
     end
 
     context 'when there is matching group' do
-      let(:transaction_id) { SecureRandom.uuid + 'test' }
+      let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:parent_group_id) { nil }
       let(:group) do
         create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
@@ -439,13 +439,13 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
           expect(fee.pay_in_advance).to eq(true)
           expect(fee.units).to eq(10)
           expect(fee.events_count).to eq(1)
-          expect(fee.amount_cents).to eq(20000)
+          expect(fee.amount_cents).to eq(20_000)
         end
       end
     end
 
     context 'when there is no matching group' do
-      let(:transaction_id) { SecureRandom.uuid + 'test' }
+      let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
       let(:group) do
         create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
@@ -465,7 +465,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
           )
         end
 
-        charge = create(
+        create(
           :standard_charge,
           :pay_in_advance,
           invoiceable: true,
@@ -508,7 +508,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
     end
 
     context 'when there is no group properties' do
-      let(:transaction_id) { SecureRandom.uuid + 'test' }
+      let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
       let(:group) do
         create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
@@ -569,7 +569,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request do
     end
 
     context 'when there is no matching group but default group properties' do
-      let(:transaction_id) { SecureRandom.uuid + 'test' }
+      let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:group2) { create(:group, billable_metric:, key: 'country', value: 'italy') }
 
       it 'creates a pay_in_advance fee' do
