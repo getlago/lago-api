@@ -77,12 +77,28 @@ module Fees
     end
 
     def create_group_properties_fees
-      charge.group_properties.each_with_object([]) do |group_properties, fees|
-        group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
-        next unless event_linked_to?(group:)
+      group_fees = []
 
-        fees << create_fee(properties: group_properties.values, group:)
+      if billable_metric.selectable_groups.any?
+        # NOTE: Create a fee for each groups defined on the charge.
+        charge.group_properties.each do |group_properties|
+          group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
+          next unless event_linked_to?(group:)
+
+          group_fees << create_fee(properties: group_properties.values, group:)
+        end
+
+        # NOTE: Create a fee for groups not defined (with default properties).
+        billable_metric.selectable_groups.where.not(
+          id: charge.group_properties.pluck(:group_id)
+        ).each do |group|
+          group_fees << create_fee(properties: charge.properties, group:)
+        end
+      else
+        group_fees << create_fee(properties: charge.properties)
       end
+
+      group_fees
     end
 
     def date_service
