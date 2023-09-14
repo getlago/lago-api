@@ -114,6 +114,8 @@ module BillableMetrics
             events_scope(from_datetime:, to_datetime:)
           end
           scope = query.where("#{sanitized_field_name} IS NOT NULL")
+          scope = scope.where("events.metadata->>'current_aggregation' IS NOT NULL")
+          scope = scope.where("events.metadata->>'max_aggregation' IS NOT NULL")
 
           scope = scope.where.not(id: event.id) if event.present?
 

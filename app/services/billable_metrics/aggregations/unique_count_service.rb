@@ -80,6 +80,8 @@ module BillableMetrics
           query = query
             .joins(:quantified_event)
             .where("#{sanitized_field_name} IS NOT NULL")
+            .where("events.metadata->>'current_aggregation' IS NOT NULL")
+            .where("events.metadata->>'max_aggregation' IS NOT NULL")
             .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
             .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
 
