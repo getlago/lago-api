@@ -271,5 +271,17 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
         )
       end
     end
+
+    context 'when fee already have taxes' do
+      before { create(:fee_applied_tax, fee:, tax: tax1) }
+
+      it 'does not reaply taxes' do
+        expect do
+          result = apply_service.call
+
+          expect(result).to be_success
+        end.not_to change { fee.applied_taxes.count }
+      end
+    end
   end
 end
