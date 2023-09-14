@@ -1759,7 +1759,6 @@ input CreatePlanInput {
   interval: PlanInterval!
   invoiceDisplayName: String
   name: String!
-  parentId: ID
   payInAdvance: Boolean!
   taxCodes: [String!]
   trialPeriod: Float

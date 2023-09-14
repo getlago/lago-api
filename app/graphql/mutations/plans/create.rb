@@ -17,7 +17,6 @@ module Mutations
       argument :interval, Types::Plans::IntervalEnum, required: true
       argument :invoice_display_name, String, required: false
       argument :name, String, required: true
-      argument :parent_id, ID, required: false
       argument :pay_in_advance, Boolean, required: true
       argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false
