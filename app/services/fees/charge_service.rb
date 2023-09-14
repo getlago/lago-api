@@ -86,6 +86,7 @@ module Fees
         invoiceable_type: 'Charge',
         invoiceable: charge,
         units:,
+        total_aggregated_units: amount_result.total_aggregated_units || units,
         properties: boundaries.to_h,
         events_count: amount_result.count,
         group_id: group&.id,
@@ -105,6 +106,7 @@ module Fees
       aggregation_result = aggregator(group:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
+      persist_recurring_value(aggregation_result, group) if billable_metric.recurring?
       apply_charge_model_service(aggregation_result, properties)
     end
 
@@ -185,6 +187,25 @@ module Fees
       end
 
       model_service.apply(charge:, aggregation_result:, properties:)
+    end
+
+    def persist_recurring_value(aggregation_result, group)
+      return if is_current_usage
+      return unless aggregation_result.recurring_updated_at
+
+      result.quantified_events ||= []
+
+      # NOTE: persist current recurring value for next period
+      result.quantified_events << QuantifiedEvent.find_or_initialize_by(
+        customer_id: customer.id,
+        external_subscription_id: subscription.external_id,
+        group_id: group&.id,
+        billable_metric_id: billable_metric.id,
+        added_at: aggregation_result.recurring_updated_at,
+      ) do |event|
+        event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS] = aggregation_result.total_aggregated_units
+        event.save!
+      end
     end
   end
 end

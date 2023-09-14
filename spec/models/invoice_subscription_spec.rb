@@ -35,20 +35,18 @@ RSpec.describe InvoiceSubscription, type: :model do
     it 'returns the sum of the related charge fees' do
       charge = create(:standard_charge)
       create(
-        :fee,
+        :charge_fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        fee_type: 'charge',
         amount_cents: 100,
       )
 
       create(
-        :fee,
+        :charge_fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        fee_type: 'charge',
         amount_cents: 200,
       )
 
@@ -73,11 +71,10 @@ RSpec.describe InvoiceSubscription, type: :model do
       )
 
       create(
-        :fee,
+        :charge_fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: create(:standard_charge),
-        fee_type: 'charge',
         amount_cents: 200,
       )
 
@@ -96,20 +93,18 @@ RSpec.describe InvoiceSubscription, type: :model do
       )
 
       create(
-        :fee,
+        :charge_fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        fee_type: 'charge',
         amount_cents: 200,
       )
 
       create(
-        :fee,
+        :charge_fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        fee_type: 'charge',
         amount_cents: 100,
       )
 

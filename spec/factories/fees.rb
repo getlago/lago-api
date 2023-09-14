@@ -47,6 +47,8 @@ FactoryBot.define do
         'charges_to_datetime' => Date.parse('2022-08-31 23:59:59'),
       }
     end
+
+    total_aggregated_units { 0 }
   end
 
   factory :add_on_fee, class: 'Fee' do

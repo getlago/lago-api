@@ -9,6 +9,10 @@ FactoryBot.define do
     aggregation_type { 'count_agg' }
     recurring { false }
     properties { {} }
+
+    trait :recurring do
+      recurring { true }
+    end
   end
 
   factory :recurring_billable_metric, parent: :billable_metric do

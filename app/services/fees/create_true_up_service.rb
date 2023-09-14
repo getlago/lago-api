@@ -17,6 +17,7 @@ module Fees
       true_up_fee = fee.dup.tap do |f|
         f.amount_cents = prorated_min_amount_cents - amount_cents
         f.units = 1
+        f.total_aggregated_units = 1
         f.events_count = 0
         f.group_id = nil
         f.true_up_parent_fee = fee

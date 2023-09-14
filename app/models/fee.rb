@@ -39,6 +39,7 @@ class Fee < ApplicationRecord
   validates :units, numericality: { greated_than_or_equal_to: 0 }
   validates :events_count, numericality: { greated_than_or_equal_to: 0 }, allow_nil: true
   validates :true_up_fee_id, presence: false, unless: :charge?
+  validates :total_aggregated_units, presence: true, if: :charge?
 
   scope :subscription_kind, -> { where(fee_type: :subscription) }
   scope :charge_kind, -> { where(fee_type: :charge) }

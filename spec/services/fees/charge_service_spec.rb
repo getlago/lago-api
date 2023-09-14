@@ -1190,6 +1190,38 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
+    context 'with recurring weighted sum aggregation' do
+      let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+      it 'creates a fee and a quantified event' do
+        result = charge_subscription_service.create
+        expect(result).to be_success
+        created_fee = result.fees.first
+        quantified_event = result.quantified_events.first
+
+        aggregate_failures do
+          expect(created_fee.id).not_to be_nil
+          expect(created_fee.invoice_id).to eq(invoice.id)
+          expect(created_fee.charge_id).to eq(charge.id)
+          expect(created_fee.amount_cents).to eq(0)
+          expect(created_fee.amount_currency).to eq('EUR')
+          expect(created_fee.units).to eq(0)
+          expect(created_fee.total_aggregated_units).to eq(0)
+          expect(created_fee.events_count).to eq(0)
+          expect(created_fee.payment_status).to eq('pending')
+
+          expect(quantified_event.id).not_to be_nil
+          expect(quantified_event.customer_id).to eq(customer.id)
+          expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
+          expect(quantified_event.external_id).to be_nil
+          expect(quantified_event.group_id).to be_nil
+          expect(quantified_event.billable_metric_id).to eq(billable_metric.id)
+          expect(quantified_event.added_at).to eq(boundaries[:from_datetime])
+          expect(quantified_event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS]).to eq('0.0')
+        end
+      end
+    end
+
     context 'with aggregation error' do
       let(:billable_metric) do
         create(

@@ -59,8 +59,7 @@ RSpec.describe ::V1::FeeSerializer do
     let(:charge) { create(:standard_charge) }
     let(:fee) do
       create(
-        :fee,
-        fee_type: 'charge',
+        :charge_fee,
         charge:,
         properties: {
           from_datetime: Time.current,
@@ -104,7 +103,7 @@ RSpec.describe ::V1::FeeSerializer do
     let(:event) { create(:event, subscription:, organization:, customer:) }
 
     let(:fee) do
-      create(:fee, fee_type: 'charge', pay_in_advance: true, subscription:, charge:, pay_in_advance_event_id: event.id)
+      create(:charge_fee, pay_in_advance: true, subscription:, charge:, pay_in_advance_event_id: event.id)
     end
 
     it 'serializes the pay_in_advance charge attributes' do
