@@ -15,6 +15,7 @@ jobs:
         uses: ruby/setup-ruby@v1
       - name: Setup pronto
         run: |
+          gem install rugged -v 1.6.3
           gem install pronto
           gem install pronto-rubocop
           gem install rubocop -v 1.44.1
