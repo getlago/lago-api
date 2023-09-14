@@ -20,7 +20,7 @@ module Events
 
     def call(organization:, params:, timestamp:, metadata:)
       customer = customer(organization:, params:)
-      event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_i : timestamp)
+      event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
       subscriptions = subscriptions(organization:, customer:, params:, timestamp: event_timestamp)
 
       Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
@@ -96,9 +96,14 @@ module Events
       end
       return unless subscriptions
 
+      timestamp_without_precision = Time.zone.at(timestamp.to_i)
+
       @subscriptions = subscriptions
-        .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
-        .where("terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?", timestamp)
+        .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", timestamp_without_precision)
+        .where(
+          "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
+          timestamp_without_precision,
+        )
         .order(started_at: :desc)
       @subscriptions
     end

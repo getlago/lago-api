@@ -46,7 +46,7 @@ module Events
           event.properties = params[:properties] || {}
           event.metadata = metadata || {}
 
-          event.timestamp = Time.zone.at(params[:timestamp]) if params[:timestamp]
+          event.timestamp = Time.zone.at(params[:timestamp].to_f) if params[:timestamp]
           event.timestamp ||= timestamp
 
           event.save!

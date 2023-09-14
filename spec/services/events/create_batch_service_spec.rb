@@ -246,5 +246,22 @@ RSpec.describe Events::CreateBatchService, type: :service do
         end.to change { organization.events.count }.by(1)
       end
     end
+
+    context 'with timestamp sent with decimal precision' do
+      it 'creates event by keeping the millisecond precision' do
+        create_args[:timestamp] = DateTime.parse('2023-09-04 15:45:12.344').strftime('%s.%3N')
+
+        expect do
+          create_batch_service.call(
+            organization:,
+            params: create_args,
+            timestamp:,
+            metadata: {},
+          )
+        end.to change { organization.events.count }.by(2)
+
+        expect(organization.events.last.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')
+      end
+    end
   end
 end

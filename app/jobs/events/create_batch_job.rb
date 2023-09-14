@@ -8,7 +8,7 @@ module Events
       result = Events::CreateBatchService.new.call(
         organization:,
         params:,
-        timestamp: Time.zone.at(timestamp),
+        timestamp: Time.zone.at(timestamp.to_f),
         metadata:,
       )
 

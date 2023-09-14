@@ -58,7 +58,7 @@ RSpec.describe Events::CreateService, type: :service do
 
   describe '#call' do
     let(:plan) { create(:plan, organization: customer.organization) }
-    let(:subscription) { create(:active_subscription, customer:, organization:, plan:) }
+    let(:subscription) { create(:active_subscription, customer:, organization:, plan:, started_at:) }
 
     let(:create_args) do
       {
@@ -69,6 +69,7 @@ RSpec.describe Events::CreateService, type: :service do
         timestamp:,
       }
     end
+    let(:started_at) { Time.current - 3.days }
     let(:timestamp) { (subscription.started_at + 1.second).to_i }
 
     before { subscription }
@@ -109,6 +110,18 @@ RSpec.describe Events::CreateService, type: :service do
         result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(create_args[:timestamp].to_i))
+      end
+    end
+
+    context 'when timestamp is sent with decimal precision' do
+      let(:started_at) { DateTime.parse('2023-09-03 23:00:00') }
+
+      it 'creates an event by keeping the millisecond precision' do
+        create_args[:timestamp] = DateTime.parse('2023-09-04 15:45:12.344').strftime('%s.%3N')
+
+        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        expect(result).to be_success
+        expect(result.event.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')
       end
     end
 
@@ -255,7 +268,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     context 'when customer has two active subscriptions' do
-      let(:subscription2) { create(:active_subscription, customer:, organization:) }
+      let(:subscription2) { create(:active_subscription, customer:, organization:, started_at:) }
 
       let(:create_args) do
         {
