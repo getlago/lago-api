@@ -5342,6 +5342,7 @@ input UpdateBillableMetricInput {
   id: String!
   name: String!
   recurring: Boolean
+  weightedInterval: WeightedIntervalEnum
 }
 
 """
