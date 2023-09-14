@@ -6,6 +6,7 @@ module Types
       graphql_name 'Group'
 
       field :id, ID, null: false
+      field :invoice_value, String, null: true
       field :key, String, null: true
       field :value, String, null: false
 

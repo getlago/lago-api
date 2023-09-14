@@ -180,6 +180,7 @@ type Charge {
   deletedAt: ISO8601DateTime
   groupProperties: [GroupProperties!]
   id: ID!
+  invoiceDisplayName: String
   invoiceable: Boolean!
   minAmountCents: BigInt!
   payInAdvance: Boolean!
@@ -194,6 +195,7 @@ input ChargeInput {
   chargeModel: ChargeModelEnum!
   groupProperties: [GroupPropertiesInput!]
   id: ID
+  invoiceDisplayName: String
   invoiceable: Boolean
   minAmountCents: BigInt
   payInAdvance: Boolean
@@ -3060,6 +3062,7 @@ input GraduatedRangeInput {
 type Group {
   deletedAt: ISO8601DateTime
   id: ID!
+  invoiceValue: String
   key: String
   value: String!
 }

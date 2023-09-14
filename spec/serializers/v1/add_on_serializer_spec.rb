@@ -13,6 +13,7 @@ RSpec.describe ::V1::AddOnSerializer do
     aggregate_failures do
       expect(result['add_on']['lago_id']).to eq(add_on.id)
       expect(result['add_on']['name']).to eq(add_on.name)
+      expect(result['add_on']['invoice_display_name']).to eq(add_on.invoice_display_name)
       expect(result['add_on']['code']).to eq(add_on.code)
       expect(result['add_on']['amount_cents']).to eq(add_on.amount_cents)
       expect(result['add_on']['amount_currency']).to eq(add_on.amount_currency)

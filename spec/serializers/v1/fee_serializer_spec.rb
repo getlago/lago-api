@@ -46,6 +46,7 @@ RSpec.describe ::V1::FeeSerializer do
         'type' => fee.fee_type,
         'code' => fee.item_code,
         'name' => fee.item_name,
+        'invoice_display_name' => fee.invoice_name,
         'lago_item_id' => fee.item_id,
         'item_type' => fee.item_type,
       )

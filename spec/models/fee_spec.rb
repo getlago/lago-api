@@ -74,10 +74,22 @@ RSpec.describe Fee, type: :model do
 
       context 'when it is a charge fee' do
         let(:fee) { build_stubbed(:fee, charge:, fee_type: 'charge', invoice_display_name:) }
-        let(:charge) { create(:standard_charge) }
+        let(:charge) { create(:standard_charge, invoice_display_name: charge_invoice_display_name) }
 
-        it 'returns related billable metric name' do
-          expect(fee_invoice_name).to eq(charge.billable_metric.name)
+        context 'when charge has invoice display name present' do
+          let(:charge_invoice_display_name) { Faker::Fantasy::Tolkien.location }
+
+          it 'returns charge invoice display name' do
+            expect(fee_invoice_name).to eq(charge.invoice_display_name)
+          end
+        end
+
+        context 'when charge has invoice display name blank' do
+          let(:charge_invoice_display_name) { [nil, ''].sample }
+
+          it 'returns related billable metric name' do
+            expect(fee_invoice_name).to eq(charge.billable_metric.name)
+          end
         end
       end
 
@@ -100,10 +112,22 @@ RSpec.describe Fee, type: :model do
 
       context 'when it is an pay_in_advance charge fee' do
         let(:fee) { build_stubbed(:fee, charge:, fee_type: 'charge', invoice_display_name:) }
-        let(:charge) { create(:standard_charge, :pay_in_advance) }
+        let(:charge) { create(:standard_charge, :pay_in_advance, invoice_display_name: charge_invoice_display_name) }
 
-        it 'returns related billable metric name' do
-          expect(fee_invoice_name).to eq(charge.billable_metric.name)
+        context 'when charge has invoice display name present' do
+          let(:charge_invoice_display_name) { Faker::Fantasy::Tolkien.location }
+
+          it 'returns charge invoice display name' do
+            expect(fee_invoice_name).to eq(charge.invoice_display_name)
+          end
+        end
+
+        context 'when charge has invoice display name blank' do
+          let(:charge_invoice_display_name) { [nil, ''].sample }
+
+          it 'returns related billable metric name' do
+            expect(fee_invoice_name).to eq(charge.billable_metric.name)
+          end
         end
       end
     end

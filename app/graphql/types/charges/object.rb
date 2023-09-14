@@ -6,6 +6,7 @@ module Types
       graphql_name 'Charge'
 
       field :id, ID, null: false
+      field :invoice_display_name, String, null: true
 
       field :billable_metric, Types::BillableMetrics::Object, null: false
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
