@@ -115,6 +115,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
         "values": [
           {
             "name": 'AWS',
+            "invoice_display_name": "AWS Invoice name",
             "key": 'region',
             "values": %w[usa europe],
           },
@@ -127,7 +128,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
       }
     end
 
-    let(:parent_group1) { create(:group, billable_metric:, key: 'cloud', value: 'AWS') }
+    let(:parent_group1) { create(:group, billable_metric:, key: 'cloud', value: 'AWS', invoice_value: 'AWS Invoice') }
     let(:parent_group2) { create(:group, billable_metric:, key: 'cloud', value: 'Microsoft') }
     let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id: parent_group1.id) }
     let(:group2) { create(:group, billable_metric:, key: 'region', value: 'africa', parent_group_id: parent_group1.id) }

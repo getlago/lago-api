@@ -113,8 +113,8 @@ RSpec.describe BillableMetric, type: :model do
 
     context 'when groups contain one dimension' do
       before do
-        create(:group, billable_metric:, key: 'country', value: 'france')
-        create(:group, billable_metric:, key: 'country', value: 'italy')
+        create(:group, billable_metric:, key: 'country', value: 'france', invoice_value: nil)
+        create(:group, billable_metric:, key: 'country', value: 'italy', invoice_value: nil)
       end
 
       it 'returns a tree with one dimension' do
@@ -128,32 +128,74 @@ RSpec.describe BillableMetric, type: :model do
     end
 
     context 'when groups contain two dimensions' do
-      before do
-        france = create(:group, billable_metric:, key: 'country', value: 'france')
-        italy = create(:group, billable_metric:, key: 'country', value: 'italy')
-        create(:group, billable_metric:, key: 'cloud', value: 'aws', parent_group_id: france.id)
-        create(:group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: france.id)
-        create(:group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: italy.id)
+      context 'when invoice values are blank' do
+        before do
+          france = create(:group, billable_metric:, key: 'country', value: 'france', invoice_value: nil)
+          italy = create(:group, billable_metric:, key: 'country', value: 'italy', invoice_value: nil)
+          create(:group, billable_metric:, key: 'cloud', value: 'aws', parent_group_id: france.id, invoice_value: nil)
+          create(:group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: france.id, invoice_value: nil)
+          create(:group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: italy.id, invoice_value: nil)
+        end
+
+        it 'returns a tree with two dimensions' do
+          expect(billable_metric.active_groups_as_tree).to eq(
+            {
+              key: 'country',
+              values: [
+                {
+                  name: 'france',
+                  key: 'cloud',
+                  values: %w[aws google],
+                },
+                {
+                  name: 'italy',
+                  key: 'cloud',
+                  values: %w[google],
+                },
+              ],
+            },
+          )
+        end
       end
 
-      it 'returns a tree with two dimensions' do
-        expect(billable_metric.active_groups_as_tree).to eq(
-          {
-            key: 'country',
-            values: [
-              {
-                name: 'france',
-                key: 'cloud',
-                values: %w[aws google],
-              },
-              {
-                name: 'italy',
-                key: 'cloud',
-                values: %w[google],
-              },
-            ],
-          },
-        )
+      context 'when invoice values are present' do
+        before do
+          france = create(:group, billable_metric:, key: 'country', value: 'france', invoice_value: 'FR')
+          italy = create(:group, billable_metric:, key: 'country', value: 'italy', invoice_value: 'IT')
+          create(
+            :group, billable_metric:, key: 'cloud', value: 'aws', parent_group_id: france.id, invoice_value: 'aws on invoice',
+          )
+          create(
+            :group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: france.id, invoice_value: 'google on invoice',
+          )
+          create(
+            :group, billable_metric:, key: 'cloud', value: 'google', parent_group_id: italy.id, invoice_value: 'google on invoice',
+          )
+        end
+
+        it 'returns a tree with two dimensions' do
+          expect(billable_metric.active_groups_as_tree).to eq(
+            {
+              key: 'country',
+              values: [
+                {
+                  name: 'france',
+                  invoice_display_name: 'FR',
+                  key: 'cloud',
+                  values: %w[aws google],
+                  invoice_values: ['aws on invoice', 'google on invoice'],
+                },
+                {
+                  name: 'italy',
+                  invoice_display_name: 'IT',
+                  key: 'cloud',
+                  values: %w[google],
+                  invoice_values: ['google on invoice'],
+                },
+              ],
+            },
+          )
+        end
       end
     end
   end

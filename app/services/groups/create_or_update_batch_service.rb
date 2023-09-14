@@ -20,7 +20,7 @@ module Groups
       ActiveRecord::Base.transaction do
         if one_dimension?
           billable_metric.groups.each(&:discard_with_properties!) if billable_metric.groups.children.any?
-          assign_groups(group_params[:key], group_params[:values].uniq, group_params[:invoice_values].uniq)
+          assign_groups(group_params[:key], group_params[:values].uniq, group_params[:invoice_values]&.uniq)
         else
           billable_metric.groups.parents.where.not(
             value: group_params[:values].map { |v| v[:name] },
@@ -30,9 +30,12 @@ module Groups
           billable_metric.groups.parents.each { |g| g.properties.discard_all }
 
           group_params[:values].each do |value|
-            parent_group = billable_metric.groups.find_or_create_by!(
-              key: group_params[:key], value: value[:name], invoice_value: value[:invoice_display_name],
+            parent_group = billable_metric.groups.find_or_initialize_by(
+              key: group_params[:key], value: value[:name],
             )
+            parent_group.invoice_value = value[:invoice_display_name].presence
+            parent_group.save!
+
             assign_groups(value[:key], value[:values].uniq, value[:invoice_values]&.uniq, parent_group.id)
           end
         end
