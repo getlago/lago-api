@@ -42,6 +42,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             }
             groupProperties {
               groupId,
+              invoiceDisplayName,
               values {
                 amount,
                 freeUnits,
@@ -98,6 +99,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               groupProperties: [
                 {
                   groupId: first_group.id,
+                  invoiceDisplayName: 'Group 1 Invoice Name',
                   values: {
                     amount: '300.00',
                     freeUnits: 10,
@@ -112,6 +114,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               groupProperties: [
                 {
                   groupId: second_group.id,
+                  invoiceDisplayName: 'Group 2 Invoice Name',
                   values: {
                     rate: '0.25',
                     fixedAmount: '2',
@@ -213,6 +216,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(group_properties['amount']).to eq('300.00')
       expect(group_properties['freeUnits']).to eq('10')
       expect(group_properties['packageSize']).to eq('10')
+      expect(package_charge['groupProperties'][0]['invoiceDisplayName']).to eq('Group 1 Invoice Name')
 
       percentage_charge = result_data['charges'][2]
       expect(percentage_charge['chargeModel']).to eq('percentage')
@@ -221,6 +225,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(group_properties['fixedAmount']).to eq('2')
       expect(group_properties['freeUnitsPerEvents']).to eq('5')
       expect(group_properties['freeUnitsPerTotalAggregation']).to eq('50')
+      expect(package_charge['groupProperties'][0]['invoiceDisplayName']).to eq('Group 1 Invoice Name')
 
       graduated_charge = result_data['charges'][3]
       expect(graduated_charge['chargeModel']).to eq('graduated')

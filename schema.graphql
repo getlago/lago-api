@@ -3063,7 +3063,6 @@ input GraduatedRangeInput {
 type Group {
   deletedAt: ISO8601DateTime
   id: ID!
-  invoiceValue: String
   key: String
   value: String!
 }
@@ -3071,11 +3070,13 @@ type Group {
 type GroupProperties {
   deletedAt: ISO8601DateTime
   groupId: ID!
+  invoiceDisplayName: String
   values: Properties!
 }
 
 input GroupPropertiesInput {
   groupId: ID!
+  invoiceDisplayName: String
   values: PropertiesInput!
 }
 

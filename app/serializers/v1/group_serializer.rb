@@ -7,7 +7,6 @@ module V1
         lago_id: model.id,
         key: model.parent&.value || model.key,
         value: model.value,
-        invoice_value: model.invoice_value,
       }
     end
   end

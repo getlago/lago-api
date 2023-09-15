@@ -5,6 +5,5 @@ FactoryBot.define do
     billable_metric
     key { 'region' }
     value { 'europe' }
-    invoice_value { 'Europe' }
   end
 end

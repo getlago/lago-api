@@ -22,18 +22,8 @@ class Group < ApplicationRecord
     parent ? "#{parent.value} • #{value}" : value
   end
 
-  def invoice_name
-    parent ? "#{parent.invoice_display_name} • #{invoice_display_name}" : invoice_display_name
-  end
-
   # NOTE: Discard group and children with properties.
   def discard_with_properties!
     children.each { |c| c.properties&.discard_all && c.discard! } && properties.discard_all && discard!
-  end
-
-  private
-
-  def invoice_display_name
-    invoice_value.presence || value
   end
 end

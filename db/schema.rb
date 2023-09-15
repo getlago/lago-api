@@ -412,6 +412,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_26_144126) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.string "invoice_display_name"
     t.index ["charge_id", "group_id"], name: "index_group_properties_on_charge_id_and_group_id", unique: true
     t.index ["charge_id"], name: "index_group_properties_on_charge_id"
     t.index ["deleted_at"], name: "index_group_properties_on_deleted_at"
@@ -426,7 +427,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_26_144126) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
-    t.string "invoice_value"
     t.index ["billable_metric_id"], name: "index_groups_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_groups_on_deleted_at"
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"

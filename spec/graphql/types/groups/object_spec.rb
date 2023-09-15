@@ -6,7 +6,6 @@ RSpec.describe Types::Groups::Object do
   subject { described_class }
 
   it { is_expected.to have_field(:id).of_type('ID!') }
-  it { is_expected.to have_field(:invoice_value).of_type('String') }
   it { is_expected.to have_field(:key).of_type('String') }
   it { is_expected.to have_field(:value).of_type('String!') }
 

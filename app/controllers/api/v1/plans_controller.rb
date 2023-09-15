@@ -95,6 +95,7 @@ module Api
             {
               group_properties: [
                 :group_id,
+                :invoice_display_name,
                 { values: {} },
               ],
             },

@@ -404,7 +404,7 @@ html
                     td
                   - items.each do |item|
                     tr
-                      td.body-1 style="padding-left: 16px;" = item.fee.group.invoice_name
+                      td.body-1 style="padding-left: 16px;" = item.fee.group_name
                       td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                       td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - items.select { |i| i.fee.true_up_fee.present? }.each do |item|

@@ -94,6 +94,10 @@ class Fee < ApplicationRecord
     subscription.plan.invoice_display_name
   end
 
+  def group_name
+    charge.group_properties.find_by(group:)&.invoice_display_name || group.name
+  end
+
   def currency
     amount_currency
   end

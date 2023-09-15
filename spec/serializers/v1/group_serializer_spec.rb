@@ -14,7 +14,6 @@ RSpec.describe ::V1::GroupSerializer do
       expect(result['group']['lago_id']).to eq(group.id)
       expect(result['group']['key']).to eq(group.key)
       expect(result['group']['value']).to eq(group.value)
-      expect(result['group']['invoice_value']).to eq(group.invoice_value)
     end
   end
 end

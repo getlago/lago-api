@@ -71,27 +71,20 @@ class BillableMetric < ApplicationRecord
     return {} if active_groups.blank?
 
     unless active_groups.children.exists?
-      invoice_values = active_groups.pluck(:invoice_value).compact
-
       return {
         key: active_groups.pluck(:key).uniq.first,
         values: active_groups.pluck(:value),
-        invoice_values: (invoice_values unless invoice_values.empty?),
-      }.compact
+      }
     end
 
     {
       key: active_groups.parents.pluck(:key).uniq.first,
       values: active_groups.parents.map do |p|
-        invoice_values = p.children.pluck(:invoice_value).compact
-
         {
           name: p.value,
-          invoice_display_name: p.invoice_value,
           key: p.children.first.key,
           values: p.children.pluck(:value),
-          invoice_values: (invoice_values unless invoice_values.empty?),
-        }.compact
+        }
       end,
     }
   end
