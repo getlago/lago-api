@@ -56,4 +56,24 @@ RSpec.describe Plan, type: :model do
       it { expect(plan.yearly_amount_cents).to eq(400) }
     end
   end
+
+  describe '#invoice_name' do
+    subject(:plan_invoice_name) { plan.invoice_name }
+
+    context 'when invoice display name is blank' do
+      let(:plan) { build_stubbed(:plan, invoice_display_name: [nil, ''].sample) }
+
+      it 'returns name' do
+        expect(plan_invoice_name).to eq(plan.name)
+      end
+    end
+
+    context 'when invoice display name is present' do
+      let(:plan) { build_stubbed(:plan) }
+
+      it 'returns invoice display name' do
+        expect(plan_invoice_name).to eq(plan.invoice_display_name)
+      end
+    end
+  end
 end

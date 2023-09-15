@@ -10,6 +10,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
   describe 'create' do
     let(:plan_name) { 'Some plan name' }
+    let(:plan_invoice_display_name) { 'Some plan invoice name' }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
     let(:group) { create(:group, billable_metric:) }
@@ -18,6 +19,7 @@ RSpec.describe Plans::CreateService, type: :service do
     let(:create_args) do
       {
         name: plan_name,
+        invoice_display_name: plan_invoice_display_name,
         organization_id: organization.id,
         code: 'new_plan',
         interval: 'monthly',
@@ -78,6 +80,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
       plan = Plan.order(:created_at).last
       expect(plan.taxes.pluck(:code)).to eq([plan_tax.code])
+      expect(plan.invoice_display_name).to eq(plan_invoice_display_name)
     end
 
     it 'creates charges' do
@@ -116,6 +119,7 @@ RSpec.describe Plans::CreateService, type: :service do
         properties: {
           code: plan.code,
           name: plan.name,
+          invoice_display_name: plan.invoice_display_name,
           description: plan.description,
           plan_interval: plan.interval,
           plan_amount_cents: plan.amount_cents,

@@ -57,6 +57,10 @@ class Plan < ApplicationRecord
     trial_period.present? && trial_period.positive?
   end
 
+  def invoice_name
+    invoice_display_name.presence || name
+  end
+
   # NOTE: Method used to compare plan for upgrade / downgrade on
   #       a same duration basis. It is not intended to be used
   #       directly for billing/invoicing purpose

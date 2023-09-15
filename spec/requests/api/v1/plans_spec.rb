@@ -12,6 +12,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     let(:create_params) do
       {
         name: 'P1',
+        invoice_display_name: 'P1 invoice name',
         code: 'plan_code',
         interval: 'weekly',
         description: 'description',
@@ -41,6 +42,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plan][:lago_id]).to be_present
       expect(json[:plan][:code]).to eq(create_params[:code])
       expect(json[:plan][:name]).to eq(create_params[:name])
+      expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
       expect(json[:plan][:created_at]).to be_present
       expect(json[:plan][:charges].first[:lago_id]).to be_present
     end

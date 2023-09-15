@@ -131,4 +131,8 @@ class Subscription < ApplicationRecord
   def display_name
     name.presence || plan.name
   end
+
+  def invoice_name
+    name.presence || plan.invoice_name
+  end
 end

@@ -1750,6 +1750,7 @@ input CreatePlanInput {
   code: String!
   description: String
   interval: PlanInterval!
+  invoiceDisplayName: String
   name: String!
   parentId: ID
   payInAdvance: Boolean!
@@ -3949,6 +3950,7 @@ type Plan {
   draftInvoicesCount: Int!
   id: ID!
   interval: PlanInterval!
+  invoiceDisplayName: String
   name: String!
   organization: Organization
   parentId: ID
@@ -5500,6 +5502,7 @@ input UpdatePlanInput {
   description: String
   id: String!
   interval: PlanInterval!
+  invoiceDisplayName: String
   name: String!
   payInAdvance: Boolean!
   taxCodes: [String!]

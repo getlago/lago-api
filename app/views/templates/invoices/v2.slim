@@ -514,10 +514,7 @@ html
 
       - if subscription?
         - subscriptions.each do |subscription|
-          - if subscription.name.present?
-            h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.name)
-          - else
-            h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.plan.name)
+          h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.invoice_name)
           .body-1 = I18n.t('invoice.subscription')
           .mb-24.body-3
             | #{I18n.t('invoice.date_from')} #{I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default)} #{I18n.t('invoice.date_to')} #{I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default)}
@@ -527,7 +524,7 @@ html
               tr
                 td width="70%"
                   .body-1
-                    = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.name)
+                    = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
                 td.body-1 style="text-align: right;" width="30%"
                   = subscription_fees(subscription.id).subscription_kind.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             table.total-table width="100%"
@@ -604,10 +601,7 @@ html
 
             - recurring_fees(subscription.id).group_by(&:charge_id).each do |_charge_id, fees|
               - if fees.sum(&:units) > 0
-                - if subscription.name.present?
-                  h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.name)
-                - else
-                  h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.plan.name)
+                h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.invoice_name)
 
                 - if fees.all? { |f| f.group_id? }
                   - fees.select { |f| f.units.positive? }.each do |fee|

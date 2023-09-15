@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         name: model.name,
+        invoice_display_name: model.invoice_display_name,
         created_at: model.created_at.iso8601,
         code: model.code,
         interval: model.interval,
