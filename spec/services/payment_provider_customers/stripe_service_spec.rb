@@ -177,8 +177,13 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           customer:,
           total_amount_cents: 200,
           currency: 'EUR',
+          status:,
+          ready_for_payment_processing:,
         )
       end
+
+      let(:status) { 'finalized' }
+      let(:ready_for_payment_processing) { true }
 
       before { invoice }
 
@@ -194,6 +199,44 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
           expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued
             .with(invoice)
+        end
+      end
+
+      context 'when invoices are not finalized' do
+        let(:status) { 'draft' }
+
+        it 'does not enqueue jobs to reprocess pending payment' do
+          result = stripe_service.update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: stripe_customer.provider_customer_id,
+            payment_method_id: 'pm_123456',
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(Invoices::Payments::StripeCreateJob).not_to have_been_enqueued
+              .with(invoice)
+          end
+        end
+      end
+
+      context 'when invoices are not ready for payment processing' do
+        let(:ready_for_payment_processing) { 'false' }
+
+        it 'does not enqueue jobs to reprocess pending payment' do
+          result = stripe_service.update_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: stripe_customer.provider_customer_id,
+            payment_method_id: 'pm_123456',
+          )
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(Invoices::Payments::StripeCreateJob).not_to have_been_enqueued
+              .with(invoice)
+          end
         end
       end
     end
