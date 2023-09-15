@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Event < ApplicationRecord
+class Event < EventsRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
