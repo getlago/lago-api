@@ -115,6 +115,12 @@ module BillableMetrics
           end
           scope = query.where("#{sanitized_field_name} IS NOT NULL")
 
+          # Events without attached right metadata are ignored since such events cannot be processed correctly.
+          # Could happen in race condition when event is stored but metadata in async job are attached later.
+          # In the meantime we want to avoid any issues with not attached metadata.
+          scope = scope.where("events.metadata->>'current_aggregation' IS NOT NULL")
+          scope = scope.where("events.metadata->>'max_aggregation' IS NOT NULL")
+
           scope = scope.where.not(id: event.id) if event.present?
 
           scope.reorder(created_at: :desc).first
