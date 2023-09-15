@@ -24,6 +24,7 @@ nb:
     item: Vare
     unit: Enhet
     unit_price: Enhetspris
+    units_per_second: Enheter per sekund
     amount: Beløp
     amount_with_tax: Beløp (inkl. MVA)
     amount_without_tax: Beløp (ekskl. MVA)

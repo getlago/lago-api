@@ -24,6 +24,7 @@ en:
     item: Item
     unit: Unit
     unit_price: Unit price
+    units_per_second: Units per second
     amount: Amount
     amount_with_tax: Amount (incl. tax)
     amount_without_tax: Amount (excl. tax)

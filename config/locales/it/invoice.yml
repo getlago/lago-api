@@ -24,6 +24,7 @@ it:
     item: Articolo
     unit: Unità
     unit_price: Prezzo unitario
+    units_per_second: Unità al secondo
     amount: Importo
     amount_with_tax: Importo (incl. tasse)
     amount_without_tax: Importo (escl. tasse)
