@@ -214,10 +214,7 @@
         - recurring_fees(subscription.id).group_by(&:charge_id).each do |_charge_id, fees|
           - next unless fees.sum(&:units) > 0
 
-          - if subscription.name.present?
-            h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.name)
-          - else
-            h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.plan.name)
+          h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.invoice_name)
 
           - number_of_days_in_period = 0
 
