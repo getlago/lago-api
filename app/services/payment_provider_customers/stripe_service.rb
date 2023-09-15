@@ -197,7 +197,12 @@ module PaymentProviderCustomers
     end
 
     def reprocess_pending_invoices(customer)
-      customer.invoices.pending.find_each do |invoice|
+      invoices = customer.invoices
+        .pending
+        .where(ready_for_payment_processing: true)
+        .where(status: 'finalized')
+
+      invoices.find_each do |invoice|
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
       end
     end
