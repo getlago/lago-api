@@ -109,10 +109,14 @@ class Charge < ApplicationRecord
   # NOTE: A prorated charge cannot be created in the following cases:
   # - for pay_in_arrear, price model cannot be package, graduated and percentage
   # - for pay_in_idvance, price model cannot be package, graduated, percentage and volume
+  # - for weighted_sum aggregation as it already apply pro-ration logic
   def validate_prorated
     return unless prorated?
-    return if billable_metric.recurring? && pay_in_advance? && standard?
-    return if billable_metric.recurring? && !pay_in_advance? && (standard? || volume?)
+
+    unless billable_metric.weighted_sum_agg?
+      return if billable_metric.recurring? && pay_in_advance? && standard?
+      return if billable_metric.recurring? && !pay_in_advance? && (standard? || volume?)
+    end
 
     errors.add(:prorated, :invalid_billable_metric_or_charge_model)
   end

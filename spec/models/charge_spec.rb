@@ -492,6 +492,19 @@ RSpec.describe Charge, type: :model do
         end
       end
     end
+
+    context 'when billable metric is weighted sum' do
+      let(:billable_metric) { create(:weighted_sum_billable_metric) }
+
+      it 'returns an error' do
+        charge = build(:percentage_charge, prorated: true, billable_metric:)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:prorated]).to include('invalid_billable_metric_or_charge_model')
+        end
+      end
+    end
   end
 
   describe '#validate_uniqueness_group_properties' do

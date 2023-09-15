@@ -9,6 +9,7 @@ module V1
         code: model.code,
         description: model.description,
         aggregation_type: model.aggregation_type,
+        weighted_interval: model.weighted_interval,
         recurring: model.recurring,
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
