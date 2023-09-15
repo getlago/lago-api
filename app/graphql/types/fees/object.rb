@@ -8,6 +8,7 @@ module Types
 
       field :charge, Types::Charges::Object, null: true
       field :currency, Types::CurrencyEnum, null: false
+      field :invoice_display_name, String, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
       field :true_up_parent_fee, Types::Fees::Object, null: true

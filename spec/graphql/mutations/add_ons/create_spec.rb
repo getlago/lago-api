@@ -12,6 +12,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
         createAddOn(input: $input) {
           id,
           name,
+          invoiceDisplayName,
           code,
           description,
           amountCents,
@@ -30,6 +31,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
       variables: {
         input: {
           name: 'Test Add-on',
+          invoiceDisplayName: 'Test Add-on Invoice',
           code: 'free-beer-for-us',
           description: 'some text',
           amountCents: 5000,
@@ -44,6 +46,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Test Add-on')
+      expect(result_data['invoiceDisplayName']).to eq('Test Add-on Invoice')
       expect(result_data['code']).to eq('free-beer-for-us')
       expect(result_data['description']).to eq('some text')
       expect(result_data['amountCents']).to eq('5000')

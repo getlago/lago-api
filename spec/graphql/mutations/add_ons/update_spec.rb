@@ -14,6 +14,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
         updateAddOn(input: $input) {
           id,
           name,
+          invoiceDisplayName,
           code,
           description,
           amountCents,
@@ -34,6 +35,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
         input: {
           id: add_on.id,
           name: 'New name',
+          invoiceDisplayName: 'New invoice name',
           code: 'new_code',
           description: 'desc',
           amountCents: 123,
@@ -47,6 +49,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
 
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
+      expect(result_data['invoiceDisplayName']).to eq('New invoice name')
       expect(result_data['code']).to eq('new_code')
       expect(result_data['description']).to eq('desc')
       expect(result_data['amountCents']).to eq('123')

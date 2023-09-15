@@ -2948,6 +2948,7 @@ type Fee implements InvoiceItem {
   feeType: FeeTypesEnum!
   group: Group
   id: ID!
+  invoiceDisplayName: String
   itemCode: String!
   itemName: String!
   itemType: String!
