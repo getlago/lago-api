@@ -25,6 +25,7 @@ RSpec.describe ::V1::CouponSerializer do
       expect(result['coupon']['expiration']).to eq(coupon.expiration)
       expect(result['coupon']['expiration_at']).to eq(coupon.expiration_at&.iso8601)
       expect(result['coupon']['created_at']).to eq(coupon.created_at.iso8601)
+      expect(result['coupon']['terminated_at']).to eq(coupon.terminated_at&.iso8601)
       expect(result['coupon']['plan_codes'].first).to eq(coupon_plan.plan.code)
       expect(result['coupon']['billable_metric_codes']).to eq([])
     end
