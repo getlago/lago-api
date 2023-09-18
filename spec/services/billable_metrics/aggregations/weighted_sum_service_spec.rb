@@ -22,18 +22,18 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
   let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
-  let(:from_datetime) { DateTime.parse('2023-08-01 00:00:00.000') }
-  let(:to_datetime) { DateTime.parse('2023-08-31 23:59:59.999') }
+  let(:from_datetime) { Time.zone.parse('2023-08-01 00:00:00.000') }
+  let(:to_datetime) { Time.zone.parse('2023-08-31 23:59:59.999') }
 
   let(:events_values) do
     [
-      { timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 2 },
-      { timestamp: DateTime.parse('2023-08-01 01:00:00'), value: 3 },
-      { timestamp: DateTime.parse('2023-08-01 01:30:00'), value: 1 },
-      { timestamp: DateTime.parse('2023-08-01 02:00:00'), value: -4 },
-      { timestamp: DateTime.parse('2023-08-01 04:00:00'), value: -2 },
-      { timestamp: DateTime.parse('2023-08-01 05:00:00'), value: 10 },
-      { timestamp: DateTime.parse('2023-08-01 05:30:00'), value: -10 },
+      { timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 2 },
+      { timestamp: Time.zone.parse('2023-08-01 01:00:00'), value: 3 },
+      { timestamp: Time.zone.parse('2023-08-01 01:30:00'), value: 1 },
+      { timestamp: Time.zone.parse('2023-08-01 02:00:00'), value: -4 },
+      { timestamp: Time.zone.parse('2023-08-01 04:00:00'), value: -2 },
+      { timestamp: Time.zone.parse('2023-08-01 05:00:00'), value: 10 },
+      { timestamp: Time.zone.parse('2023-08-01 05:30:00'), value: -10 },
     ]
   end
 
@@ -55,21 +55,21 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   it 'aggregates the events' do
     result = aggregator.aggregate
 
-    expect(result.aggregation.round(5).to_s).to eq('0.0125')
+    expect(result.aggregation.round(5).to_s).to eq('0.02218')
     expect(result.count).to eq(7)
   end
 
   context 'with a single event' do
     let(:events_values) do
       [
-        { timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000 },
+        { timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 1000 },
       ]
     end
 
     it 'aggregates the events' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.aggregation.round(5).to_s).to eq('1000.0')
       expect(result.count).to eq(1)
     end
   end
@@ -106,7 +106,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     it 'uses the persisted recurring value as initial value' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.aggregation.to_s).to eq('1000.0')
       expect(result.count).to eq(0)
       expect(result.variation).to eq(0)
       expect(result.total_aggregated_units).to eq(1000)
@@ -143,7 +143,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       it 'aggregates the events' do
         result = aggregator.aggregate
 
-        expect(result.aggregation.round(5).to_s).to eq('2.37399')
+        expect(result.aggregation.round(5).to_s).to eq('1000.02218')
         expect(result.count).to eq(7)
         expect(result.variation).to eq(0)
         expect(result.total_aggregated_units).to eq(1000)
@@ -164,7 +164,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     it 'aggregates the events' do
       result = aggregator.aggregate
 
-      expect(result.aggregation.round(5).to_s).to eq('0.00037')
+      expect(result.aggregation.to_s).to eq('1000.0')
       expect(result.count).to eq(1)
     end
   end

@@ -54,7 +54,7 @@ module BillableMetrics
             timestamp,
             difference,
             SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul,
-            EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
+            EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
             (#{period_ratio_sql}) AS period_ratio
           FROM events_data
         SQL
@@ -92,7 +92,7 @@ module BillableMetrics
         <<-SQL
           SELECT *
           FROM (
-            VALUES (timestamp without time zone '#{to_datetime}', 0)
+            VALUES (timestamp without time zone '#{to_datetime.ceil}', 0)
           ) AS t(timestamp, difference)
         SQL
       end
@@ -100,16 +100,18 @@ module BillableMetrics
       def period_ratio_sql
         <<-SQL
           -- NOTE: duration in seconds between current event and next one
-          -- TODO: takes weighted interval into account (+ group per interval in CTE ??)
-          CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) = 0
+          CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp) = 0
           THEN
             0 -- NOTE: duration was null so usage is null
           ELSE
             -- NOTE: cumulative sum from previous events in the period
             (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
-            /
+            *
             -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-            EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp)
+            EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp)
+            /
+            -- NOTE: full duration of the period
+            #{to_datetime.ceil - from_datetime}
           END
         SQL
       end
