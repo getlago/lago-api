@@ -67,7 +67,7 @@ module BillableMetrics
             UNION
             (#{
               fetch_events(from_datetime:, to_datetime:)
-                .select("timestamp, (#{sanitized_field_name})::numeric AS difference")
+                .select("timestamp, (#{sanitized_field_name})::numeric AS difference, events.created_at")
                 .to_sql
             })
             UNION
@@ -83,8 +83,8 @@ module BillableMetrics
         <<-SQL
           SELECT *
           FROM (
-            VALUES (timestamp without time zone '#{from_datetime}', #{initial_value})
-          ) AS t(timestamp, difference)
+            VALUES (timestamp without time zone '#{from_datetime}', #{initial_value}, timestamp without time zone '#{from_datetime}')
+          ) AS t(timestamp, difference, created_at)
         SQL
       end
 
@@ -92,8 +92,8 @@ module BillableMetrics
         <<-SQL
           SELECT *
           FROM (
-            VALUES (timestamp without time zone '#{to_datetime.ceil}', 0)
-          ) AS t(timestamp, difference)
+            VALUES (timestamp without time zone '#{to_datetime.ceil}', 0, timestamp without time zone '#{to_datetime.ceil}')
+          ) AS t(timestamp, difference, created_at)
         SQL
       end
 

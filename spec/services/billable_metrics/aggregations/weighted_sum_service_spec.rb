@@ -85,6 +85,22 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     end
   end
 
+  context 'with events with the same timestamo' do
+    let(:events_values) do
+      [
+        { timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3 },
+        { timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3 },
+      ]
+    end
+
+    it 'aggregates the events' do
+      result = aggregator.aggregate
+
+      expect(result.aggregation).to eq(6)
+      expect(result.count).to eq(2)
+    end
+  end
+
   context 'when billable metric is recurring' do
     let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
