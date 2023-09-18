@@ -624,7 +624,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_18_090426) do
     t.boolean "pending_deletion", default: false, null: false
     t.string "invoice_display_name"
     t.index ["deleted_at"], name: "index_plans_on_deleted_at"
-    t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "((deleted_at IS NULL) AND (parent_id IS NULL))"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
   end
