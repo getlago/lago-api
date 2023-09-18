@@ -81,8 +81,10 @@ module Customers
         end
 
         # NOTE: if payment provider is updated, we need to create/update the provider customer
-        payment_provider = old_payment_provider || customer.payment_provider
-        create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
+        if args.key?(:provider_customer) || args.key?(:payment_provider)
+          payment_provider = old_payment_provider || customer.payment_provider
+          create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
+        end
       end
 
       result.customer = customer
