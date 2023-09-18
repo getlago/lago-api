@@ -260,5 +260,30 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
     end
+
+    context 'when partialy updating' do
+      let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods: %w[sepa_debit]) }
+
+      let(:update_args) do
+        {
+          id: customer.id,
+          invoice_grace_period: 8,
+        }
+      end
+
+      around { |test| lago_premium!(&test) }
+      before { stripe_customer }
+
+      it 'updates only the updated args' do
+        result = customers_service.update(**update_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
+
+          expect(result.customer.stripe_customer.provider_payment_methods).to eq(%w[sepa_debit])
+        end
+      end
+    end
   end
 end
