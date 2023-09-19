@@ -104,11 +104,7 @@ module Invoices
     end
 
     def create_subscription_fee(subscription, boundaries)
-      fee_result = Fees::SubscriptionService.new(
-        invoice:,
-        subscription:,
-        boundaries:,
-      ).create
+      fee_result = Fees::SubscriptionService.new(invoice:, subscription:, boundaries:).create
 
       fee_result.raise_if_error!
     end
