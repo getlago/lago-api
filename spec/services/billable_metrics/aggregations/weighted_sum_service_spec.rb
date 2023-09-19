@@ -11,6 +11,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       boundaries: {
         from_datetime:,
         to_datetime:,
+        charges_duration:,
       },
     )
   end
@@ -24,6 +25,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
   let(:from_datetime) { Time.zone.parse('2023-08-01 00:00:00.000') }
   let(:to_datetime) { Time.zone.parse('2023-08-31 23:59:59.999') }
+  let(:charges_duration) { 31 }
 
   let(:events_values) do
     [

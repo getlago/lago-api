@@ -119,7 +119,7 @@ module BillableMetrics
             EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp)
             /
             -- NOTE: full duration of the period
-            #{to_datetime.ceil - from_datetime}
+            #{boundaries[:charges_duration].days.to_i}
           END
         SQL
       end

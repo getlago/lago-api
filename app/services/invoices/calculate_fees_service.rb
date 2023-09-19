@@ -269,6 +269,7 @@ module Invoices
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         timestamp: Time.zone.at(timestamp),
+        charges_duration: date_service.charges_duration_in_days,
       }
     end
 
