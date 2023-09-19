@@ -26,6 +26,14 @@ module BillableMetrics
       private
 
       def fetch_events(from_datetime:, to_datetime:)
+        if billable_metric.recurring?
+          # NOTE: When recurring we need to scope the fetch using the external ID to handle events
+          #       sent to upgraded/downgraded subscription
+          return recurring_events_scope(from_datetime:, to_datetime:)
+            .where("#{sanitized_field_name} IS NOT NULL")
+            .order(timestamp: :asc)
+        end
+
         events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
       end
 
@@ -117,6 +125,8 @@ module BillableMetrics
       end
 
       def latest_value
+        return @latest_value if @latest_value
+
         quantified_events = QuantifiedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
@@ -125,10 +135,29 @@ module BillableMetrics
           .order(added_at: :desc)
 
         quantified_events = quantified_events.where(group_id: group.id) if group
-
         quantified_event = quantified_events.first
 
-        BigDecimal(quantified_event&.properties&.[](QuantifiedEvent::RECURRING_TOTAL_UNITS) || 0)
+        return @latest_value = BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS)) if quantified_event
+        return @latest_value = BigDecimal(latest_value_from_events) if subscription.previous_subscription_id?
+
+        @latest_value = BigDecimal(0)
+      end
+
+      # NOTE: In case of upgrade/downgrade, if latest value is not persisted yet,
+      #       we need to fetch latest value from previous events attached to the same external subscription ID
+      def latest_value_from_events
+        scope = customer.events
+          .joins(:subscription)
+          .where(subscription: { external_id: subscription.external_id})
+          .where(code: billable_metric.code)
+          .where(created_at: billable_metric.created_at...)
+          .where(timestamp: ..from_datetime)
+          .where.not(subscription_id: subscription.id)
+          .where("#{sanitized_field_name} IS NOT NULL")
+
+        return scope.sum("(#{sanitized_field_name})::numeric") unless group
+
+        group_scope(scope).sum("(#{sanitized_field_name})::numeric")
       end
     end
   end

@@ -46,6 +46,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         :event,
         code: billable_metric.code,
         subscription:,
+        customer:,
         timestamp: values[:timestamp],
         properties:,
       )
@@ -141,6 +142,53 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         expect(result.total_aggregated_units).to eq(0)
         expect(result.recurring_updated_at).to eq(from_datetime)
       end
+
+      context 'with events attached to a previous subcription' do
+        let(:previous_subscription) do
+          create(
+            :terminated_subscription,
+            started_at: DateTime.parse('2022-01-01 22:22:22'),
+            terminated_at: DateTime.parse('2023-04-01 22:22:21'),
+          )
+        end
+
+        let(:customer) { previous_subscription.customer }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            started_at: DateTime.parse('2023-04-01 22:22:22'),
+            previous_subscription:,
+            customer:,
+            external_id: previous_subscription.external_id,
+          )
+        end
+
+        before do
+          subscription
+
+          create(
+            :event,
+            code: billable_metric.code,
+            subscription: previous_subscription,
+            customer:,
+            timestamp: Time.zone.parse('2023-03-01 22:22:22'),
+            properties: { value: 10 },
+          )
+        end
+
+        it 'uses previous events as latest value' do
+          result = aggregator.aggregate
+
+          aggregate_failures do
+            expect(result.aggregation.round(5).to_s).to eq('10.0')
+            expect(result.count).to eq(0)
+            expect(result.variation).to eq(0)
+            expect(result.total_aggregated_units).to eq(10)
+            expect(result.recurring_updated_at).to eq(from_datetime)
+          end
+        end
+      end
     end
 
     context 'with events' do
@@ -159,11 +207,13 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       it 'aggregates the events' do
         result = aggregator.aggregate
 
-        expect(result.aggregation.round(5).to_s).to eq('1000.02218')
-        expect(result.count).to eq(7)
-        expect(result.variation).to eq(0)
-        expect(result.total_aggregated_units).to eq(1000)
-        expect(result.recurring_updated_at).to eq('2023-08-01 05:30:00')
+        aggregate_failures do
+          expect(result.aggregation.round(5).to_s).to eq('1000.02218')
+          expect(result.count).to eq(7)
+          expect(result.variation).to eq(0)
+          expect(result.total_aggregated_units).to eq(1000)
+          expect(result.recurring_updated_at).to eq('2023-08-01 05:30:00')
+        end
       end
     end
   end
