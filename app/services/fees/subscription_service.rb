@@ -2,11 +2,10 @@
 
 module Fees
   class SubscriptionService < BaseService
-    def initialize(invoice:, subscription:, boundaries:, terminated_on_billing_day: false)
+    def initialize(invoice:, subscription:, boundaries:)
       @invoice = invoice
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
-      @terminated_on_billing_day = terminated_on_billing_day
 
       super(nil)
     end
@@ -38,7 +37,7 @@ module Fees
 
     private
 
-    attr_reader :invoice, :subscription, :boundaries, :terminated_on_billing_day
+    attr_reader :invoice, :subscription, :boundaries
 
     delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
@@ -67,7 +66,6 @@ module Fees
 
     def should_compute_terminated_amount?
       return false unless subscription.terminated?
-      return false if terminated_on_billing_day
       return false if subscription.plan.pay_in_advance?
 
       subscription.upgraded? || subscription.next_subscription.nil?
@@ -75,7 +73,6 @@ module Fees
 
     def should_compute_upgraded_amount?
       return false unless subscription.previous_subscription_id?
-      return false if terminated_on_billing_day
       return false if subscription.invoices.count > 1
 
       subscription.previous_subscription.upgraded?
@@ -84,7 +81,6 @@ module Fees
     # NOTE: Subscription has already been billed once and is not terminated
     #        or when it is payed in advance on an anniversary base
     def should_use_full_amount?
-      return true if terminated_on_billing_day
       return true if plan.pay_in_advance? && subscription.anniversary?
       return true if subscription.fees.subscription_kind.where('created_at < ?', invoice.created_at).exists?
       return true if subscription.started_in_past? && plan.pay_in_advance?
@@ -141,7 +137,11 @@ module Fees
       # NOTE: number of days between beginning of the period and the termination date
       number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
 
-      number_of_day_to_bill * single_day_price(subscription)
+      number_of_day_to_bill *
+      single_day_price(
+        subscription,
+        optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+      )
     end
 
     def upgraded_amount

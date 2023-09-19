@@ -44,10 +44,7 @@ module Invoices
             recurring:,
           )
 
-          if should_create_subscription_fee?(subscription)
-            create_subscription_fee(subscription, boundaries, termination_boundaries.present?)
-          end
-
+          create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
         end
 
@@ -106,12 +103,11 @@ module Invoices
       end
     end
 
-    def create_subscription_fee(subscription, boundaries, terminated_on_billing_day)
+    def create_subscription_fee(subscription, boundaries)
       fee_result = Fees::SubscriptionService.new(
         invoice:,
         subscription:,
         boundaries:,
-        terminated_on_billing_day:,
       ).create
 
       fee_result.raise_if_error!
