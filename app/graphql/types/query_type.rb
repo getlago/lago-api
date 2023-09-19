@@ -36,6 +36,7 @@ module Types
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
+    field :subscription, resolver: Resolvers::SubscriptionResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
