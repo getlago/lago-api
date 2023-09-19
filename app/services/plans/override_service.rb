@@ -16,7 +16,7 @@ module Plans
         new_plan = plan.dup.tap do |p|
           p.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
           p.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
-          # p.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+          p.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
           p.trial_period = params[:trial_period] if params.key?(:trial_period)
           p.parent_id = plan.id
         end
