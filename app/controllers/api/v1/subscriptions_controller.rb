@@ -24,12 +24,7 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::SubscriptionSerializer.new(
-              result.subscription,
-              root_name: 'subscription',
-            ),
-          )
+          render_subscription(result.subscription)
         else
           render_error_response(result)
         end
@@ -47,12 +42,7 @@ module Api
         result = Subscriptions::TerminateService.call(subscription:)
 
         if result.success?
-          render(
-            json: ::V1::SubscriptionSerializer.new(
-              result.subscription,
-              root_name: 'subscription',
-            ),
-          )
+          render_subscription(result.subscription)
         else
           render_error_response(result)
         end
@@ -70,15 +60,17 @@ module Api
         )
 
         if result.success?
-          render(
-            json: ::V1::SubscriptionSerializer.new(
-              result.subscription,
-              root_name: 'subscription',
-            ),
-          )
+          render_subscription(result.subscription)
         else
           render_error_response(result)
         end
+      end
+
+      def show
+        subscription = current_organization.subscriptions.find_by(external_id: params[:external_id])
+        return not_found_error(resource: 'subscription') unless subscription
+
+        render_subscription(subscription)
       end
 
       def index
@@ -127,6 +119,15 @@ module Api
 
       def index_filters
         params.permit(:external_customer_id, :plan_code, status: [])
+      end
+
+      def render_subscription(subscription)
+        render(
+          json: ::V1::SubscriptionSerializer.new(
+            subscription,
+            root_name: 'subscription',
+          ),
+        )
       end
     end
   end

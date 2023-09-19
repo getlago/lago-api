@@ -170,6 +170,27 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
   end
 
+  describe 'show' do
+    let(:subscription) { create(:subscription, customer:, plan:) }
+
+    it 'returns a subscription' do
+      get_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
+
+      expect(response).to have_http_status(:success)
+      expect(json[:subscription]).to include(
+        lago_id: subscription.id,
+        external_id: subscription.external_id,
+      )
+    end
+
+    context 'when subscription does not exist' do
+      it 'returns not found' do
+        get_with_token(organization, '/api/v1/subscriptions/555')
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe 'index' do
     let(:subscription1) { create(:subscription, customer:, plan:) }
 
