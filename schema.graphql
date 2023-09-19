@@ -4288,6 +4288,16 @@ type Query {
   ): PlanCollection!
 
   """
+  Query a single subscription of an organization
+  """
+  subscription(
+    """
+    Uniq ID of the subscription
+    """
+    id: ID!
+  ): Subscription
+
+  """
   Query a single tax of an organization
   """
   tax(
