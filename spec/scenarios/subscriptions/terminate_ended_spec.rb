@@ -238,15 +238,13 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription).to be_active
           end
 
-          Organization.update_all(webhook_url: nil)
+          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
           WebhookEndpoint.destroy_all
 
           travel_to(ending_at + 5.minutes) do
             Subscriptions::BillingService.new.call
 
             perform_all_enqueued_jobs
-
-            invoice = subscription.invoices.order(created_at: :desc).first
 
             aggregate_failures do
               expect(subscription.reload).to be_active
@@ -291,7 +289,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription).to be_active
           end
 
-          Organization.update_all(webhook_url: nil)
+          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidationss
           WebhookEndpoint.destroy_all
 
           travel_to(ending_at + 5.minutes) do

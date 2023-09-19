@@ -138,10 +138,10 @@ module Fees
       number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
 
       number_of_day_to_bill *
-      single_day_price(
-        subscription,
-        optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
-      )
+        single_day_price(
+          subscription,
+          optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+        )
     end
 
     def upgraded_amount
