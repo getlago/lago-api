@@ -17,6 +17,7 @@ RSpec.describe Fees::SubscriptionService do
   let(:started_at) { Time.zone.parse('2022-01-01 00:01') }
   let(:created_at) { started_at }
   let(:subscription_at) { started_at }
+
   let(:plan) do
     create(
       :plan,
