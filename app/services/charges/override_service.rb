@@ -16,7 +16,7 @@ module Charges
         new_charge = charge.dup.tap do |c|
           c.properties = params[:properties] if params.key?(:properties)
           c.min_amount_cents = params[:min_amount_cents] if params.key?(:min_amount_cents)
-          # c.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+          c.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
           c.group_properties = charge.group_properties.map(&:dup)
           c.plan_id = params[:plan_id]
         end

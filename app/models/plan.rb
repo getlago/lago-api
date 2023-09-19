@@ -34,10 +34,8 @@ class Plan < ApplicationRecord
 
   validates :name, :code, presence: true
   validates :amount_currency, inclusion: { in: currency_list }
-  validates :code,
-            uniqueness: { scope: :organization_id },
-            unless: -> { deleted_at? || parent_id? }
   validates :pay_in_advance, inclusion: { in: [true, false] }
+  validate :validate_code_unique
 
   default_scope -> { kept }
 
@@ -70,5 +68,15 @@ class Plan < ApplicationRecord
     return amount_cents * 4 if quarterly?
 
     amount_cents * 52
+  end
+
+  private
+
+  def validate_code_unique
+    return unless organization
+    return if parent_id?
+
+    plan = organization.plans.where(code:).first
+    errors.add(:code, :taken) if plan && plan != self
   end
 end

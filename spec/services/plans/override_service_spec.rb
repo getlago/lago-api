@@ -71,6 +71,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         # Overriden attributes
         amount_cents: 300,
         amount_currency: 'USD',
+        invoice_display_name: 'invoice display name',
         trial_period: 20,
       )
 

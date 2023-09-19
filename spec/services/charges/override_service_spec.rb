@@ -39,6 +39,7 @@ RSpec.describe Charges::OverrideService, type: :service do
       {
         id: charge.id,
         plan_id: plan.id,
+        # invoice_display_name: 'invoice display name',
         min_amount_cents: 1000,
         properties: { amount: '200' },
         tax_codes: [tax.code],
@@ -80,6 +81,7 @@ RSpec.describe Charges::OverrideService, type: :service do
           prorated: charge.prorated,
           # Overriden attributes
           plan_id: plan.id,
+          # invoice_display_name: 'invoice display name',
           min_amount_cents: 1000,
           properties: { 'amount' => '200' },
         )
