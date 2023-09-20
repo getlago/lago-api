@@ -10,28 +10,31 @@ RSpec.describe ::V1::PlanSerializer do
 
   before { charge }
 
-  it 'serializes the object' do
+  it 'serializes the object', :aggregate_failures do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result['plan']['lago_id']).to eq(plan.id)
-      expect(result['plan']['name']).to eq(plan.name)
-      expect(result['plan']['invoice_display_name']).to eq(plan.invoice_display_name)
-      expect(result['plan']['created_at']).to eq(plan.created_at.iso8601)
-      expect(result['plan']['code']).to eq(plan.code)
-      expect(result['plan']['interval']).to eq(plan.interval)
-      expect(result['plan']['description']).to eq(plan.description)
-      expect(result['plan']['amount_cents']).to eq(plan.amount_cents)
-      expect(result['plan']['amount_currency']).to eq(plan.amount_currency)
-      expect(result['plan']['trial_period']).to eq(plan.trial_period)
-      expect(result['plan']['pay_in_advance']).to eq(plan.pay_in_advance)
-      expect(result['plan']['bill_charges_monthly']).to eq(plan.bill_charges_monthly)
-      expect(result['plan']['active_subscriptions_count']).to eq(0)
-      expect(result['plan']['draft_invoices_count']).to eq(0)
-      expect(result['plan']['charges'].first['lago_id']).to eq(charge.id)
-      expect(result['plan']['charges'].first['group_properties']).to eq([])
+    expect(result['plan']).to include(
+      'lago_id' => plan.id,
+      'name' => plan.name,
+      'invoice_display_name' => plan.invoice_display_name,
+      'created_at' => plan.created_at.iso8601,
+      'code' => plan.code,
+      'interval' => plan.interval,
+      'description' => plan.description,
+      'amount_cents' => plan.amount_cents,
+      'amount_currency' => plan.amount_currency,
+      'trial_period' => plan.trial_period,
+      'pay_in_advance' => plan.pay_in_advance,
+      'bill_charges_monthly' => plan.bill_charges_monthly,
+      'active_subscriptions_count' => 0,
+      'draft_invoices_count' => 0,
+      'parent_id' => nil,
+      'taxes' => [],
+    )
 
-      expect(result['plan']['taxes']).to eq([])
-    end
+    expect(result['plan']['charges'].first).to include(
+      'lago_id' => charge.id,
+      'group_properties' => [],
+    )
   end
 end

@@ -18,6 +18,7 @@ module V1
         bill_charges_monthly: model.bill_charges_monthly,
         active_subscriptions_count:,
         draft_invoices_count:,
+        parent_id: model.parent_id,
       }
 
       payload.merge!(charges) if include?(:charges)
