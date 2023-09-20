@@ -189,6 +189,19 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context 'when status is given' do
+      it 'returns the subscription with the given status' do
+        pending = create(:subscription, customer:, plan:, status: :pending, external_id: subscription.external_id)
+        get_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}?status=pending")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription]).to include(
+          lago_id: pending.id,
+          external_id: pending.external_id,
+        )
+      end
+    end
   end
 
   describe 'index' do
