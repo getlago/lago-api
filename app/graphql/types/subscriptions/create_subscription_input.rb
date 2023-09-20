@@ -12,6 +12,7 @@ module Types
 
       argument :customer_id, ID, required: true
       argument :plan_id, ID, required: true
+      argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
 
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
