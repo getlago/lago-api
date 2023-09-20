@@ -104,7 +104,7 @@ module Events
           "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
           timestamp_without_precision,
         )
-        .order(started_at: :desc)
+        .order('terminated_at DESC NULLS FIRST, started_at DESC')
       @subscriptions
     end
 
