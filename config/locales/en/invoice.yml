@@ -24,7 +24,7 @@ en:
     item: Item
     unit: Unit
     unit_price: Unit price
-    units_per_second: Units per second
+    units_prorated_per_period: Units prorated per second per %{period}
     amount: Amount
     amount_with_tax: Amount (incl. tax)
     amount_without_tax: Amount (excl. tax)
@@ -41,6 +41,10 @@ en:
     yearly: Yearly
     weekly: Weekly
     quarterly: Quarterly
+    week: week
+    month: month
+    quarter: quarter
+    year: year
     sub_total: Sub total
     subscription_interval: "%{plan_interval} subscription - %{plan_name}"
 

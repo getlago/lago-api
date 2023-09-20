@@ -24,7 +24,7 @@ it:
     item: Articolo
     unit: Unità
     unit_price: Prezzo unitario
-    units_per_second: Unità al secondo
+    units_prorated_per_period: Unità proporzionate al secondo per %{period}
     amount: Importo
     amount_with_tax: Importo (incl. tasse)
     amount_without_tax: Importo (escl. tasse)
@@ -41,6 +41,10 @@ it:
     yearly: Annuale
     weekly: Settimanale
     quarterly: Trimestrale
+    week: settimana
+    month: mese
+    quarter: trimestre
+    year: anno
     sub_total: Subtotale
     subscription_interval: "Abbonamento %{plan_interval} - %{plan_name}"
 
