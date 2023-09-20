@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, organization:, amount_cents: 500) }
 
   describe 'create' do
     let(:subscription_at) { Time.current.iso8601 }
@@ -21,30 +21,38 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         billing_time: 'anniversary',
         subscription_at:,
         ending_at:,
+        plan_overrides: {
+          amount_cents: 100,
+        },
       }
     end
 
-    it 'returns a success' do
-      freeze_time do
-        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+    around { |test| lago_premium!(&test) }
+
+    it 'returns a success', :aggregate_failures do
+      post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
         expect(response).to have_http_status(:ok)
 
-        expect(json[:subscription][:lago_id]).to be_present
-        expect(json[:subscription][:external_id]).to be_present
-        expect(json[:subscription][:external_customer_id]).to eq(customer.external_id)
-        expect(json[:subscription][:lago_customer_id]).to eq(customer.id)
-        expect(json[:subscription][:plan_code]).to eq(plan.code)
-        expect(json[:subscription][:status]).to eq('active')
-        expect(json[:subscription][:name]).to eq('subscription name')
-        expect(json[:subscription][:started_at]).to be_present
-        expect(json[:subscription][:billing_time]).to eq('anniversary')
-        expect(json[:subscription][:subscription_at]).to eq(Time.current.iso8601)
-        expect(json[:subscription][:ending_at]).to eq((Time.current + 1.year).iso8601)
-        expect(json[:subscription][:previous_plan_code]).to be_nil
-        expect(json[:subscription][:next_plan_code]).to be_nil
-        expect(json[:subscription][:downgrade_plan_date]).to be_nil
-      end
+      expect(json[:subscription]).to include(
+        lago_id: String,
+        external_id: String,
+        external_customer_id: customer.external_id,
+        lago_customer_id: customer.id,
+        plan_code: plan.code,
+        status: 'active',
+        name: 'subscription name',
+        started_at: String,
+        billing_time: 'anniversary',
+        subscription_at: Time.current.iso8601,
+        ending_at: (Time.current + 1.year).iso8601,
+        previous_plan_code: nil,
+        next_plan_code: nil,
+        downgrade_plan_date: nil,
+      )
+      expect(json[:subscription][:plan]).to include(
+        amount_cents: 100,
+      )
     end
 
     context 'with external_customer_id, external_id and name as integer' do
