@@ -64,7 +64,7 @@
 
                 / True up fees attached to the fee
                 - fees.select { |f| f.true_up_fee.present? }.each do |fee|
-                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee: fee)
+                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee)
 
               / Fees without group
               - else
@@ -85,7 +85,7 @@
 
                 / True up fees attached to the fee
                 - if fee.true_up_fee.present?
-                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee: fee)
+                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee)
 
       / Charges payed in advance on payed in arrears plan
       - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance?
@@ -132,7 +132,7 @@
 
                 / True up fees attached to the fee
                 - fees.select { |f| f.true_up_fee.present? }.each do |fee|
-                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee: fee)
+                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee)
 
               / Fees without group
               - else
@@ -153,7 +153,7 @@
 
                 / True up fees attached to the fee
                 - if fee.true_up_fee.present?
-                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee: fee)
+                  == SlimHelper.render('templates/invoices/fees/_true_up_fee', fee)
 
 
     / Total section
