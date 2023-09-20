@@ -137,6 +137,10 @@ module Fees
       # NOTE: number of days between beginning of the period and the termination date
       number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
 
+      # Remove later customer timezone fix while passing optional_from_date
+      # single_day_price method should return correct amount even without the timezone fix since
+      # date service should not calculate single_day_price based on difference between dates but more as a
+      # difference between date-times
       number_of_day_to_bill *
         single_day_price(
           subscription,
