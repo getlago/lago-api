@@ -113,6 +113,23 @@ module Api
             :subscription_date,
             :subscription_at,
             :ending_at,
+            plan_overrides: [
+              :amount_cents,
+              :amount_currency,
+              :invoice_display_name,
+              :trial_period,
+              { tax_codes: [] },
+              {
+                charges: [
+                  :id,
+                  :min_amount_cents,
+                  :invoice_display_name,
+                  { properties: {} },
+                  { group_properties: [] },
+                  { tax_codes: [] },
+                ],
+              },
+            ],
           )
       end
 
@@ -129,6 +146,7 @@ module Api
           json: ::V1::SubscriptionSerializer.new(
             subscription,
             root_name: 'subscription',
+            includes: %i[plan],
           ),
         )
       end

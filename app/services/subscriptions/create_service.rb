@@ -79,7 +79,7 @@ module Subscriptions
     def create_subscription
       new_subscription = Subscription.new(
         customer:,
-        plan:,
+        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
         subscription_at:,
         name:,
         external_id:,
@@ -244,6 +244,10 @@ module Subscriptions
       @editable_subscriptions ||= customer.subscriptions.active
         .or(customer.subscriptions.starting_in_the_future)
         .order(started_at: :desc)
+    end
+
+    def override_plan(plan)
+      Plans::OverrideService.call(plan:, params: params[:plan_overrides].with_indifferent_access).plan
     end
   end
 end
