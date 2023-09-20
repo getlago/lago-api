@@ -25,24 +25,26 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     it 'returns a success' do
-      post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+      freeze_time do
+        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
-      expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:ok)
 
-      expect(json[:subscription][:lago_id]).to be_present
-      expect(json[:subscription][:external_id]).to be_present
-      expect(json[:subscription][:external_customer_id]).to eq(customer.external_id)
-      expect(json[:subscription][:lago_customer_id]).to eq(customer.id)
-      expect(json[:subscription][:plan_code]).to eq(plan.code)
-      expect(json[:subscription][:status]).to eq('active')
-      expect(json[:subscription][:name]).to eq('subscription name')
-      expect(json[:subscription][:started_at]).to be_present
-      expect(json[:subscription][:billing_time]).to eq('anniversary')
-      expect(json[:subscription][:subscription_at]).to eq(Time.current.iso8601)
-      expect(json[:subscription][:ending_at]).to eq((Time.current + 1.year).iso8601)
-      expect(json[:subscription][:previous_plan_code]).to be_nil
-      expect(json[:subscription][:next_plan_code]).to be_nil
-      expect(json[:subscription][:downgrade_plan_date]).to be_nil
+        expect(json[:subscription][:lago_id]).to be_present
+        expect(json[:subscription][:external_id]).to be_present
+        expect(json[:subscription][:external_customer_id]).to eq(customer.external_id)
+        expect(json[:subscription][:lago_customer_id]).to eq(customer.id)
+        expect(json[:subscription][:plan_code]).to eq(plan.code)
+        expect(json[:subscription][:status]).to eq('active')
+        expect(json[:subscription][:name]).to eq('subscription name')
+        expect(json[:subscription][:started_at]).to be_present
+        expect(json[:subscription][:billing_time]).to eq('anniversary')
+        expect(json[:subscription][:subscription_at]).to eq(Time.current.iso8601)
+        expect(json[:subscription][:ending_at]).to eq((Time.current + 1.year).iso8601)
+        expect(json[:subscription][:previous_plan_code]).to be_nil
+        expect(json[:subscription][:next_plan_code]).to be_nil
+        expect(json[:subscription][:downgrade_plan_date]).to be_nil
+      end
     end
 
     context 'with external_customer_id, external_id and name as integer' do
