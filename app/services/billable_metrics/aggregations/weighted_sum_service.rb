@@ -30,8 +30,8 @@ module BillableMetrics
           # NOTE: When recurring we need to scope the fetch using the external ID to handle events
           #       sent to upgraded/downgraded subscription
           return recurring_events_scope(from_datetime:, to_datetime:)
-            .where("#{sanitized_field_name} IS NOT NULL")
-            .order(timestamp: :asc)
+              .where("#{sanitized_field_name} IS NOT NULL")
+              .order(timestamp: :asc)
         end
 
         events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
@@ -137,7 +137,9 @@ module BillableMetrics
         quantified_events = quantified_events.where(group_id: group.id) if group
         quantified_event = quantified_events.first
 
-        return @latest_value = BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS)) if quantified_event
+        if quantified_event
+          return @latest_value = BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS))
+        end
         return @latest_value = BigDecimal(latest_value_from_events) if subscription.previous_subscription_id?
 
         @latest_value = BigDecimal(0)
@@ -148,7 +150,7 @@ module BillableMetrics
       def latest_value_from_events
         scope = customer.events
           .joins(:subscription)
-          .where(subscription: { external_id: subscription.external_id})
+          .where(subscription: { external_id: subscription.external_id })
           .where(code: billable_metric.code)
           .where(created_at: billable_metric.created_at...)
           .where(timestamp: ..from_datetime)
