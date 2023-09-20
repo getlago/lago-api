@@ -14,7 +14,6 @@ module V1
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
         group: model.active_groups_as_tree,
-        weighted_interval: model.weighted_interval,
         active_subscriptions_count:,
         draft_invoices_count:,
         plans_count:,
