@@ -294,7 +294,7 @@
               ]
             },
             {
-              "name": "customerCount",
+              "name": "customersCount",
               "description": "Number of customers using this add-on",
               "type": {
                 "kind": "NON_NULL",
@@ -3946,7 +3946,7 @@
               ]
             },
             {
-              "name": "customerCount",
+              "name": "customersCount",
               "description": "Number of customers using this coupon",
               "type": {
                 "kind": "NON_NULL",
@@ -16493,7 +16493,7 @@
               ]
             },
             {
-              "name": "customerCount",
+              "name": "customersCount",
               "description": "Number of customers attached to a plan",
               "type": {
                 "kind": "NON_NULL",

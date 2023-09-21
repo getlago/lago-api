@@ -52,7 +52,7 @@ type AddOn {
   """
   Number of customers using this add-on
   """
-  customerCount: Int!
+  customersCount: Int!
   deletedAt: ISO8601DateTime
   description: String
   id: ID!
@@ -1491,7 +1491,7 @@ type Coupon {
   """
   Number of customers using this coupon
   """
-  customerCount: Int!
+  customersCount: Int!
   description: String
   expiration: CouponExpiration!
   expirationAt: ISO8601DateTime
@@ -3953,7 +3953,7 @@ type Plan {
   """
   Number of customers attached to a plan
   """
-  customerCount: Int!
+  customersCount: Int!
   description: String
   draftInvoicesCount: Int!
   id: ID!
