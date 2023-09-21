@@ -22,6 +22,7 @@ describe 'Delete Plan Scenarios', :scenarios, type: :request do
       )
 
       create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+      create(:plan, pay_in_advance: true, organization:, amount_cents: 1000, parent_id: plan.id)
     end
 
     subscription = customer.subscriptions.first
@@ -43,16 +44,20 @@ describe 'Delete Plan Scenarios', :scenarios, type: :request do
     jan20 = DateTime.new(2023, 1, 20)
 
     travel_to(jan20) do
+      overridden_plan = plan.children.first
       delete_plan(plan)
 
       # Plan is pending deletion
       expect(plan.reload).to be_pending_deletion
+      expect(overridden_plan.reload).to be_pending_deletion
 
       perform_all_enqueued_jobs
 
       # Plan is now discarded
       expect(plan.reload).not_to be_pending_deletion
+      expect(overridden_plan.reload).not_to be_pending_deletion
       expect(plan).to be_discarded
+      expect(overridden_plan).to be_discarded
 
       # Subscription is terminated
       expect(subscription.reload).to be_terminated

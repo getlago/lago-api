@@ -30,7 +30,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer:,
-          currency: plan.amount_currency,
+          currency: params.dig(:plan_overrides, :amount_currency) || plan.amount_currency,
         )
         return currency_result unless currency_result.success?
 
@@ -120,7 +120,7 @@ module Subscriptions
 
       new_subscription = Subscription.new(
         customer:,
-        plan:,
+        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
         name:,
         external_id: current_subscription.external_id,
         previous_subscription_id: current_subscription.id,
@@ -180,7 +180,7 @@ module Subscriptions
       #       until the next billing day. The new subscription will become active at this date
       Subscription.create!(
         customer:,
-        plan:,
+        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
         name:,
         external_id: current_subscription.external_id,
         previous_subscription_id: current_subscription.id,

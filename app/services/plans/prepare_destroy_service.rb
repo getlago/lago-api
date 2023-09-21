@@ -10,8 +10,11 @@ module Plans
     def call
       return result.not_found_failure!(resource: 'plan') unless plan
 
-      plan.update!(pending_deletion: true)
-      Plans::DestroyJob.perform_later(plan)
+      ActiveRecord::Base.transaction do
+        plan.update!(pending_deletion: true)
+        plan.children.each { |c| c.update!(pending_deletion: true) }
+        Plans::DestroyJob.perform_later(plan)
+      end
 
       result.plan = plan
       result
