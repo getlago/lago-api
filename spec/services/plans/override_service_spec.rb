@@ -35,6 +35,8 @@ RSpec.describe Plans::OverrideService, type: :service do
         amount_cents: 300,
         amount_currency: 'USD',
         invoice_display_name: 'invoice display name',
+        name: 'overridden name',
+        description: 'overridden description',
         trial_period: 20,
         tax_codes: [tax.code],
         charges: charges_params,
@@ -60,8 +62,6 @@ RSpec.describe Plans::OverrideService, type: :service do
       plan = Plan.order(:created_at).last
       expect(plan).to have_attributes(
         organization_id: organization.id,
-        name: parent_plan.name,
-        description: parent_plan.description,
         bill_charges_monthly: parent_plan.bill_charges_monthly,
         code: parent_plan.code,
         interval: parent_plan.interval,
@@ -71,7 +71,9 @@ RSpec.describe Plans::OverrideService, type: :service do
         # Overriden attributes
         amount_cents: 300,
         amount_currency: 'USD',
+        description: 'overridden description',
         invoice_display_name: 'invoice display name',
+        name: 'overridden name',
         trial_period: 20,
       )
 
