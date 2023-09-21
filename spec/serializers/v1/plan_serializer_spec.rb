@@ -6,11 +6,17 @@ RSpec.describe ::V1::PlanSerializer do
   subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges taxes]) }
 
   let(:plan) { create(:plan) }
+  let(:customer) { create(:customer, organization: plan.organization) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:) }
 
-  before { charge }
+  before { subscription && charge }
 
   it 'serializes the object', :aggregate_failures do
+    overridden_plan = create(:plan, parent_id: plan.id)
+    customer2 = create(:customer, organization: plan.organization)
+    create(:subscription, customer: customer2, plan: overridden_plan)
+
     result = JSON.parse(serializer.to_json)
 
     expect(result['plan']).to include(
@@ -26,7 +32,8 @@ RSpec.describe ::V1::PlanSerializer do
       'trial_period' => plan.trial_period,
       'pay_in_advance' => plan.pay_in_advance,
       'bill_charges_monthly' => plan.bill_charges_monthly,
-      'active_subscriptions_count' => 0,
+      'customers_count' => 2,
+      'active_subscriptions_count' => 1,
       'draft_invoices_count' => 0,
       'parent_id' => nil,
       'taxes' => [],
