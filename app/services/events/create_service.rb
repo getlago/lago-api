@@ -24,7 +24,15 @@ module Events
       subscriptions = subscriptions(organization:, customer:, params:, timestamp: event_timestamp)
 
       Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
-      return result unless result.success?
+      unless result.success?
+        # NOTE: Ignore transaction_id validation failure as they are related to duplicated events
+        if result.error.is_a?(BaseService::ValidationFailure) && result.error.messages.keys == %i[transaction_id]
+          delivor_error_webhook(organization:, params:, message: 'transaction_id already exists')
+          return BaseService::Result.new
+        end
+
+        return result
+      end
 
       ActiveRecord::Base.transaction do
         event = organization.events.new
