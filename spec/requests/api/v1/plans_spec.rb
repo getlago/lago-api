@@ -327,6 +327,13 @@ RSpec.describe Api::V1::PlansController, type: :request do
         .to change { plan.reload.pending_deletion }.from(false).to(true)
     end
 
+    it 'marks children plan as pending_deletion' do
+      children_plan = create(:plan, parent_id: plan.id)
+
+      expect { delete_with_token(organization, "/api/v1/plans/#{plan.code}") }
+        .to change { children_plan.reload.pending_deletion }.from(false).to(true)
+    end
+
     it 'returns deleted plan' do
       delete_with_token(organization, "/api/v1/plans/#{plan.code}")
 
