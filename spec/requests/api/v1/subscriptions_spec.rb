@@ -7,6 +7,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500) }
 
+  around { |test| lago_premium!(&test) }
+
   describe 'create' do
     let(:subscription_at) { Time.current.iso8601 }
     let(:ending_at) { (Time.current + 1.year).iso8601 }
@@ -23,12 +25,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         ending_at:,
         plan_overrides: {
           amount_cents: 100,
-          name: 'overridden name'
+          name: 'overridden name',
         },
       }
     end
-
-    around { |test| lago_premium!(&test) }
 
     it 'returns a success', :aggregate_failures do
       post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
@@ -160,17 +160,29 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
   describe 'update' do
     let(:subscription) { create(:pending_subscription, customer:, plan:) }
-    let(:update_params) { { name: 'subscription name new', subscription_at: '2022-09-05T12:23:12Z' } }
+    let(:update_params) do
+      {
+        name: 'subscription name new',
+        subscription_at: '2022-09-05T12:23:12Z',
+        plan_overrides: {
+          amount_cents: 100,
+        },
+      }
+    end
 
     before { subscription }
 
-    it 'updates a subscription' do
+    it 'updates a subscription', :aggregate_failures do
       put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", { subscription: update_params })
 
       expect(response).to have_http_status(:success)
       expect(json[:subscription][:lago_id]).to eq(subscription.id)
       expect(json[:subscription][:name]).to eq('subscription name new')
       expect(json[:subscription][:subscription_at].to_s).to eq('2022-09-05T12:23:12Z')
+
+      expect(json[:subscription][:plan]).to include(
+        amount_cents: 100,
+      )
     end
 
     context 'with not existing subscription' do

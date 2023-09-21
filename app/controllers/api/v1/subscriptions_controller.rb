@@ -49,11 +49,9 @@ module Api
       end
 
       def update
-        service = Subscriptions::UpdateService.new
-
-        result = service.update(
+        result = Subscriptions::UpdateService.call(
           subscription: current_organization.subscriptions.find_by(external_id: params[:external_id]),
-          args: SubscriptionLegacyInput.new(
+          params: SubscriptionLegacyInput.new(
             current_organization,
             update_params,
           ).update_input,
@@ -113,30 +111,40 @@ module Api
             :subscription_date,
             :subscription_at,
             :ending_at,
-            plan_overrides: [
-              :amount_cents,
-              :amount_currency,
-              :description,
-              :invoice_display_name,
-              :name,
-              :trial_period,
-              { tax_codes: [] },
-              {
-                charges: [
-                  :id,
-                  :min_amount_cents,
-                  :invoice_display_name,
-                  { properties: {} },
-                  { group_properties: [] },
-                  { tax_codes: [] },
-                ],
-              },
-            ],
+            plan_overrides:,
           )
       end
 
       def update_params
-        params.require(:subscription).permit(:name, :subscription_date, :subscription_at, :ending_at)
+        params.require(:subscription).permit(
+          :name,
+          :subscription_date,
+          :subscription_at,
+          :ending_at,
+          plan_overrides:,
+        )
+      end
+
+      def plan_overrides
+        [
+          :amount_cents,
+          :amount_currency,
+          :description,
+          :name,
+          :invoice_display_name,
+          :trial_period,
+          { tax_codes: [] },
+          {
+            charges: [
+              :id,
+              :min_amount_cents,
+              :invoice_display_name,
+              { properties: {} },
+              { group_properties: [] },
+              { tax_codes: [] },
+            ],
+          },
+        ]
       end
 
       def index_filters
