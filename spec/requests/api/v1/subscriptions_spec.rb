@@ -32,7 +32,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     it 'returns a success', :aggregate_failures do
       post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
-        expect(response).to have_http_status(:ok)
+      expect(response).to have_http_status(:ok)
 
       expect(json[:subscription]).to include(
         lago_id: String,

@@ -211,10 +211,10 @@ enum ChargeModelEnum {
 }
 
 input ChargeOverridesInput {
-  groupProperties: [GroupPropertiesInput!]!
-  minAmountCents: BigInt!
-  properties: PropertiesInput!
-  taxCodes: [String!]!
+  groupProperties: [GroupPropertiesInput!]
+  minAmountCents: BigInt
+  properties: PropertiesInput
+  taxCodes: [String!]
 }
 
 type ChargeUsage {
@@ -3982,12 +3982,12 @@ enum PlanInterval {
 }
 
 input PlanOverridesInput {
-  amountCents: BigInt!
-  amountCurrency: CurrencyEnum!
-  charges: [ChargeOverridesInput!]!
-  invoiceDisplayName: String!
-  taxCodes: [String!]!
-  trialPeriod: Float!
+  amountCents: BigInt
+  amountCurrency: CurrencyEnum
+  charges: [ChargeOverridesInput!]
+  invoiceDisplayName: String
+  taxCodes: [String!]
+  trialPeriod: Float
 }
 
 type Properties {
