@@ -20,7 +20,7 @@ module Api
       end
 
       def update
-        plan = current_organization.plans.find_by(code: params[:code])
+        plan = current_organization.plans.parents.find_by(code: params[:code])
         result = ::Plans::UpdateService.call(plan:, params: input_params)
 
         if result.success?
@@ -31,7 +31,7 @@ module Api
       end
 
       def destroy
-        plan = current_organization.plans.find_by(code: params[:code])
+        plan = current_organization.plans.parents.find_by(code: params[:code])
         result = ::Plans::PrepareDestroyService.call(plan:)
 
         if result.success?
@@ -42,17 +42,14 @@ module Api
       end
 
       def show
-        plan = current_organization.plans.find_by(
-          code: params[:code],
-        )
-
+        plan = current_organization.plans.parents.find_by(code: params[:code])
         return not_found_error(resource: 'plan') unless plan
 
         render_plan(plan)
       end
 
       def index
-        plans = current_organization.plans
+        plans = current_organization.plans.parents
           .order(created_at: :desc)
           .page(params[:page])
           .per(params[:per_page] || PER_PAGE)

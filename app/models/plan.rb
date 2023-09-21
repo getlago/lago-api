@@ -38,6 +38,7 @@ class Plan < ApplicationRecord
   validate :validate_code_unique
 
   default_scope -> { kept }
+  scope :parents, -> { where(parent_id: nil) }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
