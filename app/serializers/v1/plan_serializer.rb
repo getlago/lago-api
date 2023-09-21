@@ -39,6 +39,13 @@ module V1
       ).serialize
     end
 
+    def customers_count
+      customers_count = model.subscriptions.active.select(:customer_id).distinct.count
+      return customers_count unless model.children
+
+      customers_count + model.children.sum { |c| c.subscriptions.active.select(:customer_id).distinct.count }
+    end
+
     def active_subscriptions_count
       model.subscriptions.active.count
     end
