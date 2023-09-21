@@ -116,7 +116,9 @@ module Api
             plan_overrides: [
               :amount_cents,
               :amount_currency,
+              :description,
               :invoice_display_name,
+              :name,
               :trial_period,
               { tax_codes: [] },
               {

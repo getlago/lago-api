@@ -23,6 +23,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         ending_at:,
         plan_overrides: {
           amount_cents: 100,
+          name: 'overridden name'
         },
       }
     end
@@ -52,6 +53,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       )
       expect(json[:subscription][:plan]).to include(
         amount_cents: 100,
+        name: 'overridden name',
       )
     end
 
