@@ -42,9 +42,30 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
       end
     end
 
-    context 'when the same alert webhook had been already triggered' do
+    context 'when current date is 45 before subscription ending_at' do
+      it 'sends webhook that subscription is going to be terminated for the right subscriptions' do
+        current_date = ending_at - 45.days
+
+        travel_to(current_date) do
+          expect do
+            described_class.perform_now
+          end
+            .to have_enqueued_job(SendWebhookJob)
+            .with('subscription.termination_alert', Subscription)
+            .exactly(:once)
+        end
+      end
+    end
+
+    context 'when the same alert webhook had been already triggered on the same day' do
       let(:webhook_alert1) do
-        create(:webhook, :succeeded, object_id: subscription1.id, webhook_type: 'subscription.termination_alert')
+        create(
+          :webhook,
+          :succeeded,
+          object_id: subscription1.id,
+          webhook_type: 'subscription.termination_alert',
+          created_at: Time.current + 2.months,
+        )
       end
 
       before { webhook_alert1 }
@@ -63,14 +84,20 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
       end
     end
 
-    context 'with customer timezone' do
-      let(:ending_at) { DateTime.parse('2022-10-21 00:30:00') }
-
-      before do
-        subscription1.customer.update!(timezone: 'America/New_York')
+    context 'when the same alert webhook has already been triggered 30 days ago' do
+      let(:webhook_alert1) do
+        create(
+          :webhook,
+          :succeeded,
+          object_id: subscription1.id,
+          webhook_type: 'subscription.termination_alert',
+          created_at: ending_at - 45.days,
+        )
       end
 
-      it 'takes timezone into account' do
+      before { webhook_alert1 }
+
+      it 'sends webhook that subscription is going to be terminated for the right subscriptions' do
         current_date = ending_at - 15.days
 
         travel_to(current_date) do
@@ -79,7 +106,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
           end
             .to have_enqueued_job(SendWebhookJob)
             .with('subscription.termination_alert', Subscription)
-            .exactly(0).times
+            .exactly(:once)
         end
       end
     end
