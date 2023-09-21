@@ -14,7 +14,7 @@ module Clock
           "DATE(subscriptions.ending_at::timestamptz) IN (?)",
           [(Time.current + 45.days).to_date, (Time.current + 15.days).to_date],
         )
-        .where('webhooks.id IS NULL OR webhooks.created_at::date != ?', Time.current)
+        .where('webhooks.id IS NULL OR webhooks.created_at::date != ?', Time.current.to_date)
         .find_each do |subscription|
           if subscription.customer.organization.webhook_endpoints.any?
             SendWebhookJob.perform_later('subscription.termination_alert', subscription)
