@@ -18,7 +18,7 @@ module Clockwork
 
   # NOTE: All clocks run every hour to take customer timezones into account
 
-  every(1.hour, 'schedule:activate_subscriptions', at: '*:30') do
+  every(5.minutes, 'schedule:activate_subscriptions') do
     Clock::ActivateSubscriptionsJob.perform_later
   end
 
