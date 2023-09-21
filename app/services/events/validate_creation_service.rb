@@ -55,7 +55,9 @@ module Events
 
     def validate_create
       return invalid_customer_error if params[:external_customer_id] && !customer
-      return missing_subscription_error if params[:external_subscription_id].blank? && subscriptions.count > 1
+      if params[:external_subscription_id].blank? && subscriptions.count(&:active?) > 1
+        return missing_subscription_error
+      end
       return missing_subscription_error if subscriptions.empty?
 
       if params[:external_subscription_id] &&

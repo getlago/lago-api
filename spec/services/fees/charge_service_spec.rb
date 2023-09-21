@@ -25,6 +25,9 @@ RSpec.describe Fees::ChargeService do
       to_datetime: subscription.started_at.end_of_month.end_of_day,
       charges_from_datetime: subscription.started_at.beginning_of_day,
       charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_duration: (
+        subscription.started_at.end_of_month.end_of_day - subscription.started_at.beginning_of_month
+      ).fdiv(1.day).ceil,
     }
   end
 
@@ -145,6 +148,7 @@ RSpec.describe Fees::ChargeService do
             to_datetime: Time.zone.parse('30 Apr 2022 00:01:00'),
             charges_from_datetime: subscription.started_at,
             charges_to_datetime: Time.zone.parse('30 Apr 2022 00:01:00'),
+            charges_duration: 30,
           }
         end
 
@@ -508,11 +512,14 @@ RSpec.describe Fees::ChargeService do
       end
 
       it 'creates expected fees for recurring_count_agg aggregation type' do
+        from_datetime = subscription.started_at.at_beginning_of_month.next_month.beginning_of_day
+        to_datetime = subscription.started_at.next_month.end_of_month.end_of_day
         boundaries = {
-          from_datetime: subscription.started_at.at_beginning_of_month.next_month.beginning_of_day,
-          to_datetime: subscription.started_at.next_month.end_of_month.end_of_day,
-          charges_from_datetime: subscription.started_at.at_beginning_of_month.next_month.beginning_of_day,
-          charges_to_datetime: subscription.started_at.next_month.end_of_month.end_of_day,
+          from_datetime:,
+          to_datetime:,
+          charges_from_datetime: from_datetime,
+          charges_to_datetime: to_datetime,
+          charges_duration: (to_datetime - from_datetime).fdiv(1.day).ceil,
         }
 
         create(

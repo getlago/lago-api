@@ -24,7 +24,7 @@ de:
     item: Artikel
     unit: Einheit
     unit_price: Stückpreis
-    units_per_second: Einheiten pro Sekunde
+    units_prorated_per_period: Einheiten anteilig pro Sekunde pro %{period}
     amount: Betrag
     amount_with_tax: Betrag (inkl. Steuern)
     amount_without_tax: Betrag (ohne Steuern)
@@ -41,6 +41,10 @@ de:
     yearly: Jährlich
     weekly: Wöchentlich
     quarterly: Vierteljährlich
+    week: woche
+    month: monat
+    quarter: quartal
+    year: jahr
     sub_total: Zwischensumme
     subscription_interval: "%{plan_interval}es Abonnement - %{plan_name}"
 

@@ -52,13 +52,11 @@
                       .body-1 = fee.group.name
                       - unless fee.billable_metric.recurring_count_agg?
                         - if fee.billable_metric.weighted_sum_agg?
-                          .body-3 = I18n.t('invoice.units_per_second')
+                          .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
                         - if fee.charge.percentage?
                           .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                     td
                       .body-2 = fee.units
-                      - if fee.billable_metric.weighted_sum_agg?
-                        .body-2 = fee.total_aggregated_units.round(15)
                     td.body-2 == TaxHelper.applied_taxes(fee)
                     td.body-2 = MoneyHelper.format(fee.amount)
 
@@ -73,13 +71,11 @@
                     .body-1 = fee.billable_metric.name
                     - unless fee.billable_metric.recurring_count_agg?
                       - if fee.billable_metric.weighted_sum_agg?
-                        .body-3 = I18n.t('invoice.units_per_second')
+                        .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
                       - if fee.charge.percentage?
                         .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                   td
                     .body-2 = fees.sum(&:units)
-                    - if fee.billable_metric.weighted_sum_agg?
-                      .body-2 = fees.sum(&:total_aggregated_units).round(15)
                   td.body-2 == TaxHelper.applied_taxes(fee)
                   td.body-2 = MoneyHelper.format(fees.sum(&:amount))
 
@@ -120,13 +116,11 @@
                       .body-1 = fee.group.name
                       - unless fee.billable_metric.recurring_count_agg?
                         - if fee.billable_metric.weighted_sum_agg?
-                          .body-3 = I18n.t('invoice.units_per_second')
+                          .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
                         - if fee.charge.percentage?
                           .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                     td
                       .body-2 = fee.units
-                      - if fee.billable_metric.weighted_sum_agg?
-                        .body-2 = fee.total_aggregated_units.round(15)
                     td.body-2 == TaxHelper.applied_taxes(fee)
                     td.body-2 = MoneyHelper.format(fee.amount)
 
@@ -141,13 +135,11 @@
                     .body-1 = fee.billable_metric.name
                     - unless fee.billable_metric.recurring_count_agg?
                       - if fee.billable_metric.weighted_sum_agg?
-                        .body-3 = I18n.t('invoice.units_per_second')
+                        .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
                       - if fee.charge.percentage?
                         .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                   td
                     .body-2 = fees.sum(&:units)
-                    - if fee.billable_metric.weighted_sum_agg?
-                      .body-2 = fees.sum(&:total_aggregated_units).round(15)
                   td.body-2 == TaxHelper.applied_taxes(fee)
                   td.body-2 = MoneyHelper.format(fees.sum(&:amount))
 

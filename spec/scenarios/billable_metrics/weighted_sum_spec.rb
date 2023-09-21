@@ -8,7 +8,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
 
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
   let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
-  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: { amount: '1000' }) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: { amount: '1' }) }
 
   before { charge }
 
@@ -25,7 +25,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
 
     subscription = customer.subscriptions.first
 
-    travel_to(DateTime.new(2023, 3, 7)) do
+    travel_to(DateTime.new(2023, 3, 5)) do
       create_event(
         {
           code: billable_metric.code,
@@ -36,8 +36,8 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
       )
 
       fetch_current_usage(customer:)
-      expect(json[:customer_usage][:total_amount_cents]).to eq(116)
-      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('0.00115740794324441817')
+      expect(json[:customer_usage][:total_amount_cents]).to eq(217_742)
+      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2177.4193548387096774')
     end
 
     travel_to(DateTime.new(2023, 4, 1)) do
@@ -52,8 +52,8 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
     expect(invoice.fees.charge.count).to eq(1)
 
     fee = invoice.fees.charge.first
-    expect(fee.amount_cents).to eq(116)
-    expect(fee.units.round(5)).to eq(0.00116)
+    expect(fee.amount_cents).to eq(217_742)
+    expect(fee.units.round).to eq(2177)
     expect(fee.total_aggregated_units).to eq(2500)
 
     quantified_event = QuantifiedEvent.last
@@ -81,8 +81,8 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
       )
 
       fetch_current_usage(customer:)
-      expect(json[:customer_usage][:total_amount_cents]).to eq(1268)
-      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('0.01267746920010291043')
+      expect(json[:customer_usage][:total_amount_cents]).to eq(53_333)
+      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('533.3333333333333333')
     end
 
     travel_to(DateTime.new(2023, 5, 1)) do
@@ -97,8 +97,8 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
     expect(invoice.fees.charge.count).to eq(1)
 
     fee = invoice.fees.charge.first
-    expect(fee.amount_cents).to eq(1268)
-    expect(fee.units.round(5)).to eq(0.01268)
+    expect(fee.amount_cents).to eq(53_333)
+    expect(fee.units.round(5)).to eq(533.33333)
     expect(fee.total_aggregated_units).to eq(300)
 
     quantified_event = QuantifiedEvent.order(:created_at).last

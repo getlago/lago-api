@@ -24,7 +24,7 @@ fr:
     item: Article
     unit: Unité
     unit_price: Prix unitaire
-    units_per_second: Unités par seconde
+    units_prorated_per_period: Unités proratisées par seconde par %{period}
     amount: Montant
     amount_with_tax: Montant (TTC)
     amount_without_tax: Montant (HT)
@@ -41,6 +41,10 @@ fr:
     yearly: annuel
     weekly: hebdomadaire
     quarterly: trimestriellement
+    week: semaine
+    month: mois
+    quarter: trimestre
+    year: année
     sub_total: Sous total
     subscription_interval: Abonnement %{plan_interval} - %{plan_name}
 

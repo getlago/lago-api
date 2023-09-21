@@ -26,6 +26,14 @@ module BillableMetrics
       private
 
       def fetch_events(from_datetime:, to_datetime:)
+        if billable_metric.recurring?
+          # NOTE: When recurring we need to scope the fetch using the external ID to handle events
+          #       sent to upgraded/downgraded subscription
+          return recurring_events_scope(from_datetime:, to_datetime:)
+              .where("#{sanitized_field_name} IS NOT NULL")
+              .order(timestamp: :asc)
+        end
+
         events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
       end
 
@@ -54,7 +62,7 @@ module BillableMetrics
             timestamp,
             difference,
             SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul,
-            EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
+            EXTRACT(epoch FROM lead(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp) AS second_duration,
             (#{period_ratio_sql}) AS period_ratio
           FROM events_data
         SQL
@@ -67,7 +75,7 @@ module BillableMetrics
             UNION
             (#{
               fetch_events(from_datetime:, to_datetime:)
-                .select("timestamp, (#{sanitized_field_name})::numeric AS difference")
+                .select("timestamp, (#{sanitized_field_name})::numeric AS difference, events.created_at")
                 .to_sql
             })
             UNION
@@ -83,8 +91,8 @@ module BillableMetrics
         <<-SQL
           SELECT *
           FROM (
-            VALUES (timestamp without time zone '#{from_datetime}', #{initial_value})
-          ) AS t(timestamp, difference)
+            VALUES (timestamp without time zone '#{from_datetime}', #{initial_value}, timestamp without time zone '#{from_datetime}')
+          ) AS t(timestamp, difference, created_at)
         SQL
       end
 
@@ -92,29 +100,33 @@ module BillableMetrics
         <<-SQL
           SELECT *
           FROM (
-            VALUES (timestamp without time zone '#{to_datetime}', 0)
-          ) AS t(timestamp, difference)
+            VALUES (timestamp without time zone '#{to_datetime.ceil}', 0, timestamp without time zone '#{to_datetime.ceil}')
+          ) AS t(timestamp, difference, created_at)
         SQL
       end
 
       def period_ratio_sql
         <<-SQL
           -- NOTE: duration in seconds between current event and next one
-          -- TODO: takes weighted interval into account (+ group per interval in CTE ??)
-          CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp) = 0
+          CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp) = 0
           THEN
             0 -- NOTE: duration was null so usage is null
           ELSE
             -- NOTE: cumulative sum from previous events in the period
             (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
-            /
+            *
             -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-            EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime}') OVER (ORDER BY timestamp) - timestamp)
+            EXTRACT(EPOCH FROM LEAD(timestamp, 1, '#{to_datetime.ceil}') OVER (ORDER BY timestamp) - timestamp)
+            /
+            -- NOTE: full duration of the period
+            #{boundaries[:charges_duration].days.to_i}
           END
         SQL
       end
 
       def latest_value
+        return @latest_value if @latest_value
+
         quantified_events = QuantifiedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(customer_id: subscription.customer_id)
@@ -123,10 +135,31 @@ module BillableMetrics
           .order(added_at: :desc)
 
         quantified_events = quantified_events.where(group_id: group.id) if group
-
         quantified_event = quantified_events.first
 
-        BigDecimal(quantified_event&.properties&.[](QuantifiedEvent::RECURRING_TOTAL_UNITS) || 0)
+        if quantified_event
+          return @latest_value = BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS))
+        end
+        return @latest_value = BigDecimal(latest_value_from_events) if subscription.previous_subscription_id?
+
+        @latest_value = BigDecimal(0)
+      end
+
+      # NOTE: In case of upgrade/downgrade, if latest value is not persisted yet,
+      #       we need to fetch latest value from previous events attached to the same external subscription ID
+      def latest_value_from_events
+        scope = customer.events
+          .joins(:subscription)
+          .where(subscription: { external_id: subscription.external_id })
+          .where(code: billable_metric.code)
+          .where(created_at: billable_metric.created_at...)
+          .where(timestamp: ..from_datetime)
+          .where.not(subscription_id: subscription.id)
+          .where("#{sanitized_field_name} IS NOT NULL")
+
+        return scope.sum("(#{sanitized_field_name})::numeric") unless group
+
+        group_scope(scope).sum("(#{sanitized_field_name})::numeric")
       end
     end
   end

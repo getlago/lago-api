@@ -24,7 +24,7 @@ nb:
     item: Vare
     unit: Enhet
     unit_price: Enhetspris
-    units_per_second: Enheter per sekund
+    units_prorated_per_period: Enheter proratert per sekund per %{period}
     amount: Beløp
     amount_with_tax: Beløp (inkl. MVA)
     amount_without_tax: Beløp (ekskl. MVA)
@@ -41,6 +41,10 @@ nb:
     yearly: Årlig
     weekly: Ukentlig
     quarterly: Kvartalsvis
+    week: uke
+    month: måned
+    quarter: kvartal
+    year: år
     sub_total: Sub total
     subscription_interval: "%{plan_interval} abonnement - %{plan_name}"
 
