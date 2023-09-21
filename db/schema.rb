@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_09_20_083133) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_21_094357) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -333,6 +333,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_20_083133) do
     t.uuid "subscription_id"
     t.datetime "deleted_at"
     t.uuid "quantified_event_id"
+    t.string "external_customer_id"
+    t.string "external_subscription_id"
+    t.decimal "value"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
