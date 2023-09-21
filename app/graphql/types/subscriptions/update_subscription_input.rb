@@ -9,6 +9,7 @@ module Types
 
       argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :name, String, required: false
+      argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
     end
   end

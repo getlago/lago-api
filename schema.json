@@ -16865,7 +16865,31 @@
               "deprecationReason": null
             },
             {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceDisplayName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -23303,6 +23327,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "planOverrides",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PlanOverridesInput",
                 "ofType": null
               },
               "defaultValue": null,

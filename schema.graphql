@@ -3984,7 +3984,9 @@ input PlanOverridesInput {
   amountCents: BigInt
   amountCurrency: CurrencyEnum
   charges: [ChargeOverridesInput!]
+  description: String
   invoiceDisplayName: String
+  name: String
   taxCodes: [String!]
   trialPeriod: Float
 }
@@ -5546,6 +5548,7 @@ input UpdateSubscriptionInput {
   endingAt: ISO8601DateTime
   id: ID!
   name: String
+  planOverrides: PlanOverridesInput
   subscriptionAt: ISO8601DateTime
 }
 
