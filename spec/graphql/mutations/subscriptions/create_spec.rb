@@ -25,13 +25,16 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           },
           plan {
             id
+            amountCents
           }
         }
       }
     GQL
   end
 
-  it 'creates a subscription' do
+  around { |test| lago_premium!(&test) }
+
+  it 'creates a subscription', :aggregate_failures do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -44,23 +47,31 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
           externalId: 'custom-external-id',
           billingTime: 'anniversary',
           endingAt: ending_at.iso8601,
+          planOverrides: {
+            amountCents: 100,
+          },
         },
       },
     )
 
     result_data = result['data']['createSubscription']
 
-    aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['status'].to_sym).to eq(:active)
-      expect(result_data['name']).to eq('invoice display name')
-      expect(result_data['externalId']).to eq('custom-external-id')
-      expect(result_data['startedAt']).to be_present
-      expect(result_data['customer']['id']).to eq(customer.id)
-      expect(result_data['plan']['id']).to eq(plan.id)
-      expect(result_data['billingTime']).to eq('anniversary')
-      expect(result_data['endingAt']).to eq(ending_at.iso8601)
-    end
+    expect(result_data).to include(
+      'id' => String,
+      'status' => 'active',
+      'name' => 'invoice display name',
+      'externalId' => 'custom-external-id',
+      'startedAt' => String,
+      'billingTime' => 'anniversary',
+      'endingAt' => ending_at.iso8601,
+    )
+    expect(result_data['customer']).to include(
+      'id' => customer.id,
+    )
+    expect(result_data['plan']).to include(
+      'id' => String,
+      'amountCents' => '100',
+    )
   end
 
   context 'without current user' do

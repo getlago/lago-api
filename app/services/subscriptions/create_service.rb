@@ -247,7 +247,7 @@ module Subscriptions
     end
 
     def override_plan(plan)
-      Plans::OverrideService.call(plan:, params: params[:plan_overrides].with_indifferent_access).plan
+      Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
     end
   end
 end

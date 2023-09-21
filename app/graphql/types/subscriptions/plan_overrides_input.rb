@@ -3,12 +3,12 @@
 module Types
   module Subscriptions
     class PlanOverridesInput < Types::BaseInputObject
-      argument :amount_cents, GraphQL::Types::BigInt
-      argument :amount_currency, Types::CurrencyEnum
-      argument :charges, [Types::Subscriptions::ChargeOverridesInput]
-      argument :invoice_display_name, String
-      argument :tax_codes, [String]
-      argument :trial_period, Float
+      argument :amount_cents, GraphQL::Types::BigInt, required: false
+      argument :amount_currency, Types::CurrencyEnum, required: false
+      argument :charges, [Types::Subscriptions::ChargeOverridesInput], required: false
+      argument :invoice_display_name, String, required: false
+      argument :tax_codes, [String], required: false
+      argument :trial_period, Float, required: false
     end
   end
 end
