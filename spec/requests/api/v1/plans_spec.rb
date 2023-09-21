@@ -115,6 +115,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               group_properties: [
                 {
                   group_id: group.id,
+                  invoice_display_name: 'Europe',
                   values: { amount: '0.22' },
                 },
               ],
@@ -134,6 +135,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           [
             {
               group_id: group.id,
+              invoice_display_name: 'Europe',
               values: { amount: '0.22' },
             },
           ],
@@ -266,6 +268,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               group_properties: [
                 {
                   group_id: group.id,
+                  invoice_display_name: 'Europe',
                   values: { amount: '0.22' },
                 },
               ],
@@ -285,6 +288,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           [
             {
               group_id: group.id,
+              invoice_display_name: 'Europe',
               values: { amount: '0.22' },
             },
           ],
