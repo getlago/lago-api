@@ -8078,7 +8078,7 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "activeSubscriptionCount",
+              "name": "activeSubscriptionsCount",
               "description": "Number of active subscriptions per customer",
               "type": {
                 "kind": "NON_NULL",
@@ -16417,24 +16417,6 @@
               ]
             },
             {
-              "name": "chargeCount",
-              "description": "Number of charges attached to a plan",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "charges",
               "description": null,
               "type": {
@@ -16448,6 +16430,24 @@
                     "name": "Charge",
                     "ofType": null
                   }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "chargesCount",
+              "description": "Number of charges attached to a plan",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
                 }
               },
               "isDeprecated": false,

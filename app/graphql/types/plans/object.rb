@@ -27,7 +27,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :active_subscriptions_count, Integer, null: false
-      field :charge_count, Integer, null: false, description: 'Number of charges attached to a plan'
+      field :charges_count, Integer, null: false, description: 'Number of charges attached to a plan'
       field :customers_count, Integer, null: false, description: 'Number of customers attached to a plan'
       field :draft_invoices_count, Integer, null: false
       field :subscriptions_count, Integer, null: false
@@ -36,7 +36,7 @@ module Types
         object.charges.order(created_at: :asc)
       end
 
-      def charge_count
+      def charges_count
         object.charges.count
       end
 

@@ -23,8 +23,8 @@ RSpec.describe Types::Plans::Object do
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:updated_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:active_subscriptions_count).of_type('Int!') }
-  it { is_expected.to have_field(:charge_count).of_type('Int!') }
-  it { is_expected.to have_field(:customer_count).of_type('Int!') }
+  it { is_expected.to have_field(:charges_count).of_type('Int!') }
+  it { is_expected.to have_field(:customers_count).of_type('Int!') }
   it { is_expected.to have_field(:draft_invoices_count).of_type('Int!') }
   it { is_expected.to have_field(:subscriptions_count).of_type('Int!') }
 end

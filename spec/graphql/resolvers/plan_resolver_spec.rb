@@ -9,7 +9,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
         plan(id: $planId) {
           id
           name
-          customerCount
+          customersCount
           subscriptionsCount
           activeSubscriptionsCount
           draftInvoicesCount
@@ -46,7 +46,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
     aggregate_failures do
       expect(plan_response['id']).to eq(plan.id)
       expect(plan_response['subscriptionsCount']).to eq(2)
-      expect(plan_response['customerCount']).to eq(1)
+      expect(plan_response['customersCount']).to eq(1)
     end
   end
 
