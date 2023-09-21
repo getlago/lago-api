@@ -95,10 +95,8 @@ module PaymentProviders
     def handle_event(organization:, event_json:)
       event = ::Stripe::Event.construct_from(JSON.parse(event_json))
       unless WEBHOOKS_EVENTS.include?(event.type)
-        return result.service_failure!(
-          code: 'webhook_error',
-          message: "Invalid stripe event type: #{event.type}",
-        )
+        Rails.logger.warn("Unexpected stripe event type: #{event.type}")
+        return result
       end
 
       case event.type

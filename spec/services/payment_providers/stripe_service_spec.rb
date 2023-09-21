@@ -406,21 +406,18 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         }
       end
 
-      it 'returns an error result' do
+      it 'returns an empty result' do
         result = stripe_service.handle_event(
           organization:,
           event_json: event.to_json,
         )
 
         aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('webhook_error')
-          expect(result.error.error_message).to eq('Invalid stripe event type: invalid')
-        end
+          expect(result).to be_success
 
-        expect(Invoices::Payments::StripeService).not_to have_received(:new)
-        expect(payment_service).not_to have_received(:update_payment_status)
+          expect(Invoices::Payments::StripeService).not_to have_received(:new)
+          expect(payment_service).not_to have_received(:update_payment_status)
+        end
       end
     end
   end
