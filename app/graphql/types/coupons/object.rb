@@ -33,9 +33,9 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :applied_coupons_count, Integer, null: false
-      field :customer_count, Integer, null: false, description: 'Number of customers using this coupon'
+      field :customers_count, Integer, null: false, description: 'Number of customers using this coupon'
 
-      def customer_count
+      def customers_count
         object.applied_coupons.active.select(:customer_id).distinct.count
       end
 
