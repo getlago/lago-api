@@ -14,13 +14,7 @@ module Mutations
 
       def resolve(**args)
         subscription = context[:current_user].subscriptions.find_by(id: args[:id])
-
-        result = ::Subscriptions::UpdateService
-          .new(context[:current_user])
-          .update(
-            subscription:,
-            args:,
-          )
+        result = ::Subscriptions::UpdateService.call(subscription:, params: args)
 
         result.success? ? result.subscription : result_error(result)
       end

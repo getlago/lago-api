@@ -3,16 +3,16 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(membership.user) }
+  subject(:update_service) { described_class.new(subscription:, params:) }
 
   let(:membership) { create(:membership) }
   let(:subscription) { create(:subscription, subscription_at: Time.current - 1.year) }
 
-  describe 'update' do
+  describe '#call' do
     let(:subscription_at) { '2022-07-07T00:00:00Z' }
     let(:ending_at) { Time.current.beginning_of_day + 1.month }
 
-    let(:update_args) do
+    let(:params) do
       {
         name: 'new name',
         ending_at:,
@@ -23,7 +23,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     before { subscription }
 
     it 'updates the subscription' do
-      result = update_service.update(subscription:, args: update_args)
+      result = update_service.call
 
       expect(result).to be_success
 
@@ -35,14 +35,14 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     end
 
     context 'when subscription_at is not passed at all' do
-      let(:update_args) do
+      let(:params) do
         {
           name: 'new name',
         }
       end
 
       it 'updates the subscription' do
-        result = update_service.update(subscription:, args: update_args)
+        result = update_service.call
 
         expect(result).to be_success
 
@@ -57,7 +57,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       let(:subscription) { create(:pending_subscription) }
 
       it 'updates the subscription_at as well' do
-        result = update_service.update(subscription:, args: update_args)
+        result = update_service.call
 
         expect(result).to be_success
 
@@ -73,7 +73,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         before { subscription.plan.update!(pay_in_advance: true) }
 
         it 'activates subscription' do
-          result = update_service.update(subscription:, args: update_args)
+          result = update_service.call
 
           expect(result).to be_success
 
@@ -85,21 +85,23 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
         it 'enqueues a job to bill the subscription' do
           expect do
-            update_service.update(subscription:, args: update_args)
+            update_service.call
           end.to have_enqueued_job(BillSubscriptionJob)
         end
       end
     end
 
     context 'when subscription is nil' do
-      let(:update_args) do
+      let(:params) do
         {
           name: 'new name',
         }
       end
 
+      let(:subscription) { nil }
+
       it 'returns an error' do
-        result = update_service.update(subscription: nil, args: update_args)
+        result = update_service.call
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('subscription_not_found')
