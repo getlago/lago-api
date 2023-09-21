@@ -107,6 +107,29 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           expect { billing_service.call }.not_to have_enqueued_job
         end
       end
+
+      context 'when ending_at is the same as billing day' do
+        let(:billing_date) { DateTime.parse('01 Feb 2022') }
+        let(:subscription) do
+          create(
+            :subscription,
+            plan:,
+            subscription_at:,
+            started_at: Time.zone.now,
+            billing_time:,
+            ending_at: billing_date,
+          )
+        end
+
+        it 'does not enqueue a job on billing day' do
+          travel_to(billing_date) do
+            billing_service.call
+
+            expect(BillSubscriptionJob).not_to have_been_enqueued
+              .with([subscription], billing_date.to_i, recurring: true)
+          end
+        end
+      end
     end
 
     context 'when billed quarterly with calendar billing time' do
