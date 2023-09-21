@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     <<~GQL
       query($couponId: ID!) {
         coupon(id: $couponId) {
-          id name description customerCount appliedCouponsCount expirationAt
+          id name description customersCount appliedCouponsCount expirationAt
         }
       }
     GQL
@@ -40,7 +40,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
 
     aggregate_failures do
       expect(coupon_response['id']).to eq(coupon.id)
-      expect(coupon_response['customerCount']).to eq(1)
+      expect(coupon_response['customersCount']).to eq(1)
       expect(coupon_response['description']).to eq(coupon.description)
       expect(coupon_response['appliedCouponsCount']).to eq(1)
     end

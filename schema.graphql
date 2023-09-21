@@ -2572,7 +2572,7 @@ type Customer {
   """
   Number of active subscriptions per customer
   """
-  activeSubscriptionCount: Int!
+  activeSubscriptionsCount: Int!
   addressLine1: String
   addressLine2: String
   applicableTimezone: TimezoneEnum!
@@ -3941,12 +3941,12 @@ type Plan {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  charges: [Charge!]
 
   """
   Number of charges attached to a plan
   """
-  chargeCount: Int!
-  charges: [Charge!]
+  chargesCount: Int!
   code: String!
   createdAt: ISO8601DateTime!
 

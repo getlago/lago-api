@@ -7,7 +7,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     <<~GQL
       query($addOnId: ID!) {
         addOn(id: $addOnId) {
-          id name customerCount appliedAddOnsCount
+          id name customersCount appliedAddOnsCount
         }
       }
     GQL
@@ -45,7 +45,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     aggregate_failures do
       expect(add_on_response['id']).to eq(add_on.id)
       expect(add_on_response['name']).to eq(add_on.name)
-      expect(add_on_response['customerCount']).to eq(2)
+      expect(add_on_response['customersCount']).to eq(2)
       expect(add_on_response['appliedAddOnsCount']).to eq(4)
     end
   end

@@ -51,7 +51,7 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :active_subscription_count, Integer, null: false, description: 'Number of active subscriptions per customer'
+      field :active_subscriptions_count, Integer, null: false, description: 'Number of active subscriptions per customer'
       field :credit_notes_balance_amount_cents,
             GraphQL::Types::BigInt,
             null: false,
@@ -87,7 +87,7 @@ module Types
         object.credit_notes.finalized.any?
       end
 
-      def active_subscription_count
+      def active_subscriptions_count
         object.active_subscriptions.count
       end
 
