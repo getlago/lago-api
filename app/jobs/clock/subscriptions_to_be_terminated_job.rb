@@ -11,7 +11,7 @@ module Clock
                "webhooks.webhook_type = 'subscription.termination_alert'")
         .active
         .where(
-          "DATE(subscriptions.ending_at::timestamptz) IN (?)",
+          'DATE(subscriptions.ending_at::timestamptz) IN (?)',
           [(Time.current + 45.days).to_date, (Time.current + 15.days).to_date],
         )
         .where('webhooks.id IS NULL OR webhooks.created_at::date != ?', Time.current.to_date)
