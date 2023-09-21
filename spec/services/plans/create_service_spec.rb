@@ -131,6 +131,7 @@ RSpec.describe Plans::CreateService, type: :service do
           nb_graduated_charges: 1,
           nb_package_charges: 0,
           organization_id: plan.organization_id,
+          parent_id: nil,
         },
       )
     end

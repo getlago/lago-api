@@ -54,7 +54,10 @@ RSpec.describe Plans::OverrideService, type: :service do
 
     around { |test| lago_premium!(&test) }
 
-    before { charge }
+    before do
+      charge
+      allow(SegmentTrackJob).to receive(:perform_later)
+    end
 
     it 'creates a plan based from the parent plan', :aggregate_failures do
       expect { override_service.call }.to change(Plan, :count).by(1)
@@ -78,6 +81,32 @@ RSpec.describe Plans::OverrideService, type: :service do
       )
 
       expect(plan.taxes).to contain_exactly(tax)
+    end
+
+    it 'calls SegmentTrackJob' do
+      plan = override_service.call.plan
+
+      expect(SegmentTrackJob).to have_received(:perform_later).with(
+        membership_id: CurrentContext.membership,
+        event: 'plan_created',
+        properties: {
+          code: plan.code,
+          name: plan.name,
+          invoice_display_name: plan.invoice_display_name,
+          description: plan.description,
+          plan_interval: plan.interval,
+          plan_amount_cents: plan.amount_cents,
+          plan_period: 'arrears',
+          trial: plan.trial_period,
+          nb_charges: 1,
+          nb_standard_charges: 1,
+          nb_percentage_charges: 0,
+          nb_graduated_charges: 0,
+          nb_package_charges: 0,
+          organization_id: plan.organization_id,
+          parent_id: plan.parent.id,
+        },
+      )
     end
 
     it 'creates charges based from the parent plan', :aggregate_failures do
