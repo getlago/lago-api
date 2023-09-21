@@ -41,7 +41,12 @@ module Types
       end
 
       def customers_count
-        object.subscriptions.active.select(:customer_id).distinct.count
+        customers_count = object.subscriptions.active.select(:customer_id).distinct.count
+        return customers_count unless object.children
+
+        customers_count + model.children.joins(:subscriptions).where(
+          subscriptions: { status: :active },
+        ).select('distinct(customer_id)').count
       end
 
       def subscriptions_count

@@ -16,6 +16,7 @@ module V1
         trial_period: model.trial_period,
         pay_in_advance: model.pay_in_advance,
         bill_charges_monthly: model.bill_charges_monthly,
+        customers_count:,
         active_subscriptions_count:,
         draft_invoices_count:,
         parent_id: model.parent_id,
@@ -36,6 +37,15 @@ module V1
         collection_name: 'charges',
         includes: include?(:taxes) ? %i[taxes] : [],
       ).serialize
+    end
+
+    def customers_count
+      customers_count = model.subscriptions.active.select(:customer_id).distinct.count
+      return customers_count unless model.children
+
+      customers_count + model.children.joins(:subscriptions).where(
+        subscriptions: { status: :active },
+      ).select('distinct(customer_id)').count
     end
 
     def active_subscriptions_count
