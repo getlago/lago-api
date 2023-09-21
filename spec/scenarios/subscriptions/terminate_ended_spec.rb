@@ -178,6 +178,84 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
       end
     end
 
+    context 'with America/Bogota timezone' do
+      let(:timezone) { 'America/Bogota' }
+
+      it 'bills correctly previous billing period if it has not been billed yet' do
+        subscription = nil
+
+        travel_to(creation_time) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+              billing_time: 'anniversary',
+              subscription_at: subscription_at.iso8601,
+              ending_at: ending_at.iso8601,
+            },
+          )
+
+          subscription = customer.subscriptions.first
+          expect(subscription).to be_active
+        end
+
+        travel_to(ending_at - 5.hours) do
+          Clock::TerminateEndedSubscriptionsJob.perform_now
+
+          perform_all_enqueued_jobs
+
+          invoice = subscription.invoices.first
+
+          aggregate_failures do
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(1000)
+            expect(invoice.issuing_date.iso8601).to eq('2023-10-04')
+          end
+        end
+      end
+    end
+
+    context 'with Asia/Bangkok timezone' do
+      let(:timezone) { 'Asia/Bangkok' }
+
+      it 'bills correctly previous billing period if it has not been billed yet' do
+        subscription = nil
+
+        travel_to(creation_time) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+              billing_time: 'anniversary',
+              subscription_at: subscription_at.iso8601,
+              ending_at: ending_at.iso8601,
+            },
+          )
+
+          subscription = customer.subscriptions.first
+          expect(subscription).to be_active
+        end
+
+        travel_to(ending_at - 5.hours) do
+          Clock::TerminateEndedSubscriptionsJob.perform_now
+
+          perform_all_enqueued_jobs
+
+          invoice = subscription.invoices.first
+
+          aggregate_failures do
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(1000)
+            expect(invoice.issuing_date.iso8601).to eq('2023-10-05')
+          end
+        end
+      end
+    end
+
     context 'when billing time is calendar' do
       let(:creation_time) { DateTime.new(2023, 8, 1, 0, 0) }
       let(:subscription_at) { DateTime.new(2023, 8, 1, 0, 0) }

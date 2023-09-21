@@ -293,11 +293,12 @@ module Invoices
       duplicate = subscription.dup.tap { |s| s.status = :active }
 
       current_time = Time.zone.at(timestamp)
+      current_time_in_timezone = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone)
 
       dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time - 1.day, current_usage: true)
 
-      one_day_ago = (current_time.in_time_zone(customer.applicable_timezone) - 1.day).to_date
-      return boundaries if dates_service.charges_to_datetime.to_date != one_day_ago
+      return boundaries if current_time_in_timezone < dates_service.charges_to_datetime
+      return boundaries unless (current_time_in_timezone - dates_service.charges_to_datetime) < 1.day
 
       # We should calculate boundaries as if subscription was not terminated
       dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time, current_usage: false)
