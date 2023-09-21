@@ -19,6 +19,9 @@ module Events
     end
 
     def call(organization:, params:, timestamp:, metadata:)
+      @organization = organization
+      @code = params[:code]
+
       customer = customer(organization:, params:)
       event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
       subscriptions = subscriptions(organization:, customer:, params:, timestamp: event_timestamp)
@@ -43,6 +46,9 @@ module Events
         event.properties = params[:properties] || {}
         event.metadata = metadata || {}
         event.timestamp = event_timestamp
+        event.external_customer_id = customer.external_id
+        event.external_subscription_id = subscriptions.first.external_id
+        event.value = event.properties[billable_metric&.field_name]
 
         event.save!
 
@@ -81,6 +87,8 @@ module Events
     end
 
     private
+
+    attr_reader :organization, :code
 
     delegate :event, to: :result
 
@@ -156,7 +164,7 @@ module Events
     end
 
     def billable_metric
-      @billable_metric ||= event.organization.billable_metrics.find_by(code: event.code)
+      @billable_metric ||= organization.billable_metrics.find_by(code:)
     end
 
     def delivor_error_webhook(organization:, params:, message:)

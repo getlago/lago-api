@@ -164,6 +164,9 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(event.external_customer_id).to eq(customer.external_id)
+          expect(event.external_subscription_id).to eq(subscription.external_id)
+          expect(event.value).to be_nil
         end
       end
     end
@@ -207,6 +210,9 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(active_subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(event.external_customer_id).to eq(customer.external_id)
+          expect(event.external_subscription_id).to eq(subscription.external_id)
+          expect(event.value).to be_nil
         end
       end
     end
@@ -230,6 +236,9 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(event.external_customer_id).to eq(customer.external_id)
+          expect(event.external_subscription_id).to eq(subscription.external_id)
+          expect(event.value).to be_nil
         end
       end
     end
@@ -263,6 +272,9 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(event.external_customer_id).to eq(customer.external_id)
+          expect(event.external_subscription_id).to eq(subscription.external_id)
+          expect(event.value).to be_nil
         end
       end
     end
@@ -353,6 +365,48 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
           expect(event.properties).to eq({})
+          expect(event.external_customer_id).to eq(customer.external_id)
+          expect(event.external_subscription_id).to eq(subscription.external_id)
+          expect(event.value).to be_nil
+        end
+      end
+    end
+
+    context 'when billable metric has a field name' do
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+
+      let(:create_args) do
+        {
+          external_customer_id: customer.external_id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          timestamp:,
+          properties: { billable_metric.field_name => 42.42 },
+        }
+      end
+
+      it 'creates a new event' do
+        result = create_service.call(
+          organization:,
+          params: create_args,
+          timestamp:,
+          metadata: {},
+        )
+
+        expect(result).to be_success
+
+        event = result.event
+
+        aggregate_failures do
+          expect(event.customer_id).to eq(customer.id)
+          expect(event.organization_id).to eq(organization.id)
+          expect(event.code).to eq(billable_metric.code)
+          expect(event.subscription_id).to eq(subscription.id)
+          expect(event.timestamp).to be_a(Time)
+          expect(event.properties).to eq({ billable_metric.field_name => 42.42 })
+          expect(event.external_customer_id).to eq(customer.external_id)
+          expect(event.external_subscription_id).to eq(subscription.external_id)
+          expect(event.value).to eq('42.42')
         end
       end
     end
