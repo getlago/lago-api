@@ -22,6 +22,11 @@ module Subscriptions
     end
 
     def call
+      amount_currency = params.dig(:plan_overrides, :amount_currency)
+      @plan.amount_currency = amount_currency if amount_currency
+      amount_cents = params.dig(:plan_overrides, :amount_cents)
+      @plan.amount_cents = amount_cents if amount_cents
+
       return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
 
       # NOTE: in API, it's possible to create a subscription for a new customer
@@ -30,7 +35,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer:,
-          currency: params.dig(:plan_overrides, :amount_currency) || plan.amount_currency,
+          currency: plan.amount_currency,
         )
         return currency_result unless currency_result.success?
 
