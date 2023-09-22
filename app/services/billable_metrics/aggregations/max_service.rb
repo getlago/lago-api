@@ -36,7 +36,7 @@ module BillableMetrics
       private
 
       def fetch_events(from_datetime:, to_datetime:)
-        events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+        events_scope(from_datetime:, to_datetime:).where(field_presence_condition)
       end
     end
   end
