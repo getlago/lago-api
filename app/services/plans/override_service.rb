@@ -31,7 +31,7 @@ module Plans
 
         plan.charges.each do |charge|
           charge_params = (
-            params[:charges].find { |p| p[:id] == charge.id } || {}
+            params[:charges]&.find { |p| p[:id] == charge.id } || {}
           ).merge(plan_id: new_plan.id)
           Charges::OverrideService.call(charge:, params: charge_params)
         end
