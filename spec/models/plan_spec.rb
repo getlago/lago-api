@@ -80,7 +80,7 @@ RSpec.describe Plan, type: :model do
   describe '#active_subscriptions_count' do
     let(:plan) { create(:plan) }
 
-    it 'returns the number of impacted customers' do
+    it 'returns the number of active subscriptions' do
       create(:subscription, plan:)
       overridden_plan = create(:plan, parent_id: plan.id)
       create(:subscription, plan: overridden_plan)
@@ -100,6 +100,23 @@ RSpec.describe Plan, type: :model do
       create(:subscription, customer: customer2, plan: overridden_plan)
 
       expect(plan.customers_count).to eq(2)
+    end
+  end
+
+  describe '#draft_invoices_count' do
+    let(:plan) { create(:plan) }
+
+    it 'returns the number draft invoices' do
+      subscription = create(:subscription, plan:)
+      invoice = create(:invoice, :draft)
+      create(:invoice_subscription, invoice:, subscription:)
+
+      overridden_plan = create(:plan, parent_id: plan.id)
+      subscription2 = create(:subscription, plan: overridden_plan)
+      invoice2 = create(:invoice, :draft)
+      create(:invoice_subscription, invoice: invoice2, subscription: subscription2)
+
+      expect(plan.draft_invoices_count).to eq(2)
     end
   end
 end

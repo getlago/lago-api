@@ -33,7 +33,7 @@ RSpec.describe ::V1::PlanSerializer do
       'pay_in_advance' => plan.pay_in_advance,
       'bill_charges_monthly' => plan.bill_charges_monthly,
       'customers_count' => 2,
-      'active_subscriptions_count' => 1,
+      'active_subscriptions_count' => 2,
       'draft_invoices_count' => 0,
       'parent_id' => nil,
       'taxes' => [],
