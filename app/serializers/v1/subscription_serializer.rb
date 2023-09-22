@@ -40,7 +40,10 @@ module V1
     end
 
     def plan
-      ::V1::PlanSerializer.new(model.plan).serialize
+      ::V1::PlanSerializer.new(
+        model.plan,
+        includes: %i[charges taxes],
+      ).serialize
     end
   end
 end
