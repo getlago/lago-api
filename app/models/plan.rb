@@ -71,6 +71,13 @@ class Plan < ApplicationRecord
     amount_cents * 52
   end
 
+  def active_subscriptions_count
+    count = subscriptions.active.count
+    return count unless children
+
+    count + children.joins(:subscriptions).where(subscriptions: { status: :active }).count
+  end
+
   def customers_count
     count = subscriptions.active.select(:customer_id).distinct.count
     return count unless children
