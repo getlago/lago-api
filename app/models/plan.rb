@@ -98,7 +98,7 @@ class Plan < ApplicationRecord
     return unless organization
     return if parent_id?
 
-    plan = organization.plans.where(code:).first
+    plan = organization.plans.parents.where(code:).first
     errors.add(:code, :taken) if plan && plan != self
   end
 end
