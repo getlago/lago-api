@@ -17,7 +17,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         bill_charges_monthly: model.bill_charges_monthly,
         customers_count: model.customers_count,
-        active_subscriptions_count:,
+        active_subscriptions_count: model.active_subscriptions_count,
         draft_invoices_count:,
         parent_id: model.parent_id,
       }
@@ -39,8 +39,11 @@ module V1
       ).serialize
     end
 
-    def active_subscriptions_count
-      model.subscriptions.active.count
+    def customers_count
+      customers_count = model.subscriptions.active.select(:customer_id).distinct.count
+      return customers_count unless model.children
+
+      customers_count + model.children.sum { |c| c.subscriptions.active.select(:customer_id).distinct.count }
     end
 
     def draft_invoices_count

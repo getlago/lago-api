@@ -77,6 +77,18 @@ RSpec.describe Plan, type: :model do
     end
   end
 
+  describe '#active_subscriptions_count' do
+    let(:plan) { create(:plan) }
+
+    it 'returns the number of impacted customers' do
+      create(:subscription, plan:)
+      overridden_plan = create(:plan, parent_id: plan.id)
+      create(:subscription, plan: overridden_plan)
+
+      expect(plan.active_subscriptions_count).to eq(2)
+    end
+  end
+
   describe '#customers_count' do
     let(:customer) { create(:customer) }
     let(:plan) { create(:plan) }

@@ -44,10 +44,6 @@ module Types
         object.subscriptions.count
       end
 
-      def active_subscriptions_count
-        object.subscriptions.active.count
-      end
-
       def draft_invoices_count
         object.subscriptions.joins(:invoices)
           .merge(Invoice.draft)
