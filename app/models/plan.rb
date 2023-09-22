@@ -75,16 +75,21 @@ class Plan < ApplicationRecord
     count = subscriptions.active.count
     return count unless children
 
-    count + children.joins(:subscriptions).where(subscriptions: { status: :active }).count
+    count + children.joins(:subscriptions).merge(Subscription.active).select('subscriptions.id').distinct.count
   end
 
   def customers_count
     count = subscriptions.active.select(:customer_id).distinct.count
     return count unless children
 
-    count + children.joins(:subscriptions).where(
-      subscriptions: { status: :active },
-    ).select('distinct(customer_id)').count
+    count + children.joins(:subscriptions).merge(Subscription.active).select(:customer_id).distinct.count
+  end
+
+  def draft_invoices_count
+    count = subscriptions.joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
+    return count unless children
+
+    count + children.joins(:subscriptions).joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
   end
 
   private

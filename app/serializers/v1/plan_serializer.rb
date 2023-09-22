@@ -18,7 +18,7 @@ module V1
         bill_charges_monthly: model.bill_charges_monthly,
         customers_count: model.customers_count,
         active_subscriptions_count: model.active_subscriptions_count,
-        draft_invoices_count:,
+        draft_invoices_count: model.draft_invoices_count,
         parent_id: model.parent_id,
       }
 
@@ -44,15 +44,6 @@ module V1
       return customers_count unless model.children
 
       customers_count + model.children.sum { |c| c.subscriptions.active.select(:customer_id).distinct.count }
-    end
-
-    def draft_invoices_count
-      model.subscriptions
-        .joins(:invoices)
-        .merge(Invoice.draft)
-        .select(:invoice_id)
-        .distinct
-        .count
     end
 
     def taxes

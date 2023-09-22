@@ -41,15 +41,10 @@ module Types
       end
 
       def subscriptions_count
-        object.subscriptions.count
-      end
+        count = object.subscriptions.count
+        return count unless object.children
 
-      def draft_invoices_count
-        object.subscriptions.joins(:invoices)
-          .merge(Invoice.draft)
-          .select(:invoice_id)
-          .distinct
-          .count
+        count + object.children.joins(:subscriptions).select('subscriptions.id').distinct.count
       end
     end
   end
