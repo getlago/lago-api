@@ -70,6 +70,15 @@ class Plan < ApplicationRecord
     amount_cents * 52
   end
 
+  def customers_count
+    count = subscriptions.active.select(:customer_id).distinct.count
+    return count unless children
+
+    count + children.joins(:subscriptions).where(
+      subscriptions: { status: :active },
+    ).select('distinct(customer_id)').count
+  end
+
   private
 
   def validate_code_unique
