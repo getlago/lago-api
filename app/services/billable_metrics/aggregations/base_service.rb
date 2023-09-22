@@ -85,6 +85,10 @@ module BillableMetrics
         sanitized_name(billable_metric.field_name)
       end
 
+      def field_presence_condition
+        "events.properties::jsonb ? '#{ActiveRecord::Base.sanitize_sql_for_conditions(billable_metric.field_name)}'"
+      end
+
       def handle_in_advance_current_usage(total_aggregation)
         if previous_event
           aggregation = total_aggregation -

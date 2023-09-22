@@ -30,11 +30,11 @@ module BillableMetrics
           # NOTE: When recurring we need to scope the fetch using the external ID to handle events
           #       sent to upgraded/downgraded subscription
           return recurring_events_scope(from_datetime:, to_datetime:)
-              .where("#{sanitized_field_name} IS NOT NULL")
+              .where(field_presence_condition)
               .order(timestamp: :asc)
         end
 
-        events_scope(from_datetime:, to_datetime:).where("#{sanitized_field_name} IS NOT NULL")
+        events_scope(from_datetime:, to_datetime:).where(field_presence_condition)
       end
 
       def compute_aggregation
@@ -155,7 +155,7 @@ module BillableMetrics
           .where(created_at: billable_metric.created_at...)
           .where(timestamp: ..from_datetime)
           .where.not(subscription_id: subscription.id)
-          .where("#{sanitized_field_name} IS NOT NULL")
+          .where(field_presence_condition)
 
         return scope.sum("(#{sanitized_field_name})::numeric") unless group
 
