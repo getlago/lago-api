@@ -40,8 +40,10 @@ module BillableMetrics
 
         period_events = period_query
           .pluck(
-            Arel.sql("(COALESCE((#{sanitized_field_name})::numeric, 0)) * "\
-                     "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric"),
+            Arel.sql(
+              "(COALESCE((#{sanitized_field_name})::numeric, 0)) * "\
+              "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric"
+            ),
           )
 
         persisted_events + period_events
