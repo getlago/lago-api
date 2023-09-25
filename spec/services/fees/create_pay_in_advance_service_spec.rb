@@ -15,8 +15,16 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:group) { nil }
 
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
-  let(:event) { create(:event, subscription:, customer:, organization:) }
   let(:estimate) { false }
+
+  let(:event) do
+    create(
+      :event,
+      subscription_id: subscription.id,
+      customer_id: customer.id,
+      organization_id: organization.id,
+    )
+  end
 
   before { tax }
 

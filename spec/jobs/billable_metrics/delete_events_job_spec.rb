@@ -8,7 +8,7 @@ RSpec.describe BillableMetrics::DeleteEventsJob, type: :job, transaction: false 
 
   it 'deletes related events' do
     create(:standard_charge, plan: subscription.plan, billable_metric:)
-    event = create(:event, code: billable_metric.code, subscription:)
+    event = create(:event, code: billable_metric.code, subscription_id: subscription.id)
     quantified_event = create(:quantified_event, billable_metric:)
 
     freeze_time do

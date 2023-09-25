@@ -187,7 +187,7 @@ RSpec.describe Invoice, type: :model do
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
     let(:timestamp) { DateTime.parse('2023-07-25 00:00:00 UTC') }
-    let(:event) { create(:event, subscription:, timestamp:) }
+    let(:event) { create(:event, subscription_id: subscription.id, timestamp:) }
     let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
     let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, pay_in_advance_event_id: event.id) }
     let(:charge) do

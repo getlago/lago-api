@@ -14,8 +14,16 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:active_subscription, organization:, customer:, plan:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
-  let(:event) { create(:event, subscription:, customer:, organization:) }
   let(:group) { nil }
+
+  let(:event) do
+    create(
+      :event,
+      subscription_id: subscription.id,
+      customer_id: customer.id,
+      organization_id: organization.id,
+    )
+  end
 
   before { create(:tax, organization:, applied_to_organization: true) }
 
@@ -167,8 +175,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     end
 
     context 'with customer timezone' do
-      before { customer.update!(timezone: 'America/Los_Angeles') }
-
+      let(:customer) { create(:customer, organization:, timezone: 'America/Los_Angeles') }
       let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
 
       it 'assigns the issuing date in the customer timezone' do
