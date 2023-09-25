@@ -26,7 +26,7 @@ module Charges
 
           # Calculate prorated value inside the range. Which events are taken into account
           # for certain range depends on comparing full number of units and range boundaries
-          while true
+          loop do
             # Overflow can happen in scenarios where event covers part of lower range and part of higher range.
             # Here is applied overflow from previous range
             unless overflow.zero?
@@ -49,15 +49,15 @@ module Charges
 
             index += 1
 
-            # Calculating overflow if any and aligning current period with overflow amount
-            if range[:to_value] && full_sum >= range[:to_value]
-              overflow = full_sum - range[:to_value]
-              prorated_coefficient = prorated_units[index - 1].fdiv(full_units[index - 1])
-              prorated_sum -= overflow * prorated_coefficient
-              full_sum -= overflow
+            next unless range[:to_value] && full_sum >= range[:to_value]
 
-              break
-            end
+            # Calculating overflow (if any) and aligning current invalid prorated sum with overflow amount
+            overflow = full_sum - range[:to_value]
+            prorated_coefficient = prorated_units[index - 1].fdiv(full_units[index - 1])
+            prorated_sum -= overflow * prorated_coefficient
+            full_sum -= overflow
+
+            break
           end
 
           result_amount += prorated_sum * per_unit_amount
