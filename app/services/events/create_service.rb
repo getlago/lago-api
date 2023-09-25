@@ -40,10 +40,11 @@ module Events
       end
 
       ActiveRecord::Base.transaction do
-        event = organization.events.new
+        event = Event.new
+        event.organization_id = organization.id
         event.code = params[:code]
         event.transaction_id = params[:transaction_id]
-        event.customer = customer
+        event.customer_id = customer.id
         event.subscription_id = subscriptions.first.id
         event.properties = params[:properties] || {}
         event.metadata = metadata || {}

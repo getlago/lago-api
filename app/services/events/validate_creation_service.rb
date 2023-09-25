@@ -77,7 +77,8 @@ module Events
     def valid_transaction_id?
       return false if params[:transaction_id].blank?
 
-      organization.events.where(
+      Event.where(
+        organization_id: organization.id,
         transaction_id: params[:transaction_id],
         subscription_id: subscriptions.first.id,
       ).none?

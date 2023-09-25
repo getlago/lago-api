@@ -62,7 +62,10 @@ module V1
     def pay_in_advance_charge_attributes
       return {} unless model.pay_in_advance?
 
-      event = model.subscription.organization.events.find_by(id: model.pay_in_advance_event_id)
+      event = Event.find_by(
+        organization_id: model.subscription.organization,
+        id: model.pay_in_advance_event_id,
+      )
 
       {
         lago_subscription_id: model.subscription_id,

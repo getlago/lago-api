@@ -30,7 +30,11 @@ module Events
       ActiveRecord::Base.transaction do
         params[:external_subscription_ids].each do |id|
           subscription = Subscription.find_by(external_id: id)
-          event = organization.events.find_by(transaction_id: params[:transaction_id], subscription_id: subscription.id)
+          event = Event.find_by(
+            organization_id: organization.id,
+            transaction_id: params[:transaction_id],
+            subscription_id: subscription.id,
+          )
 
           if event
             events << event
@@ -38,10 +42,11 @@ module Events
             next
           end
 
-          event = organization.events.new
+          event = Event.new
+          event.organization_id = organization.id
           event.code = params[:code]
           event.transaction_id = params[:transaction_id]
-          event.customer = customer
+          event.customer_id = customer.id
           event.subscription_id = subscription.id
           event.properties = params[:properties] || {}
           event.metadata = metadata || {}

@@ -56,7 +56,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
     events_response = result['data']['events']
 
     aggregate_failures do
-      expect(events_response['collection'].count).to eq(organization.events.count)
+      expect(events_response['collection'].count).to eq(Event.where(organization_id: organization.id).count)
       expect(events_response['collection'].first['id']).to eq(event.id)
       expect(events_response['collection'].first['code']).to eq(event.code)
       expect(events_response['collection'].first['externalCustomerId']).to eq(event.customer.external_id)
@@ -87,7 +87,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       events_response = result['data']['events']
 
       aggregate_failures do
-        expect(events_response['collection'].count).to eq(organization.events.count)
+        expect(events_response['collection'].count).to eq(Event.where(organization_id: organization.id).count)
         expect(events_response['collection'].first['id']).to eq(event.id)
       end
     end

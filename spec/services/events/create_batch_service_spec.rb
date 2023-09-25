@@ -243,7 +243,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
             timestamp:,
             metadata: {},
           )
-        end.to change { organization.events.count }.by(1)
+        end.to change(Event, :count).by(1)
       end
     end
 
@@ -258,9 +258,10 @@ RSpec.describe Events::CreateBatchService, type: :service do
             timestamp:,
             metadata: {},
           )
-        end.to change { organization.events.count }.by(2)
+        end.to change(Event, :count).by(2)
 
-        expect(organization.events.last.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')
+        expect(Event.where(organization_id: organization.id).last.timestamp.iso8601(3))
+          .to eq('2023-09-04T15:45:12.344Z')
       end
     end
   end
