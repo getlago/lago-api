@@ -104,6 +104,13 @@ module BillableMetrics
         ((to_datetime.to_time - from_datetime.to_time) / 1.day).ceil.fdiv(period_duration)
       end
 
+      def per_event_aggregation
+        Result.new.tap do |result|
+          result.event_aggregation = base_aggregator.compute_per_event_aggregation
+          result.event_prorated_aggregation = compute_per_event_prorated_aggregation
+        end
+      end
+
       private
 
       attr_reader :base_aggregator
