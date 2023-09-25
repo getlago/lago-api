@@ -48,17 +48,22 @@ module Types
       end
 
       def match_billable_metric
-        object.billable_metric_name.present?
+        object.billable_metric.present?
       end
 
       def match_custom_field
-        return true if object.billable_metric_field_name.blank?
+        return true if object.billable_metric.blank?
+        return true if object.billable_metric.field_name.blank?
 
-        object.properties.key?(object.billable_metric_field_name)
+        object.properties.key?(object.billable_metric.field_name)
       end
 
       def customer_timezone
         object.customer.applicable_timezone
+      end
+
+      def billable_metric_name
+        object.billable_metric&.name
       end
     end
   end

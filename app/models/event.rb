@@ -27,4 +27,8 @@ class Event < EventsRecord
   def ip_address
     metadata['ip_address']
   end
+
+  def billable_metric
+    @billable_metric ||= organization.billable_metrics.find_by(code:)
+  end
 end

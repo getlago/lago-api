@@ -85,6 +85,7 @@ group :development, :test do
 end
 
 group :test do
+  gem 'database_cleaner-active_record'
   gem 'rspec-graphql_matchers'
   gem 'shoulda-matchers'
 end

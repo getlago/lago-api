@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service do
+RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service, transaction: false do
   subject(:sum_service) do
     described_class.new(
       billable_metric:,
