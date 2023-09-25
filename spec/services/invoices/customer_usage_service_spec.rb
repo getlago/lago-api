@@ -29,6 +29,15 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     create(:billable_metric, aggregation_type: 'count_agg')
   end
 
+  let(:charge) do
+    create(
+      :standard_charge,
+      plan:,
+      billable_metric:,
+      properties: { amount: '12.66' },
+    )
+  end
+
   let(:events) do
     create_list(
       :event,
@@ -47,12 +56,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
   describe '#usage' do
     before do
       events if subscription
-      create(
-        :standard_charge,
-        plan:,
-        billable_metric:,
-        properties: { amount: '12.66' },
-      )
+      charge
       allow(Rails).to receive(:cache).and_return(memory_store)
       Rails.cache.clear
 
@@ -60,11 +64,11 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     end
 
     it 'uses the Rails cache' do
-      to_date = usage_service.__send__(:boundaries)[:charges_to_datetime].to_date
       key = [
-        'current_usage',
-        "#{subscription.id}-#{to_date.iso8601}-#{subscription.created_at.iso8601}",
-        subscription.plan.updated_at.iso8601,
+        'charge-usage',
+        charge.id,
+        subscription.id,
+        charge.updated_at.iso8601,
       ].join('/')
 
       expect do

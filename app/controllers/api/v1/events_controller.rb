@@ -5,8 +5,9 @@ module Api
     class EventsController < Api::BaseController
       def create
         # NOTE: Properties validations will be returned on the debugger.
-        validate_result = Events::CreateService.new.validate_params(
+        validate_result = Events::CreateService.new(
           organization: current_organization,
+        ).validate_params(
           params: create_params,
         )
         return render_error_response(validate_result) unless validate_result.success?

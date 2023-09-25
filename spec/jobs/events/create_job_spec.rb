@@ -11,9 +11,11 @@ RSpec.describe Events::CreateJob, type: :job do
   let(:metadata) { { user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11' } }
 
   it 'calls the event service' do
-    allow(Events::CreateService).to receive(:new).and_return(create_service)
+    allow(Events::CreateService).to receive(:new)
+      .with(organization:)
+      .and_return(create_service)
     allow(create_service).to receive(:call)
-      .with(organization:, params:, timestamp: Time.zone.at(timestamp), metadata:)
+      .with(params:, timestamp: Time.zone.at(timestamp), metadata:)
       .and_return(result)
 
     described_class.perform_now(organization, params, timestamp, metadata)

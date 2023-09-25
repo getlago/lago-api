@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Events::CreateService, type: :service do
-  subject(:create_service) { described_class.new }
+  subject(:create_service) { described_class.new(organization:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -24,7 +24,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     it 'delegates to ValidateParamsService' do
-      create_service.validate_params(organization:, params:)
+      create_service.validate_params(params:)
 
       expect(Events::ValidateCreationService).to have_received(:call).with(
         organization:,
@@ -37,7 +37,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     it 'validates the presence of the mandatory arguments' do
-      result = create_service.validate_params(organization:, params:)
+      result = create_service.validate_params(params:)
 
       expect(result).to be_success
     end
@@ -45,7 +45,7 @@ RSpec.describe Events::CreateService, type: :service do
     context 'with missing or nil arguments' do
       it 'returns an error' do
         params[:code] = nil
-        result = create_service.validate_params(organization:, params:)
+        result = create_service.validate_params(params:)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -78,7 +78,7 @@ RSpec.describe Events::CreateService, type: :service do
       let(:subscription) { create(:terminated_subscription, customer:, organization:, plan:) }
 
       it 'creates an event' do
-        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        result = create_service.call(params: create_args, timestamp:, metadata: {})
 
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(timestamp))
@@ -96,7 +96,7 @@ RSpec.describe Events::CreateService, type: :service do
       end
 
       it 'creates an event by setting the timestamp to the current datetime' do
-        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        result = create_service.call(params: create_args, timestamp:, metadata: {})
 
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(timestamp))
@@ -107,7 +107,7 @@ RSpec.describe Events::CreateService, type: :service do
       it 'creates an event by setting timestamp' do
         create_args[:timestamp] = create_args[:timestamp].to_s
 
-        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        result = create_service.call(params: create_args, timestamp:, metadata: {})
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(create_args[:timestamp].to_i))
       end
@@ -119,7 +119,7 @@ RSpec.describe Events::CreateService, type: :service do
       it 'creates an event by keeping the millisecond precision' do
         create_args[:timestamp] = DateTime.parse('2023-09-04 15:45:12.344').strftime('%s.%3N')
 
-        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        result = create_service.call(params: create_args, timestamp:, metadata: {})
         expect(result).to be_success
         expect(result.event.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')
       end
@@ -153,7 +153,7 @@ RSpec.describe Events::CreateService, type: :service do
       before { active_subscription }
 
       it 'creates an event to the terminated subscription' do
-        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        result = create_service.call(params: create_args, timestamp:, metadata: {})
         expect(result).to be_success
 
         event = result.event
@@ -196,7 +196,7 @@ RSpec.describe Events::CreateService, type: :service do
       before { active_subscription }
 
       it 'creates an event to the active subscription' do
-        result = create_service.call(organization:, params: create_args, timestamp:, metadata: {})
+        result = create_service.call(params: create_args, timestamp:, metadata: {})
         expect(result).to be_success
 
         event = result.event
@@ -214,7 +214,6 @@ RSpec.describe Events::CreateService, type: :service do
     context 'when customer has only one active subscription and subscription is not given' do
       it 'creates a new event and assigns subscription' do
         result = create_service.call(
-          organization:,
           params: create_args,
           timestamp:,
           metadata: {},
@@ -247,7 +246,6 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates a new event and assigns customer' do
         result = create_service.call(
-          organization:,
           params: create_args,
           timestamp:,
           metadata: {},
@@ -284,7 +282,6 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates a new event for correct subscription' do
         result = create_service.call(
-          organization:,
           params: create_args,
           timestamp:,
           metadata: {},
@@ -315,7 +312,6 @@ RSpec.describe Events::CreateService, type: :service do
       it 'returns existing event' do
         expect do
           create_service.call(
-            organization:,
             params: create_args,
             timestamp:,
             metadata: {},
@@ -336,7 +332,6 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates a new event' do
         result = create_service.call(
-          organization:,
           params: create_args,
           timestamp:,
           metadata: {},
@@ -384,7 +379,6 @@ RSpec.describe Events::CreateService, type: :service do
       it 'creates a quantified metric' do
         expect do
           create_service.call(
-            organization:,
             params: create_args,
             timestamp:,
             metadata: {},
@@ -394,7 +388,6 @@ RSpec.describe Events::CreateService, type: :service do
 
       it 'creates association with quantified event' do
         result = create_service.call(
-          organization:,
           params: create_args,
           timestamp:,
           metadata: {},
@@ -423,7 +416,6 @@ RSpec.describe Events::CreateService, type: :service do
 
           expect do
             result = create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},
@@ -462,7 +454,6 @@ RSpec.describe Events::CreateService, type: :service do
       it 'enqueues a job to perform the pay_in_advance aggregation' do
         expect do
           create_service.call(
-            organization:,
             params: create_args,
             timestamp:,
             metadata: {},
@@ -476,7 +467,6 @@ RSpec.describe Events::CreateService, type: :service do
         it 'does not enqueue a job to perform the pay_in_advance aggregation' do
           expect do
             create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},
@@ -491,7 +481,6 @@ RSpec.describe Events::CreateService, type: :service do
         it 'enqueues a job for each charge' do
           expect do
             create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},
@@ -528,7 +517,6 @@ RSpec.describe Events::CreateService, type: :service do
       it 'enqueues a job to create the pay_in_advance charge invoice' do
         expect do
           create_service.call(
-            organization:,
             params: create_args,
             timestamp:,
             metadata: {},
@@ -542,7 +530,6 @@ RSpec.describe Events::CreateService, type: :service do
         it 'does not enqueue a job to create the pay_in_advance charge invoice' do
           expect do
             create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},
@@ -557,7 +544,6 @@ RSpec.describe Events::CreateService, type: :service do
         it 'enqueues a job for each charge' do
           expect do
             create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},
@@ -581,7 +567,6 @@ RSpec.describe Events::CreateService, type: :service do
         it 'enqueues a job' do
           expect do
             create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},
@@ -605,7 +590,6 @@ RSpec.describe Events::CreateService, type: :service do
         it 'does not enqueue a job' do
           expect do
             create_service.call(
-              organization:,
               params: create_args,
               timestamp:,
               metadata: {},

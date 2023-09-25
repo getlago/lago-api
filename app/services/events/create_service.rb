@@ -2,10 +2,15 @@
 
 module Events
   class CreateService < BaseService
-    def validate_params(organization:, params:)
-      customer = customer(organization:, params:)
+    def initialize(organization:)
+      @organization = organization
+      super(nil)
+    end
+
+    def validate_params(params:)
+      customer = customer(params:)
       timestamp = Time.zone.at((params[:timestamp] || Time.current).to_i)
-      subscriptions = subscriptions(organization:, customer:, params:, timestamp:)
+      subscriptions = subscriptions(customer:, params:, timestamp:)
 
       Events::ValidateCreationService.call(
         organization:,
@@ -18,16 +23,16 @@ module Events
       result
     end
 
-    def call(organization:, params:, timestamp:, metadata:)
-      customer = customer(organization:, params:)
+    def call(params:, timestamp:, metadata:)
+      customer = customer(params:)
       event_timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
-      subscriptions = subscriptions(organization:, customer:, params:, timestamp: event_timestamp)
+      subscriptions = subscriptions(customer:, params:, timestamp: event_timestamp)
 
       Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
       unless result.success?
         # NOTE: Ignore transaction_id validation failure as they are related to duplicated events
         if result.error.is_a?(BaseService::ValidationFailure) && result.error.messages.keys == %i[transaction_id]
-          delivor_error_webhook(organization:, params:, message: 'transaction_id already exists')
+          delivor_error_webhook(params:, message: 'transaction_id already exists')
           return BaseService::Result.new
         end
 
@@ -47,6 +52,8 @@ module Events
         event.save!
 
         result.event = event
+
+        expire_cached_charges(subscriptions)
 
         if should_handle_quantified_event?
           # For unique count if repeated event got ingested, we want to store this event but prevent further processing
@@ -82,9 +89,11 @@ module Events
 
     private
 
+    attr_reader :organization
+
     delegate :event, to: :result
 
-    def customer(organization:, params:)
+    def customer(params:)
       return @customer if defined? @customer
 
       @customer = if params[:external_subscription_id]
@@ -94,7 +103,7 @@ module Events
       end
     end
 
-    def subscriptions(organization:, customer:, params:, timestamp:)
+    def subscriptions(customer:, params:, timestamp:)
       return @subscriptions if defined? @subscriptions
 
       subscriptions = if customer && params[:external_subscription_id].blank?
@@ -159,13 +168,26 @@ module Events
       @billable_metric ||= event.organization.billable_metrics.find_by(code: event.code)
     end
 
-    def delivor_error_webhook(organization:, params:, message:)
+    def delivor_error_webhook(params:, message:)
       return unless organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later(
         'event.error',
         { input_params: params, error: message, organization_id: organization.id, status: 422 },
       )
+    end
+
+    def expire_cached_charges(subscriptions)
+      active_subscription = subscriptions.select(&:active?)
+      charges = billable_metric.charges
+        .joins(:plan)
+        .where(plans: { id: active_subscription.map(&:plan_id) })
+
+      charges.each do |charge|
+        active_subscription.each do |subscription|
+          Subscriptions::ChargeCacheService.new(subscription:, charge:).expire_cache
+        end
+      end
     end
   end
 end
