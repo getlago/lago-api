@@ -34,7 +34,9 @@ module BillableMetrics
 
       def compute_per_event_prorated_aggregation
         persisted_events = persisted_query
-          .pluck(Arel.sql("(COALESCE((#{sanitized_field_name})::numeric, 0)) * (#{persisted_pro_rata})::numeric"))
+          .pluck(
+            Arel.sql("(COALESCE((#{sanitized_field_name})::numeric, 0)) * (#{persisted_pro_rata})::numeric"),
+          )
 
         period_events = period_query
           .pluck(
