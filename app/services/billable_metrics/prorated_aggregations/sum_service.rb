@@ -42,7 +42,7 @@ module BillableMetrics
           .pluck(
             Arel.sql(
               "(COALESCE((#{sanitized_field_name})::numeric, 0)) * "\
-              "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric"
+              "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric",
             ),
           )
 
