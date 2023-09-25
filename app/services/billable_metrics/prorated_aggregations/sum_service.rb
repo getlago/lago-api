@@ -32,6 +32,18 @@ module BillableMetrics
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
+      def compute_per_event_prorated_aggregation
+        persisted_events = persisted_query
+          .pluck(Arel.sql("(COALESCE((#{sanitized_field_name})::numeric, 0)) * (#{persisted_pro_rata})::numeric"))
+
+          # NOTE: Added during the period
+        period_events = period_query
+          .pluck(Arel.sql("(COALESCE((#{sanitized_field_name})::numeric, 0)) * "\
+                 "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric"))
+
+        persisted_events + period_events
+      end
+
       protected
 
       attr_reader :options
