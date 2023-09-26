@@ -82,6 +82,8 @@ RSpec.describe Events::CreateService, type: :service do
 
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(timestamp))
+        expect(result.event.external_subscription_id).to eq(subscription.external_id)
+        expect(result.event.external_customer_id).to eq(customer.external_id)
       end
     end
 
@@ -100,6 +102,8 @@ RSpec.describe Events::CreateService, type: :service do
 
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(timestamp))
+        expect(result.event.external_subscription_id).to eq(subscription.external_id)
+        expect(result.event.external_customer_id).to eq(customer.external_id)
       end
     end
 
@@ -164,6 +168,8 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(result.event.external_subscription_id).to eq(subscription.external_id)
+          expect(result.event.external_customer_id).to eq(customer.external_id)
         end
       end
     end
@@ -207,6 +213,8 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(active_subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(result.event.external_subscription_id).to eq(active_subscription.external_id)
+          expect(result.event.external_customer_id).to eq(customer.external_id)
         end
       end
     end
@@ -229,6 +237,8 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(result.event.external_subscription_id).to eq(subscription.external_id)
+          expect(result.event.external_customer_id).to eq(customer.external_id)
         end
       end
     end
@@ -261,6 +271,8 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.code).to eq(billable_metric.code)
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
+          expect(result.event.external_subscription_id).to eq(subscription.external_id)
+          expect(result.event.external_customer_id).to eq(customer.external_id)
         end
       end
     end
@@ -293,6 +305,8 @@ RSpec.describe Events::CreateService, type: :service do
 
         aggregate_failures do
           expect(event.subscription_id).to eq(subscription2.id)
+          expect(result.event.external_subscription_id).to eq(subscription2.external_id)
+          expect(result.event.external_customer_id).to eq(customer.external_id)
         end
       end
     end
@@ -348,6 +362,8 @@ RSpec.describe Events::CreateService, type: :service do
           expect(event.subscription_id).to eq(subscription.id)
           expect(event.timestamp).to be_a(Time)
           expect(event.properties).to eq({})
+          expect(result.event.external_subscription_id).to eq(subscription.external_id)
+          expect(result.event.external_customer_id).to eq(customer.external_id)
         end
       end
     end

@@ -47,7 +47,9 @@ module Events
           event.code = params[:code]
           event.transaction_id = params[:transaction_id]
           event.customer_id = customer.id
+          event.external_customer_id = customer.external_id
           event.subscription_id = subscription.id
+          event.external_subscription_id = subscription.external_id
           event.properties = params[:properties] || {}
           event.metadata = metadata || {}
 

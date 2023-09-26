@@ -4,14 +4,14 @@ default: &default
 development:
   primary:
     <<: *default
-    host: localhost
+    host: db
     username: lago
     password: changeme
     database: lago
     port: 5432
   events:
     <<: *default
-    host: localhost
+    host: db
     username: lago
     password: changeme
     database: lago

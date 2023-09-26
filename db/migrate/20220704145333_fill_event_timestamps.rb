@@ -2,7 +2,6 @@
 
 class FillEventTimestamps < ActiveRecord::Migration[7.0]
   def change
-    LagoApi::Application.load_tasks
-    Rake::Task['events:fill_timestamp'].invoke
+    # NOTE: kept here for legacy reasons
   end
 end
