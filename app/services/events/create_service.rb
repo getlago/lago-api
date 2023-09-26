@@ -75,14 +75,14 @@ module Events
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      delivor_error_webhook(organization:, params:, message: e.record.errors.messages)
+      delivor_error_webhook(params:, message: e.record.errors.messages)
 
       # NOTE: Raise error only when validation errors are not transaction_id related
       result.record_validation_failure!(record: e.record) unless e.record.errors.messages.keys == %i[transaction_id]
 
       result
     rescue ActiveRecord::RecordNotUnique
-      delivor_error_webhook(organization:, params:, message: 'transaction_id already exists')
+      delivor_error_webhook(params:, message: 'transaction_id already exists')
 
       result
     end
