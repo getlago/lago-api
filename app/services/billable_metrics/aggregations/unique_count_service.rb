@@ -151,7 +151,11 @@ module BillableMetrics
         quantified_events = if billable_metric.recurring?
           quantified_events.where(external_subscription_id: subscription.external_id)
         else
-          quantified_events.joins(:events).where(events: { subscription_id: subscription.id })
+          quantified_event_ids = Event.where(subscription_id: subscription.id)
+            .where('quantified_event_id IS NOT NULL')
+            .pluck('DISTINCT(quantified_event_id)')
+
+          quantified_events.where(id: quantified_event_ids)
         end
 
         return quantified_events unless group

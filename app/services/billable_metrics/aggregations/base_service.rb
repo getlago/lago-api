@@ -39,7 +39,7 @@ module BillableMetrics
       end
 
       def events_scope(from_datetime:, to_datetime:)
-        events = subscription.events
+        events = Event.where(subscription_id: subscription.id)
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
           .where(code: billable_metric.code)

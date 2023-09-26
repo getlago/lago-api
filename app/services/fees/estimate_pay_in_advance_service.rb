@@ -43,7 +43,8 @@ module Fees
     def event
       return @event if @event
 
-      @event = organization.events.new(
+      @event = Event.new(
+        organization_id: organization.id,
         code: params[:code],
         customer:,
         subscription: subscriptions.first,

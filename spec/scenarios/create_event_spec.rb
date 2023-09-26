@@ -153,9 +153,9 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
             external_subscription_id: subscription2.external_id,
           ),
         )
-      end.to change { subscription2.events.reload.count }
+      end.to change { Event.where(subscription_id: subscription2.id).count }
 
-      expect(subscription.events.count).to eq(0)
+      expect(Event.where(subscription_id: subscription.id).count).to eq(0)
     end
   end
 
@@ -173,9 +173,9 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     it 'creates the event on the active subscription' do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
-      end.to change { subscription.events.reload.count }
+      end.to change { Event.where(subscription_id: subscription.id).count }
 
-      expect(subscription2.events.count).to eq(0)
+      expect(Event.where(subscription_id: subscription2.id).count).to eq(0)
     end
   end
 end

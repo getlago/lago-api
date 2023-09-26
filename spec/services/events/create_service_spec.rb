@@ -316,7 +316,7 @@ RSpec.describe Events::CreateService, type: :service do
             timestamp:,
             metadata: {},
           )
-        end.not_to change { organization.events.count }
+        end.not_to change(Event, :count)
       end
     end
 
