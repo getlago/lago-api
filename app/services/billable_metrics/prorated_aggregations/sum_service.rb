@@ -17,6 +17,7 @@ module BillableMetrics
 
         aggregation = compute_aggregation.ceil(5)
         result.full_units_number = aggregation_without_proration.aggregation if event.nil?
+        result.recurring_updated_at = from_datetime if event.nil?
 
         if options[:is_current_usage]
           handle_current_usage(aggregation, options[:is_pay_in_advance])
@@ -33,20 +34,13 @@ module BillableMetrics
       end
 
       def compute_per_event_prorated_aggregation
-        persisted_events = persisted_query
-          .pluck(
-            Arel.sql("(COALESCE((#{sanitized_field_name})::numeric, 0)) * (#{persisted_pro_rata})::numeric"),
-          )
-
-        period_events = period_query
+        period_query
           .pluck(
             Arel.sql(
               "(COALESCE((#{sanitized_field_name})::numeric, 0)) * "\
               "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric",
             ),
           )
-
-        persisted_events + period_events
       end
 
       protected
@@ -89,6 +83,17 @@ module BillableMetrics
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
+      end
+
+      def previous_prorated_event
+        @previous_prorated_event ||= begin
+          query = recurring_events_scope(to_datetime:)
+          scope = query.where(field_presence_condition)
+          scope = scope.where("events.properties->>'recurring_updated_at' IS NOT NULL")
+          scope = scope.to_datetime(from_datetime)
+
+          scope.reorder(timestamp: :desc, created_at: :desc).first
+        end
       end
     end
   end

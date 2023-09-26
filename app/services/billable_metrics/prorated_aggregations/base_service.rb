@@ -105,9 +105,12 @@ module BillableMetrics
       end
 
       def per_event_aggregation
+        recurring_value = previous_prorated_event ? previous_prorated_event.properties['full_units_number'] : nil
+        recurring_aggregation = recurring_value ? [BigDecimal(recurring_value)] : []
+
         Result.new.tap do |result|
-          result.event_aggregation = base_aggregator.compute_per_event_aggregation
-          result.event_prorated_aggregation = compute_per_event_prorated_aggregation
+          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation
+          result.event_prorated_aggregation = recurring_aggregation + compute_per_event_prorated_aggregation
         end
       end
 

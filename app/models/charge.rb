@@ -115,7 +115,7 @@ class Charge < ApplicationRecord
 
     unless billable_metric.weighted_sum_agg?
       return if billable_metric.recurring? && pay_in_advance? && standard?
-      return if billable_metric.recurring? && !pay_in_advance? && (standard? || volume?)
+      return if billable_metric.recurring? && !pay_in_advance? && (standard? || volume? || graduated?)
     end
 
     errors.add(:prorated, :invalid_billable_metric_or_charge_model)
