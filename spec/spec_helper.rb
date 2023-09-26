@@ -12,4 +12,23 @@ RSpec.configure do |config|
   end
 
   config.shared_context_metadata_behavior = :apply_to_host_groups
+
+  # NOTE: Database cleaner config to turn off/on transactional mode
+  config.before(:suite) do
+    DatabaseCleaner.clean_with(:deletion)
+  end
+
+  config.before do
+    DatabaseCleaner.strategy = :transaction
+  end
+
+  config.before(:each, transaction: false) do
+    DatabaseCleaner.strategy = :deletion
+  end
+
+  config.around do |example|
+    DatabaseCleaner.cleaning do
+      example.run
+    end
+  end
 end

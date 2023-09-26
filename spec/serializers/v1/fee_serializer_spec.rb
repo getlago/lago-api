@@ -100,7 +100,15 @@ RSpec.describe ::V1::FeeSerializer do
     let(:plan) { create(:plan, organization:) }
     let(:subscription) { create(:subscription, customer:, organization:, plan:) }
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
-    let(:event) { create(:event, subscription:, organization:, customer:) }
+
+    let(:event) do
+      create(
+        :event,
+        subscription_id: subscription.id,
+        organization_id: organization.id,
+        customer_id: customer.id,
+      )
+    end
 
     let(:fee) do
       create(:charge_fee, pay_in_advance: true, subscription:, charge:, pay_in_advance_event_id: event.id)

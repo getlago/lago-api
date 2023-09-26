@@ -11,7 +11,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
   let(:charge) { create(:standard_charge, billable_metric:) }
   let(:group) { create(:group) }
   let(:aggregation_type) { 'count_agg' }
-  let(:event) { create(:event, subscription:) }
+  let(:event) { create(:event, subscription_id: subscription.id) }
   let(:properties) { {} }
 
   let(:subscription) do

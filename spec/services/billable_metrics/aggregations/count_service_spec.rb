@@ -125,7 +125,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   end
 
   context 'when pay_in_advance aggregation' do
-    let(:pay_in_advance_event) { create(:event, subscription:, customer:) }
+    let(:pay_in_advance_event) { create(:event, subscription_id: subscription.id, customer_id: customer.id) }
 
     it 'assigns an pay_in_advance aggregation' do
       result = count_service.aggregate

@@ -9,9 +9,10 @@ module BillableMetrics
 
       deleted_at = Time.current
 
-      Event.joins(subscription: [:plan]).where(
-        code: metric.code,
-        plan: { id: Charge.with_discarded.where(billable_metric_id: metric.id).pluck(:plan_id) },
+      Event.where(
+        subscription_id: Charge.with_discarded
+          .where(billable_metric_id: metric.id)
+          .joins(plan: :subscriptions).pluck('subscriptions.id'),
       ).update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
 
       metric.quantified_events.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations

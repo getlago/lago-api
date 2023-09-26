@@ -2,9 +2,9 @@
 
 FactoryBot.define do
   factory :event do
-    organization
-    customer
-    subscription
+    organization_id { create(:organization).id }
+    customer_id { create(:customer).id }
+    subscription_id { create(:subscription).id }
 
     transaction_id { SecureRandom.uuid }
     code { Faker::Name.name.underscore }

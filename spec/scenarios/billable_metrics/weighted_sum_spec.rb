@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request do
+describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 

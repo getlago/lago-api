@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Event < ApplicationRecord
+class Event < EventsRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
@@ -26,5 +26,9 @@ class Event < ApplicationRecord
 
   def ip_address
     metadata['ip_address']
+  end
+
+  def billable_metric
+    @billable_metric ||= organization.billable_metrics.find_by(code:)
   end
 end

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe BillableMetrics::Breakdown::SumService, type: :service do
+RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transaction: false do
   subject(:service) do
     described_class.new(
       billable_metric:,

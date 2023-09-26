@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service do
+RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service, transaction: false do
   subject(:aggregator) do
     described_class.new(
       billable_metric:,
