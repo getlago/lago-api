@@ -84,18 +84,6 @@ module BillableMetrics
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
       end
-
-      def previous_charge_fee
-        subscription_ids = customer.subscriptions
-          .where(external_id: subscription.external_id)
-          .pluck(:id)
-
-        Fee.joins(:charge)
-          .where(charge: { billable_metric_id: billable_metric.id })
-          .where(subscription_id: subscription_ids, fee_type: :charge, group_id: group&.id)
-          .order(created_at: :desc)
-          .first
-      end
     end
   end
 end
