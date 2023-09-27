@@ -216,11 +216,14 @@ module Fees
     end
 
     def handle_prorated_aggregation(aggregation_result, group)
+      subscription_ids = customer.subscriptions
+        .where(external_id: subscription.external_id)
+        .pluck(:id)
+
       events = Event
-        .joins(:subscription)
-        .where(subscription: { external_id: subscription.external_id })
+        .where(customer_id: customer.id)
+        .where(subscription_id: subscription_ids)
         .where(code: billable_metric.code)
-        .where(customer:)
         .to_datetime(boundaries.charges_to_datetime)
         .order(timestamp: :desc, created_at: :desc)
 
