@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Invoice < ApplicationRecord
+  include AASM
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
@@ -47,11 +48,25 @@ class Invoice < ApplicationRecord
 
   INVOICE_TYPES = %i[subscription add_on credit one_off].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
-  STATUS = %i[draft finalized].freeze
+  STATUS = %i[draft finalized voided].freeze
 
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS
   enum status: STATUS
+
+  aasm column: 'status' do
+    state :draft
+    state :finalized
+    state :voided
+
+    event :finalize do
+      transitions from: :draft, to: :finalized
+    end
+
+    event :void do
+      transitions from: :finalized, to: :voided, guard: :voidable?
+    end
+  end
 
   sequenced scope: ->(invoice) { invoice.customer.invoices }
 
@@ -211,6 +226,10 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def voidable?
+    pending? || failed?
+  end
 
   def ensure_number
     return if number.present?
