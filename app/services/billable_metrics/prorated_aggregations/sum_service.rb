@@ -85,15 +85,16 @@ module BillableMetrics
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
       end
 
-      def previous_prorated_event
-        @previous_prorated_event ||= begin
-          query = recurring_events_scope(to_datetime:)
-          scope = query.where(field_presence_condition)
-          scope = scope.where("events.properties->>'recurring_updated_at' IS NOT NULL")
-          scope = scope.to_datetime(from_datetime)
+      def previous_charge_fee
+        subscription_ids = customer.subscriptions
+          .where(external_id: subscription.external_id)
+          .pluck(:id)
 
-          scope.reorder(timestamp: :desc, created_at: :desc).first
-        end
+        Fee.joins(:charge)
+          .where(charge: { billable_metric_id: billable_metric.id })
+          .where(subscription_id: subscription_ids, fee_type: :charge, group_id: group&.id)
+          .order(created_at: :desc)
+          .first
       end
     end
   end

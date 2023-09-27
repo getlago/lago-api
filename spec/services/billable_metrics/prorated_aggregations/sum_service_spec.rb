@@ -470,8 +470,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     it 'aggregates per events' do
       result = sum_service.per_event_aggregation
 
-      expect(result.event_aggregation).to eq([2.5, 2.5, 12, 12])
-      expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([2.5, 2.5, 2.32258, 2.32258])
+      expect(result.event_aggregation).to eq([12, 12])
+      expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([2.32258, 2.32258])
     end
   end
 end

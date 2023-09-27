@@ -198,8 +198,6 @@ module Fees
       return if is_current_usage
       return unless aggregation_result.recurring_updated_at
 
-      return handle_prorated_aggregation(aggregation_result, group) if charge.prorated?
-
       result.quantified_events ||= []
 
       # NOTE: persist current recurring value for next period
@@ -213,32 +211,6 @@ module Fees
         event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS] = aggregation_result.total_aggregated_units
         event.save!
       end
-    end
-
-    def handle_prorated_aggregation(aggregation_result, group)
-      subscription_ids = customer.subscriptions
-        .where(external_id: subscription.external_id)
-        .pluck(:id)
-
-      events = Event
-        .where(customer_id: customer.id)
-        .where(subscription_id: subscription_ids)
-        .where(code: billable_metric.code)
-        .to_datetime(boundaries.charges_to_datetime)
-        .order(timestamp: :desc, created_at: :desc)
-
-      if group
-        events = events.where('events.properties @> ?', { group.key.to_s => group.value }.to_json)
-        return events unless group.parent
-
-        events.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
-      end
-
-      latest_event = events.first
-
-      latest_event.properties['full_units_number'] = aggregation_result.full_units_number
-      latest_event.properties['recurring_updated_at'] = aggregation_result.recurring_updated_at
-      latest_event.save!
     end
   end
 end
