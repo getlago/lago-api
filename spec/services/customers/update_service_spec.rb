@@ -20,6 +20,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         id: customer.id,
         name: 'Updated customer name',
         tax_identification_number: '2246',
+        net_payment_term: 8,
         external_id:,
         billing_configuration: {
           vat_rate: 20,
@@ -282,6 +283,21 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
 
           expect(result.customer.stripe_customer.provider_payment_methods).to eq(%w[sepa_debit])
+        end
+      end
+    end
+
+    context 'when updating net payment term' do
+      it 'updates the net payment term of all draft invoices' do
+        create(:invoice, :draft, customer:, net_payment_term: 30)
+        create(:invoice, customer:, net_payment_term: 30)
+        create(:invoice, :draft, customer:, net_payment_term: 30)
+
+        result = customers_service.update(**update_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.customer.invoices.draft.pluck(:net_payment_term)).to eq([8, 8])
         end
       end
     end
