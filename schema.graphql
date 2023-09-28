@@ -3085,6 +3085,7 @@ type GroupUsage {
   amountCents: BigInt!
   eventsCount: Int!
   id: ID!
+  invoiceDisplayName: String
   key: String
   units: Float!
   value: String!
