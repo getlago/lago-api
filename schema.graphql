@@ -2980,6 +2980,7 @@ Fee input for creating invoice
 input FeeInput {
   addOnId: ID!
   description: String
+  invoiceDisplayName: String
   name: String
   taxCodes: [String!]
   unitAmountCents: BigInt

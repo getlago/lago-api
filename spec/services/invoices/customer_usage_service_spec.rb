@@ -87,6 +87,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
         expect(result.usage.to_datetime).to eq(Time.current.end_of_month.iso8601)
         expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_month.iso8601)
         expect(result.usage.fees.size).to eq(1)
+        expect(result.usage.fees.first[:charge][:invoice_display_name]).to eq(charge.invoice_display_name)
 
         expect(result.usage.currency).to eq('EUR')
         expect(result.usage.amount_cents).to eq(2532) # 1266 * 2
