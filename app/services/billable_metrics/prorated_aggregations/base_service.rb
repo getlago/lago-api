@@ -105,7 +105,7 @@ module BillableMetrics
       end
 
       def per_event_aggregation
-        recurring_value = previous_charge_fee ? previous_charge_fee.units : nil
+        recurring_value = previous_charge_fee&.units
         recurring_aggregation = recurring_value ? [BigDecimal(recurring_value) * persisted_pro_rata] : []
 
         Result.new.tap do |result|
