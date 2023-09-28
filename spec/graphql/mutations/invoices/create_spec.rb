@@ -17,6 +17,7 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         unitAmountCents: 1200,
         units: 2,
         description: 'desc-123',
+        invoiceDisplayName: 'fee-123',
         taxCodes: [tax.code],
       },
       {
