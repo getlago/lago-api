@@ -396,4 +396,157 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
       end
     end
   end
+
+  describe 'with unique_count_agg' do
+    let(:aggregation_type) { 'unique_count_agg' }
+    let(:field_name) { 'amount' }
+
+    describe 'two ranges' do
+      it 'returns the expected invoice and usage amounts' do
+        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+        WebhookEndpoint.destroy_all
+
+        travel_to(DateTime.new(2023, 9, 1)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+        end
+
+        create(
+          :graduated_charge,
+          billable_metric:,
+          prorated: true,
+          plan:,
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: 1,
+                per_unit_amount: '10',
+                flat_amount: '100',
+              },
+              {
+                from_value: 2,
+                to_value: nil,
+                per_unit_amount: '5',
+                flat_amount: '50',
+              },
+            ],
+          },
+        )
+
+        travel_to(DateTime.new(2023, 9, 10)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '1111', operation_type: 'add' },
+            },
+          )
+        end
+
+        travel_to(DateTime.new(2023, 9, 12)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '1111', operation_type: 'remove' },
+            },
+          )
+        end
+
+        travel_to(DateTime.new(2023, 9, 14)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '1111', operation_type: 'add' },
+            },
+          )
+        end
+
+        travel_to(DateTime.new(2023, 9, 15)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '2222', operation_type: 'add' },
+            },
+          )
+        end
+
+        travel_to(DateTime.new(2023, 9, 16)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '2222', operation_type: 'add' },
+            },
+          )
+        end
+
+        travel_to(DateTime.new(2023, 9, 20)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '3333', operation_type: 'add' },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_833)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_833)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('3.0')
+        end
+
+        travel_to(DateTime.new(2023, 10, 1)) do
+          Subscriptions::BillingService.new.call
+
+          perform_all_enqueued_jobs
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.first
+
+          aggregate_failures do
+            expect(invoice.total_amount_cents).to eq(15_833)
+            expect(subscription.reload.invoices.count).to eq(1)
+          end
+        end
+
+        travel_to(DateTime.new(2023, 10, 5)) do
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_000)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_000)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('3.0')
+        end
+
+        travel_to(DateTime.new(2023, 10, 17)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              properties: { amount: '4444', operation_type: 'add' },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_242)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_242)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('4.0')
+        end
+      end
+    end
+  end
 end
