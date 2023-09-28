@@ -7,8 +7,5 @@ class AddSubscriptionIdToEvents < ActiveRecord::Migration[7.0]
     add_reference :events, :subscription, type: :uuid, foreign_key: true
     add_index :events, %i[subscription_id code]
     add_index :events, %i[subscription_id transaction_id], unique: true
-
-    LagoApi::Application.load_tasks
-    Rake::Task['events:fill_subscription'].invoke
   end
 end

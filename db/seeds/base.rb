@@ -73,16 +73,16 @@ Charge.create_with(
     plan:,
   )
 
-  next if customer.events.exists?
+  next if Event.where(customer_id: customer.id).exists?
 
   # NOTE: Assigns valid events
   5.times do
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer:,
-      subscription: sub,
-      organization:,
+      customer_id: customer.id,
+      subscription_id: sub.id,
+      organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..12).seconds,
       created_at: time,
@@ -102,9 +102,9 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer:,
-      subscription: sub,
-      organization:,
+      customer_id: customer.id,
+      subscription_id: sub.id,
+      organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
       created_at: time,
@@ -122,9 +122,9 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer:,
-      subscription: sub,
-      organization:,
+      customer_id: customer.id,
+      subscription_id: sub.id,
+      organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
       created_at: time,
@@ -179,9 +179,9 @@ organization.customers.find_each do |customer|
     time = Time.zone.now
 
     Event.create!(
-      customer:,
-      subscription: customer.active_subscriptions&.first,
-      organization:,
+      customer_id: customer.id,
+      subscription_id: customer.active_subscriptions&.first&.id,
+      organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..24).hours,
       created_at: time,
