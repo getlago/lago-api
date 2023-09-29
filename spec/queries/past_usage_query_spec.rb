@@ -49,7 +49,7 @@ RSpec.describe PastUsageQuery, type: :query do
 
       aggregate_failures do
         expect(result).to be_success
-        expect(result.usage.count).to eq(2)
+        expect(result.usage_periods.count).to eq(2)
       end
     end
 
@@ -113,8 +113,8 @@ RSpec.describe PastUsageQuery, type: :query do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.usage.count).to eq(2)
-          expect(result.usage.first.fees.count).to eq(1)
+          expect(result.usage_periods.count).to eq(2)
+          expect(result.usage_periods.first.fees.count).to eq(1)
         end
       end
 
@@ -148,8 +148,8 @@ RSpec.describe PastUsageQuery, type: :query do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.usage.count).to eq(1)
-          expect(result.usage.first.invoice_subscription).to eq(invoice_subscription1)
+          expect(result.usage_periods.count).to eq(1)
+          expect(result.usage_periods.first.invoice_subscription).to eq(invoice_subscription1)
         end
       end
 
@@ -161,7 +161,7 @@ RSpec.describe PastUsageQuery, type: :query do
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.usage.count).to eq(2)
+            expect(result.usage_periods.count).to eq(2)
           end
         end
       end

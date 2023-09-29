@@ -10,7 +10,7 @@ module Resolvers
       argument :customer_id, type: ID, required: false
       argument :subscription_id, type: ID, required: true
 
-      type Types::Invoices::Usage, null: false
+      type Types::Customers::Usage::Current, null: false
 
       def resolve(customer_id:, subscription_id:)
         result = Invoices::CustomerUsageService

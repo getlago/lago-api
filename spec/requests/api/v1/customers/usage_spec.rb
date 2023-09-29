@@ -3,19 +3,22 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:disable RSpec/FilePath
+  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization) }
+
+  let(:plan) { create(:plan, interval: 'monthly') }
+
+  let(:subscription) do
+    create(
+      :subscription,
+      plan:,
+      customer:,
+      started_at: Time.zone.now - 2.years,
+    )
+  end
+
   describe 'GET /customers/:customer_id/current_usage' do
-    let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
     let(:tax) { create(:tax, organization:, rate: 20) }
-    let(:subscription) do
-      create(
-        :subscription,
-        plan:,
-        customer:,
-        started_at: Time.zone.now - 2.years,
-      )
-    end
-    let(:plan) { create(:plan, interval: 'monthly') }
 
     let(:metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:charge) do
@@ -257,6 +260,104 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
       let(:customer) { create(:customer) }
 
       it 'returns not found' do
+        get_with_token(organization, path)
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe 'GET /customers/:customer_id/past_usage' do
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        from_datetime: DateTime.parse('2023-08-17T00:00:00'),
+        to_datetime: DateTime.parse('2023-09-16T23:59:59'),
+        subscription:,
+      )
+    end
+
+    let(:billable_metric1) { create(:billable_metric, organization:) }
+    let(:billable_metric2) { create(:billable_metric, organization:) }
+
+    let(:charge1) { create(:standard_charge, plan:, billable_metric: billable_metric1) }
+    let(:charge2) { create(:standard_charge, plan:, billable_metric: billable_metric2) }
+
+    let(:invoice) { invoice_subscription.invoice }
+
+    let(:fee1) { create(:charge_fee, charge: charge1, invoice:) }
+    let(:fee2) { create(:charge_fee, charge: charge2, invoice:) }
+
+    let(:path) do
+      [
+        '/api/v1/customers',
+        customer.external_id,
+        "past_usage?external_subscription_id=#{subscription.external_id}",
+      ].join('/')
+    end
+
+    before do
+      fee1
+      fee2
+    end
+
+    it 'returns the past usage' do
+      get_with_token(organization, path)
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:usage_periods].count).to eq(1)
+
+        usage = json[:usage_periods].first
+        expect(usage[:from_datetime]).to eq(invoice_subscription.from_datetime.iso8601)
+        expect(usage[:to_datetime]).to eq(invoice_subscription.to_datetime.iso8601)
+        expect(usage[:issuing_date]).to eq(invoice.issuing_date.iso8601)
+        expect(usage[:currency]).to eq(invoice.currency)
+        expect(usage[:amount_cents]).to eq(invoice.fees_amount_cents)
+        expect(usage[:total_amount_cents]).to eq(4)
+        expect(usage[:taxes_amount_cents]).to eq(4)
+
+        expect(usage[:charges_usage].count).to eq(2)
+
+        charge_usage = usage[:charges_usage].first
+        expect(charge_usage[:billable_metric][:name]).to eq(billable_metric1.name)
+        expect(charge_usage[:billable_metric][:code]).to eq(billable_metric1.code)
+        expect(charge_usage[:billable_metric][:aggregation_type]).to eq(billable_metric1.aggregation_type)
+        expect(charge_usage[:charge][:charge_model]).to eq(charge1.charge_model)
+        expect(charge_usage[:units]).to eq(fee1.units.to_s)
+        expect(charge_usage[:amount_cents]).to eq(fee1.amount_cents)
+        expect(charge_usage[:amount_currency]).to eq(fee1.currency)
+        expect(charge_usage[:groups]).to eq([])
+      end
+    end
+
+    context 'when missing external_subscription_id' do
+      let(:path) do
+        [
+          '/api/v1/customers',
+          customer.external_id,
+          'past_usage',
+        ].join('/')
+      end
+
+      it 'returns an unprocessable entity' do
+        get_with_token(organization, path)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    context 'with invalid billable metric code' do
+      let(:path) do
+        [
+          '/api/v1/customers',
+          customer.external_id,
+          "past_usage?billable_metric_code=foo&external_subscription_id=#{subscription.external_id}",
+        ].join('/')
+      end
+
+      it 'returns a not found error' do
         get_with_token(organization, path)
 
         expect(response).to have_http_status(:not_found)

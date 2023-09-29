@@ -22,11 +22,9 @@ module V1
       private
 
       def charges_usage
-        ::CollectionSerializer.new(
-          model.fees,
-          ::V1::Customers::ChargeUsageSerializer,
-          collection_name: 'charges_usage',
-        ).serialize
+        {
+          charges_usage: ::V1::Customers::ChargeUsageSerializer.new(model.fees).serialize,
+        }
       end
 
       def legacy_values

@@ -40,10 +40,10 @@ module Api
           if result.success?
             render(
               json: ::CollectionSerializer.new(
-                result.usage,
+                result.usage_periods,
                 ::V1::Customers::PastUsageSerializer,
                 collection_name: 'usage_periods',
-                meta: pagination_metadata(result.usage_query),
+                meta: pagination_metadata(result),
                 includes: %i[charges_usage],
               ),
             )
