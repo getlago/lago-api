@@ -30,7 +30,7 @@ module Charges
           # and determine which prorated events goes into certain tier. Full units sum determines tier while
           # prorated units sum determines amount that is going to be used for price calculation inside the tier.
           # Overflow can happen if event value covers partially both lower and higher tier
-          while (index < units_count) || (!overflow.zero?)
+          while (index < units_count) || !overflow.zero?
             # Here is applied overflow from previous iteration (if any)
             unless overflow.zero?
               prorated_sum += overflow * prorated_coefficient(prorated_units[index - 1], full_units[index - 1])
@@ -61,6 +61,8 @@ module Charges
             # Calculating overflow (if any) and aligning current invalid prorated sum with prorated overflow amount
             overflow = full_sum - range[:to_value]
             prorated_sum -= overflow * prorated_coefficient(prorated_units[index - 1], full_units[index - 1])
+
+            break
           end
 
           result_amount += prorated_sum * per_unit_amount
