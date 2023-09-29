@@ -10604,6 +10604,20 @@
               ]
             },
             {
+              "name": "groupName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
