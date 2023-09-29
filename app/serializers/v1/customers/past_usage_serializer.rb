@@ -12,7 +12,7 @@ module V1
           amount_cents: invoice.fees_amount_cents,
           total_amount_cents: invoice.fees_amount_cents + taxes_amount_cents,
           taxes_amount_cents:,
-          invoice_id: invoice.id,
+          lago_invoice_id: invoice.id,
         }
 
         payload.merge!(charges_usage) if include?(:charges_usage)

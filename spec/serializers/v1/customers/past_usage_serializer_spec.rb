@@ -44,7 +44,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
         'amount_cents' => invoice.fees_amount_cents,
         'total_amount_cents' => invoice.fees_amount_cents + invoice.fees.sum(:taxes_amount_cents),
         'taxes_amount_cents' => invoice.fees.sum(:taxes_amount_cents),
-        'invoice_id' => invoice.id,
+        'lago_invoice_id' => invoice.id,
       )
 
       expect(result['usage_period']['charges_usage'].count).to eq(2)
