@@ -17,7 +17,6 @@ module BillableMetrics
 
         aggregation = compute_aggregation.ceil(5)
         result.full_units_number = aggregation_without_proration.aggregation if event.nil?
-        result.recurring_updated_at = from_datetime if event.nil?
 
         if options[:is_current_usage]
           handle_current_usage(aggregation, options[:is_pay_in_advance])
