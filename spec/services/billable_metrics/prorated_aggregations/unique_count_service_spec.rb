@@ -477,7 +477,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'with multiple events added in the period and with one added and removed during period' do
       let(:added_at) { from_datetime + 10.days }
-      let(:quantified_event_2) do
+      let(:quantified_event2) do
         create(
           :quantified_event,
           customer:,
@@ -485,10 +485,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           removed_at: from_datetime + 20.days,
           external_subscription_id: subscription.external_id,
           billable_metric:,
-          )
+        )
       end
 
-      before { quantified_event_2 }
+      before { quantified_event2 }
 
       it 'aggregates per events' do
         result = unique_count_service.per_event_aggregation
