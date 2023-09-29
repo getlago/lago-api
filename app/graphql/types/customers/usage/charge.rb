@@ -7,6 +7,7 @@ module Types
         graphql_name 'ChargeUsage'
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
+        field :events_count, Integer, null: false
         field :units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
@@ -14,7 +15,11 @@ module Types
         field :groups, [Types::Customers::Usage::ChargeGroup], null: true
 
         def units
-          object.map(&:units).map(&:to_f).sum
+          object.map { |f| BigDecimal(f.units) }.sum
+        end
+
+        def events_count
+          object.sum(&:events_count)
         end
 
         def amount_cents

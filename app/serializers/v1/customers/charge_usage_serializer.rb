@@ -9,6 +9,7 @@ module V1
 
           {
             units: fees.map { |f| BigDecimal(f.units) }.sum.to_s,
+            events_count: fees.map { |f| BigDecimal(f.events_count || 0) }.sum,
             amount_cents: fees.sum(&:amount_cents),
             amount_currency: fee.amount_currency,
             charge: {
@@ -38,6 +39,7 @@ module V1
             value: f.group.value,
             units: f.units,
             amount_cents: f.amount_cents,
+            events_count: f.events_count,
           }
         end.compact
       end

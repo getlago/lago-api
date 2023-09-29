@@ -9,6 +9,7 @@ module Types
         field :id, ID, null: false, method: :group_id
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
+        field :events_count, Integer, null: false
         field :key, String, null: true
         field :units, GraphQL::Types::Float, null: false
         field :value, String, null: false

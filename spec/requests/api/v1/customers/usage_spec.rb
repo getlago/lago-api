@@ -155,8 +155,9 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
               value: 'aws',
               units: '3.0',
               amount_cents: 3000,
+              events_count: 3,
             },
-            { lago_id: google.id, key: 'cloud', value: 'google', units: '1.0', amount_cents: 2000 },
+            { lago_id: google.id, key: 'cloud', value: 'google', units: '1.0', amount_cents: 2000, events_count: 1 },
           )
         end
       end
@@ -248,9 +249,10 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
               value: 'usa',
               units: '2.0',
               amount_cents: 2000,
+              events_count: 2,
             },
-            { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000 },
-            { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000 },
+            { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000, events_count: 1 },
+            { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000, events_count: 1 },
           )
         end
       end
