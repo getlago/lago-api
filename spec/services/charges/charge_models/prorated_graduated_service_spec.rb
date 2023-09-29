@@ -80,7 +80,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
   end
 
   context 'with three ranges and one overflow' do
-    let(:aggregation) { 7.2 }
+    let(:aggregation) { 6.36 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
         r.event_aggregation = [2, 5, -6, 10, 4, 60]
@@ -118,12 +118,32 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
 
     before do
       aggregation_result.aggregation = aggregation
-      aggregation_result.full_units_number = 80
-      aggregation_result.current_usage_units = 80
+      aggregation_result.full_units_number = 75
+      aggregation_result.current_usage_units = 75
     end
 
     it 'calculates the amount correctly' do
       expect(apply_graduated_service.amount.round(2)).to eq(190.33)
+    end
+
+    context 'when there ate two overflows' do
+      let(:aggregation) { 75 }
+      let(:per_event_aggregation) do
+        BaseService::Result.new.tap do |r|
+          r.event_aggregation = [75]
+          r.event_prorated_aggregation = [75]
+        end
+      end
+
+      before do
+        aggregation_result.aggregation = aggregation
+        aggregation_result.full_units_number = 75
+        aggregation_result.current_usage_units = 75
+      end
+
+      it 'calculates the amount correctly' do
+        expect(apply_graduated_service.amount.round(2)).to eq(370)
+      end
     end
   end
 end

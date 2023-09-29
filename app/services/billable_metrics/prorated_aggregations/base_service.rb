@@ -105,15 +105,30 @@ module BillableMetrics
       end
 
       def per_event_aggregation
+        recurring_value = previous_charge_fee&.units
+        recurring_aggregation = recurring_value ? [BigDecimal(recurring_value) * persisted_pro_rata] : []
+
         Result.new.tap do |result|
-          result.event_aggregation = base_aggregator.compute_per_event_aggregation
-          result.event_prorated_aggregation = compute_per_event_prorated_aggregation
+          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation
+          result.event_prorated_aggregation = recurring_aggregation + compute_per_event_prorated_aggregation
         end
       end
 
       private
 
       attr_reader :base_aggregator
+
+      def previous_charge_fee
+        subscription_ids = customer.subscriptions
+          .where(external_id: subscription.external_id)
+          .pluck(:id)
+
+        Fee.joins(:charge)
+          .where(charge: { billable_metric_id: billable_metric.id })
+          .where(subscription_id: subscription_ids, fee_type: :charge, group_id: group&.id)
+          .order(created_at: :desc)
+          .first
+      end
     end
   end
 end

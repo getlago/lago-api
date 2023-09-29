@@ -86,11 +86,7 @@ module BillableMetrics
       end
 
       def compute_per_event_aggregation
-        if billable_metric.recurring?
-          recurring_events_scope(to_datetime:).pluck(Arel.sql("COALESCE((#{sanitized_field_name})::numeric, 0)"))
-        else
-          events_scope(from_datetime:, to_datetime:).pluck(Arel.sql("COALESCE((#{sanitized_field_name})::numeric, 0)"))
-        end
+        events_scope(from_datetime:, to_datetime:).pluck(Arel.sql("COALESCE((#{sanitized_field_name})::numeric, 0)"))
       end
 
       protected

@@ -33,6 +33,16 @@ module Charges
               prorated_coefficient = prorated_units[index - 1].fdiv(full_units[index - 1])
               prorated_sum += overflow * prorated_coefficient
               full_sum += overflow
+
+              if range[:to_value] && full_sum >= range[:to_value]
+                overflow = full_sum - range[:to_value]
+                prorated_coefficient = prorated_units[index - 1].fdiv(full_units[index - 1])
+                prorated_sum -= overflow * prorated_coefficient
+                full_sum -= overflow
+
+                break
+              end
+
               overflow = 0
             end
 

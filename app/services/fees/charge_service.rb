@@ -174,7 +174,11 @@ module Fees
                       when :standard
                         Charges::ChargeModels::StandardService
                       when :graduated
-                        Charges::ChargeModels::GraduatedService
+                        if charge.prorated?
+                          Charges::ChargeModels::ProratedGraduatedService
+                        else
+                          Charges::ChargeModels::GraduatedService
+                        end
                       when :graduated_percentage
                         Charges::ChargeModels::GraduatedPercentageService
                       when :package
