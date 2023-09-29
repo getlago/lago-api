@@ -69,6 +69,11 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               properties: { amount: '2' },
             },
           )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_400)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_400)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
         end
 
         travel_to(DateTime.new(2023, 9, 16)) do
@@ -80,6 +85,11 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               properties: { amount: '5' },
             },
           )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_400)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_400)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('7.0')
         end
 
         travel_to(DateTime.new(2023, 9, 20)) do
@@ -91,6 +101,11 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               properties: { amount: '-6' },
             },
           )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_300)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_300)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
         end
 
         travel_to(DateTime.new(2023, 9, 25)) do
@@ -102,6 +117,11 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               properties: { amount: '10' },
             },
           )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_300)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_300)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('11.0')
         end
 
         travel_to(DateTime.new(2023, 9, 26)) do
@@ -113,6 +133,11 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               properties: { amount: '4' },
             },
           )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_633)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_633)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('15.0')
         end
 
         travel_to(DateTime.new(2023, 9, 30)) do

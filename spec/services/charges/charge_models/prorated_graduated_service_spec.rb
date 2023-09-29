@@ -79,6 +79,55 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     end
   end
 
+  context 'when only one range is used' do
+    let(:aggregation) { 0.7 }
+    let(:per_event_aggregation) do
+      BaseService::Result.new.tap do |r|
+        r.event_aggregation = [1]
+        r.event_prorated_aggregation = [0.7]
+      end
+    end
+
+    before do
+      aggregation_result.aggregation = aggregation
+      aggregation_result.full_units_number = 1
+      aggregation_result.current_usage_units = 1
+    end
+
+    it 'calculates the amount correctly' do
+      expect(apply_graduated_service.amount.round(2)).to eq(107)
+    end
+
+    context 'with two ranges where first unit fully covers first range' do
+      let(:charge) do
+        create(
+          :graduated_charge,
+          billable_metric:,
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: 1,
+                per_unit_amount: '10',
+                flat_amount: '100',
+              },
+              {
+                from_value: 2,
+                to_value: nil,
+                per_unit_amount: '5',
+                flat_amount: '50',
+              },
+            ],
+          },
+        )
+      end
+
+      it 'calculates the amount correctly and second flat fee is not applied' do
+        expect(apply_graduated_service.amount.round(2)).to eq(107)
+      end
+    end
+  end
+
   context 'with three ranges and one overflow' do
     let(:aggregation) { 6.36 }
     let(:per_event_aggregation) do
@@ -126,7 +175,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       expect(apply_graduated_service.amount.round(2)).to eq(190.33)
     end
 
-    context 'when there ate two overflows' do
+    context 'when there are two overflows' do
       let(:aggregation) { 75 }
       let(:per_event_aggregation) do
         BaseService::Result.new.tap do |r|

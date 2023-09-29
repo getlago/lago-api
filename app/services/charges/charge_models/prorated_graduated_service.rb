@@ -22,7 +22,7 @@ module Charges
           per_unit_amount = BigDecimal(range[:per_unit_amount])
 
           # NOTE: Add flat amount to the total
-          result_amount += flat_amount unless units.zero?
+          result_amount += flat_amount if !units.zero? && (!overflow.zero? || prorated_units[index])
 
           # Calculate prorated value inside the range. Which events are taken into account
           # for certain range depends on comparing full number of units and range boundaries
