@@ -36,6 +36,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       {
         billable_metric_id: sum_billable_metric.id,
         charge_model: 'standard',
+        invoice_display_name: 'charge1',
         min_amount_cents: 100,
         group_properties: [
           {
@@ -48,6 +49,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       {
         billable_metric_id: billable_metric.id,
         charge_model: 'graduated',
+        invoice_display_name: 'charge2',
         properties: {
           graduated_ranges: [
             {
@@ -82,6 +84,8 @@ RSpec.describe Plans::UpdateService, type: :service do
         expect(updated_plan.invoice_display_name).to eq(plan_invoice_display_name)
         expect(updated_plan.taxes.pluck(:code)).to eq([tax2.code])
         expect(plan.charges.count).to eq(2)
+        expect(plan.charges.first.invoice_display_name).to eq('charge2')
+        expect(plan.charges.second.invoice_display_name).to eq('charge1')
       end
     end
 

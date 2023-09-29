@@ -116,6 +116,7 @@ module Plans
 
           properties = payload_charge.delete(:properties)
           charge.update!(
+            invoice_display_name: payload_charge[:invoice_display_name],
             properties: properties.presence || Charges::BuildDefaultPropertiesService.call(
               payload_charge[:charge_model],
             ),
