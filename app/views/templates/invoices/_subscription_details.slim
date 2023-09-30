@@ -39,7 +39,7 @@
               - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
                 tr
                   td
-                    .body-1 = fee.billable_metric.name
+                    .body-1 = fee.invoice_name
                     .body-3
                       - if fee.charge.percentage?
                         = I18n.t('invoice.total_events', count: fees.sum(&:events_count))
@@ -68,7 +68,7 @@
               - else
                 tr
                   td
-                    .body-1 = fee.billable_metric.name
+                    .body-1 = fee.invoice_name
                     - unless fee.billable_metric.recurring_count_agg?
                       - if fee.billable_metric.weighted_sum_agg?
                         .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
@@ -103,7 +103,7 @@
               - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
                 tr
                   td
-                    .body-1 = fee.billable_metric.name
+                    .body-1 = fee.invoice_name
                     .body-3
                       - if fee.charge.percentage?
                         = I18n.t('invoice.total_events', count: fees.sum(&:events_count))
@@ -132,7 +132,7 @@
               - else
                 tr
                   td
-                    .body-1 = fee.billable_metric.name
+                    .body-1 = fee.invoice_name
                     - unless fee.billable_metric.recurring_count_agg?
                       - if fee.billable_metric.weighted_sum_agg?
                         .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
@@ -213,7 +213,7 @@
           / Fees for groups
           - if fees.all? { |f| f.group_id? }
             - fees.select { |f| f.units.positive? }.each do |fee|
-              .body-3 = fees.first.billable_metric.name
+              .body-3 = fees.first.invoice_name
               .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_group_name: fee.group_name)
               .breakdown-details.mb-24
                 table.breakdown-details-table width="100%"
@@ -233,7 +233,7 @@
 
           / Fees without group
           - else
-            .body-3 = fees.first.billable_metric.name
+            .body-3 = fees.first.invoice_name
             .body-1.mb-24 = I18n.t('invoice.breakdown')
             .breakdown-details.mb-24
               table.breakdown-details-table width="100%"
