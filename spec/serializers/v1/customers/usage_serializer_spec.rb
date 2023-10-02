@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ::V1::CustomerUsageSerializer do
+RSpec.describe ::V1::Customers::UsageSerializer do
   subject(:serializer) { described_class.new(usage, root_name: 'customer_usage', includes: [:charges_usage]) }
 
   let(:usage) do

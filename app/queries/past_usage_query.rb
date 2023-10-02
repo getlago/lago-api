@@ -5,7 +5,8 @@ class PastUsageQuery < BaseQuery
     validate_filters
     return result if result.error.present?
 
-    result.usage = query.map do |invoice_subscription|
+    result.usage_query = query
+    result.usage = result.usage_query.map do |invoice_subscription|
       OpenStruct.new(
         invoice_subscription:,
         fees: fees_query(invoice_subscription.invoice),
