@@ -5,13 +5,20 @@ class PastUsageQuery < BaseQuery
     validate_filters
     return result if result.error.present?
 
-    result.usage_query = query
-    result.usage = result.usage_query.map do |invoice_subscription|
+    query_result = query
+    result.usage_periods = query_result.map do |invoice_subscription|
       OpenStruct.new(
         invoice_subscription:,
         fees: fees_query(invoice_subscription.invoice),
       )
     end
+
+    # NOTE: Pagination attributes
+    result.current_page = query_result.current_page
+    result.next_page = query_result.next_page
+    result.prev_page = query_result.prev_page
+    result.total_pages = query_result.total_pages
+    result.total_count = query_result.total_count
 
     result
   end

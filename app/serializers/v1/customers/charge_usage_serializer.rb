@@ -4,32 +4,44 @@ module V1
   module Customers
     class ChargeUsageSerializer < ModelSerializer
       def serialize
-        {
-          units: model.units,
-          amount_cents: model.amount_cents,
-          amount_currency: model.amount_currency,
-          charge: {
-            lago_id: model.charge.id,
-            charge_model: model.charge.charge_model,
-            invoiceable: model.charge.invoiceable,
-            pay_in_advance: model.charge.pay_in_advance,
-          },
-          billable_metric: {
-            lago_id: model.billable_metric.id,
-            name: model.billable_metric.name,
-            code: model.billable_metric.code,
-            aggregation_type: model.billable_metric.aggregation_type,
-          },
-          groups: model.groups.sort_by(&:name).map do |group|
-            {
-              lago_id: group.id,
-              key: group.key,
-              value: group.value,
-              units: group.units,
-              amount_cents: group.amount_cents,
-            }
-          end,
-        }
+        model.group_by(&:charge_id).map do |charge_id, fees|
+          fee = fees.first
+
+          {
+            units: fees.map { |f| BigDecimal(f.units) }.sum.to_s,
+            events_count: fees.map { |f| BigDecimal(f.events_count || 0) }.sum,
+            amount_cents: fees.sum(&:amount_cents),
+            amount_currency: fee.amount_currency,
+            charge: {
+              id: charge_id,
+              charge_model: fee.charge.charge_model,
+            },
+            billable_metric: {
+              id: fee.billable_metric.id,
+              name: fee.billable_metric.name,
+              code: fee.billable_metric.code,
+              aggregation_type: fee.billable_metric.aggregation_type,
+            },
+            groups: groups(fees),
+          }
+        end
+      end
+
+      private
+
+      def groups(fees)
+        fees.sort_by { |f| f.group&.name }.map do |f|
+          next unless f.group
+
+          {
+            lago_id: f.group.id,
+            key: f.group.parent&.value || f.group.key,
+            value: f.group.value,
+            units: f.units,
+            amount_cents: f.amount_cents,
+            events_count: f.events_count,
+          }
+        end.compact
       end
     end
   end

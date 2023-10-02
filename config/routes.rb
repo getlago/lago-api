@@ -19,8 +19,10 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :customers, param: :external_id, only: %i[create index show destroy] do
-        get :current_usage, to: 'customers/usage#current'
         get :portal_url
+
+        get :current_usage, to: 'customers/usage#current'
+        get :past_usage, to: 'customers/usage#past'
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]

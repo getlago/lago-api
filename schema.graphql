@@ -221,6 +221,7 @@ type ChargeUsage {
   amountCents: BigInt!
   billableMetric: BillableMetric!
   charge: Charge!
+  eventsCount: Int!
   groups: [GroupUsage!]
   units: Float!
 }
@@ -3074,6 +3075,7 @@ input GroupPropertiesInput {
 
 type GroupUsage {
   amountCents: BigInt!
+  eventsCount: Int!
   id: ID!
   key: String
   units: Float!
