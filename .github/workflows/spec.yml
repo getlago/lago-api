@@ -41,6 +41,6 @@ jobs:
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
       - name: Set up database schema
-        run: bin/rails db:schema:load
+        run: bin/rails db:schema:load:primary
       - name: Run tests
         run: bundle exec rspec
