@@ -14,6 +14,7 @@ module Invoices
 
       begin
         invoice.void!
+        SendWebhookJob.perform_later('invoice.voided', result.invoice) if invoice.organization.webhook_endpoints.any?
       rescue AASM::InvalidTransition => _e
         return result.not_allowed_failure!(code: 'not_voidable')
       end
