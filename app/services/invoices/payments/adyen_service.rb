@@ -69,7 +69,7 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def should_process_payment?
-        return false if invoice.succeeded?
+        return false if invoice.succeeded? || invoice.voided?
         return false if adyen_payment_provider.blank?
 
         customer&.adyen_customer&.provider_customer_id
