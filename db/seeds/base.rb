@@ -11,12 +11,20 @@ organization = Organization.find_or_create_by!(name: 'Hooli')
 Membership.find_or_create_by!(user:, organization:, role: :admin)
 
 # NOTE: define a billing model
-billable_metric = BillableMetric.find_or_create_by!(
+sum_metric = BillableMetric.find_or_create_by!(
   organization:,
   aggregation_type: 'sum_agg',
   name: 'Sum BM',
   code: 'sum_bm',
   field_name: 'custom_field',
+)
+
+count_metric = BillableMetric.find_or_create_by!(
+  organization:,
+  aggregation_type: 'count_agg',
+  name: 'Count BM',
+  code: 'count_bm',
+  field_name: 'customer_field',
 )
 
 plan = Plan.create_with(
@@ -38,7 +46,18 @@ Charge.create_with(
   },
 ).find_or_create_by!(
   plan:,
-  billable_metric:,
+  billable_metric: sum_metric,
+)
+
+Charge.create_with(
+  charge_model: 'standard',
+  amount_currency: 'EUR',
+  properties: {
+    amount: Faker::Number.between(from: 100, to: 500).to_s,
+  },
+).find_or_create_by!(
+  plan:,
+  billable_metric: count_metric,
 )
 
 # NOTE: define customers
@@ -63,10 +82,13 @@ Charge.create_with(
     external_id: "cust_#{i + 1}",
   )
 
+  subscription_at = (Time.current - 6.months).beginning_of_month
+
   sub = Subscription.create_with(
-    started_at: Time.current - 3.months,
-    subscription_at: Time.current - 3.months,
+    started_at: subscription_at,
+    subscription_at:,
     status: :active,
+    billing_time: :calendar,
   ).find_or_create_by!(
     customer:,
     external_id: SecureRandom.uuid,
@@ -76,25 +98,45 @@ Charge.create_with(
   next if Event.where(customer_id: customer.id).exists?
 
   # NOTE: Assigns valid events
-  5.times do
-    time = Time.zone.now - rand(1..20).days
+  6.times do |offset|
+    5.times do
+      time = Time.current - offset.month - rand(1..20).days
 
-    Event.create!(
-      customer_id: customer.id,
-      subscription_id: sub.id,
-      organization_id: organization.id,
-      transaction_id: SecureRandom.uuid,
-      timestamp: time - rand(0..12).seconds,
-      created_at: time,
-      code: billable_metric.code,
-      properties: {
-        custom_field: 10,
-      },
-      metadata: {
-        user_agent: 'Lago Python v0.1.5',
-        ip_address: Faker::Internet.ip_v4_address,
-      },
-    )
+      Event.create!(
+        customer_id: customer.id,
+        subscription_id: sub.id,
+        organization_id: organization.id,
+        transaction_id: SecureRandom.uuid,
+        timestamp: time - rand(0..12).seconds,
+        created_at: time,
+        code: sum_metric.code,
+        properties: {
+          custom_field: 10,
+        },
+        metadata: {
+          user_agent: 'Lago Python v0.1.5',
+          ip_address: Faker::Internet.ip_v4_address,
+        },
+      )
+    end
+
+    2.times do
+      time = Time.current - offset.month - rand(1..20).days
+
+      Event.create!(
+        customer_id: customer.id,
+        subscription_id: sub.id,
+        organization_id: organization.id,
+        transaction_id: SecureRandom.uuid,
+        timestamp: time - rand(0..12).seconds,
+        created_at: time,
+        code: count_metric.code,
+        metadata: {
+          user_agent: 'Lago Python v0.1.5',
+          ip_address: Faker::Internet.ip_v4_address,
+        },
+      )
+    end
   end
 
   # NOTE: Assigns events missing custom property
@@ -108,7 +150,7 @@ Charge.create_with(
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
       created_at: time,
-      code: billable_metric.code,
+      code: sum_metric.code,
       properties: {},
       metadata: {
         user_agent: 'Lago Python v0.1.5',
@@ -185,7 +227,7 @@ organization.customers.find_each do |customer|
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..24).hours,
       created_at: time,
-      code: billable_metric.code,
+      code: sum_metric.code,
       properties: {
         custom_field: 10,
       },
