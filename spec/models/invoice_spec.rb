@@ -202,6 +202,34 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#voidable?' do
+    subject(:voidable) { invoice.__send__(:voidable?) }
+
+    context 'when invoice is pending' do
+      let(:invoice) { build_stubbed(:invoice, payment_status: :pending) }
+
+      it 'returns true' do
+        expect(voidable).to be true
+      end
+    end
+
+    context 'when invoice is failed' do
+      let(:invoice) { build_stubbed(:invoice, payment_status: :failed) }
+
+      it 'returns true' do
+        expect(voidable).to be true
+      end
+    end
+
+    context 'when invoice is succeeded' do
+      let(:invoice) { build_stubbed(:invoice, payment_status: :succeeded) }
+
+      it 'returns false' do
+        expect(voidable).to be false
+      end
+    end
+  end
+
   describe '#creditable_amount_cents' do
     context 'when invoice v1' do
       it 'returns 0' do

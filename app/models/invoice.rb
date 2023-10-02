@@ -54,7 +54,7 @@ class Invoice < ApplicationRecord
   enum payment_status: PAYMENT_STATUS
   enum status: STATUS
 
-  aasm column: 'status' do
+  aasm column: 'status', timestamps: true do
     state :draft
     state :finalized
     state :voided
