@@ -228,6 +228,8 @@ class Invoice < ApplicationRecord
   private
 
   def voidable?
+    return false if credit_notes.any?
+
     pending? || failed?
   end
 
