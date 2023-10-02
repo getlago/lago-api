@@ -2950,6 +2950,7 @@ type Fee implements InvoiceItem {
   groupName: String
   id: ID!
   invoiceDisplayName: String
+  invoiceName: String
   itemCode: String!
   itemName: String!
   itemType: String!
