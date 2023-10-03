@@ -31,7 +31,7 @@ RSpec.describe Webhooks::Invoices::VoidedService do
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:webhook_type]).to eq('invoice.drafted')
+        expect(payload[:webhook_type]).to eq('invoice.voided')
         expect(payload[:object_type]).to eq('invoice')
       end
     end
