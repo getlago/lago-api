@@ -16,7 +16,7 @@ module Types
       field :interval, Types::Plans::IntervalEnum, null: false
       field :invoice_display_name, String
       field :name, String, null: false
-      field :parent_id, ID, null: true
+      field :parent, Types::Plans::Object, null: true
       field :pay_in_advance, Boolean, null: false
       field :trial_period, Float
 

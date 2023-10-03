@@ -16649,11 +16649,11 @@
               ]
             },
             {
-              "name": "parentId",
+              "name": "parent",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "ID",
+                "kind": "OBJECT",
+                "name": "Plan",
                 "ofType": null
               },
               "isDeprecated": false,
