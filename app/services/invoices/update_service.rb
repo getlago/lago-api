@@ -30,7 +30,7 @@ module Invoices
 
       invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
 
-      if params.key?(:ready_for_payment_processing)
+      if params.key?(:ready_for_payment_processing) && !invoice.voided?
         invoice.ready_for_payment_processing = params[:ready_for_payment_processing]
       end
 

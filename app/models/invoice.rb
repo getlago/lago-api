@@ -64,7 +64,10 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized, to: :voided, guard: :voidable?
+      transitions from: :finalized,
+                  to: :voided,
+                  guard: :voidable?,
+                  after: proc { update!(ready_for_payment_processing: false) }
     end
   end
 
