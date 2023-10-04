@@ -8,6 +8,7 @@ module Events
       else
         :default
       end
+    end
 
     def perform(organization, params, timestamp, metadata)
       result = Events::CreateService.new(
