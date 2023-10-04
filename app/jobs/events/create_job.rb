@@ -2,7 +2,12 @@
 
 module Events
   class CreateJob < ApplicationJob
-    queue_as :default
+    queue_as do
+      if ENV['SIDEKIQ_EVENTS'].present? && ENV['SIDEKIQ_EVENTS'] == 'true'
+        :events      
+      else
+        :default
+      end
 
     def perform(organization, params, timestamp, metadata)
       result = Events::CreateService.new(
