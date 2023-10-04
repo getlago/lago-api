@@ -3229,6 +3229,7 @@ enum InvoicePaymentStatusTypeEnum {
 enum InvoiceStatusTypeEnum {
   draft
   finalized
+  voided
 }
 
 type InvoiceSubscription {

@@ -64,10 +64,7 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized,
-                  to: :voided,
-                  guard: :voidable?,
-                  after: proc { update!(ready_for_payment_processing: false) }
+      transitions from: :finalized, to: :voided, guard: :voidable?, after: :void_invoice!
     end
   end
 
@@ -229,6 +226,10 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def void_invoice!
+    update!(ready_for_payment_processing: false)
+  end
 
   def voidable?
     return false if credit_notes.any?

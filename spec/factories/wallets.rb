@@ -10,5 +10,9 @@ FactoryBot.define do
     credits_balance { 0 }
     balance_cents { 0 }
     consumed_credits { 0 }
+
+    trait :terminated do
+      status { 'terminated' }
+    end
   end
 end
