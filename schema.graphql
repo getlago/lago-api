@@ -3962,7 +3962,7 @@ type Plan {
   invoiceDisplayName: String
   name: String!
   organization: Organization
-  parentId: ID
+  parent: Plan
   payInAdvance: Boolean!
   subscriptionsCount: Int!
   taxes: [Tax!]
