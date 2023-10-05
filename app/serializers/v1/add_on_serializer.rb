@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         name: model.name,
+        invoice_display_name: model.invoice_display_name,
         code: model.code,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,

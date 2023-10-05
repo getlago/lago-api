@@ -25,6 +25,7 @@ module Fees
           fee = Fee.new(
             invoice:,
             add_on:,
+            invoice_display_name: fee[:invoice_display_name].presence,
             description: fee[:description] || add_on.description,
             unit_amount_cents:,
             amount_cents: (unit_amount_cents * units).round,

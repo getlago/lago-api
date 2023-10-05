@@ -440,7 +440,7 @@ html
             td width="70%"
               .body-1
                 - if add_on?
-                  | #{fees.first.add_on.name}
+                  | #{fees.first.add_on.invoice_name}
                 - elsif credit?
                   = I18n.t('invoice.prepaid_credits_with_value', wallet_name: fees.first.invoiceable.wallet.name)
                   .body-3
@@ -543,7 +543,7 @@ html
                   - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
                     tr
                       td width="70%"
-                        .body-1 = fee.billable_metric.name
+                        .body-1 = fee.invoice_name
                         .body-3
                           - if fee.billable_metric.recurring_count_agg?
                             = I18n.t('invoice.see_breakdown')
@@ -556,7 +556,7 @@ html
                     - fees.select { |f| f.units.positive? }.each do |fee|
                       tr
                         td width="70%" style="padding-left: 16px;"
-                          .body-1 = fee.group.name
+                          .body-1 = fee.group_name
                           - unless fee.billable_metric.recurring_count_agg?
                             .body-3
                               - if fee.charge.percentage?
@@ -567,13 +567,13 @@ html
                     - if fee.true_up_fee.present?
                       tr
                         td width="70%"
-                          .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)
+                          .body-1 = I18n.t('invoice.true_up_metric', metric: fee.invoice_name)
                           .body-3 = I18n.t('invoice.true_up_details', min_amount: fee.charge.min_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator')))
                         td.body-1 width="30%" = fee.true_up_fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
                   - else
                     tr
                       td width="70%"
-                        .body-1 = fee.billable_metric.name
+                        .body-1 = fee.invoice_name
                         .body-3
                           - if fee.billable_metric.recurring_count_agg? && fees.sum(&:units) > 0
                             = I18n.t('invoice.see_breakdown')
@@ -585,7 +585,7 @@ html
                     - if fee.true_up_fee.present?
                       tr
                         td width="70%"
-                          .body-1 = I18n.t('invoice.true_up_metric', metric: fee.billable_metric.name)
+                          .body-1 = I18n.t('invoice.true_up_metric', metric: fee.invoice_name)
                           .body-3 = I18n.t('invoice.true_up_details', min_amount: fee.charge.min_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator')))
                         td.body-1 width="30%" = fee.true_up_fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
@@ -605,8 +605,8 @@ html
 
                 - if fees.all? { |f| f.group_id? }
                   - fees.select { |f| f.units.positive? }.each do |fee|
-                    .body-3 = fees.first.billable_metric.name
-                    .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_group_name: fee.group.name)
+                    .body-3 = fees.first.invoice_name
+                    .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_group_name: fee.group_name)
                     .breakdown-details.mb-24
                       table.breakdown-details-table width="100%"
                         - recurring_breakdown(fee).each do |breakdown|
@@ -614,15 +614,15 @@ html
                             td.body-3 width="15%" = I18n.l(breakdown.date, format: :default)
                             td.body-1 width="65%"
                               - if breakdown.action.to_sym == :add
-                                | +#{breakdown.count} #{fee.item_name}
+                                | +#{breakdown.count} #{fee.invoice_name}
                               - elsif breakdown.action.to_sym == :remove
-                                | -#{breakdown.count} #{fee.item_name}
+                                | -#{breakdown.count} #{fee.invoice_name}
                               - else
-                                | +/-#{breakdown.count} #{fee.item_name}
+                                | +/-#{breakdown.count} #{fee.invoice_name}
                             td.body-3 width="20%"
                               = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
                 - else
-                  .body-3 = fees.first.billable_metric.name
+                  .body-3 = fees.first.invoice_name
                   .body-1.mb-24 = I18n.t('invoice.breakdown')
                   .breakdown-details.mb-24
                     table.breakdown-details-table width="100%"
@@ -632,11 +632,11 @@ html
                             td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
                             td.body-1 width="65%"
                               - if breakdown.action.to_sym == :add
-                                | +#{breakdown.count} #{fee.item_name}
+                                | +#{breakdown.count} #{fee.invoice_name}
                               - elsif breakdown.action.to_sym == :remove
-                                | -#{breakdown.count} #{fee.item_name}
+                                | -#{breakdown.count} #{fee.invoice_name}
                               - else
-                                | +/-#{breakdown.count} #{fee.item_name}
+                                | +/-#{breakdown.count} #{fee.invoice_name}
                             td.body-3 width="20%"
                               = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
 

@@ -115,6 +115,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
         "values": [
           {
             "name": 'AWS',
+            "invoice_display_name": "AWS Invoice name",
             "key": 'region',
             "values": %w[usa europe],
           },

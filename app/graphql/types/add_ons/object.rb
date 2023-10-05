@@ -10,6 +10,7 @@ module Types
 
       field :code, String, null: false
       field :description, String, null: true
+      field :invoice_display_name, String, null: true
       field :name, String, null: false
 
       field :amount_cents, GraphQL::Types::BigInt, null: false

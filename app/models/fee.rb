@@ -85,6 +85,19 @@ class Fee < ApplicationRecord
     subscription.plan.name
   end
 
+  def invoice_name
+    return invoice_display_name if invoice_display_name.present?
+    return charge.invoice_display_name.presence || billable_metric.name if charge?
+    return add_on.invoice_display_name if add_on?
+    return fee_type if credit?
+
+    subscription.plan.invoice_display_name
+  end
+
+  def group_name
+    charge&.group_properties&.find_by(group:)&.invoice_display_name || group&.name
+  end
+
   def currency
     amount_currency
   end

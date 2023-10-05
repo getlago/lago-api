@@ -20,9 +20,13 @@ module GroupProperties
         property = charge.group_properties.find_by(group_id: params[:group_id])
 
         if property
-          property.update!(values: params[:values])
+          property.update!(values: params[:values], invoice_display_name: params[:invoice_display_name])
         else
-          charge.group_properties.create!(group_id: params[:group_id], values: params[:values])
+          charge.group_properties.create!(
+            group_id: params[:group_id],
+            values: params[:values],
+            invoice_display_name: params[:invoice_display_name],
+          )
         end
       end
 

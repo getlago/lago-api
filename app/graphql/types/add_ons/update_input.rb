@@ -10,6 +10,7 @@ module Types
       argument :code, String, required: true
       argument :description, String, required: false
       argument :id, ID, required: true
+      argument :invoice_display_name, String, required: false
       argument :name, String, required: true
       argument :tax_codes, [String], required: false
     end

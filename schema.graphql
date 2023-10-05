@@ -56,6 +56,7 @@ type AddOn {
   deletedAt: ISO8601DateTime
   description: String
   id: ID!
+  invoiceDisplayName: String
   name: String!
   organization: Organization
   taxes: [Tax!]
@@ -179,6 +180,7 @@ type Charge {
   deletedAt: ISO8601DateTime
   groupProperties: [GroupProperties!]
   id: ID!
+  invoiceDisplayName: String
   invoiceable: Boolean!
   minAmountCents: BigInt!
   payInAdvance: Boolean!
@@ -193,6 +195,7 @@ input ChargeInput {
   chargeModel: ChargeModelEnum!
   groupProperties: [GroupPropertiesInput!]
   id: ID
+  invoiceDisplayName: String
   invoiceable: Boolean
   minAmountCents: BigInt
   payInAdvance: Boolean
@@ -1550,6 +1553,7 @@ input CreateAddOnInput {
   clientMutationId: String
   code: String!
   description: String
+  invoiceDisplayName: String
   name: String!
   taxCodes: [String!]
 }
@@ -2943,7 +2947,10 @@ type Fee implements InvoiceItem {
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group
+  groupName: String
   id: ID!
+  invoiceDisplayName: String
+  invoiceName: String
   itemCode: String!
   itemName: String!
   itemType: String!
@@ -2975,6 +2982,7 @@ Fee input for creating invoice
 input FeeInput {
   addOnId: ID!
   description: String
+  invoiceDisplayName: String
   name: String
   taxCodes: [String!]
   unitAmountCents: BigInt
@@ -3065,11 +3073,13 @@ type Group {
 type GroupProperties {
   deletedAt: ISO8601DateTime
   groupId: ID!
+  invoiceDisplayName: String
   values: Properties!
 }
 
 input GroupPropertiesInput {
   groupId: ID!
+  invoiceDisplayName: String
   values: PropertiesInput!
 }
 
@@ -3077,6 +3087,7 @@ type GroupUsage {
   amountCents: BigInt!
   eventsCount: Int!
   id: ID!
+  invoiceDisplayName: String
   key: String
   units: Float!
   value: String!
@@ -5353,6 +5364,7 @@ input UpdateAddOnInput {
   code: String!
   description: String
   id: ID!
+  invoiceDisplayName: String
   name: String!
   taxCodes: [String!]
 }

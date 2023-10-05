@@ -15,6 +15,8 @@ FactoryBot.define do
     invoiceable_type { 'Subscription' }
     invoiceable_id { subscription.id }
 
+    invoice_display_name { Faker::Fantasy::Tolkien.character }
+
     trait :succeeded do
       payment_status { :succeeded }
       succeeded_at { Time.current }

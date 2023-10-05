@@ -10,6 +10,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     let(:create_params) do
       {
         name: 'add_on1',
+        invoice_display_name: 'Addon 1 invoice name',
         code: 'add_on1_code',
         amount_cents: 123,
         amount_currency: 'EUR',
@@ -26,6 +27,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       expect(json[:add_on][:lago_id]).to be_present
       expect(json[:add_on][:code]).to eq(create_params[:code])
       expect(json[:add_on][:name]).to eq(create_params[:name])
+      expect(json[:add_on][:invoice_display_name]).to eq(create_params[:invoice_display_name])
       expect(json[:add_on][:created_at]).to be_present
       expect(json[:add_on][:taxes].map { |t| t[:code] }).to contain_exactly(tax.code)
     end
@@ -39,6 +41,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     let(:update_params) do
       {
         name: 'add_on1',
+        invoice_display_name: 'Addon 1 updated invoice name',
         code:,
         amount_cents: 123,
         amount_currency: 'EUR',
@@ -49,7 +52,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
     before { add_on_applied_tax }
 
-    it 'updates a add-on' do
+    it 'updates an add-on' do
       put_with_token(
         organization,
         "/api/v1/add_ons/#{add_on.code}",
@@ -59,6 +62,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:add_on][:lago_id]).to eq(add_on.id)
       expect(json[:add_on][:code]).to eq(update_params[:code])
+      expect(json[:add_on][:invoice_display_name]).to eq(update_params[:invoice_display_name])
       expect(json[:add_on][:taxes].map { |t| t[:code] }).to contain_exactly(tax2.code)
     end
 
@@ -99,6 +103,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:add_on][:lago_id]).to eq(add_on.id)
+      expect(json[:add_on][:invoice_display_name]).to eq(add_on.invoice_display_name)
       expect(json[:add_on][:code]).to eq(add_on.code)
     end
 
@@ -151,6 +156,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       expect(json[:add_ons].count).to eq(1)
       expect(json[:add_ons].first[:lago_id]).to eq(add_on.id)
       expect(json[:add_ons].first[:code]).to eq(add_on.code)
+      expect(json[:add_ons].first[:invoice_display_name]).to eq(add_on.invoice_display_name)
       expect(json[:add_ons].first[:taxes].map { |t| t[:code] }).to contain_exactly(tax.code)
     end
 

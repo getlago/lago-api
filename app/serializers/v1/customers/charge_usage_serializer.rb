@@ -15,6 +15,7 @@ module V1
             charge: {
               id: charge_id,
               charge_model: fee.charge.charge_model,
+              invoice_display_name: fee.charge.invoice_display_name,
             },
             billable_metric: {
               id: fee.billable_metric.id,

@@ -12,6 +12,7 @@ module AddOns
       return result.not_found_failure!(resource: 'add_on') unless add_on
 
       add_on.name = params[:name] if params.key?(:name)
+      add_on.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
       add_on.description = params[:description] if params.key?(:description)
       add_on.code = params[:code] if params.key?(:code)
       add_on.amount_cents = params[:amount_cents] if params.key?(:amount_cents)

@@ -134,6 +134,7 @@ module Api
               :currency,
               fees: [
                 :add_on_code,
+                :invoice_display_name,
                 :unit_amount_cents,
                 :units,
                 :description,

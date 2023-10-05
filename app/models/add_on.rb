@@ -29,4 +29,8 @@ class AddOn < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
+
+  def invoice_name
+    invoice_display_name.presence || name
+  end
 end

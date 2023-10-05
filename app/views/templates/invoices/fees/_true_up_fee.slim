@@ -1,6 +1,6 @@
 tr
   td
-    .body-1 = I18n.t('invoice.true_up_metric', metric: billable_metric.name)
+    .body-1 = I18n.t('invoice.true_up_metric', metric: true_up_fee.true_up_parent_fee.invoice_name)
     .body-3 = I18n.t('invoice.true_up_details', min_amount: MoneyHelper.format(charge.min_amount))
   td.body-2 = true_up_fee.units
   td.body-2 == TaxHelper.applied_taxes(true_up_fee)

@@ -57,6 +57,7 @@ module Plans
     def create_charge(plan, args)
       charge = plan.charges.new(
         billable_metric_id: args[:billable_metric_id],
+        invoice_display_name: args[:invoice_display_name],
         charge_model: charge_model(args),
         pay_in_advance: args[:pay_in_advance] || false,
         prorated: args[:prorated] || false,

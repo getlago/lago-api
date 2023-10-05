@@ -82,6 +82,7 @@ module Api
           tax_codes: [],
           charges: [
             :id,
+            :invoice_display_name,
             :billable_metric_id,
             :charge_model,
             :pay_in_advance,
@@ -94,6 +95,7 @@ module Api
             {
               group_properties: [
                 :group_id,
+                :invoice_display_name,
                 { values: {} },
               ],
             },

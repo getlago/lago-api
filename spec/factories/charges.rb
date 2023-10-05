@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :charge do
     billable_metric
     plan
+    invoice_display_name { Faker::Fantasy::Tolkien.location }
 
     factory :standard_charge do
       charge_model { 'standard' }

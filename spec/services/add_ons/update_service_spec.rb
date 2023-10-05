@@ -21,6 +21,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
       {
         id: add_on.id,
         name: 'new name',
+        invoice_display_name: 'new invoice name',
         code: 'code',
         description: 'desc',
         amount_cents: 100,
@@ -36,6 +37,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.add_on.name).to eq('new name')
+        expect(result.add_on.invoice_display_name).to eq('new invoice name')
         expect(result.add_on.description).to eq('desc')
         expect(result.add_on.amount_cents).to eq(100)
         expect(result.add_on.amount_currency).to eq('EUR')

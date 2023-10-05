@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         lago_billable_metric_id: model.billable_metric_id,
+        invoice_display_name: model.invoice_display_name,
         billable_metric_code: model.billable_metric.code,
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,

@@ -399,29 +399,29 @@ html
                 - item = items.first
                 - if items.all? { |i| i.fee.group_id? }
                   tr
-                    td.body-1 width="60%" = item.fee.item_name
+                    td.body-1 width="60%" = item.fee.invoice_name
                     td
                     td
                   - items.each do |item|
                     tr
-                      td.body-1 style="padding-left: 16px;" = item.fee.group.name
+                      td.body-1 style="padding-left: 16px;" = item.fee.group_name
                       td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                       td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - items.select { |i| i.fee.true_up_fee.present? }.each do |item|
                     - if true_up_item = subscription_charge_items(subscription_id).find_by(fee: item.fee.true_up_fee)
                       tr
-                        td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: true_up_item.fee.item_name)
+                        td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: true_up_item.fee.invoice_name)
                         td.body-2 width="20%" == TaxHelper.applied_taxes(true_up_item)
                         td.body-2 width="20%" = MoneyHelper.format(true_up_item.amount)
                 - else
                   tr
-                    td.body-1 width="60%" = item.fee.item_name
+                    td.body-1 width="60%" = item.fee.invoice_name
                     td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                     td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - if item.fee.true_up_fee.present?
                     - if true_up_item = subscription_charge_items(subscription_id).find_by(fee: item.fee.true_up_fee)
                       tr
-                        td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: true_up_item.fee.item_name)
+                        td.body-1 width="60%" = I18n.t('invoice.true_up_metric', metric: true_up_item.fee.invoice_name)
                         td.body-2 width="20%" == TaxHelper.applied_taxes(true_up_item)
                         td.body-2 width="20%" = MoneyHelper.format(true_up_item.amount)
             - else
@@ -429,9 +429,9 @@ html
                 tr
                   td.body-1
                     - if item.fee.true_up_parent_fee_id?
-                      | #{I18n.t('invoice.true_up_metric', metric: item.fee.item_name)}
+                      | #{I18n.t('invoice.true_up_metric', metric: item.fee.invoice_name)}
                     - else
-                      | #{item.fee.item_name}
+                      | #{item.fee.invoice_name}
 
                   td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                   td.body-2 width="20%" = MoneyHelper.format(item.amount)
