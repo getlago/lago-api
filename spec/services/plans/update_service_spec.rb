@@ -84,8 +84,8 @@ RSpec.describe Plans::UpdateService, type: :service do
         expect(updated_plan.invoice_display_name).to eq(plan_invoice_display_name)
         expect(updated_plan.taxes.pluck(:code)).to eq([tax2.code])
         expect(plan.charges.count).to eq(2)
-        expect(plan.charges.first.invoice_display_name).to eq('charge2')
-        expect(plan.charges.second.invoice_display_name).to eq('charge1')
+        expect(plan.charges.order(created_at: :asc).first.invoice_display_name).to eq('charge1')
+        expect(plan.charges.order(created_at: :asc).second.invoice_display_name).to eq('charge2')
       end
     end
 
