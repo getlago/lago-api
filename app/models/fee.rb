@@ -95,9 +95,7 @@ class Fee < ApplicationRecord
   end
 
   def group_name
-    return group&.name unless charge
-
-    charge.group_properties.find_by(group:)&.invoice_display_name
+    charge&.group_properties&.find_by(group:)&.invoice_display_name || group&.name
   end
 
   def currency
