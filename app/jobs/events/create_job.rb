@@ -3,8 +3,8 @@
 module Events
   class CreateJob < ApplicationJob
     queue_as do
-      if ENV['SIDEKIQ_EVENTS'].present? && ENV['SIDEKIQ_EVENTS'] == 'true'
-        :events      
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_EVENTS'])
+        :events   
       else
         :default
       end
