@@ -118,6 +118,8 @@ module Invoices
             api_key: stripe_api_key,
           },
         )
+        # TODO: stripe customer should be updated/deleted
+        return if result.deleted?
 
         if (payment_method_id = result.invoice_settings.default_payment_method || result.default_source)
           customer.stripe_customer.update!(payment_method_id:)
