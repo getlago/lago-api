@@ -10,6 +10,7 @@ module Types
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
+        field :invoice_display_name, String, null: true
         field :key, String, null: true
         field :units, GraphQL::Types::Float, null: false
         field :value, String, null: false
