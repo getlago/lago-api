@@ -2,6 +2,8 @@
 
 module Subscriptions
   class CreateService < BaseService
+    include Utils::TransactionalJobs
+
     def initialize(customer:, plan:, params:)
       super
 
@@ -41,6 +43,8 @@ module Subscriptions
 
         result.subscription = handle_subscription
       end
+
+      perform_pending_jobs
 
       track_subscription_created(result.subscription)
       result
@@ -104,14 +108,12 @@ module Subscriptions
         # NOTE: Since job is laucnhed from inside a db transaction
         #       we must wait for it to be commited before processing the job.
         #       We do not set offset anymore but instead retry jobs
-        BillSubscriptionJob
-          .perform_later(
-            [new_subscription],
-            Time.zone.now.to_i,
-          )
+        perform_later(job_class: BillSubscriptionJob, arguments: [[new_subscription], Time.zone.now.to_i])
       end
 
-      SendWebhookJob.perform_later('subscription.started', new_subscription) if new_subscription.active?
+      if new_subscription.active?
+        perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
+      end
 
       new_subscription
     end
@@ -152,21 +154,13 @@ module Subscriptions
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
       #       We do not set offset anymore but instead retry jobs
-      BillSubscriptionJob
-        .perform_later(
-          [current_subscription],
-          Time.zone.now.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
-        )
+      perform_later(job_class: BillSubscriptionJob, arguments: [[current_subscription], Time.zone.now.to_i + 1.second])
 
       if plan.pay_in_advance?
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be commited before processing the job
         #       We do not set offset anymore but instead retry jobs
-        BillSubscriptionJob
-          .perform_later(
-            [new_subscription],
-            Time.zone.now.to_i + 1.second, # NOTE: Adding 1 second because of to_i rounding.
-          )
+        perform_later(job_class: BillSubscriptionJob, arguments: [[new_subscription], Time.zone.now.to_i + 1.second])
       end
 
       new_subscription
