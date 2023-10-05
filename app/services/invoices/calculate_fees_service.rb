@@ -310,6 +310,7 @@ module Invoices
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
         timestamp: current_time,
+        charges_duration: dates_service.charges_duration_in_days,
       }
 
       matching_invoice_subscription?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries
