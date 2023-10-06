@@ -114,7 +114,6 @@ module Api
 
       def void
         invoice = current_organization.invoices.find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
 
         result = Invoices::VoidService.call(invoice:)
         if result.success?

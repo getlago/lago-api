@@ -12,23 +12,26 @@ module Invoices
 
       result.invoice = invoice
 
-      begin
-        invoice.void!
+      invoice.void!
 
-        invoice.credits.each do |credit|
-          CreditNotes::RecreditService.new(credit:).call
-        end
-
-        invoice.wallet_transactions.each do |wallet_transaction|
-          WalletTransactions::RecreditService.new(wallet_transaction:).call
-        end
-
-        SendWebhookJob.perform_later('invoice.voided', result.invoice) if invoice.organization.webhook_endpoints.any?
-      rescue AASM::InvalidTransition => _e
-        return result.not_allowed_failure!(code: 'not_voidable')
+      invoice.credits.each do |credit|
+        res = CreditNotes::RecreditService.call(credit:)
+        Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
       end
 
+      invoice.wallet_transactions.each do |wallet_transaction|
+        res = WalletTransactions::RecreditService.call(wallet_transaction:)
+
+        unless res.success?
+          Rails.logger.warn("Recrediting wallet transaction #{wallet_transaction.id} failed for invoice #{invoice.id}")
+        end
+      end
+
+      SendWebhookJob.perform_later('invoice.voided', result.invoice) if invoice.organization.webhook_endpoints.any?
+
       result
+    rescue AASM::InvalidTransition => _e
+      result.not_allowed_failure!(code: 'not_voidable')
     end
 
     private
