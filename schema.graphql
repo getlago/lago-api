@@ -1652,6 +1652,7 @@ input CreateCustomerInput {
   currency: CurrencyEnum
   email: String
   externalId: String!
+  externalSalesforceId: String
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
@@ -2606,6 +2607,7 @@ type Customer {
   deletedAt: ISO8601DateTime
   email: String
   externalId: String!
+  externalSalesforceId: String
 
   """
   Define if a customer has an active wallet
@@ -5443,6 +5445,7 @@ input UpdateCustomerInput {
   currency: CurrencyEnum
   email: String
   externalId: String!
+  externalSalesforceId: String
   id: ID!
   invoiceGracePeriod: Int
   legalName: String

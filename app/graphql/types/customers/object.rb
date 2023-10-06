@@ -19,6 +19,7 @@ module Types
       field :country, Types::CountryCodeEnum, null: true
       field :currency, Types::CurrencyEnum, null: true
       field :email, String, null: true
+      field :external_salesforce_id, String, null: true
       field :invoice_grace_period, Integer, null: true
       field :legal_name, String, null: true
       field :legal_number, String, null: true

@@ -14,6 +14,7 @@ module Types
       argument :currency, Types::CurrencyEnum, required: false
       argument :email, String, required: false
       argument :external_id, String, required: true
+      argument :external_salesforce_id, String, required: false
       argument :invoice_grace_period, Integer, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
