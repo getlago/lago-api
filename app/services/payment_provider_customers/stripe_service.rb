@@ -204,6 +204,9 @@ module PaymentProviderCustomers
 
       invoices.find_each do |invoice|
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
+      rescue ActiveJob::Uniqueness::JobNotUnique
+        # NOTE: Payment is already enqueued for processing
+        Rails.logger.warn("Duplicated payment attempt for invoice #{invoice.id}")
       end
     end
 
