@@ -18,7 +18,7 @@ module V1
               invoice_display_name: fee.charge.invoice_display_name,
             },
             billable_metric: {
-              id: fee.billable_metric.id,
+              lago_id: fee.billable_metric.id,
               name: fee.billable_metric.name,
               code: fee.billable_metric.code,
               aggregation_type: fee.billable_metric.aggregation_type,
