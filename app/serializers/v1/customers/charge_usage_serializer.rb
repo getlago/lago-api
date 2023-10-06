@@ -13,7 +13,7 @@ module V1
             amount_cents: fees.sum(&:amount_cents),
             amount_currency: fee.amount_currency,
             charge: {
-              id: charge_id,
+              lago_id: charge_id,
               charge_model: fee.charge.charge_model,
               invoice_display_name: fee.charge.invoice_display_name,
             },
