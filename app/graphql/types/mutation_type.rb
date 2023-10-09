@@ -58,6 +58,7 @@ module Types
     field :retry_all_invoice_payments, mutation: Mutations::Invoices::RetryAllPayments
     field :retry_invoice_payment, mutation: Mutations::Invoices::RetryPayment
     field :update_invoice, mutation: Mutations::Invoices::Update
+    field :void_invoice, mutation: Mutations::Invoices::Void
 
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate
