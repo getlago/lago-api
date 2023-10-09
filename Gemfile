@@ -79,6 +79,7 @@ group :development, :test do
   gem 'clockwork-test'
   gem 'debug', platforms: %i[mri mingw x64_mingw]
   gem 'dotenv'
+  gem 'i18n-tasks', '~> 1.0.12'
   gem 'rspec-rails'
   gem 'simplecov', require: false
   gem 'webmock'

@@ -1,66 +1,64 @@
+---
 en:
   invoice:
-    document_name: Invoice
-    invoice_number: Invoice Number
-    issue_date: Issue Date
-    payment_term: Payment term
-    payment_term_days: "%{net_payment_term} days"
-    bill_from: From
-    bill_to: Bill to
-    due_date: Due %{date}
-    total_credits_with_value: "Total credits: %{credit_amount} credits"
     all_subscriptions: All Subscriptions
     all_usage_based_fees: All usage based fees
-    sub_total_without_tax: Sub total (excl. tax)
-    tax: Tax
-    sub_total_with_tax: Sub total (incl. tax)
-    credit_notes: Credit notes
-    coupons: Coupons
-    prepaid_credits: Prepaid credits
-    prepaid_credits_with_value: Prepaid credits - %{wallet_name}
-    tax_identification_number: "Tax ID: %{tax_identification_number}"
-    total_due: Total due
-    powered_by: Powered by
-    item: Item
-    unit: Unit
-    unit_price: Unit price
-    units_prorated_per_period: Units prorated per second per %{period}
     amount: Amount
     amount_with_tax: Amount (incl. tax)
     amount_without_tax: Amount (excl. tax)
-    fees_from_to_date: Fees from %{from_date} to %{to_date}
-    tax_rate: Tax rate
-    tax_name_with_details: "%{name} (%{rate}%)"
-    tax_name: "%{name} (%{rate}% on %{amount})"
-
-    details: "%{resource} details"
-    subscription: Subscription
+    bill_from: From
+    bill_to: Bill to
+    breakdown: Breakdown
+    breakdown_for_days: Used %{breakdown_duration} out of %{breakdown_total_duration} days
+    breakdown_of: Breakdown of %{fee_group_name}
+    coupons: Coupons
+    credit_notes: Credit notes
     date_from: From
     date_to: to
-    monthly: Monthly
-    yearly: Yearly
-    weekly: Weekly
-    quarterly: Quarterly
-    week: week
-    month: month
-    quarter: quarter
-    year: year
-    sub_total: Sub total
-    subscription_interval: "%{plan_interval} subscription - %{plan_name}"
-
-    usage_based_fees: Usage based fees
+    details: "%{resource} details"
+    document_name: Invoice
+    due_date: Due %{date}
+    fees_from_to_date: Fees from %{from_date} to %{to_date}
+    invoice_number: Invoice Number
+    issue_date: Issue Date
+    item: Item
     list_of_charges: List of charges used from %{from} to %{to}
-    see_breakdown: See breakdown for total unit
-    total_unit_interval: "Total unit: %{events_count} events for %{units}"
-    total_events: "Total events: %{count}"
-    total_unit: "Total unit: %{units}"
-    total: Total
-    breakdown: Breakdown
-    breakdown_for_days: "Used %{breakdown_duration} out of %{breakdown_total_duration} days"
-    breakdown_of: "Breakdown of %{fee_group_name}"
-    notice_prorated: If a unit is added or removed during the monthly plan, we calculate the prorated price based on the ratio of days remaining or used to the total number of days in the plan. For instance, if 15 days are left in the plan, we multiply the price by 15/%{days_in_month}, and if a unit was used for 10 days, we multiply the price by 10/%{days_in_month}.
+    month: month
+    monthly: Monthly
     notice_full: Regardless of when an event is received, the unit is not prorated, we charge the full price.
-    true_up_metric: "%{metric} - True-up"
-    true_up_details: "Minimum spend of %{min_amount} prorated on days of usage"
-
+    notice_prorated: If a unit is added or removed during the monthly plan, we calculate the prorated price based on the ratio of days remaining or used to the total number of days in the plan. For instance, if 15 days are left in the plan, we multiply the price by 15/%{days_in_month}, and if a unit was used for 10 days, we multiply the price by 10/%{days_in_month}.
+    payment_term: Payment term
+    payment_term_days: "%{net_payment_term} days"
+    powered_by: Powered by
+    prepaid_credits: Prepaid credits
+    prepaid_credits_with_value: Prepaid credits - %{wallet_name}
+    quarter: quarter
+    quarterly: Quarterly
+    see_breakdown: See breakdown for total unit
+    sub_total: Sub total
+    sub_total_with_tax: Sub total (incl. tax)
+    sub_total_without_tax: Sub total (excl. tax)
+    subscription: Subscription
+    subscription_interval: "%{plan_interval} subscription - %{plan_name}"
+    tax: Tax
+    tax_identification_number: 'Tax ID: %{tax_identification_number}'
+    tax_name: "%{name} (%{rate}% on %{amount})"
+    tax_name_with_details: "%{name} (%{rate}%)"
+    tax_rate: Tax rate
+    total: Total
     total_credits: Total credits
+    total_credits_with_value: 'Total credits: %{credit_amount} credits'
+    total_due: Total due
+    total_events: 'Total events: %{count}'
+    total_unit: 'Total unit: %{units}'
+    total_unit_interval: 'Total unit: %{events_count} events for %{units}'
+    true_up_details: Minimum spend of %{min_amount} prorated on days of usage
+    true_up_metric: "%{metric} - True-up"
+    unit: Unit
+    unit_price: Unit price
+    units_prorated_per_period: Units prorated per second per %{period}
+    usage_based_fees: Usage based fees
+    week: week
+    weekly: Weekly
+    year: year
+    yearly: Yearly

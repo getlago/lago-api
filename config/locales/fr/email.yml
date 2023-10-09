@@ -1,23 +1,24 @@
+---
 fr:
   email:
-    questions: Questions? Contactez nous à 
-    powered_by: Généré par
-    invoice:
-      finalized:
-        subject: "Votre facture nº %{invoice_number} de %{organization_name}"
-        invoice_from: "Facture de %{organization_name}"
-        due_date: Date d'émission le %{date}
-        invoice_number: Nº de facture
-        issue_date: Date d'émission
-        download: Télécharger la facture pour plus de détails
     credit_note:
       created:
-        subject: "Votre avoir nº  %{credit_note_number} de %{organization_name} "
-        credit_note_from: "Votre avoir de %{organization_name}"
-        credited_refunded_notice: "Crédité sur le solde du client et remboursé le %{date}"
-        credited_notice: "Crédité sur le solde du client le %{date}"
-        refunded_notice: "Remboursé le %{date}"
-        credit_note_number: "Avoir nº"
-        invoice_number: "Facture nº"
-        issue_date: "Date d'émission"
+        credit_note_from: Votre avoir de %{organization_name}
+        credit_note_number: Avoir nº
+        credited_notice: Crédité sur le solde du client le %{date}
+        credited_refunded_notice: Crédité sur le solde du client et remboursé le %{date}
         download: Télécharger l'avoir pour plus de détails
+        invoice_number: Facture nº
+        issue_date: Date d'émission
+        refunded_notice: Remboursé le %{date}
+        subject: 'Votre avoir nº  %{credit_note_number} de %{organization_name} '
+    invoice:
+      finalized:
+        download: Télécharger la facture pour plus de détails
+        due_date: Date d'émission le %{date}
+        invoice_from: Facture de %{organization_name}
+        invoice_number: Nº de facture
+        issue_date: Date d'émission
+        subject: Votre facture nº %{invoice_number} de %{organization_name}
+    powered_by: Généré par
+    questions: Questions? Contactez nous à

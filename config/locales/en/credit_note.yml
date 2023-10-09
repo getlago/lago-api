@@ -1,22 +1,23 @@
+---
 en:
   credit_note:
-    document_name: Credit note
+    amount: Amount (excl. tax)
+    coupon_adjustment: Coupons
+    credit_from: From
     credit_note_number: Credit note number
+    credit_to: Credit to
+    credited_notice: Credited on customer balance on %{issuing_date}
+    credited_on_customer_balance: Credited on customer balance
+    credited_refunded_notice: Credited on customer balance and refunded on %{issuing_date}
+    document_name: Credit note
     invoice_number: Invoice number
     issue_date: Issue date
-    credit_from: From
-    credit_to: Credit to
     item: Item
-    tax_rate: Tax rate
-    amount: Amount (excl. tax)
-    refunded_notice: Refunded on %{issuing_date}
-    credited_notice: Credited on customer balance on %{issuing_date}
-    credited_refunded_notice: Credited on customer balance and refunded on %{issuing_date}
-    subscription: Subscription
-    coupon_adjustment: Coupons
-    sub_total_without_tax: Sub total (excl. tax)
-    tax: "%{name} (%{rate}% on %{amount})"
-    credited_on_customer_balance: Credited on customer balance
-    refunded: Refunded
-    total: Total
     powered_by: Powered by
+    refunded: Refunded
+    refunded_notice: Refunded on %{issuing_date}
+    sub_total_without_tax: Sub total (excl. tax)
+    subscription: Subscription
+    tax: "%{name} (%{rate}% on %{amount})"
+    tax_rate: Tax rate
+    total: Total

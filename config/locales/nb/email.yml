@@ -1,23 +1,24 @@
+---
 nb:
   email:
-    questions: Har du spørsmål? Kontakt oss på 
-    powered_by: Fakturering drevet av
-    invoice:
-      finalized:
-        subject: "Faktura fra %{organization_name} #%{invoice_number}"
-        invoice_from: "Faktura fra %{organization_name}"
-        due_date: Forfallsdato %{date}
-        invoice_number: Fakturanummer
-        issue_date: Dato
-        download: Last ned faktura for detaljer
     credit_note:
       created:
-        subject: "Kreditnota din fra %{organization_name} #%{credit_note_number}"
-        credit_note_from: "Kreditnota fra %{organization_name}"
-        credited_refunded_notice: "Kreditert til kontobalanse og refundert %{date}"
-        credited_notice: "Kreditert til kontobalanse %{date}"
-        refunded_notice: "Refundert %{date}"
-        credit_note_number: "Kreditnota nummer"
-        invoice_number: "Faktura nummer"
-        issue_date: "Dato"
+        credit_note_from: Kreditnota fra %{organization_name}
+        credit_note_number: Kreditnota nummer
+        credited_notice: Kreditert til kontobalanse %{date}
+        credited_refunded_notice: Kreditert til kontobalanse og refundert %{date}
         download: Last ned kreditnota for detaljer
+        invoice_number: Faktura nummer
+        issue_date: Dato
+        refunded_notice: Refundert %{date}
+        subject: 'Kreditnota din fra %{organization_name} #%{credit_note_number}'
+    invoice:
+      finalized:
+        download: Last ned faktura for detaljer
+        due_date: Forfallsdato %{date}
+        invoice_from: Faktura fra %{organization_name}
+        invoice_number: Fakturanummer
+        issue_date: Dato
+        subject: 'Faktura fra %{organization_name} #%{invoice_number}'
+    powered_by: Fakturering drevet av
+    questions: Har du spørsmål? Kontakt oss på
