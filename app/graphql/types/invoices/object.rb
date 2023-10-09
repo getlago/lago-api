@@ -17,6 +17,7 @@ module Types
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
       field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
       field :status, Types::Invoices::StatusTypeEnum, null: false
+      field :voidable, Boolean, null: false
 
       field :currency, Types::CurrencyEnum
       field :taxes_rate, Float, null: false
@@ -51,6 +52,10 @@ module Types
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
+      end
+
+      def voidable
+        object.finalized? && object.voidable?
       end
     end
   end

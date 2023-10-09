@@ -3165,6 +3165,7 @@ type Invoice {
   totalAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
+  voidable: Boolean!
 }
 
 type InvoiceAppliedTax implements AppliedTax {

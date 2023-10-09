@@ -203,7 +203,7 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe '#voidable?' do
-    subject(:voidable) { invoice.__send__(:voidable?) }
+    subject(:voidable) { invoice.voidable? }
 
     context 'when invoice is pending' do
       let(:invoice) { build_stubbed(:invoice, payment_status: :pending) }

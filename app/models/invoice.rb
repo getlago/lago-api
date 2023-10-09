@@ -225,16 +225,16 @@ class Invoice < ApplicationRecord
     amount.negative? ? 0 : amount
   end
 
-  private
-
-  def void_invoice!
-    update!(ready_for_payment_processing: false)
-  end
-
   def voidable?
     return false if credit_notes.any?
 
     pending? || failed?
+  end
+
+  private
+
+  def void_invoice!
+    update!(ready_for_payment_processing: false)
   end
 
   def ensure_number
