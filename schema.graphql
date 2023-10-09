@@ -215,6 +215,8 @@ enum ChargeModelEnum {
 
 input ChargeOverridesInput {
   groupProperties: [GroupPropertiesInput!]
+  id: ID!
+  invoiceDisplayName: String
   minAmountCents: BigInt
   properties: PropertiesInput
   taxCodes: [String!]

@@ -6,6 +6,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
+  let(:charge) { create(:standard_charge, plan:) }
   let(:ending_at) { Time.current.beginning_of_day + 1.year }
   let(:customer) { create(:customer, organization:) }
   let(:mutation) do
@@ -43,12 +44,16 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
         input: {
           customerId: customer.id,
           planId: plan.id,
-          name: 'invoice display name',
+          name: 'name',
           externalId: 'custom-external-id',
           billingTime: 'anniversary',
           endingAt: ending_at.iso8601,
           planOverrides: {
             amountCents: 100,
+            charges: [
+              id: charge.id,
+              invoiceDisplayName: 'invoice display name',
+            ],
           },
         },
       },
@@ -59,7 +64,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
     expect(result_data).to include(
       'id' => String,
       'status' => 'active',
-      'name' => 'invoice display name',
+      'name' => 'name',
       'externalId' => 'custom-external-id',
       'startedAt' => String,
       'billingTime' => 'anniversary',

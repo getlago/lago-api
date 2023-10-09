@@ -3,7 +3,10 @@
 module Types
   module Subscriptions
     class ChargeOverridesInput < Types::BaseInputObject
+      argument :id, ID, required: true
+
       argument :group_properties, [Types::Charges::GroupPropertiesInput], required: false
+      argument :invoice_display_name, String, required: false
       argument :min_amount_cents, GraphQL::Types::BigInt, required: false
       argument :properties, Types::Charges::PropertiesInput, required: false
       argument :tax_codes, [String], required: false
