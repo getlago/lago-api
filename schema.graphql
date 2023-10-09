@@ -4199,7 +4199,7 @@ type Query {
   """
   Query invoices of a customer
   """
-  customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
+  customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
   Query invoices of a customer

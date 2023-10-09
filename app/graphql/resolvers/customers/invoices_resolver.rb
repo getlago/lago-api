@@ -12,7 +12,7 @@ module Resolvers
       argument :limit, Integer, required: false
       argument :page, Integer, required: false
       argument :search_term, String, required: false
-      argument :status, Types::Invoices::StatusTypeEnum, required: false
+      argument :status, [Types::Invoices::StatusTypeEnum], required: false
 
       type Types::Invoices::Object.collection_type, null: false
 

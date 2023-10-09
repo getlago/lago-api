@@ -18405,9 +18405,17 @@
                   "name": "status",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "InvoiceStatusTypeEnum",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "InvoiceStatusTypeEnum",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
