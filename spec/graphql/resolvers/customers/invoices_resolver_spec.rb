@@ -48,8 +48,8 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
   context 'with filter on status' do
     let(:query) do
       <<~GQL
-        query($customerId: ID!, $status: InvoiceStatusTypeEnum!) {
-          customerInvoices(customerId: $customerId, status: $status) {
+        query($customerId: ID!, $status: [InvoiceStatusTypeEnum!]) {
+          customerInvoices(customerId: $customerId, status: [$status]) {
             collection { id }
             metadata { currentPage, totalCount }
           }
@@ -62,7 +62,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: { customerId: customer.id, status: 'draft' },
+        variables: { customerId: customer.id, status: ['draft'] },
       )
 
       invoices_response = result['data']['customerInvoices']
