@@ -34,7 +34,7 @@ class PastUsageQuery < BaseQuery
       .includes(:invoice)
 
     base_query = paginate(base_query)
-    base_query = base_query.limit(filters.periods_count) if filters.periods_count
+    base_query = base_query.limit(filters.periods_count.to_i) if filters.periods_count
     base_query
   end
 

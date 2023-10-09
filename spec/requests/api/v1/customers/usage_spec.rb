@@ -294,7 +294,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
       [
         '/api/v1/customers',
         customer.external_id,
-        "past_usage?external_subscription_id=#{subscription.external_id}",
+        "past_usage?external_subscription_id=#{subscription.external_id}&periods_count=2",
       ].join('/')
     end
 
