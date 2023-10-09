@@ -77,4 +77,8 @@ class Coupon < ApplicationRecord
     self.terminated_at ||= timestamp
     terminated!
   end
+
+  def parent_and_overriden_plans
+    (plans + plans.map(&:children)).flatten
+  end
 end

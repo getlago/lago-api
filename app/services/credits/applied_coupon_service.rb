@@ -117,7 +117,10 @@ module Credits
     end
 
     def plan_related_fees
-      invoice.fees.joins(subscription: :plan).where(plan: { id: applied_coupon.coupon.coupon_targets.select(:plan_id) })
+      invoice
+        .fees
+        .joins(subscription: :plan)
+        .where(plan: { id: applied_coupon.coupon.parent_and_overriden_plans.map(&:id) })
     end
 
     def billable_metric_related_fees
