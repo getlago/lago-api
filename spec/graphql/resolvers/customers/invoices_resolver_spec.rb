@@ -49,7 +49,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
     let(:query) do
       <<~GQL
         query($customerId: ID!, $status: [InvoiceStatusTypeEnum!]) {
-          customerInvoices(customerId: $customerId, status: [$status]) {
+          customerInvoices(customerId: $customerId, status: $status) {
             collection { id }
             metadata { currentPage, totalCount }
           }
