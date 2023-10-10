@@ -57,7 +57,9 @@ RSpec.describe ::V1::FeeSerializer do
   end
 
   context 'when fee is charge' do
-    let(:charge) { create(:standard_charge) }
+    let(:charge) { group_property.charge }
+    let(:group_property) { create(:group_property) }
+
     let(:fee) do
       create(
         :charge_fee,
@@ -72,6 +74,15 @@ RSpec.describe ::V1::FeeSerializer do
     it 'serializes the fees with dates boundaries' do
       expect(result['fee']['from_date']).not_to be_nil
       expect(result['fee']['to_date']).not_to be_nil
+      expect(result['fee']['item']).to include(
+        'type' => fee.fee_type,
+        'code' => fee.item_code,
+        'name' => fee.item_name,
+        'invoice_display_name' => fee.invoice_name,
+        'group_invoice_display_name' => fee.group_name,
+        'lago_item_id' => fee.item_id,
+        'item_type' => fee.item_type,
+      )
     end
   end
 

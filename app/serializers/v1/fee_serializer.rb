@@ -14,6 +14,7 @@ module V1
           code: model.item_code,
           name: model.item_name,
           invoice_display_name: model.invoice_name,
+          group_invoice_display_name: model.group_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
         },
