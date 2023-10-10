@@ -55,6 +55,8 @@ module Events
 
     def validate_create
       return invalid_customer_error if params[:external_customer_id] && !customer
+
+      # TODO: deal with multiple active subscriptions
       if params[:external_subscription_id].blank? && subscriptions.count(&:active?) > 1
         return missing_subscription_error
       end
@@ -67,10 +69,10 @@ module Events
 
       return transaction_id_error unless valid_transaction_id?
       return invalid_code_error unless valid_code?
-      return invalid_properties_error unless valid_properties?
+      return invalid_properties_error unless valid_properties? # TODO: filters on events
 
       subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
-      invalid_quantified_event = quantified_event_validation(subscription || subscriptions.first)
+      invalid_quantified_event = quantified_event_validation(subscription || subscriptions.first) # TODO: quantified events valdiation
       return invalid_quantified_event_error(invalid_quantified_event) if invalid_quantified_event.present?
     end
 

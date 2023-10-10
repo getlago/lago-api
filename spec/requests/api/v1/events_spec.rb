@@ -13,34 +13,50 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
   describe 'POST /events' do
     it 'returns a success' do
-      post_with_token(
-        organization,
-        '/api/v1/events',
-        event: {
-          code: metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
-          timestamp: Time.current.to_i,
-          properties: {
-            foo: 'bar',
-          },
-        },
-      )
-
-      expect(response).to have_http_status(:ok)
-      expect(Events::CreateJob).to have_been_enqueued
-    end
-
-    context 'with missing arguments' do
-      it 'returns a not found response' do
+      expect do
         post_with_token(
           organization,
           '/api/v1/events',
-          event: { external_customer_id: customer.external_id, transaction_id: SecureRandom.uuid },
+          event: {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
+            timestamp: Time.current.to_i,
+            properties: {
+              foo: 'bar',
+            },
+          },
         )
+      end.to change(Event, :count).by(1)
 
-        expect(response).to have_http_status(:not_found)
-        expect(Events::CreateJob).not_to have_been_enqueued
+      expect(response).to have_http_status(:success)
+      expect(json[:event][:external_customer_id]).to eq(customer.external_id)
+    end
+
+    context 'with duplicated transaction_id' do
+      let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
+
+      before { event }
+
+      it 'returns a not found response' do
+        expect do
+          post_with_token(
+            organization,
+            '/api/v1/events',
+            event: {
+              code: metric.code,
+              transaction_id: event.transaction_id,
+              external_customer_id: customer.external_id,
+              external_subscription_id: subscription.external_id,
+              timestamp: Time.current.to_i,
+              properties: {
+                foo: 'bar',
+              },
+            },
+          )
+        end.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end

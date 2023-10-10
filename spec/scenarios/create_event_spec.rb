@@ -14,16 +14,43 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   before { subscription }
 
   context 'without external_customer_id and external_subscription_id' do
-    it 'returns a subscription not found error' do
+    it 'returns the created event' do
       result = create_event params
-      expect(result['code']).to eq('subscription_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['code']).to eq(billable_metric.code)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: nil,
+        external_customer_id: nil,
+        subscription_id: nil,
+        external_subscription_id: nil,
+      )
     end
   end
 
   context 'with unknown external_customer_id' do
-    it 'returns a customer not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_customer_id: 'unknown'))
-      expect(result['code']).to eq('customer_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['code']).to eq(billable_metric.code)
+      expect(result['event']['external_customer_id']).to eq('unknown')
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: nil,
+        external_customer_id: 'unknown',
+        subscription_id: nil,
+        external_subscription_id: nil,
+      )
     end
   end
 
@@ -31,9 +58,23 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     let(:organization2) { create(:organization, webhook_url: nil) }
     let(:customer2) { create(:customer, organization: organization2) }
 
-    it 'returns a customer not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_customer_id: customer2.external_id))
-      expect(result['code']).to eq('customer_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['code']).to eq(billable_metric.code)
+      expect(result['event']['external_customer_id']).to eq(customer2.external_id)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: nil,
+        external_customer_id: customer2.external_id,
+        subscription_id: nil,
+        external_subscription_id: nil,
+      )
     end
   end
 
@@ -47,13 +88,39 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
           ),
         )
       end.to change(Event, :count)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer.id,
+        external_customer_id: 'unknown',
+        subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
   context 'with unknown external_customer_id and unknown external_subscription_id' do
-    it 'returns a customer not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_customer_id: 'unknown', external_subscription_id: 'unknown'))
-      expect(result['code']).to eq('customer_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['code']).to eq(billable_metric.code)
+      expect(result['event']['external_customer_id']).to eq('unknown')
+      expect(result['event']['external_subscription_id']).to eq('unknown')
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: nil,
+        external_customer_id: 'unknown',
+        subscription_id: nil,
+        external_subscription_id: 'unknown',
+      )
     end
   end
 
@@ -62,9 +129,23 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     let(:customer2) { create(:customer, organization: organization2) }
     let(:subscription2) { create(:active_subscription, customer: customer2) }
 
-    it 'returns a subscription not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_subscription_id: subscription2.external_id))
-      expect(result['code']).to eq('subscription_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['code']).to eq(billable_metric.code)
+      expect(result['event']['external_subscription_id']).to eq(subscription2.external_id)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: nil,
+        external_customer_id: nil,
+        subscription_id: nil,
+        external_subscription_id: subscription2.external_id,
+      )
     end
   end
 
@@ -73,34 +154,82 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change(Event, :count)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer_id,
+        external_customer_id: subscription.customer.external_id,
+        subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
   context 'with not yet started subscription' do
     let(:subscription) { create(:active_subscription, customer:, started_at: 1.day.from_now) }
 
-    it 'returns a subscription not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_subscription_id: subscription.external_id))
-      expect(result['code']).to eq('subscription_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['external_subscription_id']).to eq(subscription.external_id)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer_id,
+        external_customer_id: subscription.customer.external_id,
+        subscription_id: nil,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
   context 'with subscription started in the same second' do
     let(:subscription) { create(:active_subscription, customer:, started_at: Time.current) }
 
-    it 'creates the event successfully' do
+    it 'returns the created event' do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change(Event, :count)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer_id,
+        external_customer_id: subscription.customer.external_id,
+        subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
   context 'with terminated subscription' do
     let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: 1.hour.ago) }
 
-    it 'returns a subscription not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_subscription_id: subscription.external_id))
-      expect(result['code']).to eq('subscription_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['external_subscription_id']).to eq(subscription.external_id)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer_id,
+        external_customer_id: subscription.customer.external_id,
+        subscription_id: nil,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
@@ -111,6 +240,17 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change(Event, :count)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer_id,
+        external_customer_id: subscription.customer.external_id,
+        subscription_id: nil,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
@@ -126,6 +266,17 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
           ),
         )
       end.to change(Event, :count)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: subscription.customer_id,
+        external_customer_id: subscription.customer.external_id,
+        subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
@@ -134,9 +285,22 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
 
     before { subscription2 }
 
-    it 'returns a subscription not found error' do
+    it 'returns the created event' do
       result = create_event(params.merge(external_customer_id: customer.external_id))
-      expect(result['code']).to eq('subscription_not_found')
+
+      expect(result['event']).to be_present
+      expect(result['event']['external_customer_id']).to eq(customer.external_id)
+
+      perform_all_enqueued_jobs
+
+      event = organization.events.order(created_at: :asc).last
+      expect(event).to have_attributes(
+        code: billable_metric.code,
+        customer_id: customer.id,
+        external_customer_id: customer.external_id,
+        subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+      )
     end
   end
 
