@@ -1,0 +1,60 @@
+---
+es:
+  invoice:
+    all_subscriptions: Todos los suscripciones
+    all_usage_based_fees: Todos los cargos basados en el uso
+    amount: Total (excl. impuestos)
+    bill_from: Emitida por
+    bill_to: Factura destinada a
+    breakdown: Desglose
+    breakdown_for_days: Utilizados %{breakdown_duration} de %{breakdown_total_duration} días
+    breakdown_of: Desglose de %{fee_group_name}
+    credit_notes: Notas de crédito
+    date_from: Tarifas desde
+    date_to: hasta
+    details: Detalles de %{resource}
+    document_name: Factura
+    due_date: Vence el %{date}
+    fees_from_to_date: Cargos desde %{from_date} hasta %{to_date}
+    invoice_number: Número de la factura
+    issue_date: Fecha de emisión
+    item: Ítem
+    list_of_charges: Lista de cargos desde %{from} hasta %{to}
+    month: mes
+    monthly: Mensual
+    notice_full: Independientemente de cuándo se reciba un evento, la unidad no se prorratea, cobramos el precio completo.
+    notice_prorated: Si se agrega o se elimina una unidad durante el plan mensual, calculamos el precio prorrateado en función de la proporción de días restantes o utilizados con respecto al número total de días en el plan. Por ejemplo, si quedan 15 días en el plan, multiplicamos el precio por 15/%{days_in_month}, y si una unidad se usó durante 10 días, multiplicamos el precio por 10/%{days_in_month}.
+    payment_term: Plazo de pago neto
+    payment_term_days: "%{net_payment_term} días"
+    powered_by: Powered by
+    prepaid_credits: Créditos prepagados
+    prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
+    quarter: trimestre
+    quarterly: Trimestral
+    see_breakdown: Consulte el desglose a continuación
+    sub_total: Subtotal
+    sub_total_with_tax: Subtotal (impuestos incl.)
+    sub_total_without_tax: Subtotal (impuestos excl.)
+    subscription: Suscripción
+    subscription_interval: Suscripción %{plan_interval} - %{plan_name}
+    tax: Impuesto
+    tax_identification_number: 'ID del impuesto: %{tax_identification_number}'
+    tax_name: "%{name} (%{rate}% sobre %{amount})"
+    tax_name_with_details: "%{name} (%{rate}%)"
+    tax_rate: Tasas de impuestos
+    total: Total
+    total_credits_with_value: 'Total de créditos con valor: %{credit_amount} créditos'
+    total_due: Total debido
+    total_event: Eventos totales
+    total_unit: 'Total de unidades: %{units}'
+    total_unit_interval: 'Total de unidades: %{events_count} evento(s) para %{units}'
+    true_up_details: Gasto mínimo de %{min_amount} prorrateado en días de uso
+    true_up_metric: "%{metric} • Ajuste real"
+    unit: Unidad
+    unit_price: Precio unitario
+    units_prorated_per_period: Unidades prorrateadas por segundo por %{period}
+    usage_based_fees: Cargos basados en el uso
+    week: semana
+    weekly: Semanal
+    year: año
+    yearly: Anual
