@@ -1,4 +1,20 @@
 GIT
+  remote: https://github.com/glebm/i18n-tasks.git
+  revision: 249f0dd61b4e2a07befad96bed8e1f89b7527d3e
+  specs:
+    i18n-tasks (1.0.12)
+      activesupport (>= 4.0.2)
+      ast (>= 2.1.0)
+      better_html (>= 1.0, < 3.0)
+      erubi
+      highline (>= 2.0.0)
+      i18n
+      parser (>= 3.2.2.1)
+      rails-i18n
+      rainbow (>= 2.2.2, < 4.0)
+      terminal-table (>= 1.5.1)
+
+GIT
   remote: https://github.com/rmosolgo/graphiql-rails.git
   revision: 6b34eb17bf13262eef6edf9a069cfc69b5db9708
   specs:
@@ -230,17 +246,6 @@ GEM
     httpclient (2.8.3)
     i18n (1.12.0)
       concurrent-ruby (~> 1.0)
-    i18n-tasks (1.0.12)
-      activesupport (>= 4.0.2)
-      ast (>= 2.1.0)
-      better_html (>= 1.0, < 3.0)
-      erubi
-      highline (>= 2.0.0)
-      i18n
-      parser (>= 2.2.3.0)
-      rails-i18n
-      rainbow (>= 2.2.2, < 4.0)
-      terminal-table (>= 1.5.1)
     io-console (0.5.11)
     irb (1.4.1)
       reline (>= 0.3.0)
@@ -521,7 +526,7 @@ DEPENDENCIES
   graphiql-rails!
   graphql
   graphql-pagination
-  i18n-tasks (~> 1.0.12)
+  i18n-tasks!
   jwt
   kaminari-activerecord
   lograge
