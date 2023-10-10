@@ -15,6 +15,7 @@ module Subscriptions
       @subscription_at = params[:subscription_at] || Time.current
       @billing_time = params[:billing_time]
       @external_id = params[:external_id].to_s.strip
+      @plan_overrides = (params[:plan_overrides].to_h || {}).with_indifferent_access
 
       @current_subscription = if api_context?
         editable_subscriptions&.find_by(external_id:)
@@ -24,12 +25,10 @@ module Subscriptions
     end
 
     def call
-      amount_currency = params.dig(:plan_overrides, :amount_currency)
-      @plan.amount_currency = amount_currency if amount_currency
-      amount_cents = params.dig(:plan_overrides, :amount_cents)
-      @plan.amount_cents = amount_cents if amount_cents
-
       return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
+
+      plan.amount_currency = plan_overrides[:amount_currency] if plan_overrides[:amount_currency]
+      plan.amount_cents = plan_overrides[:amount_cents] if plan_overrides[:amount_cents]
 
       # NOTE: in API, it's possible to create a subscription for a new customer
       customer.save! if api_context?
@@ -58,7 +57,15 @@ module Subscriptions
 
     private
 
-    attr_reader :customer, :plan, :params, :name, :subscription_at, :billing_time, :external_id, :current_subscription
+    attr_reader :customer,
+                :plan,
+                :params,
+                :name,
+                :subscription_at,
+                :billing_time,
+                :external_id,
+                :current_subscription,
+                :plan_overrides
 
     def valid?(args)
       Subscriptions::ValidateService.new(result, **args).valid?
