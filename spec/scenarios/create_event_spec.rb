@@ -96,7 +96,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with terminated subscription' do
-    let(:subscription) { create(:terminated_subscription, customer:, terminated_at: 1.hour.ago) }
+    let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: 1.hour.ago) }
 
     it 'returns a subscription not found error' do
       result = create_event(params.merge(external_subscription_id: subscription.external_id))
@@ -105,7 +105,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with subscription terminated in the same second' do
-    let(:subscription) { create(:terminated_subscription, customer:, terminated_at: Time.current) }
+    let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: Time.current) }
 
     it 'creates the event successfully' do
       expect do
@@ -115,7 +115,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with terminated subscription but timestamp when active' do
-    let(:subscription) { create(:terminated_subscription, customer:, terminated_at: 24.hours.ago) }
+    let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: 24.hours.ago) }
 
     it 'creates the event successfully' do
       expect do

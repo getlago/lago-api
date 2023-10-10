@@ -8,8 +8,8 @@ class Event < EventsRecord
   include OrganizationTimezone
 
   belongs_to :organization
-  belongs_to :customer, -> { with_discarded }
-  belongs_to :subscription
+  belongs_to :customer, -> { with_discarded }, optional: true
+  belongs_to :subscription, optional: true
 
   belongs_to :quantified_event, optional: true
 

@@ -148,7 +148,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       context 'with events attached to a previous subcription' do
         let(:previous_subscription) do
           create(
-            :terminated_subscription,
+            :subscription,
+            :terminated,
             started_at: DateTime.parse('2022-01-01 22:22:22'),
             terminated_at: DateTime.parse('2023-04-01 22:22:21'),
           )
