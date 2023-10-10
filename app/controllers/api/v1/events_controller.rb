@@ -22,6 +22,7 @@ module Api
         head(:ok)
       end
 
+      # DEPRECATED
       def batch
         validate_result = Events::CreateBatchService.new.validate_params(
           organization: current_organization,

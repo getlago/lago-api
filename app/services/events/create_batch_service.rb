@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Events
+  # DEPRECATED
   class CreateBatchService < BaseService
     def validate_params(organization:, params:)
       Events::ValidateCreationService.call(
@@ -28,7 +29,7 @@ module Events
 
       events = []
       ActiveRecord::Base.transaction do
-        params[:external_subscription_ids].each do |id|
+        params[:external_subscription_ids].each_with_index do |id, index|
           subscription = Subscription.find_by(external_id: id)
           event = Event.find_by(
             organization_id: organization.id,
@@ -45,7 +46,7 @@ module Events
           event = Event.new
           event.organization_id = organization.id
           event.code = params[:code]
-          event.transaction_id = params[:transaction_id]
+          event.transaction_id = "#{params[:transaction_id]}_#{index}"
           event.customer_id = customer.id
           event.external_customer_id = customer.external_id
           event.subscription_id = subscription.id

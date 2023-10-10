@@ -13,7 +13,7 @@ class Event < EventsRecord
 
   belongs_to :quantified_event, optional: true
 
-  validates :transaction_id, presence: true, uniqueness: { scope: :subscription_id }
+  validates :transaction_id, presence: true, uniqueness: { scope: %i[organization_id external_subscription_id] }
   validates :code, presence: true
 
   default_scope -> { kept }

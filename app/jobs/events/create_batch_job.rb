@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Events
+  # DEPRECATED
   class CreateBatchJob < ApplicationJob
     queue_as :default
 
