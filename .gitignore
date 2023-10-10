@@ -34,3 +34,5 @@ db/events_schema.rb
 .rsa_private.pem
 .rsa_public.pem
 LAGO_VERSION
+
+**/.DS_Store
