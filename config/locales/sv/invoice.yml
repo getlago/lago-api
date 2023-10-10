@@ -1,0 +1,60 @@
+---
+sv:
+  invoice:
+    all_subscriptions: Alla prenumerationer
+    all_usage_based_fees: Alla avgifter baserade på användning
+    amount: Belopp (exkl. moms)
+    bill_from: Avsändare
+    bill_to: Mottagare
+    breakdown: Specifikation
+    breakdown_for_days: Använt %{breakdown_duration} av %{breakdown_total_duration} dagar
+    breakdown_of: Specifikation för %{fee_group_name}
+    credit_notes: Kreditfakturor
+    date_from: Avser period
+    date_to: till och med
+    details: "%{resource} specifikation”"
+    document_name: Faktura
+    due_date: Förfaller %{date}
+    fees_from_to_date: Avgifter från %{from_date} till %{to_date}
+    invoice_number: Fakturanummer
+    issue_date: Fakturadatum
+    item: Artikel
+    list_of_charges: Lista över avgifter från %{from} till %{to}
+    month: månad
+    monthly: Månadsvis
+    notice_full: Oavsett när en händelse tas emot är enheten inte proportionell, fullt pris debiteras fullt pris.
+    notice_prorated: Skulle en produkt läggas till eller tas bort under månadsperioden beräknar vi det justerade priset baserat på förhållandet mellan kvarvarande eller använda dagar till det totala antalet dagar i perioden. Skulle det till exempel vara 15 dagar kvar i perioden, multipliceras priset med 15/%{days_in_month}, om en produkt nyttjas i 10 dagar, multipliceras priset med 10/%{days_in_month}.
+    payment_term: Betalningsvillkor
+    payment_term_days: "%{net_payment_term} dagar"
+    powered_by: Powered by
+    prepaid_credits: Förbetald kontobalans
+    prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
+    quarter: kvartal
+    quarterly: Kvartalsvis
+    see_breakdown: Se uppdelning nedan
+    sub_total: Delsumma
+    sub_total_with_tax: Delsumma (inkl. moms)
+    sub_total_without_tax: Delsumma (exkl. moms)
+    subscription: Prenumeration
+    subscription_interval: "%{plan_interval} prenumeration - %{plan_name}"
+    tax: Skatt
+    tax_identification_number: 'Skatte ID: %{tax_identification_number}'
+    tax_name: "%{name} (%{rate}% på %{amount})"
+    tax_name_with_details: "%{name} (%{rate}%)"
+    tax_rate: Momssats
+    total: Total
+    total_credits_with_value: 'Totalt antal krediter med värde: %{credit_amount} krediter'
+    total_due: Att betala
+    total_event: Totala händelser
+    total_unit: 'Totalt antal enheter: %{units}'
+    total_unit_interval: 'Totalt antal enheter: %{events_count} händelse(r) för %{units}'
+    true_up_details: Minsta utgift på %{min_amount} fördelat på användningsdagar
+    true_up_metric: "%{metric} • Justering"
+    unit: Antal
+    unit_price: Styckpris
+    units_prorated_per_period: Proportionella enheter per sekund per %{period}
+    usage_based_fees: Avgifter baserade på användning
+    week: vecka
+    weekly: Veckovis
+    year: år
+    yearly: Årsvis
