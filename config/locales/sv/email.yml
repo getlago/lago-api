@@ -1,0 +1,24 @@
+---
+sv:
+  email:
+    credit_note:
+      created:
+        credit_note_from: Kreditfaktura från %{organization_name}
+        credit_note_number: Kreditfakturanummer
+        credited_notice: Krediterad till kundens förbetalda kontobalans den %{date}
+        credited_refunded_notice: Krediterad till kundens förbetalda kontobalans och återbetald den %{date}
+        download: Ladda ner kreditfakturan för ytterligare information
+        invoice_number: Fakturanummer
+        issue_date: Fakturadatum
+        refunded_notice: Återbetald den %{date}
+        subject: 'Din kreditfaktura från %{organization_name} #%{credit_note_number}'
+    invoice:
+      finalized:
+        download: Ladda ner fakturan för ytterligare information
+        due_date: Förfaller %{date}
+        invoice_from: Faktura från %{organization_name}
+        invoice_number: Fakturanummer
+        issue_date: Fakturadatum
+        subject: 'Din faktura från %{organization_name} #%{invoice_number}'
+    powered_by_lago: Powered by
+    questions: Frågor? Kontakta oss på
