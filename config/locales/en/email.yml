@@ -1,25 +1,26 @@
+---
 en:
   email:
-    questions: Questions? Contact us at
-    powered_by: Powered by
-    invoice:
-      finalized:
-        subject: "Your Invoice from %{organization_name} #%{invoice_number}"
-        invoice_from: "Invoice from %{organization_name}"
-        due_date: total due %{date}
-        invoice_number: Invoice Number
-        issue_date: Issue Date
-        download: Download invoice for details
     credit_note:
       created:
-        subject: "Your credit note from %{organization_name} #%{credit_note_number}"
-        credit_note_from: "Credit Note from %{organization_name}"
-        credited_refunded_notice: "Credited on customer balance and refunded on %{date}"
-        credited_notice: "Credited on customer balance on %{date}"
-        refunded_notice: "Refunded on %{date}"
-        credit_note_number: "Credit note number"
-        invoice_number: "Invoice number"
-        issue_date: "Issue date"
+        credit_note_from: Credit Note from %{organization_name}
+        credit_note_number: Credit note number
+        credited_notice: Credited on customer balance on %{date}
+        credited_refunded_notice: Credited on customer balance and refunded on %{date}
         download: Download credit note for details
+        invoice_number: Invoice number
+        issue_date: Issue date
+        refunded_notice: Refunded on %{date}
+        subject: 'Your credit note from %{organization_name} #%{credit_note_number}'
+    invoice:
+      finalized:
+        download: Download invoice for details
+        due_date: total due %{date}
+        invoice_from: Invoice from %{organization_name}
+        invoice_number: Invoice Number
+        issue_date: Issue Date
+        subject: 'Your Invoice from %{organization_name} #%{invoice_number}'
     password_reset:
-      subject: "Reset your Lago password"
+      subject: Reset your Lago password
+    powered_by: Powered by
+    questions: Questions? Contact us at

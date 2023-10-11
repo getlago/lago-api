@@ -1,23 +1,24 @@
+---
 de:
   email:
-    questions: Fragen? Kontaktiere uns unter
-    powered_by: Bereitgestellt von
-    invoice:
-      finalized:
-        subject: "Deine Rechnung von %{organization_name} #%{invoice_number}"
-        invoice_from: "Rechnung von %{organization_name}"
-        due_date: Gesamtbetrag fällig am %{date}
-        invoice_number: Rechnungsnummer
-        issue_date: Ausstellungsdatum
-        download: Rechnung herunterladen, um Details anzuzeigen
     credit_note:
       created:
-        subject: "Dein Gutschriftsbeleg von %{organization_name} #%{credit_note_number}"
-        credit_note_from: "Gutschriftsbeleg von %{organization_name}"
-        credited_refunded_notice: "Dem Kundenguthaben gutgeschrieben und am %{date} zurückerstattet"
-        credited_notice: "Gutschrift auf Kundenkonto am %{date}"
-        refunded_notice: "Zurückerstattet am %{date}"
+        credit_note_from: Gutschriftsbeleg von %{organization_name}
         credit_note_number: Gutschriftsbelegnummer
+        credited_notice: Gutschrift auf Kundenkonto am %{date}
+        credited_refunded_notice: Dem Kundenguthaben gutgeschrieben und am %{date} zurückerstattet
+        download: Gutschriftsbeleg herunterladen, um Details anzuzeigen
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
-        download: Gutschriftsbeleg herunterladen, um Details anzuzeigen
+        refunded_notice: Zurückerstattet am %{date}
+        subject: 'Dein Gutschriftsbeleg von %{organization_name} #%{credit_note_number}'
+    invoice:
+      finalized:
+        download: Rechnung herunterladen, um Details anzuzeigen
+        due_date: Gesamtbetrag fällig am %{date}
+        invoice_from: Rechnung von %{organization_name}
+        invoice_number: Rechnungsnummer
+        issue_date: Ausstellungsdatum
+        subject: 'Deine Rechnung von %{organization_name} #%{invoice_number}'
+    powered_by: Bereitgestellt von
+    questions: Fragen? Kontaktiere uns unter

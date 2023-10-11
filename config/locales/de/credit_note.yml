@@ -1,22 +1,23 @@
+---
 de:
   credit_note:
-    document_name: Gutschrift
+    amount: Betrag (ohne Steuern)
+    coupon_adjustment: Coupons
+    credit_from: Von
     credit_note_number: Gutschriftnummer
+    credit_to: Gutschrift für
+    credited_notice: Gutschrift auf Kundenguthaben am %{issuing_date}
+    credited_on_customer_balance: Auf Kundenguthaben gutgeschrieben
+    credited_refunded_notice: Auf Kundenguthaben gutgeschrieben und zurückerstattet am %{issuing_date}
+    document_name: Gutschrift
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
-    credit_from: Von
     item: Artikel
-    tax_rate: Tax rate
-    amount: Betrag (ohne Steuern)
-    credit_to: Gutschrift für
-    refunded_notice: Erstattung am %{issuing_date}
-    credited_notice: Gutschrift auf Kundenguthaben am %{issuing_date}
-    credited_refunded_notice: Auf Kundenguthaben gutgeschrieben und zurückerstattet am %{issuing_date}
-    subscription: Abonnement
-    coupon_adjustment: Coupons
-    sub_total_without_tax: Zwischensumme (ohne Steuern)
-    tax: "%{name} (%{rate}% on %{amount})"
-    credited_on_customer_balance: Auf Kundenguthaben gutgeschrieben
-    refunded: Erstattet
-    total: Insgesamt
     powered_by: Bereitgestellt von
+    refunded: Erstattet
+    refunded_notice: Erstattung am %{issuing_date}
+    sub_total_without_tax: Zwischensumme (ohne Steuern)
+    subscription: Abonnement
+    tax: "%{name} (%{rate}% on %{amount})"
+    tax_rate: Tax rate
+    total: Insgesamt

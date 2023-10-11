@@ -1,66 +1,64 @@
+---
 fr:
   invoice:
-    document_name: Facture
-    invoice_number: Nº de facture
-    issue_date: Date d'émission
-    payment_term: Délai de paiement
-    payment_term_days: "%{net_payment_term} jours"
-    bill_from: De
-    bill_to: Facturé à
-    due_date: Date d'échéance le %{date}
-    total_credits_with_value: "Nombre total de crédits: %{credit_amount} crédits"
     all_subscriptions: Tous les abonnements
     all_usage_based_fees: Tous les frais de consommation
-    sub_total_without_tax: Sous total (HT)
-    tax: TVA
-    sub_total_with_tax: Sous total (TTC)
-    credit_notes: Avoir(s)
-    coupons: Réduction(s)
-    prepaid_credits: Crédit(s) prépayé(s)
-    prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
-    tax_identification_number: "ID fiscal: %{tax_identification_number}"
-    total_due: Total dû
-    powered_by: Document généré par
-    item: Article
-    unit: Unité
-    unit_price: Prix unitaire
-    units_prorated_per_period: Unités proratisées par seconde par %{period}
     amount: Montant
     amount_with_tax: Montant (TTC)
     amount_without_tax: Montant (HT)
-    fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
-    tax_rate: Taux de taxe
-    tax_name_with_details: "%{name} (%{rate}%)"
-    tax_name: "%{name} (%{rate}% sur %{amount})"
-
-    details: "Détails de %{resource}"
-    subscription: Abonnement
-    date_from: Du
-    date_to: au
-    monthly: mensuel
-    yearly: annuel
-    weekly: hebdomadaire
-    quarterly: trimestriellement
-    week: semaine
-    month: mois
-    quarter: trimestre
-    year: année
-    sub_total: Sous total
-    subscription_interval: Abonnement %{plan_interval} - %{plan_name}
-
-    usage_based_fees: Frais de consommation
-    list_of_charges: Liste des frais de consommation du %{from} au %{to}
-    see_breakdown: Consultez le détail ci-après
-    total_unit_interval: "Nombre total d'unités: %{events_count} événement(s) pour %{units}"
-    total_events: "Nombre total d'événements: %{count}"
-    total_unit: "Nombre total d'unités: %{units}"
-    total: Total
+    bill_from: De
+    bill_to: Facturé à
     breakdown: Détails de consommation
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
-    breakdown_of: "Détails de consommation de %{fee_group_name}"
-    notice_prorated: Si une unité est ajoutée ou supprimée pendant la période de facturation, nous calculons le prix au prorata en fonction du ratio des jours restants ou utilisés. Par exemple, s'il reste 15 jours dans le plan, nous multiplions le prix par 15/%{days_in_month}, et si une unité a été utilisée pendant 10 jours, nous multiplions le prix par 10/%{days_in_month}.
+    breakdown_of: Détails de consommation de %{fee_group_name}
+    coupons: Réduction(s)
+    credit_notes: Avoir(s)
+    date_from: Du
+    date_to: au
+    details: Détails de %{resource}
+    document_name: Facture
+    due_date: Date d'échéance le %{date}
+    fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
+    invoice_number: Nº de facture
+    issue_date: Date d'émission
+    item: Article
+    list_of_charges: Liste des frais de consommation du %{from} au %{to}
+    month: mois
+    monthly: mensuel
     notice_full: Peu importe quand l’évènement de consommation est reçu, l'unité n'est pas proratisée et nous facturons le prix complet.
-    true_up_metric: "%{metric} - Frais d'ajustement"
-    true_up_details: "Dépense minimale de %{min_amount} au prorata des jours d'utilisation"
-
+    notice_prorated: Si une unité est ajoutée ou supprimée pendant la période de facturation, nous calculons le prix au prorata en fonction du ratio des jours restants ou utilisés. Par exemple, s'il reste 15 jours dans le plan, nous multiplions le prix par 15/%{days_in_month}, et si une unité a été utilisée pendant 10 jours, nous multiplions le prix par 10/%{days_in_month}.
+    payment_term: Délai de paiement
+    payment_term_days: "%{net_payment_term} jours"
+    powered_by: Document généré par
+    prepaid_credits: Crédit(s) prépayé(s)
+    prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
+    quarter: trimestre
+    quarterly: trimestriellement
+    see_breakdown: Consultez le détail ci-après
+    sub_total: Sous total
+    sub_total_with_tax: Sous total (TTC)
+    sub_total_without_tax: Sous total (HT)
+    subscription: Abonnement
+    subscription_interval: Abonnement %{plan_interval} - %{plan_name}
+    tax: TVA
+    tax_identification_number: 'ID fiscal: %{tax_identification_number}'
+    tax_name: "%{name} (%{rate}% sur %{amount})"
+    tax_name_with_details: "%{name} (%{rate}%)"
+    tax_rate: Taux de taxe
+    total: Total
     total_credits: Total crédits
+    total_credits_with_value: 'Nombre total de crédits: %{credit_amount} crédits'
+    total_due: Total dû
+    total_events: 'Nombre total d''événements: %{count}'
+    total_unit: 'Nombre total d''unités: %{units}'
+    total_unit_interval: 'Nombre total d''unités: %{events_count} événement(s) pour %{units}'
+    true_up_details: Dépense minimale de %{min_amount} au prorata des jours d'utilisation
+    true_up_metric: "%{metric} - Frais d'ajustement"
+    unit: Unité
+    unit_price: Prix unitaire
+    units_prorated_per_period: Unités proratisées par seconde par %{period}
+    usage_based_fees: Frais de consommation
+    week: semaine
+    weekly: hebdomadaire
+    year: année
+    yearly: annuel

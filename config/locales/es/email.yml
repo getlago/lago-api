@@ -1,0 +1,24 @@
+---
+es:
+  email:
+    credit_note:
+      created:
+        credit_note_from: Nota de crédito de %{organization_name}
+        credit_note_number: Número de nota de crédito
+        credited_notice: Acreditado en el saldo del cliente el %{date}
+        credited_refunded_notice: Acreditado en el saldo del cliente y reembolsado el %{date}
+        download: Descargar nota de crédito para más detalles
+        invoice_number: Número de factura
+        issue_date: Fecha de emisión
+        refunded_notice: Reembolso hecho el %{date}
+        subject: 'Tu nota de crédito de %{organization_name} #%{credit_note_number}'
+    invoice:
+      finalized:
+        download: Descargar factura para más detalles
+        due_date: Vence el %{date}
+        invoice_from: Factura de %{organization_name}
+        invoice_number: Número de factura
+        issue_date: Fecha de emisión
+        subject: 'Tu factura de %{organization_name} #%{invoice_number}'
+    powered_by_lago: Powered by
+    questions: "¿Preguntas? Contáctanos en"
