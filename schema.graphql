@@ -4333,6 +4333,11 @@ type Query {
   ): Subscription
 
   """
+  Query subscriptions of an organization
+  """
+  subscriptions(limit: Int, page: Int, planCode: String): SubscriptionCollection!
+
+  """
   Query a single tax of an organization
   """
   tax(
@@ -4564,6 +4569,11 @@ type Subscription {
   subscriptionAt: ISO8601DateTime
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
+}
+
+type SubscriptionCollection {
+  collection: [Subscription!]!
+  metadata: CollectionMetadata!
 }
 
 type Tax {
