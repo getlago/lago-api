@@ -37,6 +37,7 @@ module Types
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
+    field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
