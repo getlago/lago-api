@@ -9,15 +9,7 @@ FactoryBot.define do
         },
         'pspReference' => SecureRandom.uuid,
         'resultCode' => 'Authorised',
-        'amount' => {
-          'currency' => 'USD',
-          'value' => 1000,
-        },
         'merchantReference' => SecureRandom.uuid,
-        'paymentMethod' => {
-          'brand' => 'amex',
-          'type' => 'scheme',
-        },
       },
     )
   end
