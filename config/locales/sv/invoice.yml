@@ -4,6 +4,8 @@ sv:
     all_subscriptions: Alla prenumerationer
     all_usage_based_fees: Alla avgifter baserade på användning
     amount: Belopp (exkl. moms)
+    amount_with_tax: Belopp (inkl. moms)
+    amount_without_tax: Belopp (exkl. moms)
     bill_from: Avsändare
     bill_to: Mottagare
     breakdown: Specifikation
