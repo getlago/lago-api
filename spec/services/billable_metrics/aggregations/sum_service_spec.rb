@@ -206,14 +206,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       )
     end
 
-    it 'returns a failed result' do
+    it 'ignores the event' do
       result = sum_service.aggregate
 
       aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ServiceFailure)
-        expect(result.error.code).to eq('aggregation_failure')
-        expect(result.error.error_message).to be_present
+        expect(result).to be_success
+        expect(result.aggregation).to eq(48)
+        expect(result.count).to eq(4)
       end
     end
   end

@@ -31,10 +31,13 @@ module BillableMetrics
           #       sent to upgraded/downgraded subscription
           return recurring_events_scope(from_datetime:, to_datetime:)
               .where(field_presence_condition)
+              .where(field_numeric_condition)
               .order(timestamp: :asc)
         end
 
-        events_scope(from_datetime:, to_datetime:).where(field_presence_condition)
+        events_scope(from_datetime:, to_datetime:)
+          .where(field_presence_condition)
+          .where(field_numeric_condition)
       end
 
       def compute_aggregation
@@ -159,6 +162,7 @@ module BillableMetrics
           .where(timestamp: ..from_datetime)
           .where.not(subscription_id: subscription.id)
           .where(field_presence_condition)
+          .where(field_numeric_condition)
 
         return scope.sum("(#{sanitized_field_name})::numeric") unless group
 
