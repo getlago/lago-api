@@ -143,11 +143,7 @@ module Events
     def delivor_error_webhook(error:)
       return unless organization.webhook_endpoints.any?
 
-      SendWebhookJob.perform_later(
-        'event.error',
-        event,
-        { error:, status: 422 },
-      )
+      SendWebhookJob.perform_later('event.error', event, { error: })
     end
   end
 end
