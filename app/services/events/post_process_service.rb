@@ -11,8 +11,15 @@ module Events
     def call
       event.customer_id = customer&.id
       event.external_customer_id ||= customer&.external_id
-      event.subscription_id = subscriptions.first&.id
-      event.external_subscription_id ||= subscriptions.first&.external_id
+
+      # NOTE: prevent subscription if more than 1 subscription is active
+      #       if multiple terminated matches the timestamp, takes the most recent
+      if subscriptions.count(&:active?) <= 1
+        subscription = subscriptions.first
+        event.subscription_id = subscription&.id
+        event.external_subscription_id ||= subscription&.external_id
+      end
+
       event.save!
 
       expire_cached_charges(subscriptions)
