@@ -22,11 +22,19 @@ RSpec.describe WalletTransactions::RecreditService, type: :service do
   end
 
   context 'when wallet is active' do
-    let(:wallet) { create(:wallet) }
+    let(:wallet) { create(:wallet, consumed_credits: 1.0) }
 
     it 'recredits the wallet' do
       aggregate_failures do
         expect { service.call }.to change { wallet.reload.credits_balance }.from(0).to(1.0)
+
+        expect(service.call).to be_success
+      end
+    end
+
+    it 'resets consumed credits of the wallet' do
+      aggregate_failures do
+        expect { service.call }.to change { wallet.reload.consumed_credits }.from(1.0).to(0)
 
         expect(service.call).to be_success
       end
