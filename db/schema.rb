@@ -501,7 +501,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_10_090849) do
     t.bigint "sub_total_including_taxes_amount_cents", default: 0, null: false
     t.date "payment_due_date"
     t.integer "net_payment_term", default: 0, null: false
-    t.datetime "voided_at"
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
