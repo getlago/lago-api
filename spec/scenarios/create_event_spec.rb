@@ -298,8 +298,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         code: billable_metric.code,
         customer_id: customer.id,
         external_customer_id: customer.external_id,
-        subscription_id: subscription.id,
-        external_subscription_id: subscription.external_id,
+        subscription_id: nil,
+        external_subscription_id: nil,
       )
     end
   end
