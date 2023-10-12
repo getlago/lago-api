@@ -44,7 +44,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   context 'with filter on status' do
     let(:query) do
       <<~GQL
-        query($status: InvoiceStatusTypeEnum!) {
+        query($status: [InvoiceStatusTypeEnum!]) {
           customerPortalInvoices(status: $status) {
             collection { id }
             metadata { currentPage, totalCount }
@@ -57,7 +57,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         customer_portal_user: customer,
         query:,
-        variables: { status: 'draft' },
+        variables: { status: ['draft'] },
       )
 
       invoices_response = result['data']['customerPortalInvoices']
