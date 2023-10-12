@@ -429,7 +429,7 @@ html
                 tr
                   td.body-1
                     - if item.fee.true_up_parent_fee_id?
-                      | #{I18n.t('invoice.true_up_metric', metric: item.fee.invoice_name)}
+                      | #{I18n.t('invoice.true_up_metric', metric: item.fee.true_up_parent_fee.invoice_name)}
                     - else
                       | #{item.fee.invoice_name}
 
