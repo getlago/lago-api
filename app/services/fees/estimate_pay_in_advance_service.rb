@@ -11,7 +11,7 @@ module Fees
     end
 
     def call
-      Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
+      Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:, send_webhook: false)
       return result unless result.success?
 
       if charges.none?
