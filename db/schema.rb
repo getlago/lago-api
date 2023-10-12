@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_09_26_144126) do
+ActiveRecord::Schema[7.0].define(version: 2023_10_10_090849) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -340,11 +340,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_26_144126) do
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
+    t.index ["organization_id", "external_subscription_id", "transaction_id"], name: "index_unique_transaction_id", unique: true
     t.index ["organization_id"], name: "index_events_on_organization_id"
     t.index ["properties"], name: "index_events_on_properties", opclass: :jsonb_path_ops, using: :gin
     t.index ["quantified_event_id"], name: "index_events_on_quantified_event_id"
     t.index ["subscription_id", "code", "timestamp"], name: "index_events_on_subscription_id_and_code_and_timestamp", where: "(deleted_at IS NULL)"
-    t.index ["subscription_id", "transaction_id"], name: "index_events_on_subscription_id_and_transaction_id", unique: true
     t.index ["subscription_id"], name: "index_events_on_subscription_id"
   end
 
@@ -377,8 +377,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_26_144126) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.string "invoice_display_name"
     t.decimal "total_aggregated_units"
+    t.string "invoice_display_name"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"

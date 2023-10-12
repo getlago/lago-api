@@ -178,12 +178,12 @@ RSpec.describe Events::CreateBatchService, type: :service do
           expect(events.first.organization_id).to eq(organization.id)
           expect(events.first.code).to eq(billable_metric.code)
           expect(events.first.subscription_id).to eq(subscription.id)
-          expect(events.first.transaction_id).to eq(transaction_id)
+          expect(events.first.transaction_id).to eq("#{transaction_id}_0")
           expect(events.last.customer_id).to eq(customer.id)
           expect(events.last.organization_id).to eq(organization.id)
           expect(events.last.code).to eq(billable_metric.code)
           expect(events.last.subscription_id).to eq(subscription2.id)
-          expect(events.last.transaction_id).to eq(transaction_id)
+          expect(events.last.transaction_id).to eq("#{transaction_id}_1")
         end
       end
 

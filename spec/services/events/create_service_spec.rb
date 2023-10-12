@@ -75,7 +75,7 @@ RSpec.describe Events::CreateService, type: :service do
     before { subscription }
 
     context 'when subscription is terminated' do
-      let(:subscription) { create(:terminated_subscription, customer:, organization:, plan:) }
+      let(:subscription) { create(:subscription, :terminated, customer:, organization:, plan:) }
 
       it 'creates an event' do
         result = create_service.call(params: create_args, timestamp:, metadata: {})

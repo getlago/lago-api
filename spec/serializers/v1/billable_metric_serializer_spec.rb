@@ -26,7 +26,7 @@ RSpec.describe ::V1::BillableMetricSerializer do
   end
 
   it 'returns the count number of active subscriptions' do
-    terminated_subscription = create(:terminated_subscription)
+    terminated_subscription = create(:subscription, :terminated)
     create(:standard_charge, plan: terminated_subscription.plan, billable_metric:)
 
     subscription = create(:subscription)

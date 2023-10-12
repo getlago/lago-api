@@ -16,7 +16,7 @@ FactoryBot.define do
       status { :pending }
     end
 
-    factory :terminated_subscription do
+    trait :terminated do
       status { :terminated }
       started_at { 1.month.ago }
       terminated_at { Time.zone.now }
