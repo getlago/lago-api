@@ -171,7 +171,15 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       context 'when transaction_id is already used' do
-        before { create(:event, transaction_id:, subscription_id: subscription.id, organization_id: organization.id) }
+        before do
+          create(
+            :event,
+            transaction_id:,
+            external_subscription_id: subscription.external_id,
+            subscription_id: subscription.id,
+            organization_id: organization.id,
+          )
+        end
 
         it 'returns a validation error' do
           validate_event
