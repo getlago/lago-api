@@ -44,6 +44,10 @@ RSpec.describe CreditNotes::RecreditService, type: :service do
     let(:amount_cents) { credit_note.balance_amount_cents }
     let(:amount_cents_recredited) { credit_note.balance_amount_cents + credit.amount_cents }
 
+    before do
+      credit_note.update! credit_status: :consumed
+    end
+
     it 'recredits the credit note' do
       aggregate_failures do
         expect { service.call }
@@ -52,6 +56,10 @@ RSpec.describe CreditNotes::RecreditService, type: :service do
 
         expect(service.call).to be_success
       end
+    end
+
+    it 'updates credit note credit status to available' do
+      expect { service.call }.to change { credit_note.reload.credit_status }.from('consumed').to('available')
     end
   end
 end
