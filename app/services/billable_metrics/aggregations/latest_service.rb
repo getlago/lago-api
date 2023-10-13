@@ -19,6 +19,7 @@ module BillableMetrics
       def events
         @events ||= events_scope(from_datetime:, to_datetime:)
           .where(field_presence_condition)
+          .where(field_numeric_condition)
           .reorder(timestamp: :desc, created_at: :desc)
       end
 

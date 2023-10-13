@@ -93,6 +93,11 @@ module BillableMetrics
         "events.properties::jsonb ? '#{ActiveRecord::Base.sanitize_sql_for_conditions(billable_metric.field_name)}'"
       end
 
+      def field_numeric_condition
+        # NOTE: ensure property value is a numeric value
+        "#{sanitized_field_name} ~ '^-?\\d+(\\.\\d+)?$'"
+      end
+
       def handle_in_advance_current_usage(total_aggregation)
         if previous_event
           aggregation = total_aggregation -

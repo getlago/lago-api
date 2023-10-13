@@ -100,6 +100,7 @@ module BillableMetrics
           end
 
           query.where(field_presence_condition)
+            .where(field_numeric_condition)
         end
       end
 
@@ -113,7 +114,7 @@ module BillableMetrics
           else
             events_scope(from_datetime:, to_datetime:)
           end
-          scope = query.where(field_presence_condition)
+          scope = query.where(field_presence_condition).where(field_numeric_condition)
 
           # Events without attached right metadata are ignored since such events cannot be processed correctly.
           # Could happen in race condition when event is stored but metadata in async job are attached later.

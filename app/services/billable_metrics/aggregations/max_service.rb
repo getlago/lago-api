@@ -36,7 +36,9 @@ module BillableMetrics
       private
 
       def fetch_events(from_datetime:, to_datetime:)
-        events_scope(from_datetime:, to_datetime:).where(field_presence_condition)
+        events_scope(from_datetime:, to_datetime:)
+          .where(field_presence_condition)
+          .where(field_numeric_condition)
       end
     end
   end

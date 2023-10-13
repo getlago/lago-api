@@ -58,11 +58,15 @@ module BillableMetrics
       end
 
       def persisted_query
-        @persisted_query ||= recurring_events_scope(to_datetime: from_datetime).where(field_presence_condition)
+        @persisted_query ||= recurring_events_scope(to_datetime: from_datetime)
+          .where(field_presence_condition)
+          .where(field_numeric_condition)
       end
 
       def period_query
-        @period_query ||= recurring_events_scope(to_datetime:, from_datetime:).where(field_presence_condition)
+        @period_query ||= recurring_events_scope(to_datetime:, from_datetime:)
+          .where(field_presence_condition)
+          .where(field_numeric_condition)
       end
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
