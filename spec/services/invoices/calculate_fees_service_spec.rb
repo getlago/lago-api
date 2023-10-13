@@ -17,55 +17,55 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   let(:tax) { create(:tax, organization:, rate: 20) }
   let(:recurring) { false }
 
+  let(:invoice) do
+    create(
+      :invoice,
+      organization:,
+      currency: 'EUR',
+      issuing_date: Time.zone.at(timestamp).to_date,
+      customer: subscription.customer,
+    )
+  end
+
+  let(:subscription) do
+    create(
+      :subscription,
+      plan:,
+      customer:,
+      billing_time:,
+      subscription_at: started_at,
+      started_at:,
+      created_at:,
+      status:,
+      terminated_at:,
+    )
+  end
+  let(:subscriptions) { [subscription] }
+
+  let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+  let(:timestamp) { Time.zone.now.beginning_of_month }
+  let(:started_at) { Time.zone.now - 2.years }
+  let(:created_at) { started_at }
+  let(:terminated_at) { nil }
+  let(:status) { :active }
+
+  let(:plan) { create(:plan, organization:, interval:, pay_in_advance:) }
+  let(:pay_in_advance) { false }
+  let(:billing_time) { :calendar }
+  let(:interval) { 'monthly' }
+
+  let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
+
+  before do
+    tax
+    charge
+
+    allow(SegmentTrackJob).to receive(:perform_later)
+    allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
+    allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
+  end
+
   describe '#call' do
-    let(:invoice) do
-      create(
-        :invoice,
-        organization:,
-        currency: 'EUR',
-        issuing_date: Time.zone.at(timestamp).to_date,
-        customer: subscription.customer,
-      )
-    end
-
-    let(:subscription) do
-      create(
-        :subscription,
-        plan:,
-        customer:,
-        billing_time:,
-        subscription_at: started_at,
-        started_at:,
-        created_at:,
-        status:,
-        terminated_at:,
-      )
-    end
-    let(:subscriptions) { [subscription] }
-
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-    let(:timestamp) { Time.zone.now.beginning_of_month }
-    let(:started_at) { Time.zone.now - 2.years }
-    let(:created_at) { started_at }
-    let(:terminated_at) { nil }
-    let(:status) { :active }
-
-    let(:plan) { create(:plan, organization:, interval:, pay_in_advance:) }
-    let(:pay_in_advance) { false }
-    let(:billing_time) { :calendar }
-    let(:interval) { 'monthly' }
-
-    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
-
-    before do
-      tax
-      charge
-
-      allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
-      allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
-    end
-
     context 'when subscription is billed on anniversary date' do
       let(:timestamp) { DateTime.parse('07 Mar 2022') }
       let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
@@ -945,6 +945,87 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               expect(result.error.error_message).to be_present
             end
           end
+        end
+      end
+    end
+  end
+
+  describe 'not_in_finalizing_process?' do
+    subject(:not_in_finalizing_process) { service.__send__(:not_in_finalizing_process?) }
+
+    let(:service) do
+      described_class.new(
+        invoice:,
+        subscriptions:,
+        timestamp: timestamp.to_i,
+        recurring:,
+        context:,
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        status: invoice_status,
+        organization:,
+        currency: 'EUR',
+        issuing_date: Time.zone.at(timestamp).to_date,
+        customer: subscription.customer,
+      )
+    end
+
+    context 'when context is not finalize' do
+      let(:context) { nil }
+
+      context 'when invoice is draft' do
+        let(:invoice_status) { :draft }
+
+        it 'returns true' do
+          expect(not_in_finalizing_process).to be(true)
+        end
+      end
+
+      context 'when invoice is finalized' do
+        let(:invoice_status) { :finalized }
+
+        it 'returns false' do
+          expect(not_in_finalizing_process).to be(false)
+        end
+      end
+
+      context 'when invoice is voided' do
+        let(:invoice_status) { :voided }
+
+        it 'returns true' do
+          expect(not_in_finalizing_process).to be(true)
+        end
+      end
+    end
+
+    context 'when context is finalize' do
+      let(:context) { :finalize }
+
+      context 'when invoice is draft' do
+        let(:invoice_status) { :draft }
+
+        it 'returns false' do
+          expect(not_in_finalizing_process).to be(false)
+        end
+      end
+
+      context 'when invoice is finalized' do
+        let(:invoice_status) { :finalized }
+
+        it 'returns false' do
+          expect(not_in_finalizing_process).to be(false)
+        end
+      end
+
+      context 'when invoice is voided' do
+        let(:invoice_status) { :voided }
+
+        it 'returns false' do
+          expect(not_in_finalizing_process).to be(false)
         end
       end
     end

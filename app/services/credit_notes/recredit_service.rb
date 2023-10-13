@@ -16,6 +16,7 @@ module CreditNotes
       result.credit_note = credit_note
 
       credit_note.balance_amount_cents += credit.amount_cents
+      credit_note.credit_status = :available
       credit_note.save!
 
       result
