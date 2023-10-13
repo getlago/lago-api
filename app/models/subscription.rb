@@ -114,10 +114,10 @@ class Subscription < ApplicationRecord
 
   def validate_external_id
     return unless active?
+    return unless organization.subscriptions.active.exists?(external_id:)
 
     # NOTE: We want unique external id per organization.
-    used_ids = organization.subscriptions.active.pluck(:external_id)
-    errors.add(:external_id, :value_already_exist) if used_ids&.include?(external_id)
+    errors.add(:external_id, :value_already_exist)
   end
 
   def downgrade_plan_date

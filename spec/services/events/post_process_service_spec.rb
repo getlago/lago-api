@@ -124,7 +124,7 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
 
       context 'with multiple active subscription' do
-        let(:second_subscription) { create(:subscription, :terminated, organization:, customer:, started_at:) }
+        let(:second_subscription) { create(:subscription, organization:, customer:, started_at:) }
 
         before { second_subscription }
 
@@ -160,7 +160,23 @@ RSpec.describe Events::PostProcessService, type: :service do
         end
       end
 
-      # TODO: test case with multiple active subscription
+      context 'with multiple active subscription' do
+        let(:second_subscription) { create(:subscription, organization:, customer:, started_at:) }
+
+        before { second_subscription }
+
+        it 'assigns the subscription' do
+          result = process_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(event.reload.customer_id).to eq(customer.id)
+            expect(event.external_customer_id).to eq(customer.external_id)
+            expect(event.subscription_id).to be_nil
+          end
+        end
+      end
     end
 
     context 'when event code matches a recurring billable metric' do
