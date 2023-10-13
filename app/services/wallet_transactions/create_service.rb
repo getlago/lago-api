@@ -63,11 +63,11 @@ module WalletTransactions
           settled_at: Time.current,
         )
 
-        Wallets::Balance::IncreaseService.new(wallet:, credits_amount: granted_credits_amount).call
-
-        if reset_consumed_credits
-          wallet.update!(consumed_credits: [0.0, wallet.consumed_credits - granted_credits_amount].max)
-        end
+        Wallets::Balance::IncreaseService.new(
+          wallet:,
+          credits_amount: granted_credits_amount,
+          reset_consumed_credits:,
+        ).call
 
         wallet_transaction
       end
