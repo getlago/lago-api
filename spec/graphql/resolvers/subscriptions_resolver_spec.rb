@@ -6,7 +6,7 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        subscriptions(limit: 5, planCode: "#{plan.code}") {
+        subscriptions(limit: 5, planCode: "#{plan.code}", status: [active]) {
           collection { id externalId plan { code } }
           metadata { currentPage, totalCount }
         }
@@ -26,6 +26,7 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
   it 'returns a list of subscriptions' do
     first_subcription = create(:subscription, customer:, plan:)
     second_subcription = create(:subscription, customer:, plan:)
+    create(:subscription, customer:, plan:, status: :terminated)
     create(:subscription, customer:)
 
     result = execute_graphql(
