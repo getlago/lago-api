@@ -16,7 +16,6 @@ module Resolvers
       validate_organization!
 
       Event.where(organization_id: current_organization.id)
-        .includes(:customer)
         .order(timestamp: :desc)
         .page(page)
         .per(limit)

@@ -61,7 +61,7 @@ RSpec.describe Events::CreateService, type: :service do
           :event,
           organization:,
           transaction_id: create_args[:transaction_id],
-          external_subscription_id: subscription.external_id,
+          external_subscription_id:,
         )
       end
 

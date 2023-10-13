@@ -8,8 +8,8 @@ module Types
       field :code, String, null: false
       field :id, ID, null: false
 
-      field :external_customer_id, String, null: false
-      field :external_subscription_id, String, null: false
+      field :external_customer_id, String, null: true
+      field :external_subscription_id, String, null: true
       field :transaction_id, String, null: true
 
       field :customer_timezone, Types::TimezoneEnum, null: false
@@ -25,21 +25,15 @@ module Types
 
       field :match_billable_metric, Boolean, null: false
       field :match_custom_field, Boolean, null: false
-
-      def external_customer_id
-        object.customer.external_id
-      end
-
-      def external_subscription_id
-        object.subscription.external_id
-      end
+      field :match_customer, Boolean, null: false
+      field :match_subscription, Boolean, null: false
 
       def payload
         {
           event: {
             transaction_id: object.transaction_id,
-            external_customer_id: object.customer.external_id,
-            external_subscription_id: object.subscription.external_id,
+            external_customer_id: object.external_customer_id,
+            external_subscription_id: object.external_subscription_id,
             code: object.code,
             timestamp: object.timestamp.to_i,
             properties: object.properties || {},
@@ -59,11 +53,19 @@ module Types
       end
 
       def customer_timezone
-        object.customer.applicable_timezone
+        object.customer&.applicable_timezone || object.organization.timezone || 'UTC'
       end
 
       def billable_metric_name
         object.billable_metric&.name
+      end
+
+      def match_customer
+        object.customer_id.present?
+      end
+
+      def match_subscription
+        object.subscription_id.present?
       end
     end
   end
