@@ -3,7 +3,14 @@
 require 'rails_helper'
 
 RSpec.describe Events::CreateService, type: :service do
-  subject(:create_service) { described_class.new(organization:) }
+  subject(:create_service) do
+    described_class.new(
+      organization:,
+      params: create_args,
+      timestamp: creation_timestamp,
+      metadata:,
+    )
+  end
 
   let(:organization) { create(:organization) }
 
@@ -33,9 +40,7 @@ RSpec.describe Events::CreateService, type: :service do
       result = nil
 
       aggregate_failures do
-        expect do
-          result = create_service.call(params: create_args, timestamp: creation_timestamp, metadata:)
-        end.to change(Event, :count).by(1)
+        expect { result = create_service.call }.to change(Event, :count).by(1)
 
         expect(result).to be_success
         expect(result.event).to have_attributes(
@@ -50,9 +55,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     it 'enqueues a post processing job' do
-      expect do
-        create_service.call(params: create_args, timestamp: creation_timestamp, metadata:)
-      end.to have_enqueued_job(Events::PostProcessJob)
+      expect { create_service.call }.to have_enqueued_job(Events::PostProcessJob)
     end
 
     context 'when event already exists' do
@@ -71,13 +74,7 @@ RSpec.describe Events::CreateService, type: :service do
         result = 0
 
         aggregate_failures do
-          expect do
-            result = create_service.call(
-              params: create_args,
-              timestamp:,
-              metadata: {},
-            )
-          end.not_to change(Event, :count)
+          expect { result = create_service.call }.not_to change(Event, :count)
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -91,7 +88,7 @@ RSpec.describe Events::CreateService, type: :service do
       let(:timestamp) { nil }
 
       it 'creates an event by setting the timestamp to the current datetime' do
-        result = create_service.call(params: create_args, timestamp: creation_timestamp, metadata: {})
+        result = create_service.call
 
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(creation_timestamp))
@@ -102,7 +99,7 @@ RSpec.describe Events::CreateService, type: :service do
       let(:timestamp) { Time.current.to_f.to_s }
 
       it 'creates an event by setting timestamp' do
-        result = create_service.call(params: create_args, timestamp: creation_timestamp, metadata: {})
+        result = create_service.call
 
         expect(result).to be_success
         expect(result.event.timestamp).to eq(Time.zone.at(timestamp.to_f))
@@ -113,7 +110,7 @@ RSpec.describe Events::CreateService, type: :service do
       let(:timestamp) { DateTime.parse('2023-09-04T15:45:12.344Z').to_f }
 
       it 'creates an event by keeping the millisecond precision' do
-        result = create_service.call(params: create_args, timestamp: creation_timestamp, metadata: {})
+        result = create_service.call
 
         expect(result).to be_success
         expect(result.event.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')

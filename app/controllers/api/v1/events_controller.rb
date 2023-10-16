@@ -4,9 +4,8 @@ module Api
   module V1
     class EventsController < Api::BaseController
       def create
-        result = ::Events::CreateService.new(
+        result = ::Events::CreateService.call(
           organization: current_organization,
-        ).call(
           params: create_params,
           timestamp: Time.current.to_f,
           metadata: event_metadata,

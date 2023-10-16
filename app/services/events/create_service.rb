@@ -2,12 +2,15 @@
 
 module Events
   class CreateService < BaseService
-    def initialize(organization:)
+    def initialize(organization:, params:, timestamp:, metadata:)
       @organization = organization
+      @params = params
+      @timestamp = timestamp
+      @metadata = metadata
       super
     end
 
-    def call(params:, timestamp:, metadata:)
+    def call
       event = Event.new
       event.organization_id = organization.id
       event.code = params[:code]
@@ -32,6 +35,6 @@ module Events
 
     private
 
-    attr_reader :organization
+    attr_reader :organization, :params, :timestamp, :metadata
   end
 end
