@@ -402,7 +402,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
             it 'enqueues a job to bill the existing subscription' do
               create_service.call
-              expect(BillSubscriptionJob).to have_been_enqueued.at_least(2).times
+              expect(BillSubscriptionJob).to have_been_enqueued.at_least(1).times
             end
           end
 
@@ -459,7 +459,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
             it 'enqueues a job to bill the existing subscription' do
               create_service.call
-              expect(BillSubscriptionJob).to have_been_enqueued.at_least(1).times
+              expect(BillSubscriptionJob).to have_been_enqueued.at_least(2).times
             end
           end
 

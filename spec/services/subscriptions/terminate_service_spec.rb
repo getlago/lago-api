@@ -158,9 +158,9 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     it 'enqueues a SendWebhookJob' do
-      expect do
-        terminate_service.terminate_and_start_next(timestamp:)
-      end.to have_enqueued_job(SendWebhookJob)
+      terminate_service.terminate_and_start_next(timestamp:)
+      expect(SendWebhookJob).to have_been_enqueued.with('subscription.terminated', subscription)
+      expect(SendWebhookJob).to have_been_enqueued.with('subscription.started', next_subscription)
     end
 
     context 'when terminated subscription is payed in arrear' do
