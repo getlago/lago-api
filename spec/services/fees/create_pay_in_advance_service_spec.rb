@@ -343,5 +343,35 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           .with('fee.created', Fee)
       end
     end
+
+    context 'when in current and max aggregation result' do
+      let(:aggregation_result) do
+        BaseService::Result.new.tap do |result|
+          result.amount = 10
+          result.count = 1
+          result.units = 9
+          result.current_aggregation = 9
+          result.max_aggregation = 9
+          result.max_aggregation_with_proration = nil
+        end
+      end
+
+      it 'creates a cached aggregation' do
+        aggregate_failures do
+          expect { fee_service.call }.to change(CachedAggregation, :count).by(1)
+
+          cached_aggregation = CachedAggregation.last
+          expect(cached_aggregation.organization_id).to eq(organization.id)
+          expect(cached_aggregation.event_id).to eq(event.id)
+          expect(cached_aggregation.timestamp.iso8601(3)).to eq(event.timestamp.iso8601(3))
+          expect(cached_aggregation.billable_metric_id).to eq(billable_metric.id)
+          expect(cached_aggregation.external_subscription_id).to eq(event.external_subscription_id)
+          expect(cached_aggregation.group_id).to be_nil
+          expect(cached_aggregation.current_aggregation).to eq(9)
+          expect(cached_aggregation.max_aggregation).to eq(9)
+          expect(cached_aggregation.max_aggregation_with_proration).to be_nil
+        end
+      end
+    end
   end
 end

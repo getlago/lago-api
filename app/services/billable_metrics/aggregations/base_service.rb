@@ -106,10 +106,10 @@ module BillableMetrics
       end
 
       def handle_in_advance_current_usage(total_aggregation)
-        if previous_event
+        if cached_aggregation
           aggregation = total_aggregation -
-                        BigDecimal(previous_event.metadata['current_aggregation']) +
-                        BigDecimal(previous_event.metadata['max_aggregation'])
+                        BigDecimal(cached_aggregation.current_aggregation) +
+                        BigDecimal(cached_aggregation.max_aggregation)
 
           result.aggregation = aggregation
         else
@@ -122,11 +122,11 @@ module BillableMetrics
         result.current_usage_units = 0 if result.current_usage_units.negative?
       end
 
-      def get_previous_event_in_interval(from_datetime:, to_datetime:)
+      def get_cached_aggregation_in_interval(from_datetime:, to_datetime:)
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        previous_event
+        cached_aggregation
       end
     end
   end

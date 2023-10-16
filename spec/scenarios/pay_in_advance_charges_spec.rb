@@ -430,7 +430,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           )
 
           expect(subscription.reload.fees.count).to eq(1)
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to eq('10')
+          event = Event.find_by(transaction_id:)
+          expect(CachedAggregation.find_by(event_id: event.id).current_aggregation).to eq(10)
 
           fee = subscription.fees.first
 
@@ -553,7 +554,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             },
           )
 
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to eq('2')
+          event = Event.find_by(transaction_id:)
+          expect(CachedAggregation.find_by(event_id: event.id).current_aggregation).to eq(2)
           expect(subscription.reload.fees.count).to eq(1)
 
           fee = subscription.fees.first
@@ -622,7 +624,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             },
           )
 
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to eq('2')
+          event = Event.find_by(transaction_id:)
+          expect(CachedAggregation.find_by(event_id: event.id).current_aggregation).to eq(2)
           expect(subscription.reload.fees.count).to eq(1)
 
           fee = subscription.fees.first

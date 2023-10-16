@@ -231,6 +231,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     let(:options) do
       { is_pay_in_advance: true, is_current_usage: true }
     end
+
     let(:latest_events) do
       create(
         :event,
@@ -241,14 +242,26 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 4,
         },
-        metadata: {
-          current_aggregation: '4',
-          max_aggregation: '6',
-        },
       )
     end
 
-    before { billable_metric.update!(recurring: true) }
+    let(:cached_aggregation) do
+      create(
+        :cached_aggregation,
+        organization:,
+        billable_metric:,
+        event_id: latest_events.id,
+        external_subscription_id: subscription.external_id,
+        timestamp: to_datetime - 3.days,
+        current_aggregation: '4',
+        max_aggregation: '6',
+      )
+    end
+
+    before do
+      billable_metric.update!(recurring: true)
+      cached_aggregation
+    end
 
     it 'returns period maximum as aggregation' do
       result = sum_service.aggregate(options:)
@@ -256,8 +269,9 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       expect(result.aggregation).to eq(11)
     end
 
-    context 'when previous event does not exist' do
+    context 'when cached aggregation does not exist' do
       let(:latest_events) { nil }
+      let(:cached_aggregation) { nil }
 
       before { billable_metric.update!(recurring: false) }
 
@@ -390,12 +404,22 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           properties: {
             total_count: -6,
           },
-          metadata: {
-            current_aggregation: '4',
-            max_aggregation: '10',
-          },
         )
       end
+
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          organization:,
+          billable_metric:,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 3.days,
+          current_aggregation: '4',
+          max_aggregation: '10',
+        )
+      end
+
+      before { cached_aggregation }
 
       it 'assigns a pay_in_advance aggregation' do
         result = sum_service.aggregate
@@ -416,12 +440,23 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           properties: {
             total_count: -6,
           },
-          metadata: {
-            current_aggregation: '4',
-            max_aggregation: '10',
-          },
         )
       end
+
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          organization:,
+          billable_metric:,
+          event_id: latest_events.id,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 3.days,
+          current_aggregation: '4',
+          max_aggregation: '10',
+        )
+      end
+
+      before { cached_aggregation }
 
       it 'assigns a pay_in_advance aggregation' do
         result = sum_service.aggregate

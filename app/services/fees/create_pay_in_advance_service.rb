@@ -43,7 +43,7 @@ module Fees
       ActiveRecord::Base.transaction do
         aggregation_result = aggregate(properties:, group:)
 
-        update_event_metadata(aggregation_result:)
+        cache_aggregation_result(aggregation_result:, group:)
 
         result = apply_charge_model(aggregation_result:, properties:)
 
@@ -154,20 +154,22 @@ module Fees
       result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
     end
 
-    def update_event_metadata(aggregation_result:)
-      unless aggregation_result.current_aggregation.nil?
-        event.metadata['current_aggregation'] = aggregation_result.current_aggregation
-      end
+    def cache_aggregation_result(aggregation_result:, group:)
+      return unless aggregation_result.current_aggregation.present? ||
+                    aggregation_result.max_aggregation.present? ||
+                    aggregation_result.max_aggregation_with_proration
 
-      unless aggregation_result.max_aggregation.nil?
-        event.metadata['max_aggregation'] = aggregation_result.max_aggregation
-      end
-
-      unless aggregation_result.max_aggregation_with_proration.nil?
-        event.metadata['max_aggregation_with_proration'] = aggregation_result.max_aggregation_with_proration
-      end
-
-      event.save!
+      CachedAggregation.create!(
+        organization_id: event.organization_id,
+        event_id: event.id,
+        timestamp: event.timestamp,
+        external_subscription_id: event.external_subscription_id,
+        billable_metric_id: billable_metric.id,
+        group_id: group&.id,
+        current_aggregation: aggregation_result.current_aggregation,
+        max_aggregation: aggregation_result.max_aggregation,
+        max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
+      )
     end
   end
 end
