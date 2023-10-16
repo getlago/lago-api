@@ -147,21 +147,9 @@ module Subscriptions
 
       # NOTE: When upgrading, the new subscription becomes active immediatly
       #       The previous one must be terminated
-      current_subscription.mark_as_terminated!
+      Subscriptions::TerminateService.call(subscription: current_subscription)
       new_subscription.mark_as_active!
-
-      if current_subscription.plan.pay_in_advance?
-        # NOTE: As subscription was payed in advance and terminated before the end of the period,
-        #       we have to create a credit note for the days that were not consumed
-        credit_note_result = CreditNotes::CreateFromTermination.new(subscription: current_subscription).call
-        credit_note_result.raise_if_error!
-      end
-
-      # NOTE: Create an invoice for the terminated subscription
-      #       if it has not been billed yet
-      #       or only for the charges if subscription was billed in advance
-      #       We do not set offset anymore but instead retry jobs
-      perform_later(job_class: BillSubscriptionJob, arguments: [[current_subscription], Time.zone.now.to_i + 1.second])
+      SendWebhookJob.perform_later('subscription.started', new_subscription)
 
       if plan.pay_in_advance?
         # NOTE: Since job is launched from inside a db transaction
