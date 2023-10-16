@@ -148,8 +148,9 @@ module Subscriptions
       # NOTE: When upgrading, the new subscription becomes active immediatly
       #       The previous one must be terminated
       Subscriptions::TerminateService.call(subscription: current_subscription)
+
       new_subscription.mark_as_active!
-      SendWebhookJob.perform_later('subscription.started', new_subscription)
+      perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
 
       if plan.pay_in_advance?
         # NOTE: Since job is launched from inside a db transaction

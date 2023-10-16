@@ -35,10 +35,9 @@ module Subscriptions
       # NOTE: Pending next subscription should be canceled as well
       subscription.next_subscription&.mark_as_canceled!
 
-      SendWebhookJob.perform_later(
-        'subscription.terminated',
-        subscription,
-      )
+      # NOTE: Wait to ensure job is performed at the end of the database transaction.
+      # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
+      SendWebhookJob.set(wait: 2.seconds).perform_later('subscription.terminated', subscription)
 
       result.subscription = subscription
       result
@@ -60,23 +59,15 @@ module Subscriptions
       # NOTE: Create an invoice for the terminated subscription
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
-      BillSubscriptionJob.perform_later(
-        [subscription],
-        timestamp,
-      )
+      BillSubscriptionJob.perform_later([subscription], timestamp)
 
-      SendWebhookJob.perform_later(
-        'subscription.terminated',
-        subscription,
-      )
+      SendWebhookJob.perform_later('subscription.terminated', subscription)
+      SendWebhookJob.perform_later('subscription.started', next_subscription)
 
       result.subscription = next_subscription
       return result unless next_subscription.plan.pay_in_advance?
 
-      BillSubscriptionJob.perform_later(
-        [next_subscription],
-        timestamp,
-      )
+      BillSubscriptionJob.perform_later([next_subscription], timestamp)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -89,7 +80,9 @@ module Subscriptions
 
     def bill_subscription
       if async
-        BillSubscriptionJob.perform_later([subscription], subscription.terminated_at)
+        # NOTE: Wait to ensure job is performed at the end of the database transaction.
+        # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
+        BillSubscriptionJob.set(wait: 2.seconds).perform_later([subscription], subscription.terminated_at)
       else
         BillSubscriptionJob.perform_now([subscription], subscription.terminated_at)
       end
