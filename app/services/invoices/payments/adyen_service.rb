@@ -88,7 +88,9 @@ module Invoices
       end
 
       def update_payment_method_id
-        result = client.checkout.payments_api.payment_methods(payment_method_params).response
+        result = client.checkout.payments_api.payment_methods(
+          Lago::Adyen::Params.new(payment_method_params).to_h,
+        ).response
 
         if (payment_method_id = result['storedPaymentMethods']&.first&.dig('id'))
           customer.adyen_customer.update!(payment_method_id:)
@@ -101,7 +103,7 @@ module Invoices
       def create_adyen_payment
         update_payment_method_id
 
-        client.checkout.payments_api.payments(payment_params).response
+        client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h).response
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
