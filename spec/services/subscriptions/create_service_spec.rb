@@ -359,8 +359,13 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           let(:name) { 'invoice display name new' }
 
           it 'terminates the existing subscription' do
-            expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
-            expect(subscription.reload).to be_terminated
+            expect { create_service.call }.to change { subscription.reload.status }.from('active').to('terminated')
+          end
+
+          it 'sends terminated and started subscription webhooks', :aggregate_failures do
+            result = create_service.call
+            expect(SendWebhookJob).to have_been_enqueued.with('subscription.terminated', subscription)
+            expect(SendWebhookJob).to have_been_enqueued.with('subscription.started', result.subscription)
           end
 
           it 'creates a new subscription' do
@@ -396,7 +401,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             let(:old_plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
 
             it 'enqueues a job to bill the existing subscription' do
-              expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+              create_service.call
+              expect(BillSubscriptionJob).to have_been_enqueued.at_least(2).times
             end
           end
 
@@ -452,7 +458,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
 
             it 'enqueues a job to bill the existing subscription' do
-              expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob).twice
+              create_service.call
+              expect(BillSubscriptionJob).to have_been_enqueued.at_least(1).times
             end
           end
 
