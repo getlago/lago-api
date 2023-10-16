@@ -9,6 +9,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         customer(id: $customerId) {
           id
           externalId
+          externalSalesforceId
           name
           currency
           hasCreditNotes
@@ -90,6 +91,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['appliedAddOns'].count).to eq(1)
       expect(customer_response['taxes'].count).to eq(1)
       expect(customer_response['currency']).to be_present
+      expect(customer_response['externalSalesforceId']).to be_nil
       expect(customer_response['timezone']).to be_nil
       expect(customer_response['applicableTimezone']).to eq('TZ_AMERICA_NEW_YORK')
       expect(customer_response['hasCreditNotes']).to be true
