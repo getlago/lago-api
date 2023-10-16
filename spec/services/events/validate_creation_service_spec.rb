@@ -102,10 +102,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error.message).to eq('subscription_not_found')
           end
         end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
-        end
       end
 
       context 'when there are two active subscriptions but external_subscription_id is invalid' do
@@ -138,10 +134,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error).to be_a(BaseService::NotFoundFailure)
             expect(result.error.message).to eq('subscription_not_found')
           end
-        end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
         end
       end
 
@@ -189,10 +181,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           expect(result.error.messages.keys).to include(:transaction_id)
           expect(result.error.messages[:transaction_id]).to include('value_is_missing_or_already_exists')
         end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
-        end
       end
 
       context 'when code does not exist' do
@@ -208,10 +196,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error).to be_a(BaseService::NotFoundFailure)
             expect(result.error.message).to eq('billable_metric_not_found')
           end
-        end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
         end
       end
 
@@ -237,10 +221,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error.messages.keys).to include(:properties)
             expect(result.error.messages[:properties]).to include('value_is_not_valid_number')
           end
-        end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
         end
 
         context 'when field_name cannot be found' do
@@ -322,10 +302,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
               expect(result.error.messages[:operation_type]).to eq(['invalid_operation_type'])
             end
           end
-
-          it 'enqueues a SendWebhookJob' do
-            expect { validate_event }.to have_enqueued_job(SendWebhookJob)
-          end
         end
       end
 
@@ -388,10 +364,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error.message).to eq('subscription_not_found')
           end
         end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
-        end
       end
 
       context 'when customer is not given' do
@@ -419,10 +391,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error.message).to eq('customer_not_found')
           end
         end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
-        end
       end
 
       context 'when there are two active subscriptions but subscription_ids is invalid' do
@@ -447,10 +415,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error.message).to eq('subscription_not_found')
           end
         end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
-        end
       end
 
       context 'when code does not exist' do
@@ -470,10 +434,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error).to be_a(BaseService::NotFoundFailure)
             expect(result.error.message).to eq('billable_metric_not_found')
           end
-        end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
         end
       end
 
@@ -499,10 +459,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             expect(result.error.messages.keys).to include(:properties)
             expect(result.error.messages[:properties]).to include('value_is_not_valid_number')
           end
-        end
-
-        it 'enqueues a SendWebhookJob' do
-          expect { validate_event }.to have_enqueued_job(SendWebhookJob)
         end
       end
 
@@ -549,10 +505,6 @@ RSpec.describe Events::ValidateCreationService, type: :service do
               expect(result.error.messages.keys).to include(subscription_field)
               expect(result.error.messages[subscription_field]).to eq(['invalid_operation_type'])
             end
-          end
-
-          it 'enqueues a SendWebhookJob' do
-            expect { validate_event }.to have_enqueued_job(SendWebhookJob)
           end
         end
       end

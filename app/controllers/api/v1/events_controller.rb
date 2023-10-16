@@ -4,22 +4,23 @@ module Api
   module V1
     class EventsController < Api::BaseController
       def create
-        # NOTE: Properties validations will be returned on the debugger.
-        validate_result = Events::CreateService.new(
+        result = ::Events::CreateService.call(
           organization: current_organization,
-        ).validate_params(
           params: create_params,
-        )
-        return render_error_response(validate_result) unless validate_result.success?
-
-        Events::CreateJob.perform_later(
-          current_organization,
-          create_params,
-          Time.current.to_f,
-          event_metadata,
+          timestamp: Time.current.to_f,
+          metadata: event_metadata,
         )
 
-        head(:ok)
+        if result.success?
+          render(
+            json: ::V1::EventSerializer.new(
+              result.event,
+              root_name: 'event',
+            ),
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       # DEPRECATED

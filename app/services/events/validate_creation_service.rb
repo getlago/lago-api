@@ -8,14 +8,13 @@ module Events
       new(...).call
     end
 
-    def initialize(organization:, params:, result:, customer:, subscriptions: [], batch: false, send_webhook: true)
+    def initialize(organization:, params:, result:, customer:, subscriptions: [], batch: false) # rubocop:disable Metrics/ParameterLists
       @organization = organization
       @params = params
       @result = result
       @customer = customer
       @subscriptions = subscriptions
       @batch = batch
-      @send_webhook = send_webhook
     end
 
     def call
@@ -24,7 +23,7 @@ module Events
 
     private
 
-    attr_reader :organization, :params, :result, :customer, :subscriptions, :batch, :send_webhook
+    attr_reader :organization, :params, :result, :customer, :subscriptions, :batch
 
     def validate_create_batch
       return missing_subscription_error if params[:external_subscription_ids].blank?
@@ -55,6 +54,7 @@ module Events
 
     def validate_create
       return invalid_customer_error if params[:external_customer_id] && !customer
+
       if params[:external_subscription_id].blank? && subscriptions.count(&:active?) > 1
         return missing_subscription_error
       end
@@ -102,50 +102,28 @@ module Events
       false
     end
 
-    def send_webhook_notice
-      return unless send_webhook
-      return unless organization.webhook_endpoints.any?
-
-      status = result.error.is_a?(BaseService::NotFoundFailure) ? 404 : 422
-
-      object = {
-        input_params: params,
-        error: result.error.to_s,
-        status:,
-        organization_id: organization.id,
-      }
-
-      SendWebhookJob.perform_later('event.error', object)
-    end
-
     def missing_subscription_error
       result.not_found_failure!(resource: 'subscription')
-      send_webhook_notice
     end
 
     def transaction_id_error
       result.validation_failure!(errors: { transaction_id: ['value_is_missing_or_already_exists'] })
-      send_webhook_notice
     end
 
     def invalid_code_error
       result.not_found_failure!(resource: 'billable_metric')
-      send_webhook_notice
     end
 
     def invalid_properties_error
       result.validation_failure!(errors: { properties: ['value_is_not_valid_number'] })
-      send_webhook_notice
     end
 
     def invalid_customer_error
       result.not_found_failure!(resource: 'customer')
-      send_webhook_notice
     end
 
     def invalid_quantified_event_error(errors)
       result.validation_failure!(errors:)
-      send_webhook_notice
     end
 
     def billable_metric

@@ -2924,12 +2924,14 @@ type Event {
   code: String!
   customerTimezone: TimezoneEnum!
   deletedAt: ISO8601DateTime
-  externalCustomerId: String!
-  externalSubscriptionId: String!
+  externalCustomerId: String
+  externalSubscriptionId: String
   id: ID!
   ipAddress: String
   matchBillableMetric: Boolean!
   matchCustomField: Boolean!
+  matchCustomer: Boolean!
+  matchSubscription: Boolean!
   payload: JSON!
   receivedAt: ISO8601DateTime!
   timestamp: ISO8601DateTime
