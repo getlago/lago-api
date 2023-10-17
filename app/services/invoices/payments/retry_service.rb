@@ -18,7 +18,10 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: 'invoice') if invoice.blank?
-        return result.not_allowed_failure!(code: 'invalid_status') if invoice.draft? || invoice.succeeded?
+
+        if invoice.draft? || invoice.voided? || invoice.succeeded?
+          return result.not_allowed_failure!(code: 'invalid_status')
+        end
 
         unless invoice.ready_for_payment_processing?
           return result.not_allowed_failure!(code: 'payment_processor_is_currently_handling_payment')

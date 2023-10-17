@@ -13,7 +13,11 @@ module WalletTransactions
       end
 
       if args[:granted_credits]
-        transaction = handle_granted_credits(wallet: result.current_wallet, granted_credits: args[:granted_credits])
+        transaction = handle_granted_credits(
+          wallet: result.current_wallet,
+          granted_credits: args[:granted_credits],
+          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(args[:reset_consumed_credits]),
+        )
         wallet_transactions << transaction
       end
 
@@ -44,7 +48,7 @@ module WalletTransactions
       wallet_transaction
     end
 
-    def handle_granted_credits(wallet:, granted_credits:)
+    def handle_granted_credits(wallet:, granted_credits:, reset_consumed_credits: false)
       granted_credits_amount = BigDecimal(granted_credits)
 
       return if granted_credits_amount.zero?
@@ -59,7 +63,11 @@ module WalletTransactions
           settled_at: Time.current,
         )
 
-        Wallets::Balance::IncreaseService.new(wallet:, credits_amount: granted_credits_amount).call
+        Wallets::Balance::IncreaseService.new(
+          wallet:,
+          credits_amount: granted_credits_amount,
+          reset_consumed_credits:,
+        ).call
 
         wallet_transaction
       end

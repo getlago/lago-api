@@ -48,6 +48,7 @@ Rails.application.routes.draw do
       resources :fees, only: %i[show update index]
       resources :invoices, only: %i[create update show index] do
         post :download, on: :member
+        post :void, on: :member
         post :retry_payment, on: :member
         put :refresh, on: :member
         put :finalize, on: :member

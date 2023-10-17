@@ -263,7 +263,7 @@ module Invoices
     end
 
     def not_in_finalizing_process?
-      invoice.draft? && context != :finalize
+      (invoice.draft? || invoice.voided?) && context != :finalize
     end
 
     def matching_invoice_subscription?(subscription, boundaries)

@@ -6,6 +6,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '3.2.2'
 
 # Core
+gem 'aasm'
 gem 'activejob-uniqueness', require: 'active_job/uniqueness/sidekiq_patch'
 gem 'bootsnap', require: false
 gem 'clockwork', require: false

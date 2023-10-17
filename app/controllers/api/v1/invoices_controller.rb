@@ -112,6 +112,17 @@ module Api
         end
       end
 
+      def void
+        invoice = current_organization.invoices.find_by(id: params[:id])
+
+        result = Invoices::VoidService.call(invoice:)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def retry_payment
         invoice = current_organization.invoices.find_by(id: params[:id])
         return not_found_error(resource:) unless invoice

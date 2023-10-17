@@ -426,6 +426,68 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
+  describe 'POST /invoices/:id/void' do
+    let(:invoice) { create(:invoice, status:, payment_status:, customer:, organization:) }
+    let(:payment_status) { :pending }
+
+    context 'when invoice does not exist' do
+      let(:status) { :finalized }
+
+      it 'returns a not found error' do
+        post_with_token(organization, '/api/v1/invoices/555/void', {})
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when invoice is draft' do
+      let(:status) { :draft }
+
+      it 'returns a method not allowed error' do
+        post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", {})
+        expect(response).to have_http_status(:method_not_allowed)
+      end
+    end
+
+    context 'when invoice is voided' do
+      let(:status) { :voided }
+
+      it 'returns a method not allowed error' do
+        post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", {})
+        expect(response).to have_http_status(:method_not_allowed)
+      end
+    end
+
+    context 'when invoice is finalized' do
+      let(:status) { :finalized }
+
+      context 'when the payment status is succeeded' do
+        let(:payment_status) { :succeeded }
+
+        it 'returns a method not allowed error' do
+          post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", {})
+          expect(response).to have_http_status(:method_not_allowed)
+        end
+      end
+
+      context 'when the payment status is not succeeded' do
+        let(:payment_status) { [:pending, :failed].sample }
+
+        it 'voids the invoice' do
+          expect {
+            post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", {})
+          }.to change { invoice.reload.status }.from('finalized').to('voided')
+        end
+
+        it 'returns the invoice' do
+          post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", {})
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        end
+      end
+    end
+  end
+
   describe 'POST /invoices/:id/download' do
     let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
