@@ -228,7 +228,7 @@ class Invoice < ApplicationRecord
   def voidable?
     return false if credit_notes.where.not(credit_status: :voided).any?
 
-    pending? || failed?
+    finalized? && (pending? || failed?)
   end
 
   private

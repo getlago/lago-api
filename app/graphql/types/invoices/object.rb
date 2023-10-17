@@ -55,7 +55,7 @@ module Types
       end
 
       def voidable
-        object.finalized? && object.voidable?
+        object.voidable?
       end
     end
   end
