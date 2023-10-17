@@ -30,8 +30,8 @@ module Invoices
           invoice:,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
-          amount_cents: adyen_result.dig('amount', 'value'),
-          amount_currency: adyen_result.dig('amount', 'currency'),
+          amount_cents: invoice.total_amount_cents,
+          amount_currency: invoice.currency.upcase,
           provider_payment_id: adyen_result['pspReference'],
           status: adyen_result['resultCode'],
         )
