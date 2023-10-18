@@ -79,6 +79,106 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     end
   end
 
+  context 'with negative event that results in changing range' do
+    let(:aggregation) { 2.5 }
+    let(:per_event_aggregation) do
+      BaseService::Result.new.tap do |r|
+        r.event_aggregation = [5, -2]
+        r.event_prorated_aggregation = [3.5, -1]
+      end
+    end
+
+    before do
+      aggregation_result.aggregation = aggregation
+      aggregation_result.full_units_number = 3
+      aggregation_result.current_usage_units = 3
+    end
+
+    it 'calculates the amount correctly' do
+      expect(apply_graduated_service.amount.round(2)).to eq(125)
+    end
+
+    context 'with overflow and changing ranges' do
+      let(:aggregation) { 3.2 }
+      let(:per_event_aggregation) do
+        BaseService::Result.new.tap do |r|
+          r.event_aggregation = [4, 2, -3]
+          r.event_prorated_aggregation = [2.8, 1, -0.6]
+        end
+      end
+
+      before do
+        aggregation_result.aggregation = aggregation
+        aggregation_result.full_units_number = 3
+        aggregation_result.current_usage_units = 3
+      end
+
+      it 'calculates the amount correctly' do
+        expect(apply_graduated_service.amount.round(2)).to eq(130.5)
+      end
+    end
+
+    context 'with multiple overflows in both directions' do
+      let(:aggregation) { 4.9 }
+      let(:per_event_aggregation) do
+        BaseService::Result.new.tap do |r|
+          r.event_aggregation = [5, 2, -4, 10]
+          r.event_prorated_aggregation = [3.5, 1, -1.6, 2]
+        end
+      end
+
+      before do
+        aggregation_result.aggregation = aggregation
+        aggregation_result.full_units_number = 13
+        aggregation_result.current_usage_units = 13
+      end
+
+      it 'calculates the amount correctly' do
+        expect(apply_graduated_service.amount.round(2)).to eq(190)
+      end
+    end
+  end
+
+  context 'with negative event that results in negative total amount' do
+    let(:aggregation) { -31.33 }
+    let(:per_event_aggregation) do
+      BaseService::Result.new.tap do |r|
+        r.event_aggregation = [5, -100]
+        r.event_prorated_aggregation = [2, -33.33]
+      end
+    end
+
+    before do
+      aggregation_result.aggregation = aggregation
+      aggregation_result.full_units_number = -95
+      aggregation_result.current_usage_units = -95
+    end
+
+    it 'calculates the amount correctly' do
+      expect(apply_graduated_service.amount.round(2)).to eq(0)
+    end
+
+    context 'with only one range used' do
+      let(:aggregation) { -31.73 }
+      let(:per_event_aggregation) do
+        BaseService::Result.new.tap do |r|
+          r.event_aggregation = [4, -100]
+          r.event_prorated_aggregation = [1.6, -33.33]
+        end
+      end
+
+      before do
+        aggregation_result.aggregation = aggregation
+        aggregation_result.full_units_number = -96
+        aggregation_result.current_usage_units = -96
+      end
+
+      it 'calculates the amount correctly' do
+        expect(apply_graduated_service.amount.round(2)).to eq(0)
+      end
+    end
+  end
+
   context 'when only one range is used' do
     let(:aggregation) { 0.7 }
     let(:per_event_aggregation) do
@@ -132,8 +232,8 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     let(:aggregation) { 6.36 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
-        r.event_aggregation = [2, 5, -6, 10, 4, 60]
-        r.event_prorated_aggregation = [1.4, 2.5, -2.2, 2, 0.667, 2]
+        r.event_aggregation = [2, 5, 10, -6, 4, 60]
+        r.event_prorated_aggregation = [1.4, 2.5, 2, -2.2, 0.667, 2]
       end
     end
     let(:charge) do
@@ -172,7 +272,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     end
 
     it 'calculates the amount correctly' do
-      expect(apply_graduated_service.amount.round(2)).to eq(190.33)
+      expect(apply_graduated_service.amount.ceil(2)).to eq(191.34)
     end
 
     context 'when there are two overflows' do

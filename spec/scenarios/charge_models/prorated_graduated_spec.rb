@@ -103,8 +103,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_300)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_300)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_567)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_567)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
         end
 
@@ -119,8 +119,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_300)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_300)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_967)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_967)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('11.0')
         end
 
@@ -135,8 +135,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_633)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_633)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_300)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_300)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('15.0')
         end
 
@@ -151,8 +151,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(19_033)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(19_033)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_700)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_700)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('75.0')
         end
 
@@ -165,7 +165,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           invoice = subscription.invoices.first
 
           aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(19_033)
+            expect(invoice.total_amount_cents).to eq(18_700)
             expect(subscription.reload.invoices.count).to eq(1)
           end
         end
@@ -306,8 +306,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             )
 
             fetch_current_usage(customer:)
-            expect(json[:customer_usage][:amount_cents].round(2)).to eq(19_033)
-            expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(19_033)
+            expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_700)
+            expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_700)
             expect(json[:customer_usage][:charges_usage][0][:units]).to eq('75.0')
           end
 
@@ -320,7 +320,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             invoice = subscription.invoices.first
 
             aggregate_failures do
-              expect(invoice.total_amount_cents).to eq(19_033)
+              expect(invoice.total_amount_cents).to eq(18_700)
               expect(subscription.reload.invoices.count).to eq(1)
             end
           end
@@ -392,7 +392,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
 
             invoice = subscription.invoices.order(created_at: :desc).first
             expect(invoice.fees.charge_kind.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(30_484) # 30226 + 2.58 (prorated event in termination period)
+            # 30226 (17 / 31 * 75 units) + 2.58 = 2 / 31 * 20 units (prorated event in termination period)
+            expect(invoice.total_amount_cents).to eq(30_484)
           end
 
           travel_to(DateTime.new(2023, 11, 1)) do
