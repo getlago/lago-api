@@ -127,6 +127,7 @@ module BillableMetrics
           .where(charge: { billable_metric_id: billable_metric.id })
           .where(charge: { prorated: true })
           .where(subscription_id: subscription_ids, fee_type: :charge, group_id: group&.id)
+          .where("CAST(fees.properties->>'charges_to_datetime' AS timestamp) < ?", boundaries[:to_datetime])
           .order(created_at: :desc)
           .first
       end
