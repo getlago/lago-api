@@ -15,6 +15,7 @@ module PaymentProviders
       adyen_provider.merchant_account = args[:merchant_account] if args.key?(:merchant_account)
       adyen_provider.live_prefix = args[:live_prefix] if args.key?(:live_prefix)
       adyen_provider.hmac_key = args[:hmac_key] if args.key?(:hmac_key)
+      adyen_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       adyen_provider.save!
 
       if api_key != adyen_provider.api_key

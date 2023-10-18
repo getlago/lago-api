@@ -12,6 +12,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
   let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }
   let(:access_token) { instance_double(OAuth2::AccessToken) }
   let(:token) { 'access_token_554' }
+  let(:success_redirect_url) { Faker::Internet.url }
 
   before do
     allow(OAuth2::Client).to receive(:new)
@@ -30,6 +31,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         gocardless_service.create_or_update(
           organization:,
           access_code:,
+          success_redirect_url:,
         )
       end.to change(PaymentProviders::GocardlessProvider, :count).by(1)
     end
@@ -45,6 +47,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         result = gocardless_service.create_or_update(
           organization:,
           access_code:,
+          success_redirect_url:,
         )
 
         expect(result).to be_success
@@ -52,6 +55,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         aggregate_failures do
           expect(result.gocardless_provider.id).to eq(gocardless_provider.id)
           expect(result.gocardless_provider.access_token).to eq('access_token_554')
+          expect(result.gocardless_provider.success_redirect_url).to eq(success_redirect_url)
         end
       end
     end

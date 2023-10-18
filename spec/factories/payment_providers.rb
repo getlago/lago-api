@@ -10,7 +10,12 @@ FactoryBot.define do
     end
 
     settings do
-      { create_customers: true }
+      { create_customers: true, success_redirect_url:, error_redirect_url: }
+    end
+
+    transient do
+      success_redirect_url { Faker::Internet.url }
+      error_redirect_url { Faker::Internet.url }
     end
   end
 
@@ -20,6 +25,14 @@ FactoryBot.define do
 
     secrets do
       { access_token: SecureRandom.uuid }.to_json
+    end
+
+    settings do
+      { success_redirect_url: }
+    end
+
+    transient do
+      success_redirect_url { Faker::Internet.url }
     end
   end
 
@@ -32,7 +45,7 @@ FactoryBot.define do
     end
 
     settings do
-      { live_prefix:, merchant_account: }
+      { live_prefix:, merchant_account:, success_redirect_url: }
     end
 
     transient do
@@ -40,6 +53,7 @@ FactoryBot.define do
       merchant_account { Faker::Company.duns_number }
       live_prefix { Faker::Internet.domain_word }
       hmac_key { SecureRandom.uuid }
+      success_redirect_url { Faker::Internet.url }
     end
   end
 end

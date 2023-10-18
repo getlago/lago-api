@@ -9,9 +9,7 @@ module Mutations
       graphql_name 'AddStripePaymentProvider'
       description 'Add or update Stripe API keys to the organization'
 
-      argument :secret_key, String, required: false
-
-      argument :create_customers, Boolean, required: false
+      input_object_class Types::PaymentProviders::StripeInput
 
       type Types::PaymentProviders::Stripe
 

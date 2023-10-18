@@ -9,7 +9,7 @@ module Mutations
       graphql_name 'AddGocardlessPaymentProvider'
       description 'Add or update Gocardless payment provider'
 
-      argument :access_code, String, required: false
+      input_object_class Types::PaymentProviders::GocardlessInput
 
       type Types::PaymentProviders::Gocardless
 

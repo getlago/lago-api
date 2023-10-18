@@ -9,6 +9,7 @@ module Types
       argument :hmac_key, String, required: false
       argument :live_prefix, String, required: false
       argument :merchant_account, String, required: true
+      argument :success_redirect_url, String, required: false
     end
   end
 end

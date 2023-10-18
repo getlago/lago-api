@@ -8,6 +8,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
   let(:hmac_key) { 'hmac_124' }
   let(:live_prefix) { 'test' }
   let(:merchant_account) { 'Merchant1' }
+  let(:success_redirect_url) { Faker::Internet.url }
 
   let(:mutation) do
     <<-GQL
@@ -17,7 +18,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
           apiKey,
           hmacKey,
           livePrefix,
-          merchantAccount
+          merchantAccount,
+          successRedirectUrl
         }
       }
     GQL
@@ -34,6 +36,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
           hmacKey: hmac_key,
           merchantAccount: merchant_account,
           livePrefix: live_prefix,
+          successRedirectUrl: success_redirect_url,
         },
       },
     )
@@ -46,6 +49,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
       expect(result_data['hmacKey']).to eq('••••••••…124')
       expect(result_data['livePrefix']).to eq(live_prefix)
       expect(result_data['merchantAccount']).to eq(merchant_account)
+      expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
     end
   end
 

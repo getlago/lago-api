@@ -10,6 +10,9 @@ module Types
 
       field :create_customers, Boolean, null: false
 
+      field :error_redirect_url, String, null: true
+      field :success_redirect_url, String, null: true
+
       # NOTE: Secret key is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value
       def secret_key
