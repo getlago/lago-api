@@ -29,5 +29,13 @@ module PaymentProviders
     def webhook_id
       get_from_settings('webhook_id')
     end
+
+    def error_redirect_url=(value)
+      push_to_settings(key: 'error_redirect_url', value:)
+    end
+
+    def error_redirect_url
+      get_from_settings('error_redirect_url')
+    end
   end
 end

@@ -46,5 +46,13 @@ module PaymentProviders
     def webhook_secret
       get_from_settings('webhook_secret')
     end
+
+    def success_redirect_url=(value)
+      push_to_settings(key: 'success_redirect_url', value:)
+    end
+
+    def success_redirect_url
+      get_from_settings('success_redirect_url')
+    end
   end
 end

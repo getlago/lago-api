@@ -3,6 +3,7 @@
 module PaymentProviders
   class AdyenProvider < BaseProvider
     validates :api_key, :merchant_account, presence: true
+    validates :success_redirect_url, url: true, allow_nil: true, length: { maximum: 1024 }
 
     def environment
       if Rails.env.production? && live_prefix.present?

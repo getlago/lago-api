@@ -34,4 +34,24 @@ RSpec.describe PaymentProviders::StripeProvider, type: :model do
       expect(stripe_provider.webhook_secret).to eq('secret')
     end
   end
+
+  describe '#success_redirect_url' do
+    let(:success_redirect_url) { Faker::Internet.url }
+
+    before { stripe_provider.success_redirect_url = success_redirect_url }
+
+    it 'returns the url' do
+      expect(stripe_provider.success_redirect_url).to eq success_redirect_url
+    end
+  end
+
+  describe '#error_redirect_url' do
+    let(:error_redirect_url) { Faker::Internet.url }
+
+    before { stripe_provider.error_redirect_url = error_redirect_url }
+
+    it 'returns the url' do
+      expect(stripe_provider.error_redirect_url).to eq error_redirect_url
+    end
+  end
 end
