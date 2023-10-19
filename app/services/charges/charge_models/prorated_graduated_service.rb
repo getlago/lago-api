@@ -19,6 +19,8 @@ module Charges
         prorated_sum = 0
         result_amount = 0
 
+        return 0 if units.zero?
+
         # Calculate total prorated value inside the tier. The goal is to iterate over both arrays (prorated and full)
         # and determine which prorated events goes into certain tier. Full units sum determines tier while
         # prorated units sum determines amount that is going to be used for price calculation inside the tier.
