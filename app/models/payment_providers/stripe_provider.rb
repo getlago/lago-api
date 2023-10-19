@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
+    SUCCESS_REDIRECT_URL = 'https://stripe.com/'
+
     validates :secret_key, presence: true
 
     validates :create_customers, inclusion: { in: [true, false] }
@@ -28,14 +30,6 @@ module PaymentProviders
 
     def webhook_id
       get_from_settings('webhook_id')
-    end
-
-    def error_redirect_url=(value)
-      push_to_settings(key: 'error_redirect_url', value:)
-    end
-
-    def error_redirect_url
-      get_from_settings('error_redirect_url')
     end
   end
 end

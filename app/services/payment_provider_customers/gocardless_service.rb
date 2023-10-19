@@ -115,8 +115,8 @@ module PaymentProviderCustomers
     def create_billing_request_flow(billing_request_id)
       client.billing_request_flows.create(
         params: {
-          redirect_uri: PaymentProviders::GocardlessProvider::BILLING_REQUEST_REDIRECT_URL,
-          exit_uri: PaymentProviders::GocardlessProvider::BILLING_REQUEST_REDIRECT_URL,
+          redirect_uri: success_redirect_url,
+          exit_uri: success_redirect_url,
           links: {
             billing_request: billing_request_id,
           },
@@ -126,6 +126,11 @@ module PaymentProviderCustomers
       deliver_error_webhook(e)
 
       raise
+    end
+
+    def success_redirect_url
+      gocardless_payment_provider.success_redirect_url.presence ||
+        PaymentProviders::GocardlessProvider::SUCCESS_REDIRECT_URL
     end
   end
 end

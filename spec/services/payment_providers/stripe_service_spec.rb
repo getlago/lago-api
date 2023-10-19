@@ -10,9 +10,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
   let(:public_key) { SecureRandom.uuid }
   let(:secret_key) { SecureRandom.uuid }
-
   let(:success_redirect_url) { Faker::Internet.url }
-  let(:error_redirect_url) { Faker::Internet.url }
 
   describe '.create_or_update' do
     it 'creates a stripe provider' do
@@ -22,7 +20,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key:,
           create_customers: true,
           success_redirect_url:,
-          error_redirect_url:,
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
@@ -53,7 +50,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key:,
           create_customers: true,
           success_redirect_url:,
-          error_redirect_url:,
         )
 
         expect(result).to be_success
@@ -63,7 +59,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result.stripe_provider.secret_key).to eq(secret_key)
           expect(result.stripe_provider.create_customers).to be_truthy
           expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
-          expect(result.stripe_provider.error_redirect_url).to eq(error_redirect_url)
 
           expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
             .with(stripe_provider)

@@ -22,7 +22,6 @@ module PaymentProviders
 
       stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
       stripe_provider.create_customers = args[:create_customers] if args.key?(:create_customers)
-      stripe_provider.error_redirect_url = args[:error_redirect_url] if args.key?(:error_redirect_url)
       stripe_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       stripe_provider.save!
 

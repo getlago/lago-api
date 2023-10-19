@@ -12,8 +12,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
           id,
           secretKey,
           createCustomers,
-          successRedirectUrl,
-          errorRedirectUrl
+          successRedirectUrl
         }
       }
     GQL
@@ -21,7 +20,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
 
   let(:secret_key) { 'sk_12345678901234567890' }
   let(:success_redirect_url) { Faker::Internet.url }
-  let(:error_redirect_url) { Faker::Internet.url }
 
   it 'creates a stripe provider' do
     result = execute_graphql(
@@ -33,7 +31,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
           secretKey: secret_key,
           createCustomers: false,
           successRedirectUrl: success_redirect_url,
-          errorRedirectUrl: error_redirect_url,
         },
       },
     )
@@ -45,7 +42,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe, type: :graphql do
       expect(result_data['secretKey']).to eq('••••••••…890')
       expect(result_data['createCustomers']).to eq(false)
       expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
-      expect(result_data['errorRedirectUrl']).to eq(error_redirect_url)
     end
   end
 

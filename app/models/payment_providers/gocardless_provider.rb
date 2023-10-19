@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class GocardlessProvider < BaseProvider
-    BILLING_REQUEST_REDIRECT_URL = 'https://gocardless.com/'
+    SUCCESS_REDIRECT_URL = 'https://gocardless.com/'
 
     validates :access_token, presence: true
 

@@ -79,7 +79,6 @@ input AddStripePaymentProviderInput {
   """
   clientMutationId: String
   createCustomers: Boolean
-  errorRedirectUrl: String
   secretKey: String
   successRedirectUrl: String
 }
@@ -4564,7 +4563,6 @@ enum StatusTypeEnum {
 
 type StripeProvider {
   createCustomers: Boolean!
-  errorRedirectUrl: String
   id: ID!
   secretKey: String!
   successRedirectUrl: String

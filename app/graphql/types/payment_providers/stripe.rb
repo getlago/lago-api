@@ -9,8 +9,6 @@ module Types
       field :secret_key, String, null: false
 
       field :create_customers, Boolean, null: false
-
-      field :error_redirect_url, String, null: true
       field :success_redirect_url, String, null: true
 
       # NOTE: Secret key is a sensitive information. It should not be sent back to the

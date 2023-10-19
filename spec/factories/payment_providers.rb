@@ -10,12 +10,11 @@ FactoryBot.define do
     end
 
     settings do
-      { create_customers: true, success_redirect_url:, error_redirect_url: }
+      { create_customers: true, success_redirect_url: }
     end
 
     transient do
       success_redirect_url { Faker::Internet.url }
-      error_redirect_url { Faker::Internet.url }
     end
   end
 
