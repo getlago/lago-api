@@ -17,6 +17,8 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url
+      return result.not_found_failure!(resource: 'adyen_payment_provider') unless adyen_payment_provider
+
       res = client.checkout.payment_links_api.payment_links(payment_link_params)
       checkout_url = res.response['url']
 

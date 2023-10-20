@@ -16,15 +16,15 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
     create(:adyen_customer, customer:, provider_customer_id: nil)
   end
 
+  before do
+    allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+    allow(adyen_client).to receive(:checkout).and_return(checkout)
+    allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+    allow(payment_links_api).to receive(:payment_links).and_return(payment_links_response)
+  end
+
   describe '#create' do
     subject(:adyen_service_create) { adyen_service.create }
-
-    before do
-      allow(Adyen::Client).to receive(:new).and_return(adyen_client)
-      allow(adyen_client).to receive(:checkout).and_return(checkout)
-      allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
-      allow(payment_links_api).to receive(:payment_links).and_return(payment_links_response)
-    end
 
     context 'when customer does not have an adyen customer id yet' do
       it 'calls adyen api client payment links' do
@@ -76,6 +76,40 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
               error_code: nil,
             },
           )
+      end
+    end
+  end
+
+  describe '#generate_checkout_url' do
+    context 'when adyen payment provider is nil' do
+      before { adyen_provider.destroy! }
+
+      it 'returns a not found error' do
+        result = adyen_service.generate_checkout_url
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('adyen_payment_provider_not_found')
+        end
+      end
+    end
+
+    context 'when adyen payment provider is present' do
+      subject(:generate_checkout_url) { adyen_service.generate_checkout_url }
+
+      it 'generates a checkout url' do
+        expect(generate_checkout_url).to be_success
+      end
+
+      it 'delivers a success webhook' do
+        expect { generate_checkout_url }.to enqueue_job(SendWebhookJob)
+          .with(
+            'customer.checkout_url_generated',
+            customer,
+            checkout_url: 'https://test.adyen.link/test',
+          )
+          .on_queue(:webhook)
       end
     end
   end
