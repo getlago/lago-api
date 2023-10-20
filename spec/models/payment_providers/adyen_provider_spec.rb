@@ -15,8 +15,16 @@ RSpec.describe PaymentProviders::AdyenProvider, type: :model do
 
       before { provider.valid? }
 
-      context 'when it is valid url' do
+      context 'when it is valid url with http(s) scheme' do
         let(:success_redirect_url) { Faker::Internet.url }
+
+        it 'does not add an error' do
+          expect(errors.where(:success_redirect_url, :url_invalid)).not_to be_present
+        end
+      end
+
+      context 'when it is valid url with custom scheme' do
+        let(:success_redirect_url) { 'my-app://your.package.name?param=12&p=7' }
 
         it 'does not add an error' do
           expect(errors.where(:success_redirect_url, :url_invalid)).not_to be_present
@@ -31,11 +39,37 @@ RSpec.describe PaymentProviders::AdyenProvider, type: :model do
         end
       end
 
-      context 'when it is not valid url' do
-        let(:success_redirect_url) { 'invalidurl' }
+      context 'when it is an empty string' do
+        let(:success_redirect_url) { '' }
 
         it 'adds an error' do
           expect(errors.where(:success_redirect_url, :url_invalid)).to be_present
+        end
+      end
+
+      context 'when it is not valid url' do
+        context 'when it contains no scheme' do
+          let(:success_redirect_url) { 'your.package.name?param=12&p=7' }
+
+          it 'adds an error' do
+            expect(errors.where(:success_redirect_url, :url_invalid)).to be_present
+          end
+        end
+
+        context 'when it contains only scheme' do
+          let(:success_redirect_url) { 'https://' }
+
+          it 'adds an error' do
+            expect(errors.where(:success_redirect_url, :url_invalid)).to be_present
+          end
+        end
+
+        context 'when it is just a string' do
+          let(:success_redirect_url) { 'invalidurl' }
+
+          it 'adds an error' do
+            expect(errors.where(:success_redirect_url, :url_invalid)).to be_present
+          end
         end
       end
     end
