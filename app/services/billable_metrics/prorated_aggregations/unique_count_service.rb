@@ -134,7 +134,7 @@ module BillableMetrics
       def added_list
         time_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.added_at')
 
-        added_elements = prorated_added_query.group(Arel.sql(time_field))
+        added_elements = prorated_added_query.group(Arel.sql("#{time_field}, quantified_events.id"))
           .order(Arel.sql("#{time_field} ASC"))
           .pluck(
             Arel.sql(
@@ -156,7 +156,7 @@ module BillableMetrics
       def removed_list
         time_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
 
-        removed_elements = prorated_removed_query.group(Arel.sql(time_field))
+        removed_elements = prorated_removed_query.group(Arel.sql("#{time_field}, quantified_events.id"))
           .order(Arel.sql("#{time_field} ASC"))
           .pluck(
             Arel.sql(
@@ -180,7 +180,7 @@ module BillableMetrics
         removed_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
 
         added_and_removed_elements = prorated_added_and_removed_query.group(
-          Arel.sql("#{added_field}, #{removed_field}"),
+          Arel.sql("#{added_field}, #{removed_field}, quantified_events.id"),
         ).order(
           Arel.sql("#{added_field} ASC, #{removed_field} ASC"),
         ).pluck(Arel.sql(
