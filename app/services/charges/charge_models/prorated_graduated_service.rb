@@ -16,6 +16,7 @@ module Charges
         index = 0
         overflow = 0
         full_sum = 0
+        max_full_sum = 0
         prorated_sum = 0
         result_amount = 0
 
@@ -50,6 +51,7 @@ module Charges
           break if prorated_units[index].nil?
 
           full_sum += full_units[index]
+          max_full_sum = full_sum if full_sum > max_full_sum
           prorated_sum += prorated_units[index]
 
           index += 1
@@ -66,13 +68,13 @@ module Charges
 
         result_amount += prorated_sum * BigDecimal(range[:per_unit_amount]) # Applying units from highest range
 
-        result_with_flat_amount(result_amount, full_sum)
+        result_with_flat_amount(result_amount, full_sum, max_full_sum)
       end
 
       private
 
-      def result_with_flat_amount(result, total_full_units)
-        return 0 if units.zero? || total_full_units <= 0
+      def result_with_flat_amount(result, total_full_units, max_full_units)
+        return 0 if units.zero? || total_full_units < 0
 
         flat_amount = 0
         result = 0 if result.negative?
@@ -80,7 +82,7 @@ module Charges
         ranges.each do |range|
           flat_amount += BigDecimal(range[:flat_amount])
 
-          return result + flat_amount if range[:to_value].nil? || total_full_units <= range[:to_value]
+          return result + flat_amount if range[:to_value].nil? || max_full_units <= range[:to_value]
         end
       end
 

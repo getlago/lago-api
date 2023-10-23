@@ -79,6 +79,26 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     end
   end
 
+  context 'with final number of units equals to zero' do
+    let(:aggregation) { 1.613 }
+    let(:per_event_aggregation) do
+      BaseService::Result.new.tap do |r|
+        r.event_aggregation = [1, 4, 1, -5, -1]
+        r.event_prorated_aggregation = [0.7097, 1.54839, 0.2258, -0.80645, -0.0645]
+      end
+    end
+
+    before do
+      aggregation_result.aggregation = aggregation
+      aggregation_result.full_units_number = 0
+      aggregation_result.current_usage_units = 0
+    end
+
+    it 'calculates the amount correctly' do
+      expect(apply_graduated_service.amount.round(2)).to eq(165.81)
+    end
+  end
+
   context 'with negative event that results in changing range' do
     let(:aggregation) { 2.5 }
     let(:per_event_aggregation) do
@@ -114,7 +134,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       end
 
       it 'calculates the amount correctly' do
-        expect(apply_graduated_service.amount.round(2)).to eq(130.5)
+        expect(apply_graduated_service.amount.round(2)).to eq(180.5)
       end
     end
 

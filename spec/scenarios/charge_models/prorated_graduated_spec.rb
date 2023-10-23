@@ -103,8 +103,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_567)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_567)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(16_567)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(16_567)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
         end
 
