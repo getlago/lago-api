@@ -103,7 +103,12 @@ class Invoice < ApplicationRecord
   def file_url
     return if file.blank?
 
-    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
+    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
+      file,
+      host: 'void',
+    )
+
+    File.join(ENV['LAGO_API_URL'], blob_path)
   end
 
   def fee_total_amount_cents
