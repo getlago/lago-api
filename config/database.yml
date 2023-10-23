@@ -16,6 +16,14 @@ development:
     password: changeme
     database: lago
     port: 5432
+  clickhouse:
+    adapter: clickhouse
+    database: default
+    host: clickhouse
+    port: 8123
+    username: default
+    debug: true
+    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
 
 test:
   primary:
@@ -24,6 +32,14 @@ test:
   events:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+  clickhouse:
+    adapter: clickhouse
+    database: default_test
+    host: clickhouse
+    port: 8123
+    username: default
+    debug: true
+    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
 
 staging:
   primary:
@@ -33,6 +49,15 @@ staging:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
     database_tasks: false
+  clickhouse:
+    adapter: clickhouse
+    database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
+    host: <%= ENV['LAGO_CLICKHOUSE_HOST'] %>
+    port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
+    username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
+    password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
+    debug: false
+    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
 
 production:
   primary:
@@ -46,3 +71,12 @@ production:
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
     database_tasks: false
+  clickhouse:
+    adapter: clickhouse
+    database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
+    host: <%= ENV['LAGO_CLICKHOUSE_HOST'] %>
+    port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
+    username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
+    password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
+    debug: false
+    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
