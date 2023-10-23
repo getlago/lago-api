@@ -61,6 +61,10 @@ module ScenariosHelper
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
   end
 
+  def update_invoice(invoice, params)
+    put_with_token(organization, "/api/v1/invoices/#{invoice.id}", { invoice: params })
+  end
+
   ### Coupons
 
   def create_coupon(params)
@@ -89,6 +93,12 @@ module ScenariosHelper
     post_with_token(organization, '/api/v1/events', { event: params })
     perform_all_enqueued_jobs
     JSON.parse(response.body) unless response.body.empty?
+  end
+
+  ### Credit notes
+
+  def create_credit_note(params)
+    post_with_token(organization, '/api/v1/credit_notes', { credit_note: params })
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.
