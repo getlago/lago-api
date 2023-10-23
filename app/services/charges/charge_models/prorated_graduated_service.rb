@@ -74,7 +74,7 @@ module Charges
       private
 
       def result_with_flat_amount(result, total_full_units, max_full_units)
-        return 0 if units.zero? || total_full_units < 0
+        return 0 if units.zero? || total_full_units.negative?
 
         flat_amount = 0
         result = 0 if result.negative?
