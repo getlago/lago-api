@@ -416,4 +416,102 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
     end
   end
+
+  describe '.per_event_aggregation' do
+    context 'with event added in the period' do
+      let(:added_at) { from_datetime + 10.days }
+
+      it 'aggregates per events' do
+        result = unique_count_service.per_event_aggregation
+
+        expect(result.event_aggregation).to eq([1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5)])
+      end
+    end
+
+    context 'with persisted metrics removed in the period' do
+      let(:removed_at) { to_datetime - 15.days }
+
+      it 'aggregates per events' do
+        result = unique_count_service.per_event_aggregation
+
+        expect(result.event_aggregation).to eq([1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([16.fdiv(31).ceil(5)])
+      end
+
+      context 'when removed on the last day of the period' do
+        let(:removed_at) { to_datetime }
+
+        it 'aggregates per events' do
+          result = unique_count_service.per_event_aggregation
+
+          expect(result.event_aggregation).to eq([1])
+          expect(result.event_prorated_aggregation).to eq([1])
+        end
+      end
+    end
+
+    context 'with persisted metrics added and removed in the period' do
+      let(:added_at) { from_datetime + 1.day }
+      let(:removed_at) { to_datetime - 1.day }
+
+      it 'aggregates per events' do
+        result = unique_count_service.per_event_aggregation
+
+        expect(result.event_aggregation).to eq([1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([29.fdiv(31).ceil(5)])
+      end
+
+      context 'when added and removed the same day' do
+        let(:added_at) { from_datetime + 1.day }
+        let(:removed_at) { added_at }
+
+        it 'aggregates per events' do
+          result = unique_count_service.per_event_aggregation
+
+          expect(result.event_aggregation).to eq([1])
+          expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([1.fdiv(31).ceil(5)])
+        end
+      end
+    end
+
+    context 'with multiple events added in the period and with one added and removed during period' do
+      let(:added_at) { from_datetime + 10.days }
+      let(:quantified_event2) do
+        create(
+          :quantified_event,
+          customer:,
+          added_at: from_datetime + 10.days,
+          removed_at: nil,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
+      let(:quantified_event3) do
+        create(
+          :quantified_event,
+          customer:,
+          added_at: from_datetime + 20.days,
+          removed_at: from_datetime + 20.days,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
+
+      before do
+        quantified_event2
+        quantified_event3
+      end
+
+      it 'aggregates per events' do
+        result = unique_count_service.per_event_aggregation
+
+        first = 21.fdiv(31).ceil(5)
+        second = 1.fdiv(31).ceil(5)
+
+        expect(result.event_aggregation).to eq([1, 1, 1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([first, first, second])
+      end
+    end
+  end
 end
