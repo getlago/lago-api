@@ -22,7 +22,7 @@ gem 'oauth2'
 gem 'rack-cors'
 
 # Database
-gem 'clickhouse-activerecord'
+gem 'clickhouse-activerecord', git: 'https://github.com/getlago/clickhouse-activerecord.git', branch: 'fix-rails-7'
 gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'paper_trail'
