@@ -30,6 +30,17 @@ module BillableMetrics
         result
       end
 
+      def per_event_aggregation
+        recurring_value = previous_charge_fee&.units
+        recurring_aggregation = recurring_value ? [BigDecimal(recurring_value) * persisted_pro_rata] : []
+        period_agg = compute_per_event_prorated_aggregation
+
+        Result.new.tap do |result|
+          result.event_aggregation = recurring_aggregation + (0...period_agg.count).map { |_| 1 }
+          result.event_prorated_aggregation = recurring_aggregation + period_agg
+        end
+      end
+
       protected
 
       attr_reader :options
@@ -110,6 +121,81 @@ module BillableMetrics
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
         "SUM((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}) + 1)::numeric / #{period_duration})::numeric"
+      end
+
+      def compute_per_event_prorated_aggregation
+        all_events = added_list + removed_list + added_and_removed_list
+
+        all_events = all_events.sort_by(&:time)
+
+        all_events.pluck(:value)
+      end
+
+      def added_list
+        time_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.added_at')
+
+        added_elements = prorated_added_query.group(Arel.sql("#{time_field}, quantified_events.id"))
+          .order(Arel.sql("#{time_field} ASC"))
+          .pluck(
+            Arel.sql(
+              [
+                "(#{duration_ratio_sql('quantified_events.added_at', to_datetime)})::numeric",
+                time_field,
+              ].join(', '),
+            ),
+          )
+
+        added_elements.map do |element|
+          OpenStruct.new(
+            time: element.last,
+            value: element.first,
+          )
+        end
+      end
+
+      def removed_list
+        time_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
+
+        removed_elements = prorated_removed_query.group(Arel.sql("#{time_field}, quantified_events.id"))
+          .order(Arel.sql("#{time_field} ASC"))
+          .pluck(
+            Arel.sql(
+              [
+                "(#{duration_ratio_sql(from_datetime, 'quantified_events.removed_at')})::numeric",
+                time_field,
+              ].join(', '),
+            ),
+          )
+
+        removed_elements.map do |element|
+          OpenStruct.new(
+            time: element.last,
+            value: element.first,
+          )
+        end
+      end
+
+      def added_and_removed_list
+        added_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.added_at')
+        removed_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'quantified_events.removed_at')
+
+        added_and_removed_elements = prorated_added_and_removed_query.group(
+          Arel.sql("#{added_field}, #{removed_field}, quantified_events.id"),
+        ).order(
+          Arel.sql("#{added_field} ASC, #{removed_field} ASC"),
+        ).pluck(Arel.sql(
+          [
+            "(#{duration_ratio_sql('quantified_events.added_at', 'quantified_events.removed_at')})::numeric",
+            added_field,
+          ].join(', '),
+        ))
+
+        added_and_removed_elements.map do |element|
+          OpenStruct.new(
+            time: element.last,
+            value: element.first,
+          )
+        end
       end
     end
   end
