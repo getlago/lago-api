@@ -5,6 +5,8 @@ require 'rails_helper'
 RSpec.describe PaymentProviders::StripeProvider, type: :model do
   subject(:stripe_provider) { described_class.new(attributes) }
 
+  it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
+
   let(:attributes) {}
 
   describe 'secret_key' do
