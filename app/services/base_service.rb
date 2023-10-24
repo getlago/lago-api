@@ -72,6 +72,16 @@ class BaseService
     end
   end
 
+  class UnauthorizedFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, message:)
+      @message = message
+
+      super(result, message)
+    end
+  end
+
   class Result < OpenStruct
     attr_reader :error
 
@@ -119,6 +129,10 @@ class BaseService
 
     def forbidden_failure!(code: 'feature_unavailable')
       fail_with_error!(ForbiddenFailure.new(self, code:))
+    end
+
+    def unauthorized_failure!(message: 'unauthorized')
+      fail_with_error!(UnauthorizedFailure.new(self, message:))
     end
 
     def raise_if_error!

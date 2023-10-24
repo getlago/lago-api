@@ -15,7 +15,7 @@ module PaymentProviderCustomers
       return result if stripe_customer.provider_customer_id?
 
       stripe_result = create_stripe_customer
-      return result unless stripe_result
+      return result if !stripe_result || !result.success?
 
       stripe_customer.update!(
         provider_customer_id: stripe_result.id,
@@ -152,6 +152,11 @@ module PaymentProviderCustomers
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
       nil
+    rescue Stripe::AuthenticationError => e
+      deliver_error_webhook(e)
+
+      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      result.unauthorized_failure!(message:)
     end
 
     def stripe_create_payload
