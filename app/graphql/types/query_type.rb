@@ -16,6 +16,7 @@ module Types
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :credit_note, resolver: Resolvers::CreditNoteResolver
+    field :credit_note_estimate, resolver: Resolvers::CreditNotes::EstimateResolver
     field :current_version, resolver: Resolvers::VersionResolver
     field :customer, resolver: Resolvers::CustomerResolver
     field :customer_credit_notes, resolver: Resolvers::CustomerCreditNotesResolver
