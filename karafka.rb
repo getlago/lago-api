@@ -24,7 +24,7 @@ class KarafkaApp < Karafka::App
       Karafka.logger,
       # If you set this to true, logs will contain each message details
       # Please note, that this can be extensive
-      log_messages: false
-    )
+      log_messages: false,
+    ),
   )
 end

@@ -118,7 +118,7 @@ RSpec.describe Events::CreateService, type: :service do
     end
 
     context 'when kafka is configured' do
-      let(:karafka_producer ) { instance_double(WaterDrop::Producer) }
+      let(:karafka_producer) { instance_double(WaterDrop::Producer) }
 
       before do
         ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = 'kafka'

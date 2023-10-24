@@ -39,7 +39,7 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def produce_kafka_event(event)
-      return unless ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].present?
+      return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
 
       Karafka.producer.produce_sync(
         topic: 'events-raw',
