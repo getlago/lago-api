@@ -10,6 +10,7 @@ AllCops:
   Exclude:
     - 'bin/**/*'
     - 'db/schema.rb'
+    - 'db/*_schema.rb'
 
 Layout/BlockAlignment:
   Description: 'Align block ends correctly.'
