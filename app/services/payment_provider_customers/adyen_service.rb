@@ -19,7 +19,7 @@ module PaymentProviderCustomers
     def generate_checkout_url
       return result.not_found_failure!(resource: 'adyen_payment_provider') unless adyen_payment_provider
 
-      res = client.checkout.payment_links_api.payment_links(payment_link_params)
+      res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_link_params).to_h)
       checkout_url = res.response['url']
 
       SendWebhookJob.perform_later(

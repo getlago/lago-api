@@ -87,7 +87,7 @@ module CreditNotes
 
       def create_adyen_refund
         client.checkout.modifications_api.refund_captured_payment(
-          adyen_refund_params,
+          Lago::Adyen::Params.new(adyen_refund_params).to_h,
           payment.provider_payment_id,
         )
       rescue Adyen::AdyenError => e
