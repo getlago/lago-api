@@ -260,6 +260,17 @@ GEM
       activerecord
       kaminari-core (= 1.2.2)
     kaminari-core (1.2.2)
+    karafka (2.2.9)
+      karafka-core (>= 2.2.2, < 2.3.0)
+      waterdrop (>= 2.6.10, < 3.0.0)
+      zeitwerk (~> 2.3)
+    karafka-core (2.2.3)
+      concurrent-ruby (>= 1.1)
+      karafka-rdkafka (>= 0.13.6, < 0.14.0)
+    karafka-rdkafka (0.13.6)
+      ffi (~> 1.15)
+      mini_portile2 (~> 2.6)
+      rake (> 12)
     lograge (0.13.0)
       actionpack (>= 4)
       activesupport (>= 4)
@@ -281,6 +292,7 @@ GEM
     memoist (0.16.2)
     method_source (1.0.0)
     mini_mime (1.1.2)
+    mini_portile2 (2.8.5)
     minitest (5.18.0)
     monetize (1.12.0)
       money (~> 6.12)
@@ -487,6 +499,9 @@ GEM
       execjs (>= 0.3.0, < 3)
     unicode-display_width (2.5.0)
     version_gem (1.1.1)
+    waterdrop (2.6.10)
+      karafka-core (>= 2.2.3, < 3.0.0)
+      zeitwerk (~> 2.3)
     webmock (3.14.0)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
@@ -536,6 +551,7 @@ DEPENDENCIES
   i18n-tasks!
   jwt
   kaminari-activerecord
+  karafka
   lograge
   lograge-sql
   logstash-event
