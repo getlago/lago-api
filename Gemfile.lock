@@ -1,7 +1,6 @@
 GIT
   remote: https://github.com/getlago/clickhouse-activerecord.git
-  revision: f33abdce871513dc04c521092827bf34b6d73b1d
-  branch: fix-rails-7
+  revision: ec9c648ae9e7a77d4e2361bfb64ffb25dede3714
   specs:
     clickhouse-activerecord (0.6.0)
       activerecord (>= 5.2)
