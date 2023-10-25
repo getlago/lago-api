@@ -7,7 +7,9 @@ module PaymentProviders
     REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
     def create_or_update(**args)
-      access_token = oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
+      access_token = if args[:access_code].present?
+        oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
+      end
 
       gocardless_provider = PaymentProviders::GocardlessProvider.find_or_initialize_by(
         organization_id: args[:organization].id,
