@@ -24,6 +24,7 @@ module Api
         result = Invoices::UpdateService.new(
           invoice:,
           params: update_params.to_h.deep_symbolize_keys,
+          webhook_notification: true,
         ).call
 
         if result.success?

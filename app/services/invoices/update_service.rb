@@ -28,6 +28,7 @@ module Invoices
         )
       end
 
+      old_payment_status = invoice.payment_status
       invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
 
       if params.key?(:ready_for_payment_processing) && !invoice.voided?
@@ -43,7 +44,7 @@ module Invoices
       if params.key?(:payment_status)
         handle_prepaid_credits(params[:payment_status])
         track_payment_status_changed
-        deliver_webhook
+        deliver_webhook if old_payment_status != params[:payment_status]
         Invoices::UpdateFeesPaymentStatusJob.perform_later(invoice)
       end
 
