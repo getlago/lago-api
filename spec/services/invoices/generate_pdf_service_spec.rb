@@ -38,6 +38,10 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
       expect(result.invoice.file).to be_present
     end
 
+    it 'calls the SendWebhook job' do
+      expect { invoice_generate_service.call }.to have_enqueued_job(SendWebhookJob)
+    end
+
     context 'with not found invoice' do
       let(:invoice_subscription) { nil }
       let(:invoice) { nil }
