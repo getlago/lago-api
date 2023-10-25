@@ -16,7 +16,7 @@ module PaymentProviders
       )
 
       gocardless_provider.access_token = access_token if access_token
-      gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50)
+      gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50) if gocardless_provider.webhook_secret.blank?
       gocardless_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       gocardless_provider.save!
 
