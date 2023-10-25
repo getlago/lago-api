@@ -63,7 +63,7 @@ module Subscriptions
       # NOTE: If customer applicable timezone changes during a billing period, there is a risk to double count events
       #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
       #       hole bewtween a charges_from_datetime and the charges_to_datetime of the previous period
-      if timezone_has_changed?
+      if timezone_has_changed? && previous_charge_to_datetime
         new_datetime = previous_charge_to_datetime + 1.second
 
         # NOTE: Ensure that the invoice is really the previous one
@@ -151,7 +151,7 @@ module Subscriptions
     end
 
     def previous_charge_to_datetime
-      return if last_invoice_subscription.blank?
+      return nil if last_invoice_subscription.blank?
 
       last_invoice_subscription.charges_to_datetime
     end
