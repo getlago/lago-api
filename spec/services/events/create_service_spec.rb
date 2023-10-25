@@ -116,5 +116,22 @@ RSpec.describe Events::CreateService, type: :service do
         expect(result.event.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')
       end
     end
+
+    context 'when kafka is configured' do
+      let(:karafka_producer) { instance_double(WaterDrop::Producer) }
+
+      before do
+        ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = 'kafka'
+      end
+
+      it 'produces the event on kafka' do
+        allow(Karafka).to receive(:producer).and_return(karafka_producer)
+        allow(karafka_producer).to receive(:produce_sync)
+
+        create_service.call
+
+        expect(karafka_producer).to have_received(:produce_sync)
+      end
+    end
   end
 end

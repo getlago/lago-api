@@ -70,6 +70,9 @@ gem 'google-cloud-storage', require: false
 gem 'slim'
 gem 'slim-rails'
 
+# Kafka
+gem 'karafka'
+
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'
