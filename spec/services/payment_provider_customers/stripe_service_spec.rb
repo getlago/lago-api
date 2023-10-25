@@ -68,8 +68,6 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
 
       it 'delivers an error webhook' do
-        stripe_service.create
-
         expect { stripe_service.create }.to enqueue_job(SendWebhookJob)
           .with(
             'customer.payment_provider_error',
