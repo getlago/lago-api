@@ -310,6 +310,18 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
             expect(result).to match_datetime('2022-02-01 00:00:00')
           end
         end
+
+        context 'when timezone has changed and there is no invoices generated in the past' do
+          let(:billing_at) { DateTime.parse('02 Mar 2022') }
+
+          before do
+            subscription.customer.update!(timezone: 'America/Los_Angeles')
+          end
+
+          it 'takes calculates correct datetime' do
+            expect(result).to eq(date_service.from_datetime.to_s)
+          end
+        end
       end
 
       context 'when subscription started in the middle of a period' do
