@@ -51,6 +51,25 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
     expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
   end
 
+  context 'when success redirect url is nil' do
+    it 'removes success redirect url from the provider' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        variables: {
+          input: {
+            successRedirectUrl: nil,
+          },
+        },
+      )
+
+      result_data = result['data']['updateGocardlessPaymentProvider']
+
+      expect(result_data['successRedirectUrl']).to eq(nil)
+    end
+  end
+
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(
