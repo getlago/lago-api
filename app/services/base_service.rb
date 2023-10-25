@@ -73,11 +73,7 @@ class BaseService
   end
 
   class UnauthorizedFailure < FailedResult
-    attr_reader :code
-
     def initialize(result, message:)
-      @message = message
-
       super(result, message)
     end
   end
