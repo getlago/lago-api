@@ -187,6 +187,19 @@ RSpec.describe Invoices::UpdateService do
           invoice,
         )
       end
+
+      context 'when payment status has not changed' do
+        let(:invoice) { create(:invoice, payment_status: :succeeded) }
+
+        it 'does not deliver a webhook' do
+          result
+
+          expect(SendWebhookJob).not_to have_been_enqueued.with(
+            'invoice.payment_status_updated',
+            invoice,
+          )
+        end
+      end
     end
 
     context 'when invoice does not exist' do
