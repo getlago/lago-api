@@ -1868,6 +1868,7 @@ type CreditNoteEstimate {
   currency: CurrencyEnum!
   items: [CreditNoteItemEstimate!]!
   maxCreditableAmountCents: BigInt!
+  maxRefundableAmountCents: BigInt!
   subTotalExcludingTaxesAmountCents: BigInt!
   taxesAmountCents: BigInt!
   taxesRate: Float!

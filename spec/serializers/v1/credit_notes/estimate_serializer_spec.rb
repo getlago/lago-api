@@ -28,6 +28,7 @@ RSpec.describe ::V1::CreditNotes::EstimateSerializer do
       expect(result[root_name]['sub_total_excluding_taxes_amount_cents'])
         .to eq(estimated_credit_note.sub_total_excluding_taxes_amount_cents)
       expect(result[root_name]['max_creditable_amount_cents']).to eq(estimated_credit_note.credit_amount_cents)
+      expect(result[root_name]['max_refundable_amount_cents']).to eq(estimated_credit_note.refund_amount_cents)
       expect(result[root_name]['coupons_adjustment_amount_cents'])
         .to eq(estimated_credit_note.coupons_adjustment_amount_cents)
       expect(result[root_name]['taxes_rate']).to eq(estimated_credit_note.taxes_rate)

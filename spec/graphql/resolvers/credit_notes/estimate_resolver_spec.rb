@@ -11,6 +11,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
           taxesAmountCents
           subTotalExcludingTaxesAmountCents
           maxCreditableAmountCents
+          maxRefundableAmountCents
           couponsAdjustmentAmountCents
           taxesRate
           items { amountCents fee { id } }
@@ -47,6 +48,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
       expect(estimate_response['taxesAmountCents']).to eq('0')
       expect(estimate_response['subTotalExcludingTaxesAmountCents']).to eq('0')
       expect(estimate_response['maxCreditableAmountCents']).to eq('100')
+      expect(estimate_response['maxRefundableAmountCents']).to eq('0')
       expect(estimate_response['couponsAdjustmentAmountCents']).to eq('0')
       expect(estimate_response['items'].first['amountCents']).to eq('50')
       expect(estimate_response['appliedTaxes']).to be_blank
