@@ -151,7 +151,7 @@ module Subscriptions
     end
 
     def previous_charge_to_datetime
-      return nil if last_invoice_subscription.blank?
+      return if last_invoice_subscription.blank?
 
       last_invoice_subscription.charges_to_datetime
     end

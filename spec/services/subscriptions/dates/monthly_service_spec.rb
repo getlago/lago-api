@@ -311,7 +311,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
           end
         end
 
-        context 'when timezone has changed and there is no invoices generated in the past' do
+        context 'when timezone has changed and there are no invoices generated in the past' do
           let(:billing_at) { DateTime.parse('02 Mar 2022') }
 
           before do
