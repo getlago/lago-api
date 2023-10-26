@@ -428,7 +428,7 @@ html
             - fees.each do |fee|
               tr
                 td
-                  .body-1 = fee.add_on.invoice_name
+                  .body-1 = fee.invoice_name
                   .body-3 = fee.description
                 td.body-2 = fee.units
                 td.body-2 = MoneyHelper.format(fee.unit_amount)
