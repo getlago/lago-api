@@ -58,9 +58,9 @@ gem 'multipart-post'
 
 # Monitoring
 gem 'newrelic_rpm'
-gem 'sentry-rails'
-gem 'sentry-ruby'
-gem 'sentry-sidekiq'
+gem 'sentry-rails', '~> 5.12.0'
+gem 'sentry-ruby', '~> 5.12.0'
+gem 'sentry-sidekiq', '~> 5.12.0'
 
 # Storage
 gem 'aws-sdk-s3', require: false

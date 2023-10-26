@@ -249,7 +249,7 @@ GEM
     hashie (5.0.0)
     highline (2.1.0)
     httpclient (2.8.3)
-    i18n (1.12.0)
+    i18n (1.14.1)
       concurrent-ruby (~> 1.0)
     io-console (0.5.11)
     irb (1.4.1)
@@ -280,9 +280,9 @@ GEM
       activerecord (>= 5, < 7.1)
       lograge (~> 0.11)
     logstash-event (1.2.02)
-    loofah (2.20.0)
+    loofah (2.21.4)
       crass (~> 1.0.2)
-      nokogiri (>= 1.5.9)
+      nokogiri (>= 1.12.0)
     mail (2.8.1)
       mini_mime (>= 0.1.1)
       net-imap
@@ -293,7 +293,7 @@ GEM
     method_source (1.0.0)
     mini_mime (1.1.2)
     mini_portile2 (2.8.5)
-    minitest (5.18.0)
+    minitest (5.20.0)
     monetize (1.12.0)
       money (~> 6.12)
     money (6.16.0)
@@ -318,13 +318,13 @@ GEM
       net-protocol
     newrelic_rpm (9.5.0)
     nio4r (2.5.9)
-    nokogiri (1.14.3-aarch64-linux)
+    nokogiri (1.15.4-aarch64-linux)
       racc (~> 1.4)
-    nokogiri (1.14.3-arm64-darwin)
+    nokogiri (1.15.4-arm64-darwin)
       racc (~> 1.4)
-    nokogiri (1.14.3-x86_64-darwin)
+    nokogiri (1.15.4-x86_64-darwin)
       racc (~> 1.4)
-    nokogiri (1.14.3-x86_64-linux)
+    nokogiri (1.15.4-x86_64-linux)
       racc (~> 1.4)
     oauth2 (2.0.9)
       faraday (>= 0.17.3, < 3.0)
@@ -344,7 +344,7 @@ GEM
     public_suffix (5.0.1)
     puma (5.6.7)
       nio4r (~> 2.0)
-    racc (1.6.2)
+    racc (1.7.1)
     rack (2.2.8)
     rack-cors (1.1.1)
       rack (>= 2.0.0)
@@ -364,11 +364,13 @@ GEM
       activesupport (= 7.0.7)
       bundler (>= 1.15.0)
       railties (= 7.0.7)
-    rails-dom-testing (2.0.3)
-      activesupport (>= 4.2.0)
+    rails-dom-testing (2.2.0)
+      activesupport (>= 5.0.0)
+      minitest
       nokogiri (>= 1.6)
-    rails-html-sanitizer (1.5.0)
-      loofah (~> 2.19, >= 2.19.1)
+    rails-html-sanitizer (1.6.0)
+      loofah (~> 2.21)
+      nokogiri (~> 1.14)
     rails-i18n (7.0.8)
       i18n (>= 0.7, < 2)
       railties (>= 6.0.0, < 8)
@@ -436,15 +438,13 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
-    sentry-rails (5.3.1)
+    sentry-rails (5.12.0)
       railties (>= 5.0)
-      sentry-ruby-core (~> 5.3.1)
-    sentry-ruby (5.11.0)
+      sentry-ruby (~> 5.12.0)
+    sentry-ruby (5.12.0)
       concurrent-ruby (~> 1.0, >= 1.0.2)
-    sentry-ruby-core (5.3.1)
-      concurrent-ruby
-    sentry-sidekiq (5.11.0)
-      sentry-ruby (~> 5.11.0)
+    sentry-sidekiq (5.12.0)
+      sentry-ruby (~> 5.12.0)
       sidekiq (>= 3.0)
     shoulda-matchers (5.3.0)
       activesupport (>= 5.2.0)
@@ -487,7 +487,7 @@ GEM
     temple (0.8.2)
     terminal-table (3.0.2)
       unicode-display_width (>= 1.1.1, < 3)
-    thor (1.2.1)
+    thor (1.3.0)
     tilt (2.0.10)
     timecop (0.9.5)
     timeout (0.4.0)
@@ -512,7 +512,7 @@ GEM
     websocket-extensions (0.1.5)
     with_advisory_lock (4.6.0)
       activerecord (>= 4.2)
-    zeitwerk (2.6.7)
+    zeitwerk (2.6.12)
 
 PLATFORMS
   aarch64-linux-musl
@@ -568,9 +568,9 @@ DEPENDENCIES
   rspec-graphql_matchers
   rspec-rails
   sass-rails
-  sentry-rails
-  sentry-ruby
-  sentry-sidekiq
+  sentry-rails (~> 5.12.0)
+  sentry-ruby (~> 5.12.0)
+  sentry-sidekiq (~> 5.12.0)
   shoulda-matchers
   sidekiq
   simplecov
