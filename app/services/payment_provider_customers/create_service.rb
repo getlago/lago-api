@@ -91,8 +91,5 @@ module PaymentProviderCustomers
     def should_generate_checkout_url?
       result.provider_customer.provider_customer_id? && result.provider_customer.sync_with_provider.blank?
     end
-
-    def assign_provider_payment_methods()
-    end
   end
 end

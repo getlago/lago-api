@@ -181,7 +181,7 @@ module Customers
 
       customer.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
-      if new_customer
+      if new_customer || should_create_billing_configuration?(billing, customer)
         create_billing_configuration(customer, billing)
         customer.save!
         return
@@ -258,6 +258,10 @@ module Customers
         .find_or_create_by!(code: "tax_#{vat_rate}")
 
       Customers::ApplyTaxesService.call(customer:, tax_codes: [tax.code])
+    end
+
+    def should_create_billing_configuration?(billing, customer)
+      billing[:sync_with_provider] && customer.provider_customer&.provider_customer_id.nil?
     end
   end
 end

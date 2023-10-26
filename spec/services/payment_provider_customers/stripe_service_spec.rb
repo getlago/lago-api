@@ -51,6 +51,35 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
 
+    context 'when payment provider has incorrect API key' do
+      before do
+        allow(Stripe::Customer).to receive(:create)
+          .and_raise(Stripe::AuthenticationError.new('API key invalid.'))
+      end
+
+      it 'returns an unauthorized error' do
+        result = stripe_service.create
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+          expect(result.error.message).to eq('Stripe authentication failed. API key invalid.')
+        end
+      end
+
+      it 'delivers an error webhook' do
+        expect { stripe_service.create }.to enqueue_job(SendWebhookJob)
+          .with(
+            'customer.payment_provider_error',
+            customer,
+            provider_error: {
+              message: 'API key invalid.',
+              error_code: nil,
+            },
+          ).on_queue(:webhook)
+      end
+    end
+
     context 'when failing to create the customer' do
       it 'delivers an error webhook' do
         allow(Stripe::Customer).to receive(:create)

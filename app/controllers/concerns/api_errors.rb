@@ -13,11 +13,11 @@ module ApiErrors
     )
   end
 
-  def unauthorized_error
+  def unauthorized_error(message: 'Unauthorized')
     render(
       json: {
         status: 401,
-        error: 'Unauthorized',
+        error: message,
       },
       status: :unauthorized,
     )
@@ -67,6 +67,8 @@ module ApiErrors
       validation_errors(errors: error_result.error.messages)
     when BaseService::ForbiddenFailure
       forbidden_error(code: error_result.error.code)
+    when BaseService::UnauthorizedFailure
+      unauthorized_error(message: error_result.error.message)
     else
       raise(error_result.error)
     end
