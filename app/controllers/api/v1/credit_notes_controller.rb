@@ -115,11 +115,10 @@ module Api
       end
 
       def estimate
-        service = CreditNotes::EstimateService.new(
+        result = CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.find_by(id: estimate_params[:invoice_id]),
-          **estimate_params,
+          items: estimate_params[:items],
         )
-        result = service.call
 
         if result.success?
           render(

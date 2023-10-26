@@ -49,7 +49,7 @@ module CreditNotes
 
     def validate_items(credit_note)
       items.each do |item_attr|
-        amount_cents = item_attr[:amount_cents] || 0
+        amount_cents = item_attr[:amount_cents]&.to_i || 0
 
         item = CreditNoteItem.new(
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),

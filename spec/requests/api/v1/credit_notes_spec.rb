@@ -340,4 +340,48 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
   end
+
+  describe 'GET /credit_notes/estimate' do
+    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100) }
+
+    let(:invoice_id) { invoice.id }
+
+    let(:estimate_params) do
+      {
+        invoice_id:,
+        items: fees.map { |f| { fee_id: f.id, amount_cents: 50 } },
+      }
+    end
+
+    around { |test| lago_premium!(&test) }
+
+    it 'returns the computed amounts for credit note creation' do
+      get_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        estimated_credit_note = json[:estimated_credit_note]
+        expect(estimated_credit_note[:lago_invoice_id]).to eq(invoice.id)
+        expect(estimated_credit_note[:invoice_number]).to eq(invoice.number)
+        expect(estimated_credit_note[:currency]).to eq('EUR')
+        expect(estimated_credit_note[:taxes_amount_cents]).to eq(0)
+        expect(estimated_credit_note[:sub_total_excluding_taxes_amount_cents]).to eq(0)
+        expect(estimated_credit_note[:max_creditable_amount_cents]).to eq(100)
+        expect(estimated_credit_note[:coupons_adjustment_amount_cents]).to eq(0)
+        expect(estimated_credit_note[:items].first[:amount_cents]).to eq(50)
+        expect(estimated_credit_note[:applied_taxes]).to be_blank
+      end
+    end
+
+    context 'with invalid invoice' do
+      let(:invoice) { create(:invoice) }
+
+      it 'returns not found' do
+        get_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
