@@ -12,7 +12,10 @@ module PaymentProviderCustomers
       result.adyen_customer = adyen_customer
       return result if adyen_customer.provider_customer_id?
 
-      result.checkout_url = generate_checkout_url.checkout_url
+      checkout_url_result = generate_checkout_url
+      return result unless checkout_url_result.success?
+
+      result.checkout_url = checkout_url_result.checkout_url
       result
     end
 
@@ -20,6 +23,9 @@ module PaymentProviderCustomers
       return result.not_found_failure!(resource: 'adyen_payment_provider') unless adyen_payment_provider
 
       res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_link_params).to_h)
+      handle_adyen_response(res)
+      return result unless result.success?
+
       checkout_url = res.response['url']
 
       SendWebhookJob.perform_later(
@@ -121,6 +127,16 @@ module PaymentProviderCustomers
           error_code: adyen_error.request&.dig('code') || adyen_error.code,
         },
       )
+    end
+
+    def handle_adyen_response(res)
+      return if res.status < 400
+
+      code = res.response['errorType']
+      message = res.response['message']
+
+      deliver_error_webhook(Adyen::AdyenError.new(nil, nil, message, code))
+      result.service_failure!(code:, message:)
     end
 
     def handle_missing_customer(shopper_reference)

@@ -16,6 +16,7 @@ FactoryBot.define do
 
   sequence :adyen_payment_links_response do
     OpenStruct.new(
+      status: 200,
       response: {
         'amount' => {
           'currency' => 'EUR',
@@ -31,6 +32,16 @@ FactoryBot.define do
         'id' => SecureRandom.uuid,
         'status' => 'active',
         'url' => 'https://test.adyen.link/test',
+      },
+    )
+  end
+
+  sequence :adyen_payment_links_error_response do
+    OpenStruct.new(
+      status: 422,
+      response: {
+        'errorType' => 'validation',
+        'message' => 'There are no payment methods available for the given parameters.',
       },
     )
   end

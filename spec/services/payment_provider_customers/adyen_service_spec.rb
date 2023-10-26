@@ -57,6 +57,26 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
       end
     end
 
+    context 'when failing to generate the checkout link due to an error response' do
+      let(:payment_links_error_response) { generate(:adyen_payment_links_error_response) }
+
+      before do
+        allow(payment_links_api).to receive(:payment_links).and_return(payment_links_error_response)
+      end
+
+      it 'delivers an error webhook' do
+        expect { adyen_service_create }.to enqueue_job(SendWebhookJob)
+          .with(
+            'customer.payment_provider_error',
+            customer,
+            provider_error: {
+              message: 'There are no payment methods available for the given parameters.',
+              error_code: 'validation',
+            },
+          ).on_queue(:webhook)
+      end
+    end
+
     context 'when failing to generate the checkout link' do
       before do
         allow(payment_links_api)
