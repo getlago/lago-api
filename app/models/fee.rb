@@ -88,7 +88,7 @@ class Fee < ApplicationRecord
   def invoice_name
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
-    return add_on.invoice_display_name if add_on?
+    return add_on.invoice_name if add_on?
     return fee_type if credit?
 
     subscription.plan.invoice_display_name
