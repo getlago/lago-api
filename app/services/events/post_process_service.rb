@@ -39,6 +39,10 @@ module Events
       delivor_error_webhook(error: e.record.errors.messages)
 
       result
+    rescue ActiveRecord::RecordNotUnique
+      delivor_error_webhook(error: { transaction_id: ['value_already_exist'] })
+
+      result
     end
 
     private
