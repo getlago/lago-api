@@ -22,8 +22,10 @@ development:
     host: clickhouse
     port: 8123
     username: default
+    password: default
+    migrations_paths: db/clickhouse_migrate
     debug: true
-    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
 
 test:
   primary:
@@ -38,8 +40,9 @@ test:
     host: clickhouse
     port: 8123
     username: default
+    password: default
     debug: true
-    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
+    database_tasks: false
 
 staging:
   primary:
@@ -57,7 +60,7 @@ staging:
     username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
     password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
     debug: false
-    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
 
 production:
   primary:
@@ -79,4 +82,4 @@ production:
     username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
     password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
     debug: false
-    database_tasks: <%= ENV['LAGO_CLICKHOUSE_ENABLED'].present? %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>

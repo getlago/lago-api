@@ -1,0 +1,23 @@
+class CreateEventsRaw < ActiveRecord::Migration[7.0]
+  def change
+    options = <<-SQL
+      MergeTree
+      PRIMARY KEY (organization_id, external_subscription_id, code, toStartOfDay(timestamp))
+      TTL
+        timestamp TO VOLUME 'hot',
+        timestamp + INTERVAL 90 DAY TO VOLUME 'cold'
+      SETTINGS
+        storage_policy = 'hot_cold';
+    SQL
+
+    create_table :events_raw, id: false, options: do |t|
+      t.string :organization_id, null: false
+      t.string :external_customer_id, null: false
+      t.string :external_subscription_id, null: false
+      t.string :transaction_id, null: false
+      t.datetime :timestamp, null: false
+      t.string :code, null: false
+      t.string :properties, null: false
+    end
+  end
+end
