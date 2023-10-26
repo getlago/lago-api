@@ -28,9 +28,6 @@ module CreditNotes
 
       compute_amounts_and_taxes(credit_note)
 
-      # TODO: assign creditable and refundable attribute and return them in a serializer
-      credit_note.refund_amount_cents = 0
-
       result.credit_note = credit_note
       result
     end
@@ -86,6 +83,17 @@ module CreditNotes
         taxes_result.coupons_adjustment_amount_cents +
         taxes_result.taxes_amount_cents
       ).round
+
+      compute_refundable_amount(credit_note)
+    end
+
+    def compute_refundable_amount(credit_note)
+      credit_note.refund_amount_cents = credit_note.credit_amount_cents
+
+      refundable_amount_cents = invoice.refundable_amount_cents
+      return unless credit_note.credit_amount_cents > refundable_amount_cents
+
+      credit_note.refund_amount_cents = refundable_amount_cents
     end
   end
 end
