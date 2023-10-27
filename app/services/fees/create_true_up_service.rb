@@ -21,6 +21,7 @@ module Fees
         f.events_count = 0
         f.group_id = nil
         f.true_up_parent_fee = fee
+        f.unit_amount_cents = f.amount_cents
       end
 
       result.true_up_fee = true_up_fee
