@@ -102,7 +102,7 @@ module ScenariosHelper
   end
 
   def estimate_credit_note(params)
-    get_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: params })
+    post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: params })
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.

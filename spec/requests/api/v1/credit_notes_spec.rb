@@ -356,7 +356,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     around { |test| lago_premium!(&test) }
 
     it 'returns the computed amounts for credit note creation' do
-      get_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+      post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -379,7 +379,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:invoice) { create(:invoice) }
 
       it 'returns not found' do
-        get_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+        post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
 
         expect(response).to have_http_status(:not_found)
       end

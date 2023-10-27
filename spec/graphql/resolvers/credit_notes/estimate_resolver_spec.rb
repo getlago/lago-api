@@ -26,9 +26,34 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100) }
+  let(:fees) do
+    create_list(
+      :fee,
+      2,
+      invoice:,
+      amount_cents: 100,
+      precise_coupons_amount_cents: 50,
+    )
+  end
+
+  let(:coupon) do
+    create(
+      :coupon,
+      organization:,
+      amount_cents: 100,
+      expiration: :no_expiration,
+      coupon_type: :fixed_amount,
+      frequency: :forever,
+    )
+  end
+
+  let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
+
+  let(:credit) { create(:credit, invoice:, applied_coupon:, amount_cents: 100) }
 
   around { |test| lago_premium!(&test) }
+
+  before { credit }
 
   it 'returns the estimate for the credit note creation' do
     result = execute_graphql(
@@ -46,10 +71,10 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
     aggregate_failures do
       expect(estimate_response['currency']).to eq('EUR')
       expect(estimate_response['taxesAmountCents']).to eq('0')
-      expect(estimate_response['subTotalExcludingTaxesAmountCents']).to eq('100')
-      expect(estimate_response['maxCreditableAmountCents']).to eq('100')
+      expect(estimate_response['subTotalExcludingTaxesAmountCents']).to eq('50')
+      expect(estimate_response['maxCreditableAmountCents']).to eq('50')
       expect(estimate_response['maxRefundableAmountCents']).to eq('0')
-      expect(estimate_response['couponsAdjustmentAmountCents']).to eq('0')
+      expect(estimate_response['couponsAdjustmentAmountCents']).to eq('50')
       expect(estimate_response['items'].first['amountCents']).to eq('50')
       expect(estimate_response['appliedTaxes']).to be_blank
     end

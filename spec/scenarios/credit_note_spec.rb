@@ -88,9 +88,31 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     fee2 = invoice.fees.find_by(amount_cents: 39_900)
     expect(fee2.precise_coupons_amount_cents).to eq(25_000)
 
-    # Estimate the credit notes amount
     travel_to(DateTime.new(2023, 10, 23)) do
       update_invoice(invoice, payment_status: :succeeded)
+
+      # Estimate the credit notes amount on full fees
+      estimate_credit_note(
+        invoice_id: invoice.id,
+        items: [
+          {
+            fee_id: fee1.id,
+            amount_cents: fee1.amount_cents,
+          },
+          {
+            fee_id: fee2.id,
+            amount_cents: fee2.amount_cents,
+          },
+        ],
+      )
+
+      estimate = json[:estimated_credit_note]
+      expect(estimate[:taxes_amount_cents]).to eq(0)
+      expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(32_800)
+      expect(estimate[:max_creditable_amount_cents]).to eq(32_800)
+      expect(estimate[:max_refundable_amount_cents]).to eq(32_800)
+      expect(estimate[:coupons_adjustment_amount_cents]).to eq(250_00)
+      expect(estimate[:taxes_rate]).to eq(0)
 
       estimate_credit_note(
         invoice_id: invoice.id,
@@ -102,6 +124,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         ],
       )
 
+      # Estimate the credit notes amount on one partial fee
       estimate = json[:estimated_credit_note]
       expect(estimate[:taxes_amount_cents]).to eq(0)
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(9_806)
