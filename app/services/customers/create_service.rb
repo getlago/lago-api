@@ -156,7 +156,7 @@ module Customers
     end
 
     def create_billing_configuration(customer, billing_configuration = {})
-      return if billing_configuration.blank?
+      return if billing_configuration.blank? || (api_context? && billing_configuration[:payment_provider].nil?)
 
       create_provider_customer = billing_configuration[:sync_with_provider]
       create_provider_customer ||= billing_configuration[:provider_customer_id]
