@@ -128,37 +128,9 @@ module Fees
     end
 
     def aggregator(group:)
-      return @aggregator if @aggregator && !group
-
-      aggregator_service = case billable_metric.aggregation_type.to_sym
-                           when :count_agg
-                             BillableMetrics::Aggregations::CountService
-                           when :latest_agg
-                             BillableMetrics::Aggregations::LatestService
-                           when :max_agg
-                             BillableMetrics::Aggregations::MaxService
-                           when :sum_agg
-                             if charge.prorated?
-                               BillableMetrics::ProratedAggregations::SumService
-                             else
-                               BillableMetrics::Aggregations::SumService
-                             end
-                           when :unique_count_agg
-                             if charge.prorated?
-                               BillableMetrics::ProratedAggregations::UniqueCountService
-                             else
-                               BillableMetrics::Aggregations::UniqueCountService
-                             end
-                           when :recurring_count_agg
-                             BillableMetrics::Aggregations::RecurringCountService
-                           when :weighted_sum_agg
-                             BillableMetrics::Aggregations::WeightedSumService
-                           else
-                             raise(NotImplementedError)
-      end
-
-      @aggregator = aggregator_service.new(
-        billable_metric:,
+      BillableMetrics::AggregationFactory.new_instance(
+        charge:,
+        current_usage: is_current_usage,
         subscription:,
         group:,
         boundaries: {

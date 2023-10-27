@@ -40,4 +40,9 @@ FactoryBot.define do
     weighted_interval { 'seconds' }
     field_name { 'value' }
   end
+
+  factory :unique_count_billable_metric, parent: :billable_metric do
+    aggregation_type { 'unique_count_agg' }
+    field_name { 'item_id' }
+  end
 end
