@@ -13,12 +13,12 @@ module Fees
     def create
       return result if already_billed?
 
-      new_amount_cents = compute_amount
+      new_amount_cents = compute_amount.round
 
       new_fee = Fee.create!(
         invoice:,
         subscription:,
-        amount_cents: new_amount_cents.round,
+        amount_cents: new_amount_cents,
         amount_currency: plan.amount_currency,
         fee_type: :subscription,
         invoiceable_type: 'Subscription',
@@ -27,6 +27,7 @@ module Fees
         properties: boundaries.to_h,
         payment_status: :pending,
         taxes_amount_cents: 0,
+        unit_amount_cents: new_amount_cents,
       )
 
       result.fee = new_fee
