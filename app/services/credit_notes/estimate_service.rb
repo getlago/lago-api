@@ -14,7 +14,7 @@ module CreditNotes
       return result.forbidden_failure! unless License.premium?
       return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
 
-      credit_note = CreditNote.new(
+      @credit_note = CreditNote.new(
         customer: invoice.customer,
         invoice:,
         total_amount_currency: invoice.currency,
@@ -23,10 +23,10 @@ module CreditNotes
         balance_amount_currency: invoice.currency,
       )
 
-      validate_items(credit_note)
+      validate_items
       return result unless result.success?
 
-      compute_amounts_and_taxes(credit_note)
+      compute_amounts_and_taxes
 
       result.credit_note = credit_note
       result
@@ -34,9 +34,7 @@ module CreditNotes
 
     private
 
-    attr_reader :invoice, :items
-
-    delegate :credit_note, to: :result
+    attr_reader :invoice, :items, :credit_note
 
     def valid_type_or_status?
       return false if invoice.credit?
@@ -44,7 +42,7 @@ module CreditNotes
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
 
-    def validate_items(credit_note)
+    def validate_items
       items.each do |item_attr|
         amount_cents = item_attr[:amount_cents]&.to_i || 0
 
@@ -64,7 +62,7 @@ module CreditNotes
       CreditNotes::ValidateItemService.new(result, item:).valid?
     end
 
-    def compute_amounts_and_taxes(credit_note)
+    def compute_amounts_and_taxes
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice:,
         items: credit_note.items,
@@ -84,10 +82,11 @@ module CreditNotes
         taxes_result.taxes_amount_cents
       ).round
 
-      compute_refundable_amount(credit_note)
+      compute_refundable_amount
+      credit_note.total_amount_cents = credit_note.credit_amount_cents
     end
 
-    def compute_refundable_amount(credit_note)
+    def compute_refundable_amount
       credit_note.refund_amount_cents = credit_note.credit_amount_cents
 
       refundable_amount_cents = invoice.refundable_amount_cents

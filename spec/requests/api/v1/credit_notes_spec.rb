@@ -366,7 +366,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(estimated_credit_note[:invoice_number]).to eq(invoice.number)
         expect(estimated_credit_note[:currency]).to eq('EUR')
         expect(estimated_credit_note[:taxes_amount_cents]).to eq(0)
-        expect(estimated_credit_note[:sub_total_excluding_taxes_amount_cents]).to eq(0)
+        expect(estimated_credit_note[:sub_total_excluding_taxes_amount_cents]).to eq(100)
         expect(estimated_credit_note[:max_creditable_amount_cents]).to eq(100)
         expect(estimated_credit_note[:max_refundable_amount_cents]).to eq(100)
         expect(estimated_credit_note[:coupons_adjustment_amount_cents]).to eq(0)

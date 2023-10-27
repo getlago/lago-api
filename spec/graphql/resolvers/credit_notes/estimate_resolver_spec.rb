@@ -46,7 +46,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
     aggregate_failures do
       expect(estimate_response['currency']).to eq('EUR')
       expect(estimate_response['taxesAmountCents']).to eq('0')
-      expect(estimate_response['subTotalExcludingTaxesAmountCents']).to eq('0')
+      expect(estimate_response['subTotalExcludingTaxesAmountCents']).to eq('100')
       expect(estimate_response['maxCreditableAmountCents']).to eq('100')
       expect(estimate_response['maxRefundableAmountCents']).to eq('0')
       expect(estimate_response['couponsAdjustmentAmountCents']).to eq('0')
