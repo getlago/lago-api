@@ -519,6 +519,36 @@ RSpec.describe Customers::CreateService, type: :service do
             end
           end
         end
+
+        context 'when payment_provider is not sent' do
+          let(:create_args) do
+            {
+              external_id: SecureRandom.uuid,
+              name: 'Foo Bar',
+              billing_configuration: {
+                vat_rate: 28,
+                sync_with_provider: true,
+              },
+            }
+          end
+
+          it 'updates the customer and reset payment_provider attribute' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args,
+            )
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.customer).to eq(customer)
+
+              # NOTE: It should not erase existing properties
+              expect(result.customer.vat_rate).to eq(28)
+              expect(result.customer.payment_provider).to eq(nil)
+              expect(result.customer.stripe_customer).not_to be_present
+            end
+          end
+        end
       end
     end
 
