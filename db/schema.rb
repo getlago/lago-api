@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_10_20_091031) do
+ActiveRecord::Schema[7.0].define(version: 2023_10_27_144917) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -561,6 +561,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_20_091031) do
     t.string "email_settings", default: [], null: false, array: true
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
+    t.boolean "ready_for_draft_invoices_refresh", default: true, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"

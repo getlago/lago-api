@@ -53,6 +53,20 @@ module Invoices
       result
     end
 
+    def draft_invoices_refresh_enabled?
+      return false unless invoice
+
+      invoice.organization.ready_for_draft_invoices_refresh?
+    end
+
+    def disable_draft_invoices_refresh!
+      invoice.organization.update!(ready_for_draft_invoices_refresh: false)
+    end
+
+    def enable_draft_invoices_refresh!
+      invoice.organization.update!(ready_for_draft_invoices_refresh: true)
+    end
+
     private
 
     attr_accessor :invoice, :subscription_ids, :recurring, :context

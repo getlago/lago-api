@@ -5,30 +5,30 @@ require 'rails_helper'
 RSpec.describe Invoices::RefreshDraftService, type: :service do
   subject(:refresh_service) { described_class.new(invoice:) }
 
+  let(:status) { :draft }
+  let(:invoice) do
+    create(:invoice, status:, organization:, customer:)
+  end
+
+  let(:started_at) { 1.month.ago }
+  let(:customer) { create(:customer) }
+  let(:organization) { customer.organization }
+
+  let(:subscription) do
+    create(
+      :subscription,
+      customer:,
+      organization:,
+      subscription_at: started_at,
+      started_at:,
+      created_at: started_at,
+    )
+  end
+
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, recurring: true) }
+  let(:tax) { create(:tax, organization:, rate: 15) }
+
   describe '#call' do
-    let(:status) { :draft }
-    let(:invoice) do
-      create(:invoice, status:, organization:, customer:)
-    end
-
-    let(:started_at) { 1.month.ago }
-    let(:customer) { create(:customer) }
-    let(:organization) { customer.organization }
-
-    let(:subscription) do
-      create(
-        :subscription,
-        customer:,
-        organization:,
-        subscription_at: started_at,
-        started_at:,
-        created_at: started_at,
-      )
-    end
-
-    let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, recurring: true) }
-    let(:tax) { create(:tax, organization:, rate: 15) }
-
     before do
       invoice_subscription
       tax
@@ -68,6 +68,32 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     it 'updates taxes_rate' do
       expect { refresh_service.call }
         .to change { invoice.reload.taxes_rate }.from(0.0).to(15)
+    end
+  end
+
+  describe '#draft_invoices_refresh_enabled?' do
+    before { organization.update!(ready_for_draft_invoices_refresh: false) }
+
+    it 'returns correct value' do
+      expect(refresh_service.draft_invoices_refresh_enabled?).to eq(false)
+    end
+  end
+
+  describe '#disable_draft_invoices_refresh!' do
+    before { organization.update!(ready_for_draft_invoices_refresh: true) }
+
+    it 'correctly changes value' do
+      expect { refresh_service.disable_draft_invoices_refresh! }
+        .to change { organization.reload.ready_for_draft_invoices_refresh }.from(true).to(false)
+    end
+  end
+
+  describe '#enable_draft_invoices_refresh!' do
+    before { organization.update!(ready_for_draft_invoices_refresh: false) }
+
+    it 'correctly changes value' do
+      expect { refresh_service.enable_draft_invoices_refresh! }
+        .to change { organization.reload.ready_for_draft_invoices_refresh }.from(false).to(true)
     end
   end
 end
