@@ -51,6 +51,9 @@ RSpec.describe Customer, type: :model do
 
       customer.timezone = 'foo'
       expect(customer).not_to be_valid
+
+      customer.timezone = 'America/Guadeloupe'
+      expect(customer).not_to be_valid
     end
   end
 

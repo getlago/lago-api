@@ -8,6 +8,8 @@ class TimezoneValidator < ActiveModel::EachValidator
   protected
 
   def valid?(value)
-    value && ActiveSupport::TimeZone[value].present?
+    return true if value == 'UTC'
+
+    value && ActiveSupport::TimeZone::MAPPING.value?(value)
   end
 end
