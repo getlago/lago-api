@@ -4037,6 +4037,19 @@ input OrganizationBillingConfigurationInput {
   invoiceGracePeriod: Int
 }
 
+type OutstandingInvoice {
+  amountCents: BigInt!
+  currency: CurrencyEnum
+  invoicesCount: BigInt!
+  month: ISO8601DateTime!
+  paymentStatus: InvoicePaymentStatusTypeEnum
+}
+
+type OutstandingInvoiceCollection {
+  collection: [OutstandingInvoice!]!
+  metadata: CollectionMetadata!
+}
+
 type Plan {
   activeSubscriptionsCount: Int!
   amountCents: BigInt!
@@ -4383,6 +4396,11 @@ type Query {
   Query the current organization
   """
   organization: Organization
+
+  """
+  Query outstanding invoices of an organization
+  """
+  outstandingInvoices(currency: CurrencyEnum): OutstandingInvoiceCollection!
 
   """
   Query a password reset by token

@@ -20,6 +20,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       namespace :analytics do
         get :gross_revenue, to: 'gross_revenues#index', as: :gross_revenue
+        get :outstanding_invoices, to: 'outstanding_invoices#index', as: :outstanding_invoices
       end
 
       resources :customers, param: :external_id, only: %i[create index show destroy] do
