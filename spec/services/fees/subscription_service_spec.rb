@@ -56,12 +56,13 @@ RSpec.describe Fees::SubscriptionService do
       expect(result.fee).to have_attributes(
         id: String,
         invoice_id: invoice.id,
-        amount_cents: plan.amount_cents,
-        amount_currency: plan.amount_currency,
+        amount_cents: 100,
+        amount_currency: 'EUR',
         units: 1,
         events_count: nil,
         payment_status: 'pending',
-        unit_amount_cents: plan.amount_cents,
+        unit_amount_cents: 100,
+        precise_unit_amount: 1,
       )
     end
 
@@ -81,6 +82,7 @@ RSpec.describe Fees::SubscriptionService do
             id: String,
             amount_cents: 90,
             unit_amount_cents: 90,
+            precise_unit_amount: 0.9,
           )
         end
       end
@@ -128,9 +130,10 @@ RSpec.describe Fees::SubscriptionService do
           expect(result.fee).to have_attributes(
             id: String,
             invoice_id: invoice.id,
-            amount_cents: plan.amount_cents,
-            amount_currency: plan.amount_currency,
-            unit_amount_cents: plan.amount_cents,
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            unit_amount_cents: 100,
+            precise_unit_amount: 1,
             units: 1,
           )
         end
@@ -321,9 +324,10 @@ RSpec.describe Fees::SubscriptionService do
           expect(result.fee).to have_attributes(
             id: String,
             invoice_id: invoice.id,
-            amount_cents: plan.amount_cents,
-            amount_currency: plan.amount_currency,
-            unit_amount_cents: plan.amount_cents,
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            unit_amount_cents: 100,
+            precise_unit_amount: 1,
             units: 1,
           )
         end
@@ -551,9 +555,10 @@ RSpec.describe Fees::SubscriptionService do
           expect(result.fee).to have_attributes(
             id: String,
             invoice_id: invoice.id,
-            amount_cents: plan.amount_cents,
-            amount_currency: plan.amount_currency,
-            unit_amount_cents: plan.amount_cents,
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            unit_amount_cents: 100,
+            precise_unit_amount: 1,
             units: 1,
           )
         end

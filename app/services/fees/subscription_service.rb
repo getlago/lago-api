@@ -15,7 +15,7 @@ module Fees
 
       new_amount_cents = compute_amount.round
 
-      new_fee = Fee.create!(
+      new_fee = Fee.new(
         invoice:,
         subscription:,
         amount_cents: new_amount_cents,
@@ -29,6 +29,8 @@ module Fees
         taxes_amount_cents: 0,
         unit_amount_cents: new_amount_cents,
       )
+      new_fee.precise_unit_amount = new_fee.unit_amount.to_f
+      new_fee.save!
 
       result.fee = new_fee
       result
