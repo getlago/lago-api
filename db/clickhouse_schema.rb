@@ -10,11 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ClickhouseActiverecord::Schema.define(version: 2023_10_24_084411) do
+ClickhouseActiverecord::Schema.define(version: 2023_10_26_124912) do
 
   # TABLE: events_raw
   # SQL: CREATE TABLE default.events_raw ( `organization_id` String, `external_customer_id` String, `external_subscription_id` String, `transaction_id` String, `timestamp` DateTime, `code` String, `properties` String ) ENGINE = MergeTree PRIMARY KEY (organization_id, external_subscription_id, code, toStartOfDay(timestamp)) ORDER BY (organization_id, external_subscription_id, code, toStartOfDay(timestamp)) TTL timestamp TO VOLUME 'hot', timestamp + toIntervalDay(90) TO VOLUME 'cold' SETTINGS storage_policy = 'hot_cold', index_granularity = 8192
   create_table "events_raw", id: false, options: "MergeTree PRIMARY KEY (organization_id, external_subscription_id, code, toStartOfDay(timestamp)) ORDER BY (organization_id, external_subscription_id, code, toStartOfDay(timestamp)) TTL timestamp TO VOLUME 'hot', timestamp + toIntervalDay(90) TO VOLUME 'cold' SETTINGS storage_policy = 'hot_cold', index_granularity = 8192", force: :cascade do |t|
+    t.string "organization_id", null: false
+    t.string "external_customer_id", null: false
+    t.string "external_subscription_id", null: false
+    t.string "transaction_id", null: false
+    t.datetime "timestamp", precision: nil, null: false
+    t.string "code", null: false
+    t.string "properties", null: false
+  end
+
+  # TABLE: events_raw_queue
+  # SQL: CREATE TABLE default.events_raw_queue ( `organization_id` String, `external_customer_id` String, `external_subscription_id` String, `transaction_id` String, `timestamp` DateTime, `code` String, `properties` String ) ENGINE = Kafka SETTINGS kafka_broker_list = '*****', kafka_topic_list = 'events-raw', kafka_group_name = 'clickhouse', kafka_format = 'JSONEachRow'
+  create_table "events_raw_queue", id: false, options: "Kafka SETTINGS kafka_broker_list = '*****', kafka_topic_list = 'events-raw', kafka_group_name = 'clickhouse', kafka_format = 'JSONEachRow'", force: :cascade do |t|
     t.string "organization_id", null: false
     t.string "external_customer_id", null: false
     t.string "external_subscription_id", null: false
