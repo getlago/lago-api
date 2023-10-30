@@ -28,6 +28,7 @@ module Fees
             invoice_display_name: fee[:invoice_display_name].presence,
             description: fee[:description] || add_on.description,
             unit_amount_cents:,
+            precise_unit_amount: unit_amount_cents.fdiv(invoice.total_amount.currency.subunit_to_unit),
             amount_cents: (unit_amount_cents * units).round,
             amount_currency: invoice.currency,
             fee_type: :add_on,

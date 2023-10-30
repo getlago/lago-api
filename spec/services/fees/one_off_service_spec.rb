@@ -43,28 +43,34 @@ RSpec.describe Fees::OneOffService do
       second_fee = result.fees[1]
 
       aggregate_failures do
-        expect(first_fee.id).not_to be_nil
-        expect(first_fee.invoice_id).to eq(invoice.id)
-        expect(first_fee.add_on_id).to eq(add_on_first.id)
-        expect(first_fee.description).to eq('desc-123')
-        expect(first_fee.unit_amount_cents).to eq(1200)
-        expect(first_fee.units).to eq(2)
-        expect(first_fee.amount_cents).to eq(2400)
-        expect(first_fee.amount_currency).to eq('EUR')
-        expect(first_fee.fee_type).to eq('add_on')
-        expect(first_fee.payment_status).to eq('pending')
+        expect(first_fee).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          add_on_id: add_on_first.id,
+          description: 'desc-123',
+          unit_amount_cents: 1200,
+          precise_unit_amount: 12,
+          units: 2,
+          amount_cents: 2400,
+          amount_currency: 'EUR',
+          fee_type: 'add_on',
+          payment_status: 'pending',
+        )
         expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
 
-        expect(second_fee.id).not_to be_nil
-        expect(second_fee.invoice_id).to eq(invoice.id)
-        expect(second_fee.add_on_id).to eq(add_on_second.id)
-        expect(second_fee.description).to eq(add_on_second.description)
-        expect(second_fee.unit_amount_cents).to eq(400)
-        expect(second_fee.units).to eq(1)
-        expect(second_fee.amount_cents).to eq(400)
-        expect(second_fee.amount_currency).to eq('EUR')
-        expect(second_fee.fee_type).to eq('add_on')
-        expect(second_fee.payment_status).to eq('pending')
+        expect(second_fee).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          add_on_id: add_on_second.id,
+          description: add_on_second.description,
+          unit_amount_cents: 400,
+          precise_unit_amount: 4,
+          units: 1,
+          amount_cents: 400,
+          amount_currency: 'EUR',
+          fee_type: 'add_on',
+          payment_status: 'pending',
+        )
         expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
       end
     end
@@ -84,7 +90,7 @@ RSpec.describe Fees::OneOffService do
         ]
       end
 
-      it 'does not create a invalid fee' do
+      it 'does not create an invalid fee' do
         one_off_service.create
 
         expect(Fee.find_by(description: add_on_second.description)).to be_nil
