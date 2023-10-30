@@ -2,8 +2,6 @@
 
 module PaymentProviderCustomers
   class StripeService < BaseService
-    CHECKOUT_SUCCESS_URL = 'https://www.getlago.com'
-
     def initialize(stripe_customer = nil)
       @stripe_customer = stripe_customer
 
