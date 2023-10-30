@@ -19,6 +19,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
 
   let(:aggregator) do
     BillableMetrics::Aggregations::CountService.new(
+      event_store_class: Events::Stores::PostgresStore,
       billable_metric: charge.billable_metric,
       subscription: nil,
       boundaries: nil,

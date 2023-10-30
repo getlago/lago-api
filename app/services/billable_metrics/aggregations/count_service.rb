@@ -4,7 +4,7 @@ module BillableMetrics
   module Aggregations
     class CountService < BillableMetrics::Aggregations::BaseService
       def aggregate(options: {})
-        result.aggregation = events_scope(from_datetime:, to_datetime:).count
+        result.aggregation = event_store.count
         result.current_usage_units = result.aggregation
         result.count = result.aggregation
         result.pay_in_advance_aggregation = BigDecimal(1)
@@ -24,7 +24,7 @@ module BillableMetrics
       end
 
       def compute_per_event_aggregation
-        (0...events_scope(from_datetime:, to_datetime:).count).map { |_| 1 }
+        (0...event_store.count).map { |_| 1 }
       end
     end
   end

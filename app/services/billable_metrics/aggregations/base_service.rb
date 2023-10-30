@@ -3,8 +3,9 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      def initialize(billable_metric:, subscription:, boundaries:, group: nil, event: nil)
+      def initialize(event_store_class:, billable_metric:, subscription:, boundaries:, group: nil, event: nil) # rubocop:disable Metrics/ParameterLists
         super(nil)
+        @event_store_class = event_store_class
         @billable_metric = billable_metric
         @subscription = subscription
         @group = group
@@ -26,9 +27,19 @@ module BillableMetrics
 
       protected
 
-      attr_accessor :billable_metric, :subscription, :group, :event, :boundaries
+      attr_accessor :event_store_class, :billable_metric, :subscription, :group, :event, :boundaries
 
       delegate :customer, to: :subscription
+
+      def event_store
+        @event_store ||= event_store_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries:,
+          group:,
+          event:,
+        )
+      end
 
       def from_datetime
         boundaries[:from_datetime]

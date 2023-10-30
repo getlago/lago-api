@@ -138,8 +138,15 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     let(:per_transaction_min_amount) { '1.75' }
 
     let(:aggregator) do
-      BillableMetrics::Aggregations::SumService.new(billable_metric: nil, subscription: nil, boundaries: nil)
+      BillableMetrics::Aggregations::SumService.new(
+        event_store_class:,
+        billable_metric: nil,
+        subscription: nil,
+        boundaries: nil,
+      )
     end
+
+    let(:event_store_class) { Events::Stores::PostgresStore }
 
     let(:aggregation) { 11_100 }
 

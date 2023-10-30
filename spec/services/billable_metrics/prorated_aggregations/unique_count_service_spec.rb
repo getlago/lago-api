@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: :service, transaction: false do
   subject(:unique_count_service) do
     described_class.new(
+      event_store_class:,
       billable_metric:,
       subscription:,
       group:,
@@ -15,6 +16,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       },
     )
   end
+
+  let(:event_store_class) { Events::Stores::PostgresStore }
 
   let(:subscription) do
     create(
