@@ -2,19 +2,21 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::PaymentProviders::Gocardless, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:access_code) { 'ert_123456_abc' }
   let(:oauth_client) { instance_double(OAuth2::Client) }
   let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }
   let(:access_token) { instance_double(OAuth2::AccessToken) }
+  let(:success_redirect_url) { Faker::Internet.url }
 
   let(:mutation) do
     <<-GQL
       mutation($input: AddGocardlessPaymentProviderInput!) {
         addGocardlessPaymentProvider(input: $input) {
           id,
-          hasAccessToken
+          hasAccessToken,
+          successRedirectUrl
         }
       }
     GQL
@@ -39,6 +41,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless, type: :graphql do
       variables: {
         input: {
           accessCode: access_code,
+          successRedirectUrl: success_redirect_url,
         },
       },
     )
@@ -48,6 +51,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['hasAccessToken']).to be(true)
+      expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
     end
   end
 

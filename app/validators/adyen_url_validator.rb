@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class UrlValidator < ActiveModel::EachValidator
+class AdyenUrlValidator < ActiveModel::EachValidator
   def validate_each(record, attribute, value)
     record.errors.add(attribute, :url_invalid) unless url_valid?(value)
   end
@@ -8,9 +8,6 @@ class UrlValidator < ActiveModel::EachValidator
   private
 
   def url_valid?(url)
-    url = URI.parse(url)
-    url.host.present? && (url.is_a?(URI::HTTP) || url.is_a?(URI::HTTPS))
-  rescue StandardError
-    false
+    url =~ %r{.+://.+}
   end
 end

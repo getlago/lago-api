@@ -49,7 +49,10 @@ module PaymentProviderCustomers
 
       if event['success'] == 'true'
         adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
-        SendWebhookJob.perform_later('customer.payment_provider_created', customer) if organization.webhook_endpoints.any?
+
+        if organization.webhook_endpoints.any?
+          SendWebhookJob.perform_later('customer.payment_provider_created', customer)
+        end
       else
         deliver_error_webhook(Adyen::AdyenError.new(nil, nil, event['reason'], event['eventCode']))
       end
@@ -93,6 +96,7 @@ module PaymentProviderCustomers
           currency: customer.currency.presence || 'USD',
         },
         merchantAccount: adyen_payment_provider.merchant_account,
+        returnUrl: success_redirect_url,
         shopperReference: customer.external_id,
         storePaymentMethodMode: 'enabled',
         recurringProcessingModel: 'UnscheduledCardOnFile',
@@ -100,6 +104,10 @@ module PaymentProviderCustomers
       }
       prms[:shopperEmail] = customer.email if customer.email
       prms
+    end
+
+    def success_redirect_url
+      adyen_payment_provider.success_redirect_url.presence || PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL
     end
 
     def deliver_error_webhook(adyen_error)

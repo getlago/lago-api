@@ -2,8 +2,6 @@
 
 module PaymentProviderCustomers
   class StripeService < BaseService
-    CHECKOUT_SUCCESS_URL = 'https://www.getlago.com'
-
     def initialize(stripe_customer = nil)
       @stripe_customer = stripe_customer
 
@@ -134,11 +132,16 @@ module PaymentProviderCustomers
 
     def checkout_link_params
       {
-        success_url: CHECKOUT_SUCCESS_URL,
+        success_url: success_redirect_url,
         mode: 'setup',
         payment_method_types: stripe_customer.provider_payment_methods,
         customer: stripe_customer.provider_customer_id,
       }
+    end
+
+    def success_redirect_url
+      organization.stripe_payment_provider.success_redirect_url.presence ||
+        PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
     end
 
     def create_stripe_customer

@@ -118,4 +118,22 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
       end
     end
   end
+
+  describe '#success_redirect_url' do
+    subject(:success_redirect_url) { gocardless_service.__send__(:success_redirect_url) }
+
+    context 'when payment provider has success redirect url' do
+      it "returns payment provider's success redirect url" do
+        expect(success_redirect_url).to eq(gocardless_provider.success_redirect_url)
+      end
+    end
+
+    context 'when payment provider has no success redirect url' do
+      let(:gocardless_provider) { create(:gocardless_provider, success_redirect_url: nil) }
+
+      it 'returns the default success redirect url' do
+        expect(success_redirect_url).to eq(PaymentProviders::GocardlessProvider::SUCCESS_REDIRECT_URL)
+      end
+    end
+  end
 end

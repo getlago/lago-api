@@ -39,12 +39,15 @@ module Types
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
     field :update_add_on, mutation: Mutations::AddOns::Update
 
-    field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe
+    field :add_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Create
+    field :add_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless::Create
+    field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe::Create
+
+    field :update_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Update
+    field :update_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless::Update
+    field :update_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe::Update
+
     field :destroy_payment_provider, mutation: Mutations::PaymentProviders::Destroy
-
-    field :add_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless
-
-    field :add_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen
 
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download

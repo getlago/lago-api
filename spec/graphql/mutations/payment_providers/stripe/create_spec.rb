@@ -2,50 +2,46 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
   let(:membership) { create(:membership) }
-  let(:api_key) { 'api_key_123456_abc' }
-  let(:hmac_key) { 'hmac_124' }
-  let(:live_prefix) { 'test' }
-  let(:merchant_account) { 'Merchant1' }
 
   let(:mutation) do
     <<-GQL
-      mutation($input: AddAdyenPaymentProviderInput!) {
-        addAdyenPaymentProvider(input: $input) {
+      mutation($input: AddStripePaymentProviderInput!) {
+        addStripePaymentProvider(input: $input) {
           id,
-          apiKey,
-          hmacKey,
-          livePrefix,
-          merchantAccount
+          secretKey,
+          createCustomers,
+          successRedirectUrl
         }
       }
     GQL
   end
 
-  it 'creates an adyen provider' do
+  let(:secret_key) { 'sk_12345678901234567890' }
+  let(:success_redirect_url) { Faker::Internet.url }
+
+  it 'creates a stripe provider' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
       query: mutation,
       variables: {
         input: {
-          apiKey: api_key,
-          hmacKey: hmac_key,
-          merchantAccount: merchant_account,
-          livePrefix: live_prefix,
+          secretKey: secret_key,
+          createCustomers: false,
+          successRedirectUrl: success_redirect_url,
         },
       },
     )
 
-    result_data = result['data']['addAdyenPaymentProvider']
+    result_data = result['data']['addStripePaymentProvider']
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['apiKey']).to eq('••••••••…abc')
-      expect(result_data['hmacKey']).to eq('••••••••…124')
-      expect(result_data['livePrefix']).to eq(live_prefix)
-      expect(result_data['merchantAccount']).to eq(merchant_account)
+      expect(result_data['secretKey']).to eq('••••••••…890')
+      expect(result_data['createCustomers']).to eq(false)
+      expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
     end
   end
 
@@ -56,8 +52,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            apiKey: api_key,
-            merchantAccount: merchant_account,
+            secretKey: secret_key,
+            createCustomers: false,
           },
         },
       )
@@ -73,8 +69,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            apiKey: api_key,
-            merchantAccount: merchant_account,
+            secretKey: secret_key,
+            createCustomers: false,
           },
         },
       )

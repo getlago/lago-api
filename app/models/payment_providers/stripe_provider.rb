@@ -2,9 +2,11 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
-    validates :secret_key, presence: true
+    SUCCESS_REDIRECT_URL = 'https://stripe.com/'
 
+    validates :secret_key, presence: true
     validates :create_customers, inclusion: { in: [true, false] }
+    validates :success_redirect_url, url: true, allow_nil: true, length: { maximum: 1024 }
 
     def secret_key=(secret_key)
       push_to_secrets(key: 'secret_key', value: secret_key)

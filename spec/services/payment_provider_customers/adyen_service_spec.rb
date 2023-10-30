@@ -80,6 +80,24 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
     end
   end
 
+  describe '#success_redirect_url' do
+    subject(:success_redirect_url) { adyen_service.__send__(:success_redirect_url) }
+
+    context 'when payment provider has success redirect url' do
+      it "returns payment provider's success redirect url" do
+        expect(success_redirect_url).to eq(adyen_provider.success_redirect_url)
+      end
+    end
+
+    context 'when payment provider has no success redirect url' do
+      let(:adyen_provider) { create(:adyen_provider, success_redirect_url: nil) }
+
+      it 'returns the default success redirect url' do
+        expect(success_redirect_url).to eq(PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL)
+      end
+    end
+  end
+
   describe '#generate_checkout_url' do
     context 'when adyen payment provider is nil' do
       before { adyen_provider.destroy! }

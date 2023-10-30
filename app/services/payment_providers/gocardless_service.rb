@@ -7,14 +7,17 @@ module PaymentProviders
     REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
     def create_or_update(**args)
-      access_token = oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
+      access_token = if args[:access_code].present?
+        oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
+      end
 
       gocardless_provider = PaymentProviders::GocardlessProvider.find_or_initialize_by(
         organization_id: args[:organization].id,
       )
 
       gocardless_provider.access_token = access_token if access_token
-      gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50)
+      gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50) if gocardless_provider.webhook_secret.blank?
+      gocardless_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       gocardless_provider.save!
 
       result.gocardless_provider = gocardless_provider
