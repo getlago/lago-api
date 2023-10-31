@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/getlago/clickhouse-activerecord.git
-  revision: ec9c648ae9e7a77d4e2361bfb64ffb25dede3714
+  revision: d9198e9eacb50058d141a7f916995c872a2ead93
   specs:
     clickhouse-activerecord (0.6.0)
       activerecord (>= 5.2)
