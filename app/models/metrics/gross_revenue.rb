@@ -6,11 +6,21 @@ module Metrics
 
     class << self
       def columns
-        Struct.new(:month, :total_gross_revenue)
+        Struct.new(:month, :amount_cents, :currency)
       end
 
-      def query
-        <<~SQL
+      def query(organization_id, **args)
+        if args[:customer_external_id].present?
+          and_customer_external_id_sql = sanitize_sql(
+            ['AND c.external_id = :customer_external_id', args[:customer_external_id]],
+          )
+        end
+
+        if args[:currency].present?
+          and_currency_sql = sanitize_sql(['AND cd.currency = :currency', args[:currency].upcase])
+        end
+
+        sql = <<~SQL.squish
           WITH organization_creation_date AS (
             SELECT
                 DATE_TRUNC('month', o.created_at) AS start_month
@@ -27,44 +37,52 @@ module Metrics
           ),
           issued_invoices AS (
             SELECT
-                DATE_TRUNC('month', i.issuing_date) AS month,
-                COALESCE(SUM(i.total_amount_cents::float / 100), 0) AS amount
+                i.issuing_date,
+                i.total_amount_cents::float AS amount_cents,
+                i.currency
             FROM invoices i
+            LEFT JOIN customers c ON i.customer_id = c.id
             WHERE i.organization_id = :organization_id
                 AND i.status = 1
-            GROUP BY month
+                #{and_customer_external_id_sql}
           ),
           instant_charges AS (
             SELECT
-                DATE_TRUNC('month', f.created_at) AS month,
-                COALESCE(SUM(f.amount_cents::float / 100), 0) AS amount
+                f.created_at AS issuing_date,
+                f.amount_cents AS amount_cents,
+                f.amount_currency AS currency
             FROM fees f
             LEFT JOIN subscriptions s ON f.subscription_id = s.id
             LEFT JOIN customers c ON c.id = s.customer_id
             WHERE c.organization_id = :organization_id
                 AND f.invoice_id IS NULL
                 AND f.pay_in_advance IS TRUE
-            GROUP BY month
+                #{and_customer_external_id_sql}
           ),
           combined_data AS (
             SELECT
-                month,
-                COALESCE(SUM(amount), 0) AS total_gross_revenue
+                DATE_TRUNC('month', issuing_date) AS month,
+                currency,
+                COALESCE(SUM(amount_cents), 0) AS amount_cents
             FROM (
                 SELECT * FROM issued_invoices
                 UNION ALL
                 SELECT * FROM instant_charges
             ) AS gross_revenue
-            GROUP BY month
+            GROUP BY month, currency
           )
           SELECT
             am.month,
-            ROUND(CAST(COALESCE(cd.total_gross_revenue, 0) AS NUMERIC), 2) AS total_gross_revenue
+            cd.amount_cents,
+            cd.currency
           FROM all_months am
           LEFT JOIN combined_data cd ON am.month = cd.month
           WHERE am.month <= DATE_TRUNC('month', CURRENT_DATE)
-          ORDER BY am.month
+          #{and_currency_sql}
+          ORDER BY am.month;
         SQL
+
+        sanitize_sql([sql, { organization_id: }.merge(args)])
       end
     end
   end
