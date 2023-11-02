@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_10_27_144605) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_02_085146) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -632,6 +632,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_27_144605) do
     t.datetime "deleted_at"
     t.boolean "pending_deletion", default: false, null: false
     t.string "invoice_display_name"
+    t.index ["created_at"], name: "index_plans_on_created_at"
     t.index ["deleted_at"], name: "index_plans_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "((deleted_at IS NULL) AND (parent_id IS NULL))"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
@@ -703,6 +704,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_27_144605) do
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["external_id"], name: "index_subscriptions_on_external_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
+    t.index ["started_at"], name: "index_subscriptions_on_started_at"
+    t.index ["status"], name: "index_subscriptions_on_status"
   end
 
   create_table "taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
