@@ -8,7 +8,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
   end
 
   let(:billable_metric) { create(:billable_metric, aggregation_type:, field_name: 'item_id') }
-  let(:charge) { create(:standard_charge, billable_metric:) }
+  let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
   let(:group) { create(:group) }
   let(:aggregation_type) { 'count_agg' }
   let(:event) { create(:event, subscription_id: subscription.id) }
@@ -110,14 +110,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
         expect(unique_count_service).to have_received(:aggregate).with(
           options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
         )
-      end
-    end
-
-    describe 'when unknown aggregation' do
-      let(:aggregation_type) { 'max_agg' }
-
-      it 'raises a NotImplementedError' do
-        expect { agg_service.call }.to raise_error(NotImplementedError)
       end
     end
   end

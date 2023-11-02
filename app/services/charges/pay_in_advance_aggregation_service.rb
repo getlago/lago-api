@@ -13,8 +13,8 @@ module Charges
     end
 
     def call
-      aggregator = aggregator_service.new(
-        billable_metric:,
+      aggregator = BillableMetrics::AggregationFactory.new_instance(
+        charge:,
         subscription:,
         group:,
         event:,
@@ -23,6 +23,7 @@ module Charges
           to_datetime: boundaries[:charges_to_datetime],
         },
       )
+
       aggregator.aggregate(options: aggregation_options)
     end
 
@@ -32,27 +33,6 @@ module Charges
 
     delegate :subscription, to: :event
     delegate :billable_metric, to: :charge
-
-    def aggregator_service
-      @aggregator_service ||= case billable_metric.aggregation_type.to_sym
-                              when :count_agg
-                                BillableMetrics::Aggregations::CountService
-                              when :sum_agg
-                                if charge.prorated?
-                                  BillableMetrics::ProratedAggregations::SumService
-                                else
-                                  BillableMetrics::Aggregations::SumService
-                                end
-                              when :unique_count_agg
-                                if charge.prorated?
-                                  BillableMetrics::ProratedAggregations::UniqueCountService
-                                else
-                                  BillableMetrics::Aggregations::UniqueCountService
-                                end
-                              else
-                                raise(NotImplementedError)
-      end
-    end
 
     def aggregation_options
       {
