@@ -205,6 +205,8 @@ RSpec.describe Fees::ChargeService do
               expect(result).to be_success
               expect(result.fees.count).to eq(2)
               expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548) # 548 is 1000 prorated for 17 days.
+              expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(0, 548)
+              expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(0, 5.48)
             end
           end
         end
