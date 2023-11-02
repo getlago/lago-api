@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+Rake::Task['db:migrate'].enhance do
+  Rake::Task['db:clickhouse:filter'].invoke
+end
+
 if Rake::Task.task_defined?('db:schema:dump:clickhouse')
   Rake::Task['db:schema:dump:clickhouse'].enhance do
     Rake::Task['db:clickhouse:filter'].invoke

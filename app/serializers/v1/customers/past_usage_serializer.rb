@@ -5,8 +5,8 @@ module V1
     class PastUsageSerializer < ModelSerializer
       def serialize
         payload = {
-          from_datetime: invoice_subscription.from_datetime.iso8601,
-          to_datetime: invoice_subscription.to_datetime.iso8601,
+          from_datetime: invoice_subscription.charges_from_datetime.iso8601,
+          to_datetime: invoice_subscription.charges_to_datetime.iso8601,
           issuing_date: invoice.issuing_date.iso8601,
           currency: invoice.currency,
           amount_cents: invoice.fees_amount_cents,
