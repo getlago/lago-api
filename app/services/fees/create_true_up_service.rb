@@ -22,6 +22,7 @@ module Fees
         f.group_id = nil
         f.true_up_parent_fee = fee
         f.unit_amount_cents = f.amount_cents
+        f.precise_unit_amount = f.unit_amount.to_f
       end
 
       result.true_up_fee = true_up_fee
