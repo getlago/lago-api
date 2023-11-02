@@ -13,9 +13,11 @@ end
 namespace :db do
   desc 'Filter secrets from clickhouse schema file'
   task 'clickhouse:filter' => :environment do
+    next unless Rails.env.development?
+
     migration_file = 'db/clickhouse_schema.rb'
     text = File.read(migration_file)
-    new_contents = text.gsub(ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'], '*****')
+    new_contents = text.gsub(ENV.fetch('LAGO_KAFKA_BOOTSTRAP_SERVERS', ''), '*****')
     File.open(migration_file, 'w') { |file| file.puts new_contents }
   end
 end
