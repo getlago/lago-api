@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :organization do
     name { Faker::Company.name }
+    default_currency { 'USD' }
     vat_rate { 20 }
 
     email { Faker::Internet.email }

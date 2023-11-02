@@ -5,6 +5,7 @@ module Types
     class UpdateOrganizationInput < BaseInputObject
       description 'Update Organization input arguments'
 
+      argument :default_currency, Types::CurrencyEnum, required: true
       argument :email, String, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false

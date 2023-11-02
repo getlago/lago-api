@@ -582,6 +582,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_02_085146) do
     t.string "email_settings", default: [], null: false, array: true
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
+    t.string "default_currency", default: "USD", null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"

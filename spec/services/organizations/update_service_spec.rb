@@ -24,6 +24,7 @@ RSpec.describe Organizations::UpdateService do
       state: 'Foobar',
       zipcode: 'FOO1234',
       city: 'Foobar',
+      default_currency: 'EUR',
       country:,
       timezone:,
       logo:,
@@ -51,6 +52,7 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.zipcode).to eq('FOO1234')
         expect(result.organization.city).to eq('Foobar')
         expect(result.organization.country).to eq('FR')
+        expect(result.organization.default_currency).to eq('EUR')
         expect(result.organization.timezone).to eq('UTC')
 
         expect(result.organization.invoice_footer).to eq('invoice footer')
