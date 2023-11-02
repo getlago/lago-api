@@ -151,16 +151,10 @@ module BillableMetrics
       # NOTE: In case of upgrade/downgrade, if latest value is not persisted yet,
       #       we need to fetch latest value from previous events attached to the same external subscription ID
       def latest_value_from_events
-        subscription_ids = customer.subscriptions
-          .where(external_id: subscription.external_id)
-          .pluck(:id)
-
-        scope = Event.where(customer_id: customer.id)
-          .where(subscription_id: subscription_ids)
+        scope = Event.where(external_subscription_id: subscription.external_id)
           .where(code: billable_metric.code)
           .where(created_at: billable_metric.created_at...)
           .where(timestamp: ..from_datetime)
-          .where.not(subscription_id: subscription.id)
           .where(field_presence_condition)
           .where(field_numeric_condition)
 

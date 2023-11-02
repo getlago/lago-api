@@ -7,9 +7,14 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
     described_class.new(event)
   end
 
+  let(:customer) { create(:customer) }
+  let(:subscription) { create(:active_subscription, started_at: event_timestamp - 3.days, customer:) }
+  let(:organization) { customer.organization }
+
   let(:billable_metric) do
     create(
       :billable_metric,
+      organization:,
       aggregation_type: 'unique_count_agg',
       field_name: 'item_id',
     )
@@ -19,9 +24,11 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
     create(
       :event,
       properties:,
-      organization: billable_metric.organization,
+      organization:,
       code: billable_metric.code,
       timestamp: event_timestamp,
+      external_customer_id: customer.external_id,
+      external_subscription_id: subscription.external_id,
     )
   end
 
@@ -48,7 +55,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
           quantified_event = service_result.quantified_event
           expect(quantified_event.organization).to eq(event.organization)
-          expect(quantified_event.external_subscription_id).to eq(event.subscription.external_id)
+          expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
           expect(quantified_event.external_id).to eq('ext_12345')
           expect(quantified_event.properties).to eq(event.properties)
           expect(quantified_event.added_at.to_s).to eq(event.timestamp.to_s)
@@ -60,7 +67,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
           create(
             :quantified_event,
             billable_metric:,
-            external_subscription_id: event.subscription.external_id,
+            external_subscription_id: subscription.external_id,
             external_id: 'ext_12345',
             removed_at: Time.zone.parse('31 Oct 2022 09:25:00'),
           )
@@ -84,6 +91,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
       let(:billable_metric) do
         create(
           :billable_metric,
+          organization:,
           aggregation_type: 'unique_count_agg',
           field_name: 'item_id',
         )
@@ -97,7 +105,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
           quantified_event = service_result.quantified_event
           expect(quantified_event.organization).to eq(event.organization)
-          expect(quantified_event.external_subscription_id).to eq(event.subscription.external_id)
+          expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
           expect(quantified_event.external_id).to eq('ext_12345')
           expect(quantified_event.properties).to eq(event.properties)
           expect(quantified_event.added_at.to_s).to eq(event.timestamp.to_s)
@@ -110,7 +118,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
         create(
           :quantified_event,
           billable_metric:,
-          external_subscription_id: event.subscription.external_id,
+          external_subscription_id: subscription.external_id,
           external_id: 'ext_12345',
         )
       end
@@ -135,7 +143,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
           create(
             :quantified_event,
             billable_metric:,
-            external_subscription_id: event.subscription.external_id,
+            external_subscription_id: subscription.external_id,
             external_id: 'ext_12345',
             removed_at: (Time.current - 1.hour).to_i,
           )
@@ -181,7 +189,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
         create(
           :quantified_event,
           billable_metric:,
-          external_subscription_id: event.subscription.external_id,
+          external_subscription_id: subscription.external_id,
           external_id: 'ext_12345',
         )
       end

@@ -7,15 +7,18 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
     described_class.new(charge:, boundaries:, group:, properties:, event:)
   end
 
-  let(:billable_metric) { create(:billable_metric, aggregation_type:, field_name: 'item_id') }
+  let(:organization) { create(:organization) }
+  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: 'item_id') }
   let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
   let(:group) { create(:group) }
   let(:aggregation_type) { 'count_agg' }
-  let(:event) { create(:event, subscription_id: subscription.id) }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
   let(:properties) { {} }
 
+  let(:customer) { create(:customer, organization:) }
+
   let(:subscription) do
-    create(:subscription, started_at: DateTime.parse('2023-03-15'))
+    create(:subscription, customer:, started_at: DateTime.parse('2023-03-15'))
   end
 
   let(:boundaries) do

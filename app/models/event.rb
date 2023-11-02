@@ -8,9 +8,6 @@ class Event < EventsRecord
   include OrganizationTimezone
 
   belongs_to :organization
-  belongs_to :customer, -> { with_discarded }, optional: true
-  belongs_to :subscription, optional: true
-
   belongs_to :quantified_event, optional: true
 
   validates :transaction_id, presence: true, uniqueness: { scope: %i[organization_id external_subscription_id] }
@@ -30,5 +27,32 @@ class Event < EventsRecord
 
   def billable_metric
     @billable_metric ||= organization.billable_metrics.find_by(code:)
+  end
+
+  def customer
+    organization
+      .customers
+      .with_discarded
+      .where(external_id: external_customer_id)
+      .where('deleted_at IS NULL OR deleted_at > ?', timestamp)
+      .order('deleted_at DESC NULLS LAST')
+      .first
+  end
+
+  def subscription
+    scope = if external_customer_id && customer
+      customer.subscriptions
+    else
+      organization.subscriptions.where(external_id: external_subscription_id)
+    end
+
+    scope
+      .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", timestamp)
+      .where(
+        "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
+        timestamp,
+      )
+      .order('terminated_at DESC NULLS FIRST, started_at DESC')
+      .first
   end
 end

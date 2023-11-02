@@ -22,8 +22,6 @@ RSpec.describe Events::PostProcessService, type: :service do
     create(
       :event,
       organization:,
-      customer_id: nil,
-      subscription_id: nil,
       external_customer_id:,
       external_subscription_id:,
       timestamp:,
@@ -33,92 +31,15 @@ RSpec.describe Events::PostProcessService, type: :service do
   end
 
   describe '#call' do
-    it 'assigns customer and subscription' do
-      result = process_service.call
-
-      aggregate_failures do
-        expect(result).to be_success
-
-        expect(event.reload.customer_id).to eq(customer.id)
-        expect(event.subscription_id).to eq(subscription.id)
-      end
-    end
-
-    context 'when subscription is terminated' do
-      let(:subscription) { create(:subscription, :terminated, organization:, customer:, started_at:) }
-
-      it 'assigns the subscription' do
-        result = process_service.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(event.reload.subscription_id).to eq(subscription.id)
-        end
-      end
-
-      context 'when a new active subscription exists' do
-        let(:started_at) { 1.month.ago }
-        let(:timestamp) { 1.week.ago }
-
-        let(:active_subscription) do
-          create(
-            :subscription,
-            customer:,
-            organization:,
-            started_at: 1.day.ago,
-            external_id: subscription.external_id,
-          )
-        end
-
-        before { active_subscription }
-
-        it 'assigns the terminated subscription' do
-          result = process_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-            expect(event.reload.subscription_id).to eq(subscription.id)
-          end
-        end
-      end
-    end
-
-    context 'when subscription is an upgrade/downgrade' do
-      let(:started_at) { 1.week.ago }
-
-      let(:terminated_subscription) do
-        create(
-          :subscription,
-          :terminated,
-          organization:,
-          customer:,
-          external_id: external_subscription_id,
-          started_at: 1.month.ago,
-        )
-      end
-
-      before { terminated_subscription }
-
-      it 'assigns the active subscription' do
-        result = process_service.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(event.subscription_id).to eq(subscription.id)
-        end
-      end
-    end
-
     context 'without external customer id' do
       let(:external_customer_id) { nil }
 
-      it 'assigns the customer' do
+      it 'assigns the customer external_id' do
         result = process_service.call
 
         aggregate_failures do
           expect(result).to be_success
 
-          expect(event.reload.customer_id).to eq(customer.id)
           expect(event.external_customer_id).to eq(customer.external_id)
         end
       end
@@ -128,15 +49,13 @@ RSpec.describe Events::PostProcessService, type: :service do
 
         before { second_subscription }
 
-        it 'assigns the subscription' do
+        it 'assigns the subscription external_id' do
           result = process_service.call
 
           aggregate_failures do
             expect(result).to be_success
 
-            expect(event.reload.customer_id).to eq(customer.id)
             expect(event.external_customer_id).to eq(customer.external_id)
-            expect(event.subscription_id).to eq(subscription.id)
           end
         end
       end
@@ -148,14 +67,13 @@ RSpec.describe Events::PostProcessService, type: :service do
       before { subscription }
 
       context 'with a single customer subscription' do
-        it 'assigns the subscription' do
+        it 'assigns the subscription external_id' do
           result = process_service.call
 
           aggregate_failures do
             expect(result).to be_success
 
-            expect(event.reload.customer_id).to eq(customer.id)
-            expect(event.subscription_id).to eq(subscription.id)
+            expect(event.external_subscription_id).to eq(subscription.external_id)
           end
         end
       end
@@ -165,15 +83,14 @@ RSpec.describe Events::PostProcessService, type: :service do
 
         before { second_subscription }
 
-        it 'assigns the subscription' do
+        it 'does not assigns the subscription external_id' do
           result = process_service.call
 
           aggregate_failures do
             expect(result).to be_success
 
-            expect(event.reload.customer_id).to eq(customer.id)
             expect(event.external_customer_id).to eq(customer.external_id)
-            expect(event.subscription_id).to be_nil
+            expect(event.external_subscription_id).to be_nil
           end
         end
       end

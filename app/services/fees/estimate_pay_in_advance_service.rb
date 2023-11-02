@@ -46,8 +46,8 @@ module Fees
       @event = Event.new(
         organization_id: organization.id,
         code: params[:code],
-        customer:,
-        subscription: subscriptions.first,
+        external_customer_id: customer&.external_id,
+        external_subscription_id: subscriptions.first&.external_id,
         properties: params[:properties] || {},
         transaction_id: SecureRandom.uuid,
         timestamp: Time.current,
@@ -78,11 +78,11 @@ module Fees
       @subscriptions = subscriptions
         .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
         .where("terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?", timestamp)
-        .order(started_at: :desc)
+        .order('terminated_at DESC NULLS FIRST, started_at DESC')
     end
 
     def charges
-      @charges ||= event.subscription
+      @charges ||= subscriptions.first
         .plan
         .charges
         .pay_in_advance

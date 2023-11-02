@@ -150,9 +150,13 @@ module BillableMetrics
         quantified_events = if billable_metric.recurring?
           quantified_events.where(external_subscription_id: subscription.external_id)
         else
-          quantified_event_ids = Event.where(subscription_id: subscription.id)
+          scope = Event.where(external_subscription_id: subscription.external_id)
             .where('quantified_event_id IS NOT NULL')
-            .pluck('DISTINCT(quantified_event_id)')
+            .where(timestamp: subscription.started_at..)
+
+          scope = scope.where(timestamp: ...subscription.terminated_at) if subscription.terminated?
+
+          quantified_event_ids = scope.pluck('DISTINCT(quantified_event_id)')
 
           quantified_events.where(id: quantified_event_ids)
         end

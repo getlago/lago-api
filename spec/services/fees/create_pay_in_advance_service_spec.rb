@@ -9,7 +9,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:active_subscription, organization:, customer:, plan:) }
+  let(:subscription) { create(:active_subscription, customer:, plan:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:group) { nil }
@@ -20,8 +20,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:event) do
     create(
       :event,
-      subscription_id: subscription.id,
-      customer_id: customer.id,
+      external_subscription_id: subscription.external_id,
+      external_customer_id: customer.external_id,
       organization_id: organization.id,
     )
   end
@@ -153,8 +153,9 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       let(:event) do
         create(
           :event,
-          subscription:,
-          customer:,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
           properties: {
             region: 'europe',
           },
@@ -197,8 +198,9 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         let(:event) do
           create(
             :event,
-            subscription:,
-            customer:,
+            organization:,
+            external_subscription_id: subscription.external_id,
+            external_customer_id: customer.external_id,
             properties: {
               cloud: 'AWS',
               region: 'europe',
@@ -239,8 +241,9 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         let(:event) do
           create(
             :event,
-            subscription:,
-            customer:,
+            organization:,
+            external_subscription_id: subscription.external_id,
+            external_customer_id: customer.external_id,
             properties: {
               region: 'usa',
             },
