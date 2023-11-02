@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Types::Organizations::UpdateOrganizationInput do
   subject { described_class }
 
-  it { is_expected.to accept_argument(:default_currency).of_type('CurrencyEnum!') }
+  it { is_expected.to accept_argument(:default_currency).of_type('CurrencyEnum') }
   it { is_expected.to accept_argument(:email).of_type('String') }
   it { is_expected.to accept_argument(:legal_name).of_type('String') }
   it { is_expected.to accept_argument(:legal_number).of_type('String') }
