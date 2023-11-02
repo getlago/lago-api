@@ -1,24 +1,14 @@
-FROM ruby:3.2.2-alpine
+FROM ruby:3.2.2-slim
 
 WORKDIR /app
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-RUN apk add --no-cache \
-  git \
-  bash \
-  build-base \
-  libxml2-dev \
-  libxslt-dev \
-  nodejs \
-  tzdata \
-  postgresql-dev \
-  openssl \
-  gcompat
+RUN apt update -qq && apt install nodejs build-essential git pkg-config libpq-dev -y
 
-ENV BUNDLER_VERSION='2.3.26'
-RUN gem install bundler --no-document -v '2.3.26'
+ENV BUNDLER_VERSION='2.4.21'
+RUN gem install bundler --no-document -v '2.4.21'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
  bundle install
