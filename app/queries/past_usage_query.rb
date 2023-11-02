@@ -27,10 +27,10 @@ class PastUsageQuery < BaseQuery
 
   def query
     base_query = InvoiceSubscription.joins(subscription: :customer)
-      .where.not(from_datetime: nil)
+      .where.not(charges_from_datetime: nil)
       .where(customers: { external_id: filters.external_customer_id, organization_id: organization.id })
       .where(subscriptions: { external_id: filters.external_subscription_id })
-      .order(from_datetime: :desc)
+      .order(charges_from_datetime: :desc)
       .includes(:invoice)
 
     base_query = paginate(base_query)

@@ -273,8 +273,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
     let(:invoice_subscription) do
       create(
         :invoice_subscription,
-        from_datetime: DateTime.parse('2023-08-17T00:00:00'),
-        to_datetime: DateTime.parse('2023-09-16T23:59:59'),
+        charges_from_datetime: DateTime.parse('2023-08-17T00:00:00'),
+        charges_to_datetime: DateTime.parse('2023-09-16T23:59:59'),
         subscription:,
       )
     end
@@ -312,8 +312,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
         expect(json[:usage_periods].count).to eq(1)
 
         usage = json[:usage_periods].first
-        expect(usage[:from_datetime]).to eq(invoice_subscription.from_datetime.iso8601)
-        expect(usage[:to_datetime]).to eq(invoice_subscription.to_datetime.iso8601)
+        expect(usage[:from_datetime]).to eq(invoice_subscription.charges_from_datetime.iso8601)
+        expect(usage[:to_datetime]).to eq(invoice_subscription.charges_to_datetime.iso8601)
         expect(usage[:issuing_date]).to eq(invoice.issuing_date.iso8601)
         expect(usage[:currency]).to eq(invoice.currency)
         expect(usage[:amount_cents]).to eq(invoice.fees_amount_cents)
