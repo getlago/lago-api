@@ -20,6 +20,7 @@ module Charges
         result.full_units_number = aggregation_result.full_units_number
         result.count = aggregation_result.count
         result.amount = compute_amount
+        result.unit_amount = unit_amount
 
         if aggregation_result.total_aggregated_units
           result.total_aggregated_units = aggregation_result.total_aggregated_units
@@ -36,6 +37,12 @@ module Charges
 
       def compute_amount
         raise NotImplementedError
+      end
+
+      def unit_amount
+        # TODO: Uncomment this.
+        # raise NotImplementedError
+        0
       end
     end
   end

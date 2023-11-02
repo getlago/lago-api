@@ -67,6 +67,7 @@ module Fees
       currency = invoice.total_amount.currency
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
+      unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
 
       units = if is_current_usage && (charge.pay_in_advance? || charge.prorated?)
         amount_result.current_usage_units
@@ -92,6 +93,8 @@ module Fees
         group_id: group&.id,
         payment_status: :pending,
         taxes_amount_cents: 0,
+        unit_amount_cents:,
+        precise_unit_amount: amount_result.unit_amount,
       )
 
       result.fees << new_fee

@@ -53,18 +53,18 @@ RSpec.describe Fees::ChargeService do
       it 'creates a fee' do
         result = charge_subscription_service.create
         expect(result).to be_success
-        created_fee = result.fees.first
-
-        aggregate_failures do
-          expect(created_fee.id).not_to be_nil
-          expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.charge_id).to eq(charge.id)
-          expect(created_fee.amount_cents).to eq(0)
-          expect(created_fee.amount_currency).to eq('EUR')
-          expect(created_fee.units).to eq(0)
-          expect(created_fee.events_count).to eq(0)
-          expect(created_fee.payment_status).to eq('pending')
-        end
+        expect(result.fees.first).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          charge_id: charge.id,
+          amount_cents: 0,
+          amount_currency: 'EUR',
+          units: 0,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0,
+          events_count: 0,
+          payment_status: 'pending',
+        )
       end
 
       context 'with graduated charge model' do
@@ -102,16 +102,17 @@ RSpec.describe Fees::ChargeService do
         it 'creates a fee' do
           result = charge_subscription_service.create
           expect(result).to be_success
-          created_fee = result.fees.first
-
-          aggregate_failures do
-            expect(created_fee.id).not_to be_nil
-            expect(created_fee.invoice_id).to eq(invoice.id)
-            expect(created_fee.charge_id).to eq(charge.id)
-            expect(created_fee.amount_cents).to eq(5)
-            expect(created_fee.amount_currency).to eq('EUR')
-            expect(created_fee.units.to_s).to eq('4.0')
-          end
+          expect(result.fees.first).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 5,
+            amount_currency: 'EUR',
+            units: 4.0,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0.0,
+            events_count: 4,
+          )
         end
       end
 
@@ -160,16 +161,14 @@ RSpec.describe Fees::ChargeService do
         it 'creates a new fee for the complete period' do
           result = charge_subscription_service.create
           expect(result).to be_success
-          created_fee = result.fees.first
-
-          aggregate_failures do
-            expect(created_fee.id).not_to be_nil
-            expect(created_fee.invoice_id).to eq(invoice.id)
-            expect(created_fee.charge_id).to eq(charge.id)
-            expect(created_fee.amount_cents).to eq(2000)
-            expect(created_fee.amount_currency).to eq('EUR')
-            expect(created_fee.units).to eq(1)
-          end
+          expect(result.fees.first).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 2000,
+            amount_currency: 'EUR',
+            units: 1,
+          )
         end
       end
 
@@ -182,16 +181,16 @@ RSpec.describe Fees::ChargeService do
           it 'creates fees' do
             result = charge_subscription_service.create
             expect(result).to be_success
-            created_fee = result.fees.first
-
-            aggregate_failures do
-              expect(created_fee.id).not_to be_nil
-              expect(created_fee.invoice_id).to eq(invoice.id)
-              expect(created_fee.charge_id).to eq(charge.id)
-              expect(created_fee.amount_cents).to eq(0)
-              expect(created_fee.amount_currency).to eq('EUR')
-              expect(created_fee.units).to eq(0)
-            end
+            expect(result.fees.first).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 0,
+              amount_currency: 'EUR',
+              units: 0,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+            )
           end
         end
       end
@@ -230,7 +229,7 @@ RSpec.describe Fees::ChargeService do
           :standard_charge,
           plan: subscription.plan,
           billable_metric:,
-          properties: { amount: '10' },
+          properties: { amount: '10.12345' },
           group_properties: [
             build(
               :group_property,
@@ -312,18 +311,24 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 4000,
             units: 2,
+            unit_amount_cents: 2000,
+            precise_unit_amount: 20,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 5000,
             units: 1,
+            unit_amount_cents: 5000,
+            precise_unit_amount: 50,
           )
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 1000,
+            amount_cents: 1012,
             units: 1,
+            unit_amount_cents: 1012,
+            precise_unit_amount: 10.12345,
           )
         end
       end
@@ -347,18 +352,24 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 30_000,
             units: 15,
+            unit_amount_cents: 2000,
+            precise_unit_amount: 20,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 60_000,
             units: 12,
+            unit_amount_cents: 5000,
+            precise_unit_amount: 50,
           )
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 5000,
+            amount_cents: 5062,
             units: 5,
+            unit_amount_cents: 1012,
+            precise_unit_amount: 10.12345,
           )
         end
       end
@@ -382,18 +393,24 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 20_000,
             units: 10,
+            unit_amount_cents: 2000,
+            precise_unit_amount: 20,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 60_000,
             units: 12,
+            unit_amount_cents: 5000,
+            precise_unit_amount: 50,
           )
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 5000,
+            amount_cents: 5062,
             units: 5,
+            unit_amount_cents: 1012,
+            precise_unit_amount: 10.12345,
           )
         end
       end
@@ -504,8 +521,10 @@ RSpec.describe Fees::ChargeService do
 
             expect(created_fees.third).to have_attributes(
               group: france,
-              amount_cents: 1000,
+              amount_cents: 1012,
               units: 1,
+              unit_amount_cents: 1012,
+              precise_unit_amount: 10.12345,
             )
           end
         end
@@ -593,8 +612,10 @@ RSpec.describe Fees::ChargeService do
 
           expect(created_fees.third).to have_attributes(
             group: france,
-            amount_cents: 1000,
+            amount_cents: 1012,
             units: 1,
+            unit_amount_cents: 1012,
+            precise_unit_amount: 10.12345,
           )
         end
       end
@@ -707,18 +728,24 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             group: europe,
             units: 2,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 5000,
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.third).to have_attributes(
             group: france,
             amount_cents: 0,
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
         end
       end
@@ -820,18 +847,24 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 200 + 2 * 2,
             units: 2,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 1 * 1,
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.third).to have_attributes(
             group: france,
             amount_cents: 100 + 5 * 1,
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
         end
       end
@@ -933,12 +966,16 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 3,
             units: 2,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 4,
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
         end
       end
@@ -1030,12 +1067,16 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 1400,
             units: 2,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 1100,
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
         end
       end
@@ -1137,12 +1178,16 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 5, # 2 × 0.02 + 0.01
             units: 2,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 4, # 1 × 0.03 + 0.01
             units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
           )
         end
       end
