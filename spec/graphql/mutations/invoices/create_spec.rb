@@ -37,7 +37,8 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
           taxesRate,
           invoiceType,
           issuingDate,
-          appliedTaxes { id taxCode taxRate }
+          appliedTaxes { id taxCode taxRate },
+          fees { units preciseUnitAmount },
         }
       }
     GQL
@@ -62,15 +63,21 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
     result_data = result['data']['createInvoice']
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['issuingDate']).to eq(Time.current.to_date.to_s)
-      expect(result_data['invoiceType']).to eq('one_off')
-      expect(result_data['feesAmountCents']).to eq('2800')
-      expect(result_data['taxesAmountCents']).to eq('560')
-      expect(result_data['totalAmountCents']).to eq('3360')
-      expect(result_data['taxesRate']).to eq(20)
-      expect(result_data['currency']).to eq('EUR')
+      expect(result_data).to include(
+        'id' => String,
+        'issuingDate' => Time.current.to_date.to_s,
+        'invoiceType' => 'one_off',
+        'feesAmountCents' => '2800',
+        'taxesAmountCents' => '560',
+        'totalAmountCents' => '3360',
+        'taxesRate' => 20,
+        'currency' => 'EUR',
+      )
       expect(result_data['appliedTaxes'].map { |t| t['taxCode'] }).to contain_exactly(tax.code)
+      expect(result_data['fees']).to contain_exactly(
+        { 'units' => 2.0, 'preciseUnitAmount' => 12.0 },
+        { 'units' => 1.0, 'preciseUnitAmount' => 4.0 },
+      )
     end
   end
 

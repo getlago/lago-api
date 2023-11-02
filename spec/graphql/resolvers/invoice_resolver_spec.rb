@@ -50,6 +50,8 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               taxesAmountCents
               trueUpFee { id }
               trueUpParentFee { id }
+              units
+              preciseUnitAmount
               appliedTaxes {
                 taxCode
                 taxName
