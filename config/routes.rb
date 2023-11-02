@@ -40,6 +40,7 @@ Rails.application.routes.draw do
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
         put :void, on: :member
+        post :estimate, on: :collection
       end
       resources :events, only: %i[create show] do
         post :estimate_fees, on: :collection

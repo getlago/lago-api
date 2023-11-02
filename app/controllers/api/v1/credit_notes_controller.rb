@@ -114,6 +114,24 @@ module Api
         )
       end
 
+      def estimate
+        result = CreditNotes::EstimateService.call(
+          invoice: current_organization.invoices.find_by(id: estimate_params[:invoice_id]),
+          items: estimate_params[:items],
+        )
+
+        if result.success?
+          render(
+            json: ::V1::CreditNotes::EstimateSerializer.new(
+              result.credit_note,
+              root_name: 'estimated_credit_note',
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def input_params
@@ -133,6 +151,17 @@ module Api
 
       def update_params
         params.require(:credit_note).permit(:refund_status)
+      end
+
+      def estimate_params
+        @estimate_params ||= params.require(:credit_note)
+          .permit(
+            :invoice_id,
+            items: [
+              :fee_id,
+              :amount_cents,
+            ],
+          )
       end
     end
   end

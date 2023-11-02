@@ -120,6 +120,26 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_02_085146) do
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
   end
 
+  create_table "cached_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "event_id", null: false
+    t.datetime "timestamp", null: false
+    t.string "external_subscription_id", null: false
+    t.uuid "billable_metric_id", null: false
+    t.uuid "group_id"
+    t.decimal "current_aggregation"
+    t.decimal "max_aggregation"
+    t.decimal "max_aggregation_with_proration"
+    t.datetime "created_at", null: false
+    t.index ["billable_metric_id"], name: "index_cached_aggregations_on_billable_metric_id"
+    t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
+    t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
+    t.index ["group_id"], name: "index_cached_aggregations_on_group_id"
+    t.index ["organization_id", "timestamp", "billable_metric_id", "group_id"], name: "index_timestamp_group_lookup"
+    t.index ["organization_id", "timestamp", "billable_metric_id"], name: "index_timestamp_lookup"
+    t.index ["organization_id"], name: "index_cached_aggregations_on_organization_id"
+  end
+
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "billable_metric_id"
     t.datetime "created_at", null: false
@@ -808,6 +828,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_02_085146) do
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
+  add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"

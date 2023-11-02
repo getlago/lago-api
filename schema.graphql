@@ -1859,12 +1859,32 @@ enum CreditNoteCreditStatusEnum {
   voided
 }
 
+"""
+Estimate amounts for credit note creation
+"""
+type CreditNoteEstimate {
+  appliedTaxes: [CreditNoteAppliedTax!]!
+  couponsAdjustmentAmountCents: BigInt!
+  currency: CurrencyEnum!
+  items: [CreditNoteItemEstimate!]!
+  maxCreditableAmountCents: BigInt!
+  maxRefundableAmountCents: BigInt!
+  subTotalExcludingTaxesAmountCents: BigInt!
+  taxesAmountCents: BigInt!
+  taxesRate: Float!
+}
+
 type CreditNoteItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
   fee: Fee!
   id: ID!
+}
+
+type CreditNoteItemEstimate {
+  amountCents: BigInt!
+  fee: Fee!
 }
 
 input CreditNoteItemInput {
@@ -4195,6 +4215,11 @@ type Query {
     """
     id: ID!
   ): CreditNote
+
+  """
+  Fetch amounts for credit note creation
+  """
+  creditNoteEstimate(invoiceId: ID!, items: [CreditNoteItemInput!]!): CreditNoteEstimate!
 
   """
   Retrieves currently connected user
