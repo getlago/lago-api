@@ -11,10 +11,10 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   before { tax }
 
   describe 'POST /invoices' do
-    let(:add_on_first) { create(:add_on, organization:) }
-    let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
+    let(:add_on_first) { create(:add_on, code: 'first', organization:) }
+    let(:add_on_second) { create(:add_on, code: 'second', amount_cents: 400, organization:) }
     let(:customer_external_id) { customer.external_id }
-    let!(:invoice_display_name) { Faker::TvShows::BreakingBad.episode }
+    let(:invoice_display_name) { 'Invoice item #1' }
     let(:create_params) do
       {
         external_customer_id: customer_external_id,
@@ -48,8 +48,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         total_amount_cents: 3360,
         currency: 'EUR',
       )
+
+      fee = json[:invoice][:fees].find { |f| f[:item][:code] == 'first' }
+
+      expect(fee[:item][:invoice_display_name]).to eq(invoice_display_name)
       expect(json[:invoice][:applied_taxes][0][:tax_code]).to eq(tax.code)
-      expect(json[:invoice][:fees][0][:item][:invoice_display_name]).to eq(invoice_display_name)
     end
 
     context 'when customer does not exist' do
