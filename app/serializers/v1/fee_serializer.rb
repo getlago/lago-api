@@ -28,7 +28,7 @@ module V1
         total_amount_currency: model.amount_currency,
         units: model.units,
         description: model.description,
-        unit_amount_cents: model.unit_amount_cents,
+        precise_unit_amount: model.precise_unit_amount,
         events_count: model.events_count,
         payment_status: model.payment_status,
         created_at: model.created_at&.iso8601,
