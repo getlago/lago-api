@@ -39,7 +39,11 @@ module Fees
       # NOTE: number of days between beginning of the period and the termination date
       from_datetime = boundaries.charges_from_datetime.to_time
       to_datetime = boundaries.charges_to_datetime.to_time
-      number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
+      number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+        from_datetime,
+        to_datetime,
+        subscription.customer.applicable_timezone,
+      )
 
       date_service.charge_single_day_price(charge:) * number_of_day_to_bill
     end

@@ -111,8 +111,11 @@ module Fees
       end
 
       # NOTE: Number of days of the first period since subscription creation
-      days_to_bill = (to_datetime + 1.day - from_datetime).to_i / 1.day.seconds
-
+      days_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+        from_datetime,
+        to_datetime,
+        customer.applicable_timezone,
+      )
       days_to_bill * single_day_price(subscription)
     end
 
@@ -138,7 +141,11 @@ module Fees
       end
 
       # NOTE: number of days between beginning of the period and the termination date
-      number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
+      number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+        from_datetime,
+        to_datetime,
+        customer.applicable_timezone,
+      )
 
       # Remove later customer timezone fix while passing optional_from_date
       # single_day_price method should return correct amount even without the timezone fix since
@@ -165,7 +172,12 @@ module Fees
       end
 
       # NOTE: number of days between the upgrade and the end of the period
-      number_of_day_to_bill = (to_datetime - from_datetime).fdiv(1.day).ceil
+      number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+        from_datetime,
+        to_datetime,
+        customer.applicable_timezone,
+      )
+
       # NOTE: Subscription is upgraded from another plan
       #       We only bill the days between the upgrade date and the end of the period
       #       A credit note will apply automatically the amount of days from previous plan that were not consumed

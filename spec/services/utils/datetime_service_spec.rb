@@ -22,4 +22,42 @@ RSpec.describe Utils::DatetimeService, type: :service do
       end
     end
   end
+
+  describe '.date_diff_with_timezone' do
+    let(:from_datetime) { Time.zone.parse('2023-08-31T23:10:00') }
+    let(:to_datetime) { Time.zone.parse('2023-09-30T22:59:59') }
+    let(:timezone) { 'Europe/Paris' }
+
+    let(:result) do
+      datetime_service.date_diff_with_timezone(
+        from_datetime,
+        to_datetime,
+        timezone,
+      )
+    end
+
+    it 'returns the number of days between the two datetime' do
+      expect(result).to eq(30)
+    end
+
+    context 'with positive daylight saving time' do
+      let(:from_datetime) { Time.zone.parse('2023-09-30T23:10:00') }
+      let(:to_datetime) { Time.zone.parse('2023-10-31T22:59:59') }
+      let(:timezone) { 'Europe/Paris' }
+
+      it 'takes the daylight saving time into account' do
+        expect(result).to eq(31)
+      end
+    end
+
+    context 'with negative daylight saving time' do
+      let(:from_datetime) { Time.zone.parse('2023-02-28T23:10:00') }
+      let(:to_datetime) { Time.zone.parse('2023-03-31T21:59:59') }
+      let(:timezone) { 'Europe/Paris' }
+
+      it 'takes the daylight saving time into account' do
+        expect(result).to eq(31)
+      end
+    end
+  end
 end
