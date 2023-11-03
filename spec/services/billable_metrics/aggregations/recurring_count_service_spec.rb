@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :service do
   subject(:recurring_service) do
     described_class.new(
+      event_store_class:,
       billable_metric:,
       subscription:,
       group:,
@@ -14,6 +15,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       },
     )
   end
+
+  let(:event_store_class) { Events::Stores::PostgresStore }
 
   let(:subscription) do
     create(

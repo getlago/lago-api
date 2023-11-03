@@ -38,6 +38,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
 
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
           .with(
+            event_store_class: Events::Stores::PostgresStore,
             billable_metric:,
             subscription:,
             group:,
@@ -68,6 +69,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
 
         expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
           .with(
+            event_store_class: Events::Stores::PostgresStore,
             billable_metric:,
             subscription:,
             group:,
@@ -97,6 +99,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
 
         expect(BillableMetrics::Aggregations::UniqueCountService).to have_received(:new)
           .with(
+            event_store_class: Events::Stores::PostgresStore,
             billable_metric:,
             subscription:,
             group:,

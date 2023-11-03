@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transaction: false do
   subject(:sum_service) do
     described_class.new(
+      event_store_class:,
       billable_metric:,
       subscription:,
       group:,
@@ -15,6 +16,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       },
     )
   end
+
+  let(:event_store_class) { Events::Stores::PostgresStore }
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
   let(:organization) { subscription.organization }

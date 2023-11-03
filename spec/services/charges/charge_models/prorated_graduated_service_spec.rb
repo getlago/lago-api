@@ -15,8 +15,14 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
   let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
   let(:aggregation) { 5.96667 }
   let(:aggregator) do
-    BillableMetrics::ProratedAggregations::SumService.new(billable_metric:, subscription: nil, boundaries: nil)
+    BillableMetrics::ProratedAggregations::SumService.new(
+      event_store_class:,
+      billable_metric:,
+      subscription: nil,
+      boundaries: nil,
+    )
   end
+  let(:event_store_class) { Events::Stores::PostgresStore }
   let(:per_event_aggregation) do
     BaseService::Result.new.tap do |r|
       r.event_aggregation = [5, 5, 10, -6]

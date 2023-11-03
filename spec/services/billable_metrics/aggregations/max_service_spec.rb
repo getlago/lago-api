@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   subject(:max_service) do
     described_class.new(
+      event_store_class:,
       billable_metric:,
       subscription:,
       group:,
@@ -14,6 +15,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       },
     )
   end
+
+  let(:event_store_class) { Events::Stores::PostgresStore }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }

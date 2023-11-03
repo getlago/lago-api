@@ -2,8 +2,25 @@
 
 module BillableMetrics
   class AggregationFactory
+    class << self
+      def supports_clickhouse?
+        false # TODO: ENV['LAGO_CLICKHOUSE_ENABLED'].present?
+      end
+
+      def clickhouse_ready?(aggregation_type)
+        aggregation_type.to_sym == :count_agg
+      end
+    end
+
     def self.new_instance(charge:, current_usage: false, **attributes)
+      event_store = Events::Stores::PostgresStore
+
+      if supports_clickhouse? && clickhouse_ready?(charge.billable_metric.aggregation_type)
+        event_store = Events::Stores::ClickhouseStore
+      end
+
       aggregator_class(charge, current_usage).new(
+        event_store_class: event_store,
         billable_metric: charge.billable_metric,
         **attributes,
       )
