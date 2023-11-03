@@ -398,9 +398,6 @@ GEM
       connection_pool
     redlock (1.3.2)
       redis (>= 3.0.0, < 6.0)
-    relation_to_struct (1.9.0)
-      activerecord (>= 6.1, < 7.2)
-      activesupport (>= 6.1, < 7.2)
     reline (0.3.1)
       io-console (~> 0.5)
     representable (3.2.0)
@@ -576,7 +573,6 @@ DEPENDENCIES
   rack-cors
   rails (~> 7.0.7)
   ransack (~> 4.0.0)
-  relation_to_struct
   rspec-graphql_matchers
   rspec-rails
   sass-rails

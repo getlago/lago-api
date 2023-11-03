@@ -845,7 +845,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
-  add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"
