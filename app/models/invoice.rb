@@ -174,10 +174,11 @@ class Invoice < ApplicationRecord
 
     return {} unless event
 
-    number_of_seconds = date_service.charges_to_datetime.in_time_zone(customer.applicable_timezone) -
-                        event.timestamp.in_time_zone(customer.applicable_timezone)
-
-    number_of_days = number_of_seconds.fdiv(1.day).ceil
+    number_of_days = Utils::DatetimeService.date_diff_with_timezone(
+      event.timestamp,
+      date_service.charges_to_datetime,
+      customer.applicable_timezone,
+    )
 
     {
       number_of_days:,

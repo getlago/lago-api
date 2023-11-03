@@ -19,11 +19,13 @@ module BillableMetrics
         result.full_units_number = result_without_proration
         result.units_applied = aggregation_without_proration.units_applied
 
-        number_of_seconds = to_datetime.in_time_zone(customer.applicable_timezone) -
-                            event.timestamp.in_time_zone(customer.applicable_timezone)
         # In order to get proration coefficient we have to divide number of seconds with number
         # of seconds in one day (86400). That way we will get number of days when the service was used.
-        proration_coefficient = number_of_seconds.fdiv(1.day).ceil.fdiv(period_duration)
+        proration_coefficient = Utils::DatetimeService.date_diff_with_timezone(
+          event.timestamp,
+          to_datetime,
+          customer.applicable_timezone,
+        ).fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 

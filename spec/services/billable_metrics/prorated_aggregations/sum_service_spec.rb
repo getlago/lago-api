@@ -19,7 +19,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
   let(:event_store_class) { Events::Stores::PostgresStore }
 
-  let(:subscription) { create(:subscription, started_at: DateTime.parse('2022-12-01 00:00:00')) }
+  let(:subscription) { create(:subscription, started_at: Time.zone.parse('2022-12-01 00:00:00')) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
@@ -34,8 +34,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     )
   end
 
-  let(:from_datetime) { DateTime.parse('2023-05-01 00:00:00') }
-  let(:to_datetime) { DateTime.parse('2023-05-31 23:59:59') }
+  let(:from_datetime) { Time.zone.parse('2023-05-01 00:00:00') }
+  let(:to_datetime) { Time.zone.parse('2023-05-31 23:59:59') }
   let(:pay_in_advance_event) { nil }
   let(:options) { {} }
 
@@ -230,7 +230,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   end
 
   context 'when current usage context and charge is pay in advance and just upgraded' do
-    let(:from_datetime) { DateTime.parse('2023-05-15 00:00:00') }
+    let(:from_datetime) { Time.zone.parse('2023-05-15 00:00:00') }
     let(:options) do
       { is_pay_in_advance: true, is_current_usage: true }
     end
@@ -245,7 +245,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   end
 
   context 'when current usage context and charge is pay in advance and just upgraded and new event in period' do
-    let(:from_datetime) { DateTime.parse('2023-05-15 00:00:00') }
+    let(:from_datetime) { Time.zone.parse('2023-05-15 00:00:00') }
     let(:options) do
       { is_pay_in_advance: true, is_current_usage: true }
     end
