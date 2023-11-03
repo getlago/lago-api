@@ -690,6 +690,18 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_06_145424) do
     t.index ["group_id"], name: "index_quantified_events_on_group_id"
   end
 
+  create_table "recurring_transaction_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "wallet_id", null: false
+    t.integer "rule_type", default: 0, null: false
+    t.decimal "paid_credits", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "granted_credits", precision: 30, scale: 5, default: "0.0", null: false
+    t.decimal "threshold_credits", precision: 30, scale: 5, default: "0.0"
+    t.integer "interval", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
+  end
+
   create_table "refunds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "payment_id", null: false
     t.uuid "credit_note_id", null: false
@@ -770,6 +782,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_06_145424) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "invoice_id"
+    t.integer "source", default: 0, null: false
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end
@@ -886,6 +899,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_06_145424) do
   add_foreign_key "plans_taxes", "taxes"
   add_foreign_key "quantified_events", "customers"
   add_foreign_key "quantified_events", "groups"
+  add_foreign_key "recurring_transaction_rules", "wallets"
   add_foreign_key "refunds", "credit_notes"
   add_foreign_key "refunds", "payment_provider_customers"
   add_foreign_key "refunds", "payment_providers"
