@@ -27,6 +27,7 @@ module Types
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :customers, resolver: Resolvers::CustomersResolver
     field :events, resolver: Resolvers::EventsResolver
+    field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
     field :invoice, resolver: Resolvers::InvoiceResolver

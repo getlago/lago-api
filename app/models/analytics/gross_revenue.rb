@@ -1,14 +1,10 @@
 # frozen_string_literal: true
 
-module Metrics
+module Analytics
   class GrossRevenue < Base
     self.abstract_class = true
 
     class << self
-      def columns
-        Struct.new(:month, :amount_cents, :currency)
-      end
-
       def query(organization_id, **args)
         if args[:customer_external_id].present?
           and_customer_external_id_sql = sanitize_sql(

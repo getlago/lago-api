@@ -3098,6 +3098,17 @@ input GraduatedRangeInput {
   toValue: BigInt
 }
 
+type GrossRevenue {
+  amountCents: BigInt
+  currency: CurrencyEnum
+  month: ISO8601DateTime!
+}
+
+type GrossRevenueCollection {
+  collection: [GrossRevenue!]!
+  metadata: CollectionMetadata!
+}
+
 type Group {
   deletedAt: ISO8601DateTime
   id: ID!
@@ -4305,6 +4316,19 @@ type Query {
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
+
+  """
+  Query add-ons of an organization
+  """
+  grossRevenues(
+    """
+    List of add-ons IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    searchTerm: String
+  ): GrossRevenueCollection!
 
   """
   Query a single Invite
