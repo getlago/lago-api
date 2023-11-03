@@ -364,7 +364,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           expect(cached_aggregation.organization_id).to eq(organization.id)
           expect(cached_aggregation.event_id).to eq(event.id)
           expect(cached_aggregation.timestamp.iso8601(3)).to eq(event.timestamp.iso8601(3))
-          expect(cached_aggregation.billable_metric_id).to eq(billable_metric.id)
+          expect(cached_aggregation.charge_id).to eq(charge.id)
           expect(cached_aggregation.external_subscription_id).to eq(event.external_subscription_id)
           expect(cached_aggregation.group_id).to be_nil
           expect(cached_aggregation.current_aggregation).to eq(9)

@@ -289,7 +289,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         create(
           :cached_aggregation,
           organization:,
-          billable_metric:,
+          charge:,
           event_id: previous_event.id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
@@ -421,7 +421,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           create(
             :cached_aggregation,
             organization:,
-            billable_metric:,
+            charge:,
             event_id: previous_event.id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_event.timestamp,

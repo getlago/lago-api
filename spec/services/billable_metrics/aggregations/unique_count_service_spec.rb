@@ -301,7 +301,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         create(
           :cached_aggregation,
           organization:,
-          billable_metric:,
+          charge:,
           event_id: previous_event.id,
           external_subscription_id: subscription.external_id,
           timestamp: previous_event.timestamp,
@@ -417,7 +417,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           create(
             :cached_aggregation,
             organization:,
-            billable_metric:,
+            charge:,
             event_id: previous_event.id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_event.timestamp,
@@ -465,7 +465,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           create(
             :cached_aggregation,
             organization:,
-            billable_metric:,
+            charge:,
             event_id: previous_event.id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_event.timestamp,

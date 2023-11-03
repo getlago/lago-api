@@ -249,7 +249,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       create(
         :cached_aggregation,
         organization:,
-        billable_metric:,
+        charge:,
         event_id: latest_events.id,
         external_subscription_id: subscription.external_id,
         timestamp: to_datetime - 3.days,
@@ -411,7 +411,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         create(
           :cached_aggregation,
           organization:,
-          billable_metric:,
+          charge:,
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
           current_aggregation: '4',
@@ -447,7 +447,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         create(
           :cached_aggregation,
           organization:,
-          billable_metric:,
+          charge:,
           event_id: latest_events.id,
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,

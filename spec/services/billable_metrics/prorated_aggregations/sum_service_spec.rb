@@ -217,7 +217,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       create(
         :cached_aggregation,
         organization: billable_metric.organization,
-        billable_metric:,
+        charge:,
         external_subscription_id: subscription.external_id,
         event_id: latest_events.id,
         timestamp: latest_events.timestamp,
@@ -287,7 +287,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       create(
         :cached_aggregation,
         organization: billable_metric.organization,
-        billable_metric:,
+        charge:,
         external_subscription_id: subscription.external_id,
         event_id: latest_events.id,
         timestamp: latest_events.timestamp,
@@ -433,7 +433,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         create(
           :cached_aggregation,
           organization: billable_metric.organization,
-          billable_metric:,
+          charge:,
           external_subscription_id: subscription.external_id,
           event_id: latest_events.id,
           timestamp: latest_events.timestamp,
@@ -471,7 +471,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         create(
           :cached_aggregation,
           organization: billable_metric.organization,
-          billable_metric:,
+          charge:,
           external_subscription_id: subscription.external_id,
           event_id: latest_events.id,
           timestamp: latest_events.timestamp,
