@@ -125,6 +125,30 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
+    context 'when License is free and plan_overrides is passed' do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          plan_overrides: {
+            amount_cents: 0,
+          },
+        }
+      end
+
+      it 'returns an error' do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq('feature_unavailable')
+      end
+    end
+
     context 'when customer does not exists in API context' do
       let(:customer) { Customer.new(organization:, external_id: SecureRandom.uuid) }
 
