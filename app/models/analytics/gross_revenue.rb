@@ -12,8 +12,22 @@ module Analytics
           )
         end
 
+        if args[:months].present?
+          months_interval = (args[:months].to_i <= 1) ? 0 : args[:months].to_i - 1
+
+          and_months_sql = sanitize_sql(
+            [
+              "AND am.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL ':months months')",
+              { months: months_interval },
+            ],
+          )
+        end
+
         if args[:currency].present?
           and_currency_sql = sanitize_sql(['AND cd.currency = :currency', args[:currency].upcase])
+          select_currency_sql = sanitize_sql(['COALESCE(cd.currency, :currency) as currency', args[:currency].upcase])
+        else
+          select_currency_sql = 'cd.currency'
         end
 
         sql = <<~SQL.squish
@@ -70,15 +84,27 @@ module Analytics
           SELECT
             am.month,
             cd.amount_cents,
-            cd.currency
+            #{select_currency_sql}
           FROM all_months am
           LEFT JOIN combined_data cd ON am.month = cd.month
           WHERE am.month <= DATE_TRUNC('month', CURRENT_DATE)
+          #{and_months_sql}
           #{and_currency_sql}
           ORDER BY am.month;
         SQL
 
         sanitize_sql([sql, { organization_id: }.merge(args)])
+      end
+
+      def cache_key(organization_id, **args)
+        [
+          'gross-revenue',
+          Date.current.strftime('%Y-%m-%d'),
+          organization_id,
+          args[:customer_external_id],
+          args[:currency],
+          args[:months],
+        ].join('/')
       end
     end
   end
