@@ -10,7 +10,7 @@ module Plans
     end
 
     def call
-      return result unless License.premium?
+      return result.forbidden_failure! unless License.premium?
 
       ActiveRecord::Base.transaction do
         new_plan = plan.dup.tap do |p|

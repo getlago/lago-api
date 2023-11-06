@@ -107,5 +107,23 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         expect(result.error.error_code).to eq('subscription_not_found')
       end
     end
+
+    context 'when License is free and plan_overrides is passed' do
+      let(:params) do
+        {
+          name: 'new name',
+          plan_overrides: {
+            amount_cents: 0,
+          },
+        }
+      end
+
+      it 'returns an error' do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq('feature_unavailable')
+      end
+    end
   end
 end

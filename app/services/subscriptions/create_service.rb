@@ -26,6 +26,7 @@ module Subscriptions
 
     def call
       return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
+      return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
       plan.amount_currency = plan_overrides[:amount_currency] if plan_overrides[:amount_currency]
       plan.amount_cents = plan_overrides[:amount_cents] if plan_overrides[:amount_cents]
