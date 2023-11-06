@@ -27,7 +27,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
     )
   end
 
-  let(:subscription_at) { DateTime.parse('2022-06-09') }
+  let(:subscription_at) { Time.zone.parse('2022-06-09') }
   let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
@@ -42,8 +42,8 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
     )
   end
 
-  let(:from_datetime) { DateTime.parse('2022-07-09 00:00:00 UTC') }
-  let(:to_datetime) { DateTime.parse('2022-08-08 23:59:59 UTC') }
+  let(:from_datetime) { Time.zone.parse('2022-07-09 00:00:00 UTC') }
+  let(:to_datetime) { Time.zone.parse('2022-08-08 23:59:59 UTC') }
 
   let(:added_at) { from_datetime - 1.month }
   let(:removed_at) { nil }
@@ -79,7 +79,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             status: :terminated,
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
 
         it 'returns the prorata of the full duration' do
           expect(result.aggregation).to eq(16.fdiv(31).ceil(5))
@@ -97,7 +97,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             status: :terminated,
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
 
         before do
           create(
@@ -115,7 +115,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       end
 
       context 'when subscription was started in the period' do
-        let(:started_at) { DateTime.parse('2022-08-01') }
+        let(:started_at) { Time.zone.parse('2022-08-01') }
         let(:from_datetime) { started_at }
 
         it 'returns the prorata of the full duration' do
@@ -213,7 +213,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             status: :terminated,
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
 
         it 'returns the detail the persisted metrics' do
           aggregate_failures do
@@ -240,7 +240,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
             status: :terminated,
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
 
         before do
           create(
@@ -295,7 +295,7 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       end
 
       context 'when subscription was started in the period' do
-        let(:started_at) { DateTime.parse('2022-08-01') }
+        let(:started_at) { Time.zone.parse('2022-08-01') }
         let(:from_datetime) { started_at }
 
         it 'returns the detail the persisted metrics' do
