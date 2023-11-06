@@ -3,6 +3,7 @@
 class Organization < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
+  include Currencies
 
   EMAIL_SETTINGS = [
     'invoice.finalized',
@@ -39,6 +40,7 @@ class Organization < ApplicationRecord
   before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
+  validates :default_currency, inclusion: { in: currency_list }
   validates :document_locale, language_code: true
   validates :email, email: true, if: :email?
   validates :invoice_footer, length: { maximum: 600 }

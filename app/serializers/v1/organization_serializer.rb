@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         name: model.name,
+        default_currency: model.default_currency,
         created_at: model.created_at.iso8601,
         webhook_url: webhook_urls.first.to_s,
         webhook_urls:,
@@ -51,8 +52,6 @@ module V1
         collection_name: 'taxes',
       ).serialize
     end
-
-    private
 
     def webhook_urls
       model.webhook_endpoints.map(&:webhook_url)

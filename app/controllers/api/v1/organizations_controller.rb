@@ -40,6 +40,7 @@ module Api
       def input_params
         params.require(:organization).permit(
           :country,
+          :default_currency,
           :address_line1,
           :address_line2,
           :state,

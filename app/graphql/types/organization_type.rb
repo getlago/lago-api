@@ -6,6 +6,7 @@ module Types
 
     field :id, ID, null: false
 
+    field :default_currency, Types::CurrencyEnum, null: false
     field :email, String
     field :legal_name, String
     field :legal_number, String

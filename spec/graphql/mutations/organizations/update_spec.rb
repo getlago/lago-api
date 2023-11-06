@@ -18,6 +18,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode
           city
           country
+          defaultCurrency
           netPaymentTerm
           timezone
           emailSettings
@@ -46,6 +47,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           zipcode: 'FOO1234',
           city: 'Foobar',
           country: 'FR',
+          defaultCurrency: 'EUR',
           webhookUrl: 'https://app.test.dev',
           billingConfiguration: {
             invoiceFooter: 'invoice footer',
@@ -68,6 +70,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['zipcode']).to eq('FOO1234')
       expect(result_data['city']).to eq('Foobar')
       expect(result_data['country']).to eq('FR')
+      expect(result_data['defaultCurrency']).to eq('EUR')
       expect(result_data['netPaymentTerm']).to eq(10)
       expect(result_data['webhookUrl']).to eq('https://app.test.dev')
       expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')

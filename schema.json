@@ -16571,6 +16571,24 @@
               ]
             },
             {
+              "name": "defaultCurrency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "email",
               "description": null,
               "type": {
@@ -23880,6 +23898,18 @@
           "possibleTypes": null,
           "fields": null,
           "inputFields": [
+            {
+              "name": "defaultCurrency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "email",
               "description": null,

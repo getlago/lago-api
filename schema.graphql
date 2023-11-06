@@ -3975,6 +3975,7 @@ type Organization {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  defaultCurrency: CurrencyEnum!
   email: String
   emailSettings: [EmailSettingsEnum!]
   gocardlessPaymentProvider: GocardlessProvider
@@ -5627,6 +5628,7 @@ input UpdateOrganizationInput {
   """
   clientMutationId: String
   country: CountryCode
+  defaultCurrency: CurrencyEnum
   email: String
   emailSettings: [EmailSettingsEnum!]
   legalName: String

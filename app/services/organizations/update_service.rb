@@ -22,6 +22,7 @@ module Organizations
       organization.city = params[:city] if params.key?(:city)
       organization.state = params[:state] if params.key?(:state)
       organization.country = params[:country]&.upcase if params.key?(:country)
+      organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
 
       billing = params[:billing_configuration]&.to_h || {}
@@ -33,7 +34,7 @@ module Organizations
 
       if params.key?(:webhook_url)
         webhook_endpoint = organization.webhook_endpoints.first_or_initialize
-        webhook_endpoint.update! webhook_url: params[:webhook_url]
+        webhook_endpoint.update!(webhook_url: params[:webhook_url])
       end
 
       if License.premium? && billing.key?(:invoice_grace_period)

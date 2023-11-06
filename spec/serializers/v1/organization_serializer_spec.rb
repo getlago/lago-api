@@ -18,6 +18,7 @@ RSpec.describe ::V1::OrganizationSerializer do
 
     aggregate_failures do
       expect(result['organization']['name']).to eq(org.name)
+      expect(result['organization']['default_currency']).to eq(org.default_currency)
       expect(result['organization']['created_at']).to eq(org.created_at.iso8601)
       expect(result['organization']['webhook_url']).to eq(webhook_urls.first)
       expect(result['organization']['webhook_urls']).to eq(webhook_urls)
