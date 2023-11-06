@@ -3,7 +3,7 @@
 module Api
   module V1
     module Analytics
-      class GrossRevenueController < Api::BaseController
+      class GrossRevenuesController < Api::BaseController
         def index
           result = ::Analytics::GrossRevenue.find_all_by(current_organization.id, **filters)
 
@@ -11,7 +11,7 @@ module Api
             json: ::CollectionSerializer.new(
               result,
               ::V1::Analytics::GrossRevenueSerializer,
-              collection_name: 'gross_revenue',
+              collection_name: 'gross_revenues',
             ),
           )
         end
