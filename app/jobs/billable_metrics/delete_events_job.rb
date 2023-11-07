@@ -10,6 +10,7 @@ module BillableMetrics
       deleted_at = Time.current
 
       Event.where(
+        code: metric.code,
         subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
           .joins(plan: :subscriptions).pluck('subscriptions.id'),
