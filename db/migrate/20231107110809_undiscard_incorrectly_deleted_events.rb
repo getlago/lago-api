@@ -9,14 +9,12 @@ class UndiscardIncorrectlyDeletedEvents < ActiveRecord::Migration[7.0]
             SELECT events.id AS event_id
             FROM events
             INNER JOIN subscriptions ON subscriptions.id = events.subscription_id
-            INNER JOIN plans ON plans.id = subscriptions.plan_id
             INNER JOIN billable_metrics ON billable_metrics.code = events.code
-            WHERE (events.timestamp::timestamp(0) >= '2023-10-06')
+            WHERE (events.timestamp::timestamp(0) >= '2022-11-06')
               AND events.deleted_at IS NOT NULL
               AND events.deleted_at > billable_metrics.created_at
               AND billable_metrics.deleted_at IS NULL
               AND subscriptions.status IN (0, 1) -- pending and active subscriptions
-              AND plans.interval IN (0, 1) -- weekly and monthly intervals (there is no quarterly and yearly subs)
           )
 
           UPDATE events
