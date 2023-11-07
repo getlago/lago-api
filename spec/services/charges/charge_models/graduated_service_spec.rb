@@ -48,48 +48,176 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
   context 'when aggregation is 0' do
     let(:aggregation) { 0 }
 
-    it 'does not apply the flat amount' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_graduated_service.amount).to eq(0)
+      expect(apply_graduated_service.unit_amount).to eq(0)
+      expect(apply_graduated_service.amount_details).to eq(
+        {
+          graduated_ranges: [
+            {
+              flat_amount: 2,
+              from_value: 0,
+              to_value: 10,
+              total_amount: 0,
+              total_with_flat_amount: 0,
+              unit_amount: 10,
+              units: 0,
+            },
+          ],
+        },
+      )
     end
   end
 
   context 'when aggregation is 1' do
     let(:aggregation) { 1 }
 
-    it 'applies a unit amount for 1 and the flat rate for 1' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_graduated_service.amount).to eq(12)
+      expect(apply_graduated_service.unit_amount).to eq(12)
+      expect(apply_graduated_service.amount_details).to eq(
+        {
+          graduated_ranges: [
+            {
+              flat_amount: 2,
+              from_value: 0,
+              to_value: 10,
+              total_amount: 10,
+              total_with_flat_amount: 12,
+              unit_amount: 10,
+              units: 1,
+            },
+          ],
+        },
+      )
     end
   end
 
   context 'when aggregation is 10' do
     let(:aggregation) { 10 }
 
-    it 'applies all unit amount for top bound' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_graduated_service.amount).to eq(102)
+      expect(apply_graduated_service.unit_amount).to eq(10.2)
+      expect(apply_graduated_service.amount_details).to eq(
+        {
+          graduated_ranges: [
+            {
+              flat_amount: 2,
+              from_value: 0,
+              to_value: 10,
+              total_amount: 100,
+              total_with_flat_amount: 102,
+              unit_amount: 10,
+              units: 10,
+            },
+          ],
+        },
+      )
     end
   end
 
   context 'when aggregation is 11' do
     let(:aggregation) { 11 }
 
-    it 'applies next range flat amount for the next step' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_graduated_service.amount).to eq(110)
+      expect(apply_graduated_service.unit_amount).to eq(10)
+      expect(apply_graduated_service.amount_details).to eq(
+        {
+          graduated_ranges: [
+            {
+              flat_amount: 2,
+              from_value: 0,
+              to_value: 10,
+              total_amount: 100,
+              total_with_flat_amount: 102,
+              unit_amount: 10,
+              units: 10,
+            }, {
+              flat_amount: 3,
+              from_value: 11,
+              to_value: 20,
+              total_amount: 5,
+              total_with_flat_amount: 8,
+              unit_amount: 5,
+              units: 1,
+            },
+          ],
+        },
+      )
     end
   end
 
   context 'when aggregation is 12' do
     let(:aggregation) { 12 }
 
-    it 'applies next unit amount for more unit in next step' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_graduated_service.amount).to eq(115)
+      expect(apply_graduated_service.unit_amount.round(5)).to eq(9.58333)
+      expect(apply_graduated_service.amount_details).to eq(
+        {
+          graduated_ranges: [
+            {
+              flat_amount: 2,
+              from_value: 0,
+              to_value: 10,
+              total_amount: 100,
+              total_with_flat_amount: 102,
+              unit_amount: 10,
+              units: 10,
+            }, {
+              flat_amount: 3,
+              from_value: 11,
+              to_value: 20,
+              total_amount: 10,
+              total_with_flat_amount: 13,
+              unit_amount: 5,
+              units: 2,
+            },
+          ],
+        },
+      )
     end
   end
 
   context 'when aggregation is 21' do
     let(:aggregation) { 21 }
 
-    it 'applies last unit amount for more unit in last step' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_graduated_service.amount).to eq(163)
+      expect(apply_graduated_service.unit_amount.round(2)).to eq(7.76)
+      expect(apply_graduated_service.amount_details).to eq(
+        {
+          graduated_ranges: [
+            {
+              flat_amount: 2,
+              from_value: 0,
+              to_value: 10,
+              total_amount: 100,
+              total_with_flat_amount: 102,
+              unit_amount: 10,
+              units: 10,
+            }, {
+              flat_amount: 3,
+              from_value: 11,
+              to_value: 20,
+              total_amount: 50,
+              total_with_flat_amount: 53,
+              unit_amount: 5,
+              units: 10,
+            }, {
+              flat_amount: 3,
+              from_value: 21,
+              to_value: nil,
+              total_amount: 5,
+              total_with_flat_amount: 8,
+              unit_amount: 5,
+              units: 1,
+            },
+          ],
+        },
+      )
     end
   end
 end
