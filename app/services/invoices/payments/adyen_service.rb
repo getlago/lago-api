@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class AdyenService < BaseService
+      include Lago::Adyen::ErrorHandlable
+
       PENDING_STATUSES = %w[AuthorisedPending Received].freeze
       SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
       FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
@@ -24,7 +26,9 @@ module Invoices
 
         increment_payment_attempts
 
-        adyen_result = create_adyen_payment
+        res = create_adyen_payment
+        handle_adyen_response(res)
+        return result unless result.success?
 
         payment = Payment.new(
           invoice:,
@@ -32,8 +36,8 @@ module Invoices
           payment_provider_customer_id: customer.adyen_customer.id,
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency.upcase,
-          provider_payment_id: adyen_result['pspReference'],
-          status: adyen_result['resultCode'],
+          provider_payment_id: res.response['pspReference'],
+          status: res.response['resultCode'],
         )
         payment.save!
 
@@ -103,7 +107,7 @@ module Invoices
       def create_adyen_payment
         update_payment_method_id
 
-        client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h).response
+        client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h)
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
