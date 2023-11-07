@@ -29,7 +29,7 @@ module Plans
           return taxes_result unless taxes_result.success?
         end
 
-        plan.charges.each do |charge|
+        plan.charges.includes(:group_properties).find_each do |charge|
           charge_params = (
             params[:charges]&.find { |p| p[:id] == charge.id } || {}
           ).merge(plan_id: new_plan.id)
