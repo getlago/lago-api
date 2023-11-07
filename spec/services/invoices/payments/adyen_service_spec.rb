@@ -130,6 +130,27 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
     end
 
+    context 'with error response from adyen' do
+      let(:payments_error_response) { generate(:adyen_payments_error_response) }
+
+      before do
+        allow(payments_api).to receive(:payments).and_return(payments_error_response)
+      end
+
+      it 'delivers an error webhook' do
+        expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+          .with(
+            'invoice.payment_failure',
+            invoice,
+            provider_customer_id: adyen_customer.provider_customer_id,
+            provider_error: {
+              message: 'There are no payment methods available for the given parameters.',
+              error_code: 'validation',
+            },
+          ).on_queue(:webhook)
+      end
+    end
+
     context 'with error on adyen' do
       let(:customer) { create(:customer, organization:) }
 

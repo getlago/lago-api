@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class AdyenService < BaseService
+    include Lago::Adyen::ErrorHandlable
+
     def initialize(adyen_customer = nil)
       @adyen_customer = adyen_customer
 
@@ -127,16 +129,6 @@ module PaymentProviderCustomers
           error_code: adyen_error.request&.dig('code') || adyen_error.code,
         },
       )
-    end
-
-    def handle_adyen_response(res)
-      return if res.status < 400
-
-      code = res.response['errorType']
-      message = res.response['message']
-
-      deliver_error_webhook(Adyen::AdyenError.new(nil, nil, message, code))
-      result.service_failure!(code:, message:)
     end
 
     def handle_missing_customer(shopper_reference)
