@@ -11,10 +11,12 @@ module Types
       field :coupons_adjustment_amount_cents, GraphQL::Types::BigInt, null: false
       field :max_creditable_amount_cents, GraphQL::Types::BigInt, method: :credit_amount_cents, null: false
       field :max_refundable_amount_cents, GraphQL::Types::BigInt, method: :refund_amount_cents, null: false
+      field :precise_coupons_adjustment_amount_cents, GraphQL::Types::Float, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
-      field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
 
-      field :taxes_rate, Float, null: false
+      field :precise_taxes_amount_cents, GraphQL::Types::Float, null: false
+      field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
+      field :taxes_rate, GraphQL::Types::Float, null: false
 
       field :items, [Types::CreditNoteItems::Estimate], null: false
 

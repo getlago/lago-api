@@ -243,7 +243,7 @@ RSpec.describe CreditNote, type: :model do
   describe ' #sub_total_excluding_taxes_amount_cents' do
     it 'returs the total amount without the taxes' do
       expect(credit_note.sub_total_excluding_taxes_amount_cents)
-        .to eq(credit_note.total_amount_cents - credit_note.taxes_amount_cents)
+        .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
     end
   end
 end

@@ -95,9 +95,10 @@ module CreditNotes
     #       In order to compute the credit_note#taxes_rate, we have to apply
     #       a pro-rata of the items attached to the tax on the total items amount
     def pro_rated_taxes_rate(tax)
-      tax_items_amount_cents = indexed_items[tax.id].sum(&:precise_amount_cents)
+      tax_items_amount_cents = compute_base_amount_cents(tax)
+      total_items_amount_cents = items_amount_cents - result.coupons_adjustment_amount_cents
 
-      items_rate = tax_items_amount_cents.fdiv(items_amount_cents)
+      items_rate = tax_items_amount_cents.fdiv(total_items_amount_cents)
 
       items_rate * tax.rate
     end
