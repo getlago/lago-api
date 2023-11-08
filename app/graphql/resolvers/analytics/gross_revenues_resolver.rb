@@ -9,7 +9,7 @@ module Resolvers
       description 'Query gross revenue of an organization'
 
       argument :currency, Types::CurrencyEnum, required: false
-      argument :customer_external_id, String, required: false
+      argument :external_customer_id, String, required: false
 
       type Types::Analytics::GrossRevenues::Object.collection_type, null: false
 

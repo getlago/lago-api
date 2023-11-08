@@ -4320,7 +4320,7 @@ type Query {
   """
   Query gross revenue of an organization
   """
-  grossRevenues(currency: CurrencyEnum, customerExternalId: String): GrossRevenueCollection!
+  grossRevenues(currency: CurrencyEnum, externalCustomerId: String): GrossRevenueCollection!
 
   """
   Query a single Invite

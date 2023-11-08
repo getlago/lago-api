@@ -20,8 +20,9 @@ module Api
 
         def filters
           {
-            external_customer_id: params[:customer_external_id],
+            external_customer_id: params[:external_customer_id],
             currency: params[:currency],
+            months: params[:months],
           }
         end
       end

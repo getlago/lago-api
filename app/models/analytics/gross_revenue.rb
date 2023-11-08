@@ -6,9 +6,9 @@ module Analytics
 
     class << self
       def query(organization_id, **args)
-        if args[:customer_external_id].present?
-          and_customer_external_id_sql = sanitize_sql(
-            ['AND c.external_id = :customer_external_id', args[:customer_external_id]],
+        if args[:external_customer_id].present?
+          and_external_customer_id_sql = sanitize_sql(
+            ['AND c.external_id = :external_customer_id', args[:external_customer_id]],
           )
         end
 
@@ -54,7 +54,7 @@ module Analytics
             LEFT JOIN customers c ON i.customer_id = c.id
             WHERE i.organization_id = :organization_id
                 AND i.status = 1
-                #{and_customer_external_id_sql}
+                #{and_external_customer_id_sql}
           ),
           instant_charges AS (
             SELECT
@@ -67,7 +67,7 @@ module Analytics
             WHERE c.organization_id = :organization_id
                 AND f.invoice_id IS NULL
                 AND f.pay_in_advance IS TRUE
-                #{and_customer_external_id_sql}
+                #{and_external_customer_id_sql}
           ),
           combined_data AS (
             SELECT
@@ -101,7 +101,7 @@ module Analytics
           'gross-revenue',
           Date.current.strftime('%Y-%m-%d'),
           organization_id,
-          args[:customer_external_id],
+          args[:external_customer_id],
           args[:currency],
           args[:months],
         ].join('/')

@@ -19387,7 +19387,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "customerExternalId",
+                  "name": "externalCustomerId",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",

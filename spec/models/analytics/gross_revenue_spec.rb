@@ -7,7 +7,7 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
     subject(:gross_revenue_cache_key) { described_class.cache_key(organization_id, **args) }
 
     let(:organization_id) { SecureRandom.uuid }
-    let(:customer_external_id) { 'customer_01' }
+    let(:external_customer_id) { 'customer_01' }
     let(:currency) { 'EUR' }
     let(:months) { 12 }
     let(:date) { Date.current.strftime('%Y-%m-%d') }
@@ -22,10 +22,10 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
     end
 
     context 'with customer external id, currency and months' do
-      let(:args) { { customer_external_id:, currency:, months: } }
+      let(:args) { { external_customer_id:, currency:, months: } }
 
       let(:cache_key) do
-        "gross-revenue/#{date}/#{organization_id}/#{customer_external_id}/#{currency}/#{months}"
+        "gross-revenue/#{date}/#{organization_id}/#{external_customer_id}/#{currency}/#{months}"
       end
 
       it 'returns the cache key' do
@@ -34,10 +34,10 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
     end
 
     context 'with customer external id' do
-      let(:args) { { customer_external_id: } }
+      let(:args) { { external_customer_id: } }
 
       let(:cache_key) do
-        "gross-revenue/#{date}/#{organization_id}/#{customer_external_id}//"
+        "gross-revenue/#{date}/#{organization_id}/#{external_customer_id}//"
       end
 
       it 'returns the cache key' do
