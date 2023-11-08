@@ -13,6 +13,33 @@ module Charges
         compute_percentage_amount + compute_fixed_amount
       end
 
+      def amount_details
+        percentage_units = units - free_units_count
+        percentage_units = 0 if percentage_units.negative?
+        percentage_unit_amount = percentage_units.zero? ? 0 : compute_percentage_amount.fdiv(percentage_units)
+
+        {
+          unit_amounts: {
+            free_units_count:,
+            free_units_value:,
+            percentage_units:,
+            percentage_amount: compute_percentage_amount,
+            percentage_unit_amount:,
+            fixed_amount: compute_fixed_amount,
+            #fixed_units:,
+            #fixed_unit_amount:,
+            units:
+          }
+        }
+      end
+
+      def unit_amount
+        total_units = aggregation_result.full_units_number || units
+        return 0 if total_units.zero?
+
+        compute_amount / total_units
+      end
+
       def compute_percentage_amount
         return 0 if free_units_value > units
 

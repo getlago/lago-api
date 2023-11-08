@@ -21,6 +21,7 @@ module Charges
         result.count = aggregation_result.count
         result.amount = compute_amount
         result.unit_amount = unit_amount
+        result.amount_details = amount_details
 
         if aggregation_result.total_aggregated_units
           result.total_aggregated_units = aggregation_result.total_aggregated_units
@@ -43,6 +44,12 @@ module Charges
         # TODO: Uncomment this.
         # raise NotImplementedError
         0
+      end
+
+      def amount_details
+        # TODO: Uncomment this.
+        # raise NotImplementedError
+        {}
       end
     end
   end
