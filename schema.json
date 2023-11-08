@@ -19375,31 +19375,11 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "ids",
-                  "description": "List of add-ons IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "limit",
+                  "name": "currency",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -19407,19 +19387,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "searchTerm",
+                  "name": "customerExternalId",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",

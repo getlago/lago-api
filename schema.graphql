@@ -4320,15 +4320,7 @@ type Query {
   """
   Query add-ons of an organization
   """
-  grossRevenues(
-    """
-    List of add-ons IDs to fetch
-    """
-    ids: [ID!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): GrossRevenueCollection!
+  grossRevenues(currency: CurrencyEnum, customerExternalId: String): GrossRevenueCollection!
 
   """
   Query a single Invite

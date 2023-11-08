@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
   let(:query) do
     <<~GQL
-      query {
-        grossRevenues {
+      query($currency: CurrencyEnum, $customerExternalId: String) {
+        grossRevenues(currency: $currency, customerExternalId: $customerExternalId) {
           collection {
             month
             amountCents

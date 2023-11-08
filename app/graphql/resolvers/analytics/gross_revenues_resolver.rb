@@ -8,10 +8,8 @@ module Resolvers
 
       description 'Query add-ons of an organization'
 
-      argument :ids, [ID], required: false, description: 'List of add-ons IDs to fetch'
-      argument :limit, Integer, required: false
-      argument :page, Integer, required: false
-      argument :search_term, String, required: false
+      argument :currency, Types::CurrencyEnum, required: false
+      argument :customer_external_id, String, required: false
 
       type Types::Analytics::GrossRevenues::Object.collection_type, null: false
 
