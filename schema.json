@@ -19361,7 +19361,7 @@
             },
             {
               "name": "grossRevenues",
-              "description": "Query add-ons of an organization",
+              "description": "Query gross revenue of an organization",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
