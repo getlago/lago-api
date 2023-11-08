@@ -23,10 +23,6 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   let(:aggregation) { 800 }
   let(:free_units_per_events) { 3 }
   let(:free_units_per_total_aggregation) { '250.0' }
-
-  let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
-  let(:expected_fixed_amount) { (4 - 2) * 2.0 }
-
   let(:per_transaction_max_amount) { nil }
   let(:per_transaction_min_amount) { nil }
 
@@ -48,50 +44,117 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   context 'when aggregation value is 0' do
     let(:aggregation) { 0 }
 
-    it 'returns 0' do
+    it 'returns expected amount', :aggregate_failures do
       expect(apply_percentage_service.amount).to eq(0)
+      expect(apply_percentage_service.unit_amount).to eq(0)
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 2,
+            free_units_value: 250,
+            percentage_units: 0,
+            percentage_amount: 0,
+            percentage_unit_amount: 0,
+            fixed_amount: 0,
+            units: 0,
+          },
+        },
+      )
     end
   end
 
   context 'when fixed amount value is 0' do
-    it 'returns expected percentage amount' do
-      expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount),
+    it 'returns expected amount', :aggregate_failures do
+      expect(apply_percentage_service.amount).to eq(11.15)
+      expect(apply_percentage_service.unit_amount).to eq(0.0139375) # 11.15 / 800
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 2,
+            free_units_value: 250,
+            percentage_units: 798,
+            percentage_amount: 7.15, # (800 - 250) * (1.3 / 100)
+            percentage_unit_amount: 0.008959899749373433,
+            fixed_amount: 4, # (4 - 2) * 2.0
+            units: 800,
+          },
+        },
       )
     end
   end
 
   context 'when rate is 0' do
+    let(:running_total) { [] }
     let(:free_units_per_events) { nil }
     let(:free_units_per_total_aggregation) { nil }
     let(:rate) { '0' }
     let(:expected_fixed_amount) { (4 - 0) * 2.0 }
 
-    it 'returns 0 as expected percentage amount' do
-      expect(apply_percentage_service.amount).to eq(expected_fixed_amount)
+    it 'returns expected amount', :aggregate_failures do
+      expect(apply_percentage_service.amount).to eq(8)
+      expect(apply_percentage_service.unit_amount).to eq(0.01)
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 0,
+            free_units_value: 0,
+            percentage_units: 800,
+            percentage_amount: 0,
+            percentage_unit_amount: 0,
+            fixed_amount: 8,
+            #fixed_units: ,
+            #fixed_unit_amount: ,
+            units: 800,
+          },
+        },
+      )
     end
   end
 
   context 'when free_units_per_events is nil' do
     let(:free_units_per_events) { nil }
-    let(:expected_percentage_amount) { (800 - 250) * (1.3 / 100) }
-    let(:expected_fixed_amount) { (4 - 2) * 2.0 }
 
-    it 'returns expected percentage amount' do
-      expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount),
+    it 'returns expected amount', :aggregate_failures do
+      expect(apply_percentage_service.amount).to eq(11.15) # (800 - 250) * (1.3 / 100) + (4 - 2) * 2.0
+      expect(apply_percentage_service.unit_amount).to eq(0.0139375)
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 2,
+            free_units_value: 250,
+            percentage_units: 798,
+            percentage_amount: 7.15,
+            percentage_unit_amount: 0.008959899749373433,
+            fixed_amount: 4,
+            #fixed_units: ,
+            #fixed_unit_amount: ,
+            units: 800,
+          },
+        },
       )
     end
   end
 
   context 'when free_units_per_total_aggregation is nil' do
     let(:free_units_per_total_aggregation) { nil }
-    let(:expected_percentage_amount) { (800 - 400) * (1.3 / 100) }
-    let(:expected_fixed_amount) { (4 - 3) * 2.0 }
 
-    it 'returns expected percentage amount' do
-      expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount),
+    it 'returns expected amount', :aggregate_failures do
+      expect(apply_percentage_service.amount).to eq(7.2)
+      expect(apply_percentage_service.unit_amount).to eq(0.009)
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 3,
+            free_units_value: 400,
+            percentage_units: 797,
+            percentage_amount: 5.2, # (800 - 400) * (1.3 / 100)
+            percentage_unit_amount: 0.006524466750313676,
+            fixed_amount: 2, # (4 - 3) * 2.0
+            #fixed_units: ,
+            #fixed_unit_amount: ,
+            units: 800,
+          },
+        },
       )
     end
   end
@@ -101,12 +164,23 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     let(:free_units_per_events) { nil }
     let(:running_total) { [] }
 
-    let(:expected_percentage_amount) { 800 * (1.3 / 100) }
-    let(:expected_fixed_amount) { 4 * 2.0 }
-
-    it 'returns expected percentage amount' do
-      expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount),
+    it 'returns expected amount', :aggregate_failures do
+      expect(apply_percentage_service.amount).to eq(18.4)
+      expect(apply_percentage_service.unit_amount).to eq(0.023)
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 0,
+            free_units_value: 0,
+            percentage_units: 800,
+            percentage_amount: 10.4, # 800 * (1.3 / 100)
+            percentage_unit_amount: 0.013000000000000001,
+            fixed_amount: 8, # 4 * 2.0
+            #fixed_units: ,
+            #fixed_unit_amount: ,
+            units: 800,
+          },
+        },
       )
     end
   end
@@ -116,9 +190,23 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     let(:expected_percentage_amount) { (800 - 400) * (1.3 / 100) }
     let(:expected_fixed_amount) { (4 - 3) * 2.0 }
 
-    it 'returns expected percentage amount based on last running total' do
-      expect(apply_percentage_service.amount).to eq(
-        (expected_percentage_amount + expected_fixed_amount),
+    it 'returns expected amount', :aggregate_failures do
+      expect(apply_percentage_service.amount).to eq(7.2)
+      expect(apply_percentage_service.unit_amount).to eq(0.009)
+      expect(apply_percentage_service.amount_details).to eq(
+        {
+          unit_amounts: {
+            free_units_count: 3,
+            free_units_value: 400,
+            percentage_units: 797,
+            percentage_amount: 5.2, # (800 - 400) * (1.3 / 100)
+            percentage_unit_amount: 0.006524466750313676,
+            fixed_amount: 2, # (4 - 3) * 2.0
+            #fixed_units: ,
+            #fixed_unit_amount: ,
+            units: 800,
+          },
+        },
       )
     end
   end
