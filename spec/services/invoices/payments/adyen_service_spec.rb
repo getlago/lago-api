@@ -151,6 +151,38 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
     end
 
+    context 'with validation error on adyen' do
+      let(:customer) { create(:customer, organization:) }
+
+      let(:subscription) do
+        create(:subscription, organization:, customer:)
+      end
+
+      let(:organization) do
+        create(:organization, webhook_url: 'https://webhook.com')
+      end
+
+      before do
+        subscription
+
+        allow(payments_api).to receive(:payments)
+          .and_raise(Adyen::ValidationError.new('Invalid card number', nil))
+      end
+
+      it 'delivers an error webhook' do
+        expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+          .with(
+            'invoice.payment_failure',
+            invoice,
+            provider_customer_id: adyen_customer.provider_customer_id,
+            provider_error: {
+              message: 'Invalid card number',
+              error_code: nil,
+            },
+          ).on_queue(:webhook)
+      end
+    end
+
     context 'with error on adyen' do
       let(:customer) { create(:customer, organization:) }
 
