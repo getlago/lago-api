@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, amount_cents: 500) }
+  let(:plan) { create(:plan, organization:, amount_cents: 500, description: 'desc') }
 
   around { |test| lago_premium!(&test) }
 
@@ -31,6 +31,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     it 'returns a success', :aggregate_failures do
+      create(:plan, code: plan.code, parent_id: plan.id, organization:, description: 'foo')
+
       post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
 
       expect(response).to have_http_status(:ok)
@@ -54,6 +56,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:plan]).to include(
         amount_cents: 100,
         name: 'overridden name',
+        description: 'desc',
       )
     end
 
