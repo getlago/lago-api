@@ -101,7 +101,6 @@ module Analytics
           WHERE am.month <= DATE_TRUNC('month', CURRENT_DATE)
           #{and_months_sql}
           #{and_currency_sql}
-          AND cd.amount_cents IS NOT NULL
           ORDER BY am.month;
         SQL
 
