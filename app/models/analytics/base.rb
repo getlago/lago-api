@@ -14,7 +14,7 @@ module Analytics
     end
 
     def self.cache_expiration
-      48.hours
+      4.hours
     end
   end
 end
