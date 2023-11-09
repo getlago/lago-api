@@ -8,6 +8,7 @@ class Wallet < ApplicationRecord
   has_one :organization, through: :customer
 
   has_many :wallet_transactions
+  has_many :recurring_transaction_rules
 
   monetize :balance_cents
   monetize :consumed_amount_cents
