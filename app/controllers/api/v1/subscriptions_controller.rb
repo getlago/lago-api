@@ -137,6 +137,7 @@ module Api
           {
             charges: [
               :id,
+              :billable_metric_id,
               :min_amount_cents,
               :invoice_display_name,
               { properties: {} },

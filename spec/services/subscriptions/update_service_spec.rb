@@ -108,6 +108,22 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
+    context 'when plan_overrides' do
+      let(:params) do
+        {
+          plan_overrides: {
+            name: 'new name',
+          },
+        }
+      end
+
+      around { |test| lago_premium!(&test) }
+
+      it 'updates the plan accordingly' do
+        expect { update_service.call }.to change { subscription.plan.reload.name }.to('new name')
+      end
+    end
+
     context 'when License is free and plan_overrides is passed' do
       let(:params) do
         {
