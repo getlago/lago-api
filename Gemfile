@@ -28,6 +28,7 @@ gem 'kaminari-activerecord'
 gem 'paper_trail'
 gem 'pg'
 gem 'ransack', '~> 4.0.0'
+gem 'scenic'
 gem 'with_advisory_lock'
 
 # Currencies, Countries, Timezones...
