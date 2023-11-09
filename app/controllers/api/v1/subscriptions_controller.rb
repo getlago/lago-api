@@ -9,7 +9,7 @@ module Api
           organization_id: current_organization.id,
         )
 
-        plan = Plan.find_by(
+        plan = Plan.parents.find_by(
           code: create_params[:plan_code],
           organization_id: current_organization.id,
         )
