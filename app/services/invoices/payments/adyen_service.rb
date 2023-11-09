@@ -27,6 +27,8 @@ module Invoices
         increment_payment_attempts
 
         res = create_adyen_payment
+        return result unless res
+
         handle_adyen_response(res)
         return result unless result.success?
 
@@ -108,6 +110,10 @@ module Invoices
         update_payment_method_id
 
         client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h)
+      rescue Adyen::ValidationError => e
+        deliver_error_webhook(e)
+        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
+        nil
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
