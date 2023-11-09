@@ -33,31 +33,31 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     it 'returns a success', :aggregate_failures do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: 'foo')
 
-      post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
-
-      expect(response).to have_http_status(:ok)
-
-      expect(json[:subscription]).to include(
-        lago_id: String,
-        external_id: String,
-        external_customer_id: customer.external_id,
-        lago_customer_id: customer.id,
-        plan_code: plan.code,
-        status: 'active',
-        name: 'subscription name',
-        started_at: String,
-        billing_time: 'anniversary',
-        subscription_at: Time.current.iso8601,
-        ending_at: (Time.current + 1.year).iso8601,
-        previous_plan_code: nil,
-        next_plan_code: nil,
-        downgrade_plan_date: nil,
-      )
-      expect(json[:subscription][:plan]).to include(
-        amount_cents: 100,
-        name: 'overridden name',
-        description: 'desc',
-      )
+      freeze_time do
+        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription]).to include(
+          lago_id: String,
+          external_id: String,
+          external_customer_id: customer.external_id,
+          lago_customer_id: customer.id,
+          plan_code: plan.code,
+          status: 'active',
+          name: 'subscription name',
+          started_at: String,
+          billing_time: 'anniversary',
+          subscription_at: Time.current.iso8601,
+          ending_at: (Time.current + 1.year).iso8601,
+          previous_plan_code: nil,
+          next_plan_code: nil,
+          downgrade_plan_date: nil,
+        )
+        expect(json[:subscription][:plan]).to include(
+          amount_cents: 100,
+          name: 'overridden name',
+          description: 'desc',
+        )
+      end
     end
 
     context 'with external_customer_id, external_id and name as integer' do
@@ -168,7 +168,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         name: 'subscription name new',
         subscription_at: '2022-09-05T12:23:12Z',
         plan_overrides: {
-          amount_cents: 100,
+          name: 'plan new name',
         },
       }
     end
@@ -184,7 +184,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:subscription_at].to_s).to eq('2022-09-05T12:23:12Z')
 
       expect(json[:subscription][:plan]).to include(
-        amount_cents: 100,
+        name: 'plan new name',
       )
     end
 
