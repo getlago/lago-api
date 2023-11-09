@@ -122,22 +122,21 @@ module Plans
             ),
           )
 
+          tax_codes = payload_charge.delete(:tax_codes)
+          if tax_codes
+            taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes:)
+            taxes_result.raise_if_error!
+          end
+
           # NOTE: charges cannot be edited if plan is attached to a subscription
           unless plan.attached_to_subscriptions?
             invoiceable = payload_charge.delete(:invoiceable)
             min_amount_cents = payload_charge.delete(:min_amount_cents)
-            tax_codes = payload_charge.delete(:tax_codes)
 
             charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
             charge.min_amount_cents = min_amount_cents || 0 if License.premium?
 
             charge.update!(payload_charge)
-
-            if tax_codes
-              taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes:)
-              taxes_result.raise_if_error!
-            end
-
             charge
           end
 

@@ -8,7 +8,7 @@ module Charges
     end
 
     def call
-      case charge_model.to_sym
+      case charge_model&.to_sym
       when :standard then default_standard_properties
       when :graduated then default_graduated_properties
       when :package then default_package_properties
