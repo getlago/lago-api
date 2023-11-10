@@ -55,6 +55,44 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
     end
+
+    context 'with recurring transaction rules' do
+      around { |test| lago_premium!(&test) }
+
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: '1',
+          name: 'Wallet1',
+          currency: 'EUR',
+          paid_credits: '10',
+          granted_credits: '10',
+          expiration_at:,
+          recurring_transaction_rules: [
+            {
+              rule_type: 'interval',
+              interval: 'monthly',
+            },
+          ],
+        }
+      end
+
+      it 'returns a success' do
+        post_with_token(organization, '/api/v1/wallets', { wallet: create_params })
+
+        recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:rule_type]).to eq('interval')
+          expect(recurring_rules.first[:interval]).to eq('monthly')
+          expect(recurring_rules.first[:paid_credits]).to eq('10.0')
+          expect(recurring_rules.first[:granted_credits]).to eq('10.0')
+        end
+      end
+    end
   end
 
   describe 'update' do
@@ -113,6 +151,48 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         put_with_token(organization, '/api/v1/wallets/invalid', { wallet: update_params })
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'with recurring transaction rules' do
+      around { |test| lago_premium!(&test) }
+
+      let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+      let(:update_params) do
+        {
+          name: 'wallet1',
+          recurring_transaction_rules: [
+            {
+              id: recurring_transaction_rule.id,
+              rule_type: 'interval',
+              interval: 'weekly',
+              paid_credits: '105',
+              granted_credits: '105',
+            },
+          ],
+        }
+      end
+
+      before { recurring_transaction_rule }
+
+      it 'returns a success' do
+        put_with_token(
+          organization,
+          "/api/v1/wallets/#{wallet.id}",
+          { wallet: update_params },
+        )
+
+        recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:rule_type]).to eq('interval')
+          expect(recurring_rules.first[:interval]).to eq('weekly')
+          expect(recurring_rules.first[:paid_credits]).to eq('105.0')
+          expect(recurring_rules.first[:granted_credits]).to eq('105.0')
+        end
       end
     end
   end
