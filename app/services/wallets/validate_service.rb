@@ -53,7 +53,7 @@ module Wallets
       recurring_rule = args[:recurring_transaction_rules].first
 
       if recurring_rule[:rule_type]&.to_s == 'interval' &&
-        RecurringTransactionRule.intervals.keys.include?(recurring_rule[:interval])
+         RecurringTransactionRule.intervals.key?(recurring_rule[:interval])
 
         return true
       end
