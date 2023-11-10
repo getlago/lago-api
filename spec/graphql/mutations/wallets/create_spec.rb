@@ -44,7 +44,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
               ruleType: 'interval',
               interval: 'monthly',
             },
-          ]
+          ],
         },
       },
     )

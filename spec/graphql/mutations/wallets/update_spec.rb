@@ -48,8 +48,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               interval: 'weekly',
               paidCredits: '22.2',
               grantedCredits: '22.2',
-            }
-          ]
+            },
+          ],
         },
       },
     )
