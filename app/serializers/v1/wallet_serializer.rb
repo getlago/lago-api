@@ -3,7 +3,7 @@
 module V1
   class WalletSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
@@ -20,11 +20,25 @@ module V1
         last_consumed_credit_at: model.last_consumed_credit_at&.iso8601,
         terminated_at: model.terminated_at,
       }.merge(legacy_values)
+
+      payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
+
+      payload
     end
+
+    private
 
     def legacy_values
       ::V1::Legacy::WalletSerializer.new(
         model,
+      ).serialize
+    end
+
+    def recurring_transaction_rules
+      ::CollectionSerializer.new(
+        model.recurring_transaction_rules,
+        ::V1::Wallets::RecurringTransactionRuleSerializer,
+        collection_name: 'recurring_transaction_rules',
       ).serialize
     end
   end
