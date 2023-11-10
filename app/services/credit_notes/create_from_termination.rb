@@ -10,7 +10,6 @@ module CreditNotes
     end
 
     def call
-
       return result if (last_subscription_fee&.amount_cents || 0).zero? || last_subscription_fee.invoice.voided?
 
       amount = compute_amount
