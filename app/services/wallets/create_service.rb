@@ -59,8 +59,8 @@ module Wallets
 
       RecurringTransactionRule.create!(
         wallet:,
-        paid_credits: paid_credits,
-        granted_credits: granted_credits,
+        paid_credits:,
+        granted_credits:,
         threshold_credits: recurring_rule[:threshold_credits] || '0.0',
         interval: recurring_rule[:interval],
         rule_type: recurring_rule[:rule_type].to_s,

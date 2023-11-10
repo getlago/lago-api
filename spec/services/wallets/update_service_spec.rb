@@ -96,7 +96,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context 'edits the interval rule' do
+      context 'when editing existing interval rule' do
         let(:rules) do
           [
             {
@@ -128,7 +128,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context 'changes the rule into threshold one' do
+      context 'when changing the rule into threshold one' do
         let(:rules) do
           [
             {

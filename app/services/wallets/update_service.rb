@@ -41,14 +41,14 @@ module Wallets
       type = rule[:rule_type]&.to_s
 
       if !::Validators::DecimalAmountService.new(rule[:paid_credits]).valid_amount? ||
-        !::Validators::DecimalAmountService.new(rule[:granted_credits]).valid_amount?
+         !::Validators::DecimalAmountService.new(rule[:granted_credits]).valid_amount?
 
         add_invalid_recurring_rule_error
 
         return false
       end
 
-      return true if type == 'interval' && RecurringTransactionRule.intervals.keys.include?(rule[:interval])
+      return true if type == 'interval' && RecurringTransactionRule.intervals.key?(rule[:interval])
 
       if type == 'threshold' && ::Validators::DecimalAmountService.new(rule[:threshold_credits]).valid_amount?
         return true

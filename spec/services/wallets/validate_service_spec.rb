@@ -91,7 +91,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
           organization_id: organization.id,
           paid_credits:,
           granted_credits:,
-          recurring_transaction_rules: rules
+          recurring_transaction_rules: rules,
         }
       end
 
