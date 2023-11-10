@@ -59,7 +59,7 @@ module Wallets
       end
 
       if recurring_rule[:rule_type]&.to_s == 'threshold' &&
-        ::Validators::DecimalAmountService.new(recurring_rule[:threshold_credits]).valid_amount?
+         ::Validators::DecimalAmountService.new(recurring_rule[:threshold_credits]).valid_amount?
 
         return true
       end
