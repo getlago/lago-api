@@ -108,6 +108,7 @@ module Api
           # NOTE: Legacy field
           :expiration_date,
           recurring_transaction_rules: [
+            :id,
             :rule_type,
             :interval,
             :threshold_credits,
