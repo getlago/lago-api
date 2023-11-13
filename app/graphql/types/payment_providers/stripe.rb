@@ -7,6 +7,8 @@ module Types
 
       field :id, ID, null: false
       field :secret_key, String, null: false
+      field :code, String, null: true
+      field :name, String, null: true
 
       field :create_customers, Boolean, null: false
       field :success_redirect_url, String, null: true

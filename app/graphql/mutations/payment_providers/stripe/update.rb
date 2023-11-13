@@ -8,6 +8,7 @@ module Mutations
         description 'Update Stripe payment provider'
 
         argument :success_redirect_url, String, required: false
+        argument :name, String, required: false
 
         type Types::PaymentProviders::Stripe
       end
