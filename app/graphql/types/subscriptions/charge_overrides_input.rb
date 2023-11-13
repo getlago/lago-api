@@ -3,6 +3,7 @@
 module Types
   module Subscriptions
     class ChargeOverridesInput < Types::BaseInputObject
+      argument :billable_metric_id, ID, required: true
       argument :id, ID, required: true
 
       argument :group_properties, [Types::Charges::GroupPropertiesInput], required: false
