@@ -22,5 +22,27 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
         .to change(wallet.reload, :consumed_credits).from(0).to(4.5)
         .and change(wallet, :consumed_amount_cents).from(0).to(450)
     end
+
+    context 'with recurring transaction threshold rule' do
+      let(:recurring_transaction_rule) do
+        create(:recurring_transaction_rule, wallet:, rule_type: 'threshold', threshold_credits: '6.0')
+      end
+
+      before { recurring_transaction_rule }
+
+      it 'calls wallet transaction create job when threshold border has been crossed' do
+        expect { create_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+
+      context 'when border has NOT been crossed' do
+        let(:recurring_transaction_rule) do
+          create(:recurring_transaction_rule, wallet:, rule_type: 'threshold', threshold_credits: '2.0')
+        end
+
+        it 'does not call wallet transaction create job' do
+          expect { create_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+    end
   end
 end

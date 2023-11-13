@@ -23,6 +23,8 @@ module Wallets
           last_consumed_credit_at: Time.current,
         )
 
+        handle_threshold_top_up
+
         result.wallet = wallet
         result
       end
@@ -30,6 +32,19 @@ module Wallets
       private
 
       attr_reader :wallet, :credits_amount
+
+      def handle_threshold_top_up
+        threshold_rule = wallet.recurring_transaction_rules.where(rule_type: :threshold).first
+
+        return if threshold_rule.nil? || wallet.credits_balance > threshold_rule.threshold_credits
+
+        WalletTransactions::CreateJob.perform_later(
+          organization_id: wallet.organization.id,
+          wallet_id: wallet.id,
+          paid_credits: threshold_rule.paid_credits,
+          granted_credits: threshold_rule.granted_credits,
+        )
+      end
     end
   end
 end
