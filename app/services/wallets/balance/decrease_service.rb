@@ -43,6 +43,7 @@ module Wallets
           wallet_id: wallet.id,
           paid_credits: threshold_rule.paid_credits,
           granted_credits: threshold_rule.granted_credits,
+          source: :threshold,
         )
       end
     end
