@@ -42,7 +42,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
     )
   end
 
-  before { item }
+  before do
+    item
+    credit_note.reload
+  end
 
   describe '.call' do
     it 'validates the credit_note' do

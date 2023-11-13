@@ -9,10 +9,12 @@ module V1
           invoice_number: model.invoice.number,
           currency: model.currency,
           taxes_amount_cents: model.taxes_amount_cents,
+          precise_taxes_amount_cents: model.precise_taxes_amount_cents,
           sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
           max_creditable_amount_cents: model.credit_amount_cents,
           max_refundable_amount_cents: model.refund_amount_cents,
           coupons_adjustment_amount_cents: model.coupons_adjustment_amount_cents,
+          precise_coupons_adjustment_amount_cents: model.precise_coupons_adjustment_amount_cents,
           taxes_rate: model.taxes_rate,
         }
 
