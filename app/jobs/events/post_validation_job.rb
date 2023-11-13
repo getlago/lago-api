@@ -10,7 +10,7 @@ module Events
       end
     end
 
-    def perform(organization)
+    def perform(organization:)
       Events::PostValidationService.call(organization:)
     end
   end

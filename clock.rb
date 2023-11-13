@@ -49,4 +49,8 @@ module Clockwork
   every(1.day, 'schedule:clean_webhooks', at: '01:00') do
     Clock::WebhooksCleanupJob.perform_later
   end
+
+  every(1.hour, 'schedule:post_validate_events', at: '*:05') do
+    Clock::EventsValidationJob.perform_later
+  end
 end

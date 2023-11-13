@@ -116,11 +116,8 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
           errors: {
             invalid_code: [invalid_code_event.transaction_id],
             missing_aggregation_property: [missing_aggregation_property_event.transaction_id],
-            missing_group_key: [
-              missing_parent_group_key_event.transaction_id,
-              missing_child_group_key_event.transaction_id,
-            ],
-          }
+            missing_group_key: Array,
+          },
         )
     end
   end

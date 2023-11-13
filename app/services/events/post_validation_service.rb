@@ -55,7 +55,6 @@ module Events
     end
 
     def missing_group_key_query
-      # TODO: check for group values
       <<-SQL
         SELECT DISTINCT transaction_id
         FROM last_hour_events_mv
