@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_07_110809) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -118,26 +118,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_07_110809) do
     t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
-  end
-
-  create_table "cached_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "organization_id", null: false
-    t.uuid "event_id", null: false
-    t.datetime "timestamp", null: false
-    t.string "external_subscription_id", null: false
-    t.uuid "billable_metric_id", null: false
-    t.uuid "group_id"
-    t.decimal "current_aggregation"
-    t.decimal "max_aggregation"
-    t.decimal "max_aggregation_with_proration"
-    t.datetime "created_at", null: false
-    t.index ["billable_metric_id"], name: "index_cached_aggregations_on_billable_metric_id"
-    t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
-    t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
-    t.index ["group_id"], name: "index_cached_aggregations_on_group_id"
-    t.index ["organization_id", "timestamp", "billable_metric_id", "group_id"], name: "index_timestamp_group_lookup"
-    t.index ["organization_id", "timestamp", "billable_metric_id"], name: "index_timestamp_lookup"
-    t.index ["organization_id"], name: "index_cached_aggregations_on_organization_id"
   end
 
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -359,6 +339,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_07_110809) do
     t.string "external_subscription_id"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
+    t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
     t.index ["organization_id", "external_subscription_id", "transaction_id"], name: "index_unique_transaction_id", unique: true
     t.index ["organization_id"], name: "index_events_on_organization_id"
@@ -842,7 +823,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_07_110809) do
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
-  add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"
@@ -912,4 +892,37 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_07_110809) do
   add_foreign_key "wallets", "customers"
   add_foreign_key "webhook_endpoints", "organizations"
   add_foreign_key "webhooks", "webhook_endpoints"
+
+  create_view "last_hour_events_mv", materialized: true, sql_definition: <<-SQL
+      WITH billable_metric_groups AS (
+           SELECT billable_metrics_1.id AS bm_id,
+              billable_metrics_1.code AS bm_code,
+              count(parent_groups.id) AS parent_group_count,
+              array_agg(parent_groups.key) AS parent_group_keys,
+              count(child_groups.id) AS child_group_count,
+              array_agg(child_groups.key) AS child_group_keys
+             FROM ((billable_metrics billable_metrics_1
+               LEFT JOIN groups parent_groups ON (((parent_groups.billable_metric_id = billable_metrics_1.id) AND (parent_groups.parent_group_id IS NULL))))
+               LEFT JOIN groups child_groups ON (((child_groups.billable_metric_id = billable_metrics_1.id) AND (child_groups.parent_group_id IS NOT NULL))))
+            WHERE (billable_metrics_1.deleted_at IS NULL)
+            GROUP BY billable_metrics_1.id, billable_metrics_1.code
+          )
+   SELECT events.organization_id,
+      events.transaction_id,
+      events."timestamp",
+      events.properties,
+      billable_metrics.code AS billable_metric_code,
+      (billable_metrics.aggregation_type <> 0) AS field_name_mandatory,
+      (billable_metrics.aggregation_type = ANY (ARRAY[1, 2, 5, 6])) AS numeric_field_mandatory,
+      (events.properties ->> (billable_metrics.field_name)::text) AS field_value,
+      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
+      (COALESCE(billable_metric_groups.parent_group_count, (0)::bigint) > 0) AS parent_group_mandatory,
+      (events.properties ?| (billable_metric_groups.parent_group_keys)::text[]) AS has_parent_group_key,
+      (COALESCE(billable_metric_groups.child_group_count, (0)::bigint) > 0) AS child_group_mandatory,
+      (events.properties ?| (billable_metric_groups.child_group_keys)::text[]) AS has_child_group_key
+     FROM ((events
+       LEFT JOIN billable_metrics ON ((((billable_metrics.code)::text = (events.code)::text) AND (events.organization_id = billable_metrics.organization_id))))
+       LEFT JOIN billable_metric_groups ON ((billable_metrics.id = billable_metric_groups.bm_id)))
+    WHERE ((events.deleted_at IS NULL) AND (events.created_at >= (date_trunc('hour'::text, now()) - 'PT1H'::interval)) AND (events.created_at < date_trunc('hour'::text, now())) AND (billable_metrics.deleted_at IS NULL));
+  SQL
 end
