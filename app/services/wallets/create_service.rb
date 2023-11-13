@@ -31,6 +31,7 @@ module Wallets
         wallet_id: wallet.id,
         paid_credits: args[:paid_credits],
         granted_credits: args[:granted_credits],
+        source: :manual,
       )
 
       result

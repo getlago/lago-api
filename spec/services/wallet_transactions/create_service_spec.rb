@@ -24,12 +24,24 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
         organization_id: organization.id,
         paid_credits:,
         granted_credits:,
+        source: :manual,
       }
     end
 
     it 'creates a wallet transactions' do
       expect { create_service.create(**create_args) }
         .to change(WalletTransaction, :count).by(2)
+    end
+
+    it 'sets correct source' do
+      create_service.create(**create_args)
+
+      wallet_transactions = WalletTransaction.where(wallet_id: wallet.id).order(created_at: :desc)
+
+      aggregate_failures do
+        expect(wallet_transactions[0].source.to_s).to eq('manual')
+        expect(wallet_transactions[1].source.to_s).to eq('manual')
+      end
     end
 
     it 'enqueues the BillPaidCreditJob' do
