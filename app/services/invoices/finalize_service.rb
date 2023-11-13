@@ -14,13 +14,16 @@ module Invoices
         self.result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         result.raise_if_error!
 
-        invoice.update!(status: :finalized, issuing_date:, payment_due_date:)
+        invoice.status = :finalized
+        invoice.issuing_date = issuing_date
+        invoice.payment_due_date = payment_due_date
+        invoice.save!
 
         invoice.credit_notes.each(&:finalized!)
       end
 
       SendWebhookJob.perform_later('invoice.created', result.invoice) if invoice.organization.webhook_endpoints.any?
-      InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+      InvoiceMailer.with(invoice: invoice.reload).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
       track_invoice_created(invoice)
 
