@@ -13,13 +13,13 @@ module Customers
         )
       end
 
+      old_payment_provider = customer.payment_provider
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         if args.key?(:currency)
           update_currency(customer:, currency: args[:currency], customer_update: true)
           return result unless result.success?
         end
-        old_payment_provider = customer.payment_provider
 
         customer.name = args[:name] if args.key?(:name)
         customer.tax_identification_number = args[:tax_identification_number] if args.key?(:tax_identification_number)
@@ -48,43 +48,43 @@ module Customers
         if billing_configuration.key?(:document_locale)
           customer.document_locale = billing_configuration[:document_locale]
         end
+      end
 
-        if License.premium? && args.key?(:invoice_grace_period)
-          Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: args[:invoice_grace_period])
+      if License.premium? && args.key?(:invoice_grace_period)
+        Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: args[:invoice_grace_period])
+      end
+
+      if args.key?(:billing_configuration)
+        billing = args[:billing_configuration]
+        customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
+        customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+
+        if License.premium? && billing.key?(:invoice_grace_period)
+          Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
         end
+      end
 
-        if args.key?(:billing_configuration)
-          billing = args[:billing_configuration]
-          customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-          customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
+      if args.key?(:net_payment_term)
+        Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
+      end
 
-          if License.premium? && billing.key?(:invoice_grace_period)
-            Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
-          end
+      # NOTE: external_id is not editable if customer is attached to subscriptions
+      customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
+
+      ActiveRecord::Base.transaction do
+        customer.save!
+
+        if args[:tax_codes]
+          taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
+          taxes_result.raise_if_error!
         end
+        Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
+      end
 
-        if args.key?(:net_payment_term)
-          Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
-        end
-
-        # NOTE: external_id is not editable if customer is attached to subscriptions
-        customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
-
-        ActiveRecord::Base.transaction do
-          customer.save!
-
-          if args[:tax_codes]
-            taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
-            taxes_result.raise_if_error!
-          end
-          Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
-        end
-
-        # NOTE: if payment provider is updated, we need to create/update the provider customer
-        if args.key?(:provider_customer) || args.key?(:payment_provider)
-          payment_provider = old_payment_provider || customer.payment_provider
-          create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
-        end
+      # NOTE: if payment provider is updated, we need to create/update the provider customer
+      if args.key?(:provider_customer) || args.key?(:payment_provider)
+        payment_provider = old_payment_provider || customer.payment_provider
+        create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
       end
 
       result.customer = customer
