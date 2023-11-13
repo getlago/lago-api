@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::Analytics::InvoicedUsagesController, type: :request do # rubocop:disable RSpec/FilePath
-  describe 'GET /analytics/invoiced_usages' do
+  describe 'GET /analytics/invoiced_usage' do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
 
@@ -13,18 +13,13 @@ RSpec.describe Api::V1::Analytics::InvoicedUsagesController, type: :request do #
       it 'returns the invoiced usage' do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoiced_usages',
+          '/api/v1/analytics/invoiced_usage',
         )
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
 
-          month = DateTime.parse json[:invoiced_usages].first[:month]
-
-          expect(month).to eq(DateTime.current.beginning_of_month)
-          expect(json[:invoiced_usages].first[:code]).to eq(nil)
-          expect(json[:invoiced_usages].first[:currency]).to eq(nil)
-          expect(json[:invoiced_usages].first[:amount_cents]).to eq(0.0)
+          expect(json[:invoiced_usages]).to eq([])
         end
       end
     end
@@ -33,7 +28,7 @@ RSpec.describe Api::V1::Analytics::InvoicedUsagesController, type: :request do #
       it 'returns forbidden status' do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoiced_usages',
+          '/api/v1/analytics/invoiced_usage',
         )
 
         expect(response).to have_http_status(:forbidden)

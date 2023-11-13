@@ -28,7 +28,7 @@ module Api
         end
 
         def authorize
-          return forbidden_error(code: 'premium_feature') unless License.premium?
+          forbidden_error(code: 'premium_feature') unless License.premium?
         end
       end
     end

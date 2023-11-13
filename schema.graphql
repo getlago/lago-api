@@ -3297,6 +3297,18 @@ enum InvoiceTypeEnum {
   subscription
 }
 
+type InvoicedUsage {
+  amountCents: BigInt!
+  code: String
+  currency: CurrencyEnum!
+  month: ISO8601DateTime!
+}
+
+type InvoicedUsageCollection {
+  collection: [InvoicedUsage!]!
+  metadata: CollectionMetadata!
+}
+
 """
 Represents untyped JSON
 """
@@ -4371,6 +4383,11 @@ type Query {
     limit: Int
     page: Int
   ): CreditNoteCollection
+
+  """
+  Query invoiced usage of an organization
+  """
+  invoicedUsages(currency: CurrencyEnum): InvoicedUsageCollection!
 
   """
   Query invoices
