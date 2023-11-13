@@ -27,7 +27,7 @@ module Invoices
 
         InvoiceSubscription.create!(
           invoice:,
-          subscription: event.subscription,
+          subscription:,
           timestamp:,
           recurring: false,
         )
@@ -61,7 +61,7 @@ module Invoices
 
     attr_accessor :timestamp, :charge, :event, :invoice
 
-    delegate :customer, to: :event
+    delegate :subscription, :customer, to: :event
 
     def create_fees(invoice)
       fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, invoice:)

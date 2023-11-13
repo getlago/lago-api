@@ -46,7 +46,8 @@ class Customer < ApplicationRecord
   validates :currency, inclusion: { in: currency_list }, allow_nil: true
   validates :external_id,
             presence: true,
-            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id },
+            unless: :deleted_at
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true

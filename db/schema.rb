@@ -341,6 +341,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
+    t.index ["organization_id", "external_subscription_id", "code", "timestamp"], name: "index_events_on_external_subscription_id_and_code_and_timestamp", where: "(deleted_at IS NULL)"
     t.index ["organization_id", "external_subscription_id", "transaction_id"], name: "index_unique_transaction_id", unique: true
     t.index ["organization_id"], name: "index_events_on_organization_id"
     t.index ["properties"], name: "index_events_on_properties", opclass: :jsonb_path_ops, using: :gin

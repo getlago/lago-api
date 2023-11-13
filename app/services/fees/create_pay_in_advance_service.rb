@@ -49,7 +49,7 @@ module Fees
 
         fee = Fee.new(
           invoice:,
-          subscription: event.subscription,
+          subscription:,
           charge:,
           amount_cents: result.amount,
           amount_currency: subscription.plan.amount_currency,
