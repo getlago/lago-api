@@ -12,7 +12,15 @@ module Clock
         cascade: false,
       )
 
-      # TODO: enqueue a validation jobs for each organization with at least one event
+      organizations = Organization.where(
+        id: Events::LastHourMv.pluck('DISTINCT(organization_id)'),
+      )
+
+      organizations.find_each do |organization|
+        next unless organization.webhook_endpoints.exists?
+
+        Events::PostValidationJob.perform_later(organization:)
+      end
     end
   end
 end
