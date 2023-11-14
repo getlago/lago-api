@@ -9,6 +9,10 @@ module V1
         lago_invoice_id: model.invoice_id,
         lago_true_up_fee_id: model.true_up_fee&.id,
         lago_true_up_parent_fee_id: model.true_up_parent_fee_id,
+        lago_subscription_id: model.subscription_id,
+        external_subscription_id: model.subscription&.external_id,
+        lago_customer_id: model.customer&.id,
+        external_customer_id: model.customer&.external_id,
         item: {
           type: model.fee_type,
           code: model.item_code,
@@ -69,13 +73,7 @@ module V1
         id: model.pay_in_advance_event_id,
       )
 
-      {
-        lago_subscription_id: model.subscription_id,
-        external_subscription_id: model.subscription&.external_id,
-        lago_customer_id: model.customer.id,
-        external_customer_id: model.customer.external_id,
-        event_transaction_id: event&.transaction_id,
-      }
+      { event_transaction_id: event&.transaction_id }
     end
 
     def applied_taxes
