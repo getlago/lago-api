@@ -106,13 +106,13 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           create_interval_transactions_service.call
 
           expect(WalletTransactions::CreateJob).to have_been_enqueued
-          .with(
-            organization_id: customer.organization_id,
-            wallet_id: wallet.id,
-            paid_credits: recurring_transaction_rule.paid_credits,
-            granted_credits: recurring_transaction_rule.granted_credits,
-            source: :interval,
-          )
+            .with(
+              organization_id: customer.organization_id,
+              wallet_id: wallet.id,
+              paid_credits: recurring_transaction_rule.paid_credits,
+              granted_credits: recurring_transaction_rule.granted_credits,
+              source: :interval,
+            )
         end
       end
 

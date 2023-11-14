@@ -7,6 +7,7 @@ describe Clock::CreateIntervalWalletTransactionsJob, job: true do
 
   describe '.perform' do
     before { allow(Wallets::CreateIntervalWalletTransactionsService).to receive(:call) }
+
     it 'removes all old webhooks' do
       interval_wallet_transactions_job.perform_now
 
