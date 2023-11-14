@@ -35,6 +35,7 @@ module Types
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
+    field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :outstanding_invoices, resolver: Resolvers::Analytics::OutstandingInvoicesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver

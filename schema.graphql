@@ -3357,6 +3357,17 @@ enum MembershipStatus {
   revoked
 }
 
+type Mrr {
+  amountCents: BigInt
+  currency: CurrencyEnum
+  month: ISO8601DateTime!
+}
+
+type MrrCollection {
+  collection: [Mrr!]!
+  metadata: CollectionMetadata!
+}
+
 type Mutation {
   """
   Accepts a new Invite
@@ -4408,6 +4419,11 @@ type Query {
   Query memberships of an organization
   """
   memberships(limit: Int, page: Int): MembershipCollection!
+
+  """
+  Query MRR of an organization
+  """
+  mrrs(currency: CurrencyEnum): MrrCollection!
 
   """
   Query the current organization
