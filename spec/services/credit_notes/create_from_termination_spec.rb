@@ -84,6 +84,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       end
     end
 
+    context 'when invoice is voided' do
+      before { invoice.void! }
+
+      it 'does not create a credit note' do
+        expect { create_service.call }.not_to change(CreditNote, :count)
+      end
+    end
+
     context 'when fee amount is zero' do
       let(:subscription_fee) do
         create(
