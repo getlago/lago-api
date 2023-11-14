@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   subject(:unique_count_service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       event: pay_in_advance_event,
@@ -43,6 +43,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       aggregation_type: 'unique_count_agg',
       field_name: 'unique_id',
       recurring: true,
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

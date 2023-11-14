@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
   subject(:sum_service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       event: pay_in_advance_event,
@@ -30,6 +30,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       organization:,
       aggregation_type: 'sum_agg',
       field_name: 'total_count',
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

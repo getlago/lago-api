@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   subject(:sum_service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       event: pay_in_advance_event,
@@ -31,6 +31,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       aggregation_type: 'sum_agg',
       field_name: 'total_count',
       recurring: true,
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

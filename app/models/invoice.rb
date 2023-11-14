@@ -153,7 +153,7 @@ class Invoice < ApplicationRecord
 
     service.new(
       event_store_class: Events::Stores::PostgresStore,
-      billable_metric: fee.charge.billable_metric,
+      charge: fee.charge,
       subscription: fee.subscription,
       group: fee.group,
       boundaries: {
