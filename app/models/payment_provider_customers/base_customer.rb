@@ -35,6 +35,10 @@ module PaymentProviderCustomers
       nil
     end
 
+    def service
+      # Overriden
+    end
+
     def sync_with_provider
       get_from_settings('sync_with_provider')
     end

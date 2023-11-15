@@ -92,7 +92,7 @@ module PaymentProviderCustomers
       result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
     end
 
-    def generate_checkout_url
+    def generate_checkout_url(send_webhook: true)
       return result unless customer.organization.webhook_endpoints.any?
 
       res = Stripe::Checkout::Session.create(
@@ -103,12 +103,12 @@ module PaymentProviderCustomers
       )
 
       result.checkout_url = res['url']
-
+      
       SendWebhookJob.perform_later(
         'customer.checkout_url_generated',
         customer,
         checkout_url: result.checkout_url,
-      )
+      ) if send_webhook
 
       result
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e

@@ -2,5 +2,8 @@
 
 module PaymentProviderCustomers
   class GocardlessCustomer < BaseCustomer
+    def service
+      PaymentProviderCustomers::GocardlessService.new(self)
+    end
   end
 end

@@ -25,17 +25,18 @@ module PaymentProviderCustomers
       result
     end
 
-    def generate_checkout_url
+    def generate_checkout_url(send_webhook: true)
       billing_request = create_billing_request(gocardless_customer.provider_customer_id)
       billing_request_flow = create_billing_request_flow(billing_request.id)
+
+      result.checkout_url = billing_request_flow.authorisation_url
 
       SendWebhookJob.perform_later(
         'customer.checkout_url_generated',
         customer,
-        checkout_url: billing_request_flow.authorisation_url,
-      )
+        checkout_url: result.checkout_url,
+      ) if send_webhook
 
-      result.checkout_url = billing_request_flow.authorisation_url
       result
     end
 
