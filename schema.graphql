@@ -5698,8 +5698,8 @@ input UpdatePlanInput {
 
 input UpdateRecurringTransactionRuleInput {
   grantedCredits: String!
-  id: ID
   interval: RecurringTransactionIntervalEnum
+  lagoId: ID
   paidCredits: String!
   ruleType: RecurringTransactionRuleTypeEnum!
   thresholdCredits: String

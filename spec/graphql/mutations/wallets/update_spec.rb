@@ -43,7 +43,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           expirationAt: expiration_at.iso8601,
           recurringTransactionRules: [
             {
-              id: recurring_transaction_rule.id,
+              lagoId: recurring_transaction_rule.id,
               ruleType: 'interval',
               interval: 'weekly',
               paidCredits: '22.2',

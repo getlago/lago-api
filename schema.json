@@ -24657,7 +24657,7 @@
               "deprecationReason": null
             },
             {
-              "name": "id",
+              "name": "lagoId",
               "description": null,
               "type": {
                 "kind": "SCALAR",

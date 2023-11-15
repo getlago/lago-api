@@ -7,7 +7,7 @@ module Types
         graphql_name 'UpdateRecurringTransactionRuleInput'
 
         argument :granted_credits, String, required: true
-        argument :id, ID, required: false
+        argument :lago_id, ID, required: false
         argument :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, required: false
         argument :paid_credits, String, required: true
         argument :rule_type, Types::Wallets::RecurringTransactionRules::RuleTypeEnum, required: true
