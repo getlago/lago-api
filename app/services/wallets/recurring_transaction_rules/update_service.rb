@@ -14,8 +14,10 @@ module Wallets
         created_recurring_rules_ids = []
 
         hash_recurring_rules = params.map { |m| m.to_h.deep_symbolize_keys }
-        hash_recurring_rules.each do |rule|
-          recurring_rule = wallet.recurring_transaction_rules.find_by(id: rule[:id])
+        hash_recurring_rules.each do |payload_rule|
+          lago_id = payload_rule[:lago_id]
+          rule = payload_rule.except(:lago_id)
+          recurring_rule = wallet.recurring_transaction_rules.find_by(id: lago_id)
 
           if recurring_rule
             recurring_rule.update!(rule)
@@ -39,7 +41,7 @@ module Wallets
       attr_reader :wallet, :params
 
       def sanitize_recurring_rules(args_recurring_rules, created_recurring_rules_ids)
-        updated_recurring_rules_ids = args_recurring_rules.reject { |m| m[:id].nil? }.map { |m| m[:id] }
+        updated_recurring_rules_ids = args_recurring_rules.reject { |m| m[:lago_id].nil? }.map { |m| m[:lago_id] }
         not_needed_ids =
           wallet.recurring_transaction_rules.pluck(:id) - updated_recurring_rules_ids - created_recurring_rules_ids
 
