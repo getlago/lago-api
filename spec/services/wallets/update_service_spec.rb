@@ -180,10 +180,14 @@ RSpec.describe Wallets::UpdateService, type: :service do
             {
               rule_type: 'interval',
               interval: 'monthly',
+              paid_credits: '105',
+              granted_credits: '105',
             },
             {
               rule_type: 'threshold',
               threshold_credits: '1.0',
+              paid_credits: '105',
+              granted_credits: '105',
             },
           ]
         end
@@ -203,6 +207,8 @@ RSpec.describe Wallets::UpdateService, type: :service do
             {
               rule_type: 'invalid',
               interval: 'monthly',
+              paid_credits: '105',
+              granted_credits: '105',
             },
           ]
         end
@@ -221,6 +227,8 @@ RSpec.describe Wallets::UpdateService, type: :service do
             {
               rule_type: 'threshold',
               threshold_credits: 'abc',
+              paid_credits: '105',
+              granted_credits: '105',
             },
           ]
         end
