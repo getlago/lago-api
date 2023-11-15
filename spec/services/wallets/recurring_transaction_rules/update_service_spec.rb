@@ -10,7 +10,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
   let(:params) do
     [
       {
-        id: recurring_transaction_rule.id,
+        lago_id: recurring_transaction_rule.id,
         rule_type: 'interval',
         interval: 'weekly',
         paid_credits: '105',

@@ -163,7 +163,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           name: 'wallet1',
           recurring_transaction_rules: [
             {
-              id: recurring_transaction_rule.id,
+              lago_id: recurring_transaction_rule.id,
               rule_type: 'interval',
               interval: 'weekly',
               paid_credits: '105',
@@ -188,6 +188,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(response).to have_http_status(:success)
 
           expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
           expect(recurring_rules.first[:rule_type]).to eq('interval')
           expect(recurring_rules.first[:interval]).to eq('weekly')
           expect(recurring_rules.first[:paid_credits]).to eq('105.0')
