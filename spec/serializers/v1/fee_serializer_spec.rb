@@ -48,6 +48,7 @@ RSpec.describe ::V1::FeeSerializer do
         'succeeded_at' => fee.succeeded_at&.iso8601,
         'failed_at' => fee.failed_at&.iso8601,
         'refunded_at' => fee.refunded_at&.iso8601,
+        'amount_details' => fee.amount_details,
       )
       expect(result['fee']['item']).to include(
         'type' => fee.fee_type,

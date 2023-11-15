@@ -112,6 +112,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
           succeeded_at: fee.succeeded_at&.iso8601,
           failed_at: fee.failed_at&.iso8601,
           refunded_at: fee.refunded_at&.iso8601,
+          amount_details: fee.amount_details,
           applied_taxes: [],
         )
         expect(json[:fee][:item]).to include(

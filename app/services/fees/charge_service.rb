@@ -95,6 +95,7 @@ module Fees
         taxes_amount_cents: 0,
         unit_amount_cents:,
         precise_unit_amount: amount_result.unit_amount,
+        amount_details: amount_result.amount_details,
       )
 
       result.fees << new_fee

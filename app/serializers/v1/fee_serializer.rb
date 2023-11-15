@@ -39,6 +39,7 @@ module V1
         succeeded_at: model.succeeded_at&.iso8601,
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
+        amount_details: model.amount_details,
       }.merge(legacy_values)
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
