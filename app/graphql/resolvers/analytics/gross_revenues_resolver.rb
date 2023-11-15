@@ -16,7 +16,7 @@ module Resolvers
       def resolve(**args)
         validate_organization!
 
-        ::Analytics::GrossRevenue.find_all_by(current_organization.id, **args.merge({ months: 12 }))
+        ::Analytics::GrossRevenue.find_all_by(current_organization.id, **args.merge(months: 12))
       end
     end
   end
