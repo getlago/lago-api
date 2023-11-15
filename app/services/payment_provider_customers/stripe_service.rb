@@ -93,7 +93,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url(send_webhook: true)
-      return result unless customer.organization.webhook_endpoints.any?
+      return result unless (customer.organization.webhook_endpoints.any? || !send_webhook)
 
       res = Stripe::Checkout::Session.create(
         checkout_link_params,
