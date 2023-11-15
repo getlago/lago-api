@@ -24657,11 +24657,11 @@
               "deprecationReason": null
             },
             {
-              "name": "lagoId",
+              "name": "interval",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "ID",
+                "kind": "ENUM",
+                "name": "RecurringTransactionIntervalEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -24669,11 +24669,11 @@
               "deprecationReason": null
             },
             {
-              "name": "interval",
+              "name": "lagoId",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "RecurringTransactionIntervalEnum",
+                "kind": "SCALAR",
+                "name": "ID",
                 "ofType": null
               },
               "defaultValue": null,
