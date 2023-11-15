@@ -31,11 +31,13 @@ module PaymentProviderCustomers
 
       result.checkout_url = billing_request_flow.authorisation_url
 
-      SendWebhookJob.perform_later(
-        'customer.checkout_url_generated',
-        customer,
-        checkout_url: result.checkout_url,
-      ) if send_webhook
+      if send_webhook
+        SendWebhookJob.perform_later(
+          'customer.checkout_url_generated',
+          customer,
+          checkout_url: result.checkout_url,
+        )
+      end
 
       result
     end

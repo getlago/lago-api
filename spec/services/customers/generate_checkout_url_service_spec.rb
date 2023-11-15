@@ -42,7 +42,7 @@ RSpec.describe Customers::GenerateCheckoutUrlService, type: :service do
         result = described_class.new(customer: nil).call
 
         aggregate_failures do
-          expect(result.success?).to be_falsey
+          expect(result).not_to be_success
           expect(result.error.message).to eq('customer_not_found')
         end
       end
@@ -53,7 +53,7 @@ RSpec.describe Customers::GenerateCheckoutUrlService, type: :service do
         result = generate_checkout_url_service.call
 
         aggregate_failures do
-          expect(result.success?).to be_falsey
+          expect(result).not_to be_success
           expect(result.error.code).to eq(400)
           expect(result.error.message).to eq('400: no payment provider linked to this customer')
         end

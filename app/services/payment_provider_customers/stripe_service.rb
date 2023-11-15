@@ -93,7 +93,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url(send_webhook: true)
-      return result unless (customer.organization.webhook_endpoints.any? || !send_webhook)
+      return result unless customer.organization.webhook_endpoints.any? || !send_webhook
 
       res = Stripe::Checkout::Session.create(
         checkout_link_params,
@@ -103,12 +103,14 @@ module PaymentProviderCustomers
       )
 
       result.checkout_url = res['url']
-      
-      SendWebhookJob.perform_later(
-        'customer.checkout_url_generated',
-        customer,
-        checkout_url: result.checkout_url,
-      ) if send_webhook
+
+      if send_webhook
+        SendWebhookJob.perform_later(
+          'customer.checkout_url_generated',
+          customer,
+          checkout_url: result.checkout_url,
+        )
+      end
 
       result
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
