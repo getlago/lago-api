@@ -6,6 +6,7 @@ module WalletTransactions
       return result unless valid?(**args)
 
       wallet_transactions = []
+      @source = args[:source] || :manual
 
       if args[:paid_credits]
         transaction = handle_paid_credits(wallet: result.current_wallet, paid_credits: args[:paid_credits])
@@ -27,6 +28,8 @@ module WalletTransactions
 
     private
 
+    attr_reader :source
+
     def handle_paid_credits(wallet:, paid_credits:)
       paid_credits_amount = BigDecimal(paid_credits)
 
@@ -38,6 +41,7 @@ module WalletTransactions
         amount: wallet.rate_amount * paid_credits_amount,
         credit_amount: paid_credits_amount,
         status: :pending,
+        source:,
       )
 
       BillPaidCreditJob.perform_later(
@@ -61,6 +65,7 @@ module WalletTransactions
           credit_amount: granted_credits_amount,
           status: :settled,
           settled_at: Time.current,
+          source:,
         )
 
         Wallets::Balance::IncreaseService.new(
