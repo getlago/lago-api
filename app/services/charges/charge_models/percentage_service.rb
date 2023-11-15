@@ -14,22 +14,27 @@ module Charges
       end
 
       def amount_details
-        percentage_units = units - free_units_count
-        percentage_units = 0 if percentage_units.negative?
-        percentage_unit_amount = percentage_units.zero? ? 0 : compute_percentage_amount.fdiv(percentage_units)
+        paid_units = units - free_units_value
+        paid_units = 0 if paid_units.negative?
+        percentage_rate_unit_amount = paid_units.zero? ? 0 : compute_percentage_amount.fdiv(paid_units)
+        free_events = if aggregation_result.count >= free_units_count
+          free_units_count
+        else
+          [aggregation_result.count - free_units_count, 0].max
+        end
+        paid_events = aggregation_result.count - free_events
 
         {
-          unit_amounts: {
-            free_units_count:,
-            free_units_value:,
-            percentage_units:,
-            percentage_amount: compute_percentage_amount,
-            percentage_unit_amount:,
-            fixed_amount: compute_fixed_amount,
-            #fixed_units:,
-            #fixed_unit_amount:,
-            units:
-          }
+          units:,
+          free_units: free_units_value,
+          free_events:,
+          paid_units:,
+          percentage_rate_unit_amount:,
+          percentage_rate_amount: compute_percentage_amount,
+          paid_events:,
+          fixed_fee_unit_amount: paid_events.positive? ? fixed_amount : 0,
+          fixed_fee_amount: compute_fixed_amount,
+          min_max_adjustment_amount:,
         }
       end
 
@@ -56,6 +61,9 @@ module Charges
 
       def free_units_value
         return 0 if last_running_total.zero?
+        if free_units_per_events > 0 && free_units_per_events < (aggregation_result.options[:running_total]&.count || 0)
+          return aggregation_result.options[:running_total][free_units_per_events - 1]
+        end
         return last_running_total if free_units_per_total_aggregation.zero?
         return last_running_total if last_running_total <= free_units_per_total_aggregation
 
@@ -165,6 +173,12 @@ module Charges
         return per_transaction_max_amount if per_transaction_max_amount? && amount > per_transaction_max_amount
 
         amount
+      end
+
+      def min_max_adjustment_amount
+        return 0 unless should_apply_min_max?
+
+        compute_amount_with_transaction_min_max - compute_percentage_amount - compute_fixed_amount
       end
     end
   end

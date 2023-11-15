@@ -403,6 +403,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_17_123744) do
     t.string "invoice_display_name"
     t.decimal "total_aggregated_units"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
+    t.jsonb "amount_details", default: "{}", null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"

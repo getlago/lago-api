@@ -49,15 +49,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 2,
-            free_units_value: 250,
-            percentage_units: 0,
-            percentage_amount: 0,
-            percentage_unit_amount: 0,
-            fixed_amount: 0,
-            units: 0,
-          },
+          units: 0,
+          free_units: 250,
+          paid_units: 0,
+          free_events: 2,
+          percentage_rate_unit_amount: 0,
+          percentage_rate_amount: 0,
+          paid_events: 2,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 0,
+          min_max_adjustment_amount: 0,
         },
       )
     end
@@ -69,15 +70,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.0139375) # 11.15 / 800
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 2,
-            free_units_value: 250,
-            percentage_units: 798,
-            percentage_amount: 7.15, # (800 - 250) * (1.3 / 100)
-            percentage_unit_amount: 0.008959899749373433,
-            fixed_amount: 4, # (4 - 2) * 2.0
-            units: 800,
-          },
+          units: 800,
+          free_units: 250,
+          paid_units: 550,
+          free_events: 2,
+          percentage_rate_unit_amount: 0.013,
+          percentage_rate_amount: 7.15, # (800 - 250) * (1.3 / 100),
+          paid_events: 2,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 4, # (4 - 2) * 2.0
+          min_max_adjustment_amount: 0,
         },
       )
     end
@@ -95,17 +97,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.01)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 0,
-            free_units_value: 0,
-            percentage_units: 800,
-            percentage_amount: 0,
-            percentage_unit_amount: 0,
-            fixed_amount: 8,
-            #fixed_units: ,
-            #fixed_unit_amount: ,
-            units: 800,
-          },
+          units: 800,
+          free_units: 0,
+          paid_units: 800,
+          free_events: 0,
+          percentage_rate_unit_amount: 0,
+          percentage_rate_amount: 0,
+          paid_events: 4,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 8,
+          min_max_adjustment_amount: 0,
         },
       )
     end
@@ -119,17 +120,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.0139375)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 2,
-            free_units_value: 250,
-            percentage_units: 798,
-            percentage_amount: 7.15,
-            percentage_unit_amount: 0.008959899749373433,
-            fixed_amount: 4,
-            #fixed_units: ,
-            #fixed_unit_amount: ,
-            units: 800,
-          },
+          units: 800,
+          free_units: 250,
+          paid_units: 550,
+          free_events: 2,
+          percentage_rate_unit_amount: 0.013,
+          percentage_rate_amount: 7.15,
+          paid_events: 2,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 4,
+          min_max_adjustment_amount: 0,
         },
       )
     end
@@ -143,17 +143,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.009)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 3,
-            free_units_value: 400,
-            percentage_units: 797,
-            percentage_amount: 5.2, # (800 - 400) * (1.3 / 100)
-            percentage_unit_amount: 0.006524466750313676,
-            fixed_amount: 2, # (4 - 3) * 2.0
-            #fixed_units: ,
-            #fixed_unit_amount: ,
-            units: 800,
-          },
+          units: 800,
+          free_units: 400,
+          paid_units: 400,
+          free_events: 3,
+          percentage_rate_unit_amount: 0.013000000000000001,
+          percentage_rate_amount: 5.2, # (800 - 400) * (1.3 / 100)
+          paid_events: 1,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 2, # (4 - 3) * 2.0
+          min_max_adjustment_amount: 0,
         },
       )
     end
@@ -169,17 +168,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.023)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 0,
-            free_units_value: 0,
-            percentage_units: 800,
-            percentage_amount: 10.4, # 800 * (1.3 / 100)
-            percentage_unit_amount: 0.013000000000000001,
-            fixed_amount: 8, # 4 * 2.0
-            #fixed_units: ,
-            #fixed_unit_amount: ,
-            units: 800,
-          },
+          units: 800,
+          free_units: 0,
+          paid_units: 800,
+          free_events: 0,
+          percentage_rate_unit_amount: 0.013000000000000001,
+          percentage_rate_amount: 10.4, # 800 * (1.3 / 100)
+          paid_events: 4,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 8, # 4 * 2.0
+          min_max_adjustment_amount: 0,
         },
       )
     end
@@ -195,17 +193,16 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.009)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          unit_amounts: {
-            free_units_count: 3,
-            free_units_value: 400,
-            percentage_units: 797,
-            percentage_amount: 5.2, # (800 - 400) * (1.3 / 100)
-            percentage_unit_amount: 0.006524466750313676,
-            fixed_amount: 2, # (4 - 3) * 2.0
-            #fixed_units: ,
-            #fixed_unit_amount: ,
-            units: 800,
-          },
+          units: 800,
+          free_units: 400,
+          paid_units: 400,
+          free_events: 3,
+          percentage_rate_unit_amount: 0.013000000000000001,
+          percentage_rate_amount: 5.2, # (800 - 400) * (1.3 / 100)
+          paid_events: 1,
+          fixed_fee_unit_amount: 2,
+          fixed_fee_amount: 2, # (4 - 3) * 2.0
+          min_max_adjustment_amount: 0,
         },
       )
     end
