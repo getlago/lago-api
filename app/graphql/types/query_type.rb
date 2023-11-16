@@ -35,6 +35,7 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
+    field :outstanding_invoices, resolver: Resolvers::Analytics::OutstandingInvoicesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
@@ -44,8 +45,8 @@ module Types
     field :taxes, resolver: Resolvers::TaxesResolver
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
     field :wallets, resolver: Resolvers::WalletsResolver
-    field :webhooks, resolver: Resolvers::WebhooksResolver
     field :webhook_endpoint, resolver: Resolvers::WebhookEndpointResolver
     field :webhook_endpoints, resolver: Resolvers::WebhookEndpointsResolver
+    field :webhooks, resolver: Resolvers::WebhooksResolver
   end
 end
