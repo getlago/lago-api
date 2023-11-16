@@ -103,8 +103,8 @@ Charge.create_with(
       time = Time.current - offset.month - rand(1..20).days
 
       Event.create!(
-        customer_id: customer.id,
-        subscription_id: sub.id,
+        external_customer_id: customer.external_id,
+        external_subscription_id: sub.external_id,
         organization_id: organization.id,
         transaction_id: SecureRandom.uuid,
         timestamp: time - rand(0..12).seconds,
@@ -124,8 +124,8 @@ Charge.create_with(
       time = Time.current - offset.month - rand(1..20).days
 
       Event.create!(
-        customer_id: customer.id,
-        subscription_id: sub.id,
+        external_customer_id: customer.external_id,
+        external_subscription_id: sub.external_id,
         organization_id: organization.id,
         transaction_id: SecureRandom.uuid,
         timestamp: time - rand(0..12).seconds,
@@ -144,8 +144,8 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer_id: customer.id,
-      subscription_id: sub.id,
+      external_customer_id: customer.external_id,
+      external_subscription_id: sub.external_id,
       organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
@@ -164,8 +164,8 @@ Charge.create_with(
     time = Time.zone.now - rand(1..20).days
 
     Event.create!(
-      customer_id: customer.id,
-      subscription_id: sub.id,
+      external_customer_id: customer.external_id,
+      external_subscription_id: sub.external_id,
       organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - 120.seconds,
@@ -221,8 +221,8 @@ organization.customers.find_each do |customer|
     time = Time.zone.now
 
     Event.create!(
-      customer_id: customer.id,
-      subscription_id: customer.active_subscriptions&.first&.id,
+      external_customer_id: customer.external_id,
+      external_subscription_id: customer.active_subscriptions&.first&.external_id,
       organization_id: organization.id,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..24).hours,
