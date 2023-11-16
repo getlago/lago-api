@@ -6,8 +6,6 @@ module PaymentProviderCustomers
       service_class(provider_customer).new(provider_customer)
     end
 
-    private
-
     def self.service_class(provider_customer)
       case provider_customer&.class.to_s
       when 'PaymentProviderCustomers::StripeCustomer'

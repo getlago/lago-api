@@ -80,7 +80,7 @@ module Api
             json: ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
               customer,
               root_name: 'customer',
-              checkout_url:result.checkout_url,
+              checkout_url: result.checkout_url,
             ),
           )
         else
