@@ -400,8 +400,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.string "invoice_display_name"
     t.decimal "total_aggregated_units"
+    t.string "invoice_display_name"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
@@ -845,7 +845,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
-  add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"

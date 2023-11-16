@@ -20,6 +20,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       namespace :analytics do
         get :gross_revenue, to: 'gross_revenues#index', as: :gross_revenue
+        get :invoiced_usage, to: 'invoiced_usages#index', as: :outstanding_invoice
         get :outstanding_invoices, to: 'outstanding_invoices#index', as: :outstanding_invoices
       end
 
