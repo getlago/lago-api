@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   subject(:count_service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       event: pay_in_advance_event,
@@ -29,6 +29,13 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       :billable_metric,
       organization:,
       aggregation_type: 'count_agg',
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

@@ -17,7 +17,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
   let(:aggregator) do
     BillableMetrics::ProratedAggregations::SumService.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription: nil,
       boundaries: nil,
     )

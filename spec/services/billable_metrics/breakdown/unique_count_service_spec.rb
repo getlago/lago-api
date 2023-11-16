@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
   subject(:service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       boundaries: {
@@ -39,6 +39,13 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       organization:,
       aggregation_type: 'unique_count_agg',
       field_name: 'unique_id',
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

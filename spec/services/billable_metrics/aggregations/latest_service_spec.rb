@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   subject(:latest_service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       boundaries: {
@@ -29,6 +29,13 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       organization:,
       aggregation_type: 'latest_agg',
       field_name: 'total_count',
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

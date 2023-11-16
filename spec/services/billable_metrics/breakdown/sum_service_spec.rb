@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
   subject(:service) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       boundaries: {
@@ -40,6 +40,13 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       aggregation_type: 'sum_agg',
       field_name: 'total_count',
       recurring: true,
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
     )
   end
 

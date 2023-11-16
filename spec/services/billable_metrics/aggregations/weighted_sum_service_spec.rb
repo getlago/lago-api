@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   subject(:aggregator) do
     described_class.new(
       event_store_class:,
-      billable_metric:,
+      charge:,
       subscription:,
       group:,
       boundaries: {
@@ -25,6 +25,13 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   let(:group) { nil }
 
   let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      billable_metric:,
+    )
+  end
 
   let(:from_datetime) { Time.zone.parse('2023-08-01 00:00:00.000') }
   let(:to_datetime) { Time.zone.parse('2023-08-31 23:59:59.999') }
