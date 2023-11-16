@@ -18,6 +18,7 @@ class SendWebhookJob < ApplicationJob
     'invoice.payment_status_updated' => Webhooks::Invoices::PaymentStatusUpdatedService,
     'invoice.payment_failure' => Webhooks::PaymentProviders::InvoicePaymentFailureService,
     'event.error' => Webhooks::Events::ErrorService,
+    'events.errors' => Webhooks::Events::ValidationErrorsService,
     'fee.created' => Webhooks::Fees::PayInAdvanceCreatedService,
     'customer.payment_provider_created' => Webhooks::PaymentProviders::CustomerCreatedService,
     'customer.payment_provider_error' => Webhooks::PaymentProviders::CustomerErrorService,

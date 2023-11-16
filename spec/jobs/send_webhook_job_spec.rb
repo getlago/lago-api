@@ -91,6 +91,34 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is events.errors' do
+    let(:webhook_service) { instance_double(Webhooks::Events::ValidationErrorsService) }
+    let(:object) { organization }
+    let(:options) do
+      {
+        errors: [
+          invalid_code: [SecureRandom.uuid],
+          missing_aggregation_property: [SecureRandom.uuid],
+          missing_group_key: [SecureRandom.uuid],
+        ],
+      }
+    end
+
+    before do
+      allow(Webhooks::Events::ValidationErrorsService).to receive(:new)
+        .with(object:, options:, webhook_id: nil)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      send_webhook_job.perform_now('events.errors', object, options)
+
+      expect(Webhooks::Events::ValidationErrorsService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is fee.created' do
     let(:webhook_service) { instance_double(Webhooks::Fees::PayInAdvanceCreatedService) }
     let(:fee) { create(:fee) }
