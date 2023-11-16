@@ -13,13 +13,12 @@ module Customers
       return result.not_found_failure!(resource: 'customer') if customer.blank?
 
       if provider_customer.blank?
-        return result.service_failure!(
-          code: 400,
-          message: 'no payment provider linked to this customer',
+        return result.single_validation_failure!(
+          error_code: 'no_linked_payment_provider',
         )
       end
 
-      provider_customer.service.generate_checkout_url(send_webhook: false)
+      PaymentProviderCustomers::Factory.new_instance(provider_customer:).generate_checkout_url(send_webhook: false)
     end
 
     private

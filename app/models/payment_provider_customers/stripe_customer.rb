@@ -23,10 +23,6 @@ module PaymentProviderCustomers
       push_to_settings(key: 'provider_payment_methods', value: provider_payment_methods.to_a)
     end
 
-    def service
-      PaymentProviderCustomers::StripeService.new(self)
-    end
-
     private
 
     def allowed_provider_payment_methods

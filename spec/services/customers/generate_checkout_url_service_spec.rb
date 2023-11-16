@@ -54,8 +54,6 @@ RSpec.describe Customers::GenerateCheckoutUrlService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.code).to eq(400)
-          expect(result.error.message).to eq('400: no payment provider linked to this customer')
         end
       end
     end

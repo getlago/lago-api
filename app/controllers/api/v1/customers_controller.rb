@@ -77,11 +77,11 @@ module Api
 
         if result.success?
           render(
-            json: {
-              customer: {
-                checkout_url: result.checkout_url,
-              },
-            },
+            json: ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
+              customer,
+              root_name: 'customer',
+              checkout_url:result.checkout_url,
+            ),
           )
         else
           render_error_response(result)
