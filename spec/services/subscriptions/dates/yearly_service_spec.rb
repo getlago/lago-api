@@ -246,7 +246,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
     context 'when billing_time is calendar' do
       let(:billing_time) { :calendar }
-      let(:billing_at) { DateTime.parse('01 Jan 2022') }
+      let(:billing_at) { DateTime.parse('01 Jan 2023') }
       let(:subscription_at) { DateTime.parse('02 Feb 2020') }
 
       it 'returns from_date' do
@@ -295,7 +295,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         let(:subscription_at) { DateTime.parse('02 Feb 2020') }
 
         it 'returns the start of the previous period' do
-          expect(result).to eq('2021-01-01 00:00:00 UTC')
+          expect(result).to eq('2022-01-01 00:00:00 UTC')
         end
       end
 
@@ -303,10 +303,11 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         before { plan.update!(bill_charges_monthly: true) }
 
         it 'returns the begining of the previous month' do
-          expect(result).to eq('2021-12-01 00:00:00 UTC')
+          expect(result).to eq('2022-12-01 00:00:00 UTC')
         end
 
         context 'when subscription started in the middle of a period' do
+          let(:billing_at) { DateTime.parse('01 Jan 2022') }
           let(:started_at) { DateTime.parse('03 Mar 2022') }
 
           it 'returns the start date' do

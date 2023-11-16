@@ -71,9 +71,7 @@ module Subscriptions
         datetime = new_datetime if ((datetime.in_time_zone - new_datetime.in_time_zone) / 1.hour).abs < 26
       end
 
-      if datetime < subscription.started_at
-        datetime = subscription.started_at.in_time_zone(customer.applicable_timezone).beginning_of_day.utc
-      end
+      datetime = subscription.started_at if datetime < subscription.started_at
 
       datetime
     end
