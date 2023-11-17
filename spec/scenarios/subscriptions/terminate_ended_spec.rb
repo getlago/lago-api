@@ -198,7 +198,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           expect(subscription).to be_active
         end
 
-        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidationss
+        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
         WebhookEndpoint.destroy_all
 
         travel_to(creation_time + 5.hours) do
@@ -407,7 +407,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription).to be_active
           end
 
-          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidationss
+          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
           WebhookEndpoint.destroy_all
 
           travel_to(ending_at + 5.minutes) do
