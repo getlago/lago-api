@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Analytics
-  class MrrsService < BaseService
+  class OutstandingInvoicesService < BaseService
     def call
       return result.forbidden_failure! unless License.premium?
 
-      @records = ::Analytics::Mrr.find_all_by(organization.id, **filters)
+      @records = ::Analytics::OutstandingInvoice.find_all_by(organization.id, **filters)
 
       result.records = records
       result
