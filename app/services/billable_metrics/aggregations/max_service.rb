@@ -3,11 +3,16 @@
 module BillableMetrics
   module Aggregations
     class MaxService < BillableMetrics::Aggregations::BaseService
-      def aggregate(options: {})
-        events = fetch_events(from_datetime:, to_datetime:)
+      def initialize(...)
+        super(...)
 
-        result.aggregation = events.maximum("(#{sanitized_field_name})::numeric") || 0
-        result.count = events.count
+        event_store.numeric_property = true
+        event_store.aggregation_property = billable_metric.field_name
+      end
+
+      def aggregate(options: {})
+        result.aggregation = event_store.max || 0
+        result.count = event_store.count
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
@@ -15,10 +20,8 @@ module BillableMetrics
       end
 
       def compute_per_event_aggregation
-        events = fetch_events(from_datetime:, to_datetime:)
-
-        max_value = events.maximum("(#{sanitized_field_name})::numeric") || 0
-        event_values = events.pluck(Arel.sql("(#{sanitized_field_name})::numeric"))
+        max_value = event_store.max || 0
+        event_values = event_store.events_values
         max_value_seen = false
 
         # NOTE: returns the first max value, 0 for all other events
@@ -31,14 +34,6 @@ module BillableMetrics
 
           0
         end
-      end
-
-      private
-
-      def fetch_events(from_datetime:, to_datetime:)
-        events_scope(from_datetime:, to_datetime:)
-          .where(field_presence_condition)
-          .where(field_numeric_condition)
       end
     end
   end
