@@ -3,19 +3,11 @@
 module Api
   module V1
     module Analytics
-      class OutstandingInvoicesController < Api::BaseController
-        before_action :authorize
-
+      class OutstandingInvoicesController < BaseController
         def index
-          result = ::Analytics::OutstandingInvoice.find_all_by(current_organization.id, **filters)
+          @result = ::Analytics::OutstandingInvoicesService.new(current_organization, **filters).call
 
-          render(
-            json: ::CollectionSerializer.new(
-              result,
-              ::V1::Analytics::OutstandingInvoiceSerializer,
-              collection_name: 'outstanding_invoices',
-            ),
-          )
+          super
         end
 
         private
@@ -25,10 +17,6 @@ module Api
             currency: params[:currency]&.upcase,
             months: params[:months].to_i,
           }
-        end
-
-        def authorize
-          forbidden_error(code: 'premium_feature') unless License.premium?
         end
       end
     end
