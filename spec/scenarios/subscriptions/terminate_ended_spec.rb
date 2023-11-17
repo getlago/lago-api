@@ -178,6 +178,46 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
       end
     end
 
+    context 'when ending_at is not set and subscription is terminated on the day of creation' do
+      it 'bills correctly only 1 day' do
+        subscription = nil
+
+        travel_to(creation_time) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+              billing_time: 'anniversary',
+              subscription_at: subscription_at.iso8601,
+              ending_at: nil,
+            },
+          )
+
+          subscription = customer.subscriptions.first
+          expect(subscription).to be_active
+        end
+
+        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidationss
+        WebhookEndpoint.destroy_all
+
+        travel_to(creation_time + 5.hours) do
+          Subscriptions::TerminateService.call(subscription:)
+
+          perform_all_enqueued_jobs
+
+          invoice = subscription.invoices.order(created_at: :desc).first
+
+          aggregate_failures do
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(33)
+            expect(invoice.issuing_date.iso8601).to eq('2023-09-05')
+          end
+        end
+      end
+    end
+
     context 'with America/Bogota timezone' do
       let(:timezone) { 'America/Bogota' }
 

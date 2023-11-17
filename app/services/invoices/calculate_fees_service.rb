@@ -296,6 +296,8 @@ module Invoices
       current_time = Time.zone.at(timestamp)
       current_time_in_timezone = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone)
 
+      return boundaries if (current_time_in_timezone - 1.day) < subscription.started_at
+
       dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time - 1.day, current_usage: true)
 
       return boundaries if current_time_in_timezone < dates_service.charges_to_datetime
