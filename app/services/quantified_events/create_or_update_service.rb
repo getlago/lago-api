@@ -32,7 +32,7 @@ module QuantifiedEvents
         organization_id: organization.id,
         billable_metric_id: matching_billable_metric.id,
         external_id: event.properties[matching_billable_metric.field_name],
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: event.external_subscription_id,
       ).where(removed_at: nil).none?
     end
 
@@ -60,7 +60,7 @@ module QuantifiedEvents
         QuantifiedEvent.create!(
           organization_id: organization.id,
           billable_metric: matching_billable_metric,
-          external_subscription_id: subscription.external_id,
+          external_subscription_id: event.external_subscription_id,
           external_id: event.properties[matching_billable_metric.field_name],
           properties: event.properties,
           added_at: event.timestamp,
@@ -72,7 +72,7 @@ module QuantifiedEvents
       metric = QuantifiedEvent.find_by(
         organization_id: organization.id,
         billable_metric_id: matching_billable_metric.id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: event.external_subscription_id,
         external_id: event.properties[matching_billable_metric.field_name],
         removed_at: nil,
       )
@@ -95,7 +95,7 @@ module QuantifiedEvents
         .find_by(
           organization_id: organization.id,
           billable_metric_id: matching_billable_metric.id,
-          external_subscription_id: subscription.external_id,
+          external_subscription_id: event.external_subscription_id,
           external_id: event.properties[matching_billable_metric.field_name],
         )
     end
