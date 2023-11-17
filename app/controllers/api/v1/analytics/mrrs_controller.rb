@@ -4,31 +4,33 @@ module Api
   module V1
     module Analytics
       class MrrsController < Api::BaseController
-        before_action :authorize
-
         def index
-          result = ::Analytics::Mrr.find_all_by(current_organization.id, **filters)
+          result = ::Analytics::MrrsService.new(current_organization, **filters).call
 
+          if result.success?
+            render_result(result.records)
+          else
+            render_error_response(result)
+          end
+        end
+
+        private
+
+        def render_result(records)
           render(
             json: ::CollectionSerializer.new(
-              result,
+              records,
               ::V1::Analytics::MrrSerializer,
               collection_name: 'mrrs',
             ),
           )
         end
 
-        private
-
         def filters
           {
             currency: params[:currency]&.upcase,
             months: params[:months].to_i,
           }
-        end
-
-        def authorize
-          forbidden_error(code: 'premium_feature') unless License.premium?
         end
       end
     end
