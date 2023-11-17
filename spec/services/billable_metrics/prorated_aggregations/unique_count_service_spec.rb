@@ -61,7 +61,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   let(:quantified_event) do
     create(
       :quantified_event,
-      customer:,
       added_at:,
       removed_at:,
       external_subscription_id: subscription.external_id,
@@ -83,7 +82,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:new_quantified_event) do
           create(
             :quantified_event,
-            customer:,
             added_at: from_datetime + 10.days,
             removed_at:,
             external_subscription_id: subscription.external_id,
@@ -157,7 +155,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:quantified_event) do
           create(
             :quantified_event,
-            customer:,
             added_at:,
             removed_at:,
             external_subscription_id: subscription.external_id,
@@ -243,7 +240,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:new_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -284,7 +280,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:previous_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 5.days,
           removed_at:,
           external_id: '000',
@@ -326,7 +321,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:new_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -370,7 +364,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:previous_quantified_event) do
           create(
             :quantified_event,
-            customer:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
@@ -408,7 +401,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:previous_quantified_event) do
           create(
             :quantified_event,
-            customer:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
@@ -490,7 +482,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:quantified_event2) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 10.days,
           removed_at: nil,
           external_subscription_id: subscription.external_id,
@@ -500,7 +491,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:quantified_event3) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 20.days,
           removed_at: from_datetime + 20.days,
           external_subscription_id: subscription.external_id,

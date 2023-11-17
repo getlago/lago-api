@@ -47,7 +47,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
           expect(service_result).to be_success
 
           quantified_event = service_result.quantified_event
-          expect(quantified_event.customer).to eq(event.customer)
+          expect(quantified_event.organization).to eq(event.organization)
           expect(quantified_event.external_subscription_id).to eq(event.subscription.external_id)
           expect(quantified_event.external_id).to eq('ext_12345')
           expect(quantified_event.properties).to eq(event.properties)
@@ -59,7 +59,6 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
         let(:quantified_event) do
           create(
             :quantified_event,
-            customer: event.customer,
             billable_metric:,
             external_subscription_id: event.subscription.external_id,
             external_id: 'ext_12345',
@@ -97,7 +96,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
           expect(service_result).to be_success
 
           quantified_event = service_result.quantified_event
-          expect(quantified_event.customer).to eq(event.customer)
+          expect(quantified_event.organization).to eq(event.organization)
           expect(quantified_event.external_subscription_id).to eq(event.subscription.external_id)
           expect(quantified_event.external_id).to eq('ext_12345')
           expect(quantified_event.properties).to eq(event.properties)
@@ -110,7 +109,6 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
       let(:quantified_event) do
         create(
           :quantified_event,
-          customer: event.customer,
           billable_metric:,
           external_subscription_id: event.subscription.external_id,
           external_id: 'ext_12345',
@@ -136,7 +134,6 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
         before do
           create(
             :quantified_event,
-            customer: event.customer,
             billable_metric:,
             external_subscription_id: event.subscription.external_id,
             external_id: 'ext_12345',
@@ -183,7 +180,6 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
       before do
         create(
           :quantified_event,
-          customer: event.customer,
           billable_metric:,
           external_subscription_id: event.subscription.external_id,
           external_id: 'ext_12345',

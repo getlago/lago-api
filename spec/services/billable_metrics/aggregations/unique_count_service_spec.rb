@@ -70,7 +70,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   let(:quantified_event) do
     create(
       :quantified_event,
-      customer:,
       added_at:,
       removed_at:,
       external_subscription_id: subscription.external_id,
@@ -87,7 +86,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:new_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -135,7 +133,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:new_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -295,7 +292,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:previous_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 5.days,
           removed_at:,
           external_id: '000',
@@ -341,7 +337,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:new_quantified_event) do
         create(
           :quantified_event,
-          customer:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -402,7 +397,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_quantified_event) do
           create(
             :quantified_event,
-            customer:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
@@ -441,7 +435,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_quantified_event) do
           create(
             :quantified_event,
-            customer:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',

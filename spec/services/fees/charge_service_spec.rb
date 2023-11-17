@@ -432,7 +432,6 @@ RSpec.describe Fees::ChargeService do
         let(:quantified_event1) do
           create(
             :quantified_event,
-            customer: subscription.customer,
             added_at: DateTime.parse('2022-03-16'),
             removed_at: nil,
             external_id: '12',
@@ -455,7 +454,6 @@ RSpec.describe Fees::ChargeService do
         let(:quantified_event2) do
           create(
             :quantified_event,
-            customer: subscription.customer,
             added_at: DateTime.parse('2022-03-16'),
             removed_at: nil,
             external_id: '10',
@@ -478,7 +476,6 @@ RSpec.describe Fees::ChargeService do
         let(:quantified_event3) do
           create(
             :quantified_event,
-            customer: subscription.customer,
             added_at: DateTime.parse('2022-03-16'),
             removed_at: nil,
             external_id: '5',
@@ -545,7 +542,6 @@ RSpec.describe Fees::ChargeService do
 
         create(
           :quantified_event,
-          customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
           external_id: 'ext_11',
@@ -559,7 +555,6 @@ RSpec.describe Fees::ChargeService do
         )
         create(
           :quantified_event,
-          customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
           external_id: 'ext_12',
@@ -573,7 +568,6 @@ RSpec.describe Fees::ChargeService do
         )
         create(
           :quantified_event,
-          customer: subscription.customer,
           billable_metric:,
           external_subscription_id: subscription.external_id,
           external_id: 'ext_13',
@@ -1265,7 +1259,7 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.payment_status).to eq('pending')
 
           expect(quantified_event.id).not_to be_nil
-          expect(quantified_event.customer_id).to eq(customer.id)
+          expect(quantified_event.organization).to eq(organization)
           expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
           expect(quantified_event.external_id).to be_nil
           expect(quantified_event.group_id).to be_nil

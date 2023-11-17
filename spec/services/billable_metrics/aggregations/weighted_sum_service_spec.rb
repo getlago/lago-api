@@ -123,7 +123,6 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       create(
         :quantified_event,
         billable_metric:,
-        customer:,
         external_subscription_id: subscription.external_id,
         added_at: from_datetime - 1.day,
         properties: { QuantifiedEvent::RECURRING_TOTAL_UNITS => 1000 },

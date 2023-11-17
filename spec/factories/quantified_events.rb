@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :quantified_event do
-    customer
+    organization { billable_metric.organization }
     billable_metric
 
     external_id { SecureRandom.uuid }

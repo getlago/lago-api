@@ -132,7 +132,7 @@ module BillableMetrics
 
         quantified_events = QuantifiedEvent
           .where(billable_metric_id: billable_metric.id)
-          .where(customer_id: subscription.customer_id)
+          .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
           .where(added_at: ...from_datetime)
           .order(added_at: :desc)

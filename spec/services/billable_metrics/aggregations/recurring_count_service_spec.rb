@@ -57,7 +57,6 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
   let(:quantified_event) do
     create(
       :quantified_event,
-      customer:,
       added_at:,
       removed_at:,
       external_subscription_id: subscription.external_id,
@@ -432,7 +431,6 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
       before do
         create(
           :quantified_event,
-          customer:,
           added_at:,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -445,7 +443,6 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
         create(
           :quantified_event,
-          customer:,
           added_at:,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -458,7 +455,6 @@ RSpec.describe BillableMetrics::Aggregations::RecurringCountService, type: :serv
 
         create(
           :quantified_event,
-          customer:,
           added_at:,
           removed_at:,
           external_subscription_id: subscription.external_id,

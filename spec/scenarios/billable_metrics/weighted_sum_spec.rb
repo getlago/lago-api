@@ -45,7 +45,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
         Subscriptions::BillingService.new.call
         perform_all_enqueued_jobs
       end.to change { subscription.reload.invoices.count }.from(0).to(1)
-        .and change { customer.reload.quantified_events.count }.from(0).to(1)
+        .and change { organization.reload.quantified_events.count }.from(0).to(1)
     end
 
     invoice = subscription.invoices.first
@@ -90,7 +90,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
         Subscriptions::BillingService.new.call
         perform_all_enqueued_jobs
       end.to change { subscription.reload.invoices.count }.from(1).to(2)
-        .and change { customer.reload.quantified_events.count }.from(1).to(2)
+        .and change { organization.reload.quantified_events.count }.from(1).to(2)
     end
 
     invoice = subscription.invoices.order(:created_at).last
