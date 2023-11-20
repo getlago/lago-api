@@ -1063,16 +1063,16 @@ RSpec.describe Fees::ChargeService do
             group: europe,
             amount_cents: 1400,
             units: 2,
-            unit_amount_cents: 0,
-            precise_unit_amount: 0,
+            unit_amount_cents: 700,
+            precise_unit_amount: 7,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 1100,
             units: 1,
-            unit_amount_cents: 0,
-            precise_unit_amount: 0,
+            unit_amount_cents: 1100,
+            precise_unit_amount: 11,
           )
         end
       end
