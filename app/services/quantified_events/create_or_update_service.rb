@@ -10,10 +10,10 @@ module QuantifiedEvents
 
     def call
       result.quantified_event = case event_operation_type
-                               when :add
-                                 add_metric
-                               when :remove
-                                 remove_metric
+                                when :add
+                                  add_metric
+                                when :remove
+                                  remove_metric
       end
 
       result
@@ -29,10 +29,10 @@ module QuantifiedEvents
 
       # NOTE: Ensure no active quantified metric exists with the same external id
       QuantifiedEvent.where(
-        customer_id: customer.id,
+        organization_id: organization.id,
         billable_metric_id: matching_billable_metric.id,
         external_id: event.properties[matching_billable_metric.field_name],
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: event.external_subscription_id,
       ).where(removed_at: nil).none?
     end
 
@@ -40,7 +40,7 @@ module QuantifiedEvents
 
     attr_accessor :event
 
-    delegate :customer, :subscription, :organization, to: :event
+    delegate :subscription, :organization, to: :event
 
     def event_operation_type
       operation_type = event.properties['operation_type']&.to_sym
@@ -58,9 +58,9 @@ module QuantifiedEvents
         quantified_removed_on_event_day
       else
         QuantifiedEvent.create!(
-          customer:,
+          organization_id: organization.id,
           billable_metric: matching_billable_metric,
-          external_subscription_id: subscription.external_id,
+          external_subscription_id: event.external_subscription_id,
           external_id: event.properties[matching_billable_metric.field_name],
           properties: event.properties,
           added_at: event.timestamp,
@@ -70,9 +70,9 @@ module QuantifiedEvents
 
     def remove_metric
       metric = QuantifiedEvent.find_by(
-        customer_id: customer.id,
+        organization_id: organization.id,
         billable_metric_id: matching_billable_metric.id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: event.external_subscription_id,
         external_id: event.properties[matching_billable_metric.field_name],
         removed_at: nil,
       )
@@ -93,9 +93,9 @@ module QuantifiedEvents
       @quantified_removed_on_event_day ||= QuantifiedEvent
         .where('DATE(removed_at) = ?', event.timestamp.to_date)
         .find_by(
-          customer_id: customer.id,
+          organization_id: organization.id,
           billable_metric_id: matching_billable_metric.id,
-          external_subscription_id: subscription.external_id,
+          external_subscription_id: event.external_subscription_id,
           external_id: event.properties[matching_billable_metric.field_name],
         )
     end

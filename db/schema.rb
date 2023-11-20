@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_17_123744) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -674,7 +674,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
   end
 
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "customer_id", null: false
     t.string "external_subscription_id", null: false
     t.string "external_id"
     t.datetime "added_at", null: false
@@ -685,12 +684,13 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
     t.jsonb "properties", default: {}, null: false
     t.datetime "deleted_at"
     t.uuid "group_id"
+    t.uuid "organization_id", null: false
     t.index ["billable_metric_id"], name: "index_quantified_events_on_billable_metric_id"
-    t.index ["customer_id", "external_subscription_id", "billable_metric_id"], name: "index_search_quantified_events"
-    t.index ["customer_id"], name: "index_quantified_events_on_customer_id"
     t.index ["deleted_at"], name: "index_quantified_events_on_deleted_at"
     t.index ["external_id"], name: "index_quantified_events_on_external_id"
     t.index ["group_id"], name: "index_quantified_events_on_group_id"
+    t.index ["organization_id", "external_subscription_id", "billable_metric_id"], name: "index_search_quantified_events"
+    t.index ["organization_id"], name: "index_quantified_events_on_organization_id"
   end
 
   create_table "recurring_transaction_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -900,8 +900,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_09_154934) do
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "plans_taxes", "plans"
   add_foreign_key "plans_taxes", "taxes"
-  add_foreign_key "quantified_events", "customers"
   add_foreign_key "quantified_events", "groups"
+  add_foreign_key "quantified_events", "organizations"
   add_foreign_key "recurring_transaction_rules", "wallets"
   add_foreign_key "refunds", "credit_notes"
   add_foreign_key "refunds", "payment_provider_customers"

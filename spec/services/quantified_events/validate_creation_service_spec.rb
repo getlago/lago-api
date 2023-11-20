@@ -15,6 +15,7 @@ RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
   let(:result) { BaseService::Result.new }
   let(:subscription) { create(:subscription) }
   let(:customer) { subscription.customer }
+  let(:organization) { customer.organization }
 
   let(:billable_metric) do
     create(
@@ -93,7 +94,7 @@ RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
       before do
         create(
           :quantified_event,
-          customer:,
+          organization:,
           external_id:,
           external_subscription_id: subscription.external_id,
         )
@@ -106,7 +107,7 @@ RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
       before do
         create(
           :quantified_event,
-          customer:,
+          organization:,
           external_id:,
           external_subscription_id: subscription.external_id,
           removed_at: Time.current - 3.days,

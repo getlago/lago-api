@@ -22,7 +22,7 @@ module QuantifiedEvents
 
     attr_accessor :subscription, :billable_metric
 
-    delegate :customer, to: :subscription
+    delegate :organization, to: :subscription
 
     def operation_type
       @operation_type ||= begin
@@ -45,7 +45,7 @@ module QuantifiedEvents
       return unless operation_type == :remove
 
       return if QuantifiedEvent.where(
-        customer_id: customer.id,
+        organization_id: organization.id,
         external_id:,
         external_subscription_id: subscription.external_id,
       ).where(removed_at: nil).exists?

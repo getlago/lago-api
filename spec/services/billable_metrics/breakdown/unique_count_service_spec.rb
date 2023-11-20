@@ -57,7 +57,6 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
   let(:quantified_event) do
     create(
       :quantified_event,
-      customer:,
       added_at:,
       removed_at:,
       external_subscription_id: subscription.external_id,

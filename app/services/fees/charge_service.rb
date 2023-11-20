@@ -177,7 +177,7 @@ module Fees
 
       # NOTE: persist current recurring value for next period
       result.quantified_events << QuantifiedEvent.find_or_initialize_by(
-        customer_id: customer.id,
+        organization_id: billable_metric.organization_id,
         external_subscription_id: subscription.external_id,
         group_id: group&.id,
         billable_metric_id: billable_metric.id,

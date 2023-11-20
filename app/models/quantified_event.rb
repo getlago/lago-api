@@ -7,7 +7,7 @@ class QuantifiedEvent < ApplicationRecord
 
   RECURRING_TOTAL_UNITS = 'total_aggregated_units'
 
-  belongs_to :customer
+  belongs_to :organization
   belongs_to :billable_metric
   belongs_to :group, optional: true
 

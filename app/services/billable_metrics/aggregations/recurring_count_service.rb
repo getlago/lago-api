@@ -60,9 +60,8 @@ module BillableMetrics
 
       def base_scope
         quantified_events = QuantifiedEvent
-          .joins(customer: :organization)
+          .where(organization_id: billable_metric.organization_id)
           .where(billable_metric_id: billable_metric.id)
-          .where(customer_id: subscription.customer_id)
           .where(external_subscription_id: subscription.external_id)
 
         return quantified_events unless group

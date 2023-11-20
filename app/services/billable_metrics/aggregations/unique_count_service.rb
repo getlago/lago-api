@@ -144,9 +144,8 @@ module BillableMetrics
 
       def base_scope
         quantified_events = QuantifiedEvent
-          .joins(customer: :organization)
+          .where(organization_id: billable_metric.organization_id)
           .where(billable_metric_id: billable_metric.id)
-          .where(customer_id: subscription.customer_id)
 
         quantified_events = if billable_metric.recurring?
           quantified_events.where(external_subscription_id: subscription.external_id)

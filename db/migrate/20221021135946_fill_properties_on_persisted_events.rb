@@ -1,8 +1,19 @@
 # frozen_string_literal: true
 
 class FillPropertiesOnPersistedEvents < ActiveRecord::Migration[7.0]
+  class PersistedEvent < ApplicationRecord; end
+
   def change
-    # NOTE: Wait to ensure workers are loaded with the added tasks
-    MigrationTaskJob.set(wait: 40.seconds).perform_later('events:fill_persisted_properties')
+    PersistedEvent.unscoped.find_each do |persisted_event|
+      event = Event.unscoped.where(
+        organization_id: persisted_event.billable_metric.organization_id,
+        customer_id: persisted_event.customer_id,
+      ).where(
+        "properties -> '#{persisted_event.billable_metric.field_name}' = ?",
+        persisted_event.external_id,
+      ).first
+
+      persisted_event.update!(properties: event.properties)
+    end
   end
 end
