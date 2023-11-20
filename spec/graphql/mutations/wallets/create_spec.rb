@@ -11,16 +11,19 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
     <<-GQL
       mutation($input: CreateCustomerWalletInput!) {
         createCustomerWallet(input: $input) {
-          id,
-          name,
-          rateAmount,
-          status,
+          id
+          name
+          rateAmount
+          status
           currency
           expirationAt
+          recurringTransactionRules { id, ruleType, interval, thresholdCredits, paidCredits, grantedCredits }
         }
       }
     GQL
   end
+
+  around { |test| lago_premium!(&test) }
 
   it 'create a wallet' do
     result = execute_graphql(
@@ -36,6 +39,12 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           grantedCredits: '0.00',
           expirationAt: expiration_at.iso8601,
           currency: 'EUR',
+          recurringTransactionRules: [
+            {
+              ruleType: 'interval',
+              interval: 'monthly',
+            },
+          ],
         },
       },
     )
@@ -46,6 +55,9 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('First Wallet')
       expect(result_data['expirationAt']).to eq(expiration_at.iso8601)
+      expect(result_data['recurringTransactionRules'].count).to eq(1)
+      expect(result_data['recurringTransactionRules'][0]['ruleType']).to eq('interval')
+      expect(result_data['recurringTransactionRules'][0]['interval']).to eq('monthly')
     end
   end
 

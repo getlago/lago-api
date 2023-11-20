@@ -9,9 +9,7 @@ module Mutations
       graphql_name 'UpdateCustomerWallet'
       description 'Updates a new Customer Wallet'
 
-      argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
-      argument :id, ID, required: true
-      argument :name, String, required: false
+      input_object_class Types::Wallets::UpdateInput
 
       type Types::Wallets::Object
 

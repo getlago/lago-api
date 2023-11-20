@@ -9,13 +9,7 @@ module Mutations
       graphql_name 'CreateCustomerWallet'
       description 'Creates a new Customer Wallet'
 
-      argument :currency, Types::CurrencyEnum, required: true
-      argument :customer_id, ID, required: true
-      argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
-      argument :granted_credits, String, required: true
-      argument :name, String, required: false
-      argument :paid_credits, String, required: true
-      argument :rate_amount, String, required: true
+      input_object_class Types::Wallets::CreateInput
 
       type Types::Wallets::Object
 
