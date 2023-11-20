@@ -36,7 +36,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'does not apply the flat amount', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(0)
       expect(apply_volume_service.unit_amount).to eq(0)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 0,
+          per_unit_amount: 0,
+          per_unit_total_amount: 0,
+        }
+      )
     end
   end
 
@@ -46,7 +52,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'applies a unit amount for 1 and the flat amount', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(12)
       expect(apply_volume_service.unit_amount).to eq(12)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 10,
+          per_unit_amount: 2,
+          per_unit_total_amount: 2,
+        }
+      )
     end
   end
 
@@ -56,7 +68,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'applies unit amount for the first range and the flat amount', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(210)
       expect(apply_volume_service.unit_amount).to eq(2.1)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 10,
+          per_unit_amount: 2,
+          per_unit_total_amount: 200,
+        }
+      )
     end
   end
 
@@ -66,7 +84,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'applies unit amount the second range and no flat amount', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(101)
       expect(apply_volume_service.unit_amount).to eq(1)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 0,
+          per_unit_amount: 1,
+          per_unit_total_amount: 101,
+        }
+      )
     end
   end
 
@@ -76,7 +100,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'applies unit amount the second range and no flat amount', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(200)
       expect(apply_volume_service.unit_amount).to eq(1)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 0,
+          per_unit_amount: 1,
+          per_unit_total_amount: 200,
+        }
+      )
     end
   end
 
@@ -86,7 +116,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'applies unit amount the second range and no flat amount', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(200)
       expect(apply_volume_service.unit_amount.round(2)).to eq(0.67)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 50,
+          per_unit_amount: 0.5,
+          per_unit_total_amount: 150,
+        }
+      )
     end
   end
 
@@ -102,7 +138,13 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     it 'applies unit amount the third range', :aggregate_failures do
       expect(apply_volume_service.amount).to eq(149.3)
       expect(apply_volume_service.unit_amount.round(2)).to eq(0.50)
-      expect(apply_volume_service.amount_details).to eq({})
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_amount: 50,
+          per_unit_amount: 0.5,
+          per_unit_total_amount: 99.3,
+        }
+      )
     end
   end
 end
