@@ -48,6 +48,8 @@ module Events
         )
       end
 
+      delegate :last, to: :events
+
       private
 
       def group_scope(scope)

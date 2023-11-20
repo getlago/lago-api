@@ -3,11 +3,16 @@
 module BillableMetrics
   module Aggregations
     class LatestService < BillableMetrics::Aggregations::BaseService
-      def aggregate(options: {})
-        latest_event = events.first
+      def initialize(...)
+        super(...)
 
-        result.aggregation = compute_aggregation(latest_event)
-        result.count = events.count
+        event_store.numeric_property = true
+        event_store.aggregation_property = billable_metric.field_name
+      end
+
+      def aggregate(options: {})
+        result.aggregation = compute_aggregation(event_store.last)
+        result.count = event_store.count
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
@@ -15,13 +20,6 @@ module BillableMetrics
       end
 
       private
-
-      def events
-        @events ||= events_scope(from_datetime:, to_datetime:)
-          .where(field_presence_condition)
-          .where(field_numeric_condition)
-          .reorder(timestamp: :desc, created_at: :desc)
-      end
 
       def compute_aggregation(latest_event)
         result = if latest_event.present?

@@ -31,6 +31,10 @@ module Events
         events.maximum("(#{sanitized_propery_name})::numeric")
       end
 
+      def last
+        events.reorder(timestamp: :desc, created_at: :desc).first
+      end
+
       private
 
       def group_scope(scope)

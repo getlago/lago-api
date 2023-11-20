@@ -64,4 +64,10 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       expect(event_store.max).to be_nil
     end
   end
+
+  describe '.last' do
+    it 'returns the last event' do
+      expect(event_store.last).to be_nil
+    end
+  end
 end

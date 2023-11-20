@@ -36,8 +36,9 @@ RSpec.describe Events::Stores::PostgresStore, type: :service, transaction: false
       event = create(
         :event,
         organization:,
+        transaction_id: "event_#{i}",
         code:,
-        timestamp: boundaries[:from_datetime] + 3.days,
+        timestamp: boundaries[:from_datetime] + (1 + i).days,
         external_subscription_id: subscription.external_id,
         external_customer_id: customer.external_id,
         properties: {
@@ -99,6 +100,17 @@ RSpec.describe Events::Stores::PostgresStore, type: :service, transaction: false
 
     it 'returns the max value' do
       expect(event_store.max).to eq(2.34567)
+    end
+  end
+
+  describe '.last' do
+    before do
+      event_store.numeric_property = true
+      event_store.aggregation_property = billable_metric.field_name
+    end
+
+    it 'returns the last event' do
+      expect(event_store.last).to eq(Event.find_by(transaction_id: 'event_2'))
     end
   end
 end
