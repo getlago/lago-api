@@ -47,8 +47,6 @@ module Charges
       end
 
       def amount_details
-        # TODO: Uncomment this.
-        # raise NotImplementedError
         {}
       end
     end

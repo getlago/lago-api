@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
   subject(:service) { described_class.new(range:, total_units:) }
+
   let(:total_units) { 15 }
   let(:range) do
     {
@@ -14,7 +15,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
     }
   end
 
-  it "returns expected amount details" do
+  it 'returns expected amount details' do
     expect(service.call).to eq(
       {
         from_value: 0,
@@ -24,11 +25,11 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
         units: 10,
         total_amount: 100,
         total_with_flat_amount: 102,
-      }
+      },
     )
   end
 
-  context "when total units <= range to_value" do
+  context 'when total units <= range to_value' do
     let(:range) do
       {
         from_value: 11,
@@ -38,7 +39,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
       }
     end
 
-    it "returns expected amount details" do
+    it 'returns expected amount details' do
       expect(service.call).to eq(
         {
           from_value: 11,
@@ -48,7 +49,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
           units: 5,
           total_amount: 40,
           total_with_flat_amount: 41,
-        }
+        },
       )
     end
   end

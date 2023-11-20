@@ -134,7 +134,8 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               total_with_flat_amount: 102,
               unit_amount: 10,
               units: 10,
-            }, {
+            },
+            {
               flat_amount: 3,
               from_value: 11,
               to_value: 20,
@@ -166,7 +167,8 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               total_with_flat_amount: 102,
               unit_amount: 10,
               units: 10,
-            }, {
+            },
+            {
               flat_amount: 3,
               from_value: 11,
               to_value: 20,
@@ -198,7 +200,8 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               total_with_flat_amount: 102,
               unit_amount: 10,
               units: 10,
-            }, {
+            },
+            {
               flat_amount: 3,
               from_value: 11,
               to_value: 20,
@@ -206,7 +209,8 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               total_with_flat_amount: 53,
               unit_amount: 5,
               units: 10,
-            }, {
+            },
+            {
               flat_amount: 3,
               from_value: 21,
               to_value: nil,
