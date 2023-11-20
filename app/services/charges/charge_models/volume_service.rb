@@ -19,11 +19,19 @@ module Charges
       end
 
       def matching_range
-        number_of_units = (charge.prorated? && result.full_units_number) ? result.full_units_number : units
-
         @matching_range ||= ranges.find do |range|
           range[:from_value] <= number_of_units && (!range[:to_value] || number_of_units <= range[:to_value])
         end
+      end
+
+      def unit_amount
+        return 0 if number_of_units.zero?
+
+        compute_amount / number_of_units
+      end
+
+      def number_of_units
+        @number_of_units ||= (charge.prorated? && result.full_units_number) ? result.full_units_number : units
       end
     end
   end
