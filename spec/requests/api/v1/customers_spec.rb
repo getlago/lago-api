@@ -339,4 +339,33 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
   end
+
+  describe 'POST /customers/:external_customer_id/checkout_url' do
+    let(:organization) { create(:organization) }
+    let(:stripe_provider) { create(:stripe_provider, organization:) }
+    let(:customer) { create(:customer, organization:) }
+
+    before do
+      create(
+        :stripe_customer,
+        customer_id: customer.id,
+        payment_provider: stripe_provider,
+      )
+
+      customer.update(payment_provider: 'stripe')
+
+      allow(Stripe::Checkout::Session).to receive(:create)
+        .and_return({ 'url' => 'https://example.com' })
+    end
+
+    it 'returns the new generated checkout url' do
+      post_with_token(organization, "/api/v1/customers/#{customer.external_id}/checkout_url")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:customer][:checkout_url]).to eq('https://example.com')
+      end
+    end
+  end
 end

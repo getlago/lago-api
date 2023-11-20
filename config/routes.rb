@@ -31,6 +31,8 @@ Rails.application.routes.draw do
         get :current_usage, to: 'customers/usage#current'
         get :past_usage, to: 'customers/usage#past'
 
+        post :checkout_url
+
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
         end
