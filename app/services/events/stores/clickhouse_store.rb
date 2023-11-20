@@ -22,24 +22,28 @@ module Events
       end
 
       def events_values
-        # TODO: distinct transaction ids ordered by timestamp
         events
-          .pluck(
+          .group('events_raw.transaction_id, events_raw.properties, events_raw.timestamp')
+          .pluck(Arel.sql(
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ['toDecimal128(events.raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
+              ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
             ),
-          )
+          ))
       end
 
       def count
-        sql = events.select('COUNT(DISTINCT(events_raw.transaction_id)) AS events_count').to_sql
+        sql = events.reorder(:transaction_id).group(:transaction_id)
+          .select('COUNT(DISTINCT(events_raw.transaction_id)) AS events_count').to_sql
+
         Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
 
       def max
         events.maximum(
-          ActiveRecord::Base.sanitize_sql_for_conditions(
-            ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
+          Arel.sql(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
+            ),
           ),
         )
       end
