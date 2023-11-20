@@ -61,8 +61,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     create(
       :event,
       code: billable_metric.code,
-      customer:,
-      subscription:,
+      external_customer_id: customer.external_id,
+      external_subscription_id: subscription.external_id,
       timestamp: added_at,
       quantified_event:,
     )
@@ -96,8 +96,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         create(
           :event,
           code: billable_metric.code,
-          customer:,
-          subscription:,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
           quantified_event: new_quantified_event,
         )
@@ -124,8 +124,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         create(
           :event,
           code: billable_metric.code,
-          customer:,
-          subscription:,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
           quantified_event: new_quantified_event,
         )
@@ -276,8 +276,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         create(
           :event,
           code: billable_metric.code,
-          customer:,
-          subscription:,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
           quantified_event: previous_quantified_event,
           properties: {
@@ -327,8 +327,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         create(
           :event,
           code: billable_metric.code,
-          customer:,
-          subscription:,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
           properties:,
           quantified_event: new_quantified_event,
@@ -381,8 +381,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           create(
             :event,
             code: billable_metric.code,
-            customer:,
-            subscription:,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
             quantified_event: previous_quantified_event,
             properties: {
@@ -419,8 +419,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           create(
             :event,
             code: billable_metric.code,
-            customer:,
-            subscription:,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
             quantified_event: previous_quantified_event,
             properties: {

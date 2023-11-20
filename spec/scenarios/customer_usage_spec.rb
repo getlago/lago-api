@@ -25,7 +25,7 @@ describe 'Customer usage Scenario', :scenarios, type: :request do
         subscription = customer.subscriptions.first
         fetch_current_usage(customer:, subscription:)
 
-        expect(json[:customer_usage][:from_datetime]).to eq('2023-01-01T00:00:00Z')
+        expect(json[:customer_usage][:from_datetime]).to eq('2023-01-01T09:30:00Z')
         expect(json[:customer_usage][:to_datetime]).to eq('2023-12-31T23:59:59Z')
       end
     end
@@ -47,7 +47,7 @@ describe 'Customer usage Scenario', :scenarios, type: :request do
           subscription = customer.subscriptions.first
           fetch_current_usage(customer:, subscription:)
 
-          expect(json[:customer_usage][:from_datetime]).to eq('2022-12-31T23:00:00Z')
+          expect(json[:customer_usage][:from_datetime]).to eq('2023-01-01T09:30:00Z')
           expect(json[:customer_usage][:to_datetime]).to eq('2023-12-31T22:59:59Z')
         end
       end
@@ -70,7 +70,7 @@ describe 'Customer usage Scenario', :scenarios, type: :request do
           subscription = customer.subscriptions.first
           fetch_current_usage(customer:, subscription:)
 
-          expect(json[:customer_usage][:from_datetime]).to eq('2023-01-01T08:00:00Z')
+          expect(json[:customer_usage][:from_datetime]).to eq('2023-01-01T09:30:00Z')
           expect(json[:customer_usage][:to_datetime]).to eq('2024-01-01T07:59:59Z')
         end
       end

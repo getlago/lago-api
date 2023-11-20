@@ -4,8 +4,7 @@ module Events
   module Stores
     class PostgresStore < BaseStore
       def events
-        # TODO: switch to external_subscription_id to allow events sent before subscription creation
-        scope = Event.where(subscription_id: subscription.id)
+        scope = Event.where(external_subscription_id: subscription.external_id)
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
           .where(code:)

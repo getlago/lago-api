@@ -8,8 +8,6 @@ FactoryBot.define do
     end
 
     organization_id { create(:organization).id }
-    customer_id { customer.id }
-    subscription_id { subscription.id }
 
     transaction_id { SecureRandom.uuid }
     code { Faker::Name.name.underscore }

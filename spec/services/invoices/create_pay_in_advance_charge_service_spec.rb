@@ -8,19 +8,21 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   end
 
   let(:timestamp) { Time.zone.now.beginning_of_month }
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, email_settings:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:active_subscription, organization:, customer:, plan:) }
+  let(:subscription) { create(:active_subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
   let(:group) { nil }
+
+  let(:email_settings) { ['invoice.finalized', 'credit_note.created'] }
 
   let(:event) do
     create(
       :event,
-      subscription_id: subscription.id,
-      customer_id: customer.id,
+      external_subscription_id: subscription.external_id,
+      external_customer_id: customer.external_id,
       organization_id: organization.id,
     )
   end
@@ -154,7 +156,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
 
       context 'when organization does not have right email settings' do
-        before { customer.organization.update!(email_settings: []) }
+        let(:email_settings) { [] }
 
         it 'does not enqueue an ActionMailer::MailDeliveryJob' do
           expect do
@@ -165,7 +167,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     end
 
     context 'when organization does not have a webhook endpoint' do
-      before { customer.organization.webhook_endpoints.destroy_all }
+      before { organization.webhook_endpoints.destroy_all }
 
       it 'does not enqueues a SendWebhookJob' do
         expect do

@@ -79,8 +79,8 @@ unless customer.events.exists?
   time = Time.current
   2.times do
     Event.create!(
-      customer:,
-      subscription:,
+      external_customer_id: customer.external_id,
+      external_subscription_id: subscription.external_id,
       organization:,
       transaction_id: SecureRandom.uuid,
       timestamp: time - rand(0..12).seconds,
@@ -95,8 +95,8 @@ unless customer.events.exists?
   end
 
   Event.create!(
-    customer:,
-    subscription:,
+    external_customer_id: customer.external_id,
+    external_subscription_id: subscription.external_id,
     organization:,
     transaction_id: SecureRandom.uuid,
     timestamp: time - rand(0..12).seconds,
@@ -163,8 +163,8 @@ Charge.create_with(
 2.times do
   time = Time.current
   Event.create!(
-    customer:,
-    subscription:,
+    external_customer_id: customer.external_id,
+    external_subscription_id: subscription.external_id,
     organization:,
     transaction_id: SecureRandom.uuid,
     timestamp: time - rand(0..12).seconds,
@@ -182,8 +182,8 @@ Charge.create_with(
 end
 
 Event.create!(
-  customer:,
-  subscription:,
+  external_customer_id: customer.external_id,
+  external_subscription_id: subscription.external_id,
   organization:,
   transaction_id: SecureRandom.uuid,
   timestamp: time - rand(0..12).seconds,
@@ -200,8 +200,8 @@ Event.create!(
 )
 
 Event.create!(
-  customer:,
-  subscription:,
+  external_customer_id: customer.external_id,
+  external_subscription_id: subscription.external_id,
   organization:,
   transaction_id: SecureRandom.uuid,
   timestamp: time - rand(0..12).seconds,
@@ -218,8 +218,8 @@ Event.create!(
 )
 
 Event.create!(
-  customer:,
-  subscription:,
+  external_customer_id: customer.external_id,
+  external_subscription_id: subscription.external_id,
   organization:,
   transaction_id: SecureRandom.uuid,
   timestamp: time - rand(0..12).seconds,

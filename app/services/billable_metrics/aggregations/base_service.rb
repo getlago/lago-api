@@ -52,7 +52,7 @@ module BillableMetrics
       end
 
       def events_scope(from_datetime:, to_datetime:)
-        events = Event.where(subscription_id: subscription.id)
+        events = Event.where(external_subscription_id: subscription.external_id)
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
           .where(code: billable_metric.code)
@@ -63,13 +63,7 @@ module BillableMetrics
       end
 
       def recurring_events_scope(to_datetime:, from_datetime: nil)
-        subscription_ids = customer.subscriptions
-          .where(external_id: subscription.external_id)
-          .pluck(:id)
-
-        events = Event
-          .where(customer_id: customer.id)
-          .where(subscription_id: subscription_ids)
+        events = Event.where(external_subscription_id: subscription.external_id)
           .where(code: billable_metric.code)
           .to_datetime(to_datetime)
         events = events.from_datetime(from_datetime) unless from_datetime.nil?

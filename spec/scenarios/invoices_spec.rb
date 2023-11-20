@@ -428,8 +428,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       ### 17 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 17)) do
-        create(:event, subscription_id: subscription.id, code: metric.code)
-        create(:event, subscription_id: subscription.id, code: metric.code)
+        create(:event, external_subscription_id: subscription.external_id, code: metric.code)
+        create(:event, external_subscription_id: subscription.external_id, code: metric.code)
 
         expect {
           refresh_invoice(subscription_invoice)
@@ -512,7 +512,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       ### 17 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 17)) do
-        create(:event, subscription_id: subscription.id, code: metric.code)
+        create(:event, external_subscription_id: subscription.external_id, code: metric.code)
 
         expect {
           refresh_invoice(subscription_invoice)
@@ -593,7 +593,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       ### 16 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 16)) do
-        create(:event, subscription_id: subscription.id, code: metric.code)
+        create(:event, external_subscription_id: subscription.external_id, code: metric.code)
 
         # Paid in advance invoice amount does not change.
         expect {
@@ -603,7 +603,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       ### 17 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 17)) do
-        create(:event, subscription_id: subscription.id, code: metric.code)
+        create(:event, external_subscription_id: subscription.external_id, code: metric.code)
 
         # Paid in advance invoice amount does not change.
         expect {
@@ -620,7 +620,12 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         expect(new_invoice.total_amount_cents).to eq(1440) # (1000 + 200) * 1.2
 
         # Create event for Dec 18.
-        create(:event, subscription_id: subscription.id, timestamp: DateTime.new(2022, 12, 18), code: metric.code)
+        create(
+          :event,
+          external_subscription_id: subscription.external_id,
+          timestamp: DateTime.new(2022, 12, 18),
+          code: metric.code,
+        )
 
         # Paid in advance invoice amount does not change.
         expect {

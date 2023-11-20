@@ -65,7 +65,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
       expect(invoice.fees_amount_cents).to eq(monthly_plan.amount_cents)
       expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-07-29T00:00:00Z')
       expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2023-08-28T23:59:59Z')
-      expect(invoice.invoice_subscriptions.first.charges_from_datetime.iso8601).to eq('2023-06-29T00:00:00Z')
+      expect(invoice.invoice_subscriptions.first.charges_from_datetime.iso8601).to eq('2023-06-29T12:12:00Z')
       expect(invoice.invoice_subscriptions.first.charges_to_datetime.iso8601).to eq('2023-07-28T23:59:59Z')
     end
 
