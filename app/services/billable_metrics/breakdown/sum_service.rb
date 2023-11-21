@@ -23,7 +23,18 @@ module BillableMetrics
       end
 
       def persisted_breakdown
-        persisted_sum = persisted_query.sum("(#{sanitized_field_name})::numeric")
+        event_store = event_store_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries: { to_datetime: from_datetime },
+          group:,
+          event:,
+        )
+
+        event_store.use_from_boundary = false
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+        persisted_sum = event_store.sum
         return [] if persisted_sum.zero?
 
         [
@@ -38,18 +49,7 @@ module BillableMetrics
       end
 
       def period_breakdown
-        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
-
-        list = period_query.group(Arel.sql("DATE(#{date_field})"))
-          .order(Arel.sql("DATE(#{date_field}) ASC"))
-          .pluck(Arel.sql(
-            [
-              "DATE(#{date_field}) as date",
-              "SUM(CAST(#{sanitized_field_name} AS FLOAT))::numeric",
-            ].join(', '),
-          ))
-
-        list.map do |aggregation|
+        event_store.sum_date_breakdown.map do |aggregation|
           OpenStruct.new(
             date: aggregation.first.to_date,
             action: aggregation.last.negative? ? 'remove' : 'add',

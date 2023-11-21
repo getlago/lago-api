@@ -3,12 +3,13 @@
 module Events
   module Stores
     class PostgresStore < BaseStore
-      def events
+      def events(force_from: false)
         scope = Event.where(external_subscription_id: subscription.external_id)
-          .from_datetime(from_datetime)
           .to_datetime(to_datetime)
           .where(code:)
           .order(timestamp: :asc)
+
+        scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
 
         if numeric_property
           scope = scope.where(presence_condition)
@@ -20,11 +21,20 @@ module Events
         group_scope(scope)
       end
 
-      def events_values
+      def events_values(limit: nil, force_from: false)
         field_name = sanitized_propery_name
         field_name = "(#{field_name})::numeric" if numeric_property
 
-        events.pluck(Arel.sql(field_name))
+        scope = events(force_from:)
+        scope = scope.limit(limit) if limit
+
+        scope.pluck(Arel.sql(field_name))
+      end
+
+      def prorated_events_values(total_duration)
+        ratio_sql = duration_ratio_sql('events.timestamp', to_datetime, total_duration)
+
+        events.pluck(Arel.sql("(#{sanitized_propery_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
       def max
@@ -33,6 +43,38 @@ module Events
 
       def last
         events.reorder(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
+      end
+
+      def sum
+        events.sum("(#{sanitized_propery_name})::numeric")
+      end
+
+      def prorated_sum(period_duration:, persisted_duration: nil)
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          duration_ratio_sql('events.timestamp', to_datetime, period_duration)
+        end
+
+        sql = <<-SQL
+          SUM(
+            (#{sanitized_propery_name})::numeric * (#{ratio})::numeric
+          ) AS sum_result
+        SQL
+
+        ActiveRecord::Base.connection.execute(
+          Arel.sql(
+            events.reorder('').select(sql).to_sql,
+          ),
+        ).first['sum_result']
+      end
+
+      def sum_date_breakdown
+        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
+
+        events.group(Arel.sql("DATE(#{date_field})"))
+          .reorder(Arel.sql("DATE(#{date_field}) ASC"))
+          .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_propery_name})::numeric)"))
       end
 
       private
@@ -57,6 +99,15 @@ module Events
       def numeric_condition
         # NOTE: ensure property value is a numeric value
         "#{sanitized_propery_name} ~ '^-?\\d+(\\.\\d+)?$'"
+      end
+
+      # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
+      #       Dates are in customer timezone to make sure the duration is good
+      def duration_ratio_sql(from, to, duration)
+        from_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, from)
+        to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
+
+        "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{duration}::numeric"
       end
     end
   end

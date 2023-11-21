@@ -3,8 +3,16 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
+      def initialize(...)
+        super(...)
+
+        event_store.numeric_property = true
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.use_from_boundary = !billable_metric.recurring
+      end
+
       def aggregate(options: {})
-        aggregation = events.sum("(#{sanitized_field_name})::numeric")
+        aggregation = event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
           handle_in_advance_current_usage(aggregation)
@@ -13,45 +21,36 @@ module BillableMetrics
         end
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
-        result.count = events.count
-        result.options = { running_total: running_total(events, options) }
+        result.count = event_store.count
+        result.options = { running_total: running_total(options) }
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
       # NOTE: Return cumulative sum of field_name based on the number of free units (per_events or per_total_aggregation).
-      def running_total(events, options)
+      def running_total(options)
         free_units_per_events = options[:free_units_per_events].to_i
         free_units_per_total_aggregation = BigDecimal(options[:free_units_per_total_aggregation] || 0)
 
         return [] if free_units_per_events.zero? && free_units_per_total_aggregation.zero?
+        return running_total_per_events(free_units_per_events) unless free_units_per_events.zero?
 
-        events = events.order(created_at: :asc)
-        return running_total_per_events(events, free_units_per_events) unless free_units_per_events.zero?
-
-        running_total_per_aggregation(events, free_units_per_total_aggregation)
+        running_total_per_aggregation(free_units_per_total_aggregation)
       end
 
-      def running_total_per_events(events, limit)
+      def running_total_per_events(limit)
         total = 0.0
-
-        events
-          .limit(limit)
-          .pluck(Arel.sql("(#{sanitized_field_name})::numeric"))
-          .map { |x| total += x }
+        event_store.events_values(limit:).map { |x| total += x }
       end
 
-      def running_total_per_aggregation(events, aggregation)
+      def running_total_per_aggregation(aggregation)
         total = 0.0
+        event_store.events_values.each_with_object([]) do |val, accumulator|
+          break accumulator if aggregation < total
 
-        events
-          .pluck(Arel.sql("(#{sanitized_field_name})::numeric"))
-          .each_with_object([]) do |val, accumulator|
-            break accumulator if aggregation < total
-
-            accumulator << total += val
-          end
+          accumulator << total += val
+        end
       end
 
       def compute_pay_in_advance_aggregation
@@ -86,23 +85,10 @@ module BillableMetrics
       end
 
       def compute_per_event_aggregation
-        events_scope(from_datetime:, to_datetime:).pluck(Arel.sql("COALESCE((#{sanitized_field_name})::numeric, 0)"))
+        event_store.events_values(force_from: true)
       end
 
       protected
-
-      def events
-        @events ||= begin
-          query = if billable_metric.recurring?
-            recurring_events_scope(to_datetime:)
-          else
-            events_scope(from_datetime:, to_datetime:)
-          end
-
-          query.where(field_presence_condition)
-            .where(field_numeric_condition)
-        end
-      end
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
