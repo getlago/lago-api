@@ -31,4 +31,8 @@ RSpec.configure do |config|
       example.run
     end
   end
+
+  config.before(:each, clickhouse: true) do
+    WebMock.disable_net_connect!(allow: 'clickhouse')
+  end
 end

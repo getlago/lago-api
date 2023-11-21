@@ -9,15 +9,26 @@ module Events
         @boundaries = boundaries
         @group = group
         @event = event
+
+        @aggregation_property = nil
+        @numeric_property = false
       end
 
       def events
         raise NotImplementedError
       end
 
-      def count
-        events.count # rubocop:disable Rails/Delegate
+      def events_values
+        raise NotImplementedError
       end
+
+      delegate :count, to: :events
+
+      def max(property)
+        raise NotImplementedError
+      end
+
+      attr_accessor :numeric_property, :aggregation_property
 
       protected
 
