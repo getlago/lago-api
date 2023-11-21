@@ -10,7 +10,6 @@ module BillableMetrics
 
         event_store.numeric_property = true
         event_store.aggregation_property = billable_metric.field_name
-        # event_store.use_from_boundary = false
       end
 
       def aggregate(options: {})

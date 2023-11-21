@@ -15,11 +15,15 @@ module Events
         @use_from_boundary = true
       end
 
-      def events
+      def events(force_from: false)
         raise NotImplementedError
       end
 
-      def events_values
+      def events_values(limit: nil, force_from: false)
+        raise NotImplementedError
+      end
+
+      def prorated_events_values(total_duration)
         raise NotImplementedError
       end
 
@@ -30,6 +34,18 @@ module Events
       end
 
       def last
+        raise NotImplementedError
+      end
+
+      def sum
+        raise NotImplementedError
+      end
+
+      def prorated_sum(period_duration:, persisted_duration: nil)
+        # TODO
+      end
+
+      def sum_date_breakdown
         raise NotImplementedError
       end
 
