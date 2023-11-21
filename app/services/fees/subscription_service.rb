@@ -84,7 +84,11 @@ module Fees
     # NOTE: Subscription has already been billed once and is not terminated
     #        or when it is payed in advance on an anniversary base
     def should_use_full_amount?
-      return true if plan.pay_in_advance? && subscription.anniversary?
+      # First condition covers case when plan is pay in advance and on anniversary base.
+      # This case is used for the first subscription invoice since following cases will cover recurring invoices.
+      # However, we should not bill full amount if subscription is downgraded since in that case, first invoice
+      # should be prorated (this part is covered with first_subscription_amount method).
+      return true if plan.pay_in_advance? && subscription.anniversary? && !subscription.previous_subscription_id
       return true if subscription.fees.subscription_kind.where('created_at < ?', invoice.created_at).exists?
       return true if subscription.started_in_past? && plan.pay_in_advance?
 
