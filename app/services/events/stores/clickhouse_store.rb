@@ -127,6 +127,18 @@ module Events
         end
       end
 
+      def sum
+        # TODO
+      end
+
+      def prorated_sum
+        # TODO
+      end
+
+      def sum_date_breakdown
+        # TODO
+      end
+
       private
 
       def group_scope(scope)
