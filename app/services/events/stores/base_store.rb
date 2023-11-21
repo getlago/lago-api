@@ -24,7 +24,11 @@ module Events
 
       delegate :count, to: :events
 
-      def max(property)
+      def max
+        raise NotImplementedError
+      end
+
+      def last
         raise NotImplementedError
       end
 
