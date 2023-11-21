@@ -36,11 +36,11 @@ module Charges
       end
 
       def per_unit_amount
-        @per_unit_amount ||= BigDecimal(matching_range[:per_unit_amount])
+        @per_unit_amount ||= per_unit_total_amount.fdiv(number_of_units)
       end
 
       def per_unit_total_amount
-        @per_unit_total_amount ||= units * per_unit_amount
+        @per_unit_total_amount ||= units * BigDecimal(matching_range[:per_unit_amount])
       end
 
       def matching_range
