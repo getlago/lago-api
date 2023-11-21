@@ -79,7 +79,22 @@ module BillableMetrics
           .where(charge_id: charge.id)
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
-          .order(timestamp: :desc)
+          .order(created_at: :desc)
+
+        # NOTE: For now we are using the relation between event and quantified event, but
+        #       this relation will be removed in a comming refactor as it will not possible
+        #       to handle clickhouse events that way
+        query = query
+          .joins('INNER JOIN events ON events.id = cached_aggregations.event_id')
+          .joins('INNER JOIN quantified_events ON events.quantified_event_id = quantified_events.id')
+          .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
+          .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
+          .where('quantified_events.removed_at::timestamp(0) IS NULL')
+          .or(
+            query
+              .where('quantified_events.removed_at::timestamp(0) >= ?', from_datetime)
+              .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime),
+          )
 
         # NOTE: For now we are using the relation between event and quantified event, but
         #       this relation will be removed in a comming refactor as it will not possible
