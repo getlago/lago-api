@@ -9,38 +9,24 @@ module Charges
         properties['graduated_percentage_ranges']&.map(&:with_indifferent_access)
       end
 
-      def compute_amount
-        ranges.reduce(0) do |result_amount, range|
-          flat_amount = BigDecimal(range[:flat_amount])
-          rate = BigDecimal(range[:rate])
-
-          # NOTE: Add flat amount to the total
-          result_amount += flat_amount unless units.zero?
-
-          # NOTE: Apply rate to the range units
-          range_units = compute_range_units(range[:from_value], range[:to_value])
-          result_amount += (range_units * rate).fdiv(100)
-
-          # NOTE: units is between the bounds of the current range,
-          #       we must stop the loop
-          break result_amount if range[:to_value].nil? || range[:to_value] >= units
-
-          result_amount
-        end
+      def amount_details
+        {
+          graduated_percentage_ranges: ranges.each_with_object([]) do |range, amounts|
+            amounts << Charges::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units)
+            break amounts if range[:to_value].nil? || range[:to_value] >= units
+          end,
+        }
       end
 
-      # NOTE: compute how many units to bill in the range
-      def compute_range_units(from_value, to_value)
-        # NOTE: units is higher than the to_value of the range
-        if to_value && units >= to_value
-          return to_value - (from_value.zero? ? 1 : from_value) + 1
-        end
+      def compute_amount
+        amount_details.fetch(:graduated_percentage_ranges).sum { |e| e[:total_with_flat_amount] }
+      end
 
-        return to_value - from_value if to_value && units >= to_value
-        return units if from_value.zero?
+      def unit_amount
+        total_units = aggregation_result.full_units_number || units
+        return 0 if total_units.zero?
 
-        # NOTE: units is in the range
-        units - from_value + 1
+        compute_amount / total_units
       end
     end
   end
