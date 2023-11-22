@@ -34,11 +34,11 @@ module Charges
       end
 
       def flat_unit_amount
-        @flat_unit_amount ||= BigDecimal(range[:flat_amount])
+        @flat_unit_amount ||= units.zero? ? 0 : BigDecimal(range[:flat_amount])
       end
 
       def per_unit_amount
-        @per_unit_amount ||= BigDecimal(range[:per_unit_amount])
+        @per_unit_amount ||= units.zero? ? 0 : BigDecimal(range[:per_unit_amount])
       end
 
       def per_unit_total_amount

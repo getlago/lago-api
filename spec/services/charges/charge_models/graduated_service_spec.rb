@@ -55,12 +55,12 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_unit_amount: 2,
+              flat_unit_amount: 0,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 0,
               total_with_flat_amount: 0,
-              per_unit_amount: 10,
+              per_unit_amount: 0,
               units: '0.0',
             },
           ],
