@@ -4516,6 +4516,16 @@ type Query {
   ): TaxCollection!
 
   """
+  Query a single wallet of an organization
+  """
+  wallet(
+    """
+    Uniq ID of the wallet
+    """
+    id: ID!
+  ): Wallet
+
+  """
   Query wallet transactions
   """
   walletTransactions(
