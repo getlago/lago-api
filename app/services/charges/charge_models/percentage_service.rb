@@ -30,11 +30,11 @@ module Charges
           free_events:,
           paid_units:,
           rate_unit_amount:,
-          rate_amount: compute_percentage_amount,
+          rate_total_amount: compute_percentage_amount,
           paid_events:,
           fixed_fee_unit_amount: paid_events.positive? ? fixed_amount : 0,
-          fixed_fee_amount: compute_fixed_amount,
-          min_max_adjustment_amount:,
+          fixed_fee_total_amount: compute_fixed_amount,
+          min_max_adjustment_total_amount:,
         }
       end
 
@@ -175,7 +175,7 @@ module Charges
         amount
       end
 
-      def min_max_adjustment_amount
+      def min_max_adjustment_total_amount
         return 0 unless should_apply_min_max?
 
         compute_amount_with_transaction_min_max - compute_percentage_amount - compute_fixed_amount

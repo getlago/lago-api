@@ -13,7 +13,7 @@ module Charges
         {
           from_value:,
           to_value:,
-          flat_amount:,
+          flat_unit_amount:,
           per_unit_amount:,
           units: BigDecimal(units).to_s,
           per_unit_total_amount:,
@@ -33,8 +33,8 @@ module Charges
         @to_value ||= range[:to_value]
       end
 
-      def flat_amount
-        @flat_amount ||= BigDecimal(range[:flat_amount])
+      def flat_unit_amount
+        @flat_unit_amount ||= BigDecimal(range[:flat_amount])
       end
 
       def per_unit_amount
@@ -46,7 +46,11 @@ module Charges
       end
 
       def total_with_flat_amount
-        @total_with_flat_amount ||= total_units.zero? ? per_unit_total_amount : per_unit_total_amount + flat_amount
+        @total_with_flat_amount ||= if total_units.zero?
+          per_unit_total_amount
+        else
+          per_unit_total_amount + flat_unit_amount
+        end
       end
 
       # NOTE: compute how many units to bill in the range

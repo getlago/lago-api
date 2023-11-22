@@ -12,7 +12,7 @@ module Charges
       def compute_amount
         return 0 if units.zero?
 
-        per_unit_total_amount + flat_amount
+        per_unit_total_amount + flat_unit_amount
       end
 
       def unit_amount
@@ -22,17 +22,17 @@ module Charges
       end
 
       def amount_details
-        return { flat_amount: 0, per_unit_amount: 0, per_unit_total_amount: 0 } if number_of_units.zero?
+        return { flat_unit_amount: 0, per_unit_amount: 0, per_unit_total_amount: 0 } if number_of_units.zero?
 
         {
-          flat_amount:,
+          flat_unit_amount:,
           per_unit_amount:,
           per_unit_total_amount:,
         }
       end
 
-      def flat_amount
-        @flat_amount ||= BigDecimal(matching_range[:flat_amount])
+      def flat_unit_amount
+        @flat_unit_amount ||= BigDecimal(matching_range[:flat_amount])
       end
 
       def per_unit_amount

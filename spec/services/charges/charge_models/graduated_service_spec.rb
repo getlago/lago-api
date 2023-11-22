@@ -55,7 +55,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_amount: 2,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 0,
@@ -79,7 +79,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_amount: 2,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 10,
@@ -103,7 +103,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_amount: 2,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 100,
@@ -127,7 +127,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_amount: 2,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 100,
@@ -136,7 +136,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '10.0',
             },
             {
-              flat_amount: 3,
+              flat_unit_amount: 3,
               from_value: 11,
               to_value: 20,
               per_unit_total_amount: 5,
@@ -160,7 +160,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_amount: 2,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 100,
@@ -169,7 +169,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '10.0',
             },
             {
-              flat_amount: 3,
+              flat_unit_amount: 3,
               from_value: 11,
               to_value: 20,
               per_unit_total_amount: 10,
@@ -193,7 +193,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
         {
           graduated_ranges: [
             {
-              flat_amount: 2,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 100,
@@ -202,7 +202,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '10.0',
             },
             {
-              flat_amount: 3,
+              flat_unit_amount: 3,
               from_value: 11,
               to_value: 20,
               per_unit_total_amount: 50,
@@ -211,7 +211,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '10.0',
             },
             {
-              flat_amount: 3,
+              flat_unit_amount: 3,
               from_value: 21,
               to_value: nil,
               per_unit_total_amount: 5,
