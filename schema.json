@@ -21114,7 +21114,21 @@
               ]
             },
             {
-              "name": "id",
+              "name": "interval",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RecurringTransactionIntervalEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "lagoId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -21124,20 +21138,6 @@
                   "name": "ID",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "interval",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "RecurringTransactionIntervalEnum",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,

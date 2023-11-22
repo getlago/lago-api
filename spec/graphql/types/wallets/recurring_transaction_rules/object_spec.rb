@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Types::Wallets::RecurringTransactionRules::Object do
   subject { described_class }
 
-  it { is_expected.to have_field(:id).of_type('ID!') }
+  it { is_expected.to have_field(:lago_id).of_type('ID!') }
   it { is_expected.to have_field(:rule_type).of_type('RecurringTransactionRuleTypeEnum!') }
   it { is_expected.to have_field(:interval).of_type('RecurringTransactionIntervalEnum') }
 

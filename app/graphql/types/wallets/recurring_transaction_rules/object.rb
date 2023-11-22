@@ -6,7 +6,7 @@ module Types
       class Object < Types::BaseObject
         graphql_name 'RecurringTransactionRule'
 
-        field :id, ID, null: false
+        field :lago_id, ID, null: false, method: :id
 
         field :granted_credits, GraphQL::Types::Float, null: false
         field :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, null: true
