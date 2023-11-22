@@ -54,11 +54,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 0,
           free_events: 2,
           rate_unit_amount: 0,
-          rate_amount: 0,
+          rate_total_amount: 0,
           paid_events: 2,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 0,
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 0,
+          min_max_adjustment_total_amount: 0,
         },
       )
     end
@@ -75,11 +75,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 550,
           free_events: 2,
           rate_unit_amount: 0.013,
-          rate_amount: 7.15, # (800 - 250) * (1.3 / 100),
+          rate_total_amount: 7.15, # (800 - 250) * (1.3 / 100),
           paid_events: 2,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 4, # (4 - 2) * 2.0
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 4, # (4 - 2) * 2.0
+          min_max_adjustment_total_amount: 0,
         },
       )
     end
@@ -102,11 +102,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 800,
           free_events: 0,
           rate_unit_amount: 0,
-          rate_amount: 0,
+          rate_total_amount: 0,
           paid_events: 4,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 8,
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 8,
+          min_max_adjustment_total_amount: 0,
         },
       )
     end
@@ -125,11 +125,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 550,
           free_events: 2,
           rate_unit_amount: 0.013,
-          rate_amount: 7.15,
+          rate_total_amount: 7.15,
           paid_events: 2,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 4,
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 4,
+          min_max_adjustment_total_amount: 0,
         },
       )
     end
@@ -148,11 +148,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 400,
           free_events: 3,
           rate_unit_amount: 0.013000000000000001,
-          rate_amount: 5.2, # (800 - 400) * (1.3 / 100)
+          rate_total_amount: 5.2, # (800 - 400) * (1.3 / 100)
           paid_events: 1,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 2, # (4 - 3) * 2.0
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 2, # (4 - 3) * 2.0
+          min_max_adjustment_total_amount: 0,
         },
       )
     end
@@ -173,11 +173,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 800,
           free_events: 0,
           rate_unit_amount: 0.013000000000000001,
-          rate_amount: 10.4, # 800 * (1.3 / 100)
+          rate_total_amount: 10.4, # 800 * (1.3 / 100)
           paid_events: 4,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 8, # 4 * 2.0
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 8, # 4 * 2.0
+          min_max_adjustment_total_amount: 0,
         },
       )
     end
@@ -198,11 +198,11 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
           paid_units: 400,
           free_events: 3,
           rate_unit_amount: 0.013000000000000001,
-          rate_amount: 5.2, # (800 - 400) * (1.3 / 100)
+          rate_total_amount: 5.2, # (800 - 400) * (1.3 / 100)
           paid_events: 1,
           fixed_fee_unit_amount: 2,
-          fixed_fee_amount: 2, # (4 - 3) * 2.0
-          min_max_adjustment_amount: 0,
+          fixed_fee_total_amount: 2, # (4 - 3) * 2.0
+          min_max_adjustment_total_amount: 0,
         },
       )
     end

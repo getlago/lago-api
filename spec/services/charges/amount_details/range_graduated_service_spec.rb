@@ -20,7 +20,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
       {
         from_value: 0,
         to_value: 10,
-        flat_amount: 2,
+        flat_unit_amount: 2,
         per_unit_amount: 10,
         units: '10.0',
         per_unit_total_amount: 100,
@@ -44,7 +44,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedService, type: :service do
         {
           from_value: 11,
           to_value: 20,
-          flat_amount: 1,
+          flat_unit_amount: 1,
           per_unit_amount: 8,
           units: '5.0',
           per_unit_total_amount: 40,
