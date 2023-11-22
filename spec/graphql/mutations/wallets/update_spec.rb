@@ -8,7 +8,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:) }
-  let(:expiration_at) { DateTime.parse('2022-01-01 23:59:59') }
+  let(:expiration_at) { (Time.zone.now + 1.year) }
   let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
 
   let(:mutation) do
@@ -59,7 +59,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
       expect(result_data['status']).to eq('active')
-      expect(result_data['expirationAt']).to eq('2022-01-01T23:59:59Z')
+      expect(result_data['expirationAt']).to eq((Time.zone.now + 1.year).iso8601)
       expect(result_data['recurringTransactionRules'].count).to eq(1)
       expect(result_data['recurringTransactionRules'][0]['lagoId']).to eq(recurring_transaction_rule.id)
       expect(result_data['recurringTransactionRules'][0]['ruleType']).to eq('interval')

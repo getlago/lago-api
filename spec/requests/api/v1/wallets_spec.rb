@@ -6,7 +6,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency: 'EUR') }
   let(:subscription) { create(:subscription, customer:) }
-  let(:expiration_at) { '2022-06-06 23:59:59' }
+  let(:expiration_at) { (Time.current + 1.year).iso8601 }
 
   before { subscription }
 
@@ -32,7 +32,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:wallet][:lago_id]).to be_present
         expect(json[:wallet][:name]).to eq(create_params[:name])
         expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
-        expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+        expect(json[:wallet][:expiration_at]).to eq(expiration_at)
       end
     end
 
@@ -51,7 +51,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(json[:wallet][:lago_id]).to be_present
           expect(json[:wallet][:name]).to eq(create_params[:name])
           expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
-          expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+          expect(json[:wallet][:expiration_at]).to eq((Time.current + 1.year).end_of_day.iso8601)
         end
       end
     end
@@ -97,11 +97,11 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
   describe 'update' do
     let(:wallet) { create(:wallet, customer:) }
-    let(:expiration_at) { '2022-06-06 23:59:59' }
+    let(:expiration_at) { (Time.current + 1.year).iso8601 }
     let(:update_params) do
       {
         name: 'wallet1',
-        expiration_date: expiration_at,
+        expiration_at:,
       }
     end
 
@@ -119,7 +119,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
         expect(json[:wallet][:lago_id]).to eq(wallet.id)
         expect(json[:wallet][:name]).to eq(update_params[:name])
-        expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+        expect(json[:wallet][:expiration_at]).to eq(expiration_at)
       end
     end
 
@@ -141,7 +141,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           expect(json[:wallet][:lago_id]).to eq(wallet.id)
           expect(json[:wallet][:name]).to eq(update_params[:name])
-          expect(json[:wallet][:expiration_at]).to eq('2022-06-06T23:59:59Z')
+          expect(json[:wallet][:expiration_at]).to eq((Time.current + 1.year).end_of_day.iso8601)
         end
       end
     end

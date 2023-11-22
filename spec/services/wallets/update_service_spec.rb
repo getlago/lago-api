@@ -10,6 +10,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:) }
+  let(:expiration_at) { (Time.current + 1.year).iso8601 }
 
   describe 'update' do
     before do
@@ -21,7 +22,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       {
         id: wallet.id,
         name: 'new name',
-        expiration_at: DateTime.parse('2022-01-01 23:59:59'),
+        expiration_at:,
       }
     end
 
@@ -32,7 +33,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
       aggregate_failures do
         expect(result.wallet.name).to eq('new name')
-        expect(result.wallet.expiration_at.iso8601).to eq('2022-01-01T23:59:59Z')
+        expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
       end
     end
 
@@ -50,6 +51,41 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('wallet_not_found')
+      end
+    end
+
+    context 'with invalid expiration_at' do
+      context 'when string cannot be parsed to date' do
+        let(:expiration_at) { 'invalid' }
+
+        it 'returns false and result has errors' do
+          result = update_service.update(wallet:, args: update_args)
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
+        end
+      end
+
+      context 'when expiration_at is integer' do
+        let(:expiration_at) { 123 }
+
+        it 'returns false and result has errors' do
+          result = update_service.update(wallet:, args: update_args)
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
+        end
+      end
+
+      context 'when expiration_at is less than current time' do
+        let(:expiration_at) { (Time.current - 1.year).iso8601 }
+
+        it 'returns false and result has errors' do
+          result = update_service.update(wallet:, args: update_args)
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
+        end
       end
     end
 
@@ -71,7 +107,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         {
           id: wallet.id,
           name: 'new name',
-          expiration_at: DateTime.parse('2022-01-01 23:59:59'),
+          expiration_at:,
           recurring_transaction_rules: rules,
         }
       end

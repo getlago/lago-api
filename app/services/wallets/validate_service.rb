@@ -6,6 +6,7 @@ module Wallets
       valid_customer?
       valid_paid_credits_amount? if args[:paid_credits]
       valid_granted_credits_amount? if args[:granted_credits]
+      valid_expiration_at? if args[:expiration_at]
       valid_recurring_transaction_rules? if args[:recurring_transaction_rules]
 
       if errors?
@@ -43,6 +44,27 @@ module Wallets
       return true if ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
 
       add_error(field: :granted_credits, error_code: 'invalid_granted_credits')
+    end
+
+    def valid_expiration_at?
+      return true if args[:expiration_at].blank?
+
+      if Utils::DatetimeService.valid_format?(args[:expiration_at]) && expiration_at.to_date > Time.current.to_date
+
+        return true
+      end
+
+      add_error(field: :expiration_at, error_code: 'invalid_date')
+
+      false
+    end
+
+    def expiration_at
+      @expiration_at ||= if args[:expiration_at].is_a?(String)
+        DateTime.strptime(args[:expiration_at])
+      else
+        args[:expiration_at]
+      end
     end
 
     def valid_recurring_transaction_rules?

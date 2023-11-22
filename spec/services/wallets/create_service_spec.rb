@@ -13,6 +13,7 @@ RSpec.describe Wallets::CreateService, type: :service do
   describe '.create' do
     let(:paid_credits) { '1.00' }
     let(:granted_credits) { '0.00' }
+    let(:expiration_at) { (Time.current + 1.year).iso8601 }
 
     let(:create_args) do
       {
@@ -21,7 +22,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         organization_id: organization.id,
         currency: 'EUR',
         rate_amount: '1.00',
-        expiration_at: DateTime.parse('2022-01-01 23:59:59'),
+        expiration_at:,
         paid_credits:,
         granted_credits:,
       }
@@ -40,7 +41,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(wallet.name).to eq('New Wallet')
         expect(wallet.currency).to eq('EUR')
         expect(wallet.rate_amount).to eq(1.0)
-        expect(wallet.expiration_at.iso8601).to eq('2022-01-01T23:59:59Z')
+        expect(wallet.expiration_at.iso8601).to eq(expiration_at)
         expect(wallet.recurring_transaction_rules.count).to eq(0)
       end
     end
@@ -87,7 +88,7 @@ RSpec.describe Wallets::CreateService, type: :service do
           organization_id: organization.id,
           currency: 'EUR',
           rate_amount: '1.00',
-          expiration_at: DateTime.parse('2022-01-01 23:59:59'),
+          expiration_at:,
           paid_credits:,
           granted_credits:,
           recurring_transaction_rules: rules,
