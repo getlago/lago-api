@@ -13,7 +13,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     )
   end
 
-  let(:billable_metric) { create(:billable_metric) }
+  let(:billable_metric) { create(:billable_metric, field_name: 'value') }
   let(:organization) { billable_metric.organization }
 
   let(:customer) { create(:customer, organization:) }
@@ -23,8 +23,8 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
   let(:boundaries) do
     {
-      charges_from_datetime: subscription.started_at.beginning_of_day,
-      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+      from_datetime: subscription.started_at.beginning_of_day,
+      to_datetime: subscription.started_at.end_of_month.end_of_day,
     }
   end
 

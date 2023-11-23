@@ -80,38 +80,6 @@ module Events
           end
       end
 
-      def sum
-        events.sum("(#{sanitized_propery_name})::numeric")
-      end
-
-      def prorated_sum(period_duration:, persisted_duration: nil)
-        ratio = if persisted_duration
-          persisted_duration.fdiv(period_duration)
-        else
-          duration_ratio_sql('events.timestamp', to_datetime, period_duration)
-        end
-
-        sql = <<-SQL
-          SUM(
-            (#{sanitized_propery_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
-        SQL
-
-        ActiveRecord::Base.connection.execute(
-          Arel.sql(
-            events.reorder('').select(sql).to_sql,
-          ),
-        ).first['sum_result']
-      end
-
-      def sum_date_breakdown
-        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
-
-        events.group(Arel.sql("DATE(#{date_field})"))
-          .reorder(Arel.sql("DATE(#{date_field}) ASC"))
-          .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_propery_name})::numeric)"))
-      end
-
       private
 
       def group_scope(scope)
