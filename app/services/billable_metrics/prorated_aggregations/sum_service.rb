@@ -56,7 +56,7 @@ module BillableMetrics
         result = 0.0
 
         # NOTE: Billed on the full period
-        result += (persisted_sum || 0)
+        result += persisted_sum || 0
 
         # NOTE: Added during the period
         result + (event_store.prorated_sum(period_duration:) || 0)
@@ -89,7 +89,19 @@ module BillableMetrics
         previous_charge_fee_units = previous_charge_fee&.units
         return previous_charge_fee_units if previous_charge_fee_units
 
-        recurring_value_before_first_fee = persisted_query.sum("(#{sanitized_field_name})::numeric")
+        event_store = event_store_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries: { to_datetime: from_datetime },
+          group:,
+          event:,
+        )
+
+        event_store.use_from_boundary = false
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        recurring_value_before_first_fee = event_store.sum
 
         ((recurring_value_before_first_fee || 0) <= 0) ? nil : recurring_value_before_first_fee
       end

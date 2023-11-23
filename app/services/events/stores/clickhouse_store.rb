@@ -14,6 +14,7 @@ module Events
           .where(code:)
           .order(timestamp: :asc)
 
+        # TODO: check how to deal with this since events are not stored forever in clickhouse
         scope = scope.where('events_raw.timestamp >= ?', from_datetime) if force_from || use_from_boundary
         scope = scope.where(numeric_condition) if numeric_property
 
@@ -30,8 +31,11 @@ module Events
         scope.pluck(Arel.sql(sanitized_numeric_property))
       end
 
-      def prorated_events_values
-        # TODO
+      def prorated_events_values(total_duration)
+        ratio_sql = duration_ratio_sql('events_raw.timestamp', to_datetime, total_duration)
+
+        events.group(DEDUPLICATION_GROUP)
+          .pluck(Arel.sql("#{sanitized_numeric_property} * (#{ratio_sql})"))
       end
 
       def count
@@ -63,15 +67,64 @@ module Events
       end
 
       def sum
-        # TODO
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select(Arel.sql("#{sanitized_numeric_property} AS property"))
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select sum(events.property)
+          from events
+        SQL
+
+        Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
-      def prorated_sum
-        # TODO
+      def prorated_sum(period_duration:, persisted_duration: nil)
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          duration_ratio_sql('events_raw.timestamp', to_datetime, period_duration)
+        end
+
+        cte_sql = events
+          .reorder('')
+          .group(DEDUPLICATION_GROUP)
+          .select(Arel.sql("(#{sanitized_numeric_property}) * (#{ratio}) AS prorated_value"))
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select sum(events.prorated_value)
+          from events
+        SQL
+
+        Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
       def sum_date_breakdown
-        # TODO
+        date_field = date_in_customer_timezone_sql('events_raw.timestamp')
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select("toDate(#{date_field}) as day, #{sanitized_numeric_property} as property")
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            events.day,
+            sum(events.property) as day_sum
+          from events
+          group by events.day
+          order by events.day asc
+        SQL
+
+        Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
+          { date: row.first.to_date, value: row.last }
+        end
       end
 
       private
@@ -97,6 +150,27 @@ module Events
         ActiveRecord::Base.sanitize_sql_for_conditions(
           ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
         )
+      end
+
+      def date_in_customer_timezone_sql(date)
+        sql = if date.is_a?(String)
+          "toTimezone(#{date}, :timezone)"
+        else
+          "toTimezone(toDateTime64(:date, 5, 'UTC'), :timezone)"
+        end
+
+        ActiveRecord::Base.sanitize_sql_for_conditions(
+          [sql, { date:, timezone: customer.applicable_timezone }],
+        )
+      end
+
+      # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
+      #       Dates are in customer timezone to make sure the duration is good
+      def duration_ratio_sql(from, to, duration)
+        from_in_timezone = date_in_customer_timezone_sql(from)
+        to_in_timezone = date_in_customer_timezone_sql(to)
+
+        "(date_diff('days', #{from_in_timezone}, #{to_in_timezone}) + 1) / #{duration}"
       end
     end
   end

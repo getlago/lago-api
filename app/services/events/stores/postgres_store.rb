@@ -75,6 +75,9 @@ module Events
         events.group(Arel.sql("DATE(#{date_field})"))
           .reorder(Arel.sql("DATE(#{date_field}) ASC"))
           .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_propery_name})::numeric)"))
+          .map do |row|
+            { date: row.first.to_date, value: row.last }
+          end
       end
 
       private

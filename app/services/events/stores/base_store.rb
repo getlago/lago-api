@@ -42,9 +42,12 @@ module Events
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
-        # TODO
+        raise NotImplementedError
       end
 
+      # NOTE: returns the breakdown of the sum grouped by date
+      #       The result format will be an array of hash with the format:
+      #       [{ date: Date.parse('2023-11-27'), value: 12.9 }, ...]
       def sum_date_breakdown
         raise NotImplementedError
       end

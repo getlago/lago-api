@@ -97,6 +97,17 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '.prorated_events_values' do
+    it 'returns the values attached to each event with prorata on period duration' do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
+        [0.516, 0.968, 1.355, 1.677, 1.935],
+      )
+    end
+  end
+
   describe '.max' do
     it 'returns the max value' do
       event_store.aggregation_property = billable_metric.field_name
@@ -112,6 +123,49 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       event_store.numeric_property = true
 
       expect(event_store.last).to eq(5)
+    end
+  end
+
+  describe '.sum' do
+    it 'returns the sum of event properties' do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.sum).to eq(15)
+    end
+  end
+
+  describe '.prorated_sum' do
+    it 'returns the prorated sum of event properties' do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.prorated_sum(period_duration: 31).round(5)).to eq(6.45161)
+    end
+
+    context 'with persisted_duration' do
+      it 'returns the prorated sum of event properties' do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        expect(event_store.prorated_sum(period_duration: 31, persisted_duration: 10).round(5)).to eq(4.83871)
+      end
+    end
+  end
+
+  describe '.sum_date_breakdown' do
+    it 'returns the sum grouped by day' do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.sum_date_breakdown).to eq(
+        events.map do |e|
+          {
+            date: e.timestamp.to_date,
+            value: e.properties[billable_metric.field_name].to_f,
+          }
+        end,
+      )
     end
   end
 end

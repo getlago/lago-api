@@ -17,8 +17,6 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
     has_many :charges
   end
 
-  class Charge < ApplicationRecord; end
-
   def change
     reversible do |dir|
       dir.up do

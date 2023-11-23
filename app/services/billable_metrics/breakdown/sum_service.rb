@@ -51,10 +51,10 @@ module BillableMetrics
       def period_breakdown
         event_store.sum_date_breakdown.map do |aggregation|
           OpenStruct.new(
-            date: aggregation.first.to_date,
-            action: aggregation.last.negative? ? 'remove' : 'add',
-            amount: aggregation.last,
-            duration: (to_date_in_customer_timezone + 1.day - aggregation.first).to_i,
+            date: aggregation[:date],
+            action: aggregation[:value].negative? ? 'remove' : 'add',
+            amount: aggregation[:value],
+            duration: (to_date_in_customer_timezone + 1.day - aggregation[:date]).to_i,
             total_duration: period_duration,
           )
         end
