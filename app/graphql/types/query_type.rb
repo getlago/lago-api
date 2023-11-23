@@ -31,13 +31,13 @@ module Types
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
+    field :invoice_collections, resolver: Resolvers::Analytics::InvoiceCollectionsResolver
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
-    field :outstanding_invoices, resolver: Resolvers::Analytics::OutstandingInvoicesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver

@@ -3,9 +3,9 @@
 module Api
   module V1
     module Analytics
-      class OutstandingInvoicesController < BaseController
+      class InvoiceCollectionsController < BaseController
         def index
-          @result = ::Analytics::OutstandingInvoicesService.new(current_organization, **filters).call
+          @result = ::Analytics::InvoiceCollectionsService.new(current_organization, **filters).call
 
           super
         end

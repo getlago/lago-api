@@ -2,9 +2,9 @@
 
 require 'rails_helper'
 
-RSpec.describe Analytics::OutstandingInvoice, type: :model do
+RSpec.describe Analytics::InvoiceCollection, type: :model do
   describe '.cache_key' do
-    subject(:outstanding_invoice_cache_key) { described_class.cache_key(organization_id, **args) }
+    subject(:invoice_collection_cache_key) { described_class.cache_key(organization_id, **args) }
 
     let(:organization_id) { SecureRandom.uuid }
     let(:currency) { 'EUR' }
@@ -13,10 +13,10 @@ RSpec.describe Analytics::OutstandingInvoice, type: :model do
 
     context 'with no arguments' do
       let(:args) { {} }
-      let(:cache_key) { "outstanding-invoice/#{date}/#{organization_id}//" }
+      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}//" }
 
       it 'returns the cache key' do
-        expect(outstanding_invoice_cache_key).to eq(cache_key)
+        expect(invoice_collection_cache_key).to eq(cache_key)
       end
     end
 
@@ -24,11 +24,11 @@ RSpec.describe Analytics::OutstandingInvoice, type: :model do
       let(:args) { { currency:, months: } }
 
       let(:cache_key) do
-        "outstanding-invoice/#{date}/#{organization_id}/#{currency}/#{months}"
+        "invoice-collection/#{date}/#{organization_id}/#{currency}/#{months}"
       end
 
       it 'returns the cache key' do
-        expect(outstanding_invoice_cache_key).to eq(cache_key)
+        expect(invoice_collection_cache_key).to eq(cache_key)
       end
     end
 
@@ -36,20 +36,20 @@ RSpec.describe Analytics::OutstandingInvoice, type: :model do
       let(:args) { { months: } }
 
       let(:cache_key) do
-        "outstanding-invoice/#{date}/#{organization_id}//#{months}"
+        "invoice-collection/#{date}/#{organization_id}//#{months}"
       end
 
       it 'returns the cache key' do
-        expect(outstanding_invoice_cache_key).to eq(cache_key)
+        expect(invoice_collection_cache_key).to eq(cache_key)
       end
     end
 
     context 'with currency' do
       let(:args) { { currency: } }
-      let(:cache_key) { "outstanding-invoice/#{date}/#{organization_id}/#{currency}/" }
+      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}/#{currency}/" }
 
       it 'returns the cache key' do
-        expect(outstanding_invoice_cache_key).to eq(cache_key)
+        expect(invoice_collection_cache_key).to eq(cache_key)
       end
     end
   end

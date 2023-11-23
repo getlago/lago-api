@@ -11648,6 +11648,158 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "FinalizedInvoiceCollection",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "amountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "invoicesCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "month",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "paymentStatus",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "InvoicePaymentStatusTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "FinalizedInvoiceCollectionCollection",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "FinalizedInvoiceCollection",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
           "kind": "SCALAR",
           "name": "Float",
           "description": "Represents signed double-precision fractional values as specified by [IEEE 754](https://en.wikipedia.org/wiki/IEEE_floating_point).",
@@ -17495,158 +17647,6 @@
         },
         {
           "kind": "OBJECT",
-          "name": "OutstandingInvoice",
-          "description": null,
-          "interfaces": [
-
-          ],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "amountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "currency",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "invoicesCount",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "month",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "paymentStatus",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "InvoicePaymentStatusTypeEnum",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "OutstandingInvoiceCollection",
-          "description": null,
-          "interfaces": [
-
-          ],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "collection",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "OutstandingInvoice",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "metadata",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "OBJECT",
           "name": "Plan",
           "description": null,
           "interfaces": [
@@ -19906,6 +19906,35 @@
               ]
             },
             {
+              "name": "invoiceCollections",
+              "description": "Query invoice collections of an organization",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "FinalizedInvoiceCollectionCollection",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "invoiceCreditNotes",
               "description": "Query invoice's credit note",
               "type": {
@@ -20174,35 +20203,6 @@
               "deprecationReason": null,
               "args": [
 
-              ]
-            },
-            {
-              "name": "outstandingInvoices",
-              "description": "Query outstanding invoices of an organization",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "OutstandingInvoiceCollection",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-                {
-                  "name": "currency",
-                  "description": null,
-                  "type": {
-                    "kind": "ENUM",
-                    "name": "CurrencyEnum",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
               ]
             },
             {
