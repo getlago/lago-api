@@ -64,8 +64,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       expect(result_data['recurringTransactionRules'][0]['lagoId']).to eq(recurring_transaction_rule.id)
       expect(result_data['recurringTransactionRules'][0]['ruleType']).to eq('interval')
       expect(result_data['recurringTransactionRules'][0]['interval']).to eq('weekly')
-      expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq(22.2)
-      expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq(22.2)
+      expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq('22.2')
+      expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('22.2')
     end
   end
 

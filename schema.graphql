@@ -4600,12 +4600,12 @@ enum RecurringTransactionIntervalEnum {
 
 type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
-  grantedCredits: Float!
+  grantedCredits: String!
   interval: RecurringTransactionIntervalEnum
   lagoId: ID!
-  paidCredits: Float!
+  paidCredits: String!
   ruleType: RecurringTransactionRuleTypeEnum!
-  thresholdCredits: Float
+  thresholdCredits: String
 }
 
 enum RecurringTransactionRuleTypeEnum {

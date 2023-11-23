@@ -21103,7 +21103,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Float",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -21153,7 +21153,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "Float",
+                  "name": "String",
                   "ofType": null
                 }
               },
@@ -21186,7 +21186,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Float",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,
