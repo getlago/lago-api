@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_17_123744) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_23_095209) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -400,8 +400,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_17_123744) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.string "invoice_display_name"
     t.decimal "total_aggregated_units"
+    t.string "invoice_display_name"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: "{}", null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
@@ -493,6 +493,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_17_123744) do
     t.datetime "to_datetime"
     t.datetime "charges_from_datetime"
     t.datetime "charges_to_datetime"
+    t.index ["invoice_id", "subscription_id"], name: "index_invoice_subscriptions_on_invoice_id_and_subscription_id", unique: true, where: "(created_at >= '2023-11-23 00:00:00'::timestamp without time zone)"
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
     t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"

@@ -214,6 +214,28 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           )
         end
       end
+
+      context 'when subscriptions are duplicated' do
+        let(:subscriptions) { [subscription, subscription] }
+
+        it 'ensures charges are not duplicated' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(invoice.subscriptions.count).to eq(1)
+            expect(invoice.payment_status).to eq('pending')
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+            expect(invoice.fees.charge_kind.count).to eq(1)
+
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
+            )
+          end
+        end
+      end
     end
 
     context 'when subscription is terminated' do
