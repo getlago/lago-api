@@ -4,7 +4,7 @@ module Invoices
   class CalculateFeesService < BaseService
     def initialize(invoice:, subscriptions:, timestamp:, recurring: false, context: nil)
       @invoice = invoice
-      @subscriptions = subscriptions
+      @subscriptions = subscriptions.uniq(&:id)
       @timestamp = timestamp
 
       # NOTE: Billed automatically by the recurring billing process
@@ -114,11 +114,11 @@ module Invoices
         .where
         .not(pay_in_advance: true, billable_metric: { recurring: false })
         .each do |charge|
-        next if should_not_create_charge_fee?(charge, subscription)
+          next if should_not_create_charge_fee?(charge, subscription)
 
-        fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
-        fee_result.raise_if_error!
-      end
+          fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
+          fee_result.raise_if_error!
+        end
     end
 
     def should_not_create_charge_fee?(charge, subscription)
