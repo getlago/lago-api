@@ -2,7 +2,7 @@
 
 module V1
   module Analytics
-    class OutstandingInvoiceSerializer < ModelSerializer
+    class FinalizedInvoiceSerializer < ModelSerializer
       def serialize
         {
           month: model['month'],

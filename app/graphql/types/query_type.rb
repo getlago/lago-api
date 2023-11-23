@@ -27,6 +27,7 @@ module Types
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :customers, resolver: Resolvers::CustomersResolver
     field :events, resolver: Resolvers::EventsResolver
+    field :finalized_invoices, resolver: Resolvers::Analytics::FinalizedInvoicesResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
@@ -37,7 +38,6 @@ module Types
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
-    field :outstanding_invoices, resolver: Resolvers::Analytics::OutstandingInvoicesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver

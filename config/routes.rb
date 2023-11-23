@@ -21,7 +21,7 @@ Rails.application.routes.draw do
       namespace :analytics do
         get :gross_revenue, to: 'gross_revenues#index', as: :gross_revenue
         get :invoiced_usage, to: 'invoiced_usages#index', as: :invoiced_usage
-        get :outstanding_invoices, to: 'outstanding_invoices#index', as: :outstanding_invoices
+        get :finalized_invoices, to: 'finalized_invoices#index', as: :finalized_invoices
         get :mrr, to: 'mrrs#index', as: :mrr
       end
 

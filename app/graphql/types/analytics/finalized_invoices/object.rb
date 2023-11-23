@@ -2,9 +2,9 @@
 
 module Types
   module Analytics
-    module OutstandingInvoices
+    module FinalizedInvoices
       class Object < Types::BaseObject
-        graphql_name 'OutstandingInvoice'
+        graphql_name 'FinalizedInvoice'
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :currency, Types::CurrencyEnum, null: true
