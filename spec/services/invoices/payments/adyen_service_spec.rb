@@ -164,22 +164,46 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
 
       before do
         subscription
-
-        allow(payments_api).to receive(:payments)
-          .and_raise(Adyen::ValidationError.new('Invalid card number', nil))
       end
 
-      it 'delivers an error webhook' do
-        expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
-          .with(
-            'invoice.payment_failure',
-            invoice,
-            provider_customer_id: adyen_customer.provider_customer_id,
-            provider_error: {
-              message: 'Invalid card number',
-              error_code: nil,
-            },
-          ).on_queue(:webhook)
+      context 'when changing payment method fails with invalid card' do
+        before do
+          allow(payments_api).to receive(:payment_methods)
+            .and_raise(Adyen::ValidationError.new('Invalid card number', nil))
+        end
+
+        it 'delivers an error webhook' do
+          expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+            .with(
+              'invoice.payment_failure',
+              invoice,
+              provider_customer_id: adyen_customer.provider_customer_id,
+              provider_error: {
+                message: 'Invalid card number',
+                error_code: nil,
+              },
+            ).on_queue(:webhook)
+        end
+      end
+
+      context 'when payment fails with invalid card' do
+        before do
+          allow(payments_api).to receive(:payments)
+            .and_raise(Adyen::ValidationError.new('Invalid card number', nil))
+        end
+
+        it 'delivers an error webhook' do
+          expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+            .with(
+              'invoice.payment_failure',
+              invoice,
+              provider_customer_id: adyen_customer.provider_customer_id,
+              provider_error: {
+                message: 'Invalid card number',
+                error_code: nil,
+              },
+            ).on_queue(:webhook)
+        end
       end
     end
 
