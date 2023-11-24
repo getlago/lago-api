@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::V1::Analytics::OutstandingInvoicesController, type: :request do # rubocop:disable RSpec/FilePath
-  describe 'GET /analytics/outstanding_invoices' do
+RSpec.describe Api::V1::Analytics::InvoiceCollectionsController, type: :request do # rubocop:disable RSpec/FilePath
+  describe 'GET /analytics/invoice_collection' do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
 
@@ -13,19 +13,19 @@ RSpec.describe Api::V1::Analytics::OutstandingInvoicesController, type: :request
       it 'returns the gross revenue' do
         get_with_token(
           organization,
-          '/api/v1/analytics/outstanding_invoices',
+          '/api/v1/analytics/invoice_collection',
         )
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
 
-          month = DateTime.parse json[:outstanding_invoices].first[:month]
+          month = DateTime.parse json[:invoice_collections].first[:month]
 
           expect(month).to eq(DateTime.current.beginning_of_month)
-          expect(json[:outstanding_invoices].first[:payment_status]).to eq(nil)
-          expect(json[:outstanding_invoices].first[:invoices_count]).to eq(0)
-          expect(json[:outstanding_invoices].first[:amount_cents]).to eq(0.0)
-          expect(json[:outstanding_invoices].first[:currency]).to eq(nil)
+          expect(json[:invoice_collections].first[:payment_status]).to eq(nil)
+          expect(json[:invoice_collections].first[:invoices_count]).to eq(0)
+          expect(json[:invoice_collections].first[:amount_cents]).to eq(0.0)
+          expect(json[:invoice_collections].first[:currency]).to eq(nil)
         end
       end
     end
@@ -34,7 +34,7 @@ RSpec.describe Api::V1::Analytics::OutstandingInvoicesController, type: :request
       it 'returns forbidden status' do
         get_with_token(
           organization,
-          '/api/v1/analytics/outstanding_invoices',
+          '/api/v1/analytics/invoice_collection',
         )
 
         expect(response).to have_http_status(:forbidden)

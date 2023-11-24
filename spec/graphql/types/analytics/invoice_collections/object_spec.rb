@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Types::Analytics::OutstandingInvoices::Object do
+RSpec.describe Types::Analytics::InvoiceCollections::Object do
   subject { described_class }
 
   it { is_expected.to have_field(:month).of_type('ISO8601DateTime!') }

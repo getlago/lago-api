@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Analytics
-  class OutstandingInvoice < Base
+  class InvoiceCollection < Base
     self.abstract_class = true
 
     class << self
@@ -71,7 +71,7 @@ module Analytics
 
       def cache_key(organization_id, **args)
         [
-          'outstanding-invoice',
+          'invoice-collection',
           Date.current.strftime('%Y-%m-%d'),
           organization_id,
           args[:currency],
