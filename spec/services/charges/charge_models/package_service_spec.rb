@@ -29,8 +29,17 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
     )
   end
 
-  it 'applies the package size to the value' do
+  it 'applies the package size to the value', :aggregate_failures do
     expect(apply_package_service.amount).to eq(1300)
+    expect(apply_package_service.unit_amount.round(2)).to eq(10.74)
+    expect(apply_package_service.amount_details).to eq(
+      {
+        free_units: 0,
+        paid_units: 121,
+        per_package_size: 10,
+        per_package_unit_amount: 100,
+      },
+    )
   end
 
   context 'with free_units' do
@@ -38,12 +47,32 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
 
     it 'substracts the free units from the value' do
       expect(apply_package_service.amount).to eq(1200)
+      expect(apply_package_service.unit_amount.round(2)).to eq(10.81)
+      expect(apply_package_service.amount_details).to eq(
+        {
+          free_units: 10,
+          paid_units: 111,
+          per_package_size: 10,
+          per_package_unit_amount: 100,
+        },
+      )
     end
 
     context 'when free units is higher than the value' do
       before { charge.properties['free_units'] = 200 }
 
-      it { expect(apply_package_service.amount).to eq(0) }
+      it 'substracts the free units from the value' do
+        expect(apply_package_service.amount).to eq(0)
+        expect(apply_package_service.unit_amount).to eq(0)
+        expect(apply_package_service.amount_details).to eq(
+          {
+            free_units: 200,
+            paid_units: 0,
+            per_package_size: 10,
+            per_package_unit_amount: 100,
+          },
+        )
+      end
     end
   end
 end

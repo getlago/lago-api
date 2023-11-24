@@ -724,16 +724,17 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             group: europe,
             units: 2,
-            unit_amount_cents: 0,
-            precise_unit_amount: 0,
+            amount_cents: 10_000,
+            unit_amount_cents: 10_000,
+            precise_unit_amount: 100,
           )
 
           expect(created_fees.second).to have_attributes(
             group: usa,
             amount_cents: 5000,
             units: 1,
-            unit_amount_cents: 0,
-            precise_unit_amount: 0,
+            unit_amount_cents: 5000,
+            precise_unit_amount: 50,
           )
 
           expect(created_fees.third).to have_attributes(
