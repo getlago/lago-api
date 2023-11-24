@@ -6,23 +6,46 @@ module Charges
       protected
 
       def compute_amount
-        # NOTE: exclude free units from the count
-        billed_units = units - free_units
-        return 0 if billed_units.negative?
+        return 0 if paid_units.negative?
 
         # NOTE: Check how many packages (groups of units) are consumed
         #       It's rounded up, because a group counts from its first unit
-        package_count = billed_units.fdiv(package_size).ceil
+        package_count = paid_units.fdiv(per_package_size).ceil
+        package_count * per_package_unit_amount
+      end
 
-        package_count * BigDecimal(properties['amount'])
+      def unit_amount
+        return 0 if paid_units <= 0
+
+        compute_amount / paid_units
+      end
+
+      def amount_details
+        return { free_units: 0, paid_units: 0, per_package_size: 0, per_package_unit_amount: 0 } if units.zero?
+        return { free_units:, paid_units: 0, per_package_size:, per_package_unit_amount: } if paid_units.negative?
+
+        {
+          free_units:,
+          paid_units:,
+          per_package_size:,
+          per_package_unit_amount:,
+        }
+      end
+
+      def paid_units
+        @paid_units ||= units - free_units
       end
 
       def free_units
-        properties['free_units'] || 0
+        @free_units ||= properties['free_units'] || 0
       end
 
-      def package_size
-        properties['package_size']
+      def per_package_size
+        @per_package_size ||= properties['package_size']
+      end
+
+      def per_package_unit_amount
+        @per_package_unit_amount ||= BigDecimal(properties['amount'])
       end
     end
   end
