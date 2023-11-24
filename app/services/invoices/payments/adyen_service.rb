@@ -98,12 +98,8 @@ module Invoices
           Lago::Adyen::Params.new(payment_method_params).to_h,
         ).response
 
-        if (payment_method_id = result['storedPaymentMethods']&.first&.dig('id'))
-          customer.adyen_customer.update!(payment_method_id:)
-        end
-      rescue Adyen::AdyenError => e
-        deliver_error_webhook(e)
-        raise
+        payment_method_id = result['storedPaymentMethods']&.first&.dig('id')
+        customer.adyen_customer.update!(payment_method_id:) if payment_method_id
       end
 
       def create_adyen_payment
