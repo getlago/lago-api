@@ -24,74 +24,107 @@ module Analytics
         sql = <<~SQL.squish
           WITH organization_creation_date AS (
             SELECT
-              DATE_TRUNC('month', o.created_at) AS start_month
+              DATE_TRUNC('month', o.created_at) AS month
             FROM organizations o
             WHERE o.id = :organization_id
           ),
           all_months AS (
             SELECT
-              generate_series(
-                  (SELECT start_month FROM organization_creation_date),
-                  DATE_TRUNC('month', CURRENT_DATE + INTERVAL '10 years'),
-                  interval '1 month'
-              ) AS month
+              *
+            FROM generate_series(
+              (SELECT min(month) FROM organization_creation_date),
+              date_trunc('month', now()) + interval '10 years',
+              interval '1 month'
+            ) AS month
           ),
           invoice_details AS (
             SELECT
+              f.subscription_id,
               f.invoice_id,
-              (f.amount_cents + f.taxes_amount_cents)::numeric AS amount_cents,
+              c.name,
+              ((f.amount_cents - f.precise_coupons_amount_cents) + f.taxes_amount_cents) AS amount_cents,
               f.amount_currency AS currency,
               i.issuing_date,
+              (EXTRACT(DAY FROM CAST(properties ->> 'to_datetime' AS timestamp) - CAST(properties ->> 'from_datetime' AS timestamp))
+              + EXTRACT(HOUR FROM CAST(properties ->> 'to_datetime' AS timestamp) - CAST(properties ->> 'from_datetime' AS timestamp)) / 24
+              + EXTRACT(MINUTE FROM CAST(properties ->> 'to_datetime' AS timestamp) - CAST(properties ->> 'from_datetime' AS timestamp)) / 1440) / 30.44 AS billed_months,
               p.pay_in_advance,
               CASE
-                  WHEN p.interval = 0 THEN 'weekly'
-                  WHEN p.interval = 1 THEN 'monthly'
-                  WHEN p.interval = 2 THEN 'yearly'
-                  WHEN p.interval = 3 THEN 'quarterly'
+                WHEN p.interval = 0 THEN 'weekly'
+                WHEN p.interval = 1 THEN 'monthly'
+                WHEN p.interval = 2 THEN 'yearly'
+                WHEN p.interval = 3 THEN 'quarterly'
               END AS plan_interval
             FROM fees f
-            LEFT JOIN subscriptions s ON s.id = f.subscription_id
-            LEFT JOIN invoice_subscriptions isub ON isub.subscription_id = s.id
-            LEFT JOIN invoices i ON i.id = isub.invoice_id
-            LEFT JOIN customers c ON c.id = s.customer_id
+            LEFT JOIN invoices i ON f.invoice_id = i.id
+            LEFT JOIN customers c ON c.id = i.customer_id
+            LEFT JOIN organizations o ON o.id = c.organization_id
+            LEFT JOIN subscriptions s ON f.subscription_id = s.id
             LEFT JOIN plans p ON p.id = s.plan_id
             WHERE fee_type = 2
-            AND c.organization_id = :organization_id
-            AND i.status = 1
+              AND c.organization_id = :organization_id
+              AND i.status = 1
+            ORDER BY issuing_date ASC
           ),
           quarterly_advance AS (
             SELECT
-              DATE_TRUNC('month', issuing_date) + interval '1 month' * generate_series(0, 2) AS month,
-              amount_cents / 3 AS amount_cents,
-              currency
-            FROM invoice_details
+              DATE_TRUNC('month', issuing_date) + INTERVAL '1 month' * gs.month_index AS month,
+              CASE
+                  WHEN gs.month_index = 0 THEN (amount_cents / billed_months) * (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))
+                  WHEN gs.month_index = CEIL(billed_months) - 1 THEN (amount_cents - (amount_cents / billed_months) * (FLOOR(billed_months) - 1 + (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))))
+                  ELSE amount_cents / billed_months
+              END AS amount_cents,
+              currency,
+              name
+            FROM invoice_details,
+            LATERAL GENERATE_SERIES(0, CEIL(billed_months) - 1) AS gs(month_index)
             WHERE pay_in_advance = TRUE
             AND plan_interval = 'quarterly'
           ),
           quarterly_arrears AS (
             SELECT
-              DATE_TRUNC('month', issuing_date) - interval '1 month' * generate_series(2, 0, -1) AS month,
-              amount_cents / 3 AS amount_cents,
-              currency
-            FROM invoice_details
+              DATE_TRUNC('month', issuing_date) - INTERVAL '1 month' * gs.month_index AS month,
+              CASE
+                  WHEN gs.month_index < CEIL(billed_months::numeric) - 1 THEN
+                      amount_cents::numeric / billed_months::numeric
+                  ELSE
+                      amount_cents::numeric - (amount_cents::numeric / billed_months::numeric) * (CEIL(billed_months::numeric) - 1)
+              END AS amount_cents,
+              currency,
+              name
+            FROM invoice_details,
+            LATERAL GENERATE_SERIES(0, CEIL(billed_months::numeric) - 1) AS gs(month_index)
             WHERE pay_in_advance = FALSE
             AND plan_interval = 'quarterly'
           ),
           yearly_advance AS (
             SELECT
-              DATE_TRUNC('month', issuing_date) + interval '1 month' * generate_series(0, 11) AS month,
-              amount_cents / 12 AS amount_cents,
-              currency
-            FROM invoice_details
+              DATE_TRUNC('month', issuing_date) + INTERVAL '1 month' * gs.month_index AS month,
+              CASE
+                WHEN gs.month_index = 0 THEN (amount_cents / billed_months) * (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))
+                WHEN gs.month_index = CEIL(billed_months) - 1 THEN (amount_cents - (amount_cents / billed_months) * (FLOOR(billed_months) - 1 + (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))))
+                ELSE amount_cents / billed_months
+              END AS amount_cents,
+              currency,
+              name
+            FROM invoice_details,
+            LATERAL GENERATE_SERIES(0, CEIL(billed_months) - 1) AS gs(month_index)
             WHERE pay_in_advance = TRUE
             AND plan_interval = 'yearly'
           ),
           yearly_arrears AS (
             SELECT
-              DATE_TRUNC('month', issuing_date) - interval '1 month' * generate_series(11, 0, -1) AS month,
-              amount_cents / 12 AS amount_cents,
-              currency
-            FROM invoice_details
+              DATE_TRUNC('month', issuing_date) - INTERVAL '1 month' * gs.month_index AS month,
+              CASE
+                WHEN gs.month_index < CEIL(billed_months::numeric) - 1 THEN
+                  amount_cents::numeric / billed_months::numeric
+                ELSE
+                  amount_cents::numeric - (amount_cents::numeric / billed_months::numeric) * (CEIL(billed_months::numeric) - 1)
+              END AS amount_cents,
+              currency,
+              name
+            FROM invoice_details,
+            LATERAL GENERATE_SERIES(0, CEIL(billed_months::numeric) - 1) AS gs(month_index)
             WHERE pay_in_advance = FALSE
             AND plan_interval = 'yearly'
           ),
