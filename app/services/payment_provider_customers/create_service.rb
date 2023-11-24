@@ -89,7 +89,10 @@ module PaymentProviderCustomers
     end
 
     def should_generate_checkout_url?
-      result.provider_customer.provider_customer_id? && result.provider_customer.sync_with_provider.blank?
+      !result.provider_customer.id_previously_changed?(from: nil) && # it was not created but updated
+        result.provider_customer.provider_customer_id_previously_changed? &&
+        result.provider_customer.provider_customer_id? &&
+        result.provider_customer.sync_with_provider.blank?
     end
   end
 end
