@@ -18,7 +18,7 @@ class AddFieldsForNewDocumentNumbering < ActiveRecord::Migration[7.0]
 					WITH ordered_organization_invoices AS (
 				    SELECT
               invoices.id AS invoice_id,
-              ROW_NUMBER() OVER (PARTITION BY invoices.organization_id, DATE_PART('month', invoices.issuing_date) ORDER BY invoices.issuing_date ASC, invoices.created_at ASC) AS rn
+              ROW_NUMBER() OVER (PARTITION BY invoices.organization_id, DATE_PART('month', invoices.created_at) ORDER BY invoices.created_at ASC) AS rn
 				    FROM invoices
 					)
 
