@@ -27,8 +27,8 @@ module Types
 
     field :timezone, Types::TimezoneEnum, null: true
 
-    field :document_numbering, Types::Organizations::DocumentNumberingEnum, null: false
     field :document_number_prefix, String, null: false
+    field :document_numbering, Types::Organizations::DocumentNumberingEnum, null: false
 
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

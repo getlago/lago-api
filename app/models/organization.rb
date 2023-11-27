@@ -104,7 +104,7 @@ class Organization < ApplicationRecord
   end
 
   def generate_document_number_prefix
-    self.update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
+    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
   end
 
   def validate_email_settings

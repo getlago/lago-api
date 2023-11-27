@@ -10379,7 +10379,7 @@
         {
           "kind": "ENUM",
           "name": "DocumentNumberingEnum",
-          "description": null,
+          "description": "Document numbering type",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -24840,11 +24840,11 @@
               "deprecationReason": null
             },
             {
-              "name": "documentNumbering",
+              "name": "documentNumberPrefix",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "DocumentNumberingEnum",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -24852,11 +24852,11 @@
               "deprecationReason": null
             },
             {
-              "name": "documentNumberPrefix",
+              "name": "documentNumbering",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "DocumentNumberingEnum",
                 "ofType": null
               },
               "defaultValue": null,

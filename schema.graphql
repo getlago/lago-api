@@ -2897,6 +2897,9 @@ type DestroyWebhookEndpointPayload {
   id: ID
 }
 
+"""
+Document numbering type
+"""
 enum DocumentNumberingEnum {
   per_customer
   per_organization
