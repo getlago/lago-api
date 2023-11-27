@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddFieldsForNewDocumentNumbering < ActiveRecord::Migration[7.0]
   def change
     change_table :organizations, bulk: true do |t|
