@@ -18,12 +18,7 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
-
-          month = DateTime.parse json[:gross_revenues].first[:month]
-
-          expect(month).to eq(DateTime.current.beginning_of_month)
-          expect(json[:gross_revenues].first[:amount_cents]).to eq(nil)
-          expect(json[:gross_revenues].first[:currency]).to eq(nil)
+          expect(json[:gross_revenues]).to eq([])
         end
       end
     end
@@ -36,12 +31,7 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
         )
 
         expect(response).to have_http_status(:success)
-
-        month = DateTime.parse json[:gross_revenues].first[:month]
-
-        expect(month).to eq(DateTime.current.beginning_of_month)
-        expect(json[:gross_revenues].first[:amount_cents]).to eq(nil)
-        expect(json[:gross_revenues].first[:currency]).to eq(nil)
+        expect(json[:gross_revenues]).to eq([])
       end
     end
   end

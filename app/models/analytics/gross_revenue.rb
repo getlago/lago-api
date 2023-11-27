@@ -58,6 +58,7 @@ module Analytics
           ),
           issued_invoices AS (
             SELECT
+              i.id,
               i.issuing_date,
               i.total_amount_cents::float AS amount_cents,
               i.currency,
@@ -68,10 +69,12 @@ module Analytics
             WHERE i.organization_id = :organization_id
             AND i.status = 1
             #{and_external_customer_id_sql}
-            GROUP BY i.issuing_date, i.total_amount_cents, i.currency
+            GROUP BY i.id, i.issuing_date, i.total_amount_cents, i.currency
+            ORDER BY i.issuing_date ASC
           ),
           instant_charges AS (
             SELECT
+              f.id,
               f.created_at AS issuing_date,
               f.amount_cents AS amount_cents,
               f.amount_currency AS currency,
@@ -99,13 +102,14 @@ module Analytics
           )
           SELECT
             am.month,
-            cd.currency,
+            #{select_currency_sql},
             SUM(cd.amount_cents - cd.total_refund_amount_cents) AS amount_cents
           FROM all_months am
           LEFT JOIN combined_data cd ON am.month = cd.month
           WHERE am.month <= DATE_TRUNC('month', CURRENT_DATE)
           #{and_months_sql}
           #{and_currency_sql}
+          AND cd.amount_cents IS NOT NULL
           GROUP BY am.month, cd.currency
           ORDER BY am.month;
         SQL
