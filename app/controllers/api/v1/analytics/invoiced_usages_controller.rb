@@ -15,7 +15,7 @@ module Api
         def filters
           {
             currency: params[:currency]&.upcase,
-            months: params[:months].to_i,
+            months: params[:months],
           }
         end
       end

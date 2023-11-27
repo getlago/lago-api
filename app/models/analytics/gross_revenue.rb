@@ -23,17 +23,6 @@ module Analytics
           )
         end
 
-        if args[:months].present?
-          months_interval = (args[:months].to_i <= 1) ? 0 : args[:months].to_i - 1
-
-          and_months_sql = sanitize_sql(
-            [
-              "AND am.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL ':months months')",
-              { months: months_interval },
-            ],
-          )
-        end
-
         if args[:currency].present?
           and_currency_sql = sanitize_sql(['AND cd.currency = :currency', args[:currency].upcase])
           select_currency_sql = sanitize_sql(['COALESCE(cd.currency, :currency) as currency', args[:currency].upcase])
