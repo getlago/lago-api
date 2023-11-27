@@ -22,6 +22,8 @@ module V1
         timezone: model.timezone,
         net_payment_term: model.net_payment_term,
         email_settings: model.email_settings,
+        document_numbering: model.document_numbering,
+        document_number_prefix: model.document_number_prefix,
         tax_identification_number: model.tax_identification_number,
         billing_configuration:,
       }.merge(legacy_values.except(:billing_configuration))

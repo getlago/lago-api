@@ -38,6 +38,13 @@ class Organization < ApplicationRecord
 
   has_one_attached :logo
 
+  DOCUMENT_NUMBERINGS = [
+    :per_customer,
+    :per_organization,
+  ].freeze
+
+  enum document_numbering: DOCUMENT_NUMBERINGS
+
   before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
@@ -56,6 +63,8 @@ class Organization < ApplicationRecord
   validates :webhook_url, url: true, allow_nil: true
 
   validate :validate_email_settings
+
+  after_create :generate_document_number_prefix
 
   def logo_url
     return if logo.blank?
@@ -92,6 +101,10 @@ class Organization < ApplicationRecord
     return generate_api_key if orga.present?
 
     self.api_key = SecureRandom.uuid
+  end
+
+  def generate_document_number_prefix
+    self.update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
   end
 
   def validate_email_settings

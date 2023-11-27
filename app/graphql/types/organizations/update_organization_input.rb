@@ -24,6 +24,9 @@ module Types
 
       argument :timezone, Types::TimezoneEnum, required: false
 
+      argument :document_numbering, Types::Organizations::DocumentNumberingEnum, required: false
+      argument :document_number_prefix, String, required: false
+
       argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false
       argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false
     end
