@@ -27,12 +27,7 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
       query:,
     )
 
-    gross_revenues_response = result['data']['grossRevenues']
-    month = DateTime.parse gross_revenues_response['collection'].first['month']
-
-    aggregate_failures do
-      expect(month).to eq(DateTime.current.beginning_of_month)
-    end
+    expect(result['data']['grossRevenues']['collection']).to eq([])
   end
 
   context 'without current organization' do
