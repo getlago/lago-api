@@ -14,9 +14,9 @@ module Charges
           from_value:,
           to_value:,
           flat_unit_amount:,
-          per_unit_amount:,
+          per_unit_amount: per_unit_amount.to_s,
           units: BigDecimal(units).to_s,
-          per_unit_total_amount:,
+          per_unit_total_amount: per_unit_total_amount.to_s,
           total_with_flat_amount:,
         }
       end
@@ -34,7 +34,7 @@ module Charges
       end
 
       def flat_unit_amount
-        @flat_unit_amount ||= units.zero? ? 0 : BigDecimal(range[:flat_amount])
+        @flat_unit_amount ||= units.zero? ? BigDecimal(0) : BigDecimal(range[:flat_amount])
       end
 
       def rate
@@ -42,7 +42,7 @@ module Charges
       end
 
       def per_unit_amount
-        @per_unit_amount ||= units.zero? ? 0 : per_unit_total_amount.fdiv(units)
+        @per_unit_amount ||= units.zero? ? BigDecimal(0) : per_unit_total_amount.fdiv(units)
       end
 
       def per_unit_total_amount

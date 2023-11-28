@@ -38,9 +38,9 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.unit_amount).to eq(0)
       expect(apply_volume_service.amount_details).to eq(
         {
-          flat_unit_amount: 0,
-          per_unit_amount: 0,
-          per_unit_total_amount: 0,
+          flat_unit_amount: 0.0,
+          per_unit_amount: 0.0,
+          per_unit_total_amount: 0.0,
         },
       )
     end
@@ -55,7 +55,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount_details).to eq(
         {
           flat_unit_amount: 10,
-          per_unit_amount: 2,
+          per_unit_amount: '2.0',
           per_unit_total_amount: 2,
         },
       )
@@ -71,7 +71,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount_details).to eq(
         {
           flat_unit_amount: 10,
-          per_unit_amount: 2,
+          per_unit_amount: '2.0',
           per_unit_total_amount: 200,
         },
       )
@@ -87,7 +87,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount_details).to eq(
         {
           flat_unit_amount: 0,
-          per_unit_amount: 1,
+          per_unit_amount: '1.0',
           per_unit_total_amount: 101,
         },
       )
@@ -103,7 +103,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount_details).to eq(
         {
           flat_unit_amount: 0,
-          per_unit_amount: 1,
+          per_unit_amount: '1.0',
           per_unit_total_amount: 200,
         },
       )
@@ -119,7 +119,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount_details).to eq(
         {
           flat_unit_amount: 50,
-          per_unit_amount: 0.5,
+          per_unit_amount: '0.5',
           per_unit_total_amount: 150,
         },
       )
@@ -141,7 +141,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
       expect(apply_volume_service.amount_details).to eq(
         {
           flat_unit_amount: 50,
-          per_unit_amount: 0.331,
+          per_unit_amount: '0.331',
           per_unit_total_amount: 99.3,
         },
       )
