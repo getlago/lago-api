@@ -10,6 +10,9 @@ Rails.application.configure do
     'Cache-Control' => "public, max-age=#{1.hour.to_i}",
   }
 
+  config.logger = Logger.new(nil)
+  config.log_level = :fatal
+
   config.consider_all_requests_local       = true
   config.action_controller.perform_caching = false
   config.cache_store = :null_store
