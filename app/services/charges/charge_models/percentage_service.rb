@@ -25,10 +25,10 @@ module Charges
         paid_events = aggregation_result.count - free_events
 
         {
-          units:,
-          free_units: free_units_value,
+          units: BigDecimal(units).to_s,
+          free_units: BigDecimal(free_units_value).to_s,
           free_events:,
-          paid_units:,
+          paid_units: BigDecimal(paid_units).to_s,
           per_unit_amount:,
           per_unit_total_amount: compute_percentage_amount,
           paid_events:,
