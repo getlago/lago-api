@@ -117,33 +117,36 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       context 'when sync with provider is blank' do
         let(:sync_with_provider) { nil }
 
-        context 'when customer type is stripe' do
-          let(:customer_class) { PaymentProviderCustomers::StripeCustomer }
-          let(:provider) { create(:stripe_provider, organization: customer.organization) }
-
-          it 'generates checkout url' do
-            create_or_update
-            expect(create_service).to have_received(:generate_checkout_url)
-          end
-
-          it 'does not create customer' do
-            create_or_update
-            expect(create_service).not_to have_received(:create_customer_on_provider_service)
-          end
-        end
-
         context 'when customer type is adyen' do
           let(:customer_class) { PaymentProviderCustomers::AdyenCustomer }
           let(:provider) { create(:adyen_provider, organization: customer.organization) }
 
-          it 'generates checkout url' do
-            create_or_update
-            expect(create_service).to have_received(:generate_checkout_url)
+          context 'when provider customer exists' do
+            before do
+              create(:adyen_customer, customer:, payment_provider_id: provider.id)
+            end
+
+            it 'generates checkout url' do
+              create_or_update
+              expect(create_service).to have_received(:generate_checkout_url)
+            end
+
+            it 'does not create customer' do
+              create_or_update
+              expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            end
           end
 
-          it 'does not create customer' do
-            create_or_update
-            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+          context 'when provider customer does not exist' do
+            it 'does not generate checkout url' do
+              create_or_update
+              expect(create_service).not_to have_received(:generate_checkout_url)
+            end
+
+            it 'does not create customer' do
+              create_or_update
+              expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            end
           end
         end
 
@@ -151,14 +154,65 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
           let(:customer_class) { PaymentProviderCustomers::GocardlessCustomer }
           let(:provider) { create(:gocardless_provider, organization: customer.organization) }
 
-          it 'generates checkout url' do
-            create_or_update
-            expect(create_service).to have_received(:generate_checkout_url)
+          context 'when provider customer exists' do
+            before do
+              create(:gocardless_customer, customer:, payment_provider_id: provider.id)
+            end
+
+            it 'generates checkout url' do
+              create_or_update
+              expect(create_service).to have_received(:generate_checkout_url)
+            end
+
+            it 'does not create customer' do
+              create_or_update
+              expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            end
           end
 
-          it 'does not create customer' do
-            create_or_update
-            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+          context 'when provider customer does not exist' do
+            it 'does not generate checkout url' do
+              create_or_update
+              expect(create_service).not_to have_received(:generate_checkout_url)
+            end
+
+            it 'does not create customer' do
+              create_or_update
+              expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            end
+          end
+        end
+
+        context 'when customer type is stripe' do
+          let(:customer_class) { PaymentProviderCustomers::StripeCustomer }
+          let(:provider) { create(:stripe_provider, organization: customer.organization) }
+
+          context 'when provider customer exists' do
+            before do
+              create(:stripe_customer, customer:, payment_provider_id: provider.id)
+            end
+
+            it 'generates checkout url' do
+              create_or_update
+              expect(create_service).to have_received(:generate_checkout_url)
+            end
+
+            it 'does not create customer' do
+              create_or_update
+              expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            end
+          end
+
+          context 'when provider customer does not exist' do
+            it 'does not generate checkout url' do
+              create_or_update
+              expect(create_service).not_to have_received(:generate_checkout_url)
+            end
+
+            it 'does not create customer' do
+              create_or_update
+              expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            end
           end
         end
       end

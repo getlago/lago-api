@@ -38,7 +38,7 @@ module PaymentProviderCustomers
           checkout_url: result.checkout_url,
         )
       end
- 
+
       result
     rescue Adyen::AdyenError => e
       deliver_error_webhook(e)
