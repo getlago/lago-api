@@ -22,11 +22,17 @@ module Charges
       end
 
       def amount_details
-        return { flat_unit_amount: 0, per_unit_amount: 0, per_unit_total_amount: 0 } if number_of_units.zero?
+        if number_of_units.zero?
+          return {
+            flat_unit_amount: BigDecimal(0),
+            per_unit_amount: BigDecimal(0),
+            per_unit_total_amount: BigDecimal(0),
+          }
+        end
 
         {
           flat_unit_amount:,
-          per_unit_amount:,
+          per_unit_amount: per_unit_amount.to_s,
           per_unit_total_amount:,
         }
       end
