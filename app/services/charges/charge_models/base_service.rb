@@ -41,9 +41,7 @@ module Charges
       end
 
       def unit_amount
-        # TODO: Uncomment this.
-        # raise NotImplementedError
-        0
+        raise NotImplementedError
       end
 
       def amount_details
