@@ -11,7 +11,7 @@ RSpec.describe Webhooks::RetryService, type: :service do
     expect { retry_service.call }.to have_enqueued_job(SendWebhookJob)
       .with(
         webhook.webhook_type,
-        nil,
+        webhook.object,
         {},
         webhook.id,
       )
