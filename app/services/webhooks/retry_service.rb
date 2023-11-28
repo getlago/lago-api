@@ -14,7 +14,7 @@ module Webhooks
 
       SendWebhookJob.perform_later(
         webhook.webhook_type,
-        nil,
+        webhook.object,
         {},
         webhook.id,
       )
