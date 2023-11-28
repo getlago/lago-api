@@ -9,7 +9,7 @@ class UpdateDefaultAmountDetailsOnFees < ActiveRecord::Migration[7.0]
     reversible do |dir|
       dir.up do
         # Update all existing fees with '{}' value to {}
-        Fee.where(amount_details: '{}').update_all(amount_details: {})
+        Fee.where(amount_details: '{}').update_all(amount_details: {}) # rubocop:disable Rails/SkipsModelValidations
       end
     end
   end

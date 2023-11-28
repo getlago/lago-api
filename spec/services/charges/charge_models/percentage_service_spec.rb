@@ -49,9 +49,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 0,
-          free_units: 250,
-          paid_units: 0,
+          units: '0.0',
+          free_units: '250.0',
+          paid_units: '0.0',
           free_events: 2,
           per_unit_amount: 0,
           per_unit_total_amount: 0,
@@ -70,9 +70,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.0139375) # 11.15 / 800
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 800,
-          free_units: 250,
-          paid_units: 550,
+          units: '800.0',
+          free_units: '250.0',
+          paid_units: '550.0',
           free_events: 2,
           per_unit_amount: 0.013,
           per_unit_total_amount: 7.15, # (800 - 250) * (1.3 / 100),
@@ -97,9 +97,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.01)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 800,
-          free_units: 0,
-          paid_units: 800,
+          units: '800.0',
+          free_units: '0.0',
+          paid_units: '800.0',
           free_events: 0,
           per_unit_amount: 0,
           per_unit_total_amount: 0,
@@ -120,9 +120,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.0139375)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 800,
-          free_units: 250,
-          paid_units: 550,
+          units: '800.0',
+          free_units: '250.0',
+          paid_units: '550.0',
           free_events: 2,
           per_unit_amount: 0.013,
           per_unit_total_amount: 7.15,
@@ -143,9 +143,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.009)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 800,
-          free_units: 400,
-          paid_units: 400,
+          units: '800.0',
+          free_units: '400.0',
+          paid_units: '400.0',
           free_events: 3,
           per_unit_amount: 0.013000000000000001,
           per_unit_total_amount: 5.2, # (800 - 400) * (1.3 / 100)
@@ -168,9 +168,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.023)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 800,
-          free_units: 0,
-          paid_units: 800,
+          units: '800.0',
+          free_units: '0.0',
+          paid_units: '800.0',
           free_events: 0,
           per_unit_amount: 0.013000000000000001,
           per_unit_total_amount: 10.4, # 800 * (1.3 / 100)
@@ -193,9 +193,9 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.unit_amount).to eq(0.009)
       expect(apply_percentage_service.amount_details).to eq(
         {
-          units: 800,
-          free_units: 400,
-          paid_units: 400,
+          units: '800.0',
+          free_units: '400.0',
+          paid_units: '400.0',
           free_events: 3,
           per_unit_amount: 0.013000000000000001,
           per_unit_total_amount: 5.2, # (800 - 400) * (1.3 / 100)
