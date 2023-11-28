@@ -34,8 +34,8 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
     expect(apply_package_service.unit_amount.round(2)).to eq(10.74)
     expect(apply_package_service.amount_details).to eq(
       {
-        free_units: 0,
-        paid_units: 121,
+        free_units: '0.0',
+        paid_units: '121.0',
         per_package_size: 10,
         per_package_unit_amount: 100,
       },
@@ -50,8 +50,8 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
       expect(apply_package_service.unit_amount.round(2)).to eq(10.81)
       expect(apply_package_service.amount_details).to eq(
         {
-          free_units: 10,
-          paid_units: 111,
+          free_units: '10.0',
+          paid_units: '111.0',
           per_package_size: 10,
           per_package_unit_amount: 100,
         },
@@ -66,8 +66,8 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
         expect(apply_package_service.unit_amount).to eq(0)
         expect(apply_package_service.amount_details).to eq(
           {
-            free_units: 200,
-            paid_units: 0,
+            free_units: '200.0',
+            paid_units: '0.0',
             per_package_size: 10,
             per_package_unit_amount: 100,
           },

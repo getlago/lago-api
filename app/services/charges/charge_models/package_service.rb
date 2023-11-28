@@ -21,12 +21,20 @@ module Charges
       end
 
       def amount_details
-        return { free_units: 0, paid_units: 0, per_package_size: 0, per_package_unit_amount: 0 } if units.zero?
-        return { free_units:, paid_units: 0, per_package_size:, per_package_unit_amount: } if paid_units.negative?
+        return { free_units: '0.0', paid_units: '0.0', per_package_size: 0, per_package_unit_amount: 0 } if units.zero?
+
+        if paid_units.negative?
+          return {
+            free_units: BigDecimal(free_units).to_s,
+            paid_units: '0.0',
+            per_package_size:,
+            per_package_unit_amount:,
+          }
+        end
 
         {
-          free_units:,
-          paid_units:,
+          free_units: BigDecimal(free_units).to_s,
+          paid_units: BigDecimal(paid_units).to_s,
           per_package_size:,
           per_package_unit_amount:,
         }
