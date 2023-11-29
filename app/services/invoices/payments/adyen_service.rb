@@ -120,7 +120,7 @@ module Invoices
       def payment_method_params
         {
           merchantAccount: adyen_payment_provider.merchant_account,
-          shopperReference: customer.external_id,
+          shopperReference: customer.adyen_customer.provider_customer_id,
         }
       end
 
@@ -135,7 +135,7 @@ module Invoices
             type: 'scheme',
             storedPaymentMethodId: customer.adyen_customer.payment_method_id,
           },
-          shopperReference: customer.external_id,
+          shopperReference: customer.adyen_customer.provider_customer_id,
           merchantAccount: adyen_payment_provider.merchant_account,
           shopperInteraction: 'ContAuth',
           recurringProcessingModel: 'UnscheduledCardOnFile',
