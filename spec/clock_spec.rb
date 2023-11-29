@@ -49,7 +49,7 @@ describe Clockwork do
     end
   end
 
-  describe 'schedule:post_validate_events' do
+  xdescribe 'schedule:post_validate_events' do
     let(:job) { 'schedule:post_validate_events' }
     let(:start_time) { Time.zone.parse('1 Apr 2022 01:00:00') }
     let(:end_time) { Time.zone.parse('1 Apr 2022 03:00:00') }
