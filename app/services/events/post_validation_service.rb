@@ -44,12 +44,14 @@ module Events
         FROM last_hour_events_mv
         WHERE organization_id = '#{organization.id}'
           AND (
-            field_name_mandatory = 't'
-            AND field_value IS NULL
-          )
-          OR (
-            numeric_field_mandatory = 't'
-            AND is_numeric_field_value = 'f'
+            (
+              field_name_mandatory = 't'
+              AND field_value IS NULL
+            )
+            OR (
+              numeric_field_mandatory = 't'
+              AND is_numeric_field_value = 'f'
+            )
           )
       SQL
     end
@@ -60,12 +62,14 @@ module Events
         FROM last_hour_events_mv
         WHERE organization_id = '#{organization.id}'
           AND (
-            parent_group_mandatory = 't'
-            AND has_parent_group_key = 'f'
-          )
-          OR (
-            child_group_mandatory = 't'
-            AND has_child_group_key = 'f'
+            (
+              parent_group_mandatory = 't'
+              AND has_parent_group_key = 'f'
+            )
+            OR (
+              child_group_mandatory = 't'
+              AND has_child_group_key = 'f'
+            )
           )
       SQL
     end
