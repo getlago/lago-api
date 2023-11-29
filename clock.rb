@@ -51,6 +51,7 @@ module Clockwork
   end
 
   every(1.hour, 'schedule:post_validate_events', at: '*:05') do
-    Clock::EventsValidationJob.perform_later
+    # TODO: Reactivate this job!
+    # Clock::EventsValidationJob.perform_later
   end
 end
