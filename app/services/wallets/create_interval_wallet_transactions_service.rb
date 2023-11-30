@@ -9,8 +9,8 @@ module Wallets
         WalletTransactions::CreateJob.perform_later(
           organization_id: wallet.organization.id,
           wallet_id: wallet.id,
-          paid_credits: recurring_transaction_rule.paid_credits,
-          granted_credits: recurring_transaction_rule.granted_credits,
+          paid_credits: recurring_transaction_rule.paid_credits.to_s,
+          granted_credits: recurring_transaction_rule.granted_credits.to_s,
           source: :interval,
         )
       end
