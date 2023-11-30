@@ -517,7 +517,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_07_095229) do
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
     t.uuid "organization_id", null: false
-    t.integer "version_number", default: 3, null: false
+    t.integer "version_number", default: 4, null: false
     t.string "currency"
     t.bigint "fees_amount_cents", default: 0, null: false
     t.bigint "coupons_amount_cents", default: 0, null: false
