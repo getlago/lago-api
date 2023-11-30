@@ -46,6 +46,10 @@ module Clockwork
     Clock::SubscriptionsToBeTerminatedJob.perform_later
   end
 
+  every(1.hour, 'schedule:top_up_wallet_interval_credits', at: '*:55') do
+    Clock::CreateIntervalWalletTransactionsJob.perform_later
+  end
+
   every(1.day, 'schedule:clean_webhooks', at: '01:00') do
     Clock::WebhooksCleanupJob.perform_later
   end
