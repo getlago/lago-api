@@ -243,6 +243,26 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     end
   end
 
+  describe '#payment_method_params' do
+    subject(:payment_method_params) { adyen_service.__send__(:payment_method_params) }
+
+    let(:params) do
+      {
+        merchantAccount: adyen_payment_provider.merchant_account,
+        shopperReference: adyen_customer.provider_customer_id,
+      }
+    end
+
+    before do
+      adyen_payment_provider
+      adyen_customer
+    end
+
+    it 'returns payment method params' do
+      expect(payment_method_params).to eq(params)
+    end
+  end
+
   describe '.update_payment_status' do
     let(:payment) do
       create(
