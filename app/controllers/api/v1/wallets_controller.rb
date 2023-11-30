@@ -10,7 +10,7 @@ module Api
             current_organization,
             input_params
               .merge(organization_id: current_organization.id)
-              .merge(customer:),
+              .merge(customer:).to_h.deep_symbolize_keys,
           ).create_input,
         )
 
@@ -27,7 +27,7 @@ module Api
           wallet: current_organization.wallets.find_by(id: params[:id]),
           args: WalletLegacyInput.new(
             current_organization,
-            update_params.merge(id: params[:id]),
+            update_params.merge(id: params[:id]).to_h.deep_symbolize_keys,
           ).update_input,
         )
 
@@ -89,6 +89,11 @@ module Api
           :expiration_at,
           # NOTE: Legacy field
           :expiration_date,
+          recurring_transaction_rules: [
+            :rule_type,
+            :interval,
+            :threshold_credits,
+          ],
         )
       end
 
@@ -102,6 +107,14 @@ module Api
           :expiration_at,
           # NOTE: Legacy field
           :expiration_date,
+          recurring_transaction_rules: [
+            :lago_id,
+            :rule_type,
+            :interval,
+            :threshold_credits,
+            :paid_credits,
+            :granted_credits,
+          ],
         )
       end
 
@@ -114,6 +127,7 @@ module Api
           json: ::V1::WalletSerializer.new(
             wallet,
             root_name: 'wallet',
+            includes: %i[recurring_transaction_rules],
           ),
         )
       end

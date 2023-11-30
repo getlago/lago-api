@@ -86,7 +86,7 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
           currency: 'EUR',
           paid_credits: '10',
           granted_credits: '10',
-          expiration_at: Time.current + 15.days,
+          expiration_at: (Time.current + 15.days).iso8601,
         },
       )
       wallet = customer.wallets.active.first

@@ -22,6 +22,15 @@ module Wallets
 
         wallet.currency = wallet.customer.currency
         wallet.save!
+
+        if args[:recurring_transaction_rules] && License.premium?
+          create_recurring_transaction_rule(
+            recurring_transaction_rules: args[:recurring_transaction_rules],
+            paid_credits: args[:paid_credits],
+            granted_credits: args[:granted_credits],
+            wallet:,
+          )
+        end
       end
 
       result.wallet = wallet
@@ -43,6 +52,19 @@ module Wallets
 
     def valid?(**args)
       Wallets::ValidateService.new(result, **args).valid?
+    end
+
+    def create_recurring_transaction_rule(recurring_transaction_rules:, paid_credits:, granted_credits:, wallet:)
+      recurring_rule = recurring_transaction_rules.first
+
+      RecurringTransactionRule.create!(
+        wallet:,
+        paid_credits:,
+        granted_credits:,
+        threshold_credits: recurring_rule[:threshold_credits] || '0.0',
+        interval: recurring_rule[:interval],
+        rule_type: recurring_rule[:rule_type].to_s,
+      )
     end
   end
 end
