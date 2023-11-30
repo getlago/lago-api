@@ -818,7 +818,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_29_145100) do
     t.string "webhook_url", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "signature", default: 0
+    t.integer "signature_algo", default: 0, null: false
     t.index ["organization_id"], name: "index_webhook_endpoints_on_organization_id"
     t.index ["webhook_url", "organization_id"], name: "index_webhook_endpoints_on_webhook_url_and_organization_id", unique: true
   end
