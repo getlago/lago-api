@@ -10,20 +10,25 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
     has_many :children, class_name: 'Group', foreign_key: 'parent_group_id'
   end
 
+  class Charge < ApplicationRecord; end
+
   class BillableMetric < ApplicationRecord
     has_many :groups
+    has_many :charges
   end
-
-  class Charge < ApplicationRecord; end
 
   def change
     reversible do |dir|
       dir.up do
         Organization.order(name: :asc).pluck(:id).each do |organization_id|
-          billable_metrics = BillableMetric.where(organization_id:)
+          billable_metric_ids = BillableMetric.where(organization_id:)
             .where('billable_metrics.aggregation_type IN (0, 1, 3, 4)')
+            .joins(:charges)
+            .where(charges: { pay_in_advance: true })
+            .pluck('billable_metrics.id')
+            .uniq
 
-          billable_metrics.find_each do |billable_metric|
+          BillableMetric.where(id: billable_metric_ids).find_each do |billable_metric|
             events = Event.where(deleted_at: nil)
               .where(organization_id:)
               .where(code: billable_metric.code)
