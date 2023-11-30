@@ -31,6 +31,10 @@ module Events
         scope.pluck(Arel.sql(field_name))
       end
 
+      def last_event
+        events.last
+      end
+
       def prorated_events_values(total_duration)
         ratio_sql = duration_ratio_sql('events.timestamp', to_datetime, total_duration)
 
@@ -80,7 +84,40 @@ module Events
           end
       end
 
-      private
+      def weighted_sum(initial_value: 0)
+        query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
+
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.query,
+            {
+              from_datetime:,
+              to_datetime: to_datetime.ceil,
+              initial_value: initial_value || 0,
+            },
+          ],
+        )
+
+        result = ActiveRecord::Base.connection.select_one(sql)
+        result['aggregation']
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def weighted_sum_breakdown(initial_value: 0)
+        query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
+        ActiveRecord::Base.connection.select_all(
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              query.breakdown_query,
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                initial_value: initial_value || 0,
+              },
+            ],
+          ),
+        ).rows
+      end
 
       def group_scope(scope)
         scope = scope.where('events.properties @> ?', { group.key.to_s => group.value }.to_json)

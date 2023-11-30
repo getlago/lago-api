@@ -9,7 +9,7 @@ module Events
       # NOTE: keeps in mind that events could contains duplicated transaction_id
       #       and should be deduplicated depending on the aggregation logic
       def events(force_from: false)
-        scope = Clickhouse::EventsRaw.where(external_subscription_id: subscription.external_id)
+        scope = ::Clickhouse::EventsRaw.where(external_subscription_id: subscription.external_id)
           .where('events_raw.timestamp <= ?', to_datetime)
           .where(code:)
           .order(timestamp: :asc)
@@ -52,7 +52,7 @@ module Events
           from events
         SQL
 
-        Clickhouse::EventsRaw.connection.select_value(sql).to_i
+        ::Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
 
       def max
@@ -78,7 +78,7 @@ module Events
           from events
         SQL
 
-        Clickhouse::EventsRaw.connection.select_value(sql)
+        ::Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -101,7 +101,7 @@ module Events
           from events
         SQL
 
-        Clickhouse::EventsRaw.connection.select_value(sql)
+        ::Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
       def sum_date_breakdown
@@ -122,7 +122,7 @@ module Events
           order by events.day asc
         SQL
 
-        Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
+        ::Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
           { date: row.first.to_date, value: row.last }
         end
       end
