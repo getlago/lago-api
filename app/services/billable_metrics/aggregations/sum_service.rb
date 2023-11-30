@@ -60,16 +60,16 @@ module BillableMetrics
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 
-        unless previous_event
+        unless cached_aggregation
           return_value = BigDecimal(value).negative? ? '0' : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value, units_applied: value)
 
           return BigDecimal(return_value)
         end
 
-        current_aggregation = BigDecimal(previous_event.metadata['current_aggregation']) + BigDecimal(value)
+        current_aggregation = BigDecimal(cached_aggregation.current_aggregation) + BigDecimal(value)
 
-        old_max = BigDecimal(previous_event.metadata['max_aggregation'])
+        old_max = BigDecimal(cached_aggregation.max_aggregation)
 
         result = if current_aggregation > old_max
           diff = [current_aggregation, current_aggregation - old_max].max
@@ -104,28 +104,24 @@ module BillableMetrics
         end
       end
 
-      # This method fetches the latest event in current period. If such a event exists we know that metadata
-      # with previous aggregation and previous maximum aggregation are stored there. Fetching these metadata values
+      # This method fetches the latest cached aggregation in current period. If such a record exists we know that
+      # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period
-      def previous_event
-        @previous_event ||= begin
-          query = if billable_metric.recurring?
-            recurring_events_scope(to_datetime:, from_datetime:)
-          else
-            events_scope(from_datetime:, to_datetime:)
-          end
-          scope = query.where(field_presence_condition).where(field_numeric_condition)
+      def cached_aggregation
+        return @cached_aggregation if @cached_aggregation
 
-          # Events without attached right metadata are ignored since such events cannot be processed correctly.
-          # Could happen in race condition when event is stored but metadata in async job are attached later.
-          # In the meantime we want to avoid any issues with not attached metadata.
-          scope = scope.where("events.metadata->>'current_aggregation' IS NOT NULL")
-          scope = scope.where("events.metadata->>'max_aggregation' IS NOT NULL")
+        query = CachedAggregation
+          .where(organization_id: billable_metric.organization_id)
+          .where(external_subscription_id: subscription.external_id)
+          .where(charge_id: charge.id)
+          .from_datetime(from_datetime)
+          .to_datetime(to_datetime)
+          .order(timestamp: :desc)
 
-          scope = scope.where.not(id: event.id) if event.present?
+        query = query.where.not(event_id: event.id) if event.present?
+        query = query.where(group_id: group.id) if group
 
-          scope.reorder(created_at: :desc).first
-        end
+        @cached_aggregation = query.first
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)

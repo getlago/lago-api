@@ -7,8 +7,8 @@ module BillableMetrics
         @aggregation_without_proration ||= base_aggregator.aggregate(options:)
       end
 
-      def previous_event
-        @previous_event ||= base_aggregator.get_previous_event_in_interval(from_datetime:, to_datetime:)
+      def cached_aggregation
+        @cached_aggregation ||= base_aggregator.get_cached_aggregation_in_interval(from_datetime:, to_datetime:)
       end
 
       def compute_pay_in_advance_aggregation
@@ -29,33 +29,29 @@ module BillableMetrics
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
-        extend_event_metadata(value)
+        extend_cached_aggregation(value)
 
         value
       end
 
-      # We need to extend event metadata with max_aggregation_with_proration. This attribute will be used
+      # We need to extend cached aggregation with max_aggregation_with_proration. This attribute will be used
       # for current usage in pay_in_advance case
-      def extend_event_metadata(prorated_value)
+      def extend_cached_aggregation(prorated_value)
         result.max_aggregation = aggregation_without_proration.max_aggregation
         result.current_aggregation = aggregation_without_proration.current_aggregation
 
-        unless previous_event
+        unless cached_aggregation
           result.max_aggregation_with_proration = prorated_value.to_s
 
           return
         end
 
-        if BigDecimal(aggregation_without_proration.max_aggregation) >
-           BigDecimal(previous_event.metadata['max_aggregation'])
-          result.max_aggregation_with_proration =
-            (
-              BigDecimal(previous_event.metadata['max_aggregation_with_proration']) +
-              prorated_value
-            ).to_s
-        else
-          result.max_aggregation_with_proration =
-            BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
+        result.max_aggregation_with_proration = begin
+          if BigDecimal(aggregation_without_proration.max_aggregation) > BigDecimal(cached_aggregation.max_aggregation)
+            BigDecimal(cached_aggregation.max_aggregation_with_proration) + prorated_value
+          else
+            BigDecimal(cached_aggregation.max_aggregation_with_proration)
+          end
         end
       end
 
@@ -68,18 +64,18 @@ module BillableMetrics
         if !is_pay_in_advance
           result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
           result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
-        elsif previous_event && persisted_pro_rata < 1
+        elsif cached_aggregation && persisted_pro_rata < 1
           result.current_usage_units = aggregation_without_proration.current_usage_units
 
           persisted_units_without_proration = aggregation_without_proration.current_usage_units -
-                                              BigDecimal(previous_event.metadata['current_aggregation'])
+                                              BigDecimal(cached_aggregation.current_aggregation)
           result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
-                               BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
-        elsif previous_event
+                               BigDecimal(cached_aggregation.max_aggregation_with_proration)
+        elsif cached_aggregation
           result.current_usage_units = aggregation_without_proration.current_usage_units
           result.aggregation = aggregation_without_proration.current_usage_units -
-                               BigDecimal(previous_event.metadata['current_aggregation']) +
-                               BigDecimal(previous_event.metadata['max_aggregation_with_proration'])
+                               BigDecimal(cached_aggregation.current_aggregation) +
+                               BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif persisted_pro_rata < 1
           result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
           result.current_usage_units = aggregation_without_proration.current_usage_units
