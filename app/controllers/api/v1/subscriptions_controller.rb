@@ -141,7 +141,13 @@ module Api
               :min_amount_cents,
               :invoice_display_name,
               { properties: {} },
-              { group_properties: [] },
+              {
+                group_properties: [
+                  :group_id,
+                  { values: {} },
+                  :invoice_display_name,
+                ],
+              },
               { tax_codes: [] },
             ],
           },
