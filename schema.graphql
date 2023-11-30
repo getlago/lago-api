@@ -4061,6 +4061,7 @@ type Organization {
 
 type OrganizationBillingConfiguration {
   documentLocale: String
+  euTaxManagement: Boolean
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
@@ -4069,6 +4070,7 @@ type OrganizationBillingConfiguration {
 
 input OrganizationBillingConfigurationInput {
   documentLocale: String
+  euTaxManagement: Boolean
   invoiceFooter: String
   invoiceGracePeriod: Int
 }

@@ -32,6 +32,9 @@ module Organizations
       # NOTE(legacy): keep accepting vat_rate field temporary by converting it into tax rate
       handle_legacy_vat_rate(billing[:vat_rate]) if billing.key?(:vat_rate)
 
+      # NOTE: handle eu tax management for organization
+      handle_eu_tax_management(billing[:eu_tax_management]) if billing.key?(:eu_tax_management)
+
       if params.key?(:webhook_url)
         webhook_endpoint = organization.webhook_endpoints.first_or_initialize
         webhook_endpoint.update!(webhook_url: params[:webhook_url])
@@ -112,6 +115,10 @@ module Organizations
         name: "Tax (#{vat_rate}%)",
         applied_to_organization: true,
       ).find_or_create_by!(code: "tax_#{vat_rate}")
+    end
+
+    def handle_eu_tax_management(eu_tax_management)
+      organization.eu_tax_management = eu_tax_management
     end
   end
 end

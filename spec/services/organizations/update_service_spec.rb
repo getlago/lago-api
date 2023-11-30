@@ -33,6 +33,7 @@ RSpec.describe Organizations::UpdateService do
         invoice_footer: 'invoice footer',
         document_locale: 'fr',
         invoice_grace_period:,
+        eu_tax_management: true,
       },
     }
   end
@@ -57,6 +58,7 @@ RSpec.describe Organizations::UpdateService do
 
         expect(result.organization.invoice_footer).to eq('invoice footer')
         expect(result.organization.document_locale).to eq('fr')
+        expect(result.organization.eu_tax_management).to be_truthy
       end
     end
 

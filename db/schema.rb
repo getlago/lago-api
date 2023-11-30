@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_28_092231) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_29_145100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -588,6 +588,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_28_092231) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
+    t.boolean "eu_tax_management", default: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
@@ -817,7 +818,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_28_092231) do
     t.string "webhook_url", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "signature_algo", default: 0, null: false
+    t.integer "signature", default: 0
     t.index ["organization_id"], name: "index_webhook_endpoints_on_organization_id"
     t.index ["webhook_url", "organization_id"], name: "index_webhook_endpoints_on_webhook_url_and_organization_id", unique: true
   end

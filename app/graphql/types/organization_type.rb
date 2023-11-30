@@ -45,6 +45,7 @@ module Types
         invoice_footer: object&.invoice_footer,
         invoice_grace_period: object&.invoice_grace_period,
         document_locale: object&.document_locale,
+        eu_tax_management: object&.eu_tax_management,
       }
     end
 
