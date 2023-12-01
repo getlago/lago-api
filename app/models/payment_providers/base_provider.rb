@@ -18,6 +18,9 @@ module PaymentProviders
 
     encrypts :secrets
 
+    validates :code, uniqueness: { scope: :organization_id }
+    validates :name, presence: true
+
     def secrets_json
       JSON.parse(secrets || '{}')
     end

@@ -3,14 +3,19 @@
 require 'rails_helper'
 
 RSpec.describe PaymentProviders::GocardlessProvider, type: :model do
-  subject(:gocardless_provider) { described_class.new(attributes) }
-
-  it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
+  subject(:gocardless_provider) { build(:gocardless_provider, attributes) }
 
   let(:attributes) {}
 
+  it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
+  it { is_expected.to validate_presence_of(:name) }
+
   describe 'validations' do
     let(:errors) { provider.errors }
+
+    it 'validates uniqueness of the code' do
+      expect(gocardless_provider).to validate_uniqueness_of(:code).scoped_to(:organization_id)
+    end
 
     describe 'of success redirect url format' do
       subject(:provider) { build(:gocardless_provider, success_redirect_url:) }

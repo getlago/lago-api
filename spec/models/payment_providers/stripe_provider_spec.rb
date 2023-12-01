@@ -3,11 +3,18 @@
 require 'rails_helper'
 
 RSpec.describe PaymentProviders::StripeProvider, type: :model do
-  subject(:stripe_provider) { described_class.new(attributes) }
-
-  it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
+  subject(:stripe_provider) { build(:stripe_provider, attributes) }
 
   let(:attributes) {}
+
+  it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
+  it { is_expected.to validate_presence_of(:name) }
+
+  describe 'validations' do
+    it 'validates uniqueness of the code' do
+      expect(stripe_provider).to validate_uniqueness_of(:code).scoped_to(:organization_id)
+    end
+  end
 
   describe 'secret_key' do
     it 'assigns and retrieve a secret key' do

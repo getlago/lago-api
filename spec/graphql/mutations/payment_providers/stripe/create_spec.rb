@@ -11,6 +11,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
         addStripePaymentProvider(input: $input) {
           id,
           secretKey,
+          code,
+          name,
           createCustomers,
           successRedirectUrl
         }
@@ -18,6 +20,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
     GQL
   end
 
+  let(:code) { 'stripe_1' }
+  let(:name) { 'Stripe 1' }
   let(:secret_key) { 'sk_12345678901234567890' }
   let(:success_redirect_url) { Faker::Internet.url }
 
@@ -29,6 +33,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
       variables: {
         input: {
           secretKey: secret_key,
+          code:,
+          name:,
           createCustomers: false,
           successRedirectUrl: success_redirect_url,
         },
@@ -40,6 +46,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['secretKey']).to eq('••••••••…890')
+      expect(result_data['code']).to eq(code)
+      expect(result_data['name']).to eq(name)
       expect(result_data['createCustomers']).to eq(false)
       expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
     end
@@ -54,6 +62,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
           input: {
             secretKey: secret_key,
             createCustomers: false,
+            code:,
+            name:,
           },
         },
       )
@@ -71,6 +81,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
           input: {
             secretKey: secret_key,
             createCustomers: false,
+            code:,
+            name:,
           },
         },
       )

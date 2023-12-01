@@ -3,12 +3,17 @@
 require 'rails_helper'
 
 RSpec.describe PaymentProviders::AdyenProvider, type: :model do
-  subject(:provider) { build_stubbed(:adyen_provider) }
+  subject(:provider) { build(:adyen_provider) }
 
   it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
+  it { is_expected.to validate_presence_of(:name) }
 
   describe 'validations' do
     let(:errors) { provider.errors }
+
+    it 'validates uniqueness of the code' do
+      expect(provider).to validate_uniqueness_of(:code).scoped_to(:organization_id)
+    end
 
     describe 'of success redirect url format' do
       subject(:provider) { build(:adyen_provider, success_redirect_url:) }

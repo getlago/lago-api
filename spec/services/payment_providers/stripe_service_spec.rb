@@ -8,6 +8,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
+  let(:code) { 'code_1' }
+  let(:name) { 'Name 1' }
   let(:public_key) { SecureRandom.uuid }
   let(:secret_key) { SecureRandom.uuid }
   let(:success_redirect_url) { Faker::Internet.url }
@@ -18,6 +20,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
           secret_key:,
+          code:,
+          name:,
           create_customers: true,
           success_redirect_url:,
         )
@@ -32,6 +36,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         create(
           :stripe_provider,
           organization:,
+          code:,
+          name:,
           webhook_id: 'we_123456',
           secret_key: 'secret',
         )
@@ -48,6 +54,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
           secret_key:,
+          code:,
+          name:,
           create_customers: true,
           success_redirect_url:,
         )
@@ -57,6 +65,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         aggregate_failures do
           expect(result.stripe_provider.id).to eq(stripe_provider.id)
           expect(result.stripe_provider.secret_key).to eq(secret_key)
+          expect(result.stripe_provider.code).to eq(code)
+          expect(result.stripe_provider.name).to eq(name)
           expect(result.stripe_provider.create_customers).to be_truthy
           expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
 

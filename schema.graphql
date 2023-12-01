@@ -25,9 +25,11 @@ input AddAdyenPaymentProviderInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String!
   hmacKey: String
   livePrefix: String
   merchantAccount: String!
+  name: String!
   successRedirectUrl: String
 }
 
@@ -41,6 +43,8 @@ input AddGocardlessPaymentProviderInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String!
+  name: String!
   successRedirectUrl: String
 }
 
@@ -78,17 +82,21 @@ input AddStripePaymentProviderInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String!
   createCustomers: Boolean
+  name: String!
   secretKey: String
   successRedirectUrl: String
 }
 
 type AdyenProvider {
   apiKey: String!
+  code: String!
   hmacKey: String
   id: ID!
   livePrefix: String
   merchantAccount: String!
+  name: String!
   successRedirectUrl: String
 }
 
@@ -3128,8 +3136,10 @@ type GenerateCustomerPortalUrlPayload {
 }
 
 type GocardlessProvider {
+  code: String!
   hasAccessToken: Boolean!
   id: ID!
+  name: String!
   successRedirectUrl: String
   webhookSecret: String
 }
@@ -4799,8 +4809,10 @@ enum StatusTypeEnum {
 }
 
 type StripeProvider {
+  code: String!
   createCustomers: Boolean!
   id: ID!
+  name: String!
   secretKey: String!
   successRedirectUrl: String
 }

@@ -8,13 +8,15 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:api_key) { 'test_api_key_1' }
+  let(:code) { 'code_1' }
+  let(:name) { 'Name 1' }
   let(:merchant_account) { 'LagoMerchant' }
   let(:success_redirect_url) { Faker::Internet.url }
 
   describe '.create_or_update' do
     it 'creates an adyen provider' do
       expect do
-        adyen_service.create_or_update(organization:, api_key:, merchant_account:, success_redirect_url:)
+        adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:)
       end.to change(PaymentProviders::AdyenProvider, :count).by(1)
     end
 
@@ -29,6 +31,8 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
         result = adyen_service.create_or_update(
           organization:,
           api_key:,
+          code:,
+          name:,
           success_redirect_url:,
         )
 
@@ -37,6 +41,8 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
         aggregate_failures do
           expect(result.adyen_provider.id).to eq(adyen_provider.id)
           expect(result.adyen_provider.api_key).to eq('test_api_key_1')
+          expect(result.adyen_provider.code).to eq(code)
+          expect(result.adyen_provider.name).to eq(name)
           expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
         end
       end
