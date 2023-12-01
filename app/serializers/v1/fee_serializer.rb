@@ -22,8 +22,8 @@ module V1
           lago_item_id: model.item_id,
           item_type: model.item_type,
         },
-        pay_in_advance: pay_in_advance,
-        invoiceable: invoiceable,
+        pay_in_advance:,
+        invoiceable:,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         taxes_amount_cents: model.taxes_amount_cents,
@@ -59,11 +59,13 @@ module V1
     end
 
     def from_date
-      model.properties['from_datetime']&.to_datetime&.iso8601
+      property = model.charge? ? 'charges_from_datetime' : 'from_datetime'
+      model.properties[property]&.to_datetime&.iso8601
     end
 
     def to_date
-      model.properties['to_datetime']&.to_datetime&.iso8601
+      property = model.charge? ? 'charges_to_datetime' : 'to_datetime'
+      model.properties[property]&.to_datetime&.iso8601
     end
 
     def pay_in_advance_charge_attributes
