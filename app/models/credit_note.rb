@@ -51,7 +51,8 @@ class CreditNote < ApplicationRecord
   enum reason: REASON
   enum status: STATUS
 
-  sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) }
+  sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
+            lock_key: ->(credit_note) { credit_note.invoice_id }
 
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
   validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
