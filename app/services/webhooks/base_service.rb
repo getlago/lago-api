@@ -119,6 +119,7 @@ module Webhooks
       webhook.payload = payload.to_json
       webhook.retries += 1 if webhook.failed?
       webhook.last_retried_at = Time.zone.now if webhook.retries.positive?
+      webhook.pending!
       webhook
     end
 
