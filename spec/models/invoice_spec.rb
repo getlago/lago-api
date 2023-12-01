@@ -75,7 +75,7 @@ RSpec.describe Invoice, type: :model do
 
     context 'with organization numbering and invoices in another month' do
       let(:organization) { create(:organization, document_numbering: 'per_organization') }
-      let(:created_at) { Time.now - 1.month }
+      let(:created_at) { Time.now.utc - 1.month }
 
       before do
         create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
@@ -114,7 +114,7 @@ RSpec.describe Invoice, type: :model do
         invoice.save
         organization_id_substring = organization.id.last(4).upcase
 
-        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-001")
+        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-001")
       end
     end
   end
