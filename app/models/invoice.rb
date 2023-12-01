@@ -68,7 +68,8 @@ class Invoice < ApplicationRecord
     end
   end
 
-  sequenced scope: ->(invoice) { invoice.customer.invoices }
+  sequenced scope: ->(invoice) { invoice.customer.invoices },
+            lock_key: ->(invoice) { invoice.customer_id }
 
   scope :ready_to_be_finalized,
         lambda {
@@ -149,7 +150,7 @@ class Invoice < ApplicationRecord
                 BillableMetrics::Breakdown::UniqueCountService
               else
                 raise(NotImplementedError)
-              end
+    end
 
     service.new(
       event_store_class: Events::Stores::PostgresStore,

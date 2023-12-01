@@ -39,7 +39,8 @@ class Customer < ApplicationRecord
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 
   default_scope -> { kept }
-  sequenced scope: ->(customer) { customer.organization.customers.with_discarded }
+  sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
+            lock_key: ->(customer) { customer.organization_id }
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
