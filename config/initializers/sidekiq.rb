@@ -16,7 +16,7 @@ Sidekiq.configure_server do |config|
   config.redis = redis_config
   config.logger = Rails.logger
   config[:max_retries] = 0
-  config[:dead_max_jobs] = 100_000
+  config[:dead_max_jobs] = ENV.fetch('LAGO_SIDEKIQ_MAX_DEAD_JOBS', 100_000).to_i
 end
 
 Sidekiq.configure_client do |config|
