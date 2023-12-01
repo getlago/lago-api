@@ -68,7 +68,8 @@ class Invoice < ApplicationRecord
     end
   end
 
-  sequenced scope: ->(invoice) { invoice.customer.invoices }
+  sequenced scope: ->(invoice) { invoice.customer.invoices },
+            organization_scope: ->(invoice) { invoice.organization.invoices.where(created_at: Time.now.all_month) }
 
   scope :ready_to_be_finalized,
         lambda {
@@ -247,8 +248,15 @@ class Invoice < ApplicationRecord
   def ensure_number
     return if number.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    if organization.document_numbering.to_s == 'per_customer'
+      formatted_sequential_id = format('%03d', sequential_id)
 
-    self.number = "#{customer.slug}-#{formatted_sequential_id}"
+      self.number = "#{customer.slug}-#{formatted_sequential_id}"
+    else
+      org_formatted_sequential_id = format('%03d', organization_sequential_id)
+
+      self.number =
+        "#{organization.document_number_prefix}-#{Time.now.utc.strftime("%Y%m")}-#{org_formatted_sequential_id}"
+    end
   end
 end
