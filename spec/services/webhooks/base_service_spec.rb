@@ -209,11 +209,14 @@ RSpec.describe Webhooks::BaseService, type: :service do
     end
 
     it 'generates the query headers' do
-      headers = webhook_service.__send__(:generate_headers, webhook_endpoint, payload)
+      dummy_webhook_id = '895b41d0-474f-4a1f-a911-2df2d74dbe67'
+      headers = webhook_service.__send__(:generate_headers, dummy_webhook_id, webhook_endpoint, payload)
 
       expect(headers).to have_key('X-Lago-Signature')
       expect(headers).to have_key('X-Lago-Signature-Algorithm')
+      expect(headers).to have_key('X-Lago-Unique-Key')
       expect(headers['X-Lago-Signature-Algorithm']).to eq('jwt')
+      expect(headers['X-Lago-Unique-Key']).to eq(dummy_webhook_id)
     end
   end
 
