@@ -115,10 +115,7 @@ class Customer < ApplicationRecord
     return if slug.present?
 
     formatted_sequential_id = format('%03d', sequential_id)
-    organization_name_substring = organization.name.first(3).upcase
-    organization_id_substring = organization.id.last(4).upcase
-    organization_slug = "#{organization_name_substring}-#{organization_id_substring}"
 
-    self.slug = "#{organization_slug}-#{formatted_sequential_id}"
+    self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
   end
 end

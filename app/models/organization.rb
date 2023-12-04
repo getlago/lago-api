@@ -46,6 +46,7 @@ class Organization < ApplicationRecord
   enum document_numbering: DOCUMENT_NUMBERINGS
 
   before_create :generate_api_key
+  before_update -> { self.document_number_prefix = document_number_prefix.upcase }
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: { in: currency_list }
