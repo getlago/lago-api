@@ -29,6 +29,7 @@ RSpec.describe Organizations::UpdateService do
       timezone:,
       logo:,
       email_settings:,
+      eu_tax_management: true,
       billing_configuration: {
         invoice_footer: 'invoice footer',
         document_locale: 'fr',
@@ -57,6 +58,7 @@ RSpec.describe Organizations::UpdateService do
 
         expect(result.organization.invoice_footer).to eq('invoice footer')
         expect(result.organization.document_locale).to eq('fr')
+        expect(result.organization.eu_tax_management).to be_truthy
       end
     end
 

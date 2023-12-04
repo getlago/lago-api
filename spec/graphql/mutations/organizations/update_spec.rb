@@ -23,7 +23,12 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           timezone
           emailSettings
           webhookUrl
-          billingConfiguration { invoiceFooter, invoiceGracePeriod, documentLocale }
+          euTaxManagement,
+          billingConfiguration {
+            invoiceFooter,
+            invoiceGracePeriod,
+            documentLocale,
+          }
         }
       }
     GQL
@@ -48,6 +53,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           city: 'Foobar',
           country: 'FR',
           defaultCurrency: 'EUR',
+          euTaxManagement: true,
           webhookUrl: 'https://app.test.dev',
           billingConfiguration: {
             invoiceFooter: 'invoice footer',
@@ -76,6 +82,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')
       expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(0)
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
+      expect(result_data['euTaxManagement']).to be_truthy
       expect(result_data['timezone']).to eq('TZ_UTC')
     end
   end

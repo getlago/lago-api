@@ -4035,6 +4035,7 @@ type Organization {
   defaultCurrency: CurrencyEnum!
   email: String
   emailSettings: [EmailSettingsEnum!]
+  euTaxManagement: Boolean!
   gocardlessPaymentProvider: GocardlessProvider
   id: ID!
   legalName: String
@@ -5741,6 +5742,7 @@ input UpdateOrganizationInput {
   defaultCurrency: CurrencyEnum
   email: String
   emailSettings: [EmailSettingsEnum!]
+  euTaxManagement: Boolean
   legalName: String
   legalNumber: String
   logo: String
