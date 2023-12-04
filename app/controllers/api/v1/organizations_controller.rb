@@ -53,6 +53,8 @@ module Api
           :tax_identification_number,
           :timezone,
           :webhook_url,
+          :document_numbering,
+          :document_number_prefix,
           email_settings: [],
           billing_configuration: [
             :invoice_footer,

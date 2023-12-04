@@ -23,6 +23,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           timezone
           emailSettings
           webhookUrl
+          documentNumbering
+          documentNumberPrefix
           billingConfiguration { invoiceFooter, invoiceGracePeriod, documentLocale }
         }
       }
@@ -49,6 +51,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           country: 'FR',
           defaultCurrency: 'EUR',
           webhookUrl: 'https://app.test.dev',
+          documentNumberPrefix: 'ORGANIZATION-2',
           billingConfiguration: {
             invoiceFooter: 'invoice footer',
             documentLocale: 'fr',
@@ -73,6 +76,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['defaultCurrency']).to eq('EUR')
       expect(result_data['netPaymentTerm']).to eq(10)
       expect(result_data['webhookUrl']).to eq('https://app.test.dev')
+      expect(result_data['documentNumbering']).to eq('per_customer')
+      expect(result_data['documentNumberPrefix']).to eq('ORGANIZATION-2')
       expect(result_data['billingConfiguration']['invoiceFooter']).to eq('invoice footer')
       expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(0)
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')

@@ -35,6 +35,9 @@ RSpec.describe UsersService, type: :service do
       expect(result.membership).to be_present
       expect(result.organization).to be_present
       expect(result.token).to be_present
+
+      org = Organization.find(result.organization.id)
+      expect(org.document_number_prefix).to eq("#{org.name.first(3).upcase}-#{org.id.last(4).upcase}")
     end
 
     context 'when user already exists' do
