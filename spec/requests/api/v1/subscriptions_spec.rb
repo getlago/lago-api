@@ -195,6 +195,50 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context 'with multuple subscriptions' do
+      let(:active_plan) { create(:plan, organization:, amount_cents: 5000, description: 'desc') }
+      let(:active_subscription) do
+        create(:subscription, external_id: subscription.external_id, customer:, plan:)
+      end
+
+      before { active_subscription }
+
+      it 'updates the active subscription', :aggregate_failures do
+        put_with_token(
+          organization,
+          "/api/v1/subscriptions/#{subscription.external_id}",
+          { subscription: update_params },
+        )
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:lago_id]).to eq(active_subscription.id)
+        expect(json[:subscription][:name]).to eq('subscription name new')
+
+        expect(json[:subscription][:plan]).to include(
+          name: 'plan new name',
+        )
+      end
+
+      context 'with pending params' do
+        it 'updates the pending subscription' do
+          put_with_token(
+            organization,
+            "/api/v1/subscriptions/#{subscription.external_id}",
+            { subscription: update_params, status: 'pending' },
+          )
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:lago_id]).to eq(subscription.id)
+          expect(json[:subscription][:name]).to eq('subscription name new')
+          expect(json[:subscription][:subscription_at].to_s).to eq('2022-09-05T12:23:12Z')
+
+          expect(json[:subscription][:plan]).to include(
+            name: 'plan new name',
+          )
+        end
+      end
+    end
   end
 
   describe 'show' do
