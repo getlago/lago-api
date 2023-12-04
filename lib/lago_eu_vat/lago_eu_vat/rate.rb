@@ -17,8 +17,8 @@ module LagoEuVat
       country_rates = json_countries_rates[country_code].select do |period|
         Time.zone.now >= DateTime.parse(period['effective_from'])
       end
-      
-      country_rates&.first.fetch('rates')
+
+      country_rates.first.fetch('rates')
     end
 
     private
