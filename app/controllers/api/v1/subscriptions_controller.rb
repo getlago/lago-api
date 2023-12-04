@@ -49,8 +49,21 @@ module Api
       end
 
       def update
+        query = current_organization.subscriptions
+          .where(external_id: params[:external_id])
+          .order(subscription_at: :desc)
+        subscription = if query.count > 1
+          if params[:status] == 'pending'
+            query.pending
+          else
+            query.active
+          end
+        else
+          query
+        end.first
+
         result = Subscriptions::UpdateService.call(
-          subscription: current_organization.subscriptions.find_by(external_id: params[:external_id]),
+          subscription:,
           params: SubscriptionLegacyInput.new(
             current_organization,
             update_params,
