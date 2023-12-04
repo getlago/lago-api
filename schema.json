@@ -25171,7 +25171,8 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Boolean"
+                "name": "Boolean",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
