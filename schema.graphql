@@ -4028,6 +4028,7 @@ type Organization {
   defaultCurrency: CurrencyEnum!
   email: String
   emailSettings: [EmailSettingsEnum!]
+  euTaxManagement: Boolean!
   gocardlessPaymentProvider: GocardlessProvider
   id: ID!
   legalName: String
@@ -4061,7 +4062,6 @@ type Organization {
 
 type OrganizationBillingConfiguration {
   documentLocale: String
-  euTaxManagement: Boolean
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
@@ -4070,7 +4070,6 @@ type OrganizationBillingConfiguration {
 
 input OrganizationBillingConfigurationInput {
   documentLocale: String
-  euTaxManagement: Boolean
   invoiceFooter: String
   invoiceGracePeriod: Int
 }
@@ -5703,6 +5702,7 @@ input UpdateOrganizationInput {
   defaultCurrency: CurrencyEnum
   email: String
   emailSettings: [EmailSettingsEnum!]
+  euTaxManagement: Boolean
   legalName: String
   legalNumber: String
   logo: String
