@@ -8,5 +8,6 @@ FactoryBot.define do
     name { 'VAT' }
     rate { 20.0 }
     applied_to_organization { true }
+    auto_generated { false }
   end
 end

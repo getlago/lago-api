@@ -23,6 +23,8 @@ module Types
       field :customers_count, Integer, null: false, description: 'Number of customers using this tax'
       field :plans_count, Integer, null: false, description: 'Number of plans using this tax'
 
+      field :auto_generated, Boolean, null: false
+
       def add_ons_count
         object.add_ons.count
       end
