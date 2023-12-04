@@ -268,7 +268,7 @@ class Invoice < ApplicationRecord
   end
 
   def generate_organization_sequential_id
-    organization_sequence_scope = self.organization.invoices.where(created_at: Time.now.utc.all_month)
+    organization_sequence_scope = organization.invoices.where(created_at: Time.now.utc.all_month)
 
     result = Invoice.with_advisory_lock(
       organization_id,
