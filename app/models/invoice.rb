@@ -9,6 +9,7 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
+  before_save :ensure_organization_sequential_id
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -248,8 +249,49 @@ class Invoice < ApplicationRecord
   def ensure_number
     return if number.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    if organization.document_numbering.to_s == 'per_customer'
+      formatted_sequential_id = format('%03d', sequential_id)
 
-    self.number = "#{customer.slug}-#{formatted_sequential_id}"
+      self.number = "#{customer.slug}-#{formatted_sequential_id}"
+    else
+      org_formatted_sequential_id = format('%03d', organization_sequential_id)
+
+      self.number =
+        "#{organization.document_number_prefix}-#{Time.now.utc.strftime('%Y%m')}-#{org_formatted_sequential_id}"
+    end
+  end
+
+  def ensure_organization_sequential_id
+    return if organization_sequential_id.present? && organization_sequential_id.positive?
+
+    self.organization_sequential_id = generate_organization_sequential_id
+  end
+
+  def generate_organization_sequential_id
+    organization_sequence_scope = organization.invoices.where(created_at: Time.now.utc.all_month)
+
+    result = Invoice.with_advisory_lock(
+      organization_id,
+      transaction: true,
+      timeout_seconds: 10.seconds,
+    ) do
+      org_sequential_id = organization_sequence_scope
+        .where.not(organization_sequential_id: nil)
+        .order(organization_sequential_id: :desc)
+        .limit(1)
+        .pick(:organization_sequential_id)
+      org_sequential_id ||= 0
+
+      loop do
+        org_sequential_id += 1
+
+        break org_sequential_id unless organization_sequence_scope.exists?(organization_sequential_id:)
+      end
+    end
+
+    # NOTE: If the application was unable to acquire the lock, the block returns false
+    raise(SequenceError, 'Unable to acquire lock on the database') unless result
+
+    result
   end
 end
