@@ -32,7 +32,7 @@ module Events
       end
 
       def last
-        events.reorder(timestamp: :desc, created_at: :desc).first
+        events.reorder(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
       end
 
       private

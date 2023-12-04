@@ -4,6 +4,7 @@ module Events
   module Stores
     class ClickhouseStore < BaseStore
       DECIMAL_SCALE = 26
+      DEDUPLICATION_GROUP = 'events_raw.transaction_id, events_raw.properties, events_raw.timestamp'
 
       # NOTE: keeps in mind that events could contains duplicated transaction_id
       #       and should be deduplicated depending on the aggregation logic
@@ -18,42 +19,47 @@ module Events
 
         return scope unless group
 
-        scope
+        group_scope(scope)
       end
 
       def events_values
-        events
-          .group('events_raw.transaction_id, events_raw.properties, events_raw.timestamp')
-          .pluck(Arel.sql(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
-            ),
-          ))
+        scope = events.group(DEDUPLICATION_GROUP)
+
+        scope.pluck(Arel.sql(sanitized_numeric_property))
       end
 
       def count
-        sql = events.reorder(:transaction_id).group(:transaction_id)
-          .select('COUNT(DISTINCT(events_raw.transaction_id)) AS events_count').to_sql
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select('COUNT(events_raw.transaction_id) as transaction_count')
+          .group(:transaction_id)
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            COUNT(events.transaction_count) AS events_count
+          from events
+        SQL
 
         Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
 
       def max
-        events.maximum(
-          Arel.sql(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
-            ),
-          ),
-        )
+        events.maximum(Arel.sql(sanitized_numeric_property))
       end
 
-      delegate :last, to: :events
+      def last
+        value = events.last&.properties&.[](aggregation_property)
+        return value unless value
+
+        BigDecimal(value)
+      end
 
       private
 
       def group_scope(scope)
-        scope.where('events_raw.properties[?] = ?', group.key.to_s, group.value.to_s)
+        scope = scope.where('events_raw.properties[?] = ?', group.key.to_s, group.value.to_s)
         return scope unless group.parent
 
         scope.where('events_raw.properties[?] = ?', group.parent.key.to_s => group.parent.value.to_s)
@@ -66,6 +72,12 @@ module Events
             aggregation_property,
             DECIMAL_SCALE,
           ],
+        )
+      end
+
+      def sanitized_numeric_property
+        ActiveRecord::Base.sanitize_sql_for_conditions(
+          ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
         )
       end
     end

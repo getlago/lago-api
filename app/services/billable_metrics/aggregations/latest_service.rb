@@ -21,15 +21,11 @@ module BillableMetrics
 
       private
 
-      def compute_aggregation(latest_event)
-        result = if latest_event.present?
-          value = latest_event.properties.fetch(billable_metric.field_name, 0).to_s
-          BigDecimal(value).negative? ? 0 : value
-        else
-          0
-        end
+      def compute_aggregation(latest_value)
+        result = BigDecimal((latest_value || 0).to_s)
+        return BigDecimal(0) if result.negative?
 
-        BigDecimal(result)
+        result
       end
     end
   end
