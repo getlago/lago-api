@@ -24,6 +24,8 @@ module Types
 
       argument :timezone, Types::TimezoneEnum, required: false
 
+      argument :eu_tax_management, Boolean, required: false
+
       argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false
       argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false
     end

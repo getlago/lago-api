@@ -6,7 +6,6 @@ module Types
       graphql_name 'OrganizationBillingConfiguration'
 
       field :document_locale, String
-      field :eu_tax_management, Boolean
       field :id, ID, null: false
       field :invoice_footer, String
       field :invoice_grace_period, Integer, null: false

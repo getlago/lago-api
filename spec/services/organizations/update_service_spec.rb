@@ -29,11 +29,11 @@ RSpec.describe Organizations::UpdateService do
       timezone:,
       logo:,
       email_settings:,
+      eu_tax_management: true,
       billing_configuration: {
         invoice_footer: 'invoice footer',
         document_locale: 'fr',
         invoice_grace_period:,
-        eu_tax_management: true,
       },
     }
   end

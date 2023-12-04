@@ -33,7 +33,7 @@ module Organizations
       handle_legacy_vat_rate(billing[:vat_rate]) if billing.key?(:vat_rate)
 
       # NOTE: handle eu tax management for organization
-      handle_eu_tax_management(billing[:eu_tax_management]) if billing.key?(:eu_tax_management)
+      handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
       if params.key?(:webhook_url)
         webhook_endpoint = organization.webhook_endpoints.first_or_initialize
