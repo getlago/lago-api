@@ -22,6 +22,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         timezone: 'Europe/Paris',
         webhook_url:,
         email_settings: ['invoice.finalized'],
+        document_number_prefix: 'ORGANIZATION-2',
         billing_configuration: {
           invoice_footer: 'footer',
           invoice_grace_period: 3,
@@ -46,6 +47,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         expect(json[:organization][:webhook_url]).to eq(webhook_url)
         expect(json[:organization][:webhook_urls]).to eq([webhook_url])
         expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
+        expect(json[:organization][:document_numbering]).to eq('per_customer')
+        expect(json[:organization][:document_number_prefix]).to eq('ORGANIZATION-2')
         # TODO(:timezone): Timezone update is turned off for now
         # expect(json[:organization][:timezone]).to eq(update_params[:timezone])
 

@@ -26,6 +26,9 @@ module Types
 
       argument :eu_tax_management, Boolean, required: false
 
+      argument :document_number_prefix, String, required: false
+      argument :document_numbering, Types::Organizations::DocumentNumberingEnum, required: false
+
       argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false
       argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false
     end

@@ -24,6 +24,8 @@ module Organizations
       organization.country = params[:country]&.upcase if params.key?(:country)
       organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
+      organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
+      organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)

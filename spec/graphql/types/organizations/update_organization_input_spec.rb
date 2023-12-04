@@ -20,6 +20,9 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
   it { is_expected.to accept_argument(:state).of_type('String') }
   it { is_expected.to accept_argument(:zipcode).of_type('String') }
 
+  it { is_expected.to accept_argument(:document_numbering).of_type('DocumentNumberingEnum') }
+  it { is_expected.to accept_argument(:document_number_prefix).of_type('String') }
+
   it { is_expected.to accept_argument(:webhook_url).of_type('String') }
 
   it { is_expected.to accept_argument(:timezone).of_type('TimezoneEnum') }
