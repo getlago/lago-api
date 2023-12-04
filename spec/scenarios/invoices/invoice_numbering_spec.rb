@@ -175,7 +175,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             ORG-1-002-005
             ORG-1-003-005
             ORG-1-002-006
-          ]
+          ],
         )
     end
   end

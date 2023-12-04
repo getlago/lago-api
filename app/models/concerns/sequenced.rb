@@ -8,7 +8,7 @@ module Sequenced
     scope :with_org_sequential_id, -> { where.not(organization_sequential_id: nil) }
 
     before_save :ensure_sequential_id
-    before_save :ensure_organization_sequential_id, if: -> { self.class.to_s == 'Invoice' }
+    before_save :ensure_organization_sequential_id, if: -> { self.instance_of?(::Invoice) }
 
     private
 
@@ -19,7 +19,7 @@ module Sequenced
     end
 
     def ensure_organization_sequential_id
-      return if organization_sequential_id.present? && organization_sequential_id > 0
+      return if organization_sequential_id.present? && organization_sequential_id.positive?
 
       self.organization_sequential_id = generate_organization_sequential_id
     end

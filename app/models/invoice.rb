@@ -70,7 +70,7 @@ class Invoice < ApplicationRecord
 
   sequenced scope: ->(invoice) { invoice.customer.invoices },
             lock_key: ->(invoice) { invoice.customer_id },
-            organization_scope: ->(invoice) { invoice.organization.invoices.where(created_at: Time.now.all_month) }
+            organization_scope: ->(invoice) { invoice.organization.invoices.where(created_at: Time.now.utc.all_month) }
 
   scope :ready_to_be_finalized,
         lambda {
@@ -257,7 +257,7 @@ class Invoice < ApplicationRecord
       org_formatted_sequential_id = format('%03d', organization_sequential_id)
 
       self.number =
-        "#{organization.document_number_prefix}-#{Time.now.utc.strftime("%Y%m")}-#{org_formatted_sequential_id}"
+        "#{organization.document_number_prefix}-#{Time.now.utc.strftime('%Y%m')}-#{org_formatted_sequential_id}"
     end
   end
 end
