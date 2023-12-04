@@ -2,7 +2,7 @@
 
 module BillableMetrics
   class AggregationFactory
-    CLICKHOUSE_READY = %i[count_agg latest_agg max_agg].freeze
+    CLICKHOUSE_READY = %i[count_agg latest_agg max_agg sum_agg weighted_sum_agg].freeze
 
     class << self
       def supports_clickhouse?

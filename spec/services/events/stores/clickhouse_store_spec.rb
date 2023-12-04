@@ -17,14 +17,16 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   let(:organization) { billable_metric.organization }
 
   let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse('2023-03-15')) }
+  let(:subscription) { create(:subscription, customer:, started_at:) }
 
+  let(:started_at) { DateTime.parse('2023-03-15') }
   let(:code) { billable_metric.code }
 
   let(:boundaries) do
     {
       from_datetime: subscription.started_at.beginning_of_day,
       to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_duration: 31,
     }
   end
 
@@ -97,6 +99,15 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '.last_event' do
+    it 'returns the last event' do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.last_event.transaction_id).to eq(events.last.transaction_id)
+    end
+  end
+
   describe '.prorated_events_values' do
     it 'returns the values attached to each event with prorata on period duration' do
       event_store.aggregation_property = billable_metric.field_name
@@ -166,6 +177,111 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           }
         end,
       )
+    end
+  end
+
+  describe '.weighted_sum' do
+    let(:started_at) { Time.zone.parse('2023-03-01') }
+
+    let(:events_values) do
+      [
+        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2 },
+        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3 },
+        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1 },
+        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4 },
+        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2 },
+        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10 },
+        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10 },
+      ]
+    end
+
+    let(:events) do
+      events_values.map do |values|
+        properties = { value: values[:value] }
+        properties[:region] = values[:region] if values[:region]
+
+        Clickhouse::EventsRaw.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: values[:timestamp],
+          properties:,
+        )
+      end
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the weighted sum of event properties' do
+      expect(event_store.weighted_sum.round(5)).to eq(0.02218)
+    end
+
+    context 'with a single event' do
+      let(:events_values) do
+        [
+          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000 },
+        ]
+      end
+
+      it 'returns the weighted sum of event properties' do
+        expect(event_store.weighted_sum.round(5)).to eq(1000.0)
+      end
+    end
+
+    context 'with no events' do
+      let(:events_values) { [] }
+
+      it 'returns the weighted sum of event properties' do
+        expect(event_store.weighted_sum.round(5)).to eq(0.0)
+      end
+    end
+
+    context 'with events with the same timestamp' do
+      let(:events_values) do
+        [
+          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3 },
+          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3 },
+        ]
+      end
+
+      it 'returns the weighted sum of event properties' do
+        expect(event_store.weighted_sum.round(5)).to eq(6.0)
+      end
+    end
+
+    context 'with initial value' do
+      let(:initial_value) { 1000 }
+
+      it 'uses the initial value in the aggregation' do
+        expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.02218)
+      end
+
+      context 'without events' do
+        let(:events_values) { [] }
+
+        it 'uses only the initial value in the aggregation' do
+          expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.0)
+        end
+      end
+    end
+
+    context 'with group' do
+      let(:group) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+
+      let(:events_values) do
+        [
+          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: group.value },
+        ]
+      end
+
+      it 'returns the weighted sum of event properties scoped to the group' do
+        expect(event_store.weighted_sum.round(5)).to eq(1000.0)
+      end
     end
   end
 end
