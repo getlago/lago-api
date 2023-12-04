@@ -81,7 +81,7 @@ RSpec.describe Organizations::UpdateService do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:document_number_prefix]).to eq(['invalid_length'])
+          expect(result.error.messages[:document_number_prefix]).to eq(['value_is_too_long'])
         end
       end
     end

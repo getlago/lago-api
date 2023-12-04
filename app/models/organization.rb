@@ -46,13 +46,13 @@ class Organization < ApplicationRecord
   enum document_numbering: DOCUMENT_NUMBERINGS
 
   before_create :generate_api_key
-  before_update -> { self.document_number_prefix = document_number_prefix.upcase }
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: { in: currency_list }
   validates :document_locale, language_code: true
   validates :email, email: true, if: :email?
   validates :invoice_footer, length: { maximum: 600 }
+  validates :document_number_prefix, length: { minimum: 1, maximum: 10 }, on: :update
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
   validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }
   validates :logo,
@@ -91,6 +91,10 @@ class Organization < ApplicationRecord
     when 'adyen'
       adyen_payment_provider
     end
+  end
+
+  def document_number_prefix=(value)
+    super(value&.upcase)
   end
 
   private

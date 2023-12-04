@@ -10,13 +10,6 @@ module Organizations
     end
 
     def call
-      if params.key?(:document_number_prefix) && !params[:document_number_prefix].to_s.length.between?(1, 10)
-        return result.single_validation_failure!(
-          field: :document_number_prefix,
-          error_code: 'invalid_length',
-        )
-      end
-
       organization.email = params[:email] if params.key?(:email)
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
