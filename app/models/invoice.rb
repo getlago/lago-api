@@ -250,9 +250,10 @@ class Invoice < ApplicationRecord
     return if number.present?
 
     if organization.document_numbering.to_s == 'per_customer'
+      customer_slug = "#{organization.document_number_prefix}-#{format('%03d', customer.sequential_id)}"
       formatted_sequential_id = format('%03d', sequential_id)
 
-      self.number = "#{customer.slug}-#{formatted_sequential_id}"
+      self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
       org_formatted_sequential_id = format('%03d', organization_sequential_id)
 

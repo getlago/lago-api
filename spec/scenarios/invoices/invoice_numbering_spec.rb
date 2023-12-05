@@ -107,7 +107,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
 
     # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-      organization.update!(document_numbering: 'per_organization')
+      organization.update!(document_numbering: 'per_organization', document_number_prefix: 'ORG-11')
 
       Subscriptions::BillingService.call
       perform_all_enqueued_jobs
@@ -119,7 +119,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
 
       expect(sequential_ids).to match_array([4, 4, 4])
       expect(organization_sequential_ids).to match_array([1, 2, 3])
-      expect(numbers).to match_array(%w[ORG-1-202310-001 ORG-1-202310-002 ORG-1-202310-003])
+      expect(numbers).to match_array(%w[ORG-11-202310-001 ORG-11-202310-002 ORG-11-202310-003])
     end
 
     # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
@@ -136,7 +136,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
 
       expect(sequential_ids).to match_array([5, 5, 5])
       expect(organization_sequential_ids).to match_array([1, 2, 3])
-      expect(numbers).to match_array(%w[ORG-1-001-005 ORG-1-002-005 ORG-1-003-005])
+      expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
     end
 
     # NOTE: November 22: New subscription for second customer
@@ -168,13 +168,13 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             ORG-1-001-003
             ORG-1-002-003
             ORG-1-003-003
-            ORG-1-202310-001
-            ORG-1-202310-002
-            ORG-1-202310-003
-            ORG-1-001-005
-            ORG-1-002-005
-            ORG-1-003-005
-            ORG-1-002-006
+            ORG-11-202310-001
+            ORG-11-202310-002
+            ORG-11-202310-003
+            ORG-11-001-005
+            ORG-11-002-005
+            ORG-11-003-005
+            ORG-11-002-006
           ],
         )
     end
