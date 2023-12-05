@@ -17,7 +17,15 @@ es:
     details: Detalles de %{resource}
     document_name: Factura
     due_date: Vence el %{date}
+    fee_prorated: La tarifa se prorratea según los días de uso, el precio unitario mostrado es un promedio
     fees_from_to_date: Cargos desde %{from_date} hasta %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Tarifa por unidad para las %{to} primeras
+      fee_per_unit_for_the_last: Tarifa por unidad para %{from} y superiores
+      fee_per_unit_for_the_next: Tarifa por unidad para las siguientes de %{from} a %{to}
+      flat_fee_for_the_first: Tarifa fija para las %{to} primeras
+      flat_fee_for_the_last: Tarifa fija para %{from} y superiores
+      flat_fee_for_the_next: Tarifa fija para las siguientes de %{from} a %{to}
     invoice_number: Número de la factura
     issue_date: Fecha de emisión
     item: Ítem
@@ -26,8 +34,19 @@ es:
     monthly: Mensual
     notice_full: Independientemente de cuándo se reciba un evento, la unidad no se prorratea, cobramos el precio completo.
     notice_prorated: Si se agrega o se elimina una unidad durante el plan mensual, calculamos el precio prorrateado en función de la proporción de días restantes o utilizados con respecto al número total de días en el plan. Por ejemplo, si quedan 15 días en el plan, multiplicamos el precio por 15/%{days_in_month}, y si una unidad se usó durante 10 días, multiplicamos el precio por 10/%{days_in_month}.
+    package:
+      fee_per_package: Tarifa por paquete
+      fee_per_package_unit_price: "%{amount} por %{package_size}"
+      free_units_for_the_first: Unidades gratuitas para las %{count} primeras
     payment_term: Plazo de pago neto
     payment_term_days: "%{net_payment_term} días"
+    percentage:
+      adjustment_per_transaction: Ajuste para mín./máx. por transacción
+      fee_per_transaction: Tasa fija por transacción
+      free_units_per_transaction:
+        one: Unidades gratuitas para 1 transacción
+        other: Unidades gratuitas para %{count} transacciónes
+      percentage_rate_on_amount: Tasa sobre el monto
     powered_by: Powered by
     prepaid_credits: Créditos prepagados
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
@@ -54,8 +73,12 @@ es:
     true_up_metric: "%{metric} • Ajuste real"
     unit: Unidad
     unit_price: Precio unitario
+    units: Unidades
     units_prorated_per_period: Unidades prorrateadas por segundo por %{period}
     usage_based_fees: Cargos basados en el uso
+    volume:
+      fee_per_unit: Tarifa por unidad
+      flat_fee_for_all_units: Tarifa plana para todas las unidades
     week: semana
     weekly: Semanal
     year: año

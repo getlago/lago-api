@@ -18,7 +18,15 @@ nb:
     details: "%{resource} detaljer"
     document_name: Faktura
     due_date: Forfallsdato %{date}
+    fee_prorated: Avgiften beregnes forholdsmessig etter brukerdager, den viste enhetsprisen er et gjennomsnitt
     fees_from_to_date: Gebyrer fra %{from_date} til %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Avgift per enhet for de første %{to}
+      fee_per_unit_for_the_last: Avgift per enhet for %{from} og mer
+      fee_per_unit_for_the_next: Avgift per enhet for de neste %{from} til %{to}
+      flat_fee_for_the_first: Fast avgift for de første %{to}
+      flat_fee_for_the_last: Fast avgift for %{from} og mer
+      flat_fee_for_the_next: Fast avgift for de neste %{from} til %{to}
     invoice_number: Fakturanummer
     issue_date: Dato
     item: Vare
@@ -27,8 +35,19 @@ nb:
     monthly: Månedlig
     notice_full: Uavhengig av når en hendelse mottas, blir enheten ikke forholdsmessig priset, vi belaster full pris.
     notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i planen, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
+    package:
+      fee_per_package: Gebyr per pakke
+      fee_per_package_unit_price: "%{amount} per %{package_size}"
+      free_units_for_the_first: Gratis enheter for de første %{count}
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
+    percentage:
+      adjustment_per_transaction: Justering for min/maks per transaksjon
+      fee_per_transaction: Fast avgift per transaksjon
+      free_units_per_transaction:
+        one: Gratis enheter for 1 transaksjon
+        other: Gratis enheter for %{count} transaksjoner
+      percentage_rate_on_amount: Avgift på beløpet
     powered_by: Fakturering drevet av
     prepaid_credits: Forskuddsbetalte kreditter
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
@@ -56,8 +75,12 @@ nb:
     true_up_metric: "%{metric} - Tilpasningskostnader"
     unit: Enhet
     unit_price: Enhetspris
+    units: Enheter
     units_prorated_per_period: Enheter proratert per sekund per %{period}
     usage_based_fees: Bruksbaserte kostnader
+    volume:
+      fee_per_unit: Gebyr per enhet
+      flat_fee_for_all_units: Fast avgift for alle enheter
     week: uke
     weekly: Ukentlig
     year: år

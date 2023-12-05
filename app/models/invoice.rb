@@ -240,6 +240,15 @@ class Invoice < ApplicationRecord
     finalized? && (pending? || failed?)
   end
 
+  def different_boundaries_for_subscription_and_charges(subscription)
+    subscription_from = invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
+    subscription_to = invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date
+    charges_from = invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date
+    charges_to = invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date
+
+    subscription_from != charges_from && subscription_to != charges_to
+  end
+
   private
 
   def void_invoice!

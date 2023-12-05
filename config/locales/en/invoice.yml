@@ -18,7 +18,15 @@ en:
     details: "%{resource} details"
     document_name: Invoice
     due_date: Due %{date}
+    fee_prorated: The fee is prorated on days of usage, the displayed unit price is an average
     fees_from_to_date: Fees from %{from_date} to %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Fee per unit for the first %{to}
+      fee_per_unit_for_the_last: Fee per unit for %{from} and above
+      fee_per_unit_for_the_next: Fee per unit for the next %{from} to %{to}
+      flat_fee_for_the_first: Flat fee for first %{to}
+      flat_fee_for_the_last: Flat fee for %{from} and above
+      flat_fee_for_the_next: Flat fee for the next %{from} to %{to}
     invoice_number: Invoice Number
     issue_date: Issue Date
     item: Item
@@ -27,17 +35,28 @@ en:
     monthly: Monthly
     notice_full: Regardless of when an event is received, the unit is not prorated, we charge the full price.
     notice_prorated: If a unit is added or removed during the monthly plan, we calculate the prorated price based on the ratio of days remaining or used to the total number of days in the plan. For instance, if 15 days are left in the plan, we multiply the price by 15/%{days_in_month}, and if a unit was used for 10 days, we multiply the price by 10/%{days_in_month}.
+    package:
+      fee_per_package: Fee per package
+      fee_per_package_unit_price: "%{amount} per %{package_size}"
+      free_units_for_the_first: Free units for the first %{count}
     payment_term: Payment term
     payment_term_days: "%{net_payment_term} days"
+    percentage:
+      adjustment_per_transaction: Adjustment for min/max per transaction
+      fee_per_transaction: Fixed fee per transaction
+      free_units_per_transaction:
+        one: Free units for 1 transaction
+        other: Free units for %{count} transactions
+      percentage_rate_on_amount: Fee on the amount
     powered_by: Powered by
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     quarter: quarter
     quarterly: Quarterly
     see_breakdown: See breakdown for total unit
-    sub_total: Sub total
-    sub_total_with_tax: Sub total (incl. tax)
-    sub_total_without_tax: Sub total (excl. tax)
+    sub_total: Subtotal
+    sub_total_with_tax: Subtotal (incl. tax)
+    sub_total_without_tax: Subtotal (excl. tax)
     subscription: Subscription
     subscription_interval: "%{plan_interval} subscription - %{plan_name}"
     tax: Tax
@@ -56,8 +75,12 @@ en:
     true_up_metric: "%{metric} - True-up"
     unit: Unit
     unit_price: Unit price
+    units: Units
     units_prorated_per_period: Units prorated per second per %{period}
     usage_based_fees: Usage based fees
+    volume:
+      fee_per_unit: Fee per unit
+      flat_fee_for_all_units: Flat fee for all units
     week: week
     weekly: Weekly
     year: year

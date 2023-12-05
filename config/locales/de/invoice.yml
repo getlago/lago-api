@@ -18,7 +18,15 @@ de:
     details: "%{resource} Details"
     document_name: Rechnung
     due_date: Fälligkeit %{date}
+    fee_prorated: Die Gebühr wird anteilig nach Nutzungstagen berechnet, der angezeigte Stückpreis ist ein Durchschnitt
     fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Gebühr pro Einheit für die ersten %{to}
+      fee_per_unit_for_the_last: Gebühr pro Einheit für %{from} und höher
+      fee_per_unit_for_the_next: Gebühr pro Einheit für die nächsten %{from} bis %{to}
+      flat_fee_for_the_first: Pauschalgebühr für die ersten %{to}
+      flat_fee_for_the_last: Pauschalgebühr für %{from} und höher
+      flat_fee_for_the_next: Pauschalgebühr für die nächsten %{from} bis %{to}
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
     item: Artikel
@@ -27,8 +35,19 @@ de:
     monthly: Monatlich
     notice_full: Unabhängig davon, wann ein Ereignis empfangen wird, wird die Einheit nicht anteilig berechnet, wir berechnen den vollen Preis.
     notice_prorated: Wenn eine Einheit während des Abrechnungszeitraums hinzugefügt oder entfernt wird, berechnen wir den anteiligen Preis basierend auf dem Verhältnis der verbleibenden oder genutzten Tage zur Gesamtzahl der Tage im Plan. Zum Beispiel, wenn noch 15 Tage im Plan verbleiben, multiplizieren wir den Preis mit 15/%{days_in_month}, und wenn eine Einheit für 10 Tage genutzt wurde, multiplizieren wir den Preis mit 10/%{days_in_month}.
+    package:
+      fee_per_package: Gebühr pro Paket
+      fee_per_package_unit_price: "%{amount} pro %{package_size}"
+      free_units_for_the_first: Gebühr pro Einheit für die ersten %{count}
     payment_term: Zahlungsfrist
     payment_term_days: "%{net_payment_term} Tage"
+    percentage:
+      adjustment_per_transaction: Anpassung für Min/Max pro Transaktion
+      fee_per_transaction: Feste Gebühr pro Transaktion
+      free_units_per_transaction:
+        one: Freie Einheiten für 1 Transaktion
+        other: Freie Einheiten für %{count} Transaktionen
+      percentage_rate_on_amount: Gebühr auf den Betrag
     powered_by: Bereitgestellt von
     prepaid_credits: Prepaid-Guthaben
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
@@ -56,8 +75,12 @@ de:
     true_up_metric: "%{metric} - Kosten für die Anpassung"
     unit: Einheit
     unit_price: Stückpreis
+    units: Einheiten
     units_prorated_per_period: Einheiten anteilig pro Sekunde pro %{period}
     usage_based_fees: Nutzungsabhängige Gebühren
+    volume:
+      fee_per_unit: Gebühr pro Einheit
+      flat_fee_for_all_units: Pauschalgebühr für alle Einheiten
     week: woche
     weekly: Wöchentlich
     year: jahr

@@ -18,7 +18,15 @@ fr:
     details: Détails de %{resource}
     document_name: Facture
     due_date: Date d'échéance le %{date}
+    fee_prorated: Les frais sont calculés au prorata des jours d'utilisation, le prix unitaire affiché est une moyenne
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Frais par unité pour les %{to} premières
+      fee_per_unit_for_the_last: Frais par unité pour %{from} et plus
+      fee_per_unit_for_the_next: Frais par unité pour les suivantes de %{from} à %{to}
+      flat_fee_for_the_first: Frais fixes pour les %{to} premières
+      flat_fee_for_the_last: Frais fixes pour %{from} et plus
+      flat_fee_for_the_next: Frais fixes pour les suivantes de %{from} à %{to}
     invoice_number: Nº de facture
     issue_date: Date d'émission
     item: Article
@@ -27,8 +35,19 @@ fr:
     monthly: mensuel
     notice_full: Peu importe quand l’évènement de consommation est reçu, l'unité n'est pas proratisée et nous facturons le prix complet.
     notice_prorated: Si une unité est ajoutée ou supprimée pendant la période de facturation, nous calculons le prix au prorata en fonction du ratio des jours restants ou utilisés. Par exemple, s'il reste 15 jours dans le plan, nous multiplions le prix par 15/%{days_in_month}, et si une unité a été utilisée pendant 10 jours, nous multiplions le prix par 10/%{days_in_month}.
+    package:
+      fee_per_package: Frais par tranche
+      fee_per_package_unit_price: "%{amount} par tranche de %{package_size}"
+      free_units_for_the_first: Unités gratuites pour les premiers %{count}
     payment_term: Délai de paiement
     payment_term_days: "%{net_payment_term} jours"
+    percentage:
+      adjustment_per_transaction: Ajustement pour min/max par transaction
+      fee_per_transaction: Frais fixes par transaction
+      free_units_per_transaction:
+        one: Unités gratuites pour 1 transaction
+        other: Unités gratuites pour %{count} transactions
+      percentage_rate_on_amount: Frais sur le montant
     powered_by: Document généré par
     prepaid_credits: Crédit(s) prépayé(s)
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
@@ -56,8 +75,12 @@ fr:
     true_up_metric: "%{metric} - Frais d'ajustement"
     unit: Unité
     unit_price: Prix unitaire
+    units: Unités
     units_prorated_per_period: Unités proratisées par seconde par %{period}
     usage_based_fees: Frais de consommation
+    volume:
+      fee_per_unit: Frais par unité
+      flat_fee_for_all_units: Frais fixes pour toutes les unités
     week: semaine
     weekly: hebdomadaire
     year: année
