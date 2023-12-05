@@ -275,6 +275,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:previous_event) do
         create(
           :event,
+          organization:,
           code: billable_metric.code,
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
@@ -289,6 +290,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:previous_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 5.days,
           removed_at:,
           external_id: '000',
@@ -439,6 +441,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_event) do
           create(
             :event,
+            organization_id: organization.id,
             code: billable_metric.code,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
@@ -453,6 +456,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_quantified_event) do
           create(
             :quantified_event,
+            organization:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
