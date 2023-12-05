@@ -10,12 +10,12 @@ module Events
       #       and should be deduplicated depending on the aggregation logic
       def events(force_from: false)
         scope = ::Clickhouse::EventsRaw.where(external_subscription_id: subscription.external_id)
-          .where('events_raw.timestamp <= ?', to_datetime)
           .where(code:)
           .order(timestamp: :asc)
 
         # TODO: check how to deal with this since events are not stored forever in clickhouse
         scope = scope.where('events_raw.timestamp >= ?', from_datetime) if force_from || use_from_boundary
+        scope = scope.where('events_raw.timestamp <= ?', to_datetime) if to_datetime
         scope = scope.where(numeric_condition) if numeric_property
 
         return scope unless group

@@ -162,19 +162,21 @@ module BillableMetrics
         quantified_events = QuantifiedEvent
           .where(organization_id: billable_metric.organization_id)
           .where(billable_metric_id: billable_metric.id)
+          .where(external_subscription_id: subscription.external_id)
 
-        quantified_events = if billable_metric.recurring?
-          quantified_events.where(external_subscription_id: subscription.external_id)
-        else
-          scope = Event.where(external_subscription_id: subscription.external_id)
-            .where('quantified_event_id IS NOT NULL')
-            .where(timestamp: subscription.started_at..)
+        unless billable_metric.recurring?
+          store = event_store_class.new(
+            code: billable_metric.code,
+            subscription:,
+            boundaries: {
+              from_datetime: subscription.started_at,
+              to_datetime: subscription.terminated_at,
+            },
+            group:,
+          )
+          store.aggregation_property = billable_metric.field_name
 
-          scope = scope.where(timestamp: ...subscription.terminated_at) if subscription.terminated?
-
-          quantified_event_ids = scope.pluck('DISTINCT(quantified_event_id)')
-
-          quantified_events.where(id: quantified_event_ids)
+          quantified_events = quantified_events.where(external_id: store.events_values)
         end
 
         return quantified_events unless group
