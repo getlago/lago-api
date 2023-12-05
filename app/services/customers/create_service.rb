@@ -168,7 +168,7 @@ module Customers
     end
 
     def handle_api_billing_configuration(customer, params, new_customer)
-      return unless params.key?(:billing_configuration)
+      params[:billing_configuration] = {} unless params.key?(:billing_configuration)
 
       billing = params[:billing_configuration]
 
@@ -201,9 +201,13 @@ module Customers
       update_provider_customer = (billing || {})[:provider_customer_id].present?
       update_provider_customer ||= customer.provider_customer&.provider_customer_id.present?
 
-      return unless billing.key?(:payment_provider) && update_provider_customer
+      return unless update_provider_customer
 
-      create_or_update_provider_customer(customer, billing)
+      if customer.provider_customer&.provider_customer_id
+        PaymentProviderCustomers::UpdateService.call(customer)
+      else
+        create_or_update_provider_customer(customer, billing)
+      end
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})

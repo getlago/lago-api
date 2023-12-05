@@ -187,6 +187,13 @@ RSpec.describe Customers::UpdateService, type: :service do
         }
       end
 
+      before do
+        allow(PaymentProviderCustomers::UpdateService)
+          .to receive(:call)
+          .with(customer)
+          .and_return(BaseService::Result.new)
+      end
+
       it 'creates a payment provider customer' do
         result = customers_service.update(**update_args)
 
@@ -199,6 +206,11 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
+      it 'does not call payment provider customer update service' do
+        customers_service.update(**update_args)
+        expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call).with(customer)
+      end
+
       context 'with provider customer id' do
         let(:update_args) do
           {
@@ -209,6 +221,11 @@ RSpec.describe Customers::UpdateService, type: :service do
             payment_provider: 'stripe',
             provider_customer: { provider_customer_id: 'cus_12345' },
           }
+        end
+
+        it 'calls payment provider customer update service' do
+          customers_service.update(**update_args)
+          expect(PaymentProviderCustomers::UpdateService).to have_received(:call).with(customer)
         end
 
         it 'creates a payment provider customer' do

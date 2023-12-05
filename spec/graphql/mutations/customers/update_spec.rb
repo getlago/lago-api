@@ -42,6 +42,8 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   before do
     stub_request(:post, 'https://api.stripe.com/v1/checkout/sessions')
       .to_return(status: 200, body: body.to_json, headers: {})
+
+    allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
   end
 
   it 'updates a customer' do
