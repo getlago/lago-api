@@ -249,16 +249,17 @@ class Invoice < ApplicationRecord
   def ensure_number
     return if number.present?
 
-    if organization.document_numbering.to_s == 'per_customer'
+    if organization.per_customer?
+      # NOTE: Example of expected customer slug format is ORG_PREFIX-005
       customer_slug = "#{organization.document_number_prefix}-#{format('%03d', customer.sequential_id)}"
       formatted_sequential_id = format('%03d', sequential_id)
 
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
       org_formatted_sequential_id = format('%03d', organization_sequential_id)
+      formatted_year_and_month = Time.now.utc.strftime('%Y%m')
 
-      self.number =
-        "#{organization.document_number_prefix}-#{Time.now.utc.strftime('%Y%m')}-#{org_formatted_sequential_id}"
+      self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
     end
   end
 
@@ -283,6 +284,7 @@ class Invoice < ApplicationRecord
         .pick(:organization_sequential_id)
       org_sequential_id ||= 0
 
+      # NOTE: Start with the most recent sequential id and find first available sequential id that haven't occurred
       loop do
         org_sequential_id += 1
 

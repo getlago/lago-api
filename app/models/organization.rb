@@ -108,6 +108,8 @@ class Organization < ApplicationRecord
     self.api_key = SecureRandom.uuid
   end
 
+  # NOTE: After creating an organization, default document_number_prefix needs to be generated.
+  # Example of expected format is ORG-4321
   def generate_document_number_prefix
     update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
   end
