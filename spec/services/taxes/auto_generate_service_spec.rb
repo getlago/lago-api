@@ -13,7 +13,6 @@ RSpec.describe Taxes::AutoGenerateService, type: :service do
 
       aggregate_failures do
         expect(Tax.count).to eq(30) # EU taxes + 2 defaults
-        byebug
       end
     end
   end
