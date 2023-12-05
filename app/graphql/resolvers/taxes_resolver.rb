@@ -8,6 +8,7 @@ module Resolvers
     description 'Query taxes of an organization'
 
     argument :applied_to_organization, Boolean, required: false
+    argument :auto_generated, Boolean, required: false
     argument :ids, [ID], required: false, description: 'List of taxes IDs to fetch'
     argument :limit, Integer, required: false
     argument :order, String, required: false
@@ -16,7 +17,15 @@ module Resolvers
 
     type Types::Taxes::Object.collection_type, null: false
 
-    def resolve(applied_to_organization: nil, ids: nil, order: nil, page: nil, limit: nil, search_term: nil) # rubocop:disable Metrics/ParameterLists
+    def resolve( # rubocop:disable Metrics/ParameterLists
+      applied_to_organization: nil,
+      auto_generated: nil,
+      ids: nil,
+      order: nil,
+      page: nil,
+      limit: nil,
+      search_term: nil
+    )
       validate_organization!
 
       query = ::TaxesQuery.new(organization: current_organization)
