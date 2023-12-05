@@ -423,11 +423,11 @@ html
 
       .invoice-resume.mb-24.overflow-auto
         - if credit?
-          == SlimHelper.render('templates/invoices/_credit', self)
+          == SlimHelper.render('templates/invoices/v3/_credit', self)
         - elsif subscriptions.count == 1
-          == SlimHelper.render('templates/invoices/_subscription_details', self)
+          == SlimHelper.render('templates/invoices/v3/_subscription_details', self)
         - else
-          == SlimHelper.render('templates/invoices/_subscriptions_summary', self)
+          == SlimHelper.render('templates/invoices/v3/_subscriptions_summary', self)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
@@ -451,4 +451,4 @@ html
               path fill="#fff" d="M0 0h9.25v9.263H0z"
 
       - if subscriptions.count > 1
-        == SlimHelper.render('templates/invoices/_subscription_details', self)
+        == SlimHelper.render('templates/invoices/v3/_subscription_details', self)

@@ -42,9 +42,9 @@ module Invoices
 
     def template
       if invoice.one_off?
-        'invoices/one_off'
+        "invoices/v#{invoice.version_number}/one_off"
       elsif charge?
-        'invoices/charge'
+        "invoices/v#{invoice.version_number}/charge"
       else
         "invoices/v#{invoice.version_number}"
       end
