@@ -226,5 +226,23 @@ RSpec.describe Organizations::UpdateService do
         end
       end
     end
+
+    context 'when eu tax management is activated' do
+      let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
+
+      before do
+        allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
+        allow(tax_auto_generate_service).to receive(:call)
+      end
+
+      it 'calls the taxes auto generate service' do
+        result = update_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(tax_auto_generate_service).to have_received(:call)
+        end
+      end
+    end
   end
 end
