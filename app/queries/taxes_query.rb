@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class TaxesQuery < BaseQuery
-  def call(search_term:, page:, limit:, order:, filters: {})
+  def call(search_term:, page:, limit:, order: nil, filters: {})
     @search_term = search_term
 
     taxes = base_scope.result

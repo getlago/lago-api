@@ -43,7 +43,7 @@ RSpec.describe TaxesQuery, type: :query do
   it 'returns all taxes ordered by name asc' do
     result = taxes_query.call(search_term: nil, page: 1, limit: 10)
 
-    expect(result.taxes).to eq([tax_second, tax_first, tax_third])
+    expect(result.taxes).to eq([tax_second, auto_generated_tax, tax_first, tax_third])
   end
 
   context 'when searching for /de/ term' do
@@ -90,6 +90,19 @@ RSpec.describe TaxesQuery, type: :query do
       )
 
       expect(result.taxes).to eq([auto_generated_tax])
+    end
+  end
+
+  context 'with order on rate' do
+    it 'returns the taxes ordered by rate' do
+      result = taxes_query.call(
+        search_term: '',
+        page: 1,
+        limit: 10,
+        order: 'rate',
+      )
+
+      expect(result.taxes).to eq([auto_generated_tax, tax_first, tax_second, tax_third])
     end
   end
 end

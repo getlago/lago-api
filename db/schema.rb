@@ -756,6 +756,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_04_151512) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "applied_to_organization", default: false, null: false
+    t.boolean "auto_generated", default: false, null: false
     t.index ["code", "organization_id"], name: "index_taxes_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_taxes_on_organization_id"
   end
