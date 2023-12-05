@@ -42,8 +42,12 @@ module Invoices
 
     def template
       if invoice.one_off?
+        return 'invoices/v3/one_off' if invoice.version_number < 4
+
         "invoices/v#{invoice.version_number}/one_off"
       elsif charge?
+        return 'invoices/v3/charge' if invoice.version_number < 4
+
         "invoices/v#{invoice.version_number}/charge"
       else
         "invoices/v#{invoice.version_number}"

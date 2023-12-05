@@ -18,7 +18,15 @@ it:
     details: Dettagli %{resource}
     document_name: Fattura
     due_date: Scadenza %{date}
+    fee_prorated: La tariffa è calcolata in base ai giorni di utilizzo, il prezzo unitario visualizzato è una media
     fees_from_to_date: Tariffe dal %{from_date} al %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Tariffa per unità per le prime %{to}
+      fee_per_unit_for_the_last: Tariffa per unità per %{from} e oltre
+      fee_per_unit_for_the_next: Tariffa per unità per le seguenti da %{from} a %{to}
+      flat_fee_for_the_first: Tariffa fissa per le prime %{to}
+      flat_fee_for_the_last: Tariffa fissa per %{from} e oltre
+      flat_fee_for_the_next: Tariffa fissa per le seguenti da %{from} a %{to}
     invoice_number: Numero Fattura
     issue_date: Data Emissione
     item: Articolo
@@ -27,8 +35,19 @@ it:
     monthly: Mensile
     notice_full: Indipendentemente da quando un evento viene ricevuto, l'unità non è prorata, addebitiamo il prezzo intero.
     notice_prorated: Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni nel piano, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}.
+    package:
+      fee_per_package: Tassa per pacchetto
+      fee_per_package_unit_price: "%{amount} per %{package_size}"
+      free_units_for_the_first: Unità gratuite per il primo %{count}
     payment_term: Termine di pagamento
     payment_term_days: "%{net_payment_term} giorni"
+    percentage:
+      adjustment_per_transaction: Adeguamento per min/max per transazione
+      fee_per_transaction: Tassa fissa per transazione
+      free_units_per_transaction:
+        one: Unità gratuite per 1 transazione
+        other: Unità gratuite per %{count} transazioni
+      percentage_rate_on_amount: Tassa sull'importo
     powered_by: Elaborato da
     prepaid_credits: Crediti prepagati
     prepaid_credits_with_value: Crediti prepagati - %{wallet_name}
@@ -56,8 +75,12 @@ it:
     true_up_metric: "%{metric} - Allineamento"
     unit: Unità
     unit_price: Prezzo unitario
+    units: Unità
     units_prorated_per_period: Unità proporzionate al secondo per %{period}
     usage_based_fees: Tariffe basate sull'utilizzo
+    volume:
+      fee_per_unit: Tassa per unità
+      flat_fee_for_all_units: Canone forfettario per tutte le unità
     week: settimana
     weekly: Settimanale
     year: anno

@@ -97,7 +97,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result.invoice.applied_taxes.count).to eq(1)
 
         expect(result.invoice.total_amount_cents).to eq(120)
-        expect(result.invoice.version_number).to eq(3)
+        expect(result.invoice.version_number).to eq(4)
         expect(result.invoice).to be_finalized
       end
     end
