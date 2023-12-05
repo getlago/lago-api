@@ -53,6 +53,7 @@ module V1
       configuration = {
         invoice_grace_period: model.invoice_grace_period,
         payment_provider: model.payment_provider,
+        payment_provider_code: model.payment_provider_code,
         vat_rate: model.vat_rate,
         document_locale: model.document_locale,
       }.merge(legacy_values[:billing_configuration])

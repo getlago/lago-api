@@ -429,6 +429,7 @@ RSpec.describe Customers::CreateService, type: :service do
           name: 'Foo Bar',
           billing_configuration: {
             payment_provider: 'stripe',
+            payment_provider_code: 'stripe_1',
             provider_customer_id: 'stripe_id',
           },
         }
@@ -457,6 +458,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
       context 'when customer already exists' do
         let(:payment_provider) { 'stripe' }
+        let(:payment_provider_code) { 'stripe_1' }
         let(:create_args) do
           {
             external_id: SecureRandom.uuid,
@@ -464,6 +466,7 @@ RSpec.describe Customers::CreateService, type: :service do
             billing_configuration: {
               vat_rate: 28,
               payment_provider:,
+              payment_provider_code:,
               provider_customer_id: 'stripe_id',
             },
           }
@@ -474,6 +477,8 @@ RSpec.describe Customers::CreateService, type: :service do
             organization:,
             external_id: create_args[:external_id],
             email: 'foo@bar.com',
+            payment_provider_code: nil,
+            payment_provider: nil,
           )
         end
 
@@ -641,6 +646,8 @@ RSpec.describe Customers::CreateService, type: :service do
             :customer,
             organization:,
             external_id: create_args[:external_id],
+            payment_provider: nil,
+            payment_provider_code: nil,
             email: 'foo@bar.com',
           )
         end

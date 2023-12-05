@@ -2685,6 +2685,7 @@ type Customer {
   name: String
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
+  paymentProviderConnectionCode: String
   phone: String
   providerCustomer: ProviderCustomer
   sequentialId: String!

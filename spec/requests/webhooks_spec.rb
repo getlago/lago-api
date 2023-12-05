@@ -179,6 +179,7 @@ RSpec.describe WebhooksController, type: :request do
       allow(adyen_service).to receive(:handle_incoming_webhook)
         .with(
           organization_id: organization.id,
+          code: nil,
           body: body['notificationItems'].first&.dig('NotificationRequestItem'),
         )
         .and_return(result)

@@ -109,6 +109,7 @@ module Customers
         external_salesforce_id: args[:external_salesforce_id],
         vat_rate: args[:vat_rate],
         payment_provider: args[:payment_provider],
+        payment_provider_code: args[:payment_provider_code],
         currency: args[:currency],
         document_locale: billing_configuration[:document_locale],
         tax_identification_number: args[:tax_identification_number],
@@ -135,7 +136,7 @@ module Customers
       end
 
       # NOTE: handle configuration for configured payment providers
-      billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider])
+      billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider], payment_provider_code: args[:payment_provider_code])
       create_billing_configuration(customer, billing_configuration)
 
       result.customer = customer
@@ -176,7 +177,7 @@ module Customers
       create_provider_customer ||= billing_configuration[:provider_customer_id]
       return unless create_provider_customer
 
-      customer.update!(payment_provider: billing_configuration[:payment_provider]) if api_context?
+      customer.update!(payment_provider: billing_configuration[:payment_provider], payment_provider_code: billing_configuration[:payment_provider_code]) if api_context?
 
       create_or_update_provider_customer(customer, billing_configuration)
     end
@@ -236,7 +237,7 @@ module Customers
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: provider_class,
-        payment_provider_id: customer.organization.payment_provider(billing_configuration[:payment_provider])&.id,
+        payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync],
       )

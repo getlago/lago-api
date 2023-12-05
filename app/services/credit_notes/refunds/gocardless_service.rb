@@ -85,7 +85,7 @@ module CreditNotes
       end
 
       def gocardless_payment_provider
-        @gocardless_payment_provider ||= organization.gocardless_payment_provider
+        @gocardless_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
       end
 
       def create_gocardless_refund

@@ -42,7 +42,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
 
     context 'when organization already have a gocardless provider' do
       let(:gocardless_provider) do
-        create(:gocardless_provider, organization:, access_token: 'access_token_123')
+        create(:gocardless_provider, organization:, access_token: 'access_token_123', code:)
       end
 
       before { gocardless_provider }

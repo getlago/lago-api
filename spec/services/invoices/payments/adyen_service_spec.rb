@@ -5,15 +5,16 @@ require 'rails_helper'
 RSpec.describe Invoices::Payments::AdyenService, type: :service do
   subject(:adyen_service) { described_class.new(invoice) }
 
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
-  let(:adyen_payment_provider) { create(:adyen_provider, organization:) }
+  let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
   let(:adyen_customer) { create(:adyen_customer, customer:) }
   let(:adyen_client) { instance_double(Adyen::Client) }
   let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
   let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
   let(:payments_response) { generate(:adyen_payments_response) }
   let(:payment_methods_response) { generate(:adyen_payment_methods_response) }
+  let(:code) { 'adyen_1' }
 
   let(:invoice) do
     create(
@@ -152,7 +153,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     end
 
     context 'with validation error on adyen' do
-      let(:customer) { create(:customer, organization:) }
+      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
       let(:subscription) do
         create(:subscription, organization:, customer:)
@@ -208,7 +209,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     end
 
     context 'with error on adyen' do
-      let(:customer) { create(:customer, organization:) }
+      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
       let(:subscription) do
         create(:subscription, organization:, customer:)

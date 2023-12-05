@@ -114,6 +114,7 @@ module Api
           billing_configuration: [
             :invoice_grace_period,
             :payment_provider,
+            :payment_provider_code,
             :provider_customer_id,
             :sync,
             :sync_with_provider,

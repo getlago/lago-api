@@ -43,6 +43,7 @@ module Customers
         # TODO: delete this when GraphQL will use billing_configuration.
         customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
+        customer.payment_provider_code = args[:payment_provider_code] if args.key?(:payment_provider_code)
         customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
 
         if billing_configuration.key?(:document_locale)
@@ -174,7 +175,7 @@ module Customers
     def update_stripe_customer(customer, billing_configuration)
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
-        payment_provider_id: customer.organization.stripe_payment_provider&.id,
+        payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,
       )
       create_result.raise_if_error!
@@ -186,7 +187,7 @@ module Customers
     def update_gocardless_customer(customer, billing_configuration)
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::GocardlessCustomer,
-        payment_provider_id: customer.organization.gocardless_payment_provider&.id,
+        payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,
       )
       create_result.raise_if_error!
@@ -198,7 +199,7 @@ module Customers
     def update_adyen_customer(customer, billing_configuration)
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::AdyenCustomer,
-        payment_provider_id: customer.organization.adyen_payment_provider&.id,
+        payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,
       )
       create_result.raise_if_error!

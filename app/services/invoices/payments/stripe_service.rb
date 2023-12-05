@@ -31,7 +31,7 @@ module Invoices
 
         payment = Payment.new(
           invoice:,
-          payment_provider_id: organization.stripe_payment_provider.id,
+          payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
@@ -77,13 +77,13 @@ module Invoices
 
       def should_process_payment?
         return false if invoice.succeeded? || invoice.voided?
-        return false if organization.stripe_payment_provider.blank?
+        return false if stripe_payment_provider.blank?
 
         customer&.stripe_customer&.provider_customer_id
       end
 
       def stripe_api_key
-        organization.stripe_payment_provider.secret_key
+        stripe_payment_provider.secret_key
       end
 
       def stripe_payment_method
@@ -221,6 +221,10 @@ module Invoices
         return result if invoice.failed?
 
         result.not_found_failure!(resource: 'stripe_payment')
+      end
+
+      def stripe_payment_provider
+        @stripe_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
       end
     end
   end

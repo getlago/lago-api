@@ -81,6 +81,42 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#connected_payment_provider' do
+    subject(:connected_payment_provider) { customer.connected_payment_provider }
+
+    let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
+    let(:provider) { Customer::PAYMENT_PROVIDERS.sample }
+
+    before { payment_provider }
+
+    context 'when organization has no payment provider' do
+      let(:payment_provider) { nil }
+      let(:payment_provider_code) { nil }
+
+      it 'returns nil' do
+        expect(connected_payment_provider).to be nil
+      end
+    end
+
+    context 'when organization has payment provider with a different code' do
+      let(:payment_provider) { create(:"#{provider}_provider", organization:, code: 'provider_2') }
+      let(:payment_provider_code) { 'provider_1' }
+
+      it 'returns nil' do
+        expect(connected_payment_provider).to be nil
+      end
+    end
+
+    context 'when organization has payment provider with matching code' do
+      let(:payment_provider) { create(:"#{provider}_provider", organization:, code: payment_provider_code) }
+      let(:payment_provider_code) { 'provider_1' }
+
+      it 'returns payment_provider' do
+        expect(connected_payment_provider).to eq(payment_provider)
+      end
+    end
+  end
+
   describe '#provider_customer' do
     subject(:customer) { create(:customer, organization:, payment_provider:) }
 

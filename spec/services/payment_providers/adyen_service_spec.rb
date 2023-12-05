@@ -22,7 +22,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
 
     context 'when organization already has an adyen provider' do
       let(:adyen_provider) do
-        create(:adyen_provider, organization:, api_key: 'api_key_789')
+        create(:adyen_provider, organization:, api_key: 'api_key_789', code:)
       end
 
       before { adyen_provider }
@@ -115,14 +115,14 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       end
 
       before do
-        organization.adyen_payment_provider.destroy!
+        adyen_provider.destroy!
       end
 
       it 'returns an error' do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('webhook_error')
+          expect(result.error.code).to eq('payment_provider_not_found')
           expect(result.error.error_message).to eq('Payment provider not found')
         end
       end
@@ -130,7 +130,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
 
     context 'when failing to validate the signature' do
       before do
-        organization.adyen_payment_provider.update! hmac_key: '123'
+        adyen_provider.update! hmac_key: '123'
       end
 
       it 'returns an error' do

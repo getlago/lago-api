@@ -11,9 +11,19 @@ module PaymentProviders
         oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
       end
 
-      gocardless_provider = PaymentProviders::GocardlessProvider.find_or_initialize_by(
+      payment_provider_result = PaymentProviders::FindService.new(
         organization_id: args[:organization].id,
-      )
+        code: args[:code],
+      ).call
+
+      gocardless_provider = if payment_provider_result.success?
+        payment_provider_result.payment_provider
+      else
+        PaymentProviders::GocardlessProvider.new(
+          organization_id: args[:organization].id,
+          code: args[:code],
+        )
+      end
 
       gocardless_provider.access_token = access_token if access_token
       gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50) if gocardless_provider.webhook_secret.blank?
@@ -30,13 +40,14 @@ module PaymentProviders
       result.service_failure!(code: 'internal_error', message: e.description)
     end
 
-    def handle_incoming_webhook(organization_id:, body:, signature:)
-      organization = Organization.find_by(id: organization_id)
+    def handle_incoming_webhook(organization_id:, body:, signature:, code: nil)
+      payment_provider_result = PaymentProviders::FindService.new(organization_id:, code:).call
+      return payment_provider_result unless payment_provider_result.success?
 
       events = GoCardlessPro::Webhook.parse(
         request_body: body,
         signature_header: signature,
-        webhook_endpoint_secret: organization&.gocardless_payment_provider&.webhook_secret,
+        webhook_endpoint_secret: payment_provider_result.payment_provider&.webhook_secret,
       )
 
       PaymentProviders::Gocardless::HandleEventJob.perform_later(events_json: body)

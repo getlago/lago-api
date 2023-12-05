@@ -74,7 +74,7 @@ module CreditNotes
       end
 
       def stripe_api_key
-        organization.stripe_payment_provider.secret_key
+        stripe_payment_provider.secret_key
       end
 
       def create_stripe_refund
@@ -156,6 +156,10 @@ module CreditNotes
         return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
 
         result.not_found_failure!(resource: 'stripe_refund')
+      end
+
+      def stripe_payment_provider
+        @stripe_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
       end
     end
   end

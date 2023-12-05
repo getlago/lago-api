@@ -85,6 +85,10 @@ class Customer < ApplicationRecord
     organization.net_payment_term
   end
 
+  # def connected_payment_provider
+  #   PaymentProviders::BaseProvider.find_by(organization:, code: payment_provider_code)
+  # end
+
   def editable?
     subscriptions.none? &&
       applied_add_ons.none? &&

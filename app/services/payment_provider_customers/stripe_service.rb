@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def create
       result.stripe_customer = stripe_customer
-      return result if stripe_customer.provider_customer_id? || !organization.stripe_payment_provider
+      return result if stripe_customer.provider_customer_id? || !stripe_payment_provider
 
       stripe_result = create_stripe_customer
       return result if !stripe_result || !result.success?
@@ -109,7 +109,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url(send_webhook: true)
-      return result unless customer.organization.webhook_endpoints.any? || !send_webhook
+      return result unless customer.organization.webhook_endpoints.any? || !send_webhook || !payment_provider
 
       res = Stripe::Checkout::Session.create(
         checkout_link_params,
@@ -145,7 +145,7 @@ module PaymentProviderCustomers
     end
 
     def api_key
-      organization.stripe_payment_provider.secret_key
+      stripe_payment_provider.secret_key
     end
 
     def checkout_link_params
@@ -158,7 +158,7 @@ module PaymentProviderCustomers
     end
 
     def success_redirect_url
-      organization.stripe_payment_provider.success_redirect_url.presence ||
+      stripe_payment_provider.success_redirect_url.presence ||
         PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
     end
 
@@ -262,6 +262,10 @@ module PaymentProviderCustomers
       return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id:).nil?
 
       result.not_found_failure!(resource: 'stripe_customer')
+    end
+
+    def stripe_payment_provider
+      Customers::BaseService.new.payment_provider(customer)
     end
   end
 end

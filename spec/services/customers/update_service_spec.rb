@@ -8,11 +8,12 @@ RSpec.describe Customers::UpdateService, type: :service do
   let(:user) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:payment_provider_code) { 'stripe_1' }
 
   describe 'update' do
     let(:user) { membership.user }
 
-    let(:customer) { create(:customer, organization:) }
+    let(:customer) { create(:customer, organization:, payment_provider: 'stripe', payment_provider_code:) }
     let(:external_id) { SecureRandom.uuid }
 
     let(:update_args) do
@@ -184,14 +185,12 @@ RSpec.describe Customers::UpdateService, type: :service do
           name: 'Updated customer name',
           external_id:,
           payment_provider: 'stripe',
+          payment_provider_code:,
         }
       end
 
       before do
-        allow(PaymentProviderCustomers::UpdateService)
-          .to receive(:call)
-          .with(customer)
-          .and_return(BaseService::Result.new)
+        create(:stripe_provider, organization: customer.organization, code: payment_provider_code)
       end
 
       it 'creates a payment provider customer' do

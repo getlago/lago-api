@@ -90,7 +90,7 @@ module Invoices
       end
 
       def adyen_payment_provider
-        @adyen_payment_provider ||= organization.adyen_payment_provider
+        @adyen_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
       end
 
       def update_payment_method_id

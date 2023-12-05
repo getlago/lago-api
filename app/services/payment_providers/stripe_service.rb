@@ -14,9 +14,19 @@ module PaymentProviders
     ].freeze
 
     def create_or_update(**args)
-      stripe_provider = PaymentProviders::StripeProvider.find_or_initialize_by(
+      payment_provider_result = PaymentProviders::FindService.new(
         organization_id: args[:organization_id],
-      )
+        code: args[:code],
+      ).call
+
+      stripe_provider = if payment_provider_result.success?
+        payment_provider_result.payment_provider
+      else
+        PaymentProviders::StripeProvider.new(
+          organization_id: args[:organization_id],
+          code: args[:code],
+        )
+      end
 
       secret_key = stripe_provider.secret_key
 
@@ -51,7 +61,7 @@ module PaymentProviders
 
       stripe_webhook = ::Stripe::WebhookEndpoint.create(
         {
-          url: URI.join(ENV['LAGO_API_URL'], "webhooks/stripe/#{organization_id}"),
+          url: URI.join(ENV['LAGO_API_URL'], "webhooks/stripe/#{organization_id}?code=#{stripe_provider.code}"),
           enabled_events: WEBHOOKS_EVENTS,
         },
         { api_key: stripe_provider.secret_key },
@@ -73,13 +83,16 @@ module PaymentProviders
       register_webhook(stripe_provider)
     end
 
-    def handle_incoming_webhook(organization_id:, params:, signature:)
+    def handle_incoming_webhook(organization_id:, params:, signature:, code: nil)
       organization = Organization.find_by(id: organization_id)
+
+      payment_provider_result = PaymentProviders::FindService.new(organization_id:, code:).call
+      return payment_provider_result unless payment_provider_result.success?
 
       event = ::Stripe::Webhook.construct_event(
         params,
         signature,
-        organization&.stripe_payment_provider&.webhook_secret,
+        payment_provider_result.payment_provider&.webhook_secret,
       )
 
       PaymentProviders::Stripe::HandleEventJob.perform_later(

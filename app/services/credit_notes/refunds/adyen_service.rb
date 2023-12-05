@@ -82,7 +82,7 @@ module CreditNotes
       end
 
       def adyen_api_key
-        organization.adyen_payment_provider.secret_key
+        adyen_payment_provider.secret_key
       end
 
       def create_adyen_refund
@@ -148,6 +148,10 @@ module CreditNotes
         return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
 
         result.not_found_failure!(resource: 'adyen_refund')
+      end
+
+      def adyen_payment_provider
+        @adyen_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
       end
     end
   end
