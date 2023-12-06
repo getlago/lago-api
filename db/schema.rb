@@ -528,6 +528,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_29_145100) do
     t.date "payment_due_date"
     t.integer "net_payment_term", default: 0, null: false
     t.datetime "voided_at"
+    t.integer "organization_sequential_id", default: 0, null: false
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
@@ -589,6 +590,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_29_145100) do
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
     t.boolean "eu_tax_management", default: false
+    t.integer "document_numbering", default: 0, null: false
+    t.string "document_number_prefix"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"

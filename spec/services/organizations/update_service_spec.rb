@@ -62,6 +62,32 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context 'when document_number_prefix is sent' do
+      before { params[:document_number_prefix] = 'abc' }
+
+      it 'converts document_number_prefix to upcase version' do
+        result = update_service.call
+
+        aggregate_failures do
+          expect(result.organization.document_number_prefix).to eq('ABC')
+        end
+      end
+    end
+
+    context 'when document_number_prefix is invalid' do
+      before { params[:document_number_prefix] = 'aaaaaaaaaaaaaaa' }
+
+      it 'returns an error' do
+        result = update_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:document_number_prefix]).to eq(['value_is_too_long'])
+        end
+      end
+    end
+
     context 'with premium features' do
       around { |test| lago_premium!(&test) }
 

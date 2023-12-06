@@ -38,6 +38,13 @@ class Organization < ApplicationRecord
 
   has_one_attached :logo
 
+  DOCUMENT_NUMBERINGS = [
+    :per_customer,
+    :per_organization,
+  ].freeze
+
+  enum document_numbering: DOCUMENT_NUMBERINGS
+
   before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
@@ -45,6 +52,7 @@ class Organization < ApplicationRecord
   validates :document_locale, language_code: true
   validates :email, email: true, if: :email?
   validates :invoice_footer, length: { maximum: 600 }
+  validates :document_number_prefix, length: { minimum: 1, maximum: 10 }, on: :update
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
   validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }
   validates :logo,
@@ -56,6 +64,8 @@ class Organization < ApplicationRecord
   validates :webhook_url, url: true, allow_nil: true
 
   validate :validate_email_settings
+
+  after_create :generate_document_number_prefix
 
   def logo_url
     return if logo.blank?
@@ -83,6 +93,10 @@ class Organization < ApplicationRecord
     end
   end
 
+  def document_number_prefix=(value)
+    super(value&.upcase)
+  end
+
   private
 
   def generate_api_key
@@ -92,6 +106,12 @@ class Organization < ApplicationRecord
     return generate_api_key if orga.present?
 
     self.api_key = SecureRandom.uuid
+  end
+
+  # NOTE: After creating an organization, default document_number_prefix needs to be generated.
+  # Example of expected format is ORG-4321
+  def generate_document_number_prefix
+    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
   end
 
   def validate_email_settings

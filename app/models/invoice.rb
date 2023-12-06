@@ -9,6 +9,7 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
+  before_save :ensure_organization_sequential_id
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -248,8 +249,52 @@ class Invoice < ApplicationRecord
   def ensure_number
     return if number.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    if organization.per_customer?
+      # NOTE: Example of expected customer slug format is ORG_PREFIX-005
+      customer_slug = "#{organization.document_number_prefix}-#{format('%03d', customer.sequential_id)}"
+      formatted_sequential_id = format('%03d', sequential_id)
 
-    self.number = "#{customer.slug}-#{formatted_sequential_id}"
+      self.number = "#{customer_slug}-#{formatted_sequential_id}"
+    else
+      org_formatted_sequential_id = format('%03d', organization_sequential_id)
+      formatted_year_and_month = Time.now.utc.strftime('%Y%m')
+
+      self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
+    end
+  end
+
+  def ensure_organization_sequential_id
+    return if organization_sequential_id.present? && organization_sequential_id.positive?
+
+    self.organization_sequential_id = generate_organization_sequential_id
+  end
+
+  def generate_organization_sequential_id
+    organization_sequence_scope = organization.invoices.where(created_at: Time.now.utc.all_month)
+
+    result = Invoice.with_advisory_lock(
+      organization_id,
+      transaction: true,
+      timeout_seconds: 10.seconds,
+    ) do
+      org_sequential_id = organization_sequence_scope
+        .where.not(organization_sequential_id: nil)
+        .order(organization_sequential_id: :desc)
+        .limit(1)
+        .pick(:organization_sequential_id)
+      org_sequential_id ||= 0
+
+      # NOTE: Start with the most recent sequential id and find first available sequential id that haven't occurred
+      loop do
+        org_sequential_id += 1
+
+        break org_sequential_id unless organization_sequence_scope.exists?(organization_sequential_id:)
+      end
+    end
+
+    # NOTE: If the application was unable to acquire the lock, the block returns false
+    raise(SequenceError, 'Unable to acquire lock on the database') unless result
+
+    result
   end
 end

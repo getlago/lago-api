@@ -3,39 +3,47 @@
 require 'rails_helper'
 
 RSpec.describe Invoice, type: :model do
-  subject(:invoice) { create(:invoice) }
+  subject(:invoice) { create(:invoice, organization:) }
+
+  let(:organization) { create(:organization) }
 
   it_behaves_like 'paper_trail traceable'
 
   describe 'sequential_id' do
-    let(:customer) { create(:customer) }
-    let(:invoice) { build(:invoice, customer:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { build(:invoice, customer:, organization:) }
 
-    it 'assigns a sequential id to a new invoice' do
+    it 'assigns a sequential id and organization sequential id to a new invoice' do
       invoice.save
 
       aggregate_failures do
         expect(invoice).to be_valid
         expect(invoice.sequential_id).to eq(1)
+        expect(invoice.organization_sequential_id).to eq(1)
       end
     end
 
-    context 'when sequential_id is present' do
-      before { invoice.sequential_id = 3 }
+    context 'when sequential_id and organization_sequential_id are present' do
+      before do
+        invoice.sequential_id = 3
+        invoice.organization_sequential_id = 5
+      end
 
-      it 'does not replace the sequential_id' do
+      it 'does not replace the sequential_id and organization_sequential_id' do
         invoice.save
 
         aggregate_failures do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(3)
+          expect(invoice.organization_sequential_id).to eq(5)
         end
       end
     end
 
-    context 'when invoice alrady exists' do
+    context 'when invoices already exist' do
       before do
-        create(:invoice, customer:, sequential_id: 5)
+        create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14)
+        create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15)
       end
 
       it 'takes the next available id' do
@@ -44,13 +52,14 @@ RSpec.describe Invoice, type: :model do
         aggregate_failures do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(6)
+          expect(invoice.organization_sequential_id).to eq(16)
         end
       end
     end
 
     context 'with invoices on other organization' do
       before do
-        create(:invoice, sequential_id: 1)
+        create(:invoice, sequential_id: 1, organization_sequential_id: 1)
       end
 
       it 'scopes the sequence to the organization' do
@@ -59,6 +68,27 @@ RSpec.describe Invoice, type: :model do
         aggregate_failures do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(1)
+          expect(invoice.organization_sequential_id).to eq(1)
+        end
+      end
+    end
+
+    context 'with organization numbering and invoices in another month' do
+      let(:organization) { create(:organization, document_numbering: 'per_organization') }
+      let(:created_at) { Time.now.utc - 1.month }
+
+      before do
+        create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
+        create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
+      end
+
+      it 'scopes the organization_sequential_id to the organization and month' do
+        invoice.save
+
+        aggregate_failures do
+          expect(invoice).to be_valid
+          expect(invoice.sequential_id).to eq(6)
+          expect(invoice.organization_sequential_id).to eq(1)
         end
       end
     end
@@ -68,13 +98,24 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { build(:invoice, customer:) }
+    let(:invoice) { build(:invoice, customer:, organization:) }
 
     it 'generates the invoice number' do
       invoice.save
       organization_id_substring = organization.id.last(4).upcase
 
       expect(invoice.number).to eq("LAG-#{organization_id_substring}-001-001")
+    end
+
+    context 'with organization numbering' do
+      let(:organization) { create(:organization, document_numbering: 'per_organization', name: 'lago') }
+
+      it 'scopes the organization_sequential_id to the organization and month' do
+        invoice.save
+        organization_id_substring = organization.id.last(4).upcase
+
+        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-001")
+      end
     end
   end
 
