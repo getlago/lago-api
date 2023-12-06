@@ -107,11 +107,12 @@ module BillableMetrics
       end
 
       def per_event_aggregation
-        recurring_value = previous_charge_fee&.units
+        full_per_event_aggregation = base_aggregator.compute_per_event_aggregation
+        recurring_value = recurring_value(full_per_event_aggregation)
         recurring_aggregation = recurring_value ? [BigDecimal(recurring_value) * persisted_pro_rata] : []
 
         Result.new.tap do |result|
-          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation
+          result.event_aggregation = recurring_aggregation + full_per_event_aggregation
           result.event_prorated_aggregation = recurring_aggregation + compute_per_event_prorated_aggregation
         end
       end
@@ -132,6 +133,16 @@ module BillableMetrics
           .where("CAST(fees.properties->>'charges_to_datetime' AS timestamp) < ?", boundaries[:to_datetime])
           .order(created_at: :desc)
           .first
+      end
+
+      def recurring_value(full_per_event_aggregation)
+        previous_charge_fee_units = previous_charge_fee&.units
+
+        return previous_charge_fee_units if previous_charge_fee_units
+
+        recurring_value_before_first_fee = aggregation_without_proration.aggregation - full_per_event_aggregation.sum
+
+        recurring_value_before_first_fee.zero? ? nil : recurring_value_before_first_fee
       end
     end
   end
