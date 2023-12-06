@@ -12,7 +12,7 @@ class TaxesQuery < BaseQuery
       taxes = taxes.where(applied_to_organization: filters[:applied_to_organization])
     end
 
-    order = order.presence || :name
+    order = Tax::ORDERS.include?(order) ? order : 'name'
     taxes = taxes.order(order).page(page).per(limit)
 
     result.taxes = taxes
