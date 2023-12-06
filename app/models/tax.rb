@@ -3,6 +3,8 @@
 class Tax < ApplicationRecord
   include PaperTrailTraceable
 
+  ORDERS = %w[name rate].freeze
+
   has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :customers, through: :applied_taxes
 

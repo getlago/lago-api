@@ -1,17 +1,19 @@
 # frozen_string_literal: true
 
 class TaxesQuery < BaseQuery
-  def call(search_term:, page:, limit:, filters: {})
+  def call(search_term:, page:, limit:, order: nil, filters: {})
     @search_term = search_term
 
     taxes = base_scope.result
     taxes = taxes.where(id: filters[:ids]) if filters[:ids].present?
+    taxes = taxes.where(auto_generated: filters[:auto_generated]) if filters[:auto_generated].present?
 
     unless filters[:applied_to_organization].nil?
       taxes = taxes.where(applied_to_organization: filters[:applied_to_organization])
     end
 
-    taxes = taxes.order(:name).page(page).per(limit)
+    order = Tax::ORDERS.include?(order) ? order : 'name'
+    taxes = taxes.order(order).page(page).per(limit)
 
     result.taxes = taxes
     result

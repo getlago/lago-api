@@ -120,6 +120,9 @@ module Organizations
     end
 
     def handle_eu_tax_management(eu_tax_management)
+      # NOTE: even if the organization had eu tax management, we call this service again, it uses an upsert for taxes.
+      Taxes::AutoGenerateService.new(organization:).call if eu_tax_management
+
       organization.eu_tax_management = eu_tax_management
     end
   end
