@@ -62,6 +62,12 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  after do
+    next if ENV['LAGO_CLICKHOUSE_ENABLED'].blank?
+
+    Clickhouse::EventsRaw.connection.execute('TRUNCATE TABLE events_raw')
+  end
+
   describe '.events' do
     it 'returns a list of events' do
       expect(event_store.events.count).to eq(5)
