@@ -50,11 +50,10 @@
                   tr
                     td style="padding-left: 16px;"
                       .body-1 = fee.group_name
-                      - unless fee.billable_metric.recurring_count_agg?
-                        - if fee.billable_metric.weighted_sum_agg?
-                          .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
-                        - if fee.charge.percentage?
-                          .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+                      - if fee.billable_metric.weighted_sum_agg?
+                        .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
+                      - if fee.charge.percentage?
+                        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                     td
                       .body-2 = fee.units
                     td.body-2 == TaxHelper.applied_taxes(fee)
@@ -69,11 +68,10 @@
                 tr
                   td
                     .body-1 = fee.invoice_name
-                    - unless fee.billable_metric.recurring_count_agg?
-                      - if fee.billable_metric.weighted_sum_agg?
-                        .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
-                      - if fee.charge.percentage?
-                        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+                    - if fee.billable_metric.weighted_sum_agg?
+                      .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
+                    - if fee.charge.percentage?
+                      .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                   td
                     .body-2 = fees.sum(&:units)
                   td.body-2 == TaxHelper.applied_taxes(fee)
@@ -114,11 +112,10 @@
                   tr
                     td style="padding-left: 16px;"
                       .body-1 = fee.group_name
-                      - unless fee.billable_metric.recurring_count_agg?
-                        - if fee.billable_metric.weighted_sum_agg?
-                          .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
-                        - if fee.charge.percentage?
-                          .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+                      - if fee.billable_metric.weighted_sum_agg?
+                        .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
+                      - if fee.charge.percentage?
+                        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                     td
                       .body-2 = fee.units
                     td.body-2 == TaxHelper.applied_taxes(fee)
@@ -133,11 +130,10 @@
                 tr
                   td
                     .body-1 = fee.invoice_name
-                    - unless fee.billable_metric.recurring_count_agg?
-                      - if fee.billable_metric.weighted_sum_agg?
-                        .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
-                      - if fee.charge.percentage?
-                        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+                    - if fee.billable_metric.weighted_sum_agg?
+                      .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
+                    - if fee.charge.percentage?
+                      .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                   td
                     .body-2 = fees.sum(&:units)
                   td.body-2 == TaxHelper.applied_taxes(fee)

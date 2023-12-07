@@ -457,7 +457,7 @@ RSpec.describe Invoice, type: :model do
       let(:invoice_subscription) { create(:invoice_subscription) }
       let(:invoice) { invoice_subscription.invoice }
       let(:subscription) { invoice_subscription.subscription }
-      let(:billable_metric) { create(:recurring_billable_metric, organization: subscription.organization) }
+      let(:billable_metric) { create(:unique_count_billable_metric, organization: subscription.organization) }
       let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 
       before do
@@ -473,7 +473,7 @@ RSpec.describe Invoice, type: :model do
       invoice = create(:invoice, version_number: 2)
       invoice_subscription = create(:invoice_subscription, invoice:)
       subscription = invoice_subscription.subscription
-      billable_metric = create(:recurring_billable_metric, organization: subscription.organization)
+      billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
       create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
 
@@ -496,7 +496,7 @@ RSpec.describe Invoice, type: :model do
       let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
       let(:subscription) { invoice_subscription.subscription }
       let(:billable_metric) do
-        create(:recurring_billable_metric, organization: subscription.organization)
+        create(:unique_count_billable_metric, organization: subscription.organization)
       end
       let(:charge) do
         create(:standard_charge, plan: subscription.plan, billable_metric:)

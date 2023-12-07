@@ -94,24 +94,6 @@ RSpec.describe BillableMetrics::AggregationFactory, type: :service do
       end
     end
 
-    context 'with recurring_count_agg aggregation' do
-      let(:billable_aggregation) { :recurring_billable_metric }
-
-      it { expect(result).to be_a(BillableMetrics::Aggregations::RecurringCountService) }
-
-      context 'when pay_in_advance' do
-        let(:pay_in_advance) { true }
-
-        it { expect { result }.to raise_error(NotImplementedError) }
-
-        context 'when current usage' do
-          let(:current_usage) { true }
-
-          it { expect(result).to be_a(BillableMetrics::Aggregations::RecurringCountService) }
-        end
-      end
-    end
-
     context 'with weighted_sum_agg aggregation' do
       let(:billable_aggregation) { :weighted_sum_billable_metric }
 

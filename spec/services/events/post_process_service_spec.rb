@@ -96,9 +96,9 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
-    context 'when event code matches a recurring billable metric' do
+    context 'when event code matches a unique count billable metric' do
       let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: 'recurring_count_agg', field_name: 'item_id')
+        create(:billable_metric, organization:, aggregation_type: 'unique_count_agg', field_name: 'item_id')
       end
 
       let(:event_properties) do

@@ -187,12 +187,12 @@ RSpec.describe Events::CreateBatchService, type: :service do
         end
       end
 
-      context 'when event matches a recurring billable metric' do
+      context 'when event matches a unique count billable metric' do
         let(:billable_metric) do
           create(
             :billable_metric,
             organization: customer.organization,
-            aggregation_type: 'recurring_count_agg',
+            aggregation_type: 'unique_count_agg',
             field_name: 'item_id',
           )
         end

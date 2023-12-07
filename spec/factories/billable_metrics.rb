@@ -15,11 +15,6 @@ FactoryBot.define do
     end
   end
 
-  factory :recurring_billable_metric, parent: :billable_metric do
-    aggregation_type { 'recurring_count_agg' }
-    field_name { 'item_id' }
-  end
-
   factory :sum_billable_metric, parent: :billable_metric do
     aggregation_type { 'sum_agg' }
     field_name { 'item_id' }

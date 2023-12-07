@@ -3,11 +3,6 @@
 module BillableMetrics
   class CreateService < BaseService
     def create(**args)
-      # Blocking recurring_count_agg in transition period. It will be removed completely in the future.
-      if args[:aggregation_type] && args[:aggregation_type]&.to_sym == :recurring_count_agg
-        return result.not_allowed_failure!(code: 'invalid_aggregation_type')
-      end
-
       ActiveRecord::Base.transaction do
         metric = BillableMetric.create!(
           organization_id: args[:organization_id],

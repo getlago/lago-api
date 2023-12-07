@@ -374,18 +374,6 @@ RSpec.describe Charge, type: :model do
       expect(build(:standard_charge)).to be_valid
     end
 
-    context 'when billable metric is recurring_count_agg' do
-      it 'returns an error' do
-        billable_metric = create(:recurring_billable_metric)
-        charge = build(:standard_charge, :pay_in_advance, billable_metric:)
-
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:pay_in_advance]).to include('invalid_aggregation_type_or_charge_model')
-        end
-      end
-    end
-
     context 'when billable metric is max_agg' do
       it 'returns an error' do
         billable_metric = create(:max_billable_metric)

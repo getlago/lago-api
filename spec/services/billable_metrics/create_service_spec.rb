@@ -29,29 +29,6 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         .to change(BillableMetric, :count).by(1)
     end
 
-    context 'when aggregation_type is recurring_count_agg' do
-      let(:create_args) do
-        {
-          name: 'New Metric',
-          code: 'new_metric',
-          description: 'New metric description',
-          organization_id: organization.id,
-          aggregation_type: 'recurring_count_agg',
-          recurring: true,
-        }
-      end
-
-      it 'returns an error' do
-        result = create_service.create(**create_args)
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq('invalid_aggregation_type')
-        end
-      end
-    end
-
     context 'with code already used by a deleted metric' do
       it 'creates a billable metric with the same code' do
         create(:billable_metric, organization:, code: 'new_metric', deleted_at: Time.current)

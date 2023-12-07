@@ -3,7 +3,7 @@
 module Types
   module BillableMetrics
     class AggregationTypeEnum < Types::BaseEnum
-      BillableMetric::AGGREGATION_TYPES.each do |type|
+      BillableMetric::AGGREGATION_TYPES.keys.each do |type|
         value type
       end
     end

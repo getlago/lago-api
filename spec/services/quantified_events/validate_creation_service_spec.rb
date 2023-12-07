@@ -20,7 +20,7 @@ RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
   let(:billable_metric) do
     create(
       :billable_metric,
-      aggregation_type: 'recurring_count_agg',
+      aggregation_type: 'unique_count_agg',
       organization: customer.organization,
       field_name: 'item_id',
     )
@@ -38,18 +38,6 @@ RSpec.describe QuantifiedEvents::ValidateCreationService, type: :service do
 
   let(:external_id) { 'ext_12345' }
   let(:operation_type) { 'add' }
-
-  context 'without operation type for recurring_count_agg metric' do
-    let(:operation_type) { nil }
-
-    it 'fails' do
-      aggregate_failures do
-        expect(validation_service).not_to be_valid
-        expect(validation_service.errors.keys).to include(:operation_type)
-        expect(validation_service.errors[:operation_type]).to eq(['invalid_operation_type'])
-      end
-    end
-  end
 
   context 'without operation type for unique_count_agg metric' do
     let(:operation_type) { nil }
