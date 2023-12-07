@@ -31,8 +31,8 @@ module BillableMetrics
       end
 
       def per_event_aggregation
-        recurring_value = previous_charge_fee&.units
-        recurring_aggregation = recurring_value ? [BigDecimal(recurring_value) * persisted_pro_rata] : []
+        recurring_result = recurring_value
+        recurring_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
         period_agg = compute_per_event_prorated_aggregation
 
         Result.new.tap do |result|
@@ -42,8 +42,6 @@ module BillableMetrics
       end
 
       protected
-
-      attr_reader :options
 
       def compute_prorated_aggregation
         ActiveRecord::Base.connection.execute(prorated_aggregation_query).first['aggregation_result']
@@ -195,6 +193,15 @@ module BillableMetrics
             value: element.first,
           )
         end
+      end
+
+      def recurring_value
+        previous_charge_fee_units = previous_charge_fee&.units
+        return previous_charge_fee_units if previous_charge_fee_units
+
+        recurring_value_before_first_fee = prorated_persisted_query.sum("(#{persisted_pro_rata})::numeric")
+
+        (recurring_value_before_first_fee <= 0) ? nil : recurring_value_before_first_fee
       end
     end
   end

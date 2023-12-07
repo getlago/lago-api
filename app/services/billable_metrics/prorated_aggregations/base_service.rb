@@ -106,15 +106,7 @@ module BillableMetrics
         ).fdiv(period_duration)
       end
 
-      def per_event_aggregation
-        recurring_value = previous_charge_fee&.units
-        recurring_aggregation = recurring_value ? [BigDecimal(recurring_value) * persisted_pro_rata] : []
-
-        Result.new.tap do |result|
-          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation
-          result.event_prorated_aggregation = recurring_aggregation + compute_per_event_prorated_aggregation
-        end
-      end
+      attr_accessor :options
 
       private
 
