@@ -74,6 +74,9 @@ gem 'slim-rails'
 # Kafka
 gem 'karafka'
 
+# Taxes
+gem 'valvat', require: false
+
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'

@@ -506,6 +506,8 @@ GEM
     uglifier (4.2.0)
       execjs (>= 0.3.0, < 3)
     unicode-display_width (2.5.0)
+    valvat (1.4.0)
+      rexml (>= 3.2, < 4.0)
     version_gem (1.1.1)
     waterdrop (2.6.10)
       karafka-core (>= 2.2.3, < 3.0.0)
@@ -589,6 +591,7 @@ DEPENDENCIES
   timecop
   tzinfo-data
   uglifier
+  valvat
   webmock
   with_advisory_lock
 
@@ -596,4 +599,4 @@ RUBY VERSION
    ruby 3.2.2p53
 
 BUNDLED WITH
-   2.4.21
+   2.3.26
