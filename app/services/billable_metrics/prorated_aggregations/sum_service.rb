@@ -54,8 +54,6 @@ module BillableMetrics
 
       protected
 
-      attr_reader :options
-
       def compute_aggregation
         ActiveRecord::Base.connection.execute(aggregation_query).first['aggregation_result']
       end

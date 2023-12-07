@@ -106,9 +106,7 @@ module BillableMetrics
         ).fdiv(period_duration)
       end
 
-      def options=(options)
-        @options = options
-      end
+      attr_accessor :options
 
       private
 

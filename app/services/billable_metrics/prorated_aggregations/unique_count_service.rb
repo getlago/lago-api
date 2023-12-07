@@ -43,8 +43,6 @@ module BillableMetrics
 
       protected
 
-      attr_reader :options
-
       def compute_prorated_aggregation
         ActiveRecord::Base.connection.execute(prorated_aggregation_query).first['aggregation_result']
       end
