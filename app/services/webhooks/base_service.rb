@@ -61,7 +61,7 @@ module Webhooks
 
     def send_webhook(webhook, webhook_endpoint, payload)
       http_client = LagoHttpClient::Client.new(webhook_endpoint.webhook_url)
-      headers = generate_headers(webhook_endpoint, payload)
+      headers = generate_headers(webhook.id, webhook_endpoint, payload)
       response = http_client.post_with_response(payload, headers)
 
       succeed_webhook(webhook, response)
@@ -75,7 +75,7 @@ module Webhooks
         .perform_later(webhook_type, object, options, webhook.id)
     end
 
-    def generate_headers(webhook_endpoint, payload)
+    def generate_headers(webhook_id, webhook_endpoint, payload)
       signature = case webhook_endpoint.signature_algo&.to_sym
                   when :jwt
                     jwt_signature(payload)
@@ -86,6 +86,7 @@ module Webhooks
       {
         'X-Lago-Signature' => signature,
         'X-Lago-Signature-Algorithm' => webhook_endpoint.signature_algo.to_s,
+        'X-Lago-Unique-Key' => webhook_id,
       }
     end
 
@@ -118,6 +119,7 @@ module Webhooks
       webhook.payload = payload.to_json
       webhook.retries += 1 if webhook.failed?
       webhook.last_retried_at = Time.zone.now if webhook.retries.positive?
+      webhook.pending!
       webhook
     end
 
