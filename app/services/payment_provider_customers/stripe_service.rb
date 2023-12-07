@@ -10,7 +10,7 @@ module PaymentProviderCustomers
 
     def create
       result.stripe_customer = stripe_customer
-      return result if stripe_customer.provider_customer_id?
+      return result if stripe_customer.provider_customer_id? || !organization.stripe_payment_provider
 
       stripe_result = create_stripe_customer
       return result if !stripe_result || !result.success?

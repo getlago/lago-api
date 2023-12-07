@@ -51,6 +51,30 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
 
+    context 'when no payment provider is connected' do
+      let(:stripe_customer) do
+        create(:stripe_customer, customer:, provider_customer_id: nil)
+      end
+
+      before { stripe_provider.destroy! }
+
+      it 'does not call stripe API' do
+        allow(Stripe::Customer).to receive(:create)
+
+        stripe_service.create
+
+        expect(Stripe::Customer).not_to have_received(:create)
+      end
+
+      it 'returns success' do
+        allow(Stripe::Customer).to receive(:create)
+
+        result = stripe_service.create
+
+        expect(result).to be_success
+      end
+    end
+
     context 'when payment provider has incorrect API key' do
       before do
         allow(Stripe::Customer).to receive(:create)
