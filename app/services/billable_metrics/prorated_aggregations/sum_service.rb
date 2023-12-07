@@ -109,7 +109,7 @@ module BillableMetrics
 
         return nil unless recurring_value_before_first_fee
 
-        recurring_value_before_first_fee <= 0 ? nil : recurring_value_before_first_fee
+        (recurring_value_before_first_fee <= 0) ? nil : recurring_value_before_first_fee
       end
     end
   end

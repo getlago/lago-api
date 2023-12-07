@@ -538,7 +538,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
     end
 
-    context 'with multiple events added in the period and with one added and removed during period' do
+    context 'with multiple events added and removed in the period and with one persisted' do
       let(:quantified_event2) do
         create(
           :quantified_event,
