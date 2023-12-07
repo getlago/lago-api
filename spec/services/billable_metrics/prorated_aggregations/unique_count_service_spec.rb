@@ -442,6 +442,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   end
 
   describe '.per_event_aggregation' do
+    before { unique_count_service.instance_variable_set(:@options, {}) }
+
     context 'with event added in the period' do
       let(:added_at) { from_datetime + 10.days }
 
@@ -533,6 +535,42 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         expect(result.event_aggregation).to eq([1, 1, 1])
         expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([first, first, second])
+      end
+    end
+
+    context 'with multiple events added in the period and with one added and removed during period' do
+      let(:quantified_event2) do
+        create(
+          :quantified_event,
+          added_at: from_datetime + 10.days,
+          removed_at: nil,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
+      let(:quantified_event3) do
+        create(
+          :quantified_event,
+          added_at: from_datetime + 20.days,
+          removed_at: from_datetime + 20.days,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+        )
+      end
+
+      before do
+        quantified_event2
+        quantified_event3
+      end
+
+      it 'aggregates per events' do
+        result = unique_count_service.per_event_aggregation
+
+        second = 21.fdiv(31).ceil(5)
+        third = 1.fdiv(31).ceil(5)
+
+        expect(result.event_aggregation).to eq([1, 1, 1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([1, second, third])
       end
     end
   end

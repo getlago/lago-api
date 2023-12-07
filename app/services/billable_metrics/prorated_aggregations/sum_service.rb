@@ -42,6 +42,16 @@ module BillableMetrics
           )
       end
 
+      def per_event_aggregation
+        recurring_result = recurring_value
+        recurring_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
+
+        Result.new.tap do |result|
+          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation
+          result.event_prorated_aggregation = recurring_aggregation + compute_per_event_prorated_aggregation
+        end
+      end
+
       protected
 
       attr_reader :options
@@ -86,6 +96,20 @@ module BillableMetrics
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
+      end
+
+      def recurring_value
+        previous_charge_fee_units = previous_charge_fee&.units
+
+        return previous_charge_fee_units if previous_charge_fee_units
+
+        query = persisted_query
+          .select("SUM((CAST(#{sanitized_field_name} AS FLOAT)) * (#{persisted_pro_rata}))::numeric").to_sql
+        recurring_value_before_first_fee = ActiveRecord::Base.connection.execute(query).first['sum']
+
+        return nil unless recurring_value_before_first_fee
+
+        recurring_value_before_first_fee <= 0 ? nil : recurring_value_before_first_fee
       end
     end
   end
