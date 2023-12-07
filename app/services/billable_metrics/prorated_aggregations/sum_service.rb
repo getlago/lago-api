@@ -100,16 +100,13 @@ module BillableMetrics
 
       def recurring_value
         previous_charge_fee_units = previous_charge_fee&.units
-
         return previous_charge_fee_units if previous_charge_fee_units
 
         query = persisted_query
-          .select("SUM((CAST(#{sanitized_field_name} AS FLOAT)) * (#{persisted_pro_rata}))::numeric").to_sql
-        recurring_value_before_first_fee = ActiveRecord::Base.connection.execute(query).first['sum']
+          .select("SUM(((#{sanitized_field_name})::numeric) * (#{persisted_pro_rata}))::numeric").to_sql
+        recurring_value_before_first_fee = ActiveRecord::Base.connection.select_one(query)['sum']
 
-        return nil unless recurring_value_before_first_fee
-
-        (recurring_value_before_first_fee <= 0) ? nil : recurring_value_before_first_fee
+        ((recurring_value_before_first_fee || 0) <= 0) ? nil : recurring_value_before_first_fee
       end
     end
   end

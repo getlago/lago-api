@@ -524,7 +524,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
   describe '.per_event_aggregation' do
     it 'aggregates per events' do
-      sum_service.instance_variable_set(:@options, {})
+      sum_service.options = {}
       result = sum_service.per_event_aggregation
 
       expect(result.event_aggregation).to eq([5, 12, 12])

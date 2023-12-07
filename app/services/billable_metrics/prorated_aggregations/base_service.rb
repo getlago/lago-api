@@ -106,6 +106,10 @@ module BillableMetrics
         ).fdiv(period_duration)
       end
 
+      def options=(options)
+        @options = options
+      end
+
       private
 
       attr_reader :base_aggregator

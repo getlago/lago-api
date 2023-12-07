@@ -442,7 +442,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   end
 
   describe '.per_event_aggregation' do
-    before { unique_count_service.instance_variable_set(:@options, {}) }
+    before { unique_count_service.options = {} }
 
     context 'with event added in the period' do
       let(:added_at) { from_datetime + 10.days }
