@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class UpdateService < BaseService
+    attr_reader :customer
+
     def initialize(customer)
       @customer = customer
 
@@ -9,17 +11,9 @@ module PaymentProviderCustomers
     end
 
     def call
-      result = "PaymentProviderCustomers::#{provider_name}Service".constantize.new(customer.provider_customer).update
+      result = PaymentProviderCustomers::Factory.new_instance(provider_customer: customer.provider_customer).update
       result.raise_if_error!
       result
-    end
-
-    private
-
-    attr_accessor :customer
-
-    def provider_name
-      /\APaymentProviderCustomers::(.+)Customer\z/.match(customer.provider_customer.type)[1]
     end
   end
 end
