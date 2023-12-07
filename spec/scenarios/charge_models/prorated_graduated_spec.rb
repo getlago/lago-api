@@ -239,7 +239,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
-                timestamp: 1699336493, ## November 2023
+                timestamp: 1_699_336_493, ## November 2023
                 external_subscription_id: subscription.external_id,
                 properties: { amount: '5' },
               },
@@ -249,7 +249,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
-                timestamp: 1699336493, ## November 2023
+                timestamp: 1_699_336_493, ## November 2023
                 external_subscription_id: subscription.external_id,
                 properties: { amount: '5' },
               },
