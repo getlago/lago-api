@@ -140,6 +140,9 @@ module BillableMetrics
 
         return previous_charge_fee_units if previous_charge_fee_units
 
+        # NOTE: aggregation_without_proration returns lifetime aggregation of total full units.
+        # full_per_event_aggregation variable includes all full units in certain period.
+        # Difference between those two values gives us recurring amount.
         recurring_value_before_first_fee = aggregation_without_proration.aggregation - full_per_event_aggregation.sum
 
         recurring_value_before_first_fee.zero? ? nil : recurring_value_before_first_fee
