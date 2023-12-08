@@ -32,12 +32,13 @@ module BillableMetrics
 
       def per_event_aggregation
         recurring_result = recurring_value
-        recurring_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
+        recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
+        recurring_prorated_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
         period_agg = compute_per_event_prorated_aggregation
 
         Result.new.tap do |result|
           result.event_aggregation = recurring_aggregation + (0...period_agg.count).map { |_| 1 }
-          result.event_prorated_aggregation = recurring_aggregation + period_agg
+          result.event_prorated_aggregation = recurring_prorated_aggregation + period_agg
         end
       end
 
@@ -199,7 +200,7 @@ module BillableMetrics
         previous_charge_fee_units = previous_charge_fee&.units
         return previous_charge_fee_units if previous_charge_fee_units
 
-        recurring_value_before_first_fee = prorated_persisted_query.sum("(#{persisted_pro_rata})::numeric")
+        recurring_value_before_first_fee = prorated_persisted_query.count
 
         (recurring_value_before_first_fee <= 0) ? nil : recurring_value_before_first_fee
       end

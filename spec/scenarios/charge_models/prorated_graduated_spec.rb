@@ -305,6 +305,111 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
         end
       end
 
+      context 'when there are old events before first invoice and subscription is terminated' do
+        it 'returns expected invoice and usage amounts' do
+          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+          WebhookEndpoint.destroy_all
+
+          travel_to(DateTime.new(2023, 10, 1)) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code,
+              },
+            )
+          end
+
+          subscription = customer.subscriptions.active.order(created_at: :desc).first
+
+          create(
+            :graduated_charge,
+            billable_metric:,
+            prorated: true,
+            plan:,
+            properties: {
+              graduated_ranges: [
+                {
+                  from_value: 0,
+                  to_value: 5,
+                  per_unit_amount: '0',
+                  flat_amount: '0',
+                },
+                {
+                  from_value: 6,
+                  to_value: nil,
+                  per_unit_amount: '10',
+                  flat_amount: '0',
+                },
+              ],
+            },
+          )
+
+          travel_to(DateTime.new(2023, 10, 5)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: { amount: '4' },
+              },
+            )
+
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: { amount: '3' },
+              },
+            )
+          end
+
+          travel_to(DateTime.new(2023, 11, 5)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: { amount: '-1' },
+              },
+            )
+          end
+
+          travel_to(DateTime.new(2023, 12, 7)) do
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:amount_cents].round(2)).to eq(1_000)
+            expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_000)
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('6.0')
+
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: { amount: '1' },
+              },
+            )
+
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:amount_cents].round(2)).to eq(1_806)
+            expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_806)
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('7.0')
+
+            Subscriptions::TerminateService.call(subscription:)
+            perform_all_enqueued_jobs
+            invoice = subscription.invoices.order(created_at: :desc).first
+
+            aggregate_failures do
+              expect(subscription.reload).to be_terminated
+              expect(subscription.reload.invoices.count).to eq(1)
+              expect(invoice.total_amount_cents).to eq(226)
+              expect(invoice.issuing_date.iso8601).to eq('2023-12-07')
+            end
+          end
+        end
+      end
+
       context 'when upgrade is performed' do
         let(:plan_new) { create(:plan, organization:, amount_cents: 100) }
 
@@ -504,7 +609,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             invoice = subscription.invoices.order(created_at: :desc).first
             expect(invoice.fees.charge_kind.count).to eq(1)
             # 30226 (17 / 31 * 75 units) + 2.58 = 2 / 31 * 20 units (prorated event in termination period)
-            expect(invoice.total_amount_cents).to eq(30_484)
+            expect(invoice.total_amount_cents).to eq(27_323)
           end
 
           travel_to(DateTime.new(2023, 11, 1)) do
@@ -516,9 +621,9 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             invoice = subscription.invoices.order(created_at: :desc).first
 
             aggregate_failures do
-              # (95 units * 14/31) -> 30581 - charge fee
+              # (95 units * 14/31) -> 26_742 - charge fee
               # 100 * 14/31 -> 45 -> subscription fee
-              expect(invoice.total_amount_cents).to eq(30_581 + 45)
+              expect(invoice.total_amount_cents).to eq(26_742 + 45)
               expect(subscription.reload.invoices.count).to eq(1)
             end
           end
@@ -864,6 +969,91 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(20_500)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(20_500)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('6.0')
+        end
+      end
+
+      context 'when there are old events before first invoice and subscription is terminated' do
+        it 'returns expected invoice and usage amounts' do
+          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+          WebhookEndpoint.destroy_all
+
+          travel_to(DateTime.new(2023, 10, 1)) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code,
+              },
+            )
+          end
+
+          subscription = customer.subscriptions.active.order(created_at: :desc).first
+
+          create(
+            :graduated_charge,
+            billable_metric:,
+            prorated: true,
+            plan:,
+            properties: {
+              graduated_ranges: [
+                {
+                  from_value: 0,
+                  to_value: 1,
+                  per_unit_amount: '5',
+                  flat_amount: '10',
+                },
+                {
+                  from_value: 2,
+                  to_value: nil,
+                  per_unit_amount: '15',
+                  flat_amount: '30',
+                },
+              ],
+            },
+          )
+
+          travel_to(DateTime.new(2023, 10, 5)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: { amount: '1111', operation_type: 'add' },
+              },
+            )
+          end
+
+          travel_to(DateTime.new(2023, 12, 7)) do
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:amount_cents].round(2)).to eq(1_500)
+            expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_500)
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
+
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: { amount: '2222', operation_type: 'add' },
+              },
+            )
+
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:amount_cents].round(2)).to eq(5_710)
+            expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(5_710)
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
+
+            Subscriptions::TerminateService.call(subscription:)
+            perform_all_enqueued_jobs
+            invoice = subscription.invoices.order(created_at: :desc).first
+
+            aggregate_failures do
+              expect(subscription.reload).to be_terminated
+              expect(subscription.reload.invoices.count).to eq(1)
+              expect(invoice.total_amount_cents).to eq(4_145)
+              expect(invoice.issuing_date.iso8601).to eq('2023-12-07')
+            end
+          end
         end
       end
     end
