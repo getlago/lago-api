@@ -2,7 +2,7 @@ name: Run Spec
 on:
   push:
     branches:
-      - 'main'
+      - "main"
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -18,6 +18,15 @@ jobs:
           POSTGRES_DB: lago
           POSTGRES_USER: lago
           POSTGRES_PASSWORD: lago
+      # clickhouse:
+      #   image: clickhouse/clickhouse-server
+      #   ports:
+      #     - 9000:9000
+      #     - 8123:8123
+      #   volumes:
+      #     - ${{ github.workspace }}/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
+      #   options: --name clickhouse
+
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
@@ -30,17 +39,27 @@ jobs:
       LAGO_PDF_URL: https://pdf.lago.dev
       SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
       LAGO_FROM_EMAIL: noreply@getlago.com
+      LAGO_CLICKHOUSE_ENABLED: true
+      LAGO_CLICKHOUSE_HOST: localhost
+      LAGO_CLICKHOUSE_DATABASE: default
+      LAGO_CLICKHOUSE_USERNAME: ""
+      LAGO_CLICKHOUSE_PASSWORD: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2.2'
+          ruby-version: "3.2.2"
           bundler-cache: true
+      - name: Start Clickhouse database
+        run: |
+          docker run -d --rm -p 9000:9000 -p 8123:8123 -v ${{ github.workspace }}/ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
-      - name: Set up database schema
+      - name: Set up Postgres database schema
         run: bin/rails db:schema:load:primary
+      - name: Set up Clickhouse database schema
+        run: bin/rails db:schema:load:clickhouse
       - name: Run tests
         run: bundle exec rspec
