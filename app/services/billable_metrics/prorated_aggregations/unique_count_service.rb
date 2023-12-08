@@ -200,7 +200,7 @@ module BillableMetrics
         previous_charge_fee_units = previous_charge_fee&.units
         return previous_charge_fee_units if previous_charge_fee_units
 
-        recurring_value_before_first_fee = prorated_persisted_query.sum("1::numeric")
+        recurring_value_before_first_fee = prorated_persisted_query.sum('1::numeric')
 
         (recurring_value_before_first_fee <= 0) ? nil : recurring_value_before_first_fee
       end
