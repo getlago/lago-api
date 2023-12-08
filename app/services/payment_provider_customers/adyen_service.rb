@@ -21,6 +21,10 @@ module PaymentProviderCustomers
       result
     end
 
+    def update
+      result
+    end
+
     def generate_checkout_url(send_webhook: true)
       return result.not_found_failure!(resource: 'adyen_payment_provider') unless adyen_payment_provider
 

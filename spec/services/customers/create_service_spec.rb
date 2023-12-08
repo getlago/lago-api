@@ -219,10 +219,12 @@ RSpec.describe Customers::CreateService, type: :service do
       end
 
       context 'with provider customer' do
-        let(:payment_provider) { create(:stripe_provider) }
+        let(:payment_provider) { create(:stripe_provider, organization:) }
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider:) }
+        let(:result) { BaseService::Result.new }
 
         before do
+          allow(Stripe::Customer).to receive(:update).and_return(result)
           stripe_customer
           customer.update!(payment_provider: 'stripe')
         end

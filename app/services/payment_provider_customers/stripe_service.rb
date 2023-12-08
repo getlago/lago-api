@@ -26,6 +26,20 @@ module PaymentProviderCustomers
       result
     end
 
+    def update
+      Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, { api_key: })
+      result
+    rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
+      deliver_error_webhook(e)
+
+      result.service_failure!(code: 'stripe_error', message: e.message)
+    rescue Stripe::AuthenticationError => e
+      deliver_error_webhook(e)
+
+      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      result.unauthorized_failure!(message:)
+    end
+
     def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
@@ -180,6 +194,22 @@ module PaymentProviderCustomers
           lago_customer_id: customer.id,
           customer_id: customer.external_id,
         },
+        phone: customer.phone,
+      }
+    end
+
+    def stripe_update_payload
+      {
+        address: {
+          city: customer.city,
+          country: customer.country,
+          line1: customer.address_line1,
+          line2: customer.address_line2,
+          postal_code: customer.zipcode,
+          state: customer.state,
+        },
+        email: customer.email,
+        name: customer.name,
         phone: customer.phone,
       }
     end

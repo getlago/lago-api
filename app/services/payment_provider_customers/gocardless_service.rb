@@ -25,6 +25,10 @@ module PaymentProviderCustomers
       result
     end
 
+    def update
+      result
+    end
+
     def generate_checkout_url(send_webhook: true)
       billing_request = create_billing_request(gocardless_customer.provider_customer_id)
       billing_request_flow = create_billing_request_flow(billing_request.id)

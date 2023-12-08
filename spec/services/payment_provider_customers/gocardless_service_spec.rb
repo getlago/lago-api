@@ -83,6 +83,12 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
     end
   end
 
+  describe '#update' do
+    it 'returns result' do
+      expect(gocardless_service.update).to be_a(BaseService::Result)
+    end
+  end
+
   describe '.generate_checkout_url' do
     before do
       allow(GoCardlessPro::Client).to receive(:new)

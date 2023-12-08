@@ -100,6 +100,12 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
     end
   end
 
+  describe '#update' do
+    it 'returns result' do
+      expect(adyen_service.update).to be_a(BaseService::Result)
+    end
+  end
+
   describe '#success_redirect_url' do
     subject(:success_redirect_url) { adyen_service.__send__(:success_redirect_url) }
 
