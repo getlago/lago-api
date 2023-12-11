@@ -218,16 +218,42 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         allow(Stripe::Customer).to receive(:update).and_return(true)
       end
 
-      it 'returns a successful result' do
-        result = stripe_service.update
+      context 'when stripe payment provider is present' do
+        it 'calls stripe API' do
+          stripe_service.update
 
-        aggregate_failures do
+          expect(Stripe::Customer).to have_received(:update)
+        end
+
+        it 'returns a successful result' do
+          result = stripe_service.update
+
           expect(result).to be_success
+        end
+
+        it 'does not deliver an error webhook' do
+          expect { stripe_service.update }.not_to enqueue_job(SendWebhookJob)
         end
       end
 
-      it 'does not delivera an error webhook' do
-        expect { stripe_service.update }.not_to enqueue_job(SendWebhookJob)
+      context 'when stripe payment provider is not present' do
+        before { stripe_provider.destroy! }
+
+        it 'does not call stripe API' do
+          stripe_service.update
+
+          expect(Stripe::Customer).not_to have_received(:update)
+        end
+
+        it 'returns a successful result' do
+          result = stripe_service.update
+
+          expect(result).to be_success
+        end
+
+        it 'does not deliver an error webhook' do
+          expect { stripe_service.update }.not_to enqueue_job(SendWebhookJob)
+        end
       end
     end
   end
