@@ -2991,6 +2991,7 @@ type Fee implements InvoiceItem {
   charge: Charge
   creditableAmountCents: BigInt!
   currency: CurrencyEnum!
+  description: String
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group
