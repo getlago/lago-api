@@ -273,7 +273,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       let(:events_values) do
         [
-          { timestamp: DateTime.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe' },
+          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe' },
         ]
       end
 
