@@ -191,6 +191,11 @@ RSpec.describe Customers::UpdateService, type: :service do
 
       before do
         create(:stripe_provider, organization: customer.organization, code: payment_provider_code)
+
+        allow(PaymentProviderCustomers::UpdateService)
+          .to receive(:call)
+          .with(customer)
+          .and_return(BaseService::Result.new)
       end
 
       it 'creates a payment provider customer' do

@@ -29,7 +29,7 @@ module PaymentProviderCustomers
     end
 
     def update
-      return result unless organization.stripe_payment_provider
+      return result unless stripe_payment_provider
 
       Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, { api_key: })
       result

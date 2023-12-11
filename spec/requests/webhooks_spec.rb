@@ -33,6 +33,7 @@ RSpec.describe WebhooksController, type: :request do
       allow(stripe_service).to receive(:handle_incoming_webhook)
         .with(
           organization_id: organization.id,
+          code: nil,
           params: event.to_json,
           signature: 'signature',
         )
@@ -108,6 +109,7 @@ RSpec.describe WebhooksController, type: :request do
       allow(gocardless_service).to receive(:handle_incoming_webhook)
         .with(
           organization_id: organization.id,
+          code: nil,
           body: events.to_json,
           signature: 'signature',
         )
@@ -179,6 +181,7 @@ RSpec.describe WebhooksController, type: :request do
       allow(adyen_service).to receive(:handle_incoming_webhook)
         .with(
           organization_id: organization.id,
+          code: nil,
           code: nil,
           body: body['notificationItems'].first&.dig('NotificationRequestItem'),
         )
