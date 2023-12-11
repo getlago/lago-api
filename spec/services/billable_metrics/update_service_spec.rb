@@ -110,29 +110,6 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
     end
 
-    context 'when aggregation_type is recurring_count_agg' do
-      let(:params) do
-        {
-          name: 'New Metric',
-          code: 'new_metric',
-          description: 'New metric description',
-          aggregation_type: 'recurring_count_agg',
-          field_name: 'field_value',
-          recurring: true,
-        }.tap { |p| p[:group] = group unless group.nil? }
-      end
-
-      it 'returns an error' do
-        result = update_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq('invalid_aggregation_type')
-        end
-      end
-    end
-
     context 'when billable metric is linked to plan' do
       let(:plan) { create(:plan, organization:) }
       let(:charge) { create(:standard_charge, billable_metric:, plan:) }

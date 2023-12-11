@@ -60,11 +60,6 @@ module BillableMetrics
           BillableMetrics::Aggregations::UniqueCountService
         end
 
-      when :recurring_count_agg
-        raise(NotImplementedError) if charge.pay_in_advance? && !current_usage
-
-        BillableMetrics::Aggregations::RecurringCountService
-
       when :weighted_sum_agg
         raise(NotImplementedError) if charge.pay_in_advance? && !current_usage
 

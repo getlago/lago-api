@@ -23,11 +23,6 @@ module BillableMetrics
       # NOTE: Only name and description are editable if billable metric
       #       is attached to a plan
       unless billable_metric.plans.exists?
-        # Blocking recurring_count_agg in transition period. It will be removed completely in the future.
-        if params.key?(:aggregation_type) && params[:aggregation_type]&.to_sym == :recurring_count_agg
-          return result.not_allowed_failure!(code: 'invalid_aggregation_type')
-        end
-
         billable_metric.code = params[:code] if params.key?(:code)
         billable_metric.aggregation_type = params[:aggregation_type]&.to_sym if params.key?(:aggregation_type)
         billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)

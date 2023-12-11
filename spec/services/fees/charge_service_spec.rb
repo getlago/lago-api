@@ -173,7 +173,7 @@ RSpec.describe Fees::ChargeService do
       end
 
       context 'with all types of aggregation' do
-        BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
+        BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
           before do
             billable_metric.update!(aggregation_type:, field_name: 'foo_bar', weighted_interval: 'seconds')
           end
@@ -526,93 +526,6 @@ RSpec.describe Fees::ChargeService do
               precise_unit_amount: 10.12345,
             )
           end
-        end
-      end
-
-      it 'creates expected fees for recurring_count_agg aggregation type' do
-        from_datetime = subscription.started_at.at_beginning_of_month.next_month.beginning_of_day
-        to_datetime = subscription.started_at.next_month.end_of_month.end_of_day
-        boundaries = {
-          from_datetime:,
-          to_datetime:,
-          charges_from_datetime: from_datetime,
-          charges_to_datetime: to_datetime,
-          charges_duration: (to_datetime - from_datetime).fdiv(1.day).ceil,
-        }
-
-        create(
-          :quantified_event,
-          billable_metric:,
-          external_subscription_id: subscription.external_id,
-          external_id: 'ext_11',
-          added_at: subscription.started_at - 1.day,
-          properties: {
-            'operation_type' => 'add',
-            'unique_id' => 'ext_123',
-            'region' => 'usa',
-            'foo_bar' => 12,
-          },
-        )
-        create(
-          :quantified_event,
-          billable_metric:,
-          external_subscription_id: subscription.external_id,
-          external_id: 'ext_12',
-          added_at: subscription.started_at - 1.day,
-          properties: {
-            'operation_type' => 'add',
-            'unique_id' => 'ext_456',
-            'region' => 'europe',
-            'foo_bar' => 10,
-          },
-        )
-        create(
-          :quantified_event,
-          billable_metric:,
-          external_subscription_id: subscription.external_id,
-          external_id: 'ext_13',
-          added_at: subscription.started_at - 1.day,
-          properties: {
-            'operation_type' => 'add',
-            'unique_id' => 'ext_789',
-            'country' => 'france',
-            'foo_bar' => 5,
-          },
-        )
-
-        billable_metric.update!(aggregation_type: :recurring_count_agg, field_name: 'foo_bar')
-        result = described_class.new(invoice:, charge:, subscription:, boundaries:).create
-        expect(result).to be_success
-        created_fees = result.fees
-
-        aggregate_failures do
-          expect(created_fees.count).to eq(3)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: 'EUR',
-            ),
-          )
-          expect(created_fees.first).to have_attributes(
-            group: europe,
-            amount_cents: 2000,
-            units: 1,
-          )
-
-          expect(created_fees.second).to have_attributes(
-            group: usa,
-            amount_cents: 5000,
-            units: 1,
-          )
-
-          expect(created_fees.third).to have_attributes(
-            group: france,
-            amount_cents: 1012,
-            units: 1,
-            unit_amount_cents: 1012,
-            precise_unit_amount: 10.12345,
-          )
         end
       end
     end
@@ -1305,7 +1218,7 @@ RSpec.describe Fees::ChargeService do
 
   describe '.current_usage' do
     context 'with all types of aggregation' do
-      BillableMetric::AGGREGATION_TYPES.each do |aggregation_type|
+      BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
         before do
           billable_metric.update!(aggregation_type:, field_name: 'foo_bar', weighted_interval: 'seconds')
 

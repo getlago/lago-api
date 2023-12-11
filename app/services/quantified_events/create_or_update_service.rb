@@ -20,7 +20,7 @@ module QuantifiedEvents
     end
 
     def matching_billable_metric?
-      matching_billable_metric&.recurring_count_agg? || matching_billable_metric&.unique_count_agg?
+      matching_billable_metric&.unique_count_agg?
     end
 
     def process_event?

@@ -14,15 +14,15 @@ class BillableMetric < ApplicationRecord
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
 
-  AGGREGATION_TYPES = %i[
-    count_agg
-    sum_agg
-    max_agg
-    unique_count_agg
-    recurring_count_agg
-    weighted_sum_agg
-    latest_agg
-  ].freeze
+  AGGREGATION_TYPES = {
+    count_agg: 0,
+    sum_agg: 1,
+    max_agg: 2,
+    unique_count_agg: 3,
+    # NOTE: deleted aggregation type, recurring_count_agg: 4,
+    weighted_sum_agg: 5,
+    latest_agg: 6,
+  }.freeze
 
   WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
 
@@ -33,7 +33,7 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
-  validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.map(&:to_s) }
+  validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.keys.map(&:to_s) }
   validates :code,
             presence: true,
             uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
@@ -52,7 +52,7 @@ class BillableMetric < ApplicationRecord
   end
 
   def aggregation_type=(value)
-    AGGREGATION_TYPES.include?(value&.to_sym) ? super : nil
+    AGGREGATION_TYPES.key?(value&.to_sym) ? super : nil
   end
 
   def active_groups
@@ -97,7 +97,7 @@ class BillableMetric < ApplicationRecord
 
   def validate_recurring
     return unless recurring?
-    return unless count_agg? || max_agg? || latest_agg? || recurring_count_agg?
+    return unless count_agg? || max_agg? || latest_agg?
 
     errors.add(:recurring, :not_compatible_with_aggregation_type)
   end

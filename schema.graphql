@@ -96,7 +96,6 @@ enum AggregationTypeEnum {
   count_agg
   latest_agg
   max_agg
-  recurring_count_agg
   sum_agg
   unique_count_agg
   weighted_sum_agg

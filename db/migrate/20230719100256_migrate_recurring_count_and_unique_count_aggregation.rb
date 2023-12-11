@@ -61,35 +61,6 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
           event.save!
         end
 
-        # All charges that are related to recurring_count_agg should be prorated = true
-        execute <<-SQL
-          WITH recurring_count_charges AS (
-            SELECT charges.id AS charge_id
-            FROM charges
-            INNER JOIN billable_metrics ON billable_metrics.id = charges.billable_metric_id
-            WHERE billable_metrics.aggregation_type = 4 -- recurring_count_agg
-          )
-
-          UPDATE charges
-          SET prorated = true
-          FROM recurring_count_charges
-          WHERE recurring_count_charges.charge_id = charges.id
-        SQL
-
-        # Recurring count agg billable metrics should be recurring = true and aggregation type should be unique count
-        execute <<-SQL
-          WITH recurring_count_billable_metrics AS (
-            SELECT billable_metrics.id AS billable_metric_id
-            FROM billable_metrics
-            WHERE billable_metrics.aggregation_type = 4 -- recurring_count_agg
-          )
-
-          UPDATE billable_metrics
-          SET recurring = true, aggregation_type = 3
-          FROM recurring_count_billable_metrics
-          WHERE recurring_count_billable_metrics.billable_metric_id = billable_metrics.id
-        SQL
-
         # If charge is pay_in_advance and aggregation type is SUM we need to set event metadata since this metadata
         # will be used in calculation of previous_event for further events in same period
         execute <<-SQL

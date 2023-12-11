@@ -71,7 +71,7 @@ module Events
 
       subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
       invalid_quantified_event = quantified_event_validation(subscription || subscriptions.first)
-      return invalid_quantified_event_error(invalid_quantified_event) if invalid_quantified_event.present?
+      invalid_quantified_event_error(invalid_quantified_event) if invalid_quantified_event.present?
     end
 
     def valid_transaction_id?
@@ -131,7 +131,7 @@ module Events
     end
 
     def quantified_event_validation(subscription)
-      return {} unless billable_metric.recurring_count_agg? || billable_metric.unique_count_agg?
+      return {} unless billable_metric.unique_count_agg?
 
       validation_service = QuantifiedEvents::ValidateCreationService.new(
         result:,

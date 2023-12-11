@@ -545,9 +545,7 @@ html
                       td width="70%"
                         .body-1 = fee.invoice_name
                         .body-3
-                          - if fee.billable_metric.recurring_count_agg?
-                            = I18n.t('invoice.see_breakdown')
-                          - elsif fee.charge.percentage?
+                          - if fee.charge.percentage?
                             = I18n.t('invoice.total_unit_interval', events_count: fees.sum(&:events_count), units: fees.sum(&:units))
                           - else
                             = I18n.t('invoice.total_unit', units: fees.sum(&:units))
@@ -557,12 +555,11 @@ html
                       tr
                         td width="70%" style="padding-left: 16px;"
                           .body-1 = fee.group_name
-                          - unless fee.billable_metric.recurring_count_agg?
-                            .body-3
-                              - if fee.charge.percentage?
-                                = I18n.t('invoice.total_unit_interval', events_count: fee.events_count, units: fee.units)
-                              - else
-                                = I18n.t('invoice.total_unit', units: fee.units)
+                          .body-3
+                            - if fee.charge.percentage?
+                              = I18n.t('invoice.total_unit_interval', events_count: fee.events_count, units: fee.units)
+                            - else
+                              = I18n.t('invoice.total_unit', units: fee.units)
                         td.body-1 width="30%" = fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
                     - if fee.true_up_fee.present?
                       tr
@@ -575,9 +572,7 @@ html
                       td width="70%"
                         .body-1 = fee.invoice_name
                         .body-3
-                          - if fee.billable_metric.recurring_count_agg? && fees.sum(&:units) > 0
-                            = I18n.t('invoice.see_breakdown')
-                          - elsif fee.charge.percentage?
+                          - if fee.charge.percentage?
                             = I18n.t('invoice.total_unit_interval', events_count: fees.sum(&:events_count), units: fees.sum(&:units))
                           - else
                             = I18n.t('invoice.total_unit', units: fees.sum(&:units))

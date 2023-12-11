@@ -259,12 +259,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when event belongs to a recurring persisted event' do
+      context 'when event belongs to a unique count persisted event' do
         let(:billable_metric) do
           create(
             :billable_metric,
             organization:,
-            aggregation_type: 'recurring_count_agg',
+            aggregation_type: 'unique_count_agg',
             field_name: 'item_id',
           )
         end
@@ -305,12 +305,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when event belongs to a recurring persisted event and subscription is terminated' do
+      context 'when event belongs to a unique count persisted event and subscription is terminated' do
         let(:billable_metric) do
           create(
             :billable_metric,
             organization:,
-            aggregation_type: 'recurring_count_agg',
+            aggregation_type: 'unique_count_agg',
             field_name: 'item_id',
           )
         end
@@ -462,12 +462,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
 
-      context 'when event belongs to a recurring persisted metric' do
+      context 'when event belongs to a unique count persisted metric' do
         let(:billable_metric) do
           create(
             :billable_metric,
             organization:,
-            aggregation_type: 'recurring_count_agg',
+            aggregation_type: 'unique_count_agg',
             field_name: 'item_id',
           )
         end
