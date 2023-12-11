@@ -182,7 +182,6 @@ RSpec.describe WebhooksController, type: :request do
         .with(
           organization_id: organization.id,
           code: nil,
-          code: nil,
           body: body['notificationItems'].first&.dig('NotificationRequestItem'),
         )
         .and_return(result)

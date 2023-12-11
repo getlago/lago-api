@@ -2,8 +2,10 @@
 
 class AddCodeAndNameToPaymentProviders < ActiveRecord::Migration[7.0]
   def up
-    add_column :payment_providers, :code, :string
-    add_column :payment_providers, :name, :string
+    change_table :payment_providers, bulk: true do |t|
+      t.column :code, :string
+      t.column :name, :string
+    end
 
     execute <<-SQL
       UPDATE payment_providers

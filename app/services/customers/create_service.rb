@@ -138,7 +138,10 @@ module Customers
       end
 
       # NOTE: handle configuration for configured payment providers
-      billing_configuration = args[:provider_customer]&.to_h&.merge(payment_provider: args[:payment_provider], payment_provider_code: args[:payment_provider_code])
+      billing_configuration = args[:provider_customer]&.to_h&.merge(
+        payment_provider: args[:payment_provider],
+        payment_provider_code: args[:payment_provider_code],
+      )
       create_billing_configuration(customer, billing_configuration)
 
       result.customer = customer
@@ -179,7 +182,12 @@ module Customers
       create_provider_customer ||= billing_configuration[:provider_customer_id]
       return unless create_provider_customer
 
-      customer.update!(payment_provider: billing_configuration[:payment_provider], payment_provider_code: billing_configuration[:payment_provider_code]) if api_context?
+      if api_context?
+        customer.update!(
+          payment_provider: billing_configuration[:payment_provider],
+          payment_provider_code: billing_configuration[:payment_provider_code],
+        )
+      end
 
       create_or_update_provider_customer(customer, billing_configuration)
     end
