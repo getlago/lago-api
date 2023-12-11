@@ -27,6 +27,8 @@ module PaymentProviderCustomers
     end
 
     def update
+      return result unless organization.stripe_payment_provider
+
       Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, { api_key: })
       result
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
