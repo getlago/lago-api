@@ -525,6 +525,7 @@ GEM
     zeitwerk (2.6.12)
 
 PLATFORMS
+  aarch64-linux
   aarch64-linux-musl
   arm64-darwin-22
   x86_64-darwin-21
@@ -599,4 +600,4 @@ RUBY VERSION
    ruby 3.2.2p53
 
 BUNDLED WITH
-   2.3.26
+   2.4.21

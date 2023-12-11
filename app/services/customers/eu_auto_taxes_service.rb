@@ -6,7 +6,7 @@ module Customers
   class EuAutoTaxesService < BaseService
     def initialize(customer:)
       @customer = customer
-      @organization_country_code = customer.organization_country_code
+      @organization_country_code = customer.organization.country
 
       super
     end
@@ -36,13 +36,14 @@ module Customers
     end
 
     def process_not_vies_tax
-      return "lago_eu_#{organization_country_code.downcase}_standard" if customer.country_code.blank?
-
-      if eu_countries_code.include?[customer.country_code.upcase]
-        return "lago_eu_#{customer.country_code.downcase}_standard"
-      end
+      return "lago_eu_#{organization_country_code.downcase}_standard" if customer.country.blank?
+      return "lago_eu_#{customer.country.downcase}_standard" if eu_countries_code.include?(customer.country.upcase)
 
       'lago_eu_tax_exempt'
+    end
+
+    def eu_countries_code
+      LagoEuVat::Rate.new.countries_code
     end
   end
 end
