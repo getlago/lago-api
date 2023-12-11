@@ -28,7 +28,7 @@ module Customers
     end
 
     def process_vies_tax(customer_vies)
-      if organization_country_code == customer_vies.vat_country_code
+      if organization_country_code == customer_vies.country_code
         "lago_eu_#{organization_country_code.downcase}_standard"
       else
         'lago_eu_reverse_charge'
