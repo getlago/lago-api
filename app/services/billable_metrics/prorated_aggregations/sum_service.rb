@@ -7,6 +7,9 @@ module BillableMetrics
         @base_aggregator = BillableMetrics::Aggregations::SumService.new(**args)
 
         super(**args)
+
+        event_store.numeric_property = true
+        event_store.aggregation_property = billable_metric.field_name
       end
 
       def aggregate(options: {})
@@ -33,13 +36,7 @@ module BillableMetrics
       end
 
       def compute_per_event_prorated_aggregation
-        period_query
-          .pluck(
-            Arel.sql(
-              "(COALESCE((#{sanitized_field_name})::numeric, 0)) * "\
-              "(#{duration_ratio_sql('events.timestamp', to_datetime)})::numeric",
-            ),
-          )
+        event_store.prorated_events_values(period_duration)
       end
 
       def per_event_aggregation
@@ -56,52 +53,55 @@ module BillableMetrics
       protected
 
       def compute_aggregation
-        ActiveRecord::Base.connection.execute(aggregation_query).first['aggregation_result']
+        result = 0.0
+
+        # NOTE: Billed on the full period
+        result += persisted_sum || 0
+
+        # NOTE: Added during the period
+        result + (event_store.prorated_sum(period_duration:) || 0)
       end
 
-      def aggregation_query
-        queries = [
-          # NOTE: Billed on the full period
-          persisted_query
-            .select("SUM((CAST(#{sanitized_field_name} AS FLOAT)) * (#{persisted_pro_rata}))::numeric")
-            .to_sql,
+      def persisted_sum
+        event_store = event_store_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries: { to_datetime: from_datetime },
+          group:,
+          event:,
+        )
 
-          # NOTE: Added during the period
-          period_query
-            .select("SUM((CAST(#{sanitized_field_name} AS FLOAT)) * "\
-                    "(#{duration_ratio_sql('events.timestamp', to_datetime)}))::numeric")
-            .to_sql,
-        ]
+        event_store.use_from_boundary = false
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
 
-        "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
-      end
-
-      def persisted_query
-        @persisted_query ||= recurring_events_scope(to_datetime: from_datetime)
-          .where(field_presence_condition)
-          .where(field_numeric_condition)
-      end
-
-      def period_query
-        @period_query ||= recurring_events_scope(to_datetime:, from_datetime:)
-          .where(field_presence_condition)
-          .where(field_numeric_condition)
-      end
-
-      # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
-      #       Dates are in customer timezone to make sure the duration is good
-      def duration_ratio_sql(from, to)
-        from_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, from)
-        to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
-
-        "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{period_duration}::numeric"
+        event_store.prorated_sum(
+          period_duration:,
+          persisted_duration: Utils::DatetimeService.date_diff_with_timezone(
+            from_datetime,
+            to_datetime,
+            subscription.customer.applicable_timezone,
+          ),
+        )
       end
 
       def recurring_value
         previous_charge_fee_units = previous_charge_fee&.units
         return previous_charge_fee_units if previous_charge_fee_units
 
-        recurring_value_before_first_fee = persisted_query.sum("(#{sanitized_field_name})::numeric")
+        event_store = event_store_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries: { to_datetime: from_datetime },
+          group:,
+          event:,
+        )
+
+        event_store.use_from_boundary = false
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        recurring_value_before_first_fee = event_store.sum
 
         ((recurring_value_before_first_fee || 0) <= 0) ? nil : recurring_value_before_first_fee
       end
