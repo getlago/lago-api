@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class StripeService < BaseService
+      include Customers::PaymentProviderFinder
+
       PENDING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
         .freeze
       SUCCESS_STATUSES = %w[succeeded].freeze
@@ -224,7 +226,7 @@ module Invoices
       end
 
       def stripe_payment_provider
-        @stripe_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
+        @stripe_payment_provider ||= payment_provider(customer)
       end
     end
   end

@@ -14,10 +14,10 @@ module PaymentProviders
     ].freeze
 
     def create_or_update(**args)
-      payment_provider_result = PaymentProviders::FindService.new(
+      payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization_id],
         code: args[:code],
-      ).call
+      )
 
       stripe_provider = if payment_provider_result.success?
         payment_provider_result.payment_provider
@@ -61,7 +61,10 @@ module PaymentProviders
 
       stripe_webhook = ::Stripe::WebhookEndpoint.create(
         {
-          url: URI.join(ENV['LAGO_API_URL'], "webhooks/stripe/#{organization_id}?code=#{stripe_provider.code}"),
+          url: URI.join(
+            ENV['LAGO_API_URL'],
+            "webhooks/stripe/#{organization_id}?code=#{URI.encode_www_form_component(stripe_provider.code)}",
+          ),
           enabled_events: WEBHOOKS_EVENTS,
         },
         { api_key: stripe_provider.secret_key },

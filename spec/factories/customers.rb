@@ -18,7 +18,5 @@ FactoryBot.define do
     legal_name { Faker::Company.name }
     legal_number { Faker::Company.duns_number }
     currency { 'EUR' }
-    # payment_provider { Customer::PAYMENT_PROVIDERS.sample }
-    # payment_provider_code { "#{Customer::PAYMENT_PROVIDERS.sample}_1" }
   end
 end

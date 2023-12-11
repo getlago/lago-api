@@ -4,6 +4,7 @@ module Invoices
   module Payments
     class AdyenService < BaseService
       include Lago::Adyen::ErrorHandlable
+      include Customers::PaymentProviderFinder
 
       PENDING_STATUSES = %w[AuthorisedPending Received].freeze
       SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
@@ -90,7 +91,7 @@ module Invoices
       end
 
       def adyen_payment_provider
-        @adyen_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
+        @adyen_payment_provider ||= payment_provider(customer)
       end
 
       def update_payment_method_id

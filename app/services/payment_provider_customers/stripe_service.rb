@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class StripeService < BaseService
+    include Customers::PaymentProviderFinder
+
     def initialize(stripe_customer = nil)
       @stripe_customer = stripe_customer
 
@@ -265,7 +267,7 @@ module PaymentProviderCustomers
     end
 
     def stripe_payment_provider
-      Customers::BaseService.new.payment_provider(customer)
+      @stripe_payment_provider ||= payment_provider(customer)
     end
   end
 end

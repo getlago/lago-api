@@ -3,6 +3,8 @@
 module CreditNotes
   module Refunds
     class AdyenService < BaseService
+      include Customers::PaymentProviderFinder
+
       def initialize(credit_note = nil)
         @credit_note = credit_note
 
@@ -151,7 +153,7 @@ module CreditNotes
       end
 
       def adyen_payment_provider
-        @adyen_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
+        @adyen_payment_provider ||= payment_provider(customer)
       end
     end
   end

@@ -2,6 +2,8 @@
 
 module Customers
   class UpdateService < BaseService
+    include Customers::PaymentProviderFinder
+
     def update(**args)
       customer = result.user.customers.find_by(id: args[:id])
       return result.not_found_failure!(resource: 'customer') unless customer

@@ -2,6 +2,8 @@
 
 module Customers
   class CreateService < BaseService
+    include Customers::PaymentProviderFinder
+
     def create_from_api(organization:, params:)
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?

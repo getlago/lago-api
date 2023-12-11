@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class GocardlessService < BaseService
+    include Customers::PaymentProviderFinder
+
     def initialize(gocardless_customer = nil)
       @gocardless_customer = gocardless_customer
 
@@ -57,7 +59,7 @@ module PaymentProviderCustomers
     end
 
     def gocardless_payment_provider
-      @gocardless_payment_provider || Customers::BaseService.new.payment_provider(customer)
+      @gocardless_payment_provider ||= payment_provider(customer)
     end
 
     def client

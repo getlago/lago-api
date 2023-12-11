@@ -3,6 +3,8 @@
 module CreditNotes
   module Refunds
     class StripeService < BaseService
+      include Customers::PaymentProviderFinder
+
       def initialize(credit_note = nil)
         @credit_note = credit_note
 
@@ -159,7 +161,7 @@ module CreditNotes
       end
 
       def stripe_payment_provider
-        @stripe_payment_provider ||= Customers::BaseService.new.payment_provider(customer)
+        @stripe_payment_provider ||= payment_provider(customer)
       end
     end
   end

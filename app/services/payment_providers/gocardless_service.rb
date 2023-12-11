@@ -11,10 +11,10 @@ module PaymentProviders
         oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
       end
 
-      payment_provider_result = PaymentProviders::FindService.new(
+      payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
         code: args[:code],
-      ).call
+      )
 
       gocardless_provider = if payment_provider_result.success?
         payment_provider_result.payment_provider
@@ -41,7 +41,7 @@ module PaymentProviders
     end
 
     def handle_incoming_webhook(organization_id:, body:, signature:, code: nil)
-      payment_provider_result = PaymentProviders::FindService.new(organization_id:, code:).call
+      payment_provider_result = PaymentProviders::FindService.call(organization_id:, code:)
       return payment_provider_result unless payment_provider_result.success?
 
       events = GoCardlessPro::Webhook.parse(
