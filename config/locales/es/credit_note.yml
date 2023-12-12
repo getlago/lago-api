@@ -13,7 +13,7 @@ es:
     invoice_number: Número de factura
     issue_date: Fecha de emisión
     item: Item
-    powered_by: Powered by
+    powered_by: Generada por
     refunded: Reembolso
     refunded_notice: Reembolso hecho el %{issuing_date}
     sub_total_without_tax: Subtotal (impuestos excl.)
