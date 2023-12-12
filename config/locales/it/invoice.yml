@@ -47,7 +47,7 @@ it:
       free_units_per_transaction:
         one: Unità gratuite per 1 transazione
         other: Unità gratuite per %{count} transazioni
-      percentage_rate_on_amount: Tassa sull'importo
+      percentage_rate_on_amount: Tariffa sull'importo
     powered_by: Elaborato da
     prepaid_credit_invoice: Fattura anticipata
     prepaid_credits: Crediti prepagati

@@ -47,7 +47,7 @@ de:
       free_units_per_transaction:
         one: Freie Einheiten für 1 Transaktion
         other: Freie Einheiten für %{count} Transaktionen
-      percentage_rate_on_amount: Gebühr auf den Betrag
+      percentage_rate_on_amount: Satz auf den Betrag
     powered_by: Bereitgestellt von
     prepaid_credit_invoice: Anzahlungsrechnung
     prepaid_credits: Prepaid-Guthaben

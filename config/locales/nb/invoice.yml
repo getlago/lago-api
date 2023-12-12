@@ -47,7 +47,7 @@ nb:
       free_units_per_transaction:
         one: Gratis enheter for 1 transaksjon
         other: Gratis enheter for %{count} transaksjoner
-      percentage_rate_on_amount: Avgift på beløpet
+      percentage_rate_on_amount: Satsen på beløpet
     powered_by: Fakturering drevet av
     prepaid_credit_invoice: Forskuddsfaktura
     prepaid_credits: Forskuddsbetalte kreditter
