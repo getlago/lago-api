@@ -6,7 +6,7 @@ module Clock
 
     def perform
       Invoice.ready_to_be_finalized.each do |invoice|
-        Invoices::FinalizeService.call(invoice:)
+        Invoices::FinalizeJob.perform_later(invoice)
       end
     end
   end
