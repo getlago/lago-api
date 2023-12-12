@@ -3,6 +3,12 @@
 module BillableMetrics
   module Aggregations
     class UniqueCountService < BillableMetrics::Aggregations::BaseService
+      def initialize(...)
+        super(...)
+
+        event_store.aggregation_property = billable_metric.field_name
+      end
+
       def aggregate(options: {})
         aggregation = compute_aggregation.ceil(5)
 
@@ -81,12 +87,14 @@ module BillableMetrics
           .to_datetime(to_datetime)
           .order(timestamp: :desc)
 
-        # NOTE: For now we are using the relation between event and quantified event, but
-        #       this relation will be removed in a comming refactor as it will not possible
-        #       to handle clickhouse events that way
         query = query
-          .joins('INNER JOIN events ON events.id = cached_aggregations.event_id')
-          .joins('INNER JOIN quantified_events ON events.quantified_event_id = quantified_events.id')
+          .joins(:charge)
+          .joins([
+            'INNER JOIN quantified_events ON quantified_events.organization_id = cached_aggregations.organization_id',
+            'quantified_events.external_subscription_id = cached_aggregations.external_subscription_id',
+            'quantified_events.billable_metric_id = charges.billable_metric_id',
+          ].join(' AND '))
+          .where(quantified_events: { external_id: event_store.events_values })
           .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
           .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
           .where('quantified_events.removed_at::timestamp(0) IS NULL')
@@ -96,8 +104,13 @@ module BillableMetrics
               .where('quantified_events.removed_at::timestamp(0) <= ?', to_datetime),
           )
 
+        # TODO: event_id for clickhouse events
         query = query.where.not(event_id: event.id) if event.present?
-        query = query.where(group_id: group.id) if group
+
+        if group
+          query = query.where(group_id: group.id)
+            .where('quantified_events.group_id = cached_aggregations.group_id')
+        end
 
         @cached_aggregation = query.first
       end
@@ -149,19 +162,21 @@ module BillableMetrics
         quantified_events = QuantifiedEvent
           .where(organization_id: billable_metric.organization_id)
           .where(billable_metric_id: billable_metric.id)
+          .where(external_subscription_id: subscription.external_id)
 
-        quantified_events = if billable_metric.recurring?
-          quantified_events.where(external_subscription_id: subscription.external_id)
-        else
-          scope = Event.where(external_subscription_id: subscription.external_id)
-            .where('quantified_event_id IS NOT NULL')
-            .where(timestamp: subscription.started_at..)
+        unless billable_metric.recurring?
+          store = event_store_class.new(
+            code: billable_metric.code,
+            subscription:,
+            boundaries: {
+              from_datetime: subscription.started_at,
+              to_datetime: subscription.terminated_at,
+            },
+            group:,
+          )
+          store.aggregation_property = billable_metric.field_name
 
-          scope = scope.where(timestamp: ...subscription.terminated_at) if subscription.terminated?
-
-          quantified_event_ids = scope.pluck('DISTINCT(quantified_event_id)')
-
-          quantified_events.where(id: quantified_event_ids)
+          quantified_events = quantified_events.where(external_id: store.events_values)
         end
 
         return quantified_events unless group

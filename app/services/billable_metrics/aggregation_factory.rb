@@ -2,15 +2,9 @@
 
 module BillableMetrics
   class AggregationFactory
-    CLICKHOUSE_READY = %i[count_agg latest_agg max_agg sum_agg weighted_sum_agg].freeze
-
     class << self
       def supports_clickhouse?
         ENV['LAGO_CLICKHOUSE_ENABLED'].present?
-      end
-
-      def clickhouse_ready?(aggregation_type)
-        CLICKHOUSE_READY.include?(aggregation_type.to_sym)
       end
     end
 
@@ -19,8 +13,7 @@ module BillableMetrics
 
       if !charge.pay_in_advance? &&
          supports_clickhouse? &&
-         charge.billable_metric.organization.clickhouse_aggregation? &&
-         clickhouse_ready?(charge.billable_metric.aggregation_type)
+         charge.billable_metric.organization.clickhouse_aggregation?
         event_store = Events::Stores::ClickhouseStore
       end
 

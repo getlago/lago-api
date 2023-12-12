@@ -5,11 +5,11 @@ module Events
     class PostgresStore < BaseStore
       def events(force_from: false)
         scope = Event.where(external_subscription_id: subscription.external_id)
-          .to_datetime(to_datetime)
           .where(code:)
           .order(timestamp: :asc)
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
+        scope = scope.to_datetime(to_datetime) if to_datetime
 
         if numeric_property
           scope = scope.where(presence_condition)

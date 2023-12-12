@@ -263,13 +263,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:previous_event) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
-          customer:,
-          subscription:,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
-          quantified_event: previous_quantified_event,
           properties: {
-            unique_id: '000',
+            unique_id: previous_quantified_event.external_id,
           },
         )
       end
@@ -277,6 +277,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:previous_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 5.days,
           removed_at:,
           external_id: '000',
@@ -317,22 +318,23 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'when event is given' do
-      let(:properties) { { unique_id: '111' } }
+      let(:properties) { { unique_id: new_quantified_event.external_id } }
       let(:pay_in_advance_event) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
-          customer:,
-          subscription:,
+          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
           properties:,
-          quantified_event: new_quantified_event,
         )
       end
 
       let(:new_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -358,24 +360,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:previous_event) do
           create(
             :event,
+            organization_id: organization.id,
             code: billable_metric.code,
-            customer:,
-            subscription:,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            quantified_event: previous_quantified_event,
-            properties: {
-              unique_id: '000',
-            },
-            metadata: {
-              current_aggregation: '7',
-              max_aggregation: '7',
-              max_aggregation_with_proration: '5.8',
-            },
+            properties: { unique_id: previous_quantified_event.external_id },
           )
         end
         let(:previous_quantified_event) do
           create(
             :quantified_event,
+            organization:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
@@ -395,13 +391,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:previous_event) do
           create(
             :event,
+            organization_id: organization.id,
             code: billable_metric.code,
-            customer:,
-            subscription:,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            quantified_event: previous_quantified_event,
             properties: {
-              unique_id: '000',
+              unique_id: previous_quantified_event.external_id,
             },
           )
         end
@@ -409,6 +405,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         let(:previous_quantified_event) do
           create(
             :quantified_event,
+            organization:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',

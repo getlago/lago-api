@@ -108,10 +108,6 @@ module Events
     def handle_quantified_event
       service_result = quantified_event_service.call
       service_result.raise_if_error!
-
-      # TODO: Remove this relation
-      event.quantified_event_id = service_result.quantified_event&.id
-      event.save!
     end
 
     def handle_pay_in_advance

@@ -60,16 +60,18 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   let(:unique_count_event) do
     create(
       :event,
+      organization_id: organization.id,
       code: billable_metric.code,
       external_customer_id: customer.external_id,
       external_subscription_id: subscription.external_id,
       timestamp: added_at,
-      quantified_event:,
+      properties: { unique_id: quantified_event.external_id },
     )
   end
   let(:quantified_event) do
     create(
       :quantified_event,
+      organization:,
       added_at:,
       removed_at:,
       external_subscription_id: subscription.external_id,
@@ -86,6 +88,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:new_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -95,11 +98,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:new_unique_count_event) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          quantified_event: new_quantified_event,
+          properties: { unique_id: new_quantified_event.external_id },
         )
       end
 
@@ -123,16 +127,18 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:new_unique_count_event) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          quantified_event: new_quantified_event,
+          properties: { unique_id: new_quantified_event.external_id },
         )
       end
       let(:new_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -275,13 +281,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:previous_event) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
-          quantified_event: previous_quantified_event,
           properties: {
-            unique_id: '000',
+            unique_id: previous_quantified_event.external_id,
           },
         )
       end
@@ -289,6 +295,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       let(:previous_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 5.days,
           removed_at:,
           external_id: '000',
@@ -333,21 +340,22 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     end
 
     context 'when event is given' do
-      let(:properties) { { unique_id: '111' } }
+      let(:properties) { { unique_id: new_quantified_event.external_id } }
       let(:pay_in_advance_event) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
           properties:,
-          quantified_event: new_quantified_event,
         )
       end
       let(:new_quantified_event) do
         create(
           :quantified_event,
+          organization:,
           added_at: from_datetime + 10.days,
           removed_at:,
           external_subscription_id: subscription.external_id,
@@ -391,13 +399,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_event) do
           create(
             :event,
+            organization_id: organization.id,
             code: billable_metric.code,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            quantified_event: previous_quantified_event,
             properties: {
-              unique_id: '000',
+              unique_id: previous_quantified_event.external_id,
             },
           )
         end
@@ -405,6 +413,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_quantified_event) do
           create(
             :quantified_event,
+            organization:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
@@ -439,13 +448,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_event) do
           create(
             :event,
+            organization_id: organization.id,
             code: billable_metric.code,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            quantified_event: previous_quantified_event,
             properties: {
-              unique_id: '000',
+              unique_id: previous_quantified_event.external_id,
             },
           )
         end
@@ -453,6 +462,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:previous_quantified_event) do
           create(
             :quantified_event,
+            organization:,
             added_at: from_datetime + 5.days,
             removed_at:,
             external_id: '000',
