@@ -51,58 +51,11 @@ module BillableMetrics
         boundaries[:to_datetime]
       end
 
-      def events_scope(from_datetime:, to_datetime:)
-        events = Event.where(external_subscription_id: subscription.external_id)
-          .from_datetime(from_datetime)
-          .to_datetime(to_datetime)
-          .where(code: billable_metric.code)
-          .order(timestamp: :asc)
-        return events unless group
-
-        group_scope(events)
-      end
-
-      def recurring_events_scope(to_datetime:, from_datetime: nil)
-        events = Event.where(external_subscription_id: subscription.external_id)
-          .where(code: billable_metric.code)
-          .to_datetime(to_datetime)
-        events = events.from_datetime(from_datetime) unless from_datetime.nil?
-        return events unless group
-
-        group_scope(events)
-      end
-
-      def group_scope(events)
-        events = events.where('events.properties @> ?', { group.key.to_s => group.value }.to_json)
-        return events unless group.parent
-
-        events.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
-      end
-
       def count_unique_group_scope(events)
         events = events.where('quantified_events.properties @> ?', { group.key.to_s => group.value }.to_json)
         return events unless group.parent
 
         events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
-      end
-
-      def sanitized_name(property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events.properties->>?', property],
-        )
-      end
-
-      def sanitized_field_name
-        sanitized_name(billable_metric.field_name)
-      end
-
-      def field_presence_condition
-        "events.properties::jsonb ? '#{ActiveRecord::Base.sanitize_sql_for_conditions(billable_metric.field_name)}'"
-      end
-
-      def field_numeric_condition
-        # NOTE: ensure property value is a numeric value
-        "#{sanitized_field_name} ~ '^-?\\d+(\\.\\d+)?$'"
       end
 
       def handle_in_advance_current_usage(total_aggregation)
