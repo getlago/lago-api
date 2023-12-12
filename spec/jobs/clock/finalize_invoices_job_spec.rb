@@ -38,8 +38,8 @@ describe Clock::FinalizeInvoicesJob, job: true do
 
         travel_to(current_date) do
           described_class.perform_now
-          expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: draft_invoice)
-          expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: finalized_invoice)
+          expect(Invoices::FinalizeJob).not_to have_been_enqueued.with(draft_invoice)
+          expect(Invoices::FinalizeJob).not_to have_been_enqueued.with(finalized_invoice)
         end
       end
     end
@@ -50,7 +50,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
 
         travel_to(current_date) do
           described_class.perform_now
-          expect(Invoices::FinalizeService).to have_received(:call).with(invoice: draft_invoice)
+          expect(Invoices::FinalizeJob).to have_been_enqueued.with(draft_invoice)
         end
       end
     end
