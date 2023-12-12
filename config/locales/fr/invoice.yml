@@ -49,6 +49,7 @@ fr:
         other: Unités gratuites pour %{count} transactions
       percentage_rate_on_amount: Frais sur le montant
     powered_by: Document généré par
+    prepaid_credit_invoice: Facture d'acompte
     prepaid_credits: Crédit(s) prépayé(s)
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
     quarter: trimestre

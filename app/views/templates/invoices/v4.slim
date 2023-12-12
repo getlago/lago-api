@@ -368,7 +368,7 @@ html
 
     .wrapper
       .mb-24
-        h1.invoice-title = I18n.t('invoice.document_name')
+        h1.invoice-title = credit? ? I18n.t('invoice.prepaid_credit_invoice') : I18n.t('invoice.document_name')
         - if organization.logo.present?
           img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
 

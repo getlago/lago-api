@@ -49,6 +49,7 @@ de:
         other: Freie Einheiten für %{count} Transaktionen
       percentage_rate_on_amount: Gebühr auf den Betrag
     powered_by: Bereitgestellt von
+    prepaid_credit_invoice: Anzahlungsrechnung
     prepaid_credits: Prepaid-Guthaben
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     quarter: quartal

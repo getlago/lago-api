@@ -49,6 +49,7 @@ nb:
         other: Gratis enheter for %{count} transaksjoner
       percentage_rate_on_amount: Avgift på beløpet
     powered_by: Fakturering drevet av
+    prepaid_credit_invoice: Forskuddsfaktura
     prepaid_credits: Forskuddsbetalte kreditter
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     quarter: kvartal
