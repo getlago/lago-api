@@ -506,6 +506,8 @@ GEM
     uglifier (4.2.0)
       execjs (>= 0.3.0, < 3)
     unicode-display_width (2.5.0)
+    valvat (1.4.0)
+      rexml (>= 3.2, < 4.0)
     version_gem (1.1.1)
     waterdrop (2.6.10)
       karafka-core (>= 2.2.3, < 3.0.0)
@@ -523,6 +525,7 @@ GEM
     zeitwerk (2.6.12)
 
 PLATFORMS
+  aarch64-linux
   aarch64-linux-musl
   arm64-darwin-22
   x86_64-darwin-21
@@ -589,6 +592,7 @@ DEPENDENCIES
   timecop
   tzinfo-data
   uglifier
+  valvat
   webmock
   with_advisory_lock
 

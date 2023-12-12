@@ -47,7 +47,14 @@ module Customers
         ActiveRecord::Base.transaction do
           customer.save!
 
-          if params[:tax_codes]
+          if customer.organization.eu_tax_management
+            eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
+
+            params[:tax_codes] ||= []
+            params[:tax_codes] = (params[:tax_codes] + [eu_tax_code]).uniq
+          end
+
+          if params[:tax_codes].present?
             taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: params[:tax_codes])
             taxes_result.raise_if_error!
           end
@@ -112,7 +119,14 @@ module Customers
       ActiveRecord::Base.transaction do
         customer.save!
 
-        if args[:tax_codes]
+        if customer.organization.eu_tax_management
+          eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
+
+          args[:tax_codes] ||= []
+          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code]).uniq
+        end
+
+        if args[:tax_codes].present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
           taxes_result.raise_if_error!
         end
