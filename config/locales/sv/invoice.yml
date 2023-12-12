@@ -46,7 +46,7 @@ sv:
       free_units_per_transaction:
         one: Gratis enheter för 1 transaktion
         other: Gratis enheter för %{count} transaktioner
-      percentage_rate_on_amount: Avgift på beloppet
+      percentage_rate_on_amount: Satsen på beloppet
     powered_by: Powered by
     prepaid_credit_invoice: Förskottsfaktura
     prepaid_credits: Förbetald kontobalans

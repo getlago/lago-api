@@ -47,7 +47,7 @@ en:
       free_units_per_transaction:
         one: Free units for 1 transaction
         other: Free units for %{count} transactions
-      percentage_rate_on_amount: Fee on the amount
+      percentage_rate_on_amount: Rate on the amount
     powered_by: Powered by
     prepaid_credit_invoice: Advance invoice
     prepaid_credits: Prepaid credits

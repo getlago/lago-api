@@ -47,7 +47,7 @@ fr:
       free_units_per_transaction:
         one: Unités gratuites pour 1 transaction
         other: Unités gratuites pour %{count} transactions
-      percentage_rate_on_amount: Frais sur le montant
+      percentage_rate_on_amount: Taux sur le montant
     powered_by: Document généré par
     prepaid_credit_invoice: Facture d'acompte
     prepaid_credits: Crédit(s) prépayé(s)
