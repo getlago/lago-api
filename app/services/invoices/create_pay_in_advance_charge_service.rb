@@ -33,6 +33,7 @@ module Invoices
         )
 
         create_fees(invoice)
+        raise result.service_failure!(code: 'no_fees', message: 'rollback').raise_if_error! if invoice.fees.count.zero?
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -55,6 +56,10 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ServiceFailure => e
+      return Result.new if e.code == 'no_fees'
+
+      raise
     end
 
     private
