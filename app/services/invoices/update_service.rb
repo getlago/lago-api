@@ -31,6 +31,10 @@ module Invoices
       old_payment_status = invoice.payment_status
       invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
 
+      if invoice.draft? && (old_payment_status != invoice.payment_status)
+        return result.not_allowed_failure!(code: 'payment_status_update_on_draft_invoice')
+      end
+
       if params.key?(:ready_for_payment_processing) && !invoice.voided?
         invoice.ready_for_payment_processing = params[:ready_for_payment_processing]
       end
