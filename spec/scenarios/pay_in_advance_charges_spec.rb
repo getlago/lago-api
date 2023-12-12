@@ -508,14 +508,76 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
       end
     end
 
-    context 'when there is no group properties' do
+    context 'when there is an invalid group' do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
       let(:group) do
         create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
       end
 
+      it 'does not create a pay_in_advance fee' do
+        ### 24 january: Create subscription.
+        jan24 = DateTime.new(2023, 1, 24)
+
+        travel_to(jan24) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+        end
+
+        create(
+          :standard_charge,
+          :pay_in_advance,
+          invoiceable: true,
+          plan:,
+          billable_metric:,
+          properties: {
+            amount: '10',
+          },
+          group_properties: [
+            build(
+              :group_property,
+              group:,
+              values: {
+                amount: '20',
+                amount_currency: 'EUR',
+              },
+            ),
+          ],
+        )
+
+        subscription = customer.subscriptions.first
+
+        ### 15 february: Send an event.
+        feb15 = DateTime.new(2023, 2, 15)
+
+        travel_to(feb15) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id:,
+              external_customer_id: customer.external_id,
+              properties: { amount: '10', bad: 'fake', cloud: 'AWS' },
+            },
+          )
+
+          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
+          expect(subscription.reload.fees.count).to eq(0)
+        end
+      end
+    end
+
+    context 'when there is no group properties' do
+      let(:transaction_id) { "#{SecureRandom.uuid}test" }
+      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
+
       it 'creates a pay_in_advance fee' do
+        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -550,7 +612,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '2', region: 'europe' },
+              properties: { amount: '2', region: 'europe', cloud: 'AWS' },
             },
           )
 
@@ -559,7 +621,6 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(subscription.reload.fees.count).to eq(1)
 
           fee = subscription.fees.first
-
           expect(fee.invoice_id).not_to be_nil
           expect(fee.charge_id).to eq(charge.id)
           expect(fee.pay_in_advance).to eq(true)
@@ -572,10 +633,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
 
     context 'when there is no matching group but default group properties' do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:group2) { create(:group, billable_metric:, key: 'country', value: 'italy') }
 
       it 'creates a pay_in_advance fee' do
         create(:group, billable_metric:, key: 'country', value: 'france')
+        create(:group, billable_metric:, key: 'country', value: 'italy')
 
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
@@ -596,17 +657,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           invoiceable: true,
           plan:,
           billable_metric:,
-          properties: { amount: '10' },
-          group_properties: [
-            build(
-              :group_property,
-              group: group2,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+          properties: { amount: '20' },
+          group_properties: [],
         )
 
         subscription = customer.subscriptions.first
