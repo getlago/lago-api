@@ -15,7 +15,7 @@ module Fees
       fees = []
 
       ActiveRecord::Base.transaction do
-        if charge.group_properties.blank?
+        if charge.billable_metric.selectable_groups.blank?
           fees << create_fee(properties: charge.properties)
         else
           fees += create_group_properties_fees
