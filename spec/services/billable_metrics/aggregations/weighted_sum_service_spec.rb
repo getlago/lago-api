@@ -98,7 +98,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     end
   end
 
-  context 'with events with the same timestamo' do
+  context 'with events with the same timestamp' do
     let(:events_values) do
       [
         { timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3 },

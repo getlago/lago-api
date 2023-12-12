@@ -9,7 +9,7 @@ module Events
       # NOTE: keeps in mind that events could contains duplicated transaction_id
       #       and should be deduplicated depending on the aggregation logic
       def events(force_from: false)
-        scope = Clickhouse::EventsRaw.where(external_subscription_id: subscription.external_id)
+        scope = ::Clickhouse::EventsRaw.where(external_subscription_id: subscription.external_id)
           .where('events_raw.timestamp <= ?', to_datetime)
           .where(code:)
           .order(timestamp: :asc)
@@ -29,6 +29,10 @@ module Events
         scope = scope.limit(limit) if limit
 
         scope.pluck(Arel.sql(sanitized_numeric_property))
+      end
+
+      def last_event
+        events.last
       end
 
       def prorated_events_values(total_duration)
@@ -52,7 +56,7 @@ module Events
           from events
         SQL
 
-        Clickhouse::EventsRaw.connection.select_value(sql).to_i
+        ::Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
 
       def max
@@ -78,7 +82,7 @@ module Events
           from events
         SQL
 
-        Clickhouse::EventsRaw.connection.select_value(sql)
+        ::Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -101,7 +105,7 @@ module Events
           from events
         SQL
 
-        Clickhouse::EventsRaw.connection.select_value(sql)
+        ::Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
       def sum_date_breakdown
@@ -122,12 +126,48 @@ module Events
           order by events.day asc
         SQL
 
-        Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
+        ::Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
           { date: row.first.to_date, value: row.last }
         end
       end
 
-      private
+      def weighted_sum(initial_value: 0)
+        query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
+
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.query,
+            {
+              from_datetime:,
+              to_datetime: to_datetime.ceil,
+              decimal_scale: DECIMAL_SCALE,
+              initial_value: initial_value || 0,
+            },
+          ],
+        )
+
+        result = ::Clickhouse::EventsRaw.connection.select_one(sql)
+        result['aggregation']
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def weighted_sum_breakdown(initial_value: 0)
+        query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
+
+        ::Clickhouse::EventsRaw.connection.select_all(
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              query.breakdown_query,
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE,
+                initial_value: initial_value || 0,
+              },
+            ],
+          ),
+        ).rows
+      end
 
       def group_scope(scope)
         scope = scope.where('events_raw.properties[?] = ?', group.key.to_s, group.value.to_s)
