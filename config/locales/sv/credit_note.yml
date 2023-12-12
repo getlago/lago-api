@@ -13,7 +13,7 @@ sv:
     invoice_number: Fakturanummer
     issue_date: Fakturadatum
     item: Artikel
-    powered_by: Powered by
+    powered_by: Genererad av
     refunded: Återbetald
     refunded_notice: Återbetald den %{issuing_date}
     sub_total_without_tax: Delsumma (exkl. moms)

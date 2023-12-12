@@ -47,7 +47,7 @@ es:
         one: Unidades gratuitas para 1 transacción
         other: Unidades gratuitas para %{count} transacciónes
       percentage_rate_on_amount: Tarifa sobre el monto
-    powered_by: Powered by
+    powered_by: Generada por
     prepaid_credit_invoice: Factura anticipada
     prepaid_credits: Créditos prepagados
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
