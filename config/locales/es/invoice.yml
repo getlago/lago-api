@@ -48,6 +48,7 @@ es:
         other: Unidades gratuitas para %{count} transacciónes
       percentage_rate_on_amount: Tasa sobre el monto
     powered_by: Powered by
+    prepaid_credit_invoice: Factura anticipada
     prepaid_credits: Créditos prepagados
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
     quarter: trimestre

@@ -48,6 +48,7 @@ sv:
         other: Gratis enheter för %{count} transaktioner
       percentage_rate_on_amount: Avgift på beloppet
     powered_by: Powered by
+    prepaid_credit_invoice: Förskottsfaktura
     prepaid_credits: Förbetald kontobalans
     prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
     quarter: kvartal

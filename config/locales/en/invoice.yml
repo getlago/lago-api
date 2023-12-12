@@ -49,6 +49,7 @@ en:
         other: Free units for %{count} transactions
       percentage_rate_on_amount: Fee on the amount
     powered_by: Powered by
+    prepaid_credit_invoice: Advance invoice
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     quarter: quarter
