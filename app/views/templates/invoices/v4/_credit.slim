@@ -6,7 +6,10 @@ table.invoice-resume-table width="100%"
     td.body-2 = I18n.t('invoice.unit_price')
     td.body-2 = I18n.t('invoice.amount')
   tr
-    td.body-1 = I18n.t('invoice.prepaid_credits_with_value', wallet_name: invoiceable.wallet.name)
+    - if invoiceable.wallet.name.blank?
+      td.body-1 = I18n.t('invoice.prepaid_credits')
+    - else
+      td.body-1 = I18n.t('invoice.prepaid_credits_with_value', wallet_name: invoiceable.wallet.name)
     td.body-2 = invoiceable.credit_amount
     td.body-2 = invoiceable.wallet.rate_amount
     td.body-2 = MoneyHelper.format(fees.first.amount)
