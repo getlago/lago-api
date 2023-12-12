@@ -504,6 +504,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
 
           expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
           expect(subscription.reload.fees.count).to eq(0)
+          expect(subscription.invoices.count).to eq(0)
         end
       end
     end
