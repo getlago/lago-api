@@ -74,6 +74,13 @@ module Customers
       ActiveRecord::Base.transaction do
         customer.save!
 
+        if customer.organization.eu_tax_management
+          eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
+
+          args[:tax_codes] ||= []
+          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code]).uniq
+        end
+
         if args[:tax_codes]
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
           taxes_result.raise_if_error!

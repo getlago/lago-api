@@ -51,7 +51,7 @@ module Customers
             eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
 
             params[:tax_codes] ||= []
-            params[:tax_codes] = (params[:tax_codes] + eu_taxes_code).uniq
+            params[:tax_codes] = (params[:tax_codes] + eu_tax_code).uniq
           end
 
           if params[:tax_codes].present?
