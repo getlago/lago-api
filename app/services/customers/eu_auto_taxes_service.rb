@@ -24,7 +24,11 @@ module Customers
     attr_reader :customer, :organization_country_code
 
     def vies_check
-      Valvat.new(customer.tax_identification_number).exists?(detail: true)
+      vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
+
+      SendWebhookJob.perform_later('customer.vies_check', customer, vies_check:)
+
+      vies_check
     end
 
     def process_vies_tax(customer_vies)

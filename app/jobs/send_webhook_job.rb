@@ -23,6 +23,7 @@ class SendWebhookJob < ApplicationJob
     'customer.payment_provider_created' => Webhooks::PaymentProviders::CustomerCreatedService,
     'customer.payment_provider_error' => Webhooks::PaymentProviders::CustomerErrorService,
     'customer.checkout_url_generated' => Webhooks::PaymentProviders::CustomerCheckoutService,
+    'customer.vies_check' => Webhooks::Customers::ViesCheckService,
     'credit_note.created' => Webhooks::CreditNotes::CreatedService,
     'credit_note.generated' => Webhooks::CreditNotes::GeneratedService,
     'credit_note.provider_refund_failure' => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
