@@ -25,7 +25,7 @@ class Organization < ApplicationRecord
   has_many :applied_coupons, through: :coupons
   has_many :add_ons
   has_many :invites
-  has_many :payment_providers
+  has_many :payment_providers, class_name: 'PaymentProviders::BaseProvider'
   has_many :taxes
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets

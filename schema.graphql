@@ -4160,6 +4160,13 @@ input OrganizationBillingConfigurationInput {
   invoiceGracePeriod: Int
 }
 
+union PaymentProvider = AdyenProvider | GocardlessProvider | StripeProvider
+
+type PaymentProviderCollection {
+  collection: [PaymentProvider!]!
+  metadata: CollectionMetadata!
+}
+
 type Plan {
   activeSubscriptionsCount: Int!
   amountCents: BigInt!
@@ -4531,6 +4538,21 @@ type Query {
     """
     token: String!
   ): ResetPassword!
+
+  """
+  Query a single payment provider
+  """
+  paymentProvider(
+    """
+    Uniq ID of the payment provider
+    """
+    id: ID!
+  ): PaymentProvider
+
+  """
+  Query organization's payment providers
+  """
+  paymentProviders(limit: Int, page: Int, type: ProviderTypeEnum): PaymentProviderCollection
 
   """
   Query a single plan of an organization
