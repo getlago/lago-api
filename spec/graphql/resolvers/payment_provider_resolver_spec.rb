@@ -8,23 +8,23 @@ RSpec.describe Resolvers::PaymentProviderResolver, type: :graphql do
       query($paymentProviderId: ID!) {
         paymentProvider(id: $paymentProviderId) {
           ... on AdyenProvider {
-              id
-              code
-              name
-              __typename
-            }
-            ... on GocardlessProvider {
-              id
-              code
-              name
-              __typename
-            }
-            ... on StripeProvider {
-              id
-              code
-              name
-              __typename
-            }
+            id
+            code
+            name
+            __typename
+          }
+          ... on GocardlessProvider {
+            id
+            code
+            name
+            __typename
+          }
+          ... on StripeProvider {
+            id
+            code
+            name
+            __typename
+          }
         }
       }
     GQL

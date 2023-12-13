@@ -6,7 +6,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        paymentProviders(limit: 5, type: stripe) {
+        paymentProviders(limit: 5) {
           collection {
             ... on AdyenProvider {
               id
@@ -42,21 +42,83 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
     stripe_provider
   end
 
-  it 'returns a list of payment providers' do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      query:,
-    )
+  context 'when type is present' do
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 5, type: stripe) {
+            collection {
+              ... on AdyenProvider {
+                id
+                code
+                __typename
+              }
+              ... on GocardlessProvider {
+                id
+                code
+                __typename
+              }
+              ... on StripeProvider {
+                id
+                code
+                __typename
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
 
-    payment_providers_response = result['data']['paymentProviders']
+    it 'returns a list of payment providers' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+      )
 
-    aggregate_failures do
-      expect(payment_providers_response['collection'].count).to eq(1)
-      expect(payment_providers_response['collection'].first['id']).to eq(stripe_provider.id)
+      payment_providers_response = result['data']['paymentProviders']
 
-      expect(payment_providers_response['metadata']['currentPage']).to eq(1)
-      expect(payment_providers_response['metadata']['totalCount']).to eq(1)
+      aggregate_failures do
+        expect(payment_providers_response['collection'].count).to eq(1)
+        expect(payment_providers_response['collection'].first['id']).to eq(stripe_provider.id)
+
+        expect(payment_providers_response['metadata']['currentPage']).to eq(1)
+        expect(payment_providers_response['metadata']['totalCount']).to eq(1)
+      end
+    end
+  end
+
+  context 'when type is not present' do
+    it 'returns a list of payment providers' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+      )
+
+      payment_providers_response = result['data']['paymentProviders']
+
+      adyen_provider_result = payment_providers_response['collection'].find do |record|
+        record['__typename'] == 'AdyenProvider'
+      end
+      gocardless_provider_result = payment_providers_response['collection'].find do |record|
+        record['__typename'] == 'GocardlessProvider'
+      end
+      stripe_provider_result = payment_providers_response['collection'].find do |record|
+        record['__typename'] == 'StripeProvider'
+      end
+
+      aggregate_failures do
+        expect(payment_providers_response['collection'].count).to eq(3)
+
+        expect(adyen_provider_result['id']).to eq(adyen_provider.id)
+        expect(gocardless_provider_result['id']).to eq(gocardless_provider.id)
+        expect(stripe_provider_result['id']).to eq(stripe_provider.id)
+
+        expect(payment_providers_response['metadata']['currentPage']).to eq(1)
+        expect(payment_providers_response['metadata']['totalCount']).to eq(3)
+      end
     end
   end
 
