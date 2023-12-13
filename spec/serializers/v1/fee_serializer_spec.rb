@@ -92,6 +92,52 @@ RSpec.describe ::V1::FeeSerializer do
         'item_type' => fee.item_type,
       )
     end
+
+    context 'with pay in advance charge' do
+      let(:timestamp) { DateTime.new(2023, 12, 13, 0, 0) }
+      let(:fee) do
+        create(
+          :charge_fee,
+          charge:,
+          properties: {
+            charges_from_datetime: (timestamp - 1.month).beginning_of_day,
+            charges_to_datetime: (timestamp - 1.day).end_of_day,
+          },
+        )
+      end
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          invoice: fee.invoice,
+          subscription: fee.subscription,
+          timestamp:,
+        )
+      end
+
+      before do
+        invoice_subscription
+        charge.update!(pay_in_advance: true)
+        fee.subscription.update!(
+          started_at: timestamp - 1.year,
+          billing_time: 'anniversary',
+          subscription_at: timestamp,
+        )
+      end
+
+      it 'serializes the fees with dates boundaries' do
+        expect(result['fee']['from_date']).to eq('2023-12-13T00:00:00+00:00')
+        expect(result['fee']['to_date']).to eq('2024-01-12T23:59:59+00:00')
+        expect(result['fee']['item']).to include(
+          'type' => fee.fee_type,
+          'code' => fee.item_code,
+          'name' => fee.item_name,
+          'invoice_display_name' => fee.invoice_name,
+          'group_invoice_display_name' => fee.group_name,
+          'lago_item_id' => fee.item_id,
+          'item_type' => fee.item_type,
+        )
+      end
+    end
   end
 
   context 'when fee is add_on' do
