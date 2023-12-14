@@ -5,7 +5,7 @@ module Api
     class CreditNotesController < Api::BaseController
       def create
         service = CreditNotes::CreateService.new(
-          invoice: current_organization.invoices.find_by(id: input_params[:invoice_id]),
+          invoice: current_organization.invoices.not_generating.find_by(id: input_params[:invoice_id]),
           **input_params,
         )
         result = service.call
@@ -116,7 +116,7 @@ module Api
 
       def estimate
         result = CreditNotes::EstimateService.call(
-          invoice: current_organization.invoices.find_by(id: estimate_params[:invoice_id]),
+          invoice: current_organization.invoices.not_generating.find_by(id: estimate_params[:invoice_id]),
           items: estimate_params[:items],
         )
 
