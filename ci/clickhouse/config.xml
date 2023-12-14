@@ -5,12 +5,16 @@
         <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
         <size>1000M</size>
         <count>3</count>
+        <console>1</console>
     </logger>
     <display_name>clickhouse_dev</display_name>
     <listen_host>0.0.0.0</listen_host>
     <http_port>8123</http_port>
     <tcp_port>9000</tcp_port>
     <user_directories>
+        <!-- <users_xml>
+            <path>users.xml</path>
+        </users_xml> -->
         <local_directory>
             <path>/var/lib/clickhouse/access/</path>
         </local_directory>
@@ -20,8 +24,8 @@
             <default>
             </default>
             <s3>
-              <default>
-              </default>
+              <type>local</type>
+              <path>/var/lib/clickhouse-s3/</path>
             </s3>
         </disks>
         <policies>
