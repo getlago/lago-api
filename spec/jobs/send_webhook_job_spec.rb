@@ -438,4 +438,26 @@ RSpec.describe SendWebhookJob, type: :job do
       expect(webhook_service).to have_received(:call)
     end
   end
+
+  context 'when webhook type is customer.vies_check' do
+    let(:webhook_service) { instance_double(Webhooks::Customers::ViesCheckService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::Customers::ViesCheckService).to receive(:new)
+        .with(object: customer, options: {}, webhook_id: nil)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(
+        'customer.vies_check',
+        customer,
+      )
+
+      expect(Webhooks::Customers::ViesCheckService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
 end

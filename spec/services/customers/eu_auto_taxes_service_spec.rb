@@ -30,6 +30,13 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
 
           expect(tax_code).to eq('lago_eu_fr_standard')
         end
+
+        it 'enqueues a SendWebhookJob' do
+          eu_tax_service.call
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with('customer.vies_check', customer, vies_check: vies_response)
+        end
       end
 
       context 'with a different country from the organization one' do

@@ -34,6 +34,7 @@ module V1
 
       payload = payload.merge(metadata)
       payload = payload.merge(taxes) if include?(:taxes)
+      payload = payload.merge(vies_check) if include?(:vies_check)
 
       payload
     end
@@ -78,6 +79,14 @@ module V1
 
     def taxes
       ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
+    end
+
+    def vies_check
+      vies_value = options.fetch(:vies_check)
+
+      {
+        vies_check: vies_value.is_a?(Hash) ? vies_value : { valid: false },
+      }
     end
   end
 end
