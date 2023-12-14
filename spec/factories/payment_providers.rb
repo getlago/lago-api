@@ -12,7 +12,7 @@ FactoryBot.define do
     end
 
     settings do
-      { create_customers: true, success_redirect_url: }
+      { success_redirect_url: }
     end
 
     transient do

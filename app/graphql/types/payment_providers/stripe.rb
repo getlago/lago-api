@@ -6,7 +6,6 @@ module Types
       graphql_name 'StripeProvider'
 
       field :code, String, null: false
-      field :create_customers, Boolean, null: false
       field :id, ID, null: false
       field :name, String, null: false
       field :secret_key, String, null: false

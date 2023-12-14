@@ -6,7 +6,6 @@ module Types
       description 'Stripe input arguments'
 
       argument :code, String, required: true
-      argument :create_customers, Boolean, required: false
       argument :name, String, required: true
       argument :secret_key, String, required: false
       argument :success_redirect_url, String, required: false

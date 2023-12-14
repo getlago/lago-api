@@ -83,7 +83,6 @@ input AddStripePaymentProviderInput {
   """
   clientMutationId: String
   code: String!
-  createCustomers: Boolean
   name: String!
   secretKey: String
   successRedirectUrl: String
@@ -4833,7 +4832,6 @@ enum StatusTypeEnum {
 
 type StripeProvider {
   code: String!
-  createCustomers: Boolean!
   id: ID!
   name: String!
   secretKey: String!

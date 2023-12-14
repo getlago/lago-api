@@ -23,13 +23,6 @@ RSpec.describe PaymentProviders::StripeProvider, type: :model do
     end
   end
 
-  describe 'create_customers' do
-    it 'assigns and retrieve a setting' do
-      stripe_provider.create_customers = true
-      expect(stripe_provider.create_customers).to be_truthy
-    end
-  end
-
   describe 'webhook_id' do
     it 'assigns and retrieve a setting' do
       stripe_provider.webhook_id = 'webhook_id'

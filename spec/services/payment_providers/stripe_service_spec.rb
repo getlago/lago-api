@@ -22,7 +22,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key:,
           code:,
           name:,
-          create_customers: true,
           success_redirect_url:,
         )
 
@@ -56,7 +55,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key:,
           code:,
           name:,
-          create_customers: true,
           success_redirect_url:,
         )
 
@@ -67,7 +65,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result.stripe_provider.secret_key).to eq(secret_key)
           expect(result.stripe_provider.code).to eq(code)
           expect(result.stripe_provider.name).to eq(name)
-          expect(result.stripe_provider.create_customers).to be_truthy
           expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
 
           expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
@@ -88,7 +85,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:secret_key]).to eq(['value_is_mandatory'])
-          expect(result.error.messages[:create_customers]).to eq(['value_is_invalid'])
         end
       end
     end
