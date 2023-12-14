@@ -279,7 +279,10 @@ class Invoice < ApplicationRecord
   end
 
   def generate_organization_sequential_id
-    organization_sequence_scope = organization.invoices.where(created_at: Time.now.utc.all_month)
+    organization_sequence_scope = organization.invoices.where(
+      "date_trunc('month', created_at)::date = ?",
+      Time.now.utc.beginning_of_month.to_date,
+    )
 
     result = Invoice.with_advisory_lock(
       organization_id,

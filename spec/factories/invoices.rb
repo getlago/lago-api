@@ -10,6 +10,8 @@ FactoryBot.define do
     payment_status { 'pending' }
     currency { 'EUR' }
 
+    organization_sequential_id { rand(1_000_000) }
+
     trait :draft do
       status { :draft }
     end

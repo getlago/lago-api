@@ -11,7 +11,7 @@ RSpec.describe Invoice, type: :model do
 
   describe 'sequential_id' do
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { build(:invoice, customer:, organization:) }
+    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: nil) }
 
     it 'assigns a sequential id and organization sequential id to a new invoice' do
       invoice.save
@@ -98,7 +98,7 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { build(:invoice, customer:, organization:) }
+    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: nil) }
 
     it 'generates the invoice number' do
       invoice.save
