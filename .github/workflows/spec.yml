@@ -18,15 +18,6 @@ jobs:
           POSTGRES_DB: lago
           POSTGRES_USER: lago
           POSTGRES_PASSWORD: lago
-      # clickhouse:
-      #   image: clickhouse/clickhouse-server
-      #   ports:
-      #     - 9000:9000
-      #     - 8123:8123
-      #   volumes:
-      #     - ${{ github.workspace }}/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
-      #   options: --name clickhouse
-
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
