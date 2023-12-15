@@ -25,6 +25,6 @@ amazon_compatible_endpoint:
 
 google:
   service: GCS
-  credentials: <%= Rails.root.join('gcs_keyfile.json') %>
+  credentials: <%= ENV.fetch('LAGO_GCS_KEYFILE_JSON_PATH', Rails.root.join('gcs_keyfile.json')) %>
   project: <%= ENV['LAGO_GCS_PROJECT'] %>
   bucket: <%= ENV['LAGO_GCS_BUCKET'] %>
