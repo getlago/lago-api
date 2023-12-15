@@ -52,6 +52,18 @@ module V1
     private
 
     def date_boundaries
+      if model.charge? && !model.pay_in_advance? && model.charge.pay_in_advance?
+        subscription = model.subscription
+        invoice = model.invoice
+        timestamp = invoice.invoice_subscription(subscription.id).timestamp
+        interval = invoice.charge_pay_in_advance_interval(timestamp, subscription)
+
+        return {
+          from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
+          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601,
+        }
+      end
+
       {
         from_date:,
         to_date:,
