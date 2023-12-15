@@ -290,21 +290,20 @@ module Invoices
     def termination_boundaries(subscription, boundaries)
       return boundaries unless subscription.terminated? && subscription.next_subscription.nil?
 
+      current_time = Time.zone.at(timestamp)
+
+      # First we need to ensure that termination date is not started_at date. In that case boundaries are correct
+      # and we should bill only one day. If this is not the case we should proceed.
+      return boundaries if (current_time - 1.day) < subscription.started_at
+
       # Date service has various checks for terminated subscriptions. We want to avoid it and fetch boundaries
       # for current usage (current period) but when subscription was active (one day ago)
       duplicate = subscription.dup.tap { |s| s.status = :active }
 
-      current_time = Time.zone.at(timestamp)
-      current_time_in_timezone = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone)
-
-      # First we need to ensure that termination date is not started_at date. In that case boundaries are correct
-      # and we should bill only one day. If this is not the case we should proceed.
-      return boundaries if (current_time_in_timezone - 1.day) < subscription.started_at
-
       dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time - 1.day, current_usage: true)
 
-      return boundaries if current_time_in_timezone < dates_service.charges_to_datetime
-      return boundaries unless (current_time_in_timezone - dates_service.charges_to_datetime) < 1.day
+      return boundaries if current_time < dates_service.charges_to_datetime
+      return boundaries unless (current_time - dates_service.charges_to_datetime) < 1.day
 
       # We should calculate boundaries as if subscription was not terminated
       dates_service = Subscriptions::DatesService.new_instance(duplicate, current_time, current_usage: false)
