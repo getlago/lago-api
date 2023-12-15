@@ -14,7 +14,7 @@ module Resolvers
     def resolve(id:)
       validate_organization!
 
-      current_organization.invoices.find(id)
+      current_organization.invoices.not_generating.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'invoice')
     end

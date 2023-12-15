@@ -17,7 +17,7 @@ module Resolvers
         validate_organization!
 
         result = ::CreditNotes::EstimateService.call(
-          invoice: current_organization.invoices.find_by(id: invoice_id),
+          invoice: current_organization.invoices.not_generating.find_by(id: invoice_id),
           items:,
         )
 

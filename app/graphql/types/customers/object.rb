@@ -52,7 +52,10 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :active_subscriptions_count, Integer, null: false, description: 'Number of active subscriptions per customer'
+      field :active_subscriptions_count,
+            Integer,
+            null: false,
+            description: 'Number of active subscriptions per customer'
       field :credit_notes_balance_amount_cents,
             GraphQL::Types::BigInt,
             null: false,
@@ -69,7 +72,7 @@ module Types
       end
 
       def invoices
-        object.invoices.order(created_at: :desc)
+        object.invoices.not_generating.order(created_at: :desc)
       end
 
       def applied_coupons

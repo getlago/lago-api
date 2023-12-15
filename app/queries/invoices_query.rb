@@ -21,7 +21,7 @@ class InvoicesQuery < BaseQuery
   attr_reader :search_term
 
   def base_scope
-    organization.invoices.ransack(search_params)
+    organization.invoices.not_generating.ransack(search_params)
   end
 
   def search_params
