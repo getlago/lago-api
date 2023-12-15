@@ -9,7 +9,7 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
-  before_save :ensure_organization_sequential_id
+  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -286,11 +286,7 @@ class Invoice < ApplicationRecord
       transaction: true,
       timeout_seconds: 10.seconds,
     ) do
-      org_sequential_id = organization_sequence_scope
-        .where.not(organization_sequential_id: nil)
-        .order(organization_sequential_id: :desc)
-        .limit(1)
-        .pick(:organization_sequential_id)
+      org_sequential_id = organization_sequence_scope.count
       org_sequential_id ||= 0
 
       # NOTE: Start with the most recent sequential id and find first available sequential id that haven't occurred
