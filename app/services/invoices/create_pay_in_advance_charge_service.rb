@@ -11,27 +11,19 @@ module Invoices
     end
 
     def call
+      # TODO: prevent generation if no fees will be created
+      invoice_result = Invoices::CreateGeneratingService.call(
+        customer:,
+        invoice_type: :subscription,
+        currency: customer.currency,
+        datetime: Time.zone.at(timestamp),
+        subscriptions_details: [Invoices::CreateGeneratingService::SubscriptionDetails.new(subscription, {}, false)],
+      )
+      invoice_result.raise_if_error!
+
+      @invoice = invoice_result.invoice
+
       ActiveRecord::Base.transaction do
-        @invoice = Invoice.create!(
-          organization: event.organization,
-          customer:,
-          issuing_date:,
-          payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
-          invoice_type: :subscription,
-          payment_status: :pending,
-          currency: customer.currency,
-          timezone: customer.applicable_timezone,
-          status: :finalized,
-        )
-
-        InvoiceSubscription.create!(
-          invoice:,
-          subscription:,
-          timestamp:,
-          recurring: false,
-        )
-
         create_fees(invoice)
         raise result.service_failure!(code: 'no_fees', message: 'rollback').raise_if_error! if invoice.fees.count.zero?
 
@@ -44,7 +36,7 @@ module Invoices
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        invoice.save!
+        invoice.finalized!
       end
 
       track_invoice_created(invoice)
