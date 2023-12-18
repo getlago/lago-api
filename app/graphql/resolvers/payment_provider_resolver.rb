@@ -7,14 +7,19 @@ module Resolvers
 
     description 'Query a single payment provider'
 
-    argument :id, ID, required: true, description: 'Uniq ID of the payment provider'
+    argument :code, ID, required: false, description: 'Code of the payment provider'
+    argument :id, ID, required: false, description: 'Uniq ID of the payment provider'
 
     type Types::PaymentProviders::Object, null: true
 
-    def resolve(id:)
+    def resolve(id: nil, code: nil)
       validate_organization!
 
-      current_organization.payment_providers.find(id)
+      if id.present?
+        current_organization.payment_providers.find(id)
+      else
+        current_organization.payment_providers.find_by!(code:)
+      end
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'payment_provider')
     end

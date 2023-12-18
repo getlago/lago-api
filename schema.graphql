@@ -4543,9 +4543,14 @@ type Query {
   """
   paymentProvider(
     """
+    Code of the payment provider
+    """
+    code: ID
+
+    """
     Uniq ID of the payment provider
     """
-    id: ID!
+    id: ID
   ): PaymentProvider
 
   """
@@ -5683,6 +5688,7 @@ input UpdateAdyenPaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  id: ID!
   name: String
   successRedirectUrl: String
 }
@@ -5816,6 +5822,7 @@ input UpdateGocardlessPaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  id: ID!
   name: String
   successRedirectUrl: String
 }
@@ -5906,6 +5913,7 @@ input UpdateStripePaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  id: ID!
   name: String
   successRedirectUrl: String
 }
