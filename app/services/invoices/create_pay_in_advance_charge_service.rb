@@ -98,15 +98,6 @@ module Invoices
       )
     end
 
-    # NOTE: accounting date must be in customer timezone
-    def issuing_date
-      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
-    end
-
-    def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
-    end
-
     def should_deliver_email?
       License.premium? && customer.organization.email_settings.include?('invoice.finalized')
     end
