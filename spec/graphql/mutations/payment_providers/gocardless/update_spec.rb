@@ -41,6 +41,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
       query: mutation,
       variables: {
         input: {
+          id: gocardless_provider.id,
           successRedirectUrl: success_redirect_url,
         },
       },
@@ -59,6 +60,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
         query: mutation,
         variables: {
           input: {
+            id: gocardless_provider.id,
             successRedirectUrl: nil,
           },
         },
@@ -77,6 +79,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
         query: mutation,
         variables: {
           input: {
+            id: gocardless_provider.id,
             successRedirectUrl: success_redirect_url,
           },
         },
@@ -93,6 +96,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
         query: mutation,
         variables: {
           input: {
+            id: gocardless_provider.id,
             successRedirectUrl: success_redirect_url,
           },
         },

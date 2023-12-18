@@ -5,7 +5,7 @@ module Types
     class Adyen < Types::BaseObject
       graphql_name 'AdyenProvider'
 
-      field :api_key, String, null: false
+      field :api_key, String, null: true
       field :code, String, null: false
       field :hmac_key, String, null: true
       field :id, ID, null: false

@@ -89,7 +89,7 @@ input AddStripePaymentProviderInput {
 }
 
 type AdyenProvider {
-  apiKey: String!
+  apiKey: String
   code: String!
   hmacKey: String
   id: ID!
@@ -4839,7 +4839,7 @@ type StripeProvider {
   code: String!
   id: ID!
   name: String!
-  secretKey: String!
+  secretKey: String
   successRedirectUrl: String
 }
 
