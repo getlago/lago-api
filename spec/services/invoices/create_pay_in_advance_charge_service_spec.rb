@@ -134,10 +134,16 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       expect(payment_create_service).to have_received(:call)
     end
 
-    it 'enqueues a SendWebhookJob' do
+    it 'enqueues a SendWebhookJob for the invoice' do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+    end
+
+    it 'enqueues a SendWebhookJob for the fees' do
+      expect do
+        invoice_service.call
+      end.to have_enqueued_job(SendWebhookJob).with('fee.created', Fee)
     end
 
     it 'does not enqueue an ActionMailer::MailDeliveryJob' do

@@ -301,49 +301,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       end
     end
 
-    context 'when in invoice mode' do
-      subject(:fee_service) { described_class.new(charge:, event:, estimate:, invoice:) }
-
-      let(:invoice) { create(:invoice, customer:, organization:) }
-
-      it 'creates a fee with invoice attached' do
-        result = fee_service.call
-
-        aggregate_failures do
-          expect(result).to be_success
-
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first).to have_attributes(
-            invoice:,
-            subscription:,
-            charge:,
-            amount_cents: 10,
-            amount_currency: 'EUR',
-            fee_type: 'charge',
-            pay_in_advance: true,
-            invoiceable: charge,
-            units: 9,
-            properties: Hash,
-            events_count: 1,
-            group: nil,
-            pay_in_advance_event_id: event.id,
-            payment_status: 'pending',
-
-            taxes_rate: 0,
-            taxes_amount_cents: 0,
-          )
-          expect(result.fees.first.applied_taxes.count).to eq(0)
-        end
-      end
-
-      it 'delivers a webhook' do
-        fee_service.call
-
-        expect(SendWebhookJob).to have_been_enqueued
-          .with('fee.created', Fee)
-      end
-    end
-
     context 'when in current and max aggregation result' do
       let(:aggregation_result) do
         BaseService::Result.new.tap do |result|

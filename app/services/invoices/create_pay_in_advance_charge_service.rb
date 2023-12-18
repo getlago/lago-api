@@ -11,7 +11,9 @@ module Invoices
     end
 
     def call
-      # TODO: prevent generation if no fees will be created
+      fees = generate_fees
+      return Result.new if fees.none?
+
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :subscription,
@@ -24,8 +26,7 @@ module Invoices
       @invoice = invoice_result.invoice
 
       ActiveRecord::Base.transaction do
-        create_fees(invoice)
-        raise result.service_failure!(code: 'no_fees', message: 'rollback').raise_if_error! if invoice.fees.count.zero?
+        fees.each { |f| f.update!(invoice:) }
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -40,7 +41,8 @@ module Invoices
       end
 
       track_invoice_created(invoice)
-      SendWebhookJob.perform_later('invoice.created', invoice) if should_deliver_webhook?
+
+      deliver_webhooks if should_deliver_webhook?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
 
@@ -48,10 +50,6 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ServiceFailure => e
-      return Result.new if e.code == 'no_fees'
-
-      raise
     end
 
     private
@@ -60,13 +58,19 @@ module Invoices
 
     delegate :subscription, :customer, to: :event
 
-    def create_fees(invoice)
-      fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, invoice:)
+    def generate_fees
+      fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
       fee_result.raise_if_error!
+      fee_result.fees
     end
 
     def should_deliver_webhook?
       customer.organization.webhook_endpoints.any?
+    end
+
+    def deliver_webhooks
+      invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+      SendWebhookJob.perform_later('invoice.created', invoice)
     end
 
     def track_invoice_created(invoice)
