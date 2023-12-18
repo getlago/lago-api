@@ -71,7 +71,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([1, 1, 1])
-      expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(organization_sequential_ids).to match_array([1, 2, 3])
       expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
     end
 
@@ -86,7 +86,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([2, 2, 2])
-      expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(organization_sequential_ids).to match_array([1, 2, 3])
       expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
     end
 
@@ -101,7 +101,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([3, 3, 3])
-      expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(organization_sequential_ids).to match_array([1, 2, 3])
       expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
     end
 
@@ -135,7 +135,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([5, 5, 5])
-      expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(organization_sequential_ids).to match_array([1, 2, 3])
       expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
     end
 
@@ -155,7 +155,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       invoices = organization.reload.invoices.order(created_at: :desc)
 
       expect(invoices.first.sequential_id).to eq(6)
-      expect(invoices.first.organization_sequential_id).to eq(0)
+      expect(invoices.first.organization_sequential_id).to eq(4)
       expect(invoices.pluck(:number))
         .to match_array(
           %w[
