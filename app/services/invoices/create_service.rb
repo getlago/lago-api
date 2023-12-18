@@ -16,29 +16,16 @@ module Invoices
       return result.not_found_failure!(resource: 'fees') if fees.blank?
       return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
 
-      invoice = nil
-
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(customer:, currency:)
         return currency_result unless currency_result.success?
 
-        invoice = Invoice.create!(
-          organization: customer.organization,
-          customer:,
-          issuing_date:,
-          payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
-          invoice_type: :one_off,
-          currency:,
-          timezone: customer.applicable_timezone,
-          status: :finalized,
-        )
-
+        create_generating_invoice
         create_one_off_fees(invoice)
         Invoices::ComputeAmountsFromFees.call(invoice:)
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
 
-        invoice.save!
+        invoice.finalized!
       end
 
       track_invoice_created(invoice)
@@ -50,11 +37,27 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue Sequenced::SequenceError
+      raise
+    rescue StandardError => e
+      result.fail_with_error!(e)
     end
 
     private
 
-    attr_accessor :timestamp, :currency, :customer, :fees
+    attr_accessor :timestamp, :currency, :customer, :fees, :invoice
+
+    def create_generating_invoice
+      invoice_result = Invoices::CreateGeneratingService.call(
+        customer:,
+        invoice_type: :one_off,
+        currency:,
+        datetime: Time.zone.at(timestamp),
+      )
+      invoice_result.raise_if_error!
+
+      @invoice = invoice_result.invoice
+    end
 
     def create_one_off_fees(invoice)
       fee_result = Fees::OneOffService.new(invoice:, fees:).create
@@ -75,15 +78,6 @@ module Invoices
           invoice_type: invoice.invoice_type,
         },
       )
-    end
-
-    # NOTE: accounting date must be in customer timezone
-    def issuing_date
-      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
-    end
-
-    def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
     def should_deliver_email?
