@@ -14,6 +14,7 @@ module PaymentProviders
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
         code: args[:code],
+        id: args[:id],
       )
 
       gocardless_provider = if payment_provider_result.success?

@@ -5680,7 +5680,7 @@ input UpdateAddOnInput {
 }
 
 """
-Stripe input arguments
+Update input arguments
 """
 input UpdateAdyenPaymentProviderInput {
   """
@@ -5814,7 +5814,7 @@ input UpdateCustomerWalletInput {
 }
 
 """
-Stripe input arguments
+Update input arguments
 """
 input UpdateGocardlessPaymentProviderInput {
   """
@@ -5905,7 +5905,7 @@ input UpdateRecurringTransactionRuleInput {
 }
 
 """
-Stripe input arguments
+Update input arguments
 """
 input UpdateStripePaymentProviderInput {
   """

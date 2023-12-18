@@ -17,6 +17,7 @@ module PaymentProviders
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization_id],
         code: args[:code],
+        id: args[:id],
       )
 
       stripe_provider = if payment_provider_result.success?

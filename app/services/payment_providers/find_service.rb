@@ -2,9 +2,10 @@
 
 module PaymentProviders
   class FindService < BaseService
-    attr_reader :code, :organization_id, :scope
+    attr_reader :id, :code, :organization_id, :scope
 
-    def initialize(organization_id:, code: nil)
+    def initialize(organization_id:, code: nil, id: nil)
+      @id = id
       @code = code
       @organization_id = organization_id
       @scope = PaymentProviders::BaseProvider.where(organization_id:)
@@ -13,6 +14,11 @@ module PaymentProviders
     end
 
     def call
+      if id.present? && (payment_provider = scope.find_by(id:))
+        result.payment_provider = payment_provider
+        return result
+      end
+
       if code.blank? && scope.count > 1
         return result.service_failure!(
           code: 'payment_provider_code_error',

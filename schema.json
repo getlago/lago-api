@@ -24590,7 +24590,7 @@
         {
           "kind": "INPUT_OBJECT",
           "name": "UpdateAdyenPaymentProviderInput",
-          "description": "Stripe input arguments",
+          "description": "Update input arguments",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -25579,7 +25579,7 @@
         {
           "kind": "INPUT_OBJECT",
           "name": "UpdateGocardlessPaymentProviderInput",
-          "description": "Stripe input arguments",
+          "description": "Update input arguments",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -26306,7 +26306,7 @@
         {
           "kind": "INPUT_OBJECT",
           "name": "UpdateStripePaymentProviderInput",
-          "description": "Stripe input arguments",
+          "description": "Update input arguments",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,

@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class UpdateInput < BaseInputObject
-      description 'Stripe input arguments'
+      description 'Update input arguments'
 
       argument :code, String, required: false
       argument :id, ID, required: true
