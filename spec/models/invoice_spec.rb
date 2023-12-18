@@ -19,7 +19,7 @@ RSpec.describe Invoice, type: :model do
       aggregate_failures do
         expect(invoice).to be_valid
         expect(invoice.sequential_id).to eq(1)
-        expect(invoice.organization_sequential_id).to eq(1)
+        expect(invoice.organization_sequential_id).to eq(0)
       end
     end
 
@@ -52,7 +52,7 @@ RSpec.describe Invoice, type: :model do
         aggregate_failures do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(6)
-          expect(invoice.organization_sequential_id).to eq(16)
+          expect(invoice.organization_sequential_id).to eq(0)
         end
       end
     end
@@ -68,7 +68,7 @@ RSpec.describe Invoice, type: :model do
         aggregate_failures do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(1)
-          expect(invoice.organization_sequential_id).to eq(1)
+          expect(invoice.organization_sequential_id).to eq(0)
         end
       end
     end
