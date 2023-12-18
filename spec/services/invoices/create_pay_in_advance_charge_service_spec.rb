@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   subject(:invoice_service) do
-    described_class.new(charge:, event:, timestamp: timestamp.to_i)
+    described_class.new(charge:, event:, timestamp: timestamp.to_i, invoice:)
   end
 
   let(:timestamp) { Time.zone.now.beginning_of_month }
@@ -15,6 +15,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   let(:subscription) { create(:active_subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
   let(:group) { nil }
+
+  let(:invoice) { nil }
 
   let(:email_settings) { ['invoice.finalized', 'credit_note.created'] }
 
@@ -191,6 +193,47 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
         expect(result.invoice.payment_due_date.to_s).to eq('2022-11-24')
+      end
+    end
+
+    context 'with provided invoice' do
+      let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription, status: :generating) }
+
+      it 'does not re-create an invoice' do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+
+        expect(result.invoice.fees.where(fee_type: :charge).count).to eq(1)
+        expect(result.invoice.fees.first).to have_attributes(
+          subscription:,
+          charge:,
+          amount_cents: 10,
+          amount_currency: 'EUR',
+          taxes_rate: 20.0,
+          taxes_amount_cents: 2,
+          fee_type: 'charge',
+          pay_in_advance: true,
+          invoiceable: charge,
+          units: 9,
+          properties: Hash,
+          events_count: 1,
+          group: nil,
+          pay_in_advance_event_id: event.id,
+          payment_status: 'pending',
+        )
+
+        expect(result.invoice.currency).to eq(customer.currency)
+        expect(result.invoice.fees_amount_cents).to eq(10)
+
+        expect(result.invoice.taxes_amount_cents).to eq(2)
+        expect(result.invoice.taxes_rate).to eq(20)
+        expect(result.invoice.applied_taxes.count).to eq(1)
+
+        expect(result.invoice.total_amount_cents).to eq(12)
+
+        expect(result.invoice).to be_finalized
       end
     end
   end

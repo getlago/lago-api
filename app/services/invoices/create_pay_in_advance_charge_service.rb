@@ -2,10 +2,15 @@
 
 module Invoices
   class CreatePayInAdvanceChargeService < BaseService
-    def initialize(charge:, event:, timestamp:)
+    def initialize(charge:, event:, timestamp:, invoice: nil)
       @charge = charge
       @event = event
       @timestamp = timestamp
+
+      # NOTE: In case of retry when the creation process failed,
+      #       and if the generating invoice was persisted,
+      #       the process can be retried without creating a new invoice
+      @invoice = invoice
 
       super
     end
@@ -14,16 +19,8 @@ module Invoices
       fees = generate_fees
       return Result.new if fees.none?
 
-      invoice_result = Invoices::CreateGeneratingService.call(
-        customer:,
-        invoice_type: :subscription,
-        currency: customer.currency,
-        datetime: Time.zone.at(timestamp),
-        subscriptions_details: [Invoices::CreateGeneratingService::SubscriptionDetails.new(subscription, {}, false)],
-      )
-      invoice_result.raise_if_error!
-
-      @invoice = invoice_result.invoice
+      create_generating_invoice unless invoice
+      result.invoice = invoice
 
       ActiveRecord::Base.transaction do
         fees.each { |f| f.update!(invoice:) }
@@ -46,10 +43,13 @@ module Invoices
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
 
-      result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue Sequenced::SequenceError
+      raise
+    rescue StandardError => e
+      result.fail_with_error!(e)
     end
 
     private
@@ -57,6 +57,19 @@ module Invoices
     attr_accessor :timestamp, :charge, :event, :invoice
 
     delegate :subscription, :customer, to: :event
+
+    def create_generating_invoice
+      invoice_result = Invoices::CreateGeneratingService.call(
+        customer:,
+        invoice_type: :subscription,
+        currency: customer.currency,
+        datetime: Time.zone.at(timestamp),
+        subscriptions_details: [Invoices::CreateGeneratingService::SubscriptionDetails.new(subscription, {}, false)],
+      )
+      invoice_result.raise_if_error!
+
+      @invoice = invoice_result.invoice
+    end
 
     def generate_fees
       fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
