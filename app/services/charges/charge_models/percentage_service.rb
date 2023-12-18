@@ -29,7 +29,7 @@ module Charges
           free_units: BigDecimal(free_units_value).to_s,
           free_events:,
           paid_units: BigDecimal(paid_units).to_s,
-          per_unit_amount: per_unit_amount.to_s,
+          rate:,
           per_unit_total_amount: compute_percentage_amount,
           paid_events:,
           fixed_fee_unit_amount: paid_events.positive? ? fixed_amount : BigDecimal(0),

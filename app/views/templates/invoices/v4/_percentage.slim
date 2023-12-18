@@ -10,7 +10,7 @@
 tr.details
   td.body-2 = I18n.t('invoice.percentage.percentage_rate_on_amount')
   td.body-2 = amount_details['paid_units']
-  td.body-2 = MoneyHelper.format(amount_details['per_unit_amount'].to_money(amount_currency))
+  td.body-2 = amount_details['rate'] + '%'
   td.body-2 == TaxHelper.applied_taxes(self)
   td.body-2 = MoneyHelper.format(amount_details['per_unit_total_amount'].to_money(amount_currency))
 - if amount_details['fixed_fee_unit_amount'].to_f.positive?
