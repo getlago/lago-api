@@ -4,7 +4,7 @@ default: &default
 development:
   primary:
     <<: *default
-    host: db
+    host: localhost
     username: lago
     password: changeme
     database: lago

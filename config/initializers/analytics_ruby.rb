@@ -17,7 +17,7 @@ unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
 
   SEGMENT_CLIENT = Segment::Analytics.new(
     {
-      write_key: ENV['SEGMENT_WRITE_KEY'],
+      write_key: ENV['SEGMENT_WRITE_KEY'] || "secret_segment_key",
       on_error: proc { |status, msg| Sentry.capture_exception(SegmentError.new(status, msg)) },
       stub: Rails.env.development? || Rails.env.test?,
     },
