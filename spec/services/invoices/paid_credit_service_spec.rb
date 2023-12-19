@@ -4,18 +4,20 @@ require 'rails_helper'
 
 RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
-    described_class.new(wallet_transaction:, timestamp:)
+    described_class.new(wallet_transaction:, timestamp:, invoice:)
   end
 
   let(:timestamp) { Time.current.to_i }
 
-  describe 'create' do
+  describe 'call' do
     let(:customer) { create(:customer) }
     let(:subscription) { create(:subscription, customer:) }
     let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
       create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
     end
+
+    let(:invoice) { nil }
 
     before do
       wallet_transaction
@@ -24,7 +26,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
     end
 
     it 'creates an invoice' do
-      result = invoice_service.create
+      result = invoice_service.call
 
       aggregate_failures do
         expect(result).to be_success
@@ -50,13 +52,13 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
     it 'enqueues a SendWebhookJob' do
       expect do
-        invoice_service.create
+        invoice_service.call
       end.to have_enqueued_job(SendWebhookJob)
     end
 
     it 'does not enqueue an ActionMailer::MailDeliveryJob' do
       expect do
-        invoice_service.create
+        invoice_service.call
       end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
@@ -65,7 +67,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
       it 'enqueues an ActionMailer::MailDeliveryJob' do
         expect do
-          invoice_service.create
+          invoice_service.call
         end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
       end
 
@@ -74,14 +76,14 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
         it 'does not enqueue an ActionMailer::MailDeliveryJob' do
           expect do
-            invoice_service.create
+            invoice_service.call
           end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
         end
       end
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = invoice_service.create.invoice
+      invoice = invoice_service.call.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -101,7 +103,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       allow(payment_create_service)
         .to receive(:call)
 
-      invoice_service.create
+      invoice_service.call
 
       expect(Invoices::Payments::CreateService).to have_received(:new)
       expect(payment_create_service).to have_received(:call)
@@ -112,7 +114,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
       it 'does not enqueues a SendWebhookJob' do
         expect do
-          invoice_service.create
+          invoice_service.call
         end.not_to have_enqueued_job(SendWebhookJob)
       end
     end
@@ -123,9 +125,31 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       let(:timestamp) { DateTime.parse('2022-11-25 01:00:00').to_i }
 
       it 'assigns the issuing date in the customer timezone' do
-        result = invoice_service.create
+        result = invoice_service.call
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+      end
+    end
+
+    context 'with provided invoice' do
+      let(:invoice) do
+        create(:invoice, organization: customer.organization, customer:, invoice_type: :credit, status: :generating)
+      end
+
+      it 'does not re-create an invoice' do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+
+        expect(result.invoice.fees.count).to eq(1)
+
+        expect(result.invoice.fees_amount_cents).to eq(1500)
+        expect(result.invoice.taxes_amount_cents).to eq(0)
+        expect(result.invoice.taxes_rate).to eq(0)
+        expect(result.invoice.total_amount_cents).to eq(1500)
+
+        expect(result.invoice).to be_finalized
       end
     end
   end
