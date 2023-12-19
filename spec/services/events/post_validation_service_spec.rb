@@ -33,6 +33,16 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     )
   end
 
+  let(:negative_aggregation_property_event) do
+    create(
+      :event,
+      organization:,
+      code: billable_metric.code,
+      properties: { billable_metric.field_name => -12 },
+      created_at: Time.current.beginning_of_hour - 25.minutes,
+    )
+  end
+
   let(:billable_metric_with_group) do
     create(
       :sum_billable_metric,
@@ -82,6 +92,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
 
     invalid_code_event
     missing_aggregation_property_event
+    negative_aggregation_property_event
     missing_parent_group_key_event
     missing_child_group_key_event
 
@@ -110,6 +121,8 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       expect(result.errors[:invalid_code]).to include(invalid_code_event.transaction_id)
       expect(result.errors[:missing_aggregation_property])
         .to include(missing_aggregation_property_event.transaction_id)
+      expect(result.errors[:missing_aggregation_property])
+        .not_to include(negative_aggregation_property_event.transaction_id)
       expect(result.errors[:missing_group_key])
         .to include(
           missing_parent_group_key_event.transaction_id,
