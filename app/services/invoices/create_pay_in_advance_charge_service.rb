@@ -2,38 +2,28 @@
 
 module Invoices
   class CreatePayInAdvanceChargeService < BaseService
-    def initialize(charge:, event:, timestamp:)
+    def initialize(charge:, event:, timestamp:, invoice: nil)
       @charge = charge
       @event = event
       @timestamp = timestamp
+
+      # NOTE: In case of retry when the creation process failed,
+      #       and if the generating invoice was persisted,
+      #       the process can be retried without creating a new invoice
+      @invoice = invoice
 
       super
     end
 
     def call
+      fees = generate_fees
+      return Result.new if fees.none?
+
+      create_generating_invoice unless invoice
+      result.invoice = invoice
+
       ActiveRecord::Base.transaction do
-        @invoice = Invoice.create!(
-          organization: event.organization,
-          customer:,
-          issuing_date:,
-          payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
-          invoice_type: :subscription,
-          payment_status: :pending,
-          currency: customer.currency,
-          timezone: customer.applicable_timezone,
-          status: :finalized,
-        )
-
-        InvoiceSubscription.create!(
-          invoice:,
-          subscription:,
-          timestamp:,
-          recurring: false,
-        )
-
-        create_fees(invoice)
-        raise result.service_failure!(code: 'no_fees', message: 'rollback').raise_if_error! if invoice.fees.count.zero?
+        fees.each { |f| f.update!(invoice:) }
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -44,22 +34,22 @@ module Invoices
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        invoice.save!
+        invoice.finalized!
       end
 
       track_invoice_created(invoice)
-      SendWebhookJob.perform_later('invoice.created', invoice) if should_deliver_webhook?
+
+      deliver_webhooks if should_deliver_webhook?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
 
-      result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ServiceFailure => e
-      return Result.new if e.code == 'no_fees'
-
+    rescue Sequenced::SequenceError
       raise
+    rescue StandardError => e
+      result.fail_with_error!(e)
     end
 
     private
@@ -68,13 +58,32 @@ module Invoices
 
     delegate :subscription, :customer, to: :event
 
-    def create_fees(invoice)
-      fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, invoice:)
+    def create_generating_invoice
+      invoice_result = Invoices::CreateGeneratingService.call(
+        customer:,
+        invoice_type: :subscription,
+        currency: customer.currency,
+        datetime: Time.zone.at(timestamp),
+        subscriptions_details: [Invoices::CreateGeneratingService::SubscriptionDetails.new(subscription, {}, false)],
+      )
+      invoice_result.raise_if_error!
+
+      @invoice = invoice_result.invoice
+    end
+
+    def generate_fees
+      fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
       fee_result.raise_if_error!
+      fee_result.fees
     end
 
     def should_deliver_webhook?
       customer.organization.webhook_endpoints.any?
+    end
+
+    def deliver_webhooks
+      invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+      SendWebhookJob.perform_later('invoice.created', invoice)
     end
 
     def track_invoice_created(invoice)
@@ -87,15 +96,6 @@ module Invoices
           invoice_type: invoice.invoice_type,
         },
       )
-    end
-
-    # NOTE: accounting date must be in customer timezone
-    def issuing_date
-      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
-    end
-
-    def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
     def should_deliver_email?

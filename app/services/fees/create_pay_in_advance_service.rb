@@ -2,11 +2,10 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
-    def initialize(charge:, event:, estimate: false, invoice: nil)
+    def initialize(charge:, event:, estimate: false)
       @charge = charge
       @event = event
       @estimate = estimate
-      @invoice = invoice
 
       super
     end
@@ -34,7 +33,7 @@ module Fees
 
     private
 
-    attr_reader :charge, :event, :estimate, :invoice
+    attr_reader :charge, :event, :estimate
 
     delegate :billable_metric, to: :charge
     delegate :subscription, :customer, to: :event
@@ -48,7 +47,6 @@ module Fees
         result = apply_charge_model(aggregation_result:, properties:)
 
         fee = Fee.new(
-          invoice:,
           subscription:,
           charge:,
           amount_cents: result.amount,
@@ -66,10 +64,8 @@ module Fees
           taxes_amount_cents: 0,
         )
 
-        if estimate || invoice.nil?
-          taxes_result = Fees::ApplyTaxesService.call(fee:)
-          taxes_result.raise_if_error!
-        end
+        taxes_result = Fees::ApplyTaxesService.call(fee:)
+        taxes_result.raise_if_error!
 
         fee.save! unless estimate
 
