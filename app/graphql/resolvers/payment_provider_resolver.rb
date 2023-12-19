@@ -7,7 +7,7 @@ module Resolvers
 
     description 'Query a single payment provider'
 
-    argument :code, ID, required: false, description: 'Code of the payment provider'
+    argument :code, String, required: false, description: 'Code of the payment provider'
     argument :id, ID, required: false, description: 'Uniq ID of the payment provider'
 
     type Types::PaymentProviders::Object, null: true

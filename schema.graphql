@@ -4545,7 +4545,7 @@ type Query {
     """
     Code of the payment provider
     """
-    code: ID
+    code: String
 
     """
     Uniq ID of the payment provider

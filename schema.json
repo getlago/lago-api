@@ -20924,7 +20924,7 @@
                   "description": "Code of the payment provider",
                   "type": {
                     "kind": "SCALAR",
-                    "name": "ID",
+                    "name": "String",
                     "ofType": null
                   },
                   "defaultValue": null,

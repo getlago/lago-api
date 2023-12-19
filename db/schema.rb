@@ -554,7 +554,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.index "organization_id, organization_sequential_id, ((date_trunc('month'::text, created_at))::date)", name: "unique_organization_sequential_id", unique: true, where: "(organization_sequential_id <> 0)"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
-    t.index ["organization_id", "organization_sequential_id"], name: "unique_organization_sequential_id", unique: true
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
