@@ -80,6 +80,24 @@ RSpec.describe Plans::DestroyService, type: :service do
       end
     end
 
+    context 'with pending subscriptions' do
+      let(:subscriptions) { create_list(:pending_subscription, 2, plan:) }
+
+      before { subscriptions }
+
+      it 'cancels the subscriptions' do
+        result = destroy_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          subscriptions.each do |subscription|
+            expect(subscription.reload).to be_canceled
+          end
+        end
+      end
+    end
+
     context 'with draft invoices' do
       let(:subscription) { create(:active_subscription, plan:) }
       let(:invoices) { create_list(:invoice, 2, :draft) }
