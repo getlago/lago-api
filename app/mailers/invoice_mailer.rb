@@ -10,6 +10,7 @@ class InvoiceMailer < ApplicationMailer
 
     return if @organization.email.blank?
     return if @customer.email.blank?
+    return if @invoice.fee_amount_cents.zero?
 
     I18n.locale = @customer.preferred_document_locale
 
