@@ -11,7 +11,7 @@ ENV BUNDLER_VERSION='2.4.21'
 RUN gem install bundler --no-document -v '2.4.21'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
-  bundle install --jobs=3 --retry=3 --without development test
+  bundle install --jobs=3 --retry=3
 
 FROM ruby:3.2.2-slim
 
