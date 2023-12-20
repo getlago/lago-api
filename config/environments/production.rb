@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'active_support/core_ext/integer/time'
+require 'sprockets/railtie'
 
 Rails.application.configure do
   config.cache_classes = true
