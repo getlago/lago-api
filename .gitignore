@@ -37,3 +37,5 @@ LAGO_VERSION
 
 **/.DS_Store
 .vscode
+
+/config/credentials/production.key
