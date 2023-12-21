@@ -2,8 +2,6 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    SubscriptionDetails = Struct.new(:subscription, :boundaries, :recurring)
-
     def initialize(customer:, invoice_type:, datetime:, currency:, subscriptions_details: nil)
       @customer = customer
       @invoice_type = invoice_type
@@ -29,7 +27,7 @@ module Invoices
         )
         result.invoice = invoice
 
-        create_invoice_subscriptions if invoice_type.to_sym == :subscription
+        yield invoice if block_given?
       end
 
       result
@@ -57,23 +55,6 @@ module Invoices
 
     def payment_due_date
       (issuing_date + customer.applicable_net_payment_term.days).to_date
-    end
-
-    def create_invoice_subscriptions
-      subscriptions_details.each do |subscription_details|
-        boundaries = subscription_details.boundaries
-
-        InvoiceSubscription.create!(
-          invoice: result.invoice,
-          subscription: subscription_details.subscription,
-          timestamp: boundaries[:timestamp],
-          from_datetime: boundaries[:from_datetime],
-          to_datetime: boundaries[:to_datetime],
-          charges_from_datetime: boundaries[:charges_from_datetime],
-          charges_to_datetime: boundaries[:charges_to_datetime],
-          recurring: subscription_details.recurring,
-        )
-      end
     end
   end
 end

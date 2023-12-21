@@ -6,8 +6,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
     described_class.new(
       invoice:,
-      subscriptions:,
-      timestamp: timestamp.to_i,
       recurring:,
     )
   end
@@ -40,7 +38,29 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       terminated_at:,
     )
   end
-  let(:subscriptions) { [subscription] }
+
+  let(:date_service) do
+    Subscriptions::DatesService.new_instance(
+      subscription,
+      Time.zone.at(timestamp),
+      current_usage: subscription.terminated? && subscription.upgraded?,
+    )
+  end
+
+  let(:invoice_subscription) do
+    create(
+      :invoice_subscription,
+      subscription:,
+      invoice:,
+      timestamp:,
+      from_datetime: date_service.from_datetime,
+      to_datetime: date_service.to_datetime,
+      charges_from_datetime: date_service.charges_from_datetime,
+      charges_to_datetime: date_service.charges_to_datetime,
+    )
+  end
+
+  let(:invoice_subscriptions) { [invoice_subscription] }
 
   let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
   let(:timestamp) { Time.zone.now.beginning_of_month }
@@ -59,6 +79,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   before do
     tax
     charge
+    invoice_subscriptions
 
     allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
@@ -195,14 +216,27 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         )
       end
 
-      let(:subscriptions) { [subscription, subscription2] }
+      let(:invoice_subscription2) do
+        create(
+          :invoice_subscription,
+          subscription: subscription2,
+          invoice:,
+          timestamp:,
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+        )
+      end
+
+      let(:invoice_subscriptions) { [invoice_subscription, invoice_subscription2] }
 
       it 'creates subscription and charges fees for both' do
         result = invoice_service.call
 
         aggregate_failures do
           expect(result).to be_success
-          expect(invoice.subscriptions.to_a).to match_array(subscriptions)
+          expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
           expect(invoice.payment_status).to eq('pending')
           expect(invoice.fees.subscription_kind.count).to eq(2)
           expect(invoice.fees.charge_kind.count).to eq(2)
@@ -212,28 +246,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             to_datetime: match_datetime((timestamp - 1.day).end_of_day),
             from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
           )
-        end
-      end
-
-      context 'when subscriptions are duplicated' do
-        let(:subscriptions) { [subscription, subscription] }
-
-        it 'ensures charges are not duplicated' do
-          result = invoice_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.subscriptions.count).to eq(1)
-            expect(invoice.payment_status).to eq('pending')
-            expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
-
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
-            )
-          end
         end
       end
     end
@@ -441,7 +453,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when subscription was already billed earlier the same day' do
-        let(:timestamp) { Time.current.to_i }
+        let(:timestamp) { Time.current }
 
         before { create(:fee, subscription:) }
 
@@ -730,7 +742,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
-          let(:invoice_subscription) { create(:invoice_subscription, invoice: old_invoice, subscription:) }
+          let(:old_invoice_subscription) { create(:invoice_subscription, invoice: old_invoice, subscription:) }
           let(:old_invoice) do
             create(
               :invoice,
@@ -740,7 +752,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             )
           end
 
-          before { invoice_subscription }
+          before { old_invoice_subscription }
 
           it 'updates the invoice accordingly' do
             result = invoice_service.call
@@ -876,178 +888,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           result = invoice_service.call
 
           expect(result.invoice.wallet_transactions.exists?).to be(false)
-        end
-      end
-    end
-
-    context 'when invoice subscription already exists for recurring billing' do
-      let(:recurring) { true }
-
-      let(:date_service) do
-        Subscriptions::DatesService.new_instance(
-          subscription,
-          Time.zone.at(timestamp),
-          current_usage: false,
-        )
-      end
-
-      let(:invoice_subscription) do
-        create(
-          :invoice_subscription,
-          subscription:,
-          recurring: true,
-          timestamp: timestamp.to_i,
-          from_datetime: date_service.from_datetime,
-          to_datetime: date_service.to_datetime,
-        )
-      end
-
-      before { invoice_subscription }
-
-      it 'returns a service failure' do
-        result = invoice_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('duplicated_invoices')
-          expect(result.error.error_message).to be_present
-        end
-      end
-
-      context 'when plan interval is yearly and charges are not paid on monthly basis' do
-        let(:plan) do
-          create(:plan, organization:, interval: 'yearly', pay_in_advance: false, bill_charges_monthly: false)
-        end
-
-        it 'returns a service failure' do
-          result = invoice_service.call
-
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq('duplicated_invoices')
-            expect(result.error.error_message).to be_present
-          end
-        end
-      end
-
-      context 'when plan interval is yearly and charges are paid on monthly basis' do
-        let(:plan) do
-          create(:plan, organization:, interval: 'yearly', pay_in_advance: false, bill_charges_monthly: true)
-        end
-
-        it 'does not return an error' do
-          result = invoice_service.call
-
-          expect(result).to be_success
-        end
-
-        context 'when there is invoice subscriptions record in the same period' do
-          let(:invoice_subscription) do
-            create(
-              :invoice_subscription,
-              subscription:,
-              recurring: true,
-              timestamp: timestamp.to_i,
-              from_datetime: date_service.from_datetime,
-              to_datetime: date_service.to_datetime,
-              charges_from_datetime: date_service.charges_from_datetime,
-              charges_to_datetime: date_service.charges_to_datetime,
-            )
-          end
-
-          it 'returns a service failure' do
-            result = invoice_service.call
-
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq('duplicated_invoices')
-              expect(result.error.error_message).to be_present
-            end
-          end
-        end
-      end
-    end
-  end
-
-  describe 'not_in_finalizing_process?' do
-    subject(:not_in_finalizing_process) { service.__send__(:not_in_finalizing_process?) }
-
-    let(:service) do
-      described_class.new(
-        invoice:,
-        subscriptions:,
-        timestamp: timestamp.to_i,
-        recurring:,
-        context:,
-      )
-    end
-
-    let(:invoice) do
-      create(
-        :invoice,
-        status: invoice_status,
-        organization:,
-        currency: 'EUR',
-        issuing_date: Time.zone.at(timestamp).to_date,
-        customer: subscription.customer,
-      )
-    end
-
-    context 'when context is not finalize' do
-      let(:context) { nil }
-
-      context 'when invoice is draft' do
-        let(:invoice_status) { :draft }
-
-        it 'returns true' do
-          expect(not_in_finalizing_process).to be(true)
-        end
-      end
-
-      context 'when invoice is finalized' do
-        let(:invoice_status) { :finalized }
-
-        it 'returns false' do
-          expect(not_in_finalizing_process).to be(false)
-        end
-      end
-
-      context 'when invoice is voided' do
-        let(:invoice_status) { :voided }
-
-        it 'returns true' do
-          expect(not_in_finalizing_process).to be(true)
-        end
-      end
-    end
-
-    context 'when context is finalize' do
-      let(:context) { :finalize }
-
-      context 'when invoice is draft' do
-        let(:invoice_status) { :draft }
-
-        it 'returns false' do
-          expect(not_in_finalizing_process).to be(false)
-        end
-      end
-
-      context 'when invoice is finalized' do
-        let(:invoice_status) { :finalized }
-
-        it 'returns false' do
-          expect(not_in_finalizing_process).to be(false)
-        end
-      end
-
-      context 'when invoice is voided' do
-        let(:invoice_status) { :voided }
-
-        it 'returns false' do
-          expect(not_in_finalizing_process).to be(false)
         end
       end
     end
