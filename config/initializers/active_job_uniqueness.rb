@@ -9,5 +9,8 @@ ActiveJob::Uniqueness.configure do |config|
     host = [host, uri.query].join('?')
 
     config.redlock_servers = ["redis://:#{ENV['REDIS_PASSWORD']}@#{host}:#{uri.port}"]
+  else
+    # dicrectly use ENV['REDIS_URL'] as redlock_servers
+    config.redlock_servers = [ENV['REDIS_URL']]
   end
 end
