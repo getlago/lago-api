@@ -11,6 +11,8 @@ module Types
     field :destroy_billable_metric, mutation: Mutations::BillableMetrics::Destroy
     field :update_billable_metric, mutation: Mutations::BillableMetrics::Update
 
+    field :create_adjusted_fee, mutation: Mutations::AdjustedFees::Create
+
     field :create_plan, mutation: Mutations::Plans::Create
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update
