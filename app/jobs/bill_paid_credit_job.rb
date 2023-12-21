@@ -11,6 +11,7 @@ class BillPaidCreditJob < ApplicationJob
       timestamp:,
       invoice:,
     )
+    return result if result.success?
 
     result.raise_if_error! if invoice || result.invoice.nil? || !result.invoice.generating?
 
