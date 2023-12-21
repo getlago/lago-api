@@ -65,7 +65,13 @@ module Webhooks
       response = http_client.post_with_response(payload, headers)
 
       succeed_webhook(webhook, response)
-    rescue LagoHttpClient::HttpError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, SocketError, EOFError => e
+    rescue LagoHttpClient::HttpError,
+           Net::OpenTimeout,
+           Net::ReadTimeout,
+           Errno::ECONNRESET,
+           Errno::ECONNREFUSED,
+           SocketError,
+           EOFError => e
       fail_webhook(webhook, e)
 
       # NOTE: By default, Lago is retrying 3 times a webhook
