@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe InvoiceMailer, type: :mailer do
   subject(:invoice_mailer) { described_class }
 
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, fees_amount_cents: 100) }
 
   before do
     invoice.file.attach(io: File.open(Rails.root.join('spec/fixtures/blank.pdf')), filename: 'blank.pdf')
@@ -54,6 +54,18 @@ RSpec.describe InvoiceMailer, type: :mailer do
     context 'when customer email is nil' do
       before do
         invoice.customer.update(email: nil)
+      end
+
+      it 'returns a mailer with nil values' do
+        mailer = invoice_mailer.with(invoice:).finalized
+
+        expect(mailer.to).to be_nil
+      end
+    end
+
+    context 'when invoice fees amount is zero' do
+      before do
+        invoice.update(fees_amount_cents: 0)
       end
 
       it 'returns a mailer with nil values' do
