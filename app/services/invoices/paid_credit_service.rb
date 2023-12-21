@@ -2,37 +2,28 @@
 
 module Invoices
   class PaidCreditService < BaseService
-    def initialize(wallet_transaction:, timestamp:)
+    def initialize(wallet_transaction:, timestamp:, invoice: nil)
       @customer = wallet_transaction.wallet.customer
       @wallet_transaction = wallet_transaction
       @timestamp = timestamp
 
-      super(nil)
+      # NOTE: In case of retry when the creation process failed,
+      #       and if the generating invoice was persisted,
+      #       the process can be retried without creating a new invoice
+      @invoice = invoice
+
+      super
     end
 
-    def create
+    def call
+      create_generating_invoice unless invoice
+      result.invoice = invoice
+
       ActiveRecord::Base.transaction do
-        invoice = Invoice.create!(
-          organization: customer.organization,
-          customer:,
-          issuing_date:,
-          payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
-          invoice_type: :credit,
-          payment_status: :pending,
-          currency:,
-
-          # NOTE: No VAT should be applied on as it can be considered as an advance
-          taxes_rate: 0,
-          timezone: customer.applicable_timezone,
-        )
-
         create_credit_fee(invoice)
         compute_amounts(invoice)
 
-        invoice.save!
-
-        result.invoice = invoice
+        invoice.finalized!
       end
 
       track_invoice_created(result.invoice)
@@ -44,14 +35,30 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue Sequenced::SequenceError
+      raise
+    rescue StandardError => e
+      result.fail_with_error!(e)
     end
 
     private
 
-    attr_accessor :customer, :timestamp, :wallet_transaction
+    attr_accessor :customer, :timestamp, :wallet_transaction, :invoice
 
     def currency
       @currency ||= wallet_transaction.wallet.currency
+    end
+
+    def create_generating_invoice
+      invoice_result = Invoices::CreateGeneratingService.call(
+        customer:,
+        invoice_type: :credit,
+        currency:,
+        datetime: Time.zone.at(timestamp),
+      )
+      invoice_result.raise_if_error!
+
+      @invoice = invoice_result.invoice
     end
 
     def compute_amounts(invoice)
@@ -92,14 +99,6 @@ module Invoices
           invoice_type: invoice.invoice_type,
         },
       )
-    end
-
-    def issuing_date
-      Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
-    end
-
-    def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
     def should_deliver_email?

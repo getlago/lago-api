@@ -15,6 +15,9 @@ module Plans
         Subscriptions::TerminateService.call(subscription:, async: false)
       end
 
+      # NOTE: Cancel pending subscription to make sure they won't be activated.
+      plan.subscriptions.pending.find_each(&:mark_as_canceled!)
+
       # NOTE: Finalize all draft invoices.
       invoices = Invoice.draft.joins(:plans).where(plans: { id: plan.id }).distinct
       invoices.each { |invoice| Invoices::FinalizeService.call(invoice:) }

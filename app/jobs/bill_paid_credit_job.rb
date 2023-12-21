@@ -5,12 +5,20 @@ class BillPaidCreditJob < ApplicationJob
 
   retry_on Sequenced::SequenceError
 
-  def perform(wallet_transaction, timestamp)
-    result = Invoices::PaidCreditService.new(
+  def perform(wallet_transaction, timestamp, invoice: nil)
+    result = Invoices::PaidCreditService.call(
       wallet_transaction:,
       timestamp:,
-    ).create
+      invoice:,
+    )
 
-    result.raise_if_error!
+    result.raise_if_error! if invoice || result.invoice.nil? || !result.invoice.generating?
+
+    # NOTE: retry the job with the already created invoice in a previous failed attempt
+    self.class.set(wait: 3.seconds).perform_later(
+      wallet_transaction,
+      timestamp,
+      invoice: result.invoice,
+    )
   end
 end

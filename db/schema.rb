@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
+ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -71,6 +71,26 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
     t.index ["add_on_id", "tax_id"], name: "index_add_ons_taxes_on_add_on_id_and_tax_id", unique: true
     t.index ["add_on_id"], name: "index_add_ons_taxes_on_add_on_id"
     t.index ["tax_id"], name: "index_add_ons_taxes_on_tax_id"
+  end
+
+  create_table "adjusted_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "fee_id"
+    t.uuid "invoice_id", null: false
+    t.uuid "subscription_id"
+    t.uuid "charge_id"
+    t.string "invoice_display_name"
+    t.integer "fee_type"
+    t.boolean "adjusted_units", default: false, null: false
+    t.boolean "adjusted_amount", default: false, null: false
+    t.decimal "units", default: "0.0", null: false
+    t.bigint "unit_amount_cents", default: 0, null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["charge_id"], name: "index_adjusted_fees_on_charge_id"
+    t.index ["fee_id"], name: "index_adjusted_fees_on_fee_id"
+    t.index ["invoice_id"], name: "index_adjusted_fees_on_invoice_id"
+    t.index ["subscription_id"], name: "index_adjusted_fees_on_subscription_id"
   end
 
   create_table "applied_add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -527,7 +547,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
     t.integer "net_payment_term", default: 0, null: false
     t.datetime "voided_at"
     t.integer "organization_sequential_id", default: 0, null: false
-    t.index "organization_id, organization_sequential_id, date_trunc('month'::text, created_at)", name: "unique_organization_sequential_id", unique: true, where: "(organization_sequential_id <> 0)"
+    t.index "organization_id, organization_sequential_id, ((date_trunc('month'::text, created_at))::date)", name: "unique_organization_sequential_id", unique: true, where: "(organization_sequential_id <> 0)"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
@@ -850,6 +870,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
   add_foreign_key "add_ons", "organizations"
   add_foreign_key "add_ons_taxes", "add_ons"
   add_foreign_key "add_ons_taxes", "taxes"
+  add_foreign_key "adjusted_fees", "charges"
+  add_foreign_key "adjusted_fees", "fees"
+  add_foreign_key "adjusted_fees", "invoices"
+  add_foreign_key "adjusted_fees", "subscriptions"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
@@ -946,7 +970,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
       (billable_metrics.aggregation_type <> 0) AS field_name_mandatory,
       (billable_metrics.aggregation_type = ANY (ARRAY[1, 2, 5, 6])) AS numeric_field_mandatory,
       (events.properties ->> (billable_metrics.field_name)::text) AS field_value,
-      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
+      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^-?\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
       (COALESCE(billable_metric_groups.parent_group_count, (0)::bigint) > 0) AS parent_group_mandatory,
       (events.properties ?| (billable_metric_groups.parent_group_keys)::text[]) AS has_parent_group_key,
       (COALESCE(billable_metric_groups.child_group_count, (0)::bigint) > 0) AS child_group_mandatory,

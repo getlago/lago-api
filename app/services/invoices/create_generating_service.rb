@@ -41,6 +41,7 @@ module Invoices
 
     delegate :organization, to: :customer
 
+    # NOTE: accounting date must be in customer timezone
     def issuing_date
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date unless grace_period?
