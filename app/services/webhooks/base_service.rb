@@ -70,6 +70,7 @@ module Webhooks
            Net::ReadTimeout,
            Errno::ECONNRESET,
            Errno::ECONNREFUSED,
+           OpenSSL::SSL::SSLError,
            SocketError,
            EOFError => e
       fail_webhook(webhook, e)
