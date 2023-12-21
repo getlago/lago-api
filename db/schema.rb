@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_19_121735) do
+ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -71,6 +71,26 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_19_121735) do
     t.index ["add_on_id", "tax_id"], name: "index_add_ons_taxes_on_add_on_id_and_tax_id", unique: true
     t.index ["add_on_id"], name: "index_add_ons_taxes_on_add_on_id"
     t.index ["tax_id"], name: "index_add_ons_taxes_on_tax_id"
+  end
+
+  create_table "adjusted_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "fee_id"
+    t.uuid "invoice_id", null: false
+    t.uuid "subscription_id"
+    t.uuid "charge_id"
+    t.string "invoice_display_name"
+    t.integer "fee_type"
+    t.boolean "adjusted_units", default: false, null: false
+    t.boolean "adjusted_amount", default: false, null: false
+    t.decimal "units", default: "0.0", null: false
+    t.bigint "unit_amount_cents", default: 0, null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["charge_id"], name: "index_adjusted_fees_on_charge_id"
+    t.index ["fee_id"], name: "index_adjusted_fees_on_fee_id"
+    t.index ["invoice_id"], name: "index_adjusted_fees_on_invoice_id"
+    t.index ["subscription_id"], name: "index_adjusted_fees_on_subscription_id"
   end
 
   create_table "applied_add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -850,6 +870,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_19_121735) do
   add_foreign_key "add_ons", "organizations"
   add_foreign_key "add_ons_taxes", "add_ons"
   add_foreign_key "add_ons_taxes", "taxes"
+  add_foreign_key "adjusted_fees", "charges"
+  add_foreign_key "adjusted_fees", "fees"
+  add_foreign_key "adjusted_fees", "invoices"
+  add_foreign_key "adjusted_fees", "subscriptions"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
