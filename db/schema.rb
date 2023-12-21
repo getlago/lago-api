@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
+ActiveRecord::Schema[7.0].define(version: 2023_12_19_121735) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -946,7 +946,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_14_133638) do
       (billable_metrics.aggregation_type <> 0) AS field_name_mandatory,
       (billable_metrics.aggregation_type = ANY (ARRAY[1, 2, 5, 6])) AS numeric_field_mandatory,
       (events.properties ->> (billable_metrics.field_name)::text) AS field_value,
-      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
+      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^-?\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
       (COALESCE(billable_metric_groups.parent_group_count, (0)::bigint) > 0) AS parent_group_mandatory,
       (events.properties ?| (billable_metric_groups.parent_group_keys)::text[]) AS has_parent_group_key,
       (COALESCE(billable_metric_groups.child_group_count, (0)::bigint) > 0) AS child_group_mandatory,
