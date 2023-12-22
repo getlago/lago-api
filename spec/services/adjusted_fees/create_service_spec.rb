@@ -18,7 +18,6 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
   end
 
   describe '#call' do
-
     before { fee.invoice.draft! }
 
     context 'when license is premium' do

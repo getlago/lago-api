@@ -6,9 +6,9 @@ module Types
       description 'Create Adjusted Fee Input'
 
       argument :fee_id, ID, required: true
-      argument :units, GraphQL::Types::Float, required: true
-      argument :unit_amount_cents, GraphQL::Types::BigInt, required: false
       argument :invoice_display_name, String, required: false
+      argument :unit_amount_cents, GraphQL::Types::BigInt, required: false
+      argument :units, GraphQL::Types::Float, required: true
     end
   end
 end
