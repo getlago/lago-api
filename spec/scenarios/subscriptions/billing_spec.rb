@@ -498,6 +498,51 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
         it_behaves_like 'a subscription billing without duplicated invoices'
       end
 
+      context 'with anniversary on a 31st' do
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 3, 31, 1),
+            DateTime.new(2023, 6, 30, 1),
+            DateTime.new(2023, 9, 30, 2),
+            DateTime.new(2023, 12, 31, 2),
+          ]
+        end
+
+        let(:subscription_time) { DateTime.new(2022, 12, 31) }
+
+        it_behaves_like 'a subscription billing on every billing day'
+      end
+
+      context 'with anniversary on a 30' do
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 1, 30, 1),
+            DateTime.new(2023, 4, 30, 1),
+            DateTime.new(2023, 7, 30, 2),
+            DateTime.new(2023, 10, 30, 2),
+          ]
+        end
+
+        let(:subscription_time) { DateTime.new(2022, 4, 30) }
+
+        it_behaves_like 'a subscription billing on every billing day'
+      end
+
+      context 'with anniversary on a 28 of february' do
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 2, 28, 1),
+            DateTime.new(2023, 5, 28, 1),
+            DateTime.new(2023, 8, 28, 2),
+            DateTime.new(2023, 11, 28, 2),
+          ]
+        end
+
+        let(:subscription_time) { DateTime.new(2022, 2, 28) }
+
+        it_behaves_like 'a subscription billing on every billing day'
+      end
+
       context 'with UTC+ timezone' do
         let(:timezone) { 'Asia/Kolkata' }
         let(:subscription_time) { DateTime.new(2023, 2, 2) }

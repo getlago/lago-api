@@ -69,11 +69,9 @@ module Subscriptions
 
         # NOTE: if subscription anniversary day is higher than the current last day of the month,
         #       subscription period, will end on the previous end of day
-        if last_day_of_month?(date) && subscription_at.day > date.day
-          date - 1.day
-        else
-          date
-        end
+        return date - 1.day if last_day_of_month?(date) && subscription_at.day > date.day
+
+        date
       end
 
       def compute_next_end_of_period
