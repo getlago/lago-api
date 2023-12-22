@@ -40,6 +40,14 @@ module ExecutionErrorResponder
     )
   end
 
+  def forbidden_error(code:)
+    execution_error(
+      error: 'forbidden',
+      status: 403,
+      code:,
+    )
+  end
+
   def validation_error(messages:)
     execution_error(
       error: 'Unprocessable Entity',
@@ -57,6 +65,8 @@ module ExecutionErrorResponder
       not_allowed_error(code: service_result.error.code)
     when BaseService::ValidationFailure
       validation_error(messages: service_result.error.messages)
+    when BaseService::ForbiddenFailure
+      forbidden_error(code: service_result.error.code)
     else
       execution_error(
         error: 'Internal error',
