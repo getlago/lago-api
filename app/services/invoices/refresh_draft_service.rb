@@ -27,13 +27,20 @@ module Invoices
         timestamp = fetch_timestamp
 
         invoice.fees.destroy_all
+
         invoice.invoice_subscriptions.destroy_all
         invoice.applied_taxes.destroy_all
 
-        calculate_result = Invoices::CalculateFeesService.call(
-          invoice: invoice.reload,
+        Invoices::CreateInvoiceSubscriptionService.call(
+          invoice:,
           subscriptions: Subscription.find(subscription_ids),
           timestamp:,
+          recurring:,
+          refresh: true,
+        ).raise_if_error!
+
+        calculate_result = Invoices::CalculateFeesService.call(
+          invoice: invoice.reload,
           recurring:,
           context:,
         )

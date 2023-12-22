@@ -21,11 +21,11 @@ namespace :subscriptions do
     abort "External subscription ids not found\n\n" if subscriptions.blank?
     abort "Subscriptions don't belong to the same customer\n\n" if subscriptions.pluck(:customer_id).uniq.count > 1
 
-    result = Invoices::SubscriptionService.new(
+    result = Invoices::SubscriptionService.call(
       subscriptions:,
       timestamp: args[:timestamp].to_i,
       recurring: false,
-    ).create
+    )
     invoice = result.invoice
 
     invoice.update!(created_at: Time.zone.at(args[:timestamp].to_i))
