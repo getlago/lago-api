@@ -35,9 +35,9 @@
                   - else
                     == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
-                  / True up fees attached to the fee
-                  - if fee.true_up_fee.present?
-                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+                / True up fees attached to the fee
+                - if fee.true_up_fee.present?
+                  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
               / Fees without group
               - else
@@ -70,9 +70,9 @@
                   - else
                     == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
-                  / True up fees attached to the fee
-                  - fees.select { |f| f.true_up_fee.present? }.each do |fee|
-                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+                / True up fees attached to the fee
+                - fees.select { |f| f.true_up_fee.present? }.each do |fee|
+                  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
               / Fees without group
               - else
@@ -103,9 +103,9 @@
                   - else
                     == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
-                  / True up fees attached to the fee
-                  - if fee.true_up_fee.present?
-                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+                / True up fees attached to the fee
+                - if fee.true_up_fee.present?
+                  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
               / Fees without group
               - else
