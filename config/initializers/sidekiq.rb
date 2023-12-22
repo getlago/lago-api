@@ -7,6 +7,7 @@ redis_config = {
     verify_mode: OpenSSL::SSL::VERIFY_NONE,
   },
   network_timeout: 5,
+  timeout: 5,
 }
 
 if ENV['REDIS_PASSWORD'].present? && !ENV['REDIS_PASSWORD'].empty?
