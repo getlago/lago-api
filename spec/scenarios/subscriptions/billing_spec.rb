@@ -65,6 +65,34 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
     end
   end
 
+  shared_examples 'a subscription billing on every billing day' do
+    it 'creates an invoice' do
+      # Create the subscription
+      travel_to(subscription_time) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time:,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      # Create an invoice on each billing day
+      expect do
+        billing_times.each do |time|
+          travel_to(time) do
+            Subscriptions::BillingService.new.call
+            perform_all_enqueued_jobs
+          end
+        end
+      end.to change { subscription.reload.invoices.count }.from(0).to(billing_times.count)
+    end
+  end
+
   context 'with weekly plan' do
     let(:plan_interval) { 'weekly' }
 
@@ -267,6 +295,75 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
         let(:after_billing_times) { [DateTime.new(2023, 5, 1)] }
 
         it_behaves_like 'a subscription billing without duplicated invoices'
+      end
+
+      context 'with anniversary on a 31st' do
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 1, 31, 1),
+            DateTime.new(2023, 2, 28, 1),
+            DateTime.new(2023, 3, 31, 1),
+            DateTime.new(2023, 4, 30, 1),
+            DateTime.new(2023, 5, 31, 1),
+            DateTime.new(2023, 6, 30, 1),
+            DateTime.new(2023, 7, 31, 2),
+            DateTime.new(2023, 8, 31, 2),
+            DateTime.new(2023, 9, 30, 2),
+            DateTime.new(2023, 10, 31, 2),
+            DateTime.new(2023, 11, 30, 2),
+            DateTime.new(2023, 12, 31, 2),
+          ]
+        end
+
+        let(:subscription_time) { DateTime.new(2022, 12, 31) }
+
+        it_behaves_like 'a subscription billing on every billing day'
+      end
+
+      context 'with anniversary on a 30' do
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 1, 30, 1),
+            DateTime.new(2023, 2, 28, 1),
+            DateTime.new(2023, 3, 30, 1),
+            DateTime.new(2023, 4, 30, 1),
+            DateTime.new(2023, 5, 30, 1),
+            DateTime.new(2023, 6, 30, 1),
+            DateTime.new(2023, 7, 30, 2),
+            DateTime.new(2023, 8, 30, 2),
+            DateTime.new(2023, 9, 30, 2),
+            DateTime.new(2023, 10, 30, 2),
+            DateTime.new(2023, 11, 30, 2),
+            DateTime.new(2023, 12, 30, 2),
+          ]
+        end
+
+        let(:subscription_time) { DateTime.new(2022, 4, 30) }
+
+        it_behaves_like 'a subscription billing on every billing day'
+      end
+
+      context 'with anniversary on a 28 of february' do
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 1, 28, 1),
+            DateTime.new(2023, 2, 28, 1),
+            DateTime.new(2023, 3, 28, 1),
+            DateTime.new(2023, 4, 28, 1),
+            DateTime.new(2023, 5, 28, 1),
+            DateTime.new(2023, 6, 28, 1),
+            DateTime.new(2023, 7, 28, 2),
+            DateTime.new(2023, 8, 28, 2),
+            DateTime.new(2023, 9, 28, 2),
+            DateTime.new(2023, 10, 28, 2),
+            DateTime.new(2023, 11, 28, 2),
+            DateTime.new(2023, 12, 28, 2),
+          ]
+        end
+
+        let(:subscription_time) { DateTime.new(2022, 2, 28) }
+
+        it_behaves_like 'a subscription billing on every billing day'
       end
 
       context 'with UTC+ timezone' do

@@ -515,7 +515,7 @@ RSpec.describe Fees::SubscriptionService do
           {
             from_datetime: Time.zone.parse('2022-08-31 00:00:00'),
             to_datetime: Time.zone.parse('2022-09-30 23:59:59'),
-            timestamp: Time.zone.parse('2022-04-02 00:00').end_of_month.to_i,
+            timestamp: Time.zone.parse('2022-10-01 00:00').to_i,
           }
         end
 
@@ -528,7 +528,7 @@ RSpec.describe Fees::SubscriptionService do
             it 'creates a fee with prorated amount based on trial' do
               result = fees_subscription_service.create
 
-              expect(result.fee.amount_cents).to eq(1548)
+              expect(result.fee.amount_cents).to eq(1600)
             end
           end
         end
