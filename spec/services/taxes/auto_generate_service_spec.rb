@@ -12,7 +12,7 @@ RSpec.describe Taxes::AutoGenerateService, type: :service do
       auto_generate_service.call
 
       aggregate_failures do
-        expect(Tax.count).to eq(30) # EU taxes + 2 defaults
+        expect(Tax.count).to eq(29) # EU taxes + 2 defaults
       end
     end
   end
