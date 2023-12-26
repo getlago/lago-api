@@ -67,8 +67,8 @@ it:
     tax_rate: Aliquota fiscale
     taxes:
       fr_tax_exempt: Il cliente è esente da tasse secondo l'articolo 259-1 del Codice Generale delle Imposte francese.
-      tax_exempt: Il cliente è esente da tasse.
       reverse_charge: Responsabilità fiscale trasferita al cliente.
+      tax_exempt: Il cliente è esente da tasse.
     total: Totale
     total_credits: Crediti totali
     total_credits_with_value: 'Crediti totali: %{credit_amount} crediti'

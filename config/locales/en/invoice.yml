@@ -67,8 +67,8 @@ en:
     tax_rate: Tax rate
     taxes:
       fr_tax_exempt: Customer is tax exempt according to article 259-1 of the French Tax General Code.
-      tax_exempt: Customer is tax exempt.
       reverse_charge: Reverse charge - Tax liability shifted to customer.
+      tax_exempt: Customer is tax exempt.
     total: Total
     total_credits: Total credits
     total_credits_with_value: 'Total credits: %{credit_amount} credits'

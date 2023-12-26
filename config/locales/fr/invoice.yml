@@ -67,8 +67,8 @@ fr:
     tax_rate: Taux de taxe
     taxes:
       fr_tax_exempt: Le client est exonéré de taxe – art. 259-1 du CGI.
-      tax_exempt: Le client est exonéré de taxe.
       reverse_charge: Taxe soumise à autoliquidation.
+      tax_exempt: Le client est exonéré de taxe.
     total: Total
     total_credits: Total crédits
     total_credits_with_value: 'Nombre total de crédits: %{credit_amount} crédits'
