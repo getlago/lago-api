@@ -80,6 +80,40 @@ module Api
         end
       end
 
+      def create_sync
+        result = ::Events::CreateSyncService.call(
+          organization: current_organization,
+          params: create_params,
+          timestamp: Time.current.to_f,
+          metadata: event_metadata,
+        )
+
+        if result.success?
+          event_json_str = ::V1::EventSerializer.new(
+            result.event,
+            root_name: "event",
+          ).to_json
+
+          event_json = JSON.parse(event_json_str)
+
+          if result.invoices.present?
+            invoices_data = ::CollectionSerializer.new(
+              result.invoices,
+              ::V1::InvoiceSerializer,
+              collection_name: "invoices",
+            ).to_json
+
+            event_json["event"]["invoices"] = JSON.parse(invoices_data)["invoices"]
+          end
+
+          render(
+            json: event_json,
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params

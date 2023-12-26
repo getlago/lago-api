@@ -38,7 +38,9 @@ Rails.application.routes.draw do
         end
       end
 
-      resources :subscriptions, only: %i[create update show index], param: :external_id
+      resources :subscriptions, only: %i[create update show index], param: :external_id do
+        post :sync, on: :collection, to: 'subscriptions#create_sync'
+      end
       delete '/subscriptions/:external_id', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code
@@ -53,6 +55,7 @@ Rails.application.routes.draw do
       end
       resources :events, only: %i[create show] do
         post :estimate_fees, on: :collection
+        post :sync, on: :collection, to: 'events#create_sync'
       end
       resources :applied_coupons, only: %i[create index]
       resources :fees, only: %i[show update index]

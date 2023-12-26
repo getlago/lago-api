@@ -25,6 +25,7 @@ module V1
 
       payload = payload.merge(customer:) if include?(:customer)
       payload = payload.merge(plan:) if include?(:plan)
+      payload = payload.merge(invoices:) if include?(:invoices)
 
       payload
     end
@@ -44,6 +45,12 @@ module V1
         model.plan,
         includes: %i[charges taxes],
       ).serialize
+    end
+
+    def invoices
+      model.invoices.map do |invoice|
+        ::V1::InvoiceSerializer.new(invoice).serialize
+      end
     end
   end
 end
