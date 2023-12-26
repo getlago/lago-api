@@ -429,6 +429,8 @@ html
         - else
           == SlimHelper.render('templates/invoices/v3/_subscriptions_summary', self)
 
+      == SlimHelper.render('templates/invoices/v3/_eu_tax_management', self)  
+
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
       .powered-by
