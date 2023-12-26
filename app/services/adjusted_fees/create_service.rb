@@ -12,6 +12,7 @@ module AdjustedFees
 
     def call
       return result.forbidden_failure! if !License.premium? || !fee.invoice.draft?
+      return result.validation_failure!(errors: { adjusted_fee: ['already_exists'] }) if fee.adjusted_fee
 
       adjusted_fee = AdjustedFee.new(
         fee:,
