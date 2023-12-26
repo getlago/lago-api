@@ -222,6 +222,37 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
+    context 'when invoice has a too small amount' do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:) }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 20,
+          currency: 'EUR',
+          ready_for_payment_processing: true,
+        )
+      end
+
+      before do
+        subscription
+
+        allow(Stripe::PaymentIntent).to receive(:create)
+          .and_raise(Stripe::InvalidRequestError.new('amount_too_small', {}, code: 'amount_too_small'))
+      end
+
+      it 'does not send mark the invoice as failed' do
+        stripe_service.create
+        invoice.reload
+
+        expect(invoice).to be_pending
+      end
+    end
+
     context 'when payment status is processing' do
       let(:payment_status) { 'processing' }
 
