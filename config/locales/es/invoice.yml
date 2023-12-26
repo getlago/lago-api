@@ -64,6 +64,10 @@ es:
     tax_name: "%{name} (%{rate}% sobre %{amount})"
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Tasas de impuestos
+    taxes:
+      fr_tax_exempt: El cliente está exento de impuestos según el artículo 259-1 del Código General de Impuestos francés.
+      tax_exempt: El cliente está exento de impuestos.
+      reverse_charge: Responsabilidad fiscal transferida al cliente.
     total: Total
     total_credits_with_value: 'Total de créditos con valor: %{credit_amount} créditos'
     total_due: Total debido
