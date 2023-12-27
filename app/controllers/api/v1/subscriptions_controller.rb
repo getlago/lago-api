@@ -111,6 +111,39 @@ module Api
         end
       end
 
+      def create_sync
+        customer = Customer.find_or_initialize_by(
+          external_id: create_params[:external_customer_id].to_s.strip,
+          organization_id: current_organization.id,
+        )
+
+        plan = Plan.parents.find_by(
+          code: create_params[:plan_code],
+          organization_id: current_organization.id,
+        )
+
+        result = Subscriptions::CreateSyncService.call(
+          customer:,
+          plan:,
+          params: SubscriptionLegacyInput.new(
+            current_organization,
+            create_params,
+          ).create_input,
+        )
+
+        if result.success?
+          render(
+          json: ::V1::SubscriptionSerializer.new(
+            result.subscription,
+            root_name: 'subscription',
+            includes: %i[plan invoices],
+          ),
+        )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
