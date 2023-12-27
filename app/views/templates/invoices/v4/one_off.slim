@@ -460,6 +460,7 @@ html
               td.body-1 = I18n.t('invoice.total_due')
               td.body-1 = MoneyHelper.format(total_amount)
 
+      == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
