@@ -130,7 +130,7 @@ module Api
             create_params,
           ).create_input,
         )
-        debugger
+
         if result.success?
           render(
           json: ::V1::SubscriptionSerializer.new(
