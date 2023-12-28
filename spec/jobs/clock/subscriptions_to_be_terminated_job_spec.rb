@@ -51,8 +51,8 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
             described_class.perform_now
           end
             .to have_enqueued_job(SendWebhookJob)
-                  .with('subscription.termination_alert', Subscription)
-                  .exactly(:once)
+            .with('subscription.termination_alert', Subscription)
+            .exactly(:once)
         end
       end
     end
@@ -74,8 +74,8 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
             described_class.perform_now
           end
             .to have_enqueued_job(SendWebhookJob)
-                  .with('subscription.termination_alert', Subscription)
-                  .exactly(:once)
+            .with('subscription.termination_alert', Subscription)
+            .exactly(:once)
         end
       end
     end
