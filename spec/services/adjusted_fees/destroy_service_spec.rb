@@ -15,9 +15,11 @@ RSpec.describe AdjustedFees::DestroyService, type: :service do
     before { adjusted_fee }
 
     it 'destroys the adjusted fee' do
-      aggregate_failures do
-        expect { destroy_service.call }.to change(AdjustedFee, :count).by(-1)
-      end
+      expect { destroy_service.call }.to change(AdjustedFee, :count).by(-1)
+    end
+
+    it 'enqueues the Invoices::RefreshBatchJob' do
+      expect { destroy_service.call }.to have_enqueued_job(Invoices::RefreshBatchJob)
     end
 
     context 'when adjusted fee is not found' do

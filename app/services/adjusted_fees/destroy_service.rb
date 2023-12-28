@@ -14,6 +14,8 @@ module AdjustedFees
 
       fee.adjusted_fee.destroy!
 
+      Invoices::RefreshBatchJob.perform_later([fee.invoice_id])
+
       result.fee = fee
       result
     end
