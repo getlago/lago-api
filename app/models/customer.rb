@@ -35,8 +35,9 @@ class Customer < ApplicationRecord
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
   has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
   has_one :adyen_customer, class_name: 'PaymentProviderCustomers::AdyenCustomer'
+  has_one :pinet_customer, class_name: 'PaymentProviderCustomers::PinetCustomer'
 
-  PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
+  PAYMENT_PROVIDERS = %w[stripe gocardless adyen pinet].freeze
 
   default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
