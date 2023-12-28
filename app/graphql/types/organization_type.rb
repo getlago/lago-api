@@ -39,9 +39,10 @@ module Types
     field :email_settings, [Types::Organizations::EmailSettingsEnum], null: true
     field :taxes, [Types::Taxes::Object], null: true, resolver: Resolvers::TaxesResolver
 
-    field :adyen_payment_providers, [Types::PaymentProviders::Adyen], null: true
-    field :gocardless_payment_providers, [Types::PaymentProviders::Gocardless], null: true
-    field :stripe_payment_providers, [Types::PaymentProviders::Stripe], null: true
+    field :adyen_payment_provider, Types::PaymentProviders::Adyen, null: true
+    field :gocardless_payment_provider, Types::PaymentProviders::Gocardless, null: true
+    field :pinet_payment_provider, Types::PaymentProviders::Pinet, null: true
+    field :stripe_payment_provider, Types::PaymentProviders::Stripe, null: true
 
     def billing_configuration
       {

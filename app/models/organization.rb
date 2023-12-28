@@ -32,9 +32,10 @@ class Organization < ApplicationRecord
   has_many :webhook_endpoints
   has_many :webhooks, through: :webhook_endpoints
 
-  has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
-  has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
-  has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
+  has_one :stripe_payment_provider, class_name: 'PaymentProviders::StripeProvider'
+  has_one :gocardless_payment_provider, class_name: 'PaymentProviders::GocardlessProvider'
+  has_one :adyen_payment_provider, class_name: 'PaymentProviders::AdyenProvider'
+  has_one :pinet_payment_provider, class_name: 'PaymentProviders::PinetProvider'
 
   has_one_attached :logo
 
