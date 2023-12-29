@@ -1,4 +1,5 @@
 / Fee per unit
+= MoneyHelper.format(amount_details['per_unit_amount'].to_money(amount_currency))
 tr.details
   td.body-2 = I18n.t('invoice.volume.fee_per_unit')
   td.body-2 = units
