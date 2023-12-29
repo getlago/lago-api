@@ -16,5 +16,6 @@ class MoneyHelper
       decimal_mark: I18n.t('money.decimal_mark'),
       thousands_separator: I18n.t('money.thousands_separator'),
     )
+    Money.default_infinite_precision = false
   end
 end
