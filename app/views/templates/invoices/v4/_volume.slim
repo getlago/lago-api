@@ -2,7 +2,7 @@
 tr.details
   td.body-2 = I18n.t('invoice.volume.fee_per_unit')
   td.body-2 = units
-  td.body-2 = MoneyHelper.format(amount_details['per_unit_amount'].to_money(amount_currency))
+  td.body-2 = MoneyHelper.format_with_precision(BigDecimal(amount_details['per_unit_amount']), amount_currency)
   td.body-2 == TaxHelper.applied_taxes(self)
   td.body-2 = MoneyHelper.format(amount_details['per_unit_total_amount'].to_money(amount_currency))
 - if amount_details['flat_unit_amount'].to_f.positive?
