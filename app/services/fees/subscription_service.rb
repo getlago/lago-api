@@ -55,12 +55,12 @@ module Fees
       return base_fee unless adjusted_fee
 
       units = adjusted_fee.units
-      unit_amount_cents = adjusted_fee.unit_amount_cents
+      unit_amount_cents = adjusted_fee.unit_amount_cents.round
       amount_cents = adjusted_fee.adjusted_units? ? (units * new_amount_cents) : (units * unit_amount_cents)
       Fee.new(
         invoice:,
         subscription:,
-        amount_cents:,
+        amount_cents: amount_cents.round,
         amount_currency: plan.amount_currency,
         fee_type: :subscription,
         invoiceable_type: 'Subscription',
