@@ -75,6 +75,19 @@ type AddOnCollection {
 }
 
 """
+Pinet input arguments
+"""
+input AddPinetPaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  createCustomers: Boolean
+  secretKey: String
+  successRedirectUrl: String
+}
+
+"""
 Stripe input arguments
 """
 input AddStripePaymentProviderInput {
@@ -3552,6 +3565,16 @@ type Mutation {
   ): GocardlessProvider
 
   """
+  Add Pinet API keys to the organization
+  """
+  addPinetPaymentProvider(
+    """
+    Parameters for AddPinetPaymentProvider
+    """
+    input: AddPinetPaymentProviderInput!
+  ): PinetProvider
+
+  """
   Add Stripe API keys to the organization
   """
   addStripePaymentProvider(
@@ -4197,6 +4220,7 @@ type Organization {
   logoUrl: String
   name: String!
   netPaymentTerm: Int!
+  pinetPaymentProvider: PinetProvider
   state: String
   stripePaymentProviders: [StripeProvider!]
   taxIdentificationNumber: String
@@ -4237,12 +4261,21 @@ input OrganizationBillingConfigurationInput {
   invoiceGracePeriod: Int
 }
 
+# TODO: Refactor PinetProvider according to this PR https://github.com/getlago/lago-api/pull/1527
 union PaymentProvider = AdyenProvider | GocardlessProvider | StripeProvider
 
 type PaymentProviderCollection {
   collection: [PaymentProvider!]!
   metadata: CollectionMetadata!
 }
+
+type PinetProvider {
+  createCustomers: Boolean!
+  id: ID!
+  secretKey: String!
+  successRedirectUrl: String
+}
+# End of TODO
 
 type Plan {
   activeSubscriptionsCount: Int!
@@ -4353,6 +4386,7 @@ enum ProviderPaymentMethodsEnum {
 enum ProviderTypeEnum {
   adyen
   gocardless
+  pinet
   stripe
 }
 
