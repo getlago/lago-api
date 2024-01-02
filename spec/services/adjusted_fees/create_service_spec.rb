@@ -55,7 +55,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context 'when invoice is NOT in draft status' do
+      context 'when there is invalid charge model' do
         let(:percentage_charge) { create(:percentage_charge) }
 
         before { fee.charge = percentage_charge }
