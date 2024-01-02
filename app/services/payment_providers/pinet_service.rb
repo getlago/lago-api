@@ -3,7 +3,7 @@
 module PaymentProviders
   class PinetService < BaseService
     def create_or_update(**args)
-      pinet_provider = PaymentProviders::StripeProvider.find_or_initialize_by(
+      pinet_provider = PaymentProviders::PinetProvider.find_or_initialize_by(
         organization_id: args[:organization_id],
       )
 
@@ -16,7 +16,7 @@ module PaymentProviders
 
       if secret_key != pinet_provider.secret_key
 
-        # PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
+        # PaymentProviders::Pinet::RegisterWebhookJob.perform_later(pinet_provider)
 
         # NOTE: ensure existing payment_provider_customers are
         #       attached to the provider

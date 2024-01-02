@@ -133,12 +133,12 @@ module Api
 
         if result.success?
           render(
-          json: ::V1::SubscriptionSerializer.new(
-            result.subscription,
-            root_name: 'subscription',
-            includes: %i[plan invoices],
-          ),
-        )
+            json: ::V1::SubscriptionSerializer.new(
+              result.subscription,
+              root_name: 'subscription',
+              includes: %i[plan invoices],
+            ),
+          )
         else
           render_error_response(result)
         end
