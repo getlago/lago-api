@@ -25,6 +25,7 @@ RSpec.describe ::V1::CreditNotes::PaymentProviderRefundErrorSerializer do
       expect(result['data']['external_customer_id']).to eq(credit_note.customer.external_id)
       expect(result['data']['provider_customer_id']).to eq(options[:provider_customer_id])
       expect(result['data']['payment_provider']).to eq(credit_note.customer.payment_provider)
+      expect(result['data']['payment_provider_code']).to eq(credit_note.customer.payment_provider_code)
       expect(result['data']['provider_error']).to eq(options[:provider_error])
     end
   end

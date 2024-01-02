@@ -17,6 +17,7 @@ RSpec.describe ::V1::PaymentProviders::CustomerCheckoutSerializer do
       expect(result['data']['lago_customer_id']).to eq(customer.id)
       expect(result['data']['external_customer_id']).to eq(customer.external_id)
       expect(result['data']['payment_provider']).to eq(customer.payment_provider)
+      expect(result['data']['payment_provider_code']).to eq(customer.payment_provider_code)
       expect(result['data']['checkout_url']).to eq('https://example.com')
     end
   end
