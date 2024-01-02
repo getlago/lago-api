@@ -28,6 +28,7 @@ module Invoices
         pinet_result = create_pinet_payment
         # NOTE: return if payment was not processed
         return result unless pinet_result
+
         payment = Payment.new(
           invoice:,
           payment_provider_id: organization.pinet_payment_provider.id,
