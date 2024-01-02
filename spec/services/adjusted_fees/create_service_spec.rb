@@ -55,6 +55,22 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
+      context 'when invoice is NOT in draft status' do
+        let(:percentage_charge) { create(:percentage_charge) }
+
+        before { fee.charge = percentage_charge }
+
+        it 'returns error' do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:charge]).to eq(['invalid_charge_model'])
+          end
+        end
+      end
+
       context 'when adjusted fee already exists' do
         let(:adjusted_fee) { create(:adjusted_fee, fee:) }
 
