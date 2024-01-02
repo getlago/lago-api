@@ -31,7 +31,7 @@ module V1
       private
 
       def groups(fees)
-        fees.sort_by { |f| f.group&.name }.map do |f|
+        fees.sort_by { |f| f.group&.name.to_s }.map do |f|
           next unless f.group
 
           {
