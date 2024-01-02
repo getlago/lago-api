@@ -54,6 +54,38 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           end
         end
       end
+
+      context 'when there is invalid charge model' do
+        let(:percentage_charge) { create(:percentage_charge) }
+
+        before { fee.charge = percentage_charge }
+
+        it 'returns error' do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:charge]).to eq(['invalid_charge_model'])
+          end
+        end
+      end
+
+      context 'when adjusted fee already exists' do
+        let(:adjusted_fee) { create(:adjusted_fee, fee:) }
+
+        before { adjusted_fee }
+
+        it 'returns validation error' do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:adjusted_fee]).to eq(['already_exists'])
+          end
+        end
+      end
     end
 
     context 'when license is not premium' do
