@@ -38,7 +38,7 @@ module PaymentProviders
       PaymentProviderCustomers::PinetCustomer
         .joins(:customer)
         .where(payment_provider_id: nil, customers: { organization_id: })
-        .update_all(payment_provider_id: pinet_provider.id)
+        .update_all(payment_provider_id: pinet_provider.id) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end
