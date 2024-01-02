@@ -24,13 +24,13 @@ module AdjustedFees
         subscription: fee.subscription,
         charge: fee.charge,
         group: fee.group,
-        adjusted_units: params[:unit_amount_cents]&.blank?,
-        adjusted_amount: params[:unit_amount_cents]&.present?,
+        adjusted_units: params[:unit_amount_cents].blank?,
+        adjusted_amount: params[:unit_amount_cents].present?,
         invoice_display_name: params[:invoice_display_name],
         fee_type: fee.fee_type,
         properties: fee.properties,
-        units: params[:units],
-        unit_amount_cents: params[:unit_amount_cents],
+        units: params[:units] || 0,
+        unit_amount_cents: params[:unit_amount_cents] || 0,
       )
 
       adjusted_fee.save!

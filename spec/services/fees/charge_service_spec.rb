@@ -195,6 +195,110 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
+      context 'when there is adjusted fee' do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            charge:,
+            properties:,
+            fee_type: :charge,
+            adjusted_units: true,
+            adjusted_amount: false,
+            units: 3,
+          )
+        end
+        let(:properties) do
+          {
+            charges_from_datetime: boundaries[:charges_from_datetime],
+            charges_to_datetime: boundaries[:charges_to_datetime],
+          }
+        end
+
+        before do
+          adjusted_fee
+          invoice.draft!
+        end
+
+        context 'with adjusted units' do
+          it 'creates a fee' do
+            result = charge_subscription_service.create
+
+            expect(result).to be_success
+            expect(result.fees.first).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 6_000,
+              amount_currency: 'EUR',
+              units: 3,
+              unit_amount_cents: 2_000,
+              precise_unit_amount: 20,
+              events_count: 0,
+              payment_status: 'pending',
+            )
+          end
+        end
+
+        context 'with adjusted amount' do
+          let(:adjusted_fee) do
+            create(
+              :adjusted_fee,
+              invoice:,
+              subscription:,
+              charge:,
+              properties:,
+              fee_type: :charge,
+              adjusted_units: false,
+              adjusted_amount: true,
+              units: 4,
+              unit_amount_cents: 200,
+            )
+          end
+
+          it 'creates a fee' do
+            result = charge_subscription_service.create
+
+            expect(result).to be_success
+            expect(result.fees.first).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 800,
+              amount_currency: 'EUR',
+              units: 4,
+              unit_amount_cents: 200,
+              precise_unit_amount: 2,
+              events_count: 0,
+              payment_status: 'pending',
+            )
+          end
+        end
+
+        context 'with invoice NOT in draft status' do
+          before { invoice.finalized! }
+
+          it 'creates a fee without using adjusted fee attributes' do
+            result = charge_subscription_service.create
+
+            expect(result).to be_success
+            expect(result.fees.first).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 0,
+              amount_currency: 'EUR',
+              units: 0,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+              events_count: 0,
+              payment_status: 'pending',
+            )
+          end
+        end
+      end
+
       context 'with true-up fee' do
         it 'creates two fees' do
           travel_to(DateTime.new(2023, 4, 1)) do
