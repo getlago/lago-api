@@ -5731,6 +5731,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentProviderCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "providerCustomer",
               "description": null,
               "type": {
@@ -25397,6 +25409,18 @@
               "type": {
                 "kind": "ENUM",
                 "name": "ProviderTypeEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentProviderCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,

@@ -1688,6 +1688,7 @@ input CreateCustomerInput {
   name: String!
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
   state: String
@@ -5777,6 +5778,7 @@ input UpdateCustomerInput {
   name: String!
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
   state: String
