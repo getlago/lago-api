@@ -16,7 +16,7 @@ module Mutations
       def resolve(id:)
         validate_organization!
 
-        organization_draft_invoices = current_organization.invoices.where(status: :draft).pluck(:id)
+        organization_draft_invoices = current_organization.invoices.draft.pluck(:id)
         fee = Fee.where(invoice_id: organization_draft_invoices).find_by(id:)
 
         result = ::AdjustedFees::DestroyService.call(fee:)
