@@ -27,7 +27,7 @@ RSpec.describe Types::Customers::Object do
   it { is_expected.to have_field(:logo_url).of_type('String') }
   it { is_expected.to have_field(:net_payment_term).of_type('Int') }
   it { is_expected.to have_field(:payment_provider).of_type('ProviderTypeEnum') }
-  it { is_expected.to have_field(:payment_provider_connection_code).of_type('String') }
+  it { is_expected.to have_field(:payment_provider_code).of_type('String') }
   it { is_expected.to have_field(:phone).of_type('String') }
   it { is_expected.to have_field(:state).of_type('String') }
   it { is_expected.to have_field(:tax_identification_number).of_type('String') }

@@ -9292,7 +9292,7 @@
               ]
             },
             {
-              "name": "paymentProviderConnectionCode",
+              "name": "paymentProviderCode",
               "description": null,
               "type": {
                 "kind": "SCALAR",
