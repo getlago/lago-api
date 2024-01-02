@@ -18,7 +18,13 @@ module Fees
       init_true_up_fee(fee: result.fees.first, amount_cents: result.fees.sum(&:amount_cents))
       return result unless result.success?
 
-      result.fees.each(&:save!)
+      ActiveRecord::Base.transaction do
+        result.fees.each do |fee|
+          fee.save!
+          adjusted_fee.update!(fee:) if invoice.draft? && adjusted_fee
+        end
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
