@@ -26,6 +26,8 @@ module Types
 
       field :applied_taxes, [Types::Fees::AppliedTaxes::Object]
 
+      field :amount_details, Types::Fees::AmountDetails::Object, null: true
+
       delegate :group_name, to: :object
       delegate :invoice_name, to: :object
 
