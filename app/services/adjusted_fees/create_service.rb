@@ -23,6 +23,7 @@ module AdjustedFees
         invoice: fee.invoice,
         subscription: fee.subscription,
         charge: fee.charge,
+        group: fee.group,
         adjusted_units: params[:unit_amount_cents]&.blank?,
         adjusted_amount: params[:unit_amount_cents]&.present?,
         invoice_display_name: params[:invoice_display_name],

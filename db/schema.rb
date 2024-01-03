@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
+ActiveRecord::Schema[7.0].define(version: 2024_01_03_125624) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -87,8 +87,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
     t.jsonb "properties", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "group_id"
     t.index ["charge_id"], name: "index_adjusted_fees_on_charge_id"
     t.index ["fee_id"], name: "index_adjusted_fees_on_fee_id"
+    t.index ["group_id"], name: "index_adjusted_fees_on_group_id"
     t.index ["invoice_id"], name: "index_adjusted_fees_on_invoice_id"
     t.index ["subscription_id"], name: "index_adjusted_fees_on_subscription_id"
   end
@@ -872,6 +874,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
   add_foreign_key "add_ons_taxes", "taxes"
   add_foreign_key "adjusted_fees", "charges"
   add_foreign_key "adjusted_fees", "fees"
+  add_foreign_key "adjusted_fees", "groups"
   add_foreign_key "adjusted_fees", "invoices"
   add_foreign_key "adjusted_fees", "subscriptions"
   add_foreign_key "applied_add_ons", "add_ons"
