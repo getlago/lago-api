@@ -49,6 +49,7 @@ module Types
 
     field :update_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Update
     field :update_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless::Update
+    field :update_pinet_payment_provider, mutation: Mutations::PaymentProviders::Pinet::Update
     field :update_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe::Update
 
     field :destroy_payment_provider, mutation: Mutations::PaymentProviders::Destroy
