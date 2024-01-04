@@ -4,6 +4,11 @@ require 'active_support/core_ext/integer/time'
 require 'sprockets/railtie'
 
 Rails.application.configure do
+  config.after_initialize do
+    Bullet.enable        = true
+    Bullet.rails_logger  = true
+  end
+
   # Settings specified here will take precedence over those in config/application.rb.
   config.middleware.use(ActionDispatch::Cookies)
   config.middleware.use(ActionDispatch::Session::CookieStore, key: '_lago_dev')

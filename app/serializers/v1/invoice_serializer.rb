@@ -45,12 +45,17 @@ module V1
     end
 
     def subscriptions
-      ::CollectionSerializer
-        .new(model.subscriptions, ::V1::SubscriptionSerializer, collection_name: 'subscriptions').serialize
+      ::CollectionSerializer.new(
+        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: 'subscriptions'
+      ).serialize
     end
 
     def fees
-      ::CollectionSerializer.new(model.fees, ::V1::FeeSerializer, collection_name: 'fees').serialize
+      ::CollectionSerializer.new(
+        model.fees.includes([:true_up_fee, :subscription, :customer, :charge, :group, :billable_metric]),
+        ::V1::FeeSerializer,
+        collection_name: 'fees',
+      ).serialize
     end
 
     def credits
