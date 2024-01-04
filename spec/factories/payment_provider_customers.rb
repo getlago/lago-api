@@ -19,4 +19,11 @@ FactoryBot.define do
 
     provider_customer_id { SecureRandom.uuid }
   end
+
+  factory :pinet_customer, class: 'PaymentProviderCustomers::PinetCustomer' do
+    customer
+
+    provider_customer_id { SecureRandom.uuid }
+    payment_token { SecureRandom.uuid }
+  end
 end
