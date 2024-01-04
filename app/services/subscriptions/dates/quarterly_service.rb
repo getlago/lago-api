@@ -39,6 +39,16 @@ module Subscriptions
       alias compute_charges_duration compute_duration
 
       def compute_base_date
+        # NOTE: if subscription anniversary is on last day of month and current month days count
+        #       is less than month anniversary day count, we need to use the last day of the previous month
+        if subscription.anniversary? && last_day_of_month?(billing_date) && (billing_date.day < subscription_at.day)
+          if (billing_date - 3.months).end_of_month.day >= subscription_at.day
+            return (billing_date - 3.months).end_of_month.change(day: subscription_at.day)
+          end
+
+          return (billing_date - 3.months).end_of_month
+        end
+
         billing_date - 3.months
       end
 
@@ -56,7 +66,13 @@ module Subscriptions
           year += 1
         end
 
-        build_date(year, month, day)
+        date = build_date(year, month, day)
+
+        # NOTE: if subscription anniversary day is higher than the current last day of the month,
+        #       subscription period, will end on the previous end of day
+        return date - 1.day if last_day_of_month?(date) && subscription_at.day > date.day
+
+        date
       end
 
       def compute_next_end_of_period
