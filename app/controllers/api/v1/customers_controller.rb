@@ -121,6 +121,7 @@ module Api
 
             # NOTE(legacy): vat has been moved to tax model
             :vat_rate,
+            :payment_token,
             provider_payment_methods: []
           ],
           metadata: [
