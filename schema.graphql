@@ -4377,6 +4377,7 @@ input PropertiesInput {
 
 type ProviderCustomer {
   id: ID!
+  paymentToken: String
   providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
