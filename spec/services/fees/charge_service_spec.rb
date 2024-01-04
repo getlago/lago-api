@@ -239,6 +239,22 @@ RSpec.describe Fees::ChargeService do
               payment_status: 'pending',
             )
           end
+
+          context 'and with true-up fee' do
+            before { charge.update!(min_amount_cents: 20_000) }
+
+            it 'creates two fees' do
+              result = charge_subscription_service.create
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.fees.count).to eq(2)
+                expect(result.fees.pluck(:amount_cents)).to contain_exactly(6_000, 4_967)
+                expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(2_000, 4_967)
+                expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(20, 49.67)
+              end
+            end
+          end
         end
 
         context 'with adjusted amount' do

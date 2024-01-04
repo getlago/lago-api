@@ -21,7 +21,10 @@ module Fees
       ActiveRecord::Base.transaction do
         result.fees.each do |fee|
           fee.save!
-          adjusted_fee.update!(fee:) if invoice.draft? && adjusted_fee
+
+          if invoice.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(fee.group)
+            adjusted_fee(fee.group).update!(fee:)
+          end
         end
       end
 
@@ -65,8 +68,8 @@ module Fees
     end
 
     def init_fee(properties:, group: nil)
-      if invoice.draft? && adjusted_fee
-        amount_result = compute_amount_for_adjusted_fee(properties:)
+      if invoice.draft? && adjusted_fee(group)
+        amount_result = compute_amount_for_adjusted_fee(properties:, group:)
         return result.fail_with_error!(amount_result.error) unless amount_result.success?
 
         new_fee = init_adjusted_fee(amount_result, group)
@@ -120,6 +123,7 @@ module Fees
 
     def init_adjusted_fee(amount_result, group)
       currency = invoice.total_amount.currency
+      adjusted_fee = adjusted_fee(group)
 
       units = adjusted_fee.units
       if adjusted_fee.adjusted_units?
@@ -158,17 +162,23 @@ module Fees
       )
     end
 
-    def adjusted_fee
-      return @adjusted_fee if defined? @adjusted_fee
+    def adjusted_fee(group)
+      @adjusted_fee ||= {}
 
-      @adjusted_fee = AdjustedFee
-        .where(invoice:, subscription:, charge:, fee_type: :charge)
+      key = group ? group.id : 'default'
+
+      return @adjusted_fee[key] if @adjusted_fee.key?(key)
+
+      @adjusted_fee[key] = AdjustedFee
+        .where(invoice:, subscription:, charge:, group:, fee_type: :charge)
         .where("(properties->>'charges_from_datetime')::date = ?", boundaries.charges_from_datetime.to_date)
         .where("(properties->>'charges_to_datetime')::date = ?", boundaries.charges_to_datetime.to_date)
         .first
     end
 
-    def compute_amount_for_adjusted_fee(properties:)
+    def compute_amount_for_adjusted_fee(properties:, group:)
+      adjusted_fee = adjusted_fee(group)
+
       return BaseService::Result.new if adjusted_fee.adjusted_amount?
 
       adjusted_fee_result = BaseService::Result.new
