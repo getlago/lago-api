@@ -27,7 +27,7 @@ module Subscriptions
         # Have to handle retry logic same as in BillSubscriptionJob
         result = Invoices::SubscriptionSyncService.new(
           subscriptions: [new_subscription],
-          timestamp:  Time.zone.now.to_i,
+          timestamp: Time.zone.now.to_i,
           recurring: false,
         ).create
 

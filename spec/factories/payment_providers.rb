@@ -55,4 +55,17 @@ FactoryBot.define do
       success_redirect_url { Faker::Internet.url }
     end
   end
+
+  factory :pinet_provider, class: 'PaymentProviders::PinetProvider' do
+    organization
+    type { 'PaymentProviders::PinetProvider' }
+
+    secrets do
+      { secret_key: SecureRandom.uuid }.to_json
+    end
+
+    settings do
+      { create_customers: true, success_redirect_url: }
+    end
+  end
 end
