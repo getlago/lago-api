@@ -9,10 +9,10 @@ RSpec.describe Invoices::Payments::PinetCreateJob, type: :job do
 
   it 'calls the stripe create service' do
     allow(Invoices::Payments::PinetService).to receive(:new)
-                                                 .with(invoice)
-                                                 .and_return(pinet_service)
+      .with(invoice)
+      .and_return(pinet_service)
     allow(pinet_service).to receive(:create)
-                              .and_return(BaseService::Result.new)
+      .and_return(BaseService::Result.new)
 
     described_class.perform_now(invoice)
 
