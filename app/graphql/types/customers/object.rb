@@ -104,6 +104,8 @@ module Types
           object.gocardless_customer
         when :adyen
           object.adyen_customer
+        when :pinet
+          object.pinet_customer
         end
       end
 
