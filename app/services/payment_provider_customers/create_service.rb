@@ -32,6 +32,11 @@ module PaymentProviderCustomers
         end
       end
 
+      if provider_customer.is_a?(PaymentProviderCustomers::PinetCustomer) &&
+         (payment_token = (params || {})[:payment_token]).present?
+        provider_customer.payment_token = payment_token
+      end
+
       provider_customer.save!
 
       result.provider_customer = provider_customer

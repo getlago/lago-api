@@ -19057,6 +19057,20 @@
               ]
             },
             {
+              "name": "paymentToken",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "providerCustomerId",
               "description": null,
               "type": {
