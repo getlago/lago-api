@@ -36,9 +36,10 @@ module Groups
         end
       end
 
-      draft_ids = Invoice.draft.joins(plans: [:billable_metrics])
-        .where(billable_metrics: { id: billable_metric.id }).distinct.pluck(:id)
-      Invoices::RefreshBatchJob.perform_later(draft_ids) if draft_ids.present?
+      draft_invoices = Invoice.draft.joins(plans: [:billable_metrics])
+        .where(billable_metrics: { id: billable_metric.id })
+        .distinct
+      draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result
     end

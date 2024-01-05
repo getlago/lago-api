@@ -30,8 +30,7 @@ module GroupProperties
         end
       end
 
-      draft_ids = charge.plan.invoices.draft.pluck(:id)
-      Invoices::RefreshBatchJob.perform_later(draft_ids) if draft_ids.present?
+      charge.plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result
     end

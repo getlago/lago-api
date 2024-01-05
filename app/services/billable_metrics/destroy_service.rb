@@ -20,13 +20,11 @@ module BillableMetrics
           group.properties.discard_all
           group.discard!
         end
+        Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
       end
 
       # NOTE: Discard all related events asynchronously.
       BillableMetrics::DeleteEventsJob.perform_later(metric)
-
-      # NOTE: Refresh all draft invoices asynchronously.
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
 
       track_billable_metric_deleted
 
