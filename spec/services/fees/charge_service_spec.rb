@@ -240,7 +240,7 @@ RSpec.describe Fees::ChargeService do
             )
           end
 
-          context 'and with true-up fee' do
+          context 'when there is true-up fee' do
             before { charge.update!(min_amount_cents: 20_000) }
 
             it 'creates two fees' do
