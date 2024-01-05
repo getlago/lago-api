@@ -255,6 +255,144 @@ RSpec.describe Fees::ChargeService do
               end
             end
           end
+
+          context 'with standard charge, all types of aggregation and presence of groups' do
+            let(:europe) do
+              create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+            end
+
+            let(:usa) do
+              create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+            end
+
+            let(:france) do
+              create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+            end
+
+            let(:charge) do
+              create(
+                :standard_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: { amount: '10.12345' },
+                group_properties: [
+                  build(
+                    :group_property,
+                    group: europe,
+                    values: {
+                      amount: '20',
+                      amount_currency: 'EUR',
+                    },
+                  ),
+                  build(
+                    :group_property,
+                    group: usa,
+                    values: {
+                      amount: '50',
+                      amount_currency: 'EUR',
+                    },
+                  ),
+                ],
+              )
+            end
+
+            let(:adjusted_fee) do
+              create(
+                :adjusted_fee,
+                invoice:,
+                subscription:,
+                charge:,
+                group: usa,
+                properties:,
+                fee_type: :charge,
+                adjusted_units: true,
+                adjusted_amount: false,
+                units: 3,
+              )
+            end
+
+            before do
+              france
+
+              create(
+                :event,
+                organization: subscription.organization,
+                customer: subscription.customer,
+                subscription:,
+                code: charge.billable_metric.code,
+                timestamp: DateTime.parse('2022-03-16'),
+                properties: { region: 'usa', foo_bar: 12 },
+              )
+              create(
+                :event,
+                organization: subscription.organization,
+                customer: subscription.customer,
+                subscription:,
+                code: charge.billable_metric.code,
+                timestamp: DateTime.parse('2022-03-16'),
+                properties: { region: 'europe', foo_bar: 10 },
+              )
+              create(
+                :event,
+                organization: subscription.organization,
+                customer: subscription.customer,
+                subscription:,
+                code: charge.billable_metric.code,
+                timestamp: DateTime.parse('2022-03-16'),
+                properties: { region: 'europe', foo_bar: 5 },
+              )
+              create(
+                :event,
+                organization: subscription.organization,
+                customer: subscription.customer,
+                subscription:,
+                code: charge.billable_metric.code,
+                timestamp: DateTime.parse('2022-03-16'),
+                properties: { country: 'france', foo_bar: 5 },
+              )
+            end
+
+            it 'creates expected fees for sum_agg aggregation type' do
+              billable_metric.update!(aggregation_type: :sum_agg, field_name: 'foo_bar')
+              result = charge_subscription_service.create
+              expect(result).to be_success
+              created_fees = result.fees
+
+              aggregate_failures do
+                expect(created_fees.count).to eq(3)
+                expect(created_fees).to all(
+                  have_attributes(
+                    invoice_id: invoice.id,
+                    charge_id: charge.id,
+                    amount_currency: 'EUR',
+                  ),
+                )
+                expect(created_fees.first).to have_attributes(
+                  group: europe,
+                  amount_cents: 30_000,
+                  units: 15,
+                  unit_amount_cents: 2000,
+                  precise_unit_amount: 20,
+                )
+
+                expect(created_fees.second).to have_attributes(
+                  group: usa,
+                  amount_cents: 15_000,
+                  units: 3,
+                  unit_amount_cents: 5000,
+                  precise_unit_amount: 50,
+                )
+
+                expect(created_fees.third).to have_attributes(
+                  group: france,
+                  amount_cents: 5062,
+                  units: 5,
+                  unit_amount_cents: 1012,
+                  precise_unit_amount: 10.12345,
+                )
+              end
+            end
+          end
         end
 
         context 'with adjusted amount' do
