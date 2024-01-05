@@ -109,7 +109,7 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
             values: %w[usa europe],
           },
         )
-        perform_all_enqueued_jobs
+        perform_invoices_refresh
 
         expect(cards.groups.pluck(:value)).to contain_exactly('usa', 'europe')
         expect(invoice.reload.total_amount_cents).to eq(19_000)
@@ -213,7 +213,7 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
             ],
           },
         )
-        perform_all_enqueued_jobs
+        perform_invoices_refresh
 
         expect(cards.groups.parents.pluck(:value)).to contain_exactly('aws', 'google')
         expect(cards.groups.children.pluck(:value)).to contain_exactly('usa', 'france', 'usa')
