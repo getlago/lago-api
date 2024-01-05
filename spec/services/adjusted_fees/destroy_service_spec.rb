@@ -10,16 +10,24 @@ RSpec.describe AdjustedFees::DestroyService, type: :service do
   let(:invoice) { create(:invoice, status: :draft, organization:) }
   let(:fee) { create(:charge_fee, invoice:) }
   let(:adjusted_fee) { create(:adjusted_fee, invoice:, fee:) }
+  let(:refresh_service) { instance_double(Invoices::RefreshDraftService) }
 
   describe '#call' do
-    before { adjusted_fee }
+    before do
+      adjusted_fee
+      allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
+      allow(refresh_service).to receive(:call).and_return(BaseService::Result.new)
+    end
 
     it 'destroys the adjusted fee' do
       expect { destroy_service.call }.to change(AdjustedFee, :count).by(-1)
     end
 
-    it 'enqueues the Invoices::RefreshBatchJob' do
-      expect { destroy_service.call }.to have_enqueued_job(Invoices::RefreshBatchJob)
+    it 'calls the RefreshDraft service' do
+      destroy_service.call
+
+      expect(Invoices::RefreshDraftService).to have_received(:new)
+      expect(refresh_service).to have_received(:call)
     end
 
     context 'when adjusted fee is not found' do
