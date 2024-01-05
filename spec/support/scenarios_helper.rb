@@ -119,4 +119,9 @@ module ScenariosHelper
     Clock::SubscriptionsBillerJob.perform_later
     perform_all_enqueued_jobs
   end
+
+  def perform_invoices_refresh
+    Clock::RefreshDraftInvoicesJob.perform_later
+    perform_all_enqueued_jobs
+  end
 end
