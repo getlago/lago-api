@@ -19,6 +19,8 @@ module Invoices
       return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
+        invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
+
         cn_subscription_ids = invoice.credit_notes.map do |cn|
           { credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id) }
         end
