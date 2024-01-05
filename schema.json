@@ -11263,6 +11263,24 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "adjustedFee",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "amountCents",
               "description": null,
               "type": {
