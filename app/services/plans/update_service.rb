@@ -164,8 +164,7 @@ module Plans
       charge.discard!
       charge.group_properties.discard_all
 
-      # NOTE: Refresh all draft invoices asynchronously.
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
+      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

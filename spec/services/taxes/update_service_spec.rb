@@ -44,12 +44,10 @@ RSpec.describe Taxes::UpdateService, type: :service do
         { applied_to_organization: false }
       end
 
-      it 'refreshes draft invoices' do
+      it 'marks invoices as ready to be refreshed' do
         draft_invoice = create(:invoice, :draft, organization:, customer:)
 
-        expect do
-          update_service.call
-        end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+        expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
       end
     end
 
@@ -59,21 +57,17 @@ RSpec.describe Taxes::UpdateService, type: :service do
         { applied_to_organization: true }
       end
 
-      it 'refreshes draft invoices' do
+      it 'marks invoices as ready to be refreshed' do
         draft_invoice = create(:invoice, :draft, organization:, customer:)
 
-        expect do
-          update_service.call
-        end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+        expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
       end
     end
 
-    it 'refreshes draft invoices' do
+    it 'marks invoices as ready to be refreshed' do
       draft_invoice = create(:invoice, :draft, organization:, customer:)
 
-      expect do
-        update_service.call
-      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([draft_invoice.id])
+      expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
     context 'when tax is not found' do
