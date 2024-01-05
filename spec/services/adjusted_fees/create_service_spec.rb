@@ -9,6 +9,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
   let(:organization) { membership.organization }
   let(:fee) { create(:charge_fee) }
   let(:code) { 'tax_code' }
+  let(:refresh_service) { instance_double(Invoices::RefreshDraftService) }
   let(:params) do
     {
       units: 5,
@@ -18,7 +19,11 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
   end
 
   describe '#call' do
-    before { fee.invoice.draft! }
+    before do
+      fee.invoice.draft!
+      allow(Invoices::RefreshDraftService).to receive(:new).with(invoice: fee.invoice).and_return(refresh_service)
+      allow(refresh_service).to receive(:call).and_return(BaseService::Result.new)
+    end
 
     context 'when license is premium' do
       around { |test| lago_premium!(&test) }
@@ -37,8 +42,11 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         expect(result.fee).to be_a(Fee)
       end
 
-      it 'enqueues the Invoices::RefreshBatchJob' do
-        expect { create_service.call }.to have_enqueued_job(Invoices::RefreshBatchJob)
+      it 'calls the RefreshDraft service' do
+        create_service.call
+
+        expect(Invoices::RefreshDraftService).to have_received(:new)
+        expect(refresh_service).to have_received(:call)
       end
 
       context 'when invoice is NOT in draft status' do

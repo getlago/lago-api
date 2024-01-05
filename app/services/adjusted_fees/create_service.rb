@@ -35,7 +35,8 @@ module AdjustedFees
 
       adjusted_fee.save!
 
-      Invoices::RefreshBatchJob.perform_later([fee.invoice_id])
+      refresh_result = Invoices::RefreshDraftService.call(invoice: fee.invoice)
+      refresh_result.raise_if_error!
 
       result.adjusted_fee = adjusted_fee
       result.fee = fee
