@@ -63,10 +63,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
 
         travel_to(current_date) do
           # First validate that with default config nothing is sent
-          expect do
-            described_class.perform_now
-          end
-            .not_to have_enqueued_job(SendWebhookJob)
+          expect { described_class.perform_now }.not_to have_enqueued_job(SendWebhookJob)
 
           # Now validate that with custom config, it is actually sent
           stub_const('ENV', 'LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS' => '1,15,45')
