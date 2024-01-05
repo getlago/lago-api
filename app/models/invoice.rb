@@ -73,6 +73,7 @@ class Invoice < ApplicationRecord
   sequenced scope: ->(invoice) { invoice.customer.invoices },
             lock_key: ->(invoice) { invoice.customer_id }
 
+  scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized,
         lambda {
           date = <<-SQL
