@@ -64,9 +64,5 @@ module Subscriptions
     def valid?(args)
       Subscriptions::ValidateService.new(result, **args).valid?
     end
-
-    def override_plan(plan)
-      Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
-    end
   end
 end

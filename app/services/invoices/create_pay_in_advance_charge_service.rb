@@ -64,8 +64,11 @@ module Invoices
         invoice_type: :subscription,
         currency: customer.currency,
         datetime: Time.zone.at(timestamp),
-        subscriptions_details: [Invoices::CreateGeneratingService::SubscriptionDetails.new(subscription, {}, false)],
-      )
+      ) do |invoice|
+        Invoices::CreateInvoiceSubscriptionService
+          .call(invoice:, subscriptions: [subscription], timestamp:, recurring: false)
+          .raise_if_error!
+      end
       invoice_result.raise_if_error!
 
       @invoice = invoice_result.invoice

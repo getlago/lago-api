@@ -65,6 +65,10 @@ nb:
     tax_name: "%{name} (%{rate}% on %{amount})"
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Skattesats
+    taxes:
+      fr_tax_exempt: Kunden er skattefri i henhold til artikkel 259-1 i den franske skatteforvaltningsloven.
+      reverse_charge: Skatteansvar overført til kunden.
+      tax_exempt: Kunden er skattefri.
     total: Totalt
     total_credits: Antall kreditter
     total_credits_with_value: 'Antall kreditter: %{credit_amount} kreditter'

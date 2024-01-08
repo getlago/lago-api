@@ -10,7 +10,7 @@
 tr.details
   td.body-2 = I18n.t('invoice.package.fee_per_package')
   td.body-2 = amount_details['paid_units']
-  td.body-2 = I18n.t('invoice.package.fee_per_package_unit_price', amount: MoneyHelper.format(amount_details['per_package_unit_amount'].to_money(amount_currency)), package_size: amount_details['per_package_size'])
+  td.body-2 = I18n.t('invoice.package.fee_per_package_unit_price', amount: MoneyHelper.format_with_precision(BigDecimal(amount_details['per_package_unit_amount']), amount_currency), package_size: amount_details['per_package_size'])
   td.body-2 == TaxHelper.applied_taxes(self)
   td.body-2 = MoneyHelper.format(amount)
 / Sub total

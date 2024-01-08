@@ -35,6 +35,16 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       allow(Invoices::CalculateFeesService).to receive(:call).and_call_original
     end
 
+    context 'when invoice is ready to be finalized' do
+      let(:invoice) do
+        create(:invoice, status:, organization:, customer:, ready_to_be_refreshed: true)
+      end
+
+      it 'updates ready_to_be_refreshed to false' do
+        expect { refresh_service.call }.to change(invoice, :ready_to_be_refreshed).to(false)
+      end
+    end
+
     context 'when invoice is finalized' do
       let(:status) { :finalized }
 

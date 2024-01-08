@@ -9,7 +9,7 @@ RSpec.describe LagoEuVat::Rate do
     it 'returns all EU country codes' do
       countries_code = rates.countries_code
 
-      expect(countries_code.count).to eq(28)
+      expect(countries_code.count).to eq(27)
     end
   end
 

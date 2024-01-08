@@ -64,6 +64,10 @@ sv:
     tax_name: "%{name} (%{rate}% på %{amount})"
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Momssats
+    taxes:
+      fr_tax_exempt: Kunden är skattebefriad enligt artikel 259-1 i den franska skatteförvaltningskoden.
+      reverse_charge: Skattskyldighet överförd till kunden.
+      tax_exempt: Kunden är skattebefriad.
     total: Total
     total_credits_with_value: 'Totalt antal krediter med värde: %{credit_amount} krediter'
     total_due: Att betala

@@ -38,7 +38,7 @@ RSpec.describe GroupProperties::CreateOrUpdateBatchService, type: :service do
       end
     end
 
-    it 'enqueues a Invoices::RefreshBatchJob' do
+    it 'marks invoices as ready to be refreshed' do
       invoice = create(:invoice, :draft)
       subscription = create(:subscription)
       charge = create(:standard_charge, plan: subscription.plan)
@@ -46,7 +46,7 @@ RSpec.describe GroupProperties::CreateOrUpdateBatchService, type: :service do
 
       expect do
         described_class.call(charge:, properties_params:)
-      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+      end.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
   end
 end

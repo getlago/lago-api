@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
+ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -87,8 +87,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
     t.jsonb "properties", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "group_id"
     t.index ["charge_id"], name: "index_adjusted_fees_on_charge_id"
     t.index ["fee_id"], name: "index_adjusted_fees_on_fee_id"
+    t.index ["group_id"], name: "index_adjusted_fees_on_group_id"
     t.index ["invoice_id"], name: "index_adjusted_fees_on_invoice_id"
     t.index ["subscription_id"], name: "index_adjusted_fees_on_subscription_id"
   end
@@ -547,6 +549,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
     t.integer "net_payment_term", default: 0, null: false
     t.datetime "voided_at"
     t.integer "organization_sequential_id", default: 0, null: false
+    t.boolean "ready_to_be_refreshed", default: false, null: false
     t.index "organization_id, organization_sequential_id, ((date_trunc('month'::text, created_at))::date)", name: "unique_organization_sequential_id", unique: true, where: "(organization_sequential_id <> 0)"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
@@ -872,6 +875,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_20_140936) do
   add_foreign_key "add_ons_taxes", "taxes"
   add_foreign_key "adjusted_fees", "charges"
   add_foreign_key "adjusted_fees", "fees"
+  add_foreign_key "adjusted_fees", "groups"
   add_foreign_key "adjusted_fees", "invoices"
   add_foreign_key "adjusted_fees", "subscriptions"
   add_foreign_key "applied_add_ons", "add_ons"

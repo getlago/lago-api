@@ -16,12 +16,10 @@ RSpec.describe Customers::ApplyTaxesService, type: :service do
       expect { apply_service.call }.to change { customer.applied_taxes.count }.from(0).to(2)
     end
 
-    it 'refreshes draft invoices' do
+    it 'marks invoices as ready to be refreshed' do
       invoice = create(:invoice, :draft, customer:)
 
-      expect do
-        apply_service.call
-      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+      expect { apply_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
     it 'returns applied taxes' do

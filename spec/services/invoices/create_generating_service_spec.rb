@@ -54,27 +54,21 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
     end
 
-    context 'when invoice type is subscription' do
+    context 'when a block is passed to the method' do
       let(:invoice_type) { :subscription }
-      let(:from_datetime) { datetime.beginning_of_month }
-      let(:to_datetime) { datetime.end_of_month }
-      let(:charges_from_datetime) { datetime.end_of_month }
-      let(:charges_to_datetime) { datetime.end_of_month }
-
-      let(:subscriptions_details) do
-        subscriptions = create_list(:subscription, 2, customer:, started_at: Time.current - 1.day)
-
-        subscriptions.map do |subscription|
-          Invoices::CreateGeneratingService::SubscriptionDetails.new(
-            subscription,
-            { from_datetime:, to_datetime:, charges_from_datetime:, charges_to_datetime: },
-            true,
-          )
-        end
-      end
+      let(:subscription) { create(:subscription, customer:, started_at: Time.current - 1.day) }
 
       it 'creates an invoice' do
-        result = create_service.call
+        result = create_service.call do |invoice|
+          invoice.invoice_subscriptions.create!(
+            subscription:,
+            recurring:,
+            from_datetime: datetime.beginning_of_month,
+            to_datetime: datetime.end_of_month,
+            charges_from_datetime: datetime.end_of_month,
+            charges_to_datetime: datetime.end_of_month,
+          )
+        end
 
         expect(result).to be_success
         expect(result.invoice).to be_persisted
@@ -88,28 +82,29 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
         expect(result.invoice.payment_due_date).to eq(datetime.to_date)
         expect(result.invoice.net_payment_term).to eq(customer.applicable_net_payment_term)
 
-        expect(result.invoice.invoice_subscriptions.count).to eq(subscriptions_details.count)
+        expect(result.invoice.invoice_subscriptions.count).to eq(1)
+      end
+    end
+
+    context 'when invoice type is subscription' do
+      let(:invoice_type) { :subscription }
+      let(:customer) { create(:customer, invoice_grace_period: 3) }
+
+      it 'creates an invoice with grace period' do
+        result = create_service.call
+
+        expect(result.invoice.issuing_date.to_s).to eq((datetime + 3.days).to_date.to_s)
       end
 
-      context 'with grace period' do
-        let(:customer) { create(:customer, invoice_grace_period: 3) }
+      context 'with customer timezone' do
+        let(:customer) { create(:customer, timezone: 'America/Los_Angeles', invoice_grace_period: 3) }
+        let(:datetime) { Time.zone.parse('2022-11-25 01:00:00') }
 
-        it 'creates an invoice with grace period' do
+        it 'assigns the issuing date in the customer timezone' do
           result = create_service.call
 
-          expect(result.invoice.issuing_date.to_s).to eq((datetime + 3.days).to_date.to_s)
-        end
-
-        context 'with customer timezone' do
-          let(:customer) { create(:customer, timezone: 'America/Los_Angeles', invoice_grace_period: 3) }
-          let(:datetime) { Time.zone.parse('2022-11-25 01:00:00') }
-
-          it 'assigns the issuing date in the customer timezone' do
-            result = create_service.call
-
-            expect(result.invoice.timezone).to eq('America/Los_Angeles')
-            expect(result.invoice.issuing_date.to_s).to eq('2022-11-27')
-          end
+          expect(result.invoice.timezone).to eq('America/Los_Angeles')
+          expect(result.invoice.issuing_date.to_s).to eq('2022-11-27')
         end
       end
     end

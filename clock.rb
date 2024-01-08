@@ -22,6 +22,10 @@ module Clockwork
     Clock::ActivateSubscriptionsJob.perform_later
   end
 
+  every(5.minutes, 'schedule:refresh_draft_invoices') do
+    Clock::RefreshDraftInvoicesJob.perform_later
+  end
+
   every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:05') do
     Clock::TerminateEndedSubscriptionsJob.perform_later
   end

@@ -96,15 +96,13 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
         .to contain_exactly(%w[region usa], %w[region europe])
     end
 
-    it 'enqueues a Invoices::RefreshBatchJob' do
+    it 'marks invoices as ready to be refreshed' do
       invoice = create(:invoice, :draft)
       subscription = create(:subscription)
       create(:standard_charge, plan: subscription.plan, billable_metric:)
       create(:invoice_subscription, subscription:, invoice:)
 
-      expect do
-        service
-      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+      expect { service }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
   end
 
@@ -148,15 +146,13 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
       expect(google.children.pluck(:key, :value)).to eq([%w[region usa]])
     end
 
-    it 'enqueues a Invoices::RefreshBatchJob' do
+    it 'marks invoices as ready to be refreshed' do
       invoice = create(:invoice, :draft)
       subscription = create(:subscription)
       create(:standard_charge, plan: subscription.plan, billable_metric:)
       create(:invoice_subscription, subscription:, invoice:)
 
-      expect do
-        service
-      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+      expect { service }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
   end
 end

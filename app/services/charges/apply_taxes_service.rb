@@ -21,8 +21,7 @@ module Charges
         charge.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code))
       end
 
-      draft_ids = charge.plan.invoices.draft.pluck(:id)
-      Invoices::RefreshBatchJob.perform_later(draft_ids) if draft_ids.present?
+      charge.plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result
     rescue ActiveRecord::RecordInvalid => e

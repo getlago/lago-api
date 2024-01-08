@@ -15,7 +15,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
 
-  describe 'create' do
+  describe 'call' do
     let(:subscription) do
       create(
         :subscription,
@@ -45,7 +45,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     end
 
     it 'calls SegmentTrackJob' do
-      invoice = invoice_service.create.invoice
+      invoice = invoice_service.call.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -65,14 +65,14 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       allow(payment_create_service)
         .to receive(:call)
 
-      invoice_service.create
+      invoice_service.call
 
       expect(Invoices::Payments::CreateService).to have_received(:new)
       expect(payment_create_service).to have_received(:call)
     end
 
     it 'creates an invoice' do
-      result = invoice_service.create
+      result = invoice_service.call
 
       aggregate_failures do
         expect(result).to be_success
@@ -104,20 +104,20 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
     it 'enqueues a SendWebhookJob' do
       expect do
-        invoice_service.create
+        invoice_service.call
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
     it 'does not enqueue an ActionMailer::MailDeliveryJob' do
       expect do
-        invoice_service.create
+        invoice_service.call
       end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
     end
 
     context 'when recurring but no active subscriptions' do
       it 'does not create any invoices' do
         subscription.terminated!
-        expect { invoice_service.create }.not_to change(Invoice, :count)
+        expect { invoice_service.call }.not_to change(Invoice, :count)
       end
     end
 
@@ -126,7 +126,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
       it 'enqueues an ActionMailer::MailDeliveryJob' do
         expect do
-          invoice_service.create
+          invoice_service.call
         end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
       end
 
@@ -135,7 +135,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         it 'does not enqueue an ActionMailer::MailDeliveryJob' do
           expect do
-            invoice_service.create
+            invoice_service.call
           end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
         end
       end
@@ -146,7 +146,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
       it 'does not enqueue a SendWebhookJob' do
         expect do
-          invoice_service.create
+          invoice_service.call
         end.not_to have_enqueued_job(SendWebhookJob)
       end
     end
@@ -157,7 +157,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
 
       it 'assigns the issuing date in the customer timezone' do
-        result = invoice_service.create
+        result = invoice_service.call
 
         expect(result.invoice.issuing_date.to_s).to eq('2022-11-27')
       end
@@ -169,25 +169,25 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
 
       it 'does not track any invoice creation on segment' do
-        invoice_service.create
+        invoice_service.call
         expect(SegmentTrackJob).not_to have_received(:perform_later)
       end
 
       it 'does not create any payment' do
-        invoice_service.create
+        invoice_service.call
         expect(Invoices::Payments::StripeCreateJob).not_to have_received(:perform_later)
         expect(Invoices::Payments::GocardlessCreateJob).not_to have_received(:perform_later)
       end
 
       it 'creates an invoice as draft' do
-        result = invoice_service.create
+        result = invoice_service.call
         expect(result).to be_success
         expect(result.invoice).to be_draft
       end
 
       it 'enqueues a SendWebhookJob' do
         expect do
-          invoice_service.create
+          invoice_service.call
         end.to have_enqueued_job(SendWebhookJob).with('invoice.drafted', Invoice)
       end
     end

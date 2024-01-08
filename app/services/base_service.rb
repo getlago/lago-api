@@ -142,8 +142,8 @@ class BaseService
     attr_accessor :failure
   end
 
-  def self.call(...)
-    new(...).call
+  def self.call(*, **, &block)
+    new(*, **).call(&block)
   end
 
   def initialize(current_user = nil)
@@ -152,7 +152,7 @@ class BaseService
     result.user = current_user
   end
 
-  def call
+  def call(**args, &block)
     raise NotImplementedError
   end
 

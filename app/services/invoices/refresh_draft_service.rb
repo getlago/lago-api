@@ -19,6 +19,8 @@ module Invoices
       return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
+        invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
+
         cn_subscription_ids = invoice.credit_notes.map do |cn|
           { credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id) }
         end
@@ -27,13 +29,20 @@ module Invoices
         timestamp = fetch_timestamp
 
         invoice.fees.destroy_all
+
         invoice.invoice_subscriptions.destroy_all
         invoice.applied_taxes.destroy_all
 
-        calculate_result = Invoices::CalculateFeesService.call(
-          invoice: invoice.reload,
+        Invoices::CreateInvoiceSubscriptionService.call(
+          invoice:,
           subscriptions: Subscription.find(subscription_ids),
           timestamp:,
+          recurring:,
+          refresh: true,
+        ).raise_if_error!
+
+        calculate_result = Invoices::CalculateFeesService.call(
+          invoice: invoice.reload,
           recurring:,
           context:,
         )

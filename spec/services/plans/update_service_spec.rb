@@ -393,13 +393,11 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      it 'enqueues a Invoices::RefreshBatchJob' do
+      it 'marks invoices as ready to be refreshed' do
         invoice = create(:invoice, :draft)
         create(:invoice_subscription, subscription:, invoice:)
 
-        expect do
-          plans_service.call
-        end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+        expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
       end
     end
 

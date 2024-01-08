@@ -254,7 +254,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         let(:billing_at) { DateTime.parse('01 Mar 2022') }
 
         it 'returns the last day of the previous month' do
-          expect(result).to eq('2022-02-28 23:59:59 UTC')
+          expect(result).to eq('2022-02-27 23:59:59 UTC')
+        end
+
+        context 'when subscription is not the last day of the month' do
+          let(:subscription_at) { DateTime.parse('30 Jan 2022') }
+          let(:billing_at) { DateTime.parse('30 Apr 2022') }
+
+          it 'returns the last day of the month' do
+            expect(result).to eq('2022-04-29 23:59:59 UTC')
+          end
         end
       end
 

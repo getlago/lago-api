@@ -56,6 +56,17 @@ RSpec.describe Credits::AppliedCouponService do
       expect(applied_coupon.reload).to be_terminated
     end
 
+    context 'when base_amount_cents is equal to 0' do
+      let(:base_amount_cents) { 0 }
+
+      it 'limits the credit amount to the invoice amount' do
+        result = credit_service.call
+
+        expect(result).to be_success
+        expect(result.credit.amount_cents).to eq(0)
+      end
+    end
+
     context 'when coupon amount is higher than invoice amount' do
       let(:base_amount_cents) { 6 }
 

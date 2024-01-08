@@ -2,7 +2,7 @@
 
 module Invoices
   class SubscriptionService < BaseService
-    def initialize(subscriptions:, timestamp:, recurring:)
+    def initialize(subscriptions:, timestamp:, recurring:, invoice: nil)
       @subscriptions = subscriptions
       @timestamp = timestamp
 
@@ -13,37 +13,31 @@ module Invoices
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
 
+      # NOTE: In case of retry when the creation process failed,
+      #       and if the generating invoice was persisted,
+      #       the process can be retried without creating a new invoice
+      @invoice = invoice
+
       super
     end
 
-    def create
-      active_subscriptions = subscriptions.select(&:active?)
+    def call
       return result if active_subscriptions.empty? && recurring
 
-      result = nil
-      invoice = nil
+      create_generating_invoice unless invoice
+      result.invoice = invoice
 
       ActiveRecord::Base.transaction do
-        invoice = Invoice.create!(
-          organization: customer.organization,
-          customer:,
-          issuing_date:,
-          payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
-          invoice_type: :subscription,
-          currency:,
-          timezone: customer.applicable_timezone,
-          status: invoice_status,
+        invoice.status = invoice_status
+        invoice.save!
+
+        fee_result = Invoices::CalculateFeesService.call(
+          invoice:,
+          recurring:,
         )
 
-        result = Invoices::CalculateFeesService.new(
-          invoice:,
-          subscriptions: recurring ? active_subscriptions : subscriptions,
-          timestamp:,
-          recurring:,
-        ).call
-
-        result.raise_if_error!
+        fee_result.raise_if_error!
+        invoice.reload
       end
 
       if grace_period?
@@ -58,21 +52,35 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue Sequenced::SequenceError
+      raise
+    rescue StandardError => e
+      result.fail_with_error!(e)
     end
 
     private
 
-    attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency
+    attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency, :invoice
 
-    def issuing_date
-      issuing_date = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
-      return issuing_date unless grace_period?
-
-      issuing_date + customer.applicable_invoice_grace_period.days
+    def active_subscriptions
+      @active_subscriptions ||= subscriptions.select(&:active?)
     end
 
-    def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
+    def create_generating_invoice
+      invoice_result = Invoices::CreateGeneratingService.call(
+        customer:,
+        invoice_type: :subscription,
+        currency:,
+        datetime: Time.zone.at(timestamp),
+      ) do |invoice|
+        Invoices::CreateInvoiceSubscriptionService
+          .call(invoice:, subscriptions:, timestamp:, recurring:)
+          .raise_if_error!
+      end
+
+      invoice_result.raise_if_error!
+
+      @invoice = invoice_result.invoice
     end
 
     def grace_period?

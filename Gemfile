@@ -101,6 +101,7 @@ group :test do
 end
 
 group :development do
+  gem 'bullet'
   gem 'coffee-rails'
   gem 'graphiql-rails', git: 'https://github.com/rmosolgo/graphiql-rails.git'
   gem 'sass-rails'

@@ -12,6 +12,7 @@ class Fee < ApplicationRecord
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: 'Fee', optional: true
 
+  has_one :adjusted_fee, dependent: :nullify
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
   has_one :billable_metric, -> { with_discarded }, through: :charge

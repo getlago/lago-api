@@ -17,7 +17,7 @@ module Taxes
 
       tax.destroy!
 
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
+      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result.tax = tax
       result

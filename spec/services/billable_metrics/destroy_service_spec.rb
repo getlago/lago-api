@@ -49,13 +49,11 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
     end
 
-    it 'enqueues a Invoices::RefreshBatchJob' do
+    it 'marks invoice as ready to be refreshed' do
       invoice = create(:invoice, :draft)
       create(:invoice_subscription, subscription:, invoice:)
 
-      expect do
-        destroy_service.call
-      end.to have_enqueued_job(Invoices::RefreshBatchJob).with([invoice.id])
+      expect { destroy_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
     it 'calls SegmentTrackJob' do

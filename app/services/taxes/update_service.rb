@@ -22,9 +22,8 @@ module Taxes
       tax.save!
 
       customer_ids = (customer_ids + tax.reload.applicable_customers.select(:id)).uniq
-      draft_invoice_ids = tax.organization.invoices.where(customer_id: customer_ids).draft.pluck(:id)
-
-      Invoices::RefreshBatchJob.perform_later(draft_invoice_ids) if draft_invoice_ids.present?
+      draft_invoices = tax.organization.invoices.where(customer_id: customer_ids).draft
+      draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result.tax = tax
       result
