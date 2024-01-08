@@ -6,6 +6,12 @@ then
 fi
 
 rm -f ./tmp/pids/server.pid
-bundle exec rake db:migrate
+bundle exec rails db:migrate:primary
+
+if [ -v LAGO_CLICKHOUSE_ENABLED ] && [ "$LAGO_CLICKHOUSE_ENABLED" == "true" ]
+then
+  bundle exec rake db:migrate:clickhouse
+fi
+
 bundle exec rails signup:seed_organization
 bundle exec rails s -b ::
