@@ -21,11 +21,10 @@ class AddRateToPercentageAmountDetails < ActiveRecord::Migration[7.0]
     graduated_percentage_fees.find_each do |fee|
       fee.amount_details['graduated_percentage_ranges'] = fee.amount_details['graduated_percentage_ranges'].tap do |rs|
         rs.map do |range|
-          rate = fee.charge.properties['graduated_percentage_ranges'].find do |r|
-            r['from_value'] == range['from_value'] && r['to_value'] == range['to_value']
-          end['rate']
-
-          range.except!('per_unit_amount').merge!('rate' => BigDecimal(rate.to_s))
+          property = fee.charge.properties['graduated_percentage_ranges'].find do |r|
+            r['from_value'] == range['from_value']
+          end
+          range.except!('per_unit_amount').merge!('rate' => property ? BigDecimal(property['rate'].to_s) : '0.0')
         end
       end
       fee.save!
