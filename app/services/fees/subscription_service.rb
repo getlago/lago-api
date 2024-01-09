@@ -57,21 +57,13 @@ module Fees
       units = adjusted_fee.units
       unit_amount_cents = adjusted_fee.unit_amount_cents.round
       amount_cents = adjusted_fee.adjusted_units? ? (units * new_amount_cents) : (units * unit_amount_cents)
-      Fee.new(
-        invoice:,
-        subscription:,
-        amount_cents: amount_cents.round,
-        amount_currency: plan.amount_currency,
-        fee_type: :subscription,
-        invoiceable_type: 'Subscription',
-        invoiceable: subscription,
-        units:,
-        properties: boundaries.to_h,
-        payment_status: :pending,
-        taxes_amount_cents: 0,
-        unit_amount_cents: adjusted_fee.adjusted_units? ? new_amount_cents : unit_amount_cents,
-        invoice_display_name: adjusted_fee.invoice_display_name,
-      )
+
+      base_fee.amount_cents = amount_cents.round
+      base_fee.units = units
+      base_fee.unit_amount_cents = adjusted_fee.adjusted_units? ? new_amount_cents : unit_amount_cents
+      base_fee.invoice_display_name = adjusted_fee.invoice_display_name
+
+      base_fee
     end
 
     def adjusted_fee

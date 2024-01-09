@@ -30,7 +30,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
   around { |test| lago_premium!(&test) }
 
   context 'with adjusted units' do
-    it 'creates invoice numbers correctly' do
+    it 'creates invoices correctly' do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create_subscription(
@@ -84,7 +84,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
   context 'with adjusted amount' do
     let(:unit_amount_cents) { 15_000 }
 
-    it 'creates invoice numbers correctly' do
+    it 'creates invoices correctly' do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create_subscription(
