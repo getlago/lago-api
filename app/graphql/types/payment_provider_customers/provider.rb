@@ -12,7 +12,7 @@ module Types
       field :sync_with_provider, Boolean, null: true
 
       def payment_token
-        return if (payment_token = object.payment_token).blank?
+        return if (payment_token = object&.payment_token).blank?
 
         "#{'•' * 5}…#{payment_token[-3..]}"
       end
