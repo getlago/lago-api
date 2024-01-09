@@ -71,8 +71,8 @@ module Fees
 
       @adjusted_fee = AdjustedFee
         .where(invoice:, subscription:, fee_type: :subscription)
-        .where("(properties->>'from_datetime')::date = ?", boundaries.from_datetime.to_date)
-        .where("(properties->>'to_datetime')::date = ?", boundaries.to_datetime.to_date)
+        .where("properties->>'from_datetime' = ?", boundaries.from_datetime&.iso8601(3))
+        .where("properties->>'to_datetime' = ?", boundaries.to_datetime&.iso8601(3))
         .first
     end
 
