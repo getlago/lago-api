@@ -66,7 +66,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
       travel_to(DateTime.new(2023, 8, 20, 12, 12)) do
         invoice = customer.invoices.order(created_at: :desc).first
 
-        Invoices::RefreshBatchJob.perform_later([invoice.id])
+        Invoices::RefreshDraftJob.perform_later(invoice)
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq('draft')
@@ -120,7 +120,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
       travel_to(DateTime.new(2023, 8, 20, 12, 12)) do
         invoice = customer.invoices.order(created_at: :desc).first
 
-        Invoices::RefreshBatchJob.perform_later([invoice.id])
+        Invoices::RefreshDraftJob.perform_later(invoice)
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq('draft')
