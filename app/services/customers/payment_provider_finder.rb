@@ -9,6 +9,7 @@ module Customers
         payment_provider_result = PaymentProviders::FindService.new(
           organization_id: customer.organization_id,
           code: customer.payment_provider_code,
+          payment_provider_type: customer.payment_provider,
         ).call
 
         return nil if payment_provider_result.error&.code == 'payment_provider_not_found'

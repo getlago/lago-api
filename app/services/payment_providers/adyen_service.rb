@@ -9,6 +9,7 @@ module PaymentProviders
         organization_id: args[:organization].id,
         code: args[:code],
         id: args[:id],
+        payment_provider_type: 'adyen',
       )
 
       adyen_provider = if payment_provider_result.success?

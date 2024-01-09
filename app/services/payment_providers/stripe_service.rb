@@ -18,6 +18,7 @@ module PaymentProviders
         organization_id: args[:organization_id],
         code: args[:code],
         id: args[:id],
+        payment_provider_type: 'stripe',
       )
 
       stripe_provider = if payment_provider_result.success?

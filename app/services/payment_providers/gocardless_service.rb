@@ -15,6 +15,7 @@ module PaymentProviders
         organization_id: args[:organization].id,
         code: args[:code],
         id: args[:id],
+        payment_provider_type: 'gocardless',
       )
 
       gocardless_provider = if payment_provider_result.success?

@@ -75,6 +75,8 @@ module Customers
       result.customer = customer.reload
       track_customer_created(customer)
       result
+    rescue BaseService::ServiceFailure => e
+      result.single_validation_failure!(error_code: e.code)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
@@ -183,10 +185,17 @@ module Customers
       return unless create_provider_customer
 
       if api_context?
-        customer.update!(
-          payment_provider: billing_configuration[:payment_provider],
-          payment_provider_code: billing_configuration[:payment_provider_code],
-        )
+        customer.payment_provider = billing_configuration[:payment_provider]
+
+        payment_provider_result = PaymentProviders::FindService.new(
+          organization_id: customer.organization_id,
+          code: billing_configuration[:payment_provider_code].presence,
+          payment_provider_type: customer.payment_provider,
+        ).call
+        payment_provider_result.raise_if_error!
+
+        customer.payment_provider_code = payment_provider_result.payment_provider.code
+        customer.save!
       end
 
       create_or_update_provider_customer(customer, billing_configuration)
