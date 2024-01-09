@@ -12,7 +12,9 @@ module Types
       field :sync_with_provider, Boolean, null: true
 
       def payment_token
-        return if (payment_token = object&.payment_token).blank?
+        if !object.is_a?(::PaymentProviderCustomers::PinetCustomer) || (payment_token = object&.payment_token).blank?
+          return
+        end
 
         "#{'•' * 5}…#{payment_token[-3..]}"
       end
