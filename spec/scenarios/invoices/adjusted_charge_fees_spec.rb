@@ -31,7 +31,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
   around { |test| lago_premium!(&test) }
 
   context 'with adjusted units' do
-    it 'creates invoice numbers correctly' do
+    it 'creates invoices correctly' do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create(
@@ -74,7 +74,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
       travel_to(DateTime.new(2023, 8, 20, 12, 12)) do
         invoice = customer.invoices.order(created_at: :desc).first
 
-        Invoices::RefreshBatchJob.perform_later([invoice.id])
+        Invoices::RefreshDraftJob.perform_later(invoice)
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq('draft')
@@ -92,7 +92,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
   context 'with adjusted amount' do
     let(:unit_amount_cents) { 15_000 }
 
-    it 'creates invoice numbers correctly' do
+    it 'creates invoices correctly' do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create(
@@ -135,7 +135,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
       travel_to(DateTime.new(2023, 8, 20, 12, 12)) do
         invoice = customer.invoices.order(created_at: :desc).first
 
-        Invoices::RefreshBatchJob.perform_later([invoice.id])
+        Invoices::RefreshDraftJob.perform_later(invoice)
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq('draft')
