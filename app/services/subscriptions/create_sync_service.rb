@@ -25,11 +25,11 @@ module Subscriptions
         # TODO
         # before it was: perform_later(job_class: BillSubscriptionJob, arguments: [[new_subscription], Time.zone.now.to_i])
         # Have to handle retry logic same as in BillSubscriptionJob
-        result = Invoices::SubscriptionSyncService.new(
+        result = Invoices::SubscriptionSyncService.call(
           subscriptions: [new_subscription],
           timestamp: Time.zone.now.to_i,
           recurring: false,
-        ).create
+        )
 
         result.raise_if_error!
       end
