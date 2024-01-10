@@ -10,16 +10,10 @@ class MoneyHelper
   end
 
   def self.format_with_precision(amount_cents, currency)
-    Money.default_infinite_precision = true
-
-    formatted_amount = Money.from_amount(amount_cents, currency).format(
+    Utils::MoneyWithPrecision.from_amount(amount_cents, currency).format(
       format: I18n.t('money.format'),
       decimal_mark: I18n.t('money.decimal_mark'),
       thousands_separator: I18n.t('money.thousands_separator'),
     )
-
-    Money.default_infinite_precision = false
-
-    formatted_amount
   end
 end
