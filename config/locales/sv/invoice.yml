@@ -84,6 +84,8 @@ sv:
     volume:
       fee_per_unit: Avgift per enhet
       flat_fee_for_all_units: Fast avgift för alla enheter
+    day: dag
+    daily: Dagligen
     week: vecka
     weekly: Veckovis
     year: år

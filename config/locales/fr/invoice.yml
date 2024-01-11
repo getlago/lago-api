@@ -86,6 +86,8 @@ fr:
     volume:
       fee_per_unit: Frais par unité
       flat_fee_for_all_units: Frais fixes pour toutes les unités
+    day: jour
+    daily: quotidien
     week: semaine
     weekly: hebdomadaire
     year: année
