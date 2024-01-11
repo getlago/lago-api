@@ -84,6 +84,8 @@ es:
     volume:
       fee_per_unit: Tarifa por unidad
       flat_fee_for_all_units: Tarifa plana para todas las unidades
+    day: día
+    daily: Diario
     week: semana
     weekly: Semanal
     year: año

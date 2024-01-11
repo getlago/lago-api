@@ -86,6 +86,8 @@ de:
     volume:
       fee_per_unit: Gebühr pro Einheit
       flat_fee_for_all_units: Pauschalgebühr für alle Einheiten
+    day: tag
+    dayly: Täglich
     week: woche
     weekly: Wöchentlich
     year: jahr
