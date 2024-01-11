@@ -8,11 +8,12 @@ class BillableMetric < ApplicationRecord
   belongs_to :organization
 
   has_many :charges, dependent: :destroy
-  has_many :groups, dependent: :delete_all
   has_many :plans, through: :charges
   has_many :quantified_events
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
+  has_many :groups, dependent: :delete_all
+  has_many :filters, dependent: :delete_all, class_name: 'BillableMetricFilter'
 
   AGGREGATION_TYPES = {
     count_agg: 0,
