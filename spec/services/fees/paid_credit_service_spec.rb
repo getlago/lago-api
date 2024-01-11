@@ -10,7 +10,7 @@ RSpec.describe Fees::PaidCreditService do
   let(:customer) { create(:customer) }
   let(:invoice) { create(:invoice, organization: customer.organization) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, customer:, rate_amount: '1.00') }
   let(:wallet_transaction) do
     create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
   end
@@ -22,22 +22,21 @@ RSpec.describe Fees::PaidCreditService do
       result = paid_credit_service.create
 
       expect(result).to be_success
-
-      created_fee = result.fee
-
-      aggregate_failures do
-        expect(created_fee.id).not_to be_nil
-        expect(created_fee.fee_type).to eq('credit')
-        expect(created_fee.invoice_id).to eq(invoice.id)
-        expect(created_fee.invoiceable_type).to eq('WalletTransaction')
-        expect(created_fee.invoiceable_id).to eq(wallet_transaction.id)
-        expect(created_fee.amount_cents).to eq(1500)
-        expect(created_fee.amount_currency).to eq('EUR')
-        expect(created_fee.taxes_amount_cents).to eq(0)
-        expect(created_fee.taxes_rate).to eq(0)
-        expect(created_fee.units).to eq(1)
-        expect(created_fee.payment_status).to eq('pending')
-      end
+      expect(result.fee).to have_attributes(
+        id: String,
+        fee_type: 'credit',
+        invoice_id: invoice.id,
+        invoiceable_type: 'WalletTransaction',
+        invoiceable_id: wallet_transaction.id,
+        amount_cents: 1500,
+        amount_currency: 'EUR',
+        taxes_amount_cents: 0,
+        taxes_rate: 0,
+        unit_amount_cents: 100,
+        units: 15,
+        payment_status: 'pending',
+        precise_unit_amount: 1,
+      )
     end
 
     context 'when fee already exists on the period' do
