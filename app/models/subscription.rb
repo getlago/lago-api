@@ -14,7 +14,7 @@ class Subscription < ApplicationRecord
   has_many :invoices, through: :invoice_subscriptions
   has_many :fees
 
-  validates :external_id, presence: true
+  validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: :create
 
   STATUSES = [
