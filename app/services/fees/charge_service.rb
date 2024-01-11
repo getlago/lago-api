@@ -171,8 +171,8 @@ module Fees
 
       @adjusted_fee[key] = AdjustedFee
         .where(invoice:, subscription:, charge:, group:, fee_type: :charge)
-        .where("(properties->>'charges_from_datetime')::date = ?", boundaries.charges_from_datetime.to_date)
-        .where("(properties->>'charges_to_datetime')::date = ?", boundaries.charges_to_datetime.to_date)
+        .where("properties->>'charges_from_datetime' = ?", boundaries.charges_from_datetime&.iso8601(3))
+        .where("properties->>'charges_to_datetime' = ?", boundaries.charges_to_datetime&.iso8601(3))
         .first
     end
 
