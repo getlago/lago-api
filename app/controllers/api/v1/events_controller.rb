@@ -94,14 +94,15 @@ module Api
 
       def batch_params
         params
-          .require(:event)
           .permit(
-            :transaction_id,
-            :external_customer_id,
-            :code,
-            :timestamp,
-            external_subscription_ids: [],
-            properties: {},
+            events: [
+              :transaction_id,
+              :external_customer_id,
+              :code,
+              :timestamp,
+              :external_subscription_id,
+              properties: {},
+            ],
           )
       end
 

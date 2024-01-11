@@ -1,98 +1,82 @@
 # frozen_string_literal: true
 
 module Events
-  # DEPRECATED
   class CreateBatchService < BaseService
-    def validate_params(organization:, params:)
-      Events::ValidateCreationService.call(
-        organization:,
-        params:,
-        customer: customer(organization:, params:),
-        result:,
-        batch: true,
-      )
+    MAX_LENGTH = 100
 
-      result
+    def initialize(organization:, events_params:, timestamp:, metadata:)
+      @organization = organization
+      @events_params = events_params
+      @timestamp = timestamp
+      @metadata = metadata
+
+      super
     end
 
-    def call(organization:, params:, timestamp:, metadata:)
-      customer = customer(organization:, params:)
-
-      Events::ValidateCreationService.call(
-        organization:,
-        params:,
-        customer:,
-        result:,
-        batch: true,
-      )
-      return result unless result.success?
-
-      events = []
-      ActiveRecord::Base.transaction do
-        params[:external_subscription_ids].each_with_index do |id, index|
-          subscription = Subscription.find_by(external_id: id)
-          event = Event.find_by(
-            organization_id: organization.id,
-            transaction_id: params[:transaction_id],
-            subscription_id: subscription.id,
-          )
-
-          if event
-            events << event
-
-            next
-          end
-
-          event = Event.new
-          event.organization_id = organization.id
-          event.code = params[:code]
-          event.transaction_id = "#{params[:transaction_id]}_#{index}"
-          event.customer_id = customer.id
-          event.external_customer_id = customer.external_id
-          event.subscription_id = subscription.id
-          event.external_subscription_id = subscription.external_id
-          event.properties = params[:properties] || {}
-          event.metadata = metadata || {}
-
-          event.timestamp = Time.zone.at(params[:timestamp].to_f) if params[:timestamp]
-          event.timestamp ||= timestamp
-
-          event.save!
-          handle_persisted_event(event)
-
-          events << event
-        rescue ActiveRecord::RecordInvalid => e
-          result.record_validation_failure!(record: e.record)
-
-          if organization.webhook_endpoints.any?
-            SendWebhookJob.perform_later(
-              :event,
-              { input_params: params, error: result.error, organization_id: organization.id },
-            )
-          end
-
-          return result
-        end
+    def call
+      if events_params.count > MAX_LENGTH
+        return result.single_validation_failure!(error_code: 'too_many_events', field: :events)
       end
 
-      result.events = events
+      validate_events
+
+      return result.validation_failure!(errors: result.errors) if result.errors.present?
+
+      post_validate_events
+
       result
-    end
-
-    def handle_persisted_event(event)
-      persisted_service = QuantifiedEvents::CreateOrUpdateService.new(event)
-      return unless persisted_service.matching_billable_metric?
-
-      service_result = persisted_service.call
-      service_result.raise_if_error!
     end
 
     private
 
-    def customer(organization:, params:)
-      organization.subscriptions.find_by(
-        external_id: params[:external_subscription_ids]&.first,
-      )&.customer
+    attr_reader :organization, :events_params, :timestamp, :metadata
+
+    def validate_events
+      result.events = []
+      result.errors = {}
+
+      events_params.each_with_index do |event_params, index|
+        event = Event.new
+        event.organization_id = organization.id
+        event.code = event_params[:code]
+        event.transaction_id = event_params[:transaction_id]
+        event.external_customer_id = event_params[:external_customer_id]
+        event.external_subscription_id = event_params[:external_subscription_id]
+        event.properties = event_params[:properties] || {}
+        event.metadata = metadata || {}
+        event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
+
+        result.events.push(event)
+        result.errors.merge({ index => event.errors }) unless event.valid?
+      end
+    end
+
+    def post_validate_events
+      ActiveRecord::Base.transaction do
+        result.events.each do |event|
+          event.save!
+
+          produce_kafka_event(event)
+          Events::PostProcessJob.perform_later(event:)
+        end
+      end
+    end
+
+    def produce_kafka_event(event)
+      return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
+
+      Karafka.producer.produce_sync(
+        topic: 'events-raw',
+        payload: {
+          organization_id: organization.id,
+          external_customer_id: event.external_customer_id,
+          external_subscription_id: event.external_subscription_id,
+          transaction_id: event.transaction_id,
+          timestamp: event.timestamp,
+          code: event.code,
+          properties: event.properties,
+        }.to_json,
+      )
     end
   end
 end

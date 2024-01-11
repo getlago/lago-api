@@ -613,9 +613,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_15_130517) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.boolean "credits_auto_refreshed", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
