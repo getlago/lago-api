@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
-class ChargeFilter < ApplicationRecord
+class ChargeFilterValue < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   self.discard_column = :deleted_at
 
-  belongs_to :charge
+  belongs_to :charge_filter
+  belongs_to :billable_metric_filter
 
-  has_many :values, class_name: 'ChargeFilterValue', dependent: :destroy
+  validates :value, presence: true
 
   default_scope -> { kept }
 end

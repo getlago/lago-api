@@ -7,6 +7,8 @@ RSpec.describe BillableMetric, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
+  it { is_expected.to have_many(:filters).dependent(:delete_all) }
+
   describe '#aggregation_type=' do
     let(:billable_metric) { described_class.new }
 

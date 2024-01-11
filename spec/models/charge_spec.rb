@@ -7,7 +7,7 @@ RSpec.describe Charge, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
-  it { is_expected.to have_many(:charge_filters).dependent(:destroy) }
+  it { is_expected.to have_many(:filters).dependent(:destroy) }
 
   describe '#properties' do
     context 'with group properties' do
