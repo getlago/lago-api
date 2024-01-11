@@ -2,34 +2,23 @@
 
 module Invoices
   class SubscriptionSyncService < SubscriptionService
-    def create
-      active_subscriptions = subscriptions.select(&:active?)
+    def call
       return result if active_subscriptions.empty? && recurring
 
-      result = nil
-      invoice = nil
+      create_generating_invoice unless invoice
+      result.invoice = invoice
 
       ActiveRecord::Base.transaction do
-        invoice = Invoice.create!(
-          organization: customer.organization,
-          customer:,
-          issuing_date:,
-          payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
-          invoice_type: :subscription,
-          currency:,
-          timezone: customer.applicable_timezone,
-          status: invoice_status,
+        invoice.status = invoice_status
+        invoice.save!
+
+        fee_result = Invoices::CalculateFeesService.call(
+          invoice:,
+          recurring:,
         )
 
-        result = Invoices::CalculateFeesService.new(
-          invoice:,
-          subscriptions: recurring ? active_subscriptions : subscriptions,
-          timestamp:,
-          recurring:,
-        ).call
-
-        result.raise_if_error!
+        fee_result.raise_if_error!
+        invoice.reload
       end
 
       if grace_period?
@@ -44,6 +33,10 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue Sequenced::SequenceError
+      raise
+    rescue StandardError => e
+      result.fail_with_error!(e)
     end
   end
 end
