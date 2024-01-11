@@ -25,6 +25,7 @@ module Charges
       result.units = compute_units
       result.count = 1
       result.amount = amount_cents
+      result.unit_amount = rounded_amount.zero? ? BigDecimal(0) : rounded_amount / compute_units
       result
     end
 

@@ -40,6 +40,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
     let(:charge_result) do
       BaseService::Result.new.tap do |result|
         result.amount = 10
+        result.unit_amount = 0.01111111111
         result.count = 1
         result.units = 9
       end
@@ -76,6 +77,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           group: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01111111111,
 
           taxes_rate: 20.0,
           taxes_amount_cents: 2,
@@ -182,6 +185,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             events_count: 1,
             group:,
             pay_in_advance_event_id: event.id,
+            unit_amount_cents: 1,
+            precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
             taxes_amount_cents: 2,
@@ -228,6 +233,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               events_count: 1,
               group:,
               pay_in_advance_event_id: event.id,
+              unit_amount_cents: 1,
+              precise_unit_amount: 0.01111111111,
 
               taxes_rate: 20.0,
               taxes_amount_cents: 2,
@@ -285,6 +292,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             events_count: 1,
             group: nil,
             pay_in_advance_event_id: event.id,
+            unit_amount_cents: 1,
+            precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
             taxes_amount_cents: 2,

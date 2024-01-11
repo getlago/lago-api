@@ -43,6 +43,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     let(:charge_result) do
       BaseService::Result.new.tap do |result|
         result.amount = 10
+        result.unit_amount = 0.01111111111
         result.count = 1
         result.units = 9
       end
@@ -90,6 +91,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           group: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01111111111,
         )
 
         expect(result.invoice.currency).to eq(customer.currency)
@@ -222,6 +225,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           group: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01111111111,
         )
 
         expect(result.invoice.currency).to eq(customer.currency)
