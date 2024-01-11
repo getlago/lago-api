@@ -63,7 +63,8 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
 
         expect(result.units).to eq(1)
         expect(result.count).to eq(1)
-        expect(result.amount).to eq(200)
+        expect(result.amount).to eq(200) # In cents
+        expect(result.unit_amount).to eq(2)
       end
     end
 

@@ -45,6 +45,7 @@ module Fees
         cache_aggregation_result(aggregation_result:, group:)
 
         result = apply_charge_model(aggregation_result:, properties:)
+        unit_amount_cents = result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
 
         fee = Fee.new(
           subscription:,
@@ -62,6 +63,8 @@ module Fees
           payment_status: :pending,
           pay_in_advance: true,
           taxes_amount_cents: 0,
+          unit_amount_cents:,
+          precise_unit_amount: result.unit_amount,
         )
 
         taxes_result = Fees::ApplyTaxesService.call(fee:)
