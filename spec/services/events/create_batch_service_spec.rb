@@ -33,7 +33,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       events << event
     end
 
-    events
+    { events: }
   end
 
   describe '.call' do
@@ -53,7 +53,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
     context 'when events count is too big' do
       before do
-        events_params.push(
+        events_params[:events].push(
           {
             external_customer_id: SecureRandom.uuid,
             external_subscription_id: SecureRandom.uuid,
@@ -91,16 +91,18 @@ RSpec.describe Events::CreateBatchService, type: :service do
         end
 
         let(:events_params) do
-          [
-            {
-              external_customer_id: SecureRandom.uuid,
-              external_subscription_id: '123456',
-              code:,
-              transaction_id: '123456',
-              properties: { foo: 'bar' },
-              timestamp:,
-            },
-          ]
+          {
+            events: [
+              {
+                external_customer_id: SecureRandom.uuid,
+                external_subscription_id: '123456',
+                code:,
+                transaction_id: '123456',
+                properties: { foo: 'bar' },
+                timestamp:,
+              },
+            ],
+          }
         end
 
         before { existing_event }
@@ -124,16 +126,18 @@ RSpec.describe Events::CreateBatchService, type: :service do
       let(:timestamp) { nil }
 
       let(:events_params) do
-        [
-          {
-            external_customer_id: SecureRandom.uuid,
-            external_subscription_id: SecureRandom.uuid,
-            code:,
-            transaction_id: SecureRandom.uuid,
-            properties: { foo: 'bar' },
-            timestamp:,
-          },
-        ]
+        {
+          events: [
+            {
+              external_customer_id: SecureRandom.uuid,
+              external_subscription_id: SecureRandom.uuid,
+              code:,
+              transaction_id: SecureRandom.uuid,
+              properties: { foo: 'bar' },
+              timestamp:,
+            },
+          ],
+        }
       end
 
       it 'creates an event by setting the timestamp to the current datetime' do
@@ -148,16 +152,18 @@ RSpec.describe Events::CreateBatchService, type: :service do
       let(:timestamp) { Time.current.to_f.to_s }
 
       let(:events_params) do
-        [
-          {
-            external_customer_id: SecureRandom.uuid,
-            external_subscription_id: SecureRandom.uuid,
-            code:,
-            transaction_id: SecureRandom.uuid,
-            properties: { foo: 'bar' },
-            timestamp:,
-          },
-        ]
+        {
+          events: [
+            {
+              external_customer_id: SecureRandom.uuid,
+              external_subscription_id: SecureRandom.uuid,
+              code:,
+              transaction_id: SecureRandom.uuid,
+              properties: { foo: 'bar' },
+              timestamp:,
+            },
+          ],
+        }
       end
 
       it 'creates an event by setting timestamp' do
@@ -172,16 +178,18 @@ RSpec.describe Events::CreateBatchService, type: :service do
       let(:timestamp) { DateTime.parse('2023-09-04T15:45:12.344Z').to_f }
 
       let(:events_params) do
-        [
-          {
-            external_customer_id: SecureRandom.uuid,
-            external_subscription_id: SecureRandom.uuid,
-            code:,
-            transaction_id: SecureRandom.uuid,
-            properties: { foo: 'bar' },
-            timestamp:,
-          },
-        ]
+        {
+          events: [
+            {
+              external_customer_id: SecureRandom.uuid,
+              external_subscription_id: SecureRandom.uuid,
+              code:,
+              transaction_id: SecureRandom.uuid,
+              properties: { foo: 'bar' },
+              timestamp:,
+            },
+          ],
+        }
       end
 
       it 'creates an event by keeping the millisecond precision' do
