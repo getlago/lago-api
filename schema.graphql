@@ -3023,6 +3023,7 @@ type EventCollection {
 type Fee implements InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  amountDetails: FeeAmountDetails
   appliedTaxes: [FeeAppliedTax!]
   charge: Charge
   creditableAmountCents: BigInt!
@@ -3045,6 +3046,45 @@ type Fee implements InvoiceItem {
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
+}
+
+type FeeAmountDetails {
+  fixedFeeTotalAmount: String
+  fixedFeeUnitAmount: String
+  flatUnitAmount: String
+  freeEvents: Int
+  freeUnits: String
+  graduatedPercentageRanges: [FeeAmountDetailsGraduatedPercentageRange!]
+  graduatedRanges: [FeeAmountDetailsGraduatedRange!]
+  minMaxAdjustmentTotalAmount: String
+  paidEvents: Int
+  paidUnits: String
+  perPackageSize: Int
+  perPackageUnitAmount: String
+  perUnitAmount: String
+  perUnitTotalAmount: String
+  rate: String
+  units: String
+}
+
+type FeeAmountDetailsGraduatedPercentageRange {
+  flatUnitAmount: String
+  fromValue: Int
+  perUnitTotalAmount: String
+  rate: String
+  toValue: Int
+  totalWithFlatAmount: String
+  units: String
+}
+
+type FeeAmountDetailsGraduatedRange {
+  flatUnitAmount: String
+  fromValue: Int
+  perUnitAmount: String
+  perUnitTotalAmount: String
+  toValue: Int
+  totalWithFlatAmount: String
+  units: String
 }
 
 type FeeAppliedTax implements AppliedTax {
