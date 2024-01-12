@@ -207,6 +207,10 @@ RSpec.describe Events::CreateBatchService, type: :service do
         ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = 'kafka'
       end
 
+      after do
+        ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = nil
+      end
+
       it 'produces the event on kafka' do
         allow(Karafka).to receive(:producer).and_return(karafka_producer)
         allow(karafka_producer).to receive(:produce_sync)
