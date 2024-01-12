@@ -6,7 +6,7 @@ module Events
 
     def initialize(organization:, events_params:, timestamp:, metadata:)
       @organization = organization
-      @events_params = events_params
+      @events_params = events_params[:events]
       @timestamp = timestamp
       @metadata = metadata
 
