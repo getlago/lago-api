@@ -8,6 +8,7 @@ class ChargeFilter < ApplicationRecord
   belongs_to :charge
 
   has_many :values, class_name: 'ChargeFilterValue', dependent: :destroy
+  has_many :fees
 
   default_scope -> { kept }
 end
