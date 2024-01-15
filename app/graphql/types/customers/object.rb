@@ -26,6 +26,7 @@ module Types
       field :logo_url, String, null: true
       field :net_payment_term, Integer, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
+      field :payment_provider_code, String, null: true
       field :phone, String, null: true
       field :state, String, null: true
       field :tax_identification_number, String, null: true

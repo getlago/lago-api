@@ -27,6 +27,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
       query: mutation,
       variables: {
         input: {
+          id: stripe_provider.id,
           successRedirectUrl: success_redirect_url,
         },
       },
@@ -45,6 +46,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
         query: mutation,
         variables: {
           input: {
+            id: stripe_provider.id,
             successRedirectUrl: nil,
           },
         },
@@ -63,6 +65,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
         query: mutation,
         variables: {
           input: {
+            id: stripe_provider.id,
             successRedirectUrl: success_redirect_url,
           },
         },
@@ -79,6 +82,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
         query: mutation,
         variables: {
           input: {
+            id: stripe_provider.id,
             successRedirectUrl: success_redirect_url,
           },
         },

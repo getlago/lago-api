@@ -15,20 +15,4 @@ namespace :customers do
       customer.update!(currency: currencies.first)
     end
   end
-
-  desc 'Set sync_with_provider field for existing customers'
-  task populate_sync_with_provider: :environment do
-    Organization.all.each do |org|
-      next if org&.stripe_payment_provider&.create_customers.blank?
-
-      org.customers.each do |customer|
-        stripe_customer = customer&.stripe_customer
-
-        next unless stripe_customer
-
-        stripe_customer.sync_with_provider = true
-        stripe_customer.save!
-      end
-    end
-  end
 end

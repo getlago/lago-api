@@ -35,7 +35,7 @@ RSpec.describe Types::OrganizationType do
   it { is_expected.to have_field(:email_settings).of_type('[EmailSettingsEnum!]') }
   it { is_expected.to have_field(:taxes).of_type('[Tax!]') }
 
-  it { is_expected.to have_field(:adyen_payment_provider).of_type('AdyenProvider') }
-  it { is_expected.to have_field(:gocardless_payment_provider).of_type('GocardlessProvider') }
-  it { is_expected.to have_field(:stripe_payment_provider).of_type('StripeProvider') }
+  it { is_expected.to have_field(:adyen_payment_providers).of_type('[AdyenProvider!]') }
+  it { is_expected.to have_field(:gocardless_payment_providers).of_type('[GocardlessProvider!]') }
+  it { is_expected.to have_field(:stripe_payment_providers).of_type('[StripeProvider!]') }
 end

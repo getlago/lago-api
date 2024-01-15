@@ -3,6 +3,7 @@
 module PaymentProviderCustomers
   class AdyenService < BaseService
     include Lago::Adyen::ErrorHandlable
+    include Customers::PaymentProviderFinder
 
     def initialize(adyen_customer = nil)
       @adyen_customer = adyen_customer
@@ -86,7 +87,7 @@ module PaymentProviderCustomers
     end
 
     def adyen_payment_provider
-      @adyen_payment_provider || organization.adyen_payment_provider
+      @adyen_payment_provider ||= payment_provider(customer)
     end
 
     def client

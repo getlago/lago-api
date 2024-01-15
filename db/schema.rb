@@ -348,6 +348,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.string "tax_identification_number"
     t.integer "net_payment_term"
     t.string "external_salesforce_id"
+    t.string "payment_provider_code"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -420,8 +421,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.decimal "total_aggregated_units"
     t.string "invoice_display_name"
+    t.decimal "total_aggregated_units"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: {}, null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
@@ -651,6 +652,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "code", null: false
+    t.string "name", null: false
+    t.index ["code", "organization_id"], name: "index_payment_providers_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
 

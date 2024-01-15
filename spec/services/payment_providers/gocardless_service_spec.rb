@@ -8,6 +8,8 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:access_code) { '1234567!abc' }
+  let(:code) { 'code_1' }
+  let(:name) { 'Name 1' }
   let(:oauth_client) { instance_double(OAuth2::Client) }
   let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }
   let(:access_token) { instance_double(OAuth2::AccessToken) }
@@ -31,6 +33,8 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         gocardless_service.create_or_update(
           organization:,
           access_code:,
+          code:,
+          name:,
           success_redirect_url:,
         )
       end.to change(PaymentProviders::GocardlessProvider, :count).by(1)
@@ -38,7 +42,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
 
     context 'when organization already have a gocardless provider' do
       let(:gocardless_provider) do
-        create(:gocardless_provider, organization:, access_token: 'access_token_123')
+        create(:gocardless_provider, organization:, access_token: 'access_token_123', code:)
       end
 
       before { gocardless_provider }
@@ -47,6 +51,8 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         result = gocardless_service.create_or_update(
           organization:,
           access_code:,
+          code:,
+          name:,
           success_redirect_url:,
         )
 
@@ -55,6 +61,8 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         aggregate_failures do
           expect(result.gocardless_provider.id).to eq(gocardless_provider.id)
           expect(result.gocardless_provider.access_token).to eq('access_token_554')
+          expect(result.gocardless_provider.code).to eq(code)
+          expect(result.gocardless_provider.name).to eq(name)
           expect(result.gocardless_provider.success_redirect_url).to eq(success_redirect_url)
         end
       end

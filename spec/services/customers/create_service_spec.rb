@@ -429,34 +429,54 @@ RSpec.describe Customers::CreateService, type: :service do
           name: 'Foo Bar',
           billing_configuration: {
             payment_provider: 'stripe',
+            payment_provider_code: 'stripe_1',
             provider_customer_id: 'stripe_id',
           },
         }
       end
 
-      it 'creates a stripe customer' do
-        result = customers_service.create_from_api(
-          organization:,
-          params: create_args,
-        )
+      context 'when payment provider does not exist' do
+        let(:error_messages) { { base: ['payment_provider_not_found'] } }
 
-        expect(result).to be_success
+        it 'fails to create customer' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
 
-        aggregate_failures do
-          customer = result.customer
-          expect(customer.id).to be_present
-          expect(customer.payment_provider).to eq('stripe')
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(error_messages)
+        end
+      end
 
-          expect(customer.stripe_customer).to be_present
+      context 'when payment provider exists' do
+        before { create(:stripe_provider, organization:, code: 'stripe_1') }
 
-          stripe_customer = customer.stripe_customer
-          expect(stripe_customer.id).to be_present
-          expect(stripe_customer.provider_customer_id).to eq('stripe_id')
+        it 'creates a stripe customer' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
+
+          expect(result).to be_success
+
+          aggregate_failures do
+            customer = result.customer
+            expect(customer.id).to be_present
+            expect(customer.payment_provider).to eq('stripe')
+
+            expect(customer.stripe_customer).to be_present
+
+            stripe_customer = customer.stripe_customer
+            expect(stripe_customer.id).to be_present
+            expect(stripe_customer.provider_customer_id).to eq('stripe_id')
+          end
         end
       end
 
       context 'when customer already exists' do
         let(:payment_provider) { 'stripe' }
+        let(:payment_provider_code) { 'stripe_1' }
         let(:create_args) do
           {
             external_id: SecureRandom.uuid,
@@ -464,6 +484,7 @@ RSpec.describe Customers::CreateService, type: :service do
             billing_configuration: {
               vat_rate: 28,
               payment_provider:,
+              payment_provider_code:,
               provider_customer_id: 'stripe_id',
             },
           }
@@ -474,6 +495,8 @@ RSpec.describe Customers::CreateService, type: :service do
             organization:,
             external_id: create_args[:external_id],
             email: 'foo@bar.com',
+            payment_provider_code: nil,
+            payment_provider: nil,
           )
         end
 
@@ -566,24 +589,42 @@ RSpec.describe Customers::CreateService, type: :service do
         }
       end
 
-      it 'creates a gocardless customer' do
-        result = customers_service.create_from_api(
-          organization:,
-          params: create_args,
-        )
+      context 'when payment provider does not exist' do
+        let(:error_messages) { { base: ['payment_provider_not_found'] } }
 
-        expect(result).to be_success
+        it 'fails to create customer' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
 
-        aggregate_failures do
-          customer = result.customer
-          expect(customer.id).to be_present
-          expect(customer.payment_provider).to eq('gocardless')
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(error_messages)
+        end
+      end
 
-          expect(customer.gocardless_customer).to be_present
+      context 'when payment provider exists' do
+        before { create(:gocardless_provider, organization:, code: 'gocardless_1') }
 
-          gocardless_customer = customer.gocardless_customer
-          expect(gocardless_customer.id).to be_present
-          expect(gocardless_customer.provider_customer_id).to eq('gocardless_id')
+        it 'creates a gocardless customer' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args,
+          )
+
+          expect(result).to be_success
+
+          aggregate_failures do
+            customer = result.customer
+            expect(customer.id).to be_present
+            expect(customer.payment_provider).to eq('gocardless')
+
+            expect(customer.gocardless_customer).to be_present
+
+            gocardless_customer = customer.gocardless_customer
+            expect(gocardless_customer.id).to be_present
+            expect(gocardless_customer.provider_customer_id).to eq('gocardless_id')
+          end
         end
       end
     end
@@ -641,6 +682,8 @@ RSpec.describe Customers::CreateService, type: :service do
             :customer,
             organization:,
             external_id: create_args[:external_id],
+            payment_provider: nil,
+            payment_provider_code: nil,
             email: 'foo@bar.com',
           )
         end

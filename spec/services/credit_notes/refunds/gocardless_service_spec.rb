@@ -5,13 +5,14 @@ require 'rails_helper'
 RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
   subject(:gocardless_service) { described_class.new(credit_note) }
 
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, payment_provider_code: code) }
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:organization) { customer.organization }
-  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:, code:) }
   let(:gocardless_customer) { create(:gocardless_customer, customer:) }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_refunds_service) { instance_double(GoCardlessPro::Services::RefundsService) }
+  let(:code) { 'gocardless_1' }
   let(:payment) do
     create(
       :payment,

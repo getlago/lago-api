@@ -4,6 +4,7 @@ class WebhooksController < ApplicationController
   def stripe
     result = PaymentProviders::StripeService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
+      code: params[:code].presence,
       params: request.body.read,
       signature: request.headers['HTTP_STRIPE_SIGNATURE'],
     )
@@ -22,6 +23,7 @@ class WebhooksController < ApplicationController
   def gocardless
     result = PaymentProviders::GocardlessService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
+      code: params[:code].presence,
       body: request.body.read,
       signature: request.headers['Webhook-Signature'],
     )
@@ -40,6 +42,7 @@ class WebhooksController < ApplicationController
   def adyen
     result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
+      code: params[:code].presence,
       body: adyen_params,
     )
 

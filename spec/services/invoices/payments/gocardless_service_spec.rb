@@ -5,15 +5,16 @@ require 'rails_helper'
 RSpec.describe Invoices::Payments::GocardlessService, type: :service do
   subject(:gocardless_service) { described_class.new(argument) }
 
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
-  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
+  let(:gocardless_payment_provider) { create(:gocardless_provider, organization:, code:) }
   let(:gocardless_customer) { create(:gocardless_customer, customer:) }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
   let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
   let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
   let(:argument) { invoice }
+  let(:code) { 'gocardless_1' }
 
   let(:invoice) do
     create(
@@ -136,7 +137,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     end
 
     context 'with error on gocardless' do
-      let(:customer) { create(:customer, organization:) }
+      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
       let(:subscription) do
         create(:subscription, organization:, customer:)

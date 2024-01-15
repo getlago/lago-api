@@ -5,11 +5,12 @@ require 'rails_helper'
 RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
   subject(:stripe_service) { described_class.new(credit_note) }
 
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
   let(:invoice) { create(:invoice, customer:, organization:) }
-  let(:stripe_payment_provider) { create(:stripe_provider, organization:) }
+  let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:) }
+  let(:code) { 'stripe_1' }
   let(:payment) do
     create(
       :payment,

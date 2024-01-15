@@ -5,13 +5,27 @@ module PaymentProviders
     WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED].freeze
 
     def create_or_update(**args)
-      adyen_provider = PaymentProviders::AdyenProvider.find_or_initialize_by(
+      payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
+        code: args[:code],
+        id: args[:id],
+        payment_provider_type: 'adyen',
       )
+
+      adyen_provider = if payment_provider_result.success?
+        payment_provider_result.payment_provider
+      else
+        PaymentProviders::AdyenProvider.new(
+          organization_id: args[:organization].id,
+          code: args[:code],
+        )
+      end
 
       api_key = adyen_provider.api_key
 
       adyen_provider.api_key = args[:api_key] if args.key?(:api_key)
+      adyen_provider.code = args[:code] if args.key?(:code)
+      adyen_provider.name = args[:name] if args.key?(:name)
       adyen_provider.merchant_account = args[:merchant_account] if args.key?(:merchant_account)
       adyen_provider.live_prefix = args[:live_prefix] if args.key?(:live_prefix)
       adyen_provider.hmac_key = args[:hmac_key] if args.key?(:hmac_key)
@@ -33,16 +47,15 @@ module PaymentProviders
       result.record_validation_failure!(record: e.record)
     end
 
-    def handle_incoming_webhook(organization_id:, body:)
+    def handle_incoming_webhook(organization_id:, body:, code: nil)
       organization = Organization.find_by(id: organization_id)
       return result.service_failure!(code: 'webhook_error', message: 'Organization not found') unless organization
 
-      unless organization.adyen_payment_provider
-        return result.service_failure!(code: 'webhook_error', message: 'Payment provider not found')
-      end
+      payment_provider_result = PaymentProviders::FindService.call(organization_id:, code:)
+      return payment_provider_result unless payment_provider_result.success?
 
       validator = ::Adyen::Utils::HmacValidator.new
-      hmac_key = organization.adyen_payment_provider.hmac_key
+      hmac_key = payment_provider_result.payment_provider.hmac_key
 
       if hmac_key && !validator.valid_notification_hmac?(body, hmac_key)
         return result.service_failure!(code: 'webhook_error', message: 'Invalid signature')

@@ -39,6 +39,8 @@ module Types
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
+    field :payment_provider, resolver: Resolvers::PaymentProviderResolver
+    field :payment_providers, resolver: Resolvers::PaymentProvidersResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver

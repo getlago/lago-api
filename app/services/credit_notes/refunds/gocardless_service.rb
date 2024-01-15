@@ -3,6 +3,8 @@
 module CreditNotes
   module Refunds
     class GocardlessService < BaseService
+      include Customers::PaymentProviderFinder
+
       PENDING_STATUSES = %w[created pending_submission submitted refund_settled].freeze
       SUCCESS_STATUSES = %w[paid].freeze
       FAILED_STATUSES = %w[cancelled bounced funds_returned failed].freeze
@@ -85,7 +87,7 @@ module CreditNotes
       end
 
       def gocardless_payment_provider
-        @gocardless_payment_provider ||= organization.gocardless_payment_provider
+        @gocardless_payment_provider ||= payment_provider(customer)
       end
 
       def create_gocardless_refund

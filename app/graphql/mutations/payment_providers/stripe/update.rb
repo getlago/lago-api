@@ -7,7 +7,7 @@ module Mutations
         graphql_name 'UpdateStripePaymentProvider'
         description 'Update Stripe payment provider'
 
-        argument :success_redirect_url, String, required: false
+        input_object_class Types::PaymentProviders::UpdateInput
 
         type Types::PaymentProviders::Stripe
       end

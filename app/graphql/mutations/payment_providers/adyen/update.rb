@@ -7,7 +7,7 @@ module Mutations
         graphql_name 'UpdateAdyenPaymentProvider'
         description 'Update Adyen payment provider'
 
-        argument :success_redirect_url, String, required: false
+        input_object_class Types::PaymentProviders::UpdateInput
 
         type Types::PaymentProviders::Adyen
       end

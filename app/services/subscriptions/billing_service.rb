@@ -190,7 +190,6 @@ module Subscriptions
     end
 
     # NOTE: Billed quarterly on anniversary date
-    # rubocop:disable Layout/LineLength
     def quarterly_anniversary
       billing_day = <<-SQL
         DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (

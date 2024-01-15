@@ -7,7 +7,7 @@ module Mutations
         graphql_name 'UpdateGocardlessPaymentProvider'
         description 'Update Gocardless payment provider'
 
-        argument :success_redirect_url, String, required: false
+        input_object_class Types::PaymentProviders::UpdateInput
 
         type Types::PaymentProviders::Gocardless
       end

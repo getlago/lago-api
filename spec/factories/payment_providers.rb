@@ -4,13 +4,15 @@ FactoryBot.define do
   factory :stripe_provider, class: 'PaymentProviders::StripeProvider' do
     organization
     type { 'PaymentProviders::StripeProvider' }
+    code { "stripe_account_#{SecureRandom.uuid}" }
+    name { 'Stripe Account 1' }
 
     secrets do
       { secret_key: SecureRandom.uuid }.to_json
     end
 
     settings do
-      { create_customers: true, success_redirect_url: }
+      { success_redirect_url: }
     end
 
     transient do
@@ -21,6 +23,8 @@ FactoryBot.define do
   factory :gocardless_provider, class: 'PaymentProviders::GocardlessProvider' do
     organization
     type { 'PaymentProviders::GocardlessProvider' }
+    code { "gocardless_account_#{SecureRandom.uuid}" }
+    name { 'GoCardless Account 1' }
 
     secrets do
       { access_token: SecureRandom.uuid }.to_json
@@ -38,6 +42,8 @@ FactoryBot.define do
   factory :adyen_provider, class: 'PaymentProviders::AdyenProvider' do
     organization
     type { 'PaymentProviders::AdyenProvider' }
+    code { "adyen_account_#{SecureRandom.uuid}" }
+    name { 'Adyen Account 1' }
 
     secrets do
       { api_key:, hmac_key: }.to_json

@@ -8,6 +8,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
   let(:oauth_client) { instance_double(OAuth2::Client) }
   let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }
   let(:access_token) { instance_double(OAuth2::AccessToken) }
+  let(:code) { 'gocardless_1' }
+  let(:name) { 'GoCardless 1' }
   let(:success_redirect_url) { Faker::Internet.url }
 
   let(:mutation) do
@@ -15,6 +17,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
       mutation($input: AddGocardlessPaymentProviderInput!) {
         addGocardlessPaymentProvider(input: $input) {
           id,
+          code,
+          name,
           hasAccessToken,
           successRedirectUrl
         }
@@ -41,6 +45,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
       variables: {
         input: {
           accessCode: access_code,
+          code:,
+          name:,
           successRedirectUrl: success_redirect_url,
         },
       },
@@ -51,6 +57,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['hasAccessToken']).to be(true)
+      expect(result_data['code']).to eq(code)
+      expect(result_data['name']).to eq(name)
       expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
     end
   end
@@ -63,6 +71,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
         variables: {
           input: {
             accessCode: access_code,
+            code:,
+            name:,
           },
         },
       )
@@ -79,6 +89,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
         variables: {
           input: {
             accessCode: access_code,
+            code:,
+            name:,
           },
         },
       )

@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class GocardlessService < BaseService
+      include Customers::PaymentProviderFinder
+
       PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
         .freeze
       SUCCESS_STATUSES = %w[paid_out].freeze
@@ -84,7 +86,7 @@ module Invoices
       end
 
       def gocardless_payment_provider
-        @gocardless_payment_provider ||= organization.gocardless_payment_provider
+        @gocardless_payment_provider ||= payment_provider(customer)
       end
 
       def mandate_id

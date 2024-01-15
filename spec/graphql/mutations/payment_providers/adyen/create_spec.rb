@@ -6,6 +6,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:api_key) { 'api_key_123456_abc' }
   let(:hmac_key) { 'hmac_124' }
+  let(:code) { 'adyen_1' }
+  let(:name) { 'Adyen 1' }
   let(:live_prefix) { 'test' }
   let(:merchant_account) { 'Merchant1' }
   let(:success_redirect_url) { Faker::Internet.url }
@@ -16,6 +18,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
         addAdyenPaymentProvider(input: $input) {
           id,
           apiKey,
+          code,
+          name,
           hmacKey,
           livePrefix,
           merchantAccount,
@@ -34,6 +38,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
         input: {
           apiKey: api_key,
           hmacKey: hmac_key,
+          code:,
+          name:,
           merchantAccount: merchant_account,
           livePrefix: live_prefix,
           successRedirectUrl: success_redirect_url,
@@ -47,6 +53,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['apiKey']).to eq('••••••••…abc')
       expect(result_data['hmacKey']).to eq('••••••••…124')
+      expect(result_data['code']).to eq(code)
+      expect(result_data['name']).to eq(name)
       expect(result_data['livePrefix']).to eq(live_prefix)
       expect(result_data['merchantAccount']).to eq(merchant_account)
       expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
@@ -61,6 +69,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
         variables: {
           input: {
             apiKey: api_key,
+            code:,
+            name:,
             merchantAccount: merchant_account,
           },
         },
@@ -78,6 +88,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
         variables: {
           input: {
             apiKey: api_key,
+            code:,
+            name:,
             merchantAccount: merchant_account,
           },
         },

@@ -5,10 +5,10 @@ module Types
     class Stripe < Types::BaseObject
       graphql_name 'StripeProvider'
 
+      field :code, String, null: false
       field :id, ID, null: false
-      field :secret_key, String, null: false
-
-      field :create_customers, Boolean, null: false
+      field :name, String, null: false
+      field :secret_key, String, null: true
       field :success_redirect_url, String, null: true
 
       # NOTE: Secret key is a sensitive information. It should not be sent back to the
