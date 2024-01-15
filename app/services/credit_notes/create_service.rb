@@ -161,7 +161,7 @@ module CreditNotes
       return unless credit_note.organization.email_settings.include?('credit_note.created')
 
       CreditNoteMailer.with(credit_note:)
-        .created.deliver_later
+        .created.deliver_later(wait: 3.seconds)
     end
 
     def should_handle_refund?
