@@ -5,9 +5,13 @@ module Clock
     queue_as 'clock'
 
     def perform
-      Wallet.active.find_each do |wallet|
-        Wallets::RefreshCreditsJob.perform_later(wallet)
-      end
+      Wallet
+        .active
+        .joins(customer: :organization)
+        .merge(Organization.credits_auto_refreshed)
+        .find_each do |wallet|
+          Wallets::RefreshCreditsJob.perform_later(wallet)
+        end
     end
   end
 end
