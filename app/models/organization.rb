@@ -67,6 +67,8 @@ class Organization < ApplicationRecord
 
   after_create :generate_document_number_prefix
 
+  scope :credits_auto_refreshed, -> { where(credits_auto_refreshed: true) }
+
   def logo_url
     return if logo.blank?
 
