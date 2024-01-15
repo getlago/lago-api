@@ -53,7 +53,7 @@ module Events
 
     def post_validate_events
       ActiveRecord::Base.transaction do
-        result.events.each.&:save!
+        result.events.each(&:save!)
       end
 
       result.events.each do |event|
