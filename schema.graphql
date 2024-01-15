@@ -3031,6 +3031,7 @@ type EventCollection {
 
 type Fee implements InvoiceItem {
   adjustedFee: Boolean!
+  adjustedFeeType: String
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   amountDetails: FeeAmountDetails

@@ -29,6 +29,7 @@ module Types
       field :amount_details, Types::Fees::AmountDetails::Object, null: true
 
       field :adjusted_fee, Boolean, null: false
+      field :adjusted_fee_type, String, null: true
 
       delegate :group_name, to: :object
       delegate :invoice_name, to: :object
@@ -43,6 +44,14 @@ module Types
 
       def adjusted_fee
         object.adjusted_fee.present?
+      end
+
+      def adjusted_fee_type
+        if object.adjusted_fee.present?
+          object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
+        else
+          nil
+        end
       end
     end
   end
