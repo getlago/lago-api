@@ -8,6 +8,7 @@ class Fee < ApplicationRecord
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
+  belongs_to :charge_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: 'Fee', optional: true

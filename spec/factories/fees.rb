@@ -51,6 +51,10 @@ FactoryBot.define do
     end
 
     total_aggregated_units { 0 }
+
+    trait :with_charge_filter do
+      charge_filter
+    end
   end
 
   factory :add_on_fee, class: 'Fee' do
