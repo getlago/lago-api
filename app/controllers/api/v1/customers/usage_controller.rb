@@ -5,14 +5,13 @@ module Api
     module Customers
       class UsageController < Api::BaseController
         def current
-          service = ::Invoices::CustomerUsageService
-            .new(
+          result = ::Invoices::CustomerUsageService
+            .call(
               nil,
               customer_id: params[:customer_external_id],
               subscription_id: params[:external_subscription_id],
               organization_id: current_organization.id,
             )
-          result = service.usage
 
           if result.success?
             render(

@@ -19,7 +19,7 @@ module Invoices
       result.not_found_failure!(resource: 'customer')
     end
 
-    def usage
+    def call
       return result.not_found_failure!(resource: 'customer') unless @customer
       return result.not_allowed_failure!(code: 'no_active_subscription') if subscription.blank?
 
