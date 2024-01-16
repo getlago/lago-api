@@ -47,11 +47,9 @@ module Types
       end
 
       def adjusted_fee_type
-        if object.adjusted_fee.present?
-          object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
-        else
-          nil
-        end
+        return nil unless object.adjusted_fee.present?
+
+        object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
       end
     end
   end
