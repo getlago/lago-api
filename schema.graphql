@@ -4326,6 +4326,7 @@ type PlanCollection {
 }
 
 enum PlanInterval {
+  daily
   monthly
   quarterly
   weekly
