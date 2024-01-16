@@ -3,53 +3,91 @@
     - if subscriptions.count > 1
       h2.title-2.mb-24 class="#{'invoice-details-title' if subscriptions.count > 1}" = I18n.t('invoice.details', resource: subscription.invoice_name)
 
-    / Subscription fee section
-    .invoice-resume.overflow-auto class="#{'mb-24' if subscription_fees(subscription.id).charge_kind.any? && different_boundaries_for_subscription_and_charges(subscription)}"
-      table.invoice-resume-table width="100%"
-        tr.first_child
-          td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default))
-          td.body-2 = I18n.t('invoice.units')
-          td.body-2 = I18n.t('invoice.unit_price')
-          td.body-2 = I18n.t('invoice.tax_rate')
-          td.body-2 = I18n.t('invoice.amount')
-        tr
-          td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
-          td.body-2 = 1
-          td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
-          td.body-2 == TaxHelper.applied_taxes(invoice_subscription(subscription.id).subscription_fee)
-          td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
+    / PAY IN ARREARS PLAN INTERVAL
+    - if subscription? && !subscription.plan.pay_in_advance?
+      .invoice-resume.overflow-auto class="#{'mb-24' if subscription_fees(subscription.id).charge_kind.any? && different_boundaries_for_subscription_and_charges(subscription)}"
+        table.invoice-resume-table width="100%"
+          tr.first_child
+            td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default))
+            td.body-2 = I18n.t('invoice.units')
+            td.body-2 = I18n.t('invoice.unit_price')
+            td.body-2 = I18n.t('invoice.tax_rate')
+            td.body-2 = I18n.t('invoice.amount')
+          tr
+            td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
+            td.body-2 = 1
+            td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
+            td.body-2 == TaxHelper.applied_taxes(invoice_subscription(subscription.id).subscription_fee)
+            td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
 
-        - if subscription? && subscription_fees(subscription.id).charge_kind.any?
-          / Charges payed in advance on payed in advance plan
-          - if subscription.plan.charges.where(pay_in_advance: true).any? && subscription.plan.pay_in_advance?
-            / Loop over all top level fees
-            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
-              - fee = fees.first
-              - next unless fee.charge.pay_in_advance?
+      / Charge fees section for subscription invoice
+      - if subscription? && subscription_fees(subscription.id).charge_kind.any?
+        / Charges payed in arrears
+        - if subscription.plan.charges.where(pay_in_advance: false).any?
+          .invoice-resume.overflow-auto class="#{'mb-24' if subscription.plan.charges.where(pay_in_advance: true).any?}"
+            table.invoice-resume-table width="100%"
+              / Loop over all top level fees
+              - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+                - fee = fees.first
+                - next if fee.charge.pay_in_advance?
 
-              / Fees for groups
-              - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
-                - fees.select { |f| f.units.positive? }.each do |fee|
-                  - if fee.amount_details.blank?
-                    == SlimHelper.render('templates/invoices/v4/_default_fee', fees)
-                  - else
-                    == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+                / Fees for groups
+                - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+                  - fees.select { |f| f.units.positive? }.each do |fee|
+                    - if fee.amount_details.blank?
+                      == SlimHelper.render('templates/invoices/v4/_default_fee_with_groups', fee)
+                    - else
+                      == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
-                / True up fees attached to the fee
-                - if fee.true_up_fee.present?
-                  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+                  / True up fees attached to the fee
+                  - fees.select { |f| f.true_up_fee.present? }.each do |fee|
+                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
-              / Fees without group
-              - else
-                == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+                / Fees without group
+                - else
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
 
-    / Charge fees section for subscription invoice
-    - if subscription? && subscription_fees(subscription.id).charge_kind.any?
-      / Charges payed in arrears OR charges and plan payed in advance
-      - if subscription.plan.charges.where(pay_in_advance: false).any?
-        .invoice-resume.overflow-auto
-          table.invoice-resume-table width="100%"
-            - if different_boundaries_for_subscription_and_charges(subscription)
+        / Charges payed in advance on payed in arrears plan
+        - if subscription.plan.charges.where(pay_in_advance: true).any?
+          .invoice-resume.overflow-auto
+            table.invoice-resume-table width="100%"
+              tr.first_child
+                - pay_in_advance_interval = charge_pay_in_advance_interval(invoice_subscription(subscription.id).timestamp, subscription)
+                td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(pay_in_advance_interval[:charges_from_date], format: :default), to_date: I18n.l(pay_in_advance_interval[:charges_to_date], format: :default))
+                td.body-2 = I18n.t('invoice.units')
+                td.body-2 = I18n.t('invoice.unit_price')
+                td.body-2 = I18n.t('invoice.tax_rate')
+                td.body-2 = I18n.t('invoice.amount')
+
+              / Loop over all top level fees
+              - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+                - fee = fees.first
+                - next unless fee.charge.pay_in_advance?
+
+                / Fees for groups
+                - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+                  - fees.select { |f| f.units.positive? }.each do |fee|
+                    - if fee.amount_details.blank?
+                      == SlimHelper.render('templates/invoices/v4/_default_fee', fees)
+                    - else
+                      == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+
+                  / True up fees attached to the fee
+                  - if fee.true_up_fee.present?
+                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+
+                / Fees without group
+                - else
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+
+    / PAY IN ADVANCE PLAN INTERVAL
+    - if subscription? && subscription.plan.pay_in_advance?
+      / Charge fees section for subscription invoice
+      - if subscription_fees(subscription.id).charge_kind.any?
+        / Charges payed in arrears
+        - if subscription.plan.charges.where(pay_in_advance: false).any?
+          .invoice-resume.overflow-auto class="mb-24"
+            table.invoice-resume-table width="100%"
               tr.first_child
                 td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
                 td.body-2 = I18n.t('invoice.units')
@@ -57,59 +95,65 @@
                 td.body-2 = I18n.t('invoice.tax_rate')
                 td.body-2 = I18n.t('invoice.amount')
 
-            / Loop over all top level fees
-            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
-              - fee = fees.first
-              - next if fee.charge.pay_in_advance?
+              / Loop over all top level fees
+              - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+                - fee = fees.first
+                - next if fee.charge.pay_in_advance?
 
-              / Fees for groups
-              - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
-                - fees.select { |f| f.units.positive? }.each do |fee|
-                  - if fee.amount_details.blank?
-                    == SlimHelper.render('templates/invoices/v4/_default_fee_with_groups', fee)
-                  - else
-                    == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+                / Fees for groups
+                - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+                  - fees.select { |f| f.units.positive? }.each do |fee|
+                    - if fee.amount_details.blank?
+                      == SlimHelper.render('templates/invoices/v4/_default_fee_with_groups', fee)
+                    - else
+                      == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
-                / True up fees attached to the fee
-                - fees.select { |f| f.true_up_fee.present? }.each do |fee|
-                  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+                  / True up fees attached to the fee
+                  - fees.select { |f| f.true_up_fee.present? }.each do |fee|
+                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
-              / Fees without group
-              - else
-                == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+                / Fees without group
+                - else
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
 
-      / Charges payed in advance on payed in arrears plan
-      - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance?
-        .invoice-resume.overflow-auto
-          table.invoice-resume-table width="100%"
-            tr
-              - pay_in_advance_interval = charge_pay_in_advance_interval(invoice_subscription(subscription.id).timestamp, subscription)
-              td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(pay_in_advance_interval[:charges_from_date], format: :default), to_date: I18n.l(pay_in_advance_interval[:charges_to_date], format: :default))
-              td.body-2 = I18n.t('invoice.units')
-              td.body-2 = I18n.t('invoice.unit_price')
-              td.body-2 = I18n.t('invoice.tax_rate')
-              td.body-2 = I18n.t('invoice.amount')
+      .invoice-resume.overflow-auto
+        table.invoice-resume-table width="100%"
+          tr.first_child
+            td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default))
+            td.body-2 = I18n.t('invoice.units')
+            td.body-2 = I18n.t('invoice.unit_price')
+            td.body-2 = I18n.t('invoice.tax_rate')
+            td.body-2 = I18n.t('invoice.amount')
+          tr
+            td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
+            td.body-2 = 1
+            td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
+            td.body-2 == TaxHelper.applied_taxes(invoice_subscription(subscription.id).subscription_fee)
+            td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
 
-            / Loop over all top level fees
-            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
-              - fee = fees.first
-              - next unless fee.charge.pay_in_advance?
+          - if subscription? && subscription_fees(subscription.id).charge_kind.any?
+            / Charges payed in advance on payed in advance plan
+            - if subscription.plan.charges.where(pay_in_advance: true).any? && subscription.plan.pay_in_advance?
+              / Loop over all top level fees
+              - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+                - fee = fees.first
+                - next unless fee.charge.pay_in_advance?
 
-              / Fees for groups
-              - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
-                - fees.select { |f| f.units.positive? }.each do |fee|
-                  - if fee.amount_details.blank?
-                    == SlimHelper.render('templates/invoices/v4/_default_fee', fees)
-                  - else
-                    == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+                / Fees for groups
+                - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+                  - fees.select { |f| f.units.positive? }.each do |fee|
+                    - if fee.amount_details.blank?
+                      == SlimHelper.render('templates/invoices/v4/_default_fee', fees)
+                    - else
+                      == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
-                / True up fees attached to the fee
-                - if fee.true_up_fee.present?
-                  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
+                  / True up fees attached to the fee
+                  - if fee.true_up_fee.present?
+                    == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
-              / Fees without group
-              - else
-                == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+                / Fees without group
+                - else
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
 
     / Total section
     .invoice-resume.overflow-auto
