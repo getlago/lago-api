@@ -16,9 +16,13 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       description: 'New metric description',
       aggregation_type: 'sum_agg',
       field_name: 'field_value',
-    }.tap { |p| p[:group] = group unless group.nil? }
+    }.tap do |p|
+      p[:group] = group unless group.nil?
+      p[:filters] = filters unless filters.nil?
+    end
   end
   let(:group) { nil }
+  let(:filters) { nil }
 
   describe '#call' do
     it 'updates the billable metric' do
@@ -72,6 +76,21 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
             expect(result.error.messages[:group]).to eq(['value_is_invalid'])
           end
         end
+      end
+    end
+
+    context 'with filters arguments' do
+      let(:filters) do
+        [
+          {
+            key: 'cloud',
+            values: %w[aws google],
+          },
+        ]
+      end
+
+      it 'updates billable metric\'s filters' do
+        expect { update_service.call }.to change { billable_metric.filters.reload.count }.from(0).to(1)
       end
     end
 

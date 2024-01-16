@@ -2,22 +2,22 @@
 
 module BillableMetricFilters
   class CreateOrUpdateBatchService < BaseService
-    def initialize(billable_metric:, filter_params:)
+    def initialize(billable_metric:, filters_params:)
       @billable_metric = billable_metric
-      @filter_params = filter_params
+      @filters_params = filters_params
 
       super
     end
 
     def call
-      if filter_params.empty?
+      if filters_params.empty?
         discard_all
 
         return result
       end
 
       ActiveRecord::Base.transaction do
-        filter_params.each do |filter_param|
+        filters_params.each do |filter_param|
           filter = billable_metric.filters.find_or_initialize_by(key: filter_param[:key])
 
           if filter.persisted?
@@ -25,12 +25,12 @@ module BillableMetricFilters
 
             filter_values = filter.filter_values
               .where(billable_metric_filter_id: filter.id)
-              .where('value in (?)', deleted_values)
+              .where(value: deleted_values)
 
             filter_values.each { discard_filter_value(_1) }
           end
 
-          filter.values = filter_param[:values].uniq
+          filter.values = (filter_param[:values] || []).uniq
           filter.save!
         end
       end
@@ -40,7 +40,7 @@ module BillableMetricFilters
 
     private
 
-    attr_reader :billable_metric, :filter_params
+    attr_reader :billable_metric, :filters_params
 
     def discard_all
       ActiveRecord::Base.transaction do

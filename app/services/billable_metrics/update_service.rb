@@ -15,9 +15,18 @@ module BillableMetrics
       billable_metric.name = params[:name] if params.key?(:name)
       billable_metric.description = params[:description] if params.key?(:description)
 
-      if params.key?(:group)
-        group_result = update_groups(billable_metric, params[:group])
-        return group_result if group_result.error
+      ActiveRecord::Base.transaction do
+        if params.key?(:group)
+          group_result = update_groups(billable_metric, params[:group])
+          return group_result if group_result.error
+        end
+
+        if params.key?(:filters)
+          BillableMetricFilters::CreateOrUpdateBatchService.call(
+            billable_metric:,
+            filters_params: params[:filters].map(&:with_indifferent_access),
+          ).raise_if_error!
+        end
       end
 
       # NOTE: Only name and description are editable if billable metric
@@ -44,12 +53,10 @@ module BillableMetrics
     attr_reader :billable_metric, :params
 
     def update_groups(metric, group_params)
-      ActiveRecord::Base.transaction do
-        Groups::CreateOrUpdateBatchService.call(
-          billable_metric: metric,
-          group_params: group_params.with_indifferent_access,
-        )
-      end
+      Groups::CreateOrUpdateBatchService.call(
+        billable_metric: metric,
+        group_params: group_params.with_indifferent_access,
+      )
     end
   end
 end

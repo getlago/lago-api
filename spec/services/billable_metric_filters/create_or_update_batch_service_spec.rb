@@ -3,12 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
-  subject(:service) { described_class.call(billable_metric:, filter_params:) }
+  subject(:service) { described_class.call(billable_metric:, filters_params:) }
 
   let(:billable_metric) { create(:billable_metric) }
 
   context 'when filter params is empty' do
-    let(:filter_params) { {} }
+    let(:filters_params) { {} }
 
     it 'does not create any filters' do
       expect { service }.not_to change(BillableMetricFilter, :count)
@@ -39,7 +39,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
   end
 
   context 'with new filters' do
-    let(:filter_params) do
+    let(:filters_params) do
       [
         {
           key: 'region',
@@ -70,7 +70,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
   end
 
   context 'with existing filters' do
-    let(:filter_params) do
+    let(:filters_params) do
       [
         {
           key: 'region',
@@ -93,7 +93,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
     end
 
     context 'when a value is removed' do
-      let(:filter_params) do
+      let(:filters_params) do
         [
           {
             key: 'region',

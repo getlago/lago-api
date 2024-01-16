@@ -23,6 +23,13 @@ module BillableMetrics
           return group_result if group_result.error
         end
 
+        if args[:filters].present?
+          BillableMetricFilters::CreateOrUpdateBatchService.call(
+            billable_metric: metric,
+            filters_params: args[:filters].map(&:with_indifferent_access),
+          ).raise_if_error!
+        end
+
         result.billable_metric = metric
         track_billable_metric_created(metric)
       end
