@@ -53,7 +53,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
   let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
   let(:cache) { Rails.cache }
 
-  describe '#usage' do
+  describe '#call' do
     before do
       events if subscription
       charge
@@ -72,12 +72,12 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       ].join('/')
 
       expect do
-        usage_service.usage
+        usage_service.call
       end.to change { cache.exist?(key) }.from(false).to(true)
     end
 
     it 'initializes an invoice' do
-      result = usage_service.usage
+      result = usage_service.call
 
       aggregate_failures do
         expect(result).to be_success
@@ -100,7 +100,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       before { subscription.update!(started_at: Time.zone.today) }
 
       it 'changes the from date of the invoice' do
-        result = usage_service.usage
+        result = usage_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -130,7 +130,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
       it 'initializes an invoice' do
         travel_to(current_date) do
-          result = usage_service.usage
+          result = usage_service.call
 
           aggregate_failures do
             expect(result).to be_success
@@ -154,7 +154,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       let(:customer_id) { 'foo' }
 
       it 'returns an error' do
-        result = usage_service.usage
+        result = usage_service.call
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('customer_not_found')
@@ -165,7 +165,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       let(:subscription) { nil }
 
       it 'fails' do
-        result = usage_service.usage
+        result = usage_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
