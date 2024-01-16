@@ -38,6 +38,8 @@ module Subscriptions
         WITH
           billable_subscriptions AS (
             -- Calendar subscriptions
+            (#{daily_calendar})
+            UNION
             (#{weekly_calendar})
             UNION
             (#{monthly_calendar})
@@ -50,6 +52,8 @@ module Subscriptions
 
             UNION
             -- Anniversary subscriptions
+            (#{daily_anniversary})
+            UNION
             (#{weekly_anniversary})
             UNION
             (#{monthly_anniversary})
@@ -97,6 +101,15 @@ module Subscriptions
           AND #{conditions.join(' AND ')}
         GROUP BY subscriptions.id
       SQL
+    end
+
+    # NOTE: For daily interval we send invoices on subscription day
+    def daily_calendar
+      base_subscription_scope(
+        billing_time: :calendar,
+        interval: :daily,
+        conditions: [],
+      )
     end
 
     # NOTE: For weekly interval we send invoices on Monday (ISODOW = 1)
@@ -155,6 +168,14 @@ module Subscriptions
           "DATE_PART('month', (:today#{at_time_zone})) = 1",
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
         ],
+      )
+    end
+
+    def daily_anniversary
+      base_subscription_scope(
+        billing_time: :anniversary,
+        interval: :daily,
+        conditions: [],
       )
     end
 
