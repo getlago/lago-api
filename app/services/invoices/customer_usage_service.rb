@@ -24,6 +24,7 @@ module Invoices
       return result.not_allowed_failure!(code: 'no_active_subscription') if subscription.blank?
 
       result.usage = compute_usage
+      result.invoice = invoice
       result
     end
 

@@ -81,18 +81,19 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
       aggregate_failures do
         expect(result).to be_success
+        expect(result.invoice).to be_a(Invoice)
 
-        expect(result.usage.id).to be_nil
-        expect(result.usage.from_datetime).to eq(Time.current.beginning_of_month.iso8601)
-        expect(result.usage.to_datetime).to eq(Time.current.end_of_month.iso8601)
-        expect(result.usage.issuing_date).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(result.usage).to have_attributes(
+          from_datetime: Time.current.beginning_of_month.iso8601,
+          to_datetime: Time.current.end_of_month.iso8601,
+          issuing_date: Time.zone.today.end_of_month.iso8601,
+          currency: 'EUR',
+          amount_cents: 2532, # 1266 * 2,
+          taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
+          total_amount_cents: 3038,
+        )
         expect(result.usage.fees.size).to eq(1)
         expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
-
-        expect(result.usage.currency).to eq('EUR')
-        expect(result.usage.amount_cents).to eq(2532) # 1266 * 2
-        expect(result.usage.taxes_amount_cents).to eq(506) # 1266 * 2 * 0.2 = 506.4
-        expect(result.usage.total_amount_cents).to eq(3038)
       end
     end
 
@@ -134,17 +135,19 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
           aggregate_failures do
             expect(result).to be_success
+            expect(result.invoice).to be_a(Invoice)
 
-            expect(result.usage.id).to be_nil
+            expect(result.usage).to have_attributes(
+              issuing_date: '2022-07-06',
+              currency: 'EUR',
+              amount_cents: 2532, # 1266 * 2,
+              taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
+              total_amount_cents: 3038,
+            )
+
             expect(result.usage.from_datetime.to_date.to_s).to eq('2022-06-07')
             expect(result.usage.to_datetime.to_date.to_s).to eq('2022-07-06')
-            expect(result.usage.issuing_date).to eq('2022-07-06')
             expect(result.usage.fees.size).to eq(1)
-
-            expect(result.usage.currency).to eq('EUR')
-            expect(result.usage.amount_cents).to eq(2532) # 1266 * 2
-            expect(result.usage.taxes_amount_cents).to eq(506) # 1266 * 2 * 0.2 = 506.4
-            expect(result.usage.total_amount_cents).to eq(3038)
           end
         end
       end
