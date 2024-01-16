@@ -225,6 +225,26 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_15_130517) do
     t.index ["tax_id"], name: "index_charges_taxes_on_tax_id"
   end
 
+  create_table "commitments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "plan_id", null: false
+    t.integer "commitment_type", null: false
+    t.bigint "amount_cents", null: false
+    t.string "invoice_display_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["commitment_type", "plan_id"], name: "index_commitments_on_commitment_type_and_plan_id", unique: true
+    t.index ["plan_id"], name: "index_commitments_on_plan_id"
+  end
+
+  create_table "commitments_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "commitment_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["commitment_id"], name: "index_commitments_taxes_on_commitment_id"
+    t.index ["tax_id"], name: "index_commitments_taxes_on_tax_id"
+  end
+
   create_table "coupon_targets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "coupon_id", null: false
     t.uuid "plan_id"
@@ -930,6 +950,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_15_130517) do
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"
   add_foreign_key "charges_taxes", "taxes"
+  add_foreign_key "commitments", "plans"
+  add_foreign_key "commitments_taxes", "commitments"
+  add_foreign_key "commitments_taxes", "taxes"
   add_foreign_key "coupon_targets", "billable_metrics"
   add_foreign_key "coupon_targets", "coupons"
   add_foreign_key "coupon_targets", "plans"
