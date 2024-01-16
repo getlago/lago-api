@@ -29,7 +29,7 @@ module Types
       field :amount_details, Types::Fees::AmountDetails::Object, null: true
 
       field :adjusted_fee, Boolean, null: false
-      field :adjusted_fee_type, String, null: true
+      field :adjusted_fee_type, Types::AdjustedFees::AdjustedFeeTypeEnum, null: true
 
       delegate :group_name, to: :object
       delegate :invoice_name, to: :object

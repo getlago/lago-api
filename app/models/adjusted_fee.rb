@@ -7,5 +7,10 @@ class AdjustedFee < ApplicationRecord
   belongs_to :charge, optional: true
   belongs_to :group, optional: true
 
+  ADJUSTED_FEE_TYPES = [
+    :adjusted_units,
+    :adjusted_amount,
+  ].freeze
+
   enum fee_type: Fee::FEE_TYPES
 end

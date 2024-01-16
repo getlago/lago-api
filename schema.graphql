@@ -88,6 +88,11 @@ input AddStripePaymentProviderInput {
   successRedirectUrl: String
 }
 
+enum AdjustedFeeTypeEnum {
+  adjusted_amount
+  adjusted_units
+}
+
 type AdyenProvider {
   apiKey: String
   code: String!
@@ -3031,7 +3036,7 @@ type EventCollection {
 
 type Fee implements InvoiceItem {
   adjustedFee: Boolean!
-  adjustedFeeType: String
+  adjustedFeeType: AdjustedFeeTypeEnum
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   amountDetails: FeeAmountDetails

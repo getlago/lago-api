@@ -672,6 +672,29 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "AdjustedFeeTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "adjusted_units",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "adjusted_amount",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "OBJECT",
           "name": "AdyenProvider",
           "description": null,
@@ -11284,8 +11307,8 @@
               "name": "adjustedFeeType",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "AdjustedFeeTypeEnum",
                 "ofType": null
               },
               "isDeprecated": false,
