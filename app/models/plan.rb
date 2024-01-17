@@ -9,6 +9,8 @@ class Plan < ApplicationRecord
   belongs_to :organization
   belongs_to :parent, class_name: 'Plan', optional: true
 
+  has_one :minimum_commitment, -> { where(commitment_type: :minimum_commitment) }, class_name: 'Commitment'
+
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
   has_many :subscriptions

@@ -3126,6 +3126,7 @@ input FeeInput {
 enum FeeTypesEnum {
   add_on
   charge
+  commitment
   credit
   subscription
 }
