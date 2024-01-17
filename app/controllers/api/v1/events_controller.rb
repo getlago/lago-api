@@ -23,22 +23,25 @@ module Api
         end
       end
 
-      # DEPRECATED
       def batch
-        validate_result = Events::CreateBatchService.new.validate_params(
+        result = ::Events::CreateBatchService.call(
           organization: current_organization,
-          params: batch_params,
-        )
-        return render_error_response(validate_result) unless validate_result.success?
-
-        Events::CreateBatchJob.perform_later(
-          current_organization,
-          batch_params,
-          Time.current.to_f,
-          event_metadata,
+          events_params: batch_params,
+          timestamp: Time.current.to_f,
+          metadata: event_metadata,
         )
 
-        head(:ok)
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.events,
+              ::V1::EventSerializer,
+              collection_name: 'events',
+            ),
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def show
@@ -94,15 +97,16 @@ module Api
 
       def batch_params
         params
-          .require(:event)
           .permit(
-            :transaction_id,
-            :external_customer_id,
-            :code,
-            :timestamp,
-            external_subscription_ids: [],
-            properties: {},
-          )
+            events: [
+              :transaction_id,
+              :external_customer_id,
+              :code,
+              :timestamp,
+              :external_subscription_id,
+              properties: {}, # rubocop:disable Style/HashAsLastArrayItem
+            ],
+          ).to_h.deep_symbolize_keys
       end
 
       def event_metadata

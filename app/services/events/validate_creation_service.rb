@@ -1,56 +1,26 @@
 # frozen_string_literal: true
 
-# frozen_string_literal: true
-
 module Events
   class ValidateCreationService
     def self.call(...)
       new(...).call
     end
 
-    def initialize(organization:, params:, result:, customer:, subscriptions: [], batch: false) # rubocop:disable Metrics/ParameterLists
+    def initialize(organization:, params:, result:, customer:, subscriptions: [])
       @organization = organization
       @params = params
       @result = result
       @customer = customer
       @subscriptions = subscriptions
-      @batch = batch
     end
 
     def call
-      batch ? validate_create_batch : validate_create
+      validate_create
     end
 
     private
 
-    attr_reader :organization, :params, :result, :customer, :subscriptions, :batch
-
-    def validate_create_batch
-      return missing_subscription_error if params[:external_subscription_ids].blank?
-      return invalid_customer_error unless customer
-
-      invalid_subscriptions = params[:external_subscription_ids].reject do |arg|
-        customer.subscriptions&.pluck(:external_id)&.include?(arg)
-      end
-      return missing_subscription_error if invalid_subscriptions.present?
-      return invalid_code_error unless valid_code?
-      return invalid_properties_error unless valid_properties?
-
-      invalid_quantified_events = params[:external_subscription_ids]
-        .map { |external_id| organization.subscriptions.find_by(external_id:) }
-        .each_with_object({}) do |subscription, errors|
-          validation_result = quantified_event_validation(subscription)
-          next errors if validation_result.blank?
-
-          validation_result.each do |field, codes|
-            errors["subscription[#{subscription.external_id}]_#{field}".to_sym] = codes
-          end
-          errors
-        end
-      return invalid_quantified_event_error(invalid_quantified_events) if invalid_quantified_events.present?
-
-      nil
-    end
+    attr_reader :organization, :params, :result, :customer, :subscriptions
 
     def validate_create
       return invalid_customer_error if params[:external_customer_id] && !customer
