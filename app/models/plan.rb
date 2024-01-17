@@ -11,6 +11,7 @@ class Plan < ApplicationRecord
 
   has_one :minimum_commitment, -> { where(commitment_type: :minimum_commitment) }, class_name: 'Commitment'
 
+  has_many :commitments
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
   has_many :subscriptions

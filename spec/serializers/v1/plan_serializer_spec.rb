@@ -3,14 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::PlanSerializer do
-  subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges taxes]) }
+  subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges taxes commitments]) }
 
   let(:plan) { create(:plan) }
   let(:customer) { create(:customer, organization: plan.organization) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:) }
+  let(:commitment) { create(:commitment, plan:) }
 
-  before { subscription && charge }
+  before { subscription && charge && commitment }
 
   it 'serializes the object', :aggregate_failures do
     overridden_plan = create(:plan, parent_id: plan.id)
@@ -42,6 +43,17 @@ RSpec.describe ::V1::PlanSerializer do
     expect(result['plan']['charges'].first).to include(
       'lago_id' => charge.id,
       'group_properties' => [],
+    )
+
+    expect(result['plan']['commitments'].first).to include(
+      'lago_id' => commitment.id,
+      'plan_code' => commitment.plan.code,
+      'invoice_display_name' => commitment.invoice_display_name,
+      'amount_cents' => commitment.amount_cents,
+      'interval' => commitment.plan.interval,
+      'created_at' => commitment.created_at.iso8601,
+      'updated_at' => commitment.updated_at.iso8601,
+      'taxes' => [],
     )
   end
 end

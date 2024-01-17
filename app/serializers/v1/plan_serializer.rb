@@ -24,6 +24,7 @@ module V1
 
       payload.merge!(charges) if include?(:charges)
       payload.merge!(taxes) if include?(:taxes)
+      payload.merge!(commitments) if include?(:commitments)
 
       payload
     end
@@ -35,6 +36,15 @@ module V1
         model.charges,
         ::V1::ChargeSerializer,
         collection_name: 'charges',
+        includes: include?(:taxes) ? %i[taxes] : [],
+      ).serialize
+    end
+
+    def commitments
+      ::CollectionSerializer.new(
+        model.commitments,
+        ::V1::CommitmentSerializer,
+        collection_name: 'commitments',
         includes: include?(:taxes) ? %i[taxes] : [],
       ).serialize
     end
