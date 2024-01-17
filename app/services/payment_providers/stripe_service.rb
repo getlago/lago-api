@@ -90,7 +90,12 @@ module PaymentProviders
     def handle_incoming_webhook(organization_id:, params:, signature:, code: nil)
       organization = Organization.find_by(id: organization_id)
 
-      payment_provider_result = PaymentProviders::FindService.new(organization_id:, code:).call
+      payment_provider_result = PaymentProviders::FindService.call(
+        organization_id:,
+        code:,
+        payment_provider_type: 'stripe',
+      )
+
       return payment_provider_result unless payment_provider_result.success?
 
       event = ::Stripe::Webhook.construct_event(
