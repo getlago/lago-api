@@ -12,15 +12,13 @@ module Subscriptions
       end
 
       def compute_from_date(date = base_date)
-        if plan.pay_in_advance? || terminated_pay_in_arrear?
-          billing_date
-        end
+        return billing_date if plan.pay_in_advance? || terminated_pay_in_arrear?
 
         date
       end
 
       def compute_to_date(from_date = compute_from_date)
-        from_date + 1.day
+        from_date
       end
 
       def compute_charges_from_date
@@ -32,7 +30,7 @@ module Subscriptions
       end
 
       def compute_charges_to_date
-        compute_charges_from_date + 1.day
+        compute_charges_from_date
       end
 
       def compute_next_end_of_period
