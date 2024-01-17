@@ -64,9 +64,10 @@ module Events
 
     def produce_kafka_event(event)
       return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
+      return if ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'].blank?
 
-      Karafka.producer.produce_sync(
-        topic: 'events-raw',
+      Karafka.producer.produce_async(
+        topic: ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
         payload: {
           organization_id: organization.id,
           external_customer_id: event.external_customer_id,
