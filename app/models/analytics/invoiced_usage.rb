@@ -38,8 +38,9 @@ module Analytics
           ),
           usage_fees AS (
             SELECT
+              f.id,
               f.charge_id,
-              f.amount_cents::float,
+              (f.amount_cents::float - f.precise_coupons_amount_cents::float) AS amount_cents,
               f.amount_currency AS currency,
               f.created_at AS fee_created_at
             FROM fees f
