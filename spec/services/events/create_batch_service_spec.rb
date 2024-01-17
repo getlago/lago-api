@@ -205,10 +205,12 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       before do
         ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = 'kafka'
+        ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'] = 'raw_events'
       end
 
       after do
         ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = nil
+        ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'] = nil
       end
 
       it 'produces the event on kafka' do

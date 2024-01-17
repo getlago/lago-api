@@ -122,6 +122,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       before do
         ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = 'kafka'
+        ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'] = 'raw_events'
       end
 
       it 'produces the event on kafka' do
