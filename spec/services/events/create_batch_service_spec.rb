@@ -215,11 +215,11 @@ RSpec.describe Events::CreateBatchService, type: :service do
 
       it 'produces the event on kafka' do
         allow(Karafka).to receive(:producer).and_return(karafka_producer)
-        allow(karafka_producer).to receive(:produce_sync)
+        allow(karafka_producer).to receive(:produce_async)
 
         create_batch_service.call
 
-        expect(karafka_producer).to have_received(:produce_sync).exactly(100)
+        expect(karafka_producer).to have_received(:produce_async).exactly(100)
       end
     end
   end
