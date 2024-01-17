@@ -43,7 +43,12 @@ module PaymentProviders
     end
 
     def handle_incoming_webhook(organization_id:, body:, signature:, code: nil)
-      payment_provider_result = PaymentProviders::FindService.call(organization_id:, code:)
+      payment_provider_result = PaymentProviders::FindService.call(
+        organization_id:,
+        code:,
+        payment_provider_type: 'gocardless',
+      )
+
       return payment_provider_result unless payment_provider_result.success?
 
       events = GoCardlessPro::Webhook.parse(

@@ -51,7 +51,12 @@ module PaymentProviders
       organization = Organization.find_by(id: organization_id)
       return result.service_failure!(code: 'webhook_error', message: 'Organization not found') unless organization
 
-      payment_provider_result = PaymentProviders::FindService.call(organization_id:, code:)
+      payment_provider_result = PaymentProviders::FindService.call(
+        organization_id:,
+        code:,
+        payment_provider_type: 'adyen',
+      )
+
       return payment_provider_result unless payment_provider_result.success?
 
       validator = ::Adyen::Utils::HmacValidator.new
