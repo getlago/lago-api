@@ -108,7 +108,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :daily,
-        conditions: [],
+        conditions: ["subscriptions.subscription_at#{at_time_zone} <= :today#{at_time_zone}"],
       )
     end
 
@@ -175,7 +175,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :daily,
-        conditions: [],
+        conditions: ["subscriptions.subscription_at#{at_time_zone} <= :today#{at_time_zone}"],
       )
     end
 
