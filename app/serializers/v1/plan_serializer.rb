@@ -24,6 +24,7 @@ module V1
 
       payload.merge!(charges) if include?(:charges)
       payload.merge!(taxes) if include?(:taxes)
+      payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
 
       payload
     end
@@ -37,6 +38,15 @@ module V1
         collection_name: 'charges',
         includes: include?(:taxes) ? %i[taxes] : [],
       ).serialize
+    end
+
+    def minimum_commitment
+      {
+        minimum_commitment: V1::CommitmentSerializer.new(
+          model.minimum_commitment,
+          includes: include?(:taxes) ? %i[taxes] : [],
+        ).serialize,
+      }
     end
 
     def taxes

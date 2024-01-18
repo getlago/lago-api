@@ -14,6 +14,7 @@ module V1
         customers_count: model.customers_count,
         plans_count: model.plans.count,
         charges_count: model.charges.count,
+        commitments_count: model.commitments.count,
         created_at: model.created_at.iso8601,
       }
     end
