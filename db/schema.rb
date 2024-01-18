@@ -897,6 +897,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_18_135350) do
     t.string "balance_currency", null: false
     t.bigint "consumed_amount_cents", default: 0, null: false
     t.string "consumed_amount_currency", null: false
+    t.bigint "upcoming_balance_cents", default: 0, null: false
+    t.decimal "upcoming_credits_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
