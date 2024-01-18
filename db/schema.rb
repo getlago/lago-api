@@ -671,11 +671,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_25_080718) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
+    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
-    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
-    t.boolean "credits_auto_refreshed", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
