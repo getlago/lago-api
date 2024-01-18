@@ -34,7 +34,7 @@ module Subscriptions
       end
 
       def compute_next_end_of_period
-        billing_date + 1.day
+        billing_date.end_of_day
       end
 
       def compute_previous_beginning_of_period(date)
