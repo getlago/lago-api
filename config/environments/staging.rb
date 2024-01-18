@@ -23,7 +23,12 @@ Rails.application.configure do
     :local
   end
 
-  config.log_level = :info
+  config.log_level = if ENV['LAGO_LOG_LEVEL'].present? && ENV['LAGO_LOG_LEVEL'] != ''
+    ENV['LAGO_LOG_LEVEL'].downcase.to_sym
+  else
+    :info
+  end
+
   config.log_tags = [:request_id]
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true

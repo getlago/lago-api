@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'lograge/sql/extension'
-
 Rails.application.configure do
   config.lograge.enabled = true
   config.lograge.formatter = Lograge::Formatters::Json.new
