@@ -26,6 +26,14 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   describe '#instance' do
     let(:result) { described_class.new_instance(subscription, billing_date) }
 
+    context 'when interval is daily' do
+      let(:interval) { :daily }
+
+      it 'returns a daily service instance' do
+        expect(result).to be_kind_of(Subscriptions::Dates::DailyService)
+      end
+    end
+
     context 'when interval is weekly' do
       let(:interval) { :weekly }
 
