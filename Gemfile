@@ -51,7 +51,6 @@ gem 'analytics-ruby', '~> 2.4.0', require: 'segment/analytics'
 
 # Logging
 gem 'lograge'
-gem 'lograge-sql'
 gem 'logstash-event'
 
 # Multipart support
