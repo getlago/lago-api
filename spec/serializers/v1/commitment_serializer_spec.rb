@@ -11,23 +11,42 @@ RSpec.describe ::V1::CommitmentSerializer do
   let(:tax) { create(:tax, organization: commitment.plan.organization) }
   let(:commitment_applied_tax) { create(:commitment_applied_tax, commitment:, tax:) }
 
+  let(:commitment_hash) do
+    {
+      'lago_id' => commitment.id,
+      'plan_code' => commitment.plan.code,
+      'invoice_display_name' => commitment.invoice_display_name,
+      'commitment_type' => commitment.commitment_type,
+      'amount_cents' => commitment.amount_cents,
+      'interval' => commitment.plan.interval,
+      'created_at' => commitment.created_at.iso8601,
+      'updated_at' => commitment.updated_at.iso8601,
+    }
+  end
+
+  let(:commitment_tax_hash) do
+    {
+      'lago_id' => tax.id,
+      'name' => tax.name,
+      'code' => tax.code,
+      'rate' => tax.rate,
+      'description' => tax.description,
+      'applied_to_organization' => tax.applied_to_organization,
+      'commitments_count' => 1,
+    }
+  end
+
   before { commitment_applied_tax }
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result['commitment']['lago_id']).to eq(commitment.id)
-      expect(result['commitment']['plan_code']).to eq(commitment.plan.code)
-      expect(result['commitment']['invoice_display_name']).to eq(commitment.invoice_display_name)
-      expect(result['commitment']['commitment_type']).to eq(commitment.commitment_type)
-      expect(result['commitment']['amount_cents']).to eq(commitment.amount_cents)
-      expect(result['commitment']['interval']).to eq(commitment.plan.interval)
-      expect(result['commitment']['created_at']).to eq(commitment.created_at.iso8601)
-      expect(result['commitment']['updated_at']).to eq(commitment.updated_at.iso8601)
+    expect(result['commitment']).to include(commitment_hash)
+  end
 
-      expect(result['commitment']['taxes'].count).to eq(1)
-      expect(result['commitment']['taxes'].first['commitments_count']).to eq(1)
-    end
+  it 'serializes taxes' do
+    result = JSON.parse(serializer.to_json)
+
+    expect(result['commitment']['taxes'].first).to include(commitment_tax_hash)
   end
 end
