@@ -60,7 +60,7 @@ module Api
             ::V1::PlanSerializer,
             collection_name: 'plans',
             meta: pagination_metadata(plans),
-            includes: %i[charges taxes],
+            includes: %i[charges taxes minimum_commitment],
           ),
         )
       end
@@ -80,6 +80,12 @@ module Api
           :pay_in_advance,
           :bill_charges_monthly,
           tax_codes: [],
+          minimum_commitment: [
+            :id,
+            :invoice_display_name,
+            :amount_cents,
+            { tax_codes: [] },
+          ],
           charges: [
             :id,
             :invoice_display_name,
@@ -109,7 +115,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: 'plan',
-            includes: %i[charges taxes],
+            includes: %i[charges taxes minimum_commitment],
           ),
         )
       end
