@@ -3,7 +3,56 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::Customers::ChargeUsageSerializer do
-  subject(:serializer) { described_class.new(nil) }
+  subject(:serializer) { described_class.new(usage, root_name: 'charges') }
+
+  let(:charge) { create(:standard_charge) }
+  let(:billable_metric) { charge.billable_metric }
+
+  let(:usage) do
+    [
+      OpenStruct.new(
+        charge_id: charge.id,
+        billable_metric:,
+        charge:,
+        units: 10,
+        events_count: 12,
+        amount_cents: 100,
+        amount_currency: 'EUR',
+        invoice_display_name: charge.invoice_display_name,
+        lago_id: billable_metric.id,
+        name: billable_metric.name,
+        code: billable_metric.code,
+        aggregation_type: billable_metric.aggregation_type,
+        grouped_by: ['card_type'],
+      ),
+    ]
+  end
+
+  let(:result) { JSON.parse(serializer.to_json) }
+
+  it 'serializes the fee' do
+    aggregate_failures do
+      expect(result['charges'].first).to include(
+        'units' => '10.0',
+        'events_count' => 12,
+        'amount_cents' => 100,
+        'amount_currency' => 'EUR',
+        'charge' => {
+          'lago_id' => charge.id,
+          'charge_model' => charge.charge_model,
+          'invoice_display_name' => charge.invoice_display_name,
+        },
+        'billable_metric' => {
+          'lago_id' => billable_metric.id,
+          'name' => billable_metric.name,
+          'code' => billable_metric.code,
+          'aggregation_type' => billable_metric.aggregation_type,
+        },
+        'groups' => [],
+        'grouped_by' => ['card_type'],
+      )
+    end
+  end
 
   describe '#groups' do
     subject(:serializer_groups) { serializer.__send__(:groups, fees) }

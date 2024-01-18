@@ -21,6 +21,7 @@ module V1
           group_invoice_display_name: model.group_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
+          grouped_by: model.grouped_by,
         },
         pay_in_advance:,
         invoiceable:,
