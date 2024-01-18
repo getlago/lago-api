@@ -24,9 +24,9 @@ Rails.application.configure do
   end
 
   config.log_level = if ENV['LAGO_LOG_LEVEL'].present? && ENV['LAGO_LOG_LEVEL'] != ''
-    :info
-  else
     ENV['LAGO_LOG_LEVEL'].downcase.to_sym
+  else
+    :info
   end
 
   config.log_tags = [:request_id]
