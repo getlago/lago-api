@@ -37,6 +37,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:created_at]).to be_present
       expect(json[:billable_metric][:recurring]).to eq(create_params[:recurring])
       expect(json[:billable_metric][:group]).to eq({})
+      expect(json[:billable_metric][:filters]).to eq([])
     end
 
     context 'with group parameter' do
@@ -84,8 +85,10 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
-        expect(json[:billable_metric][:recurring]).to eq(create_params[:recurring
-          ])
+        expect(json[:billable_metric][:recurring]).to eq(
+          create_params[:recurring
+                    ],
+        )
         expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
         expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
       end
@@ -115,6 +118,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
       expect(json[:billable_metric][:code]).to eq(update_params[:code])
+      expect(json[:billable_metric][:filters]).to eq([])
     end
 
     context 'with group parameter' do

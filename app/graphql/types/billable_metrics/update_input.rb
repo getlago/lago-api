@@ -11,10 +11,12 @@ module Types
       argument :code, String, required: true
       argument :description, String
       argument :field_name, String, required: false
-      argument :group, GraphQL::Types::JSON, required: false
       argument :name, String, required: true
       argument :recurring, Boolean, required: false
       argument :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, required: false
+
+      argument :filters, [Types::BillableMetricFilters::Input], required: false
+      argument :group, GraphQL::Types::JSON, required: false
     end
   end
 end

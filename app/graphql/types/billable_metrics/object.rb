@@ -18,6 +18,7 @@ module Types
       field :field_name, String, null: true
       field :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, null: true
 
+      field :filters, [Types::BillableMetricFilters::Object], null: true
       field :flat_groups, [Types::Groups::Object], null: true, method: :selectable_groups
       field :group, GraphQL::Types::JSON, null: true, method: :active_groups_as_tree
 

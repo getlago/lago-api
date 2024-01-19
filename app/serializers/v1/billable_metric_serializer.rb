@@ -3,7 +3,7 @@
 module V1
   class BillableMetricSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         name: model.name,
         code: model.code,
@@ -18,6 +18,10 @@ module V1
         draft_invoices_count:,
         plans_count:,
       }
+
+      payload.merge!(filters)
+
+      payload
     end
 
     private
@@ -37,6 +41,14 @@ module V1
 
     def plans_count
       model.plans.distinct.count
+    end
+
+    def filters
+      ::CollectionSerializer.new(
+        model.filters,
+        ::V1::BillableMetricFilterSerializer,
+        collection_name: 'filters',
+      ).serialize
     end
   end
 end
