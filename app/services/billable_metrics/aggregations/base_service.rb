@@ -39,7 +39,6 @@ module BillableMetrics
           subscription:,
           boundaries:,
           group:,
-          event:,
         )
       end
 

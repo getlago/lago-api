@@ -3,12 +3,11 @@
 module Events
   module Stores
     class BaseStore
-      def initialize(code:, subscription:, boundaries:, group: nil, event: nil)
+      def initialize(code:, subscription:, boundaries:, group: nil)
         @code = code
         @subscription = subscription
         @boundaries = boundaries
         @group = group
-        @event = event
 
         @aggregation_property = nil
         @numeric_property = false
@@ -72,7 +71,7 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :group, :event, :boundaries
+      attr_accessor :code, :subscription, :group, :boundaries
 
       delegate :customer, to: :subscription
 

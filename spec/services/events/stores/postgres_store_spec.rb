@@ -9,7 +9,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       subscription:,
       boundaries:,
       group:,
-      event:,
     )
   end
 
@@ -31,7 +30,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
   end
 
   let(:group) { nil }
-  let(:event) { nil }
 
   let(:events) do
     events = []

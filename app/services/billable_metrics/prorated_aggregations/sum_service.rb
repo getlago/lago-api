@@ -68,7 +68,6 @@ module BillableMetrics
           subscription:,
           boundaries: { to_datetime: from_datetime },
           group:,
-          event:,
         )
 
         event_store.use_from_boundary = false
@@ -94,7 +93,6 @@ module BillableMetrics
           subscription:,
           boundaries: { to_datetime: from_datetime },
           group:,
-          event:,
         )
 
         event_store.use_from_boundary = false

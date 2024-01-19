@@ -9,7 +9,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       subscription:,
       boundaries:,
       group:,
-      event:,
     )
   end
 
@@ -31,7 +30,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   end
 
   let(:group) { nil }
-  let(:event) { nil }
 
   let(:events) do
     events = []
