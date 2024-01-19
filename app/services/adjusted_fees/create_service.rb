@@ -30,8 +30,8 @@ module AdjustedFees
         invoice_display_name: params[:invoice_display_name],
         fee_type: fee.fee_type,
         properties: fee.properties,
-        units: params[:units] || 0,
-        unit_amount_cents: params[:unit_amount_cents] || 0,
+        units: params[:units].presence || 0,
+        unit_amount_cents: params[:unit_amount_cents].presence || 0,
       )
 
       adjusted_fee.save!

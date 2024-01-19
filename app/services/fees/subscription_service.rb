@@ -51,8 +51,13 @@ module Fees
         unit_amount_cents: new_amount_cents,
       )
 
-      return base_fee unless invoice.draft?
-      return base_fee unless adjusted_fee
+      return base_fee if !invoice.draft? || !adjusted_fee
+
+      if adjusted_fee.adjusted_display_name?
+        base_fee.invoice_display_name = adjusted_fee.invoice_display_name
+
+        return base_fee
+      end
 
       units = adjusted_fee.units
       unit_amount_cents = adjusted_fee.unit_amount_cents.round
