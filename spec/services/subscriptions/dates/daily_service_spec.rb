@@ -41,7 +41,7 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-03-05 05:00:00 UTC') # TODO: check on this
+          expect(result).to eq('2022-03-05 05:00:00 UTC')
         end
       end
 
@@ -95,7 +95,7 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
         let(:timezone) { 'America/New_York' }
 
         it 'takes customer timezone into account' do
-          expect(result).to eq('2022-03-06 04:59:59 UTC') # TODO: check on this
+          expect(result).to eq('2022-03-06 04:59:59 UTC')
         end
       end
 
@@ -150,7 +150,6 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
           expect(result).to eq(date_service.from_datetime.to_s)
         end
 
-        # TODO: check on this
         context 'when timezone has changed' do
           let(:billing_at) { DateTime.parse('08 Mar 2022') }
 
@@ -241,7 +240,6 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
         expect(result).to eq('2022-03-07 23:59:59 UTC')
       end
 
-      # TODO: check on this
       context 'with customer timezone' do
         let(:timezone) { 'America/New_York' }
 
@@ -252,7 +250,7 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
     end
   end
 
-  describe 'compute_previous_beginning_of_period' do
+  describe 'previous_beginning_of_period' do
     let(:result) { date_service.previous_beginning_of_period(current_period:).to_s }
 
     let(:current_period) { false }

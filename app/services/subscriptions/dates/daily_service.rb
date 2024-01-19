@@ -38,7 +38,7 @@ module Subscriptions
       end
 
       def compute_previous_beginning_of_period(date)
-        date - 1.day
+        date.beginning_of_day
       end
 
       def compute_duration(*)
