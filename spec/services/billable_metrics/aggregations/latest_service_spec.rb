@@ -8,11 +8,11 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       event_store_class:,
       charge:,
       subscription:,
-      group:,
       boundaries: {
         from_datetime:,
         to_datetime:,
       },
+      filters: { group: },
     )
   end
 

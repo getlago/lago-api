@@ -172,7 +172,7 @@ module BillableMetrics
               from_datetime: subscription.started_at,
               to_datetime: subscription.terminated_at,
             },
-            filters: { group: },
+            filters:,
           )
           store.aggregation_property = billable_metric.field_name
 

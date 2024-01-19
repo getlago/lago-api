@@ -8,12 +8,12 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       event_store_class:,
       charge:,
       subscription:,
-      group:,
       boundaries: {
         from_datetime:,
         to_datetime:,
         charges_duration:,
       },
+      filters: { group: },
     )
   end
 
