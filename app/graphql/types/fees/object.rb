@@ -48,6 +48,7 @@ module Types
 
       def adjusted_fee_type
         return nil if object.adjusted_fee.blank?
+        return nil if object.adjusted_fee.adjusted_display_name?
 
         object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
       end
