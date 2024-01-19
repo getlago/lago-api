@@ -18,4 +18,5 @@ RSpec.describe Types::Fees::Object do
   it { is_expected.to have_field(:taxes_rate).of_type('Float') }
   it { is_expected.to have_field(:units).of_type('Float!') }
   it { is_expected.to have_field(:applied_taxes).of_type('[FeeAppliedTax!]') }
+  it { is_expected.to have_field(:grouped_by).of_type('[String!]!') }
 end

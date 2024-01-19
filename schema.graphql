@@ -248,6 +248,7 @@ type ChargeUsage {
   billableMetric: BillableMetric!
   charge: Charge!
   eventsCount: Int!
+  groupedBy: [String!]
   groups: [GroupUsage!]
   units: Float!
 }
@@ -3053,6 +3054,7 @@ type Fee implements InvoiceItem {
   feeType: FeeTypesEnum!
   group: Group
   groupName: String
+  groupedBy: [String!]!
   id: ID!
   invoiceDisplayName: String
   invoiceName: String
@@ -4291,6 +4293,7 @@ type Properties {
   freeUnitsPerTotalAggregation: String
   graduatedPercentageRanges: [GraduatedPercentageRange!]
   graduatedRanges: [GraduatedRange!]
+  groupedBy: [String!]
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
@@ -4306,6 +4309,7 @@ input PropertiesInput {
   freeUnitsPerTotalAggregation: String
   graduatedPercentageRanges: [GraduatedPercentageRangeInput!]
   graduatedRanges: [GraduatedRangeInput!]
+  groupedBy: [String!]
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
