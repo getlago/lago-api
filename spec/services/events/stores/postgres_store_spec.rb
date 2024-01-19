@@ -8,8 +8,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       code:,
       subscription:,
       boundaries:,
-      group:,
-      event:,
+      filters: { group:, grouped_by:, grouped_by_value: },
     )
   end
 
@@ -31,13 +30,14 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
   end
 
   let(:group) { nil }
-  let(:event) { nil }
+  let(:grouped_by) { nil }
+  let(:grouped_by_value) { nil }
 
   let(:events) do
     events = []
 
     5.times do |i|
-      event = create(
+      event = build(
         :event,
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
@@ -49,10 +49,12 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         },
       )
 
-      if group && i.even?
-        event.properties[group.key] = group.value
-        event.save!
+      if i.even?
+        event.properties[group.key] = group.value if group
+        event.properties[grouped_by] = grouped_by_value if grouped_by_value
       end
+
+      event.save!
 
       events << event
     end
@@ -69,6 +71,15 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
     context 'with group' do
       let(:group) { create(:group, billable_metric:) }
+
+      it 'returns a list of events' do
+        expect(event_store.events.count).to eq(3)
+      end
+    end
+
+    context 'with grouped_by_value' do
+      let(:grouped_by) { 'region' }
+      let(:grouped_by_value) { 'europe' }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)

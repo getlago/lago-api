@@ -18,6 +18,8 @@ module Events
         scope = scope.where('events_raw.timestamp <= ?', to_datetime) if to_datetime
         scope = scope.where(numeric_condition) if numeric_property
 
+        scope = with_grouped_by_value(scope) if grouped_by_value?
+
         return scope unless group
 
         group_scope(scope)
@@ -174,6 +176,10 @@ module Events
         return scope unless group.parent
 
         scope.where('events_raw.properties[?] = ?', group.parent.key.to_s => group.parent.value.to_s)
+      end
+
+      def with_grouped_by_value(scope)
+        scope.where('events_raw.properties[?] = ?', grouped_by.to_s, grouped_by_value.to_s)
       end
 
       def numeric_condition
