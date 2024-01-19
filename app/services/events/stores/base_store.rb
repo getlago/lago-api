@@ -17,6 +17,10 @@ module Events
         @use_from_boundary = true
       end
 
+      def grouped_by_value?
+        grouped_by.present? && grouped_by_value.present?
+      end
+
       def events(force_from: false)
         raise NotImplementedError
       end
