@@ -18,9 +18,11 @@ module Types
 
       field :balance_cents, GraphQL::Types::BigInt, null: false
       field :consumed_amount_cents, GraphQL::Types::BigInt, null: false
+      field :ongoing_balance_cents, GraphQL::Types::BigInt, null: false
 
       field :consumed_credits, GraphQL::Types::Float, null: false
       field :credits_balance, GraphQL::Types::Float, null: false
+      field :credits_ongoing_balance, GraphQL::Types::Float, null: false
 
       field :last_balance_sync_at, GraphQL::Types::ISO8601DateTime, null: true
       field :last_consumed_credit_at, GraphQL::Types::ISO8601DateTime, null: true
