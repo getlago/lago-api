@@ -1582,7 +1582,7 @@ input CreateAdjustedFeeInput {
   feeId: ID!
   invoiceDisplayName: String
   unitAmountCents: BigInt
-  units: Float!
+  units: Float
 }
 
 """
