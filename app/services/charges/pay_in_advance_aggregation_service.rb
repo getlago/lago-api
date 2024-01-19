@@ -16,11 +16,13 @@ module Charges
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         charge:,
         subscription:,
-        group:,
-        event:,
         boundaries: {
           from_datetime: boundaries[:charges_from_datetime],
           to_datetime: boundaries[:charges_to_datetime],
+        },
+        filters: {
+          group:,
+          event:,
         },
       )
 

@@ -44,11 +44,13 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             event_store_class: Events::Stores::PostgresStore,
             charge:,
             subscription:,
-            group:,
-            event:,
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
+            },
+            filters: {
+              group:,
+              event:,
             },
           )
 
@@ -75,11 +77,13 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             event_store_class: Events::Stores::PostgresStore,
             charge:,
             subscription:,
-            group:,
-            event:,
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
+            },
+            filters: {
+              group:,
+              event:,
             },
           )
 
@@ -105,11 +109,13 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             event_store_class: Events::Stores::PostgresStore,
             charge:,
             subscription:,
-            group:,
-            event:,
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
+            },
+            filters: {
+              group:,
+              event:,
             },
           )
 

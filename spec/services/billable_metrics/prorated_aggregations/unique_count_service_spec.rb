@@ -8,11 +8,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       event_store_class:,
       charge:,
       subscription:,
-      group:,
-      event: pay_in_advance_event,
       boundaries: {
         from_datetime:,
         to_datetime:,
+      },
+      filters: {
+        group:,
+        event: pay_in_advance_event,
       },
     )
   end
