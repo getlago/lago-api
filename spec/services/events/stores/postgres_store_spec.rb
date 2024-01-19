@@ -8,7 +8,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       code:,
       subscription:,
       boundaries:,
-      group:,
+      filters: { group: },
     )
   end
 

@@ -60,7 +60,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries: { to_datetime: from_datetime },
-          group:,
+          filters: { group: },
         )
 
         event_store.use_from_boundary = false

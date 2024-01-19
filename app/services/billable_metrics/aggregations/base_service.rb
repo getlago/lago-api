@@ -38,7 +38,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries:,
-          group:,
+          filters: { group: },
         )
       end
 

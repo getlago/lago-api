@@ -8,7 +8,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       code:,
       subscription:,
       boundaries:,
-      group:,
+      filters: { group: },
     )
   end
 
