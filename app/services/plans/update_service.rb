@@ -43,9 +43,10 @@ module Plans
         end
 
         process_charges(plan, params[:charges]) if params[:charges]
+        process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?
       end
 
-      result.plan = plan
+      result.plan = plan.reload
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -95,6 +96,24 @@ module Plans
       return if model == :graduated_percentage && !License.premium?
 
       model
+    end
+
+    def process_minimum_commitment(plan, params)
+      minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: 'minimum_commitment')
+
+      minimum_commitment.amount_cents = params[:amount_cents]
+      minimum_commitment.invoice_display_name = params[:invoice_display_name]
+      minimum_commitment.save!
+
+      if params[:tax_codes]
+        taxes_result = Commitments::ApplyTaxesService.call(
+          commitment: minimum_commitment,
+          tax_codes: params[:tax_codes],
+        )
+        taxes_result.raise_if_error!
+      end
+
+      minimum_commitment
     end
 
     def process_charges(plan, params_charges)

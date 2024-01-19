@@ -43,6 +43,18 @@ module Plans
             end
           end
         end
+
+        if args[:minimum_commitment].present? && License.premium?
+          minimum_commitment = args[:minimum_commitment]
+          new_commitment = create_commitment(plan, minimum_commitment, :minimum_commitment)
+          if minimum_commitment[:tax_codes].present?
+            taxes_result = Commitments::ApplyTaxesService.call(
+              commitment: new_commitment,
+              tax_codes: minimum_commitment[:tax_codes],
+            )
+            return taxes_result unless taxes_result.success?
+          end
+        end
       end
 
       result.plan = plan
@@ -53,6 +65,15 @@ module Plans
     end
 
     private
+
+    def create_commitment(plan, args, commitment_type)
+      Commitment.create!(
+        plan:,
+        commitment_type:,
+        invoice_display_name: args[:invoice_display_name],
+        amount_cents: args[:amount_cents],
+      )
+    end
 
     def create_charge(plan, args)
       charge = plan.charges.new(

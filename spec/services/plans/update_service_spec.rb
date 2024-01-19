@@ -31,6 +31,17 @@ RSpec.describe Plans::UpdateService, type: :service do
     }
   end
 
+  let(:minimum_commitment_args) do
+    {
+      amount_cents: minimum_commitment_amount_cents,
+      invoice_display_name: minimum_commitment_invoice_display_name,
+      tax_codes: [tax1.code],
+    }
+  end
+
+  let(:minimum_commitment_invoice_display_name) { 'Minimum spending' }
+  let(:minimum_commitment_amount_cents) { 100 }
+
   let(:charges_args) do
     [
       {
@@ -209,6 +220,102 @@ RSpec.describe Plans::UpdateService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error.error_code).to eq('billable_metrics_not_found')
+        end
+      end
+    end
+
+    context 'when plan has no minimum commitment' do
+      context 'when minimum commitment arguments are present' do
+        before { update_args.merge!({ minimum_commitment: minimum_commitment_args }) }
+
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'creates minimum commitment' do
+            result = plans_service.call
+            commitment = result.plan.minimum_commitment
+
+            aggregate_failures do
+              expect(commitment.amount_cents).to eq(minimum_commitment_args[:amount_cents])
+              expect(commitment.invoice_display_name).to eq(minimum_commitment_args[:invoice_display_name])
+            end
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not create minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).to be_nil
+          end
+        end
+      end
+
+      context 'when minimum commitment arguments are not present' do
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'does not create minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).to be_nil
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not create minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).to be_nil
+          end
+        end
+      end
+    end
+
+    context 'when plan has minimum commitment' do
+      let(:minimum_commitment) { create(:commitment, plan:) }
+
+      before { minimum_commitment }
+
+      context 'when minimum commitment arguments are present' do
+        before { update_args.merge!({ minimum_commitment: minimum_commitment_args }) }
+
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'updates minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment.amount_cents).to eq(minimum_commitment_args[:amount_cents])
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not update minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment.amount_cents).not_to eq(update_args[:amount_cents])
+          end
+        end
+      end
+
+      context 'when minimum commitment arguments are not present' do
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'does not update minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment.amount_cents).not_to eq(update_args[:amount_cents])
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not update minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment.amount_cents).not_to eq(update_args[:amount_cents])
+          end
         end
       end
     end

@@ -28,8 +28,20 @@ RSpec.describe Plans::CreateService, type: :service do
         amount_currency: 'EUR',
         tax_codes: [plan_tax.code],
         charges: charges_args,
+        minimum_commitment: minimum_commitment_args,
       }
     end
+
+    let(:minimum_commitment_args) do
+      {
+        amount_cents: minimum_commitment_amount_cents,
+        invoice_display_name: minimum_commitment_invoice_display_name,
+        tax_codes: [plan_tax.code],
+      }
+    end
+
+    let(:minimum_commitment_invoice_display_name) { 'Minimum spending' }
+    let(:minimum_commitment_amount_cents) { 100 }
 
     let(:charges_args) do
       [
@@ -81,6 +93,14 @@ RSpec.describe Plans::CreateService, type: :service do
       plan = Plan.order(:created_at).last
       expect(plan.taxes.pluck(:code)).to eq([plan_tax.code])
       expect(plan.invoice_display_name).to eq(plan_invoice_display_name)
+    end
+
+    it 'does not create minimum commitment' do
+      plans_service.create(**create_args)
+
+      plan = Plan.order(:created_at).last
+
+      expect(plan.minimum_commitment).to be_nil
     end
 
     it 'creates charges' do
@@ -181,6 +201,13 @@ RSpec.describe Plans::CreateService, type: :service do
       it 'saves premium attributes' do
         plan = plans_service.create(**create_args).plan
 
+        expect(plan.minimum_commitment).to have_attributes(
+          {
+            amount_cents: minimum_commitment_amount_cents,
+            invoice_display_name: minimum_commitment_invoice_display_name,
+          },
+        )
+
         expect(plan.charges.standard.first).to have_attributes(
           {
             pay_in_advance: false,
@@ -188,6 +215,7 @@ RSpec.describe Plans::CreateService, type: :service do
             invoiceable: true,
           },
         )
+
         expect(plan.charges.graduated_percentage.first).to have_attributes(
           {
             pay_in_advance: true,
