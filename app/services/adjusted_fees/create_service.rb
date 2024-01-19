@@ -14,7 +14,8 @@ module AdjustedFees
       return result.forbidden_failure! if !License.premium? || !fee.invoice.draft?
       return result.validation_failure!(errors: { adjusted_fee: ['already_exists'] }) if fee.adjusted_fee
 
-      if fee.charge && (fee.charge.percentage? || (fee.charge.prorated? && fee.charge.graduated?))
+      charge = fee.charge
+      if charge && params[:unit_amount_cents].blank? && (charge.percentage? || (charge.prorated? && charge.graduated?))
         return result.validation_failure!(errors: { charge: ['invalid_charge_model'] })
       end
 
@@ -22,7 +23,7 @@ module AdjustedFees
         fee:,
         invoice: fee.invoice,
         subscription: fee.subscription,
-        charge: fee.charge,
+        charge:,
         group: fee.group,
         adjusted_units: params[:unit_amount_cents].blank?,
         adjusted_amount: params[:unit_amount_cents].present?,
