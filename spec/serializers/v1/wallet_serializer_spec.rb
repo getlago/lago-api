@@ -26,6 +26,8 @@ RSpec.describe ::V1::WalletSerializer do
         'terminated_at' => wallet.terminated_at,
         'credits_balance' => wallet.credits_balance.to_s,
         'balance_cents' => wallet.balance_cents,
+        'credits_ongoing_balance' => wallet.credits_ongoing_balance.to_s,
+        'ongoing_balance_cents' => wallet.ongoing_balance_cents,
         'consumed_credits' => wallet.consumed_credits.to_s,
       )
 
