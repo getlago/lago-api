@@ -6069,6 +6069,7 @@ type Wallet {
   consumedCredits: Float!
   createdAt: ISO8601DateTime!
   creditsBalance: Float!
+  creditsOngoingBalance: Float!
   currency: CurrencyEnum!
   customer: Customer
   expirationAt: ISO8601DateTime
@@ -6076,6 +6077,7 @@ type Wallet {
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
   name: String
+  ongoingBalanceCents: BigInt!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
