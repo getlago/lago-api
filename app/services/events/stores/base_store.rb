@@ -10,15 +10,15 @@ module Events
 
         @group = filters[:group]
         @grouped_by = filters[:grouped_by]
-        @grouped_by_value = filters[:grouped_by_value]
+        @grouped_by_values = filters[:grouped_by_values]
 
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
       end
 
-      def grouped_by_value?
-        grouped_by.present? && grouped_by_value.present?
+      def grouped_by_values?
+        grouped_by.present? && grouped_by_values.present?
       end
 
       def events(force_from: false)
@@ -78,7 +78,7 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :group, :boundaries, :grouped_by, :grouped_by_value
+      attr_accessor :code, :subscription, :group, :boundaries, :grouped_by, :grouped_by_values
 
       delegate :customer, to: :subscription
 

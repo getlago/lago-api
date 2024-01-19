@@ -16,7 +16,7 @@ module Events
             .where(numeric_condition)
         end
 
-        scope = with_grouped_by_value(scope) if grouped_by_value?
+        scope = with_grouped_by_values(scope) if grouped_by_values?
 
         return scope unless group
 
@@ -128,8 +128,12 @@ module Events
         scope.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
 
-      def with_grouped_by_value(scope)
-        scope.where('events.properties @> ?', { grouped_by.to_s => grouped_by_value.to_s }.to_json)
+      def with_grouped_by_values(scope)
+        grouped_by_values.each do |grouped_by, grouped_by_value|
+          scope = scope.where('events.properties @> ?', { grouped_by.to_s => grouped_by_value.to_s }.to_json)
+        end
+
+        scope
       end
 
       def sanitized_propery_name

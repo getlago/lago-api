@@ -65,6 +65,7 @@ module Fees
           taxes_amount_cents: 0,
           unit_amount_cents:,
           precise_unit_amount: result.unit_amount,
+          grouped_by: (charge.properties['grouped_by'] || []).map { event.properties[_1] },
         )
 
         taxes_result = Fees::ApplyTaxesService.call(fee:)
@@ -168,6 +169,7 @@ module Fees
         current_aggregation: aggregation_result.current_aggregation,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
+        grouped_by: (charge.properties['grouped_by'] || []).map { event.properties[_1] },
       )
     end
   end
