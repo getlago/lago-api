@@ -9,6 +9,7 @@ RSpec.describe BillableMetricFilter, type: :model do
 
   it { is_expected.to belong_to(:billable_metric) }
   it { is_expected.to have_many(:filter_values).dependent(:destroy) }
+  it { is_expected.to have_many(:charge_filters).through(:filter_values) }
 
   it { is_expected.to validate_presence_of(:key) }
   it { is_expected.to validate_presence_of(:values) }
