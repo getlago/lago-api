@@ -430,6 +430,42 @@ RSpec.describe Fees::ChargeService do
           end
         end
 
+        context 'with adjusted display name' do
+          let(:adjusted_fee) do
+            create(
+              :adjusted_fee,
+              invoice:,
+              subscription:,
+              charge:,
+              properties:,
+              fee_type: :charge,
+              adjusted_units: false,
+              adjusted_amount: false,
+              invoice_display_name: 'test123',
+              units: 3,
+            )
+          end
+
+          it 'creates a fee' do
+            result = charge_subscription_service.create
+
+            expect(result).to be_success
+            expect(result.fees.first).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 0,
+              amount_currency: 'EUR',
+              units: 0,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+              events_count: 0,
+              payment_status: 'pending',
+              invoice_display_name: 'test123',
+            )
+          end
+        end
+
         context 'with invoice NOT in draft status' do
           before { invoice.finalized! }
 

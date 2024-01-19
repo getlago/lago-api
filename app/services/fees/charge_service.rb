@@ -68,7 +68,7 @@ module Fees
     end
 
     def init_fee(properties:, group: nil)
-      if invoice.draft? && adjusted_fee(group)
+      if invoice.draft? && adjusted_fee(group) && !adjusted_fee(group).adjusted_display_name?
         amount_result = compute_amount_for_adjusted_fee(properties:, group:)
         return result.fail_with_error!(amount_result.error) unless amount_result.success?
 
@@ -117,6 +117,10 @@ module Fees
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
       )
+
+      if adjusted_fee(group)&.adjusted_display_name?
+        new_fee.invoice_display_name = adjusted_fee(group).invoice_display_name
+      end
 
       result.fees << new_fee
     end
