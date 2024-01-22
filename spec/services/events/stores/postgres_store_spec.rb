@@ -52,6 +52,12 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       if i.even?
         event.properties[group.key] = group.value if group
         event.properties[grouped_by] = grouped_by_values[grouped_by] if grouped_by_values
+
+        if grouped_by.present? && grouped_by_values.blank?
+          grouped_by.each do |group|
+            event.properties[group] = Faker::Lorem.word
+          end
+        end
       end
 
       event.save!
@@ -90,6 +96,44 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
   describe '.count' do
     it 'returns the number of unique events' do
       expect(event_store.count).to eq(5)
+    end
+  end
+
+  describe '.grouped_count' do
+    let(:grouped_by) { %w[cloud] }
+
+    it 'returns the number of unique events grouped by the provided group' do
+      result = event_store.grouped_count
+
+      expect(result.count).to eq(4)
+
+      null_group = result.last
+      expect(null_group[:group]).to eq([nil])
+      expect(null_group[:value]).to eq(2)
+
+      result[...-1].each do |row|
+        expect(row[:group].count).to eq(1)
+        expect(row[:value]).to eq(1)
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the number of unique events grouped by the provided groups' do
+        result = event_store.grouped_count
+
+        expect(result.count).to eq(4)
+
+        null_group = result.last
+        expect(null_group[:group]).to eq([nil, nil])
+        expect(null_group[:value]).to eq(2)
+
+        result[...-1].each do |row|
+          expect(row[:group].count).to eq(2)
+          expect(row[:value]).to eq(1)
+        end
+      end
     end
   end
 

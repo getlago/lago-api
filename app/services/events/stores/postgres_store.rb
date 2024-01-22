@@ -43,6 +43,14 @@ module Events
         events.pluck(Arel.sql("(#{sanitized_propery_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
+      def grouped_count
+        events
+          .reorder(nil)
+          .group(grouped_by.map { |group| sanitized_propery_name(group) })
+          .count
+          .map { |group, value| { group: [group].flatten, value: } }
+      end
+
       def max
         events.maximum("(#{sanitized_propery_name})::numeric")
       end
@@ -136,9 +144,9 @@ module Events
         scope
       end
 
-      def sanitized_propery_name
+      def sanitized_propery_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events.properties->>?', aggregation_property],
+          ['events.properties->>?', property],
         )
       end
 

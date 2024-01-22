@@ -61,6 +61,33 @@ module Events
         ::Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
 
+      def grouped_count
+        groups = grouped_by.map.with_index do |group, index|
+          "#{sanitized_propery_name(group)} AS g_#{index}"
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select((groups + ['events_raw.transaction_id']).join(', '))
+
+        sql = <<-SQL
+          with events as (#{cte_sql.to_sql})
+
+          select
+            #{group_names},
+            COUNT(events.transaction_id) AS events_count
+          from events
+          group by #{group_names}
+        SQL
+
+        ::Clickhouse::EventsRaw.connection.select_all(sql).rows.map do |row|
+          {
+            group: row.first.map(&:presence),
+            value: row.last.to_i,
+          }
+        end
+      end
+
       def max
         events.maximum(Arel.sql(sanitized_numeric_property))
       end
@@ -184,6 +211,12 @@ module Events
         end
 
         scope
+      end
+
+      def sanitized_propery_name(property = aggregation_property)
+        ActiveRecord::Base.sanitize_sql_for_conditions(
+          ['events_raw.properties[?]', property],
+        )
       end
 
       def numeric_condition

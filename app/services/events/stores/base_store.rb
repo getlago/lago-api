@@ -39,6 +39,10 @@ module Events
 
       delegate :count, to: :events
 
+      def grouped_count
+        raise NotImplementedError
+      end
+
       def max
         raise NotImplementedError
       end
