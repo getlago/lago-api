@@ -5,7 +5,7 @@ WORKDIR /app
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-RUN apt update -qq && apt install nodejs build-essential git pkg-config libpq-dev -y
+RUN apt update -qq && apt install nodejs build-essential git pkg-config libpq-dev curl -y
 
 ENV BUNDLER_VERSION='2.4.21'
 RUN gem install bundler --no-document -v '2.4.21'
@@ -23,7 +23,7 @@ ARG SEGMENT_WRITE_KEY
 ARG GOCARDLESS_CLIENT_ID
 ARG GOCARDLESS_CLIENT_SECRET
 
-RUN apt update -qq && apt install git libpq-dev -y
+RUN apt update -qq && apt install git libpq-dev curl -y
 
 ENV SEGMENT_WRITE_KEY $SEGMENT_WRITE_KEY
 ENV GOCARDLESS_CLIENT_ID $GOCARDLESS_CLIENT_ID
