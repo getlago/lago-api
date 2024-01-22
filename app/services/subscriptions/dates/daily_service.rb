@@ -38,6 +38,8 @@ module Subscriptions
       end
 
       def compute_previous_beginning_of_period(date)
+        # NOTE: Watchout for this - https://github.com/Pressingly/lagu-api/issues/24
+        # date.beginning_of_day
         date
       end
 
