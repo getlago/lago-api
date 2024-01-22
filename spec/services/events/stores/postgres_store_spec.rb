@@ -108,11 +108,11 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       expect(result.count).to eq(4)
 
       null_group = result.last
-      expect(null_group[:group]).to eq([nil])
+      expect(null_group[:groups]['cloud']).to be_nil
       expect(null_group[:value]).to eq(2)
 
       result[...-1].each do |row|
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
         expect(row[:value]).to eq(1)
       end
     end
@@ -126,11 +126,13 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         expect(result.count).to eq(4)
 
         null_group = result.last
-        expect(null_group[:group]).to eq([nil, nil])
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(2)
 
         result[...-1].each do |row|
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).to eq(1)
         end
       end
@@ -189,11 +191,12 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       expect(result.count).to eq(4)
 
       null_group = result.last
-      expect(null_group[:group]).to eq([nil])
+      expect(null_group[:groups]['cloud']).to be_nil
       expect(null_group[:value]).to eq(4)
 
       result[...-1].each do |row|
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
       end
     end
 
@@ -206,11 +209,14 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         expect(result.count).to eq(4)
 
         null_group = result.last
-        expect(null_group[:group]).to eq([nil, nil])
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(4)
 
         result[...-1].each do |row|
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
         end
       end
     end
@@ -239,11 +245,11 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       expect(result.count).to eq(4)
 
       null_group = result.last
-      expect(null_group[:group]).to eq([nil])
+      expect(null_group[:groups]['cloud']).to be_nil
       expect(null_group[:value]).to eq(4)
 
       result[...-1].each do |row|
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
         expect(row[:value]).not_to be_nil
       end
     end
@@ -257,11 +263,13 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         expect(result.count).to eq(4)
 
         null_group = result.last
-        expect(null_group[:group]).to eq([nil, nil])
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(4)
 
         result[...-1].each do |row|
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).not_to be_nil
         end
       end
@@ -291,11 +299,11 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       expect(result.count).to eq(4)
 
       null_group = result.last
-      expect(null_group[:group]).to eq([nil])
+      expect(null_group[:groups]['cloud']).to be_nil
       expect(null_group[:value]).to eq(6)
 
       result[...-1].each do |row|
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
         expect(row[:value]).not_to be_nil
       end
     end
@@ -309,11 +317,13 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         expect(result.count).to eq(4)
 
         null_group = result.last
-        expect(null_group[:group]).to eq([nil, nil])
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(6)
 
         result[...-1].each do |row|
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).not_to be_nil
         end
       end

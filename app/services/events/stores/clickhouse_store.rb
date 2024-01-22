@@ -54,7 +54,7 @@ module Events
           with events as (#{cte_sql})
 
           select
-            COUNT(events.transaction_count) AS events_count
+            COUNT(events.transaction_count)::numeric AS events_count
           from events
         SQL
 
@@ -74,18 +74,13 @@ module Events
           with events as (#{cte_sql.to_sql})
 
           select
-            #{group_names},
-            COUNT(events.transaction_id) AS events_count
+            #{group_names.join(', ')},
+            toDecimal128(count(), #{DECIMAL_SCALE})
           from events
-          group by #{group_names}
+          group by #{group_names.join(',')}
         SQL
 
-        ::Clickhouse::EventsRaw.connection.select_all(sql).rows.map do |row|
-          {
-            group: row.first.map(&:presence),
-            value: row.last.to_i,
-          }
-        end
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def max
@@ -93,11 +88,13 @@ module Events
       end
 
       def grouped_max
-        events
+        results = events
           .reorder(nil)
           .group(grouped_by.map { |group| sanitized_propery_name(group) })
           .maximum(Arel.sql(sanitized_numeric_property))
-          .map { |group, value| { group: [group].flatten.map(&:presence), value: } }
+          .map { |group, value| [group, value].flatten }
+
+        prepare_grouped_result(results)
       end
 
       def last
@@ -113,16 +110,11 @@ module Events
         sql = events
           .reorder(Arel.sql((groups + ['events_raw.timestamp DESC']).join(', ')))
           .select(
-            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_propery_name})::numeric AS value",
+            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_numeric_property}) AS value",
           )
           .to_sql
 
-        ::Clickhouse::EventsRaw.connection.select_all(sql).rows.map do |row|
-          {
-            group: row[...-1].map(&:presence),
-            value: row.last,
-          }
-        end
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def sum
@@ -159,12 +151,7 @@ module Events
           group by #{group_names}
         SQL
 
-        ::Clickhouse::EventsRaw.connection.select_all(sql).rows.map do |row|
-          {
-            group: row.first.map(&:presence),
-            value: row.last,
-          }
-        end
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -307,6 +294,20 @@ module Events
         to_in_timezone = date_in_customer_timezone_sql(to)
 
         "(date_diff('days', #{from_in_timezone}, #{to_in_timezone}) + 1) / #{duration}"
+      end
+
+      # NOTE: returns the values for each groups
+      #       The result format will be an array of hash with the format:
+      #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
+      def prepare_grouped_result(rows)
+        rows.map do |row|
+          groups = row.flatten[...-1].map(&:presence)
+
+          {
+            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            value: row.last,
+          }
+        end
       end
     end
   end

@@ -117,13 +117,13 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       expect(result.count).to eq(4)
 
-      null_group = result.find { |v| v[:group].first.nil? }
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
       expect(null_group[:value]).to eq(2)
 
       result.each do |row|
-        next if row[:group].first.nil?
+        next if row[:groups]['cloud'].nil?
 
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
         expect(row[:value]).to eq(1)
       end
     end
@@ -136,14 +136,15 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
         expect(result.count).to eq(4)
 
-        null_group = result.find { |v| v[:group].first.nil? }
-        expect(null_group[:group]).to eq([nil, nil])
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(2)
 
         result[...-1].each do |row|
-          next if row[:group].first.nil?
+          next if row[:groups]['cloud'].nil?
 
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).to eq(1)
         end
       end
@@ -201,14 +202,14 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       expect(result.count).to eq(4)
 
-      null_group = result.find { |v| v[:group].first.nil? }
-      expect(null_group[:group]).to eq([nil])
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
       expect(null_group[:value]).to eq(4)
 
       result[...-1].each do |row|
-        next if row[:group].first.nil?
+        next if row[:groups]['cloud'].nil?
 
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
       end
     end
 
@@ -220,14 +221,16 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
         expect(result.count).to eq(4)
 
-        null_group = result.find { |v| v[:group].first.nil? }
-        expect(null_group[:group]).to eq([nil, nil])
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(4)
 
         result[...-1].each do |row|
-          next if row[:group].first.nil?
+          next if row[:groups]['cloud'].nil?
 
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
         end
       end
     end
@@ -255,14 +258,13 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       expect(result.count).to eq(4)
 
-      null_group = result.find { |v| v[:group].first.nil? }
-      expect(null_group[:group]).to eq([nil])
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
       expect(null_group[:value]).to eq(4)
 
       result[...-1].each do |row|
-        next if row[:group].first.nil?
+        next if row[:groups]['cloud'].nil?
 
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
         expect(row[:value]).not_to be_nil
       end
     end
@@ -275,14 +277,15 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
         expect(result.count).to eq(4)
 
-        null_group = result.find { |v| v[:group].first.nil? }
-        expect(null_group[:group]).to eq([nil, nil])
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(4)
 
         result[...-1].each do |row|
-          next if row[:group].first.nil?
+          next if row[:groups]['cloud'].nil?
 
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).not_to be_nil
         end
       end
@@ -311,14 +314,13 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       expect(result.count).to eq(4)
 
-      null_group = result.find { |v| v[:group].first.nil? }
-      expect(null_group[:group]).to eq([nil])
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
       expect(null_group[:value]).to eq(6)
 
       result[...-1].each do |row|
-        next if row[:group].first.nil?
+        next if row[:groups]['cloud'].nil?
 
-        expect(row[:group].count).to eq(1)
+        expect(row[:groups]['cloud']).not_to be_nil
         expect(row[:value]).not_to be_nil
       end
     end
@@ -331,14 +333,15 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
         expect(result.count).to eq(4)
 
-        null_group = result.find { |v| v[:group].first.nil? }
-        expect(null_group[:group]).to eq([nil, nil])
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
         expect(null_group[:value]).to eq(6)
 
         result[...-1].each do |row|
-          next if row[:group].first.nil?
+          next if row[:groups]['cloud'].nil?
 
-          expect(row[:group].count).to eq(2)
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).not_to be_nil
         end
       end
