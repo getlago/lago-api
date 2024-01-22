@@ -189,8 +189,10 @@ wallet = Wallet.create!(
   rate_amount: BigDecimal('1.00'),
   balance: BigDecimal('100.00'),
   ongoing_balance: BigDecimal('100.00'),
+  ongoing_usage_balance: BigDecimal('100.00'),
   credits_balance: BigDecimal('100.00'),
   credits_ongoing_balance: BigDecimal('100.00'),
+  credits_ongoing_usage_balance: BigDecimal('100.00'),
   currency: 'EUR',
 )
 
@@ -202,8 +204,10 @@ Wallet.create!(
   rate_amount: BigDecimal('1.00'),
   balance: BigDecimal('86.00'),
   ongoing_balance: BigDecimal('86.00'),
+  ongoing_usage_balance: BigDecimal('86.00'),
   credits_balance: BigDecimal('86.00'),
   credits_ongoing_balance: BigDecimal('86.00'),
+  credits_ongoing_usage_balance: BigDecimal('86.00'),
   consumed_credits: BigDecimal('114.00'),
   currency: 'EUR',
 )
