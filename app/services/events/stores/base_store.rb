@@ -47,6 +47,10 @@ module Events
         raise NotImplementedError
       end
 
+      def grouped_max
+        raise NotImplementedError
+      end
+
       def last
         raise NotImplementedError
       end

@@ -92,6 +92,14 @@ module Events
         events.maximum(Arel.sql(sanitized_numeric_property))
       end
 
+      def grouped_max
+        events
+          .reorder(nil)
+          .group(grouped_by.map { |group| sanitized_propery_name(group) })
+          .maximum(Arel.sql(sanitized_numeric_property))
+          .map { |group, value| { group: [group].flatten.map(&:presence), value: } }
+      end
+
       def last
         value = events.last&.properties&.[](aggregation_property)
         return value unless value

@@ -55,6 +55,14 @@ module Events
         events.maximum("(#{sanitized_propery_name})::numeric")
       end
 
+      def grouped_max
+        events
+          .reorder(nil)
+          .group(grouped_by.map { |group| sanitized_propery_name(group) })
+          .maximum("(#{sanitized_propery_name})::numeric")
+          .map { |group, value| { group: [group].flatten, value: } }
+      end
+
       def last
         events.reorder(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
       end
