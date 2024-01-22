@@ -97,6 +97,132 @@ RSpec.describe Fees::SubscriptionService do
         end
       end
     end
+
+    context 'when there is adjusted fee' do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          properties:,
+          adjusted_units: true,
+          adjusted_amount: false,
+          units: 3,
+        )
+      end
+      let(:properties) do
+        {
+          from_datetime: boundaries[:from_datetime],
+          to_datetime: boundaries[:to_datetime],
+        }
+      end
+
+      before do
+        adjusted_fee
+        invoice.draft!
+      end
+
+      context 'with adjusted units' do
+        it 'creates a fee' do
+          result = fees_subscription_service.create
+
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            amount_cents: 300,
+            amount_currency: 'EUR',
+            units: 3,
+            events_count: nil,
+            payment_status: 'pending',
+            unit_amount_cents: 100,
+            precise_unit_amount: 1,
+          )
+        end
+      end
+
+      context 'with adjusted amount' do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            properties:,
+            adjusted_units: false,
+            adjusted_amount: true,
+            units: 3,
+            unit_amount_cents: 200,
+          )
+        end
+
+        it 'creates a fee' do
+          result = fees_subscription_service.create
+
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            amount_cents: 600,
+            amount_currency: 'EUR',
+            units: 3,
+            events_count: nil,
+            payment_status: 'pending',
+            unit_amount_cents: 200,
+            precise_unit_amount: 2,
+          )
+        end
+      end
+
+      context 'with adjusted display name' do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            properties:,
+            adjusted_units: false,
+            adjusted_amount: false,
+            units: 1,
+            invoice_display_name: 'test123',
+          )
+        end
+
+        it 'creates a fee' do
+          result = fees_subscription_service.create
+
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            units: 1,
+            events_count: nil,
+            payment_status: 'pending',
+            unit_amount_cents: 100,
+            precise_unit_amount: 1,
+            invoice_display_name: 'test123',
+          )
+        end
+      end
+
+      context 'with invoice NOT in draft status' do
+        before { invoice.finalized! }
+
+        it 'creates a fee without using adjusted fee attributes' do
+          result = fees_subscription_service.create
+
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            units: 1,
+            events_count: nil,
+            payment_status: 'pending',
+            unit_amount_cents: 100,
+            precise_unit_amount: 1,
+          )
+        end
+      end
+    end
   end
 
   context 'when subscription has never been billed' do

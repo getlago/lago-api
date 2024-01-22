@@ -63,8 +63,26 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context 'when there is invalid charge model' do
+      context 'when there is invalid charge model but amount is adjusted' do
         let(:percentage_charge) { create(:percentage_charge) }
+
+        before { fee.charge = percentage_charge }
+
+        it 'returns success response' do
+          result = create_service.call
+
+          expect(result).to be_success
+        end
+      end
+
+      context 'when there is invalid charge model and units are adjusted' do
+        let(:percentage_charge) { create(:percentage_charge) }
+        let(:params) do
+          {
+            units: 5,
+            invoice_display_name: 'new-dis-name',
+          }
+        end
 
         before { fee.charge = percentage_charge }
 
