@@ -59,6 +59,10 @@ module Events
         raise NotImplementedError
       end
 
+      def grouped_sum
+        raise NotImplementedError
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
       end

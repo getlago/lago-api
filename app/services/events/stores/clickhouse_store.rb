@@ -122,6 +122,33 @@ module Events
         ::Clickhouse::EventsRaw.connection.select_value(sql)
       end
 
+      def grouped_sum
+        groups = grouped_by.map.with_index do |group, index|
+          "#{sanitized_propery_name(group)} AS g_#{index}"
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select((groups + [Arel.sql("#{sanitized_numeric_property} AS property")]).join(', '))
+
+        sql = <<-SQL
+          with events as (#{cte_sql.to_sql})
+
+          select
+            #{group_names},
+            sum(events.property)
+          from events
+          group by #{group_names}
+        SQL
+
+        ::Clickhouse::EventsRaw.connection.select_all(sql).rows.map do |row|
+          {
+            group: row.first.map(&:presence),
+            value: row.last,
+          }
+        end
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)

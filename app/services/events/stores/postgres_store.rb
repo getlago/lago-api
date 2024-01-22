@@ -71,6 +71,14 @@ module Events
         events.sum("(#{sanitized_propery_name})::numeric")
       end
 
+      def grouped_sum
+        events
+          .reorder(nil)
+          .group(grouped_by.map { |group| sanitized_propery_name(group) })
+          .sum("(#{sanitized_propery_name})::numeric")
+          .map { |group, value| { group: [group].flatten, value: } }
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
