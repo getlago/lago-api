@@ -68,6 +68,8 @@ module Fees
     end
 
     def init_fee(properties:, group: nil)
+      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
+      # Base fee creation flow handles case when only name has been adjusted
       if invoice.draft? && adjusted_fee(group) && !adjusted_fee(group).adjusted_display_name?
         amount_result = compute_amount_for_adjusted_fee(properties:, group:)
         return result.fail_with_error!(amount_result.error) unless amount_result.success?
@@ -182,10 +184,10 @@ module Fees
 
     def compute_amount_for_adjusted_fee(properties:, group:)
       adjusted_fee = adjusted_fee(group)
-
-      return BaseService::Result.new if adjusted_fee.adjusted_amount?
-
       adjusted_fee_result = BaseService::Result.new
+
+      return adjusted_fee_result if adjusted_fee.adjusted_amount?
+
       adjusted_fee_result.aggregation = adjusted_fee.units
       adjusted_fee_result.current_usage_units = adjusted_fee.units
       adjusted_fee_result.full_units_number = adjusted_fee.units
