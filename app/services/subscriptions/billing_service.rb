@@ -52,8 +52,6 @@ module Subscriptions
 
             UNION
             -- Anniversary subscriptions
-            (#{daily_anniversary})
-            UNION
             (#{weekly_anniversary})
             UNION
             (#{monthly_anniversary})
@@ -89,6 +87,8 @@ module Subscriptions
     end
 
     def base_subscription_scope(billing_time: nil, interval: nil, conditions: nil)
+      conditions_clause = conditions&.any? ? "AND #{conditions.join(' AND ')}" : ""
+
       <<-SQL
         SELECT subscriptions.id AS subscription_id
         FROM subscriptions
@@ -98,7 +98,7 @@ module Subscriptions
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
-          AND #{conditions.join(' AND ')}
+          #{conditions_clause}
         GROUP BY subscriptions.id
       SQL
     end
@@ -108,6 +108,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :daily,
+        # TODO: Test fail due to this line - https://github.com/Pressingly/lagu-api/issues/23
         conditions: ["subscriptions.subscription_at#{at_time_zone} <= :today#{at_time_zone}"],
       )
     end
@@ -168,14 +169,6 @@ module Subscriptions
           "DATE_PART('month', (:today#{at_time_zone})) = 1",
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
         ],
-      )
-    end
-
-    def daily_anniversary
-      base_subscription_scope(
-        billing_time: :anniversary,
-        interval: :daily,
-        conditions: ["subscriptions.subscription_at#{at_time_zone} <= :today#{at_time_zone}"],
       )
     end
 
