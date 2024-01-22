@@ -67,6 +67,24 @@ module Events
         events.reorder(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
       end
 
+      def grouped_last
+        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+
+        sql = events
+          .reorder(Arel.sql((groups + ['events.timestamp DESC']).join(', ')))
+          .select(
+            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_propery_name})::numeric AS value",
+          )
+          .to_sql
+
+        Event.connection.select_all(sql).rows.map do |row|
+          {
+            group: row[...-1].map(&:presence),
+            value: row.last,
+          }
+        end
+      end
+
       def sum
         events.sum("(#{sanitized_propery_name})::numeric")
       end

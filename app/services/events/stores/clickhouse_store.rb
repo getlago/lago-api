@@ -107,6 +107,24 @@ module Events
         BigDecimal(value)
       end
 
+      def grouped_last
+        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+
+        sql = events
+          .reorder(Arel.sql((groups + ['events_raw.timestamp DESC']).join(', ')))
+          .select(
+            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_propery_name})::numeric AS value",
+          )
+          .to_sql
+
+        ::Clickhouse::EventsRaw.connection.select_all(sql).rows.map do |row|
+          {
+            group: row[...-1].map(&:presence),
+            value: row.last,
+          }
+        end
+      end
+
       def sum
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql("#{sanitized_numeric_property} AS property"))

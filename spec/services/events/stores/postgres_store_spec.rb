@@ -225,6 +225,49 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
+  describe '.grouped_last' do
+    let(:grouped_by) { %w[cloud] }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the last value for the provided group' do
+      result = event_store.grouped_last
+
+      expect(result.count).to eq(4)
+
+      null_group = result.last
+      expect(null_group[:group]).to eq([nil])
+      expect(null_group[:value]).to eq(4)
+
+      result[...-1].each do |row|
+        expect(row[:group].count).to eq(1)
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the last value for each provided groups' do
+        result = event_store.grouped_last
+
+        expect(result.count).to eq(4)
+
+        null_group = result.last
+        expect(null_group[:group]).to eq([nil, nil])
+        expect(null_group[:value]).to eq(4)
+
+        result[...-1].each do |row|
+          expect(row[:group].count).to eq(2)
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
   describe '.sum' do
     it 'returns the sum of event values' do
       event_store.aggregation_property = billable_metric.field_name
