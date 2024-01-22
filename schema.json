@@ -27881,6 +27881,24 @@
               ]
             },
             {
+              "name": "creditsOngoingUsageBalance",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "currency",
               "description": null,
               "type": {
@@ -27988,6 +28006,24 @@
             },
             {
               "name": "ongoingBalanceCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "ongoingUsageBalanceCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

@@ -16,10 +16,12 @@ RSpec.describe Types::Wallets::Object do
   it { is_expected.to have_field(:balance_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:consumed_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:ongoing_balance_cents).of_type('BigInt!') }
+  it { is_expected.to have_field(:ongoing_usage_balance_cents).of_type('BigInt!') }
 
   it { is_expected.to have_field(:consumed_credits).of_type('Float!') }
   it { is_expected.to have_field(:credits_balance).of_type('Float!') }
   it { is_expected.to have_field(:credits_ongoing_balance).of_type('Float!') }
+  it { is_expected.to have_field(:credits_ongoing_usage_balance).of_type('Float!') }
 
   it { is_expected.to have_field(:last_balance_sync_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:last_consumed_credit_at).of_type('ISO8601DateTime') }
