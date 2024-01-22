@@ -262,7 +262,6 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
         expect(result).to eq('2022-03-06 00:00:00 UTC')
       end
 
-      # TODO: check on this ???
       context 'with customer timezone' do
         let(:timezone) { 'America/New_York' }
 
