@@ -10,6 +10,7 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
       field :description, String, null: true
       field :group_name, String, null: true
+      field :grouped_by, [String], null: false
       field :invoice_display_name, String, null: true
       field :invoice_name, String, null: true
       field :subscription, Types::Subscriptions::Object, null: true

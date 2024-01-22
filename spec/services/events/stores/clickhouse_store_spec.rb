@@ -8,8 +8,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       code:,
       subscription:,
       boundaries:,
-      group:,
-      event:,
+      filters: { group:, grouped_by:, grouped_by_value: },
     )
   end
 
@@ -31,14 +30,19 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   end
 
   let(:group) { nil }
-  let(:event) { nil }
+  let(:grouped_by) { nil }
+  let(:grouped_by_value) { nil }
 
   let(:events) do
     events = []
 
     5.times do |i|
       properties = { billable_metric.field_name => i + 1 }
-      properties[group.key.to_s] = group.value.to_s if group && i.even?
+
+      if i.even?
+        properties[group.key.to_s] = group.value.to_s if group
+        properties[grouped_by] = grouped_by_value if grouped_by_value
+      end
 
       events << Clickhouse::EventsRaw.create!(
         transaction_id: SecureRandom.uuid,
@@ -77,6 +81,15 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
     context 'with group' do
       let(:group) { create(:group, billable_metric:) }
+
+      it 'returns a list of events' do
+        expect(event_store.events.count).to eq(3)
+      end
+    end
+
+    context 'with grouped_by_value' do
+      let(:grouped_by) { 'region' }
+      let(:grouped_by_value) { 'europe' }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)

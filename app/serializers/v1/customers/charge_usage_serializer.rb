@@ -24,6 +24,7 @@ module V1
               aggregation_type: fee.billable_metric.aggregation_type,
             },
             groups: groups(fees),
+            grouped_by: fee.grouped_by,
           }
         end
       end

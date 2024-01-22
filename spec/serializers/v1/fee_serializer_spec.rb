@@ -57,6 +57,7 @@ RSpec.describe ::V1::FeeSerializer do
         'invoice_display_name' => fee.invoice_name,
         'lago_item_id' => fee.item_id,
         'item_type' => fee.item_type,
+        'grouped_by' => fee.grouped_by,
       )
 
       expect(result['fee']['from_date']).not_to be_nil

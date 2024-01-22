@@ -36,3 +36,4 @@ db/events_schema.rb
 LAGO_VERSION
 
 **/.DS_Store
+.vscode

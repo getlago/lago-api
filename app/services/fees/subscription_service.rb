@@ -14,23 +14,13 @@ module Fees
       return result if already_billed?
 
       new_amount_cents = compute_amount.round
-
-      new_fee = Fee.new(
-        invoice:,
-        subscription:,
-        amount_cents: new_amount_cents,
-        amount_currency: plan.amount_currency,
-        fee_type: :subscription,
-        invoiceable_type: 'Subscription',
-        invoiceable: subscription,
-        units: 1,
-        properties: boundaries.to_h,
-        payment_status: :pending,
-        taxes_amount_cents: 0,
-        unit_amount_cents: new_amount_cents,
-      )
+      new_fee = initialize_fee(new_amount_cents)
       new_fee.precise_unit_amount = new_fee.unit_amount.to_f
-      new_fee.save!
+
+      ActiveRecord::Base.transaction do
+        new_fee.save!
+        adjusted_fee.update!(fee: new_fee) if invoice.draft? && adjusted_fee
+      end
 
       result.fee = new_fee
       result
@@ -44,6 +34,52 @@ module Fees
 
     delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
+
+    def initialize_fee(new_amount_cents)
+      base_fee = Fee.new(
+        invoice:,
+        subscription:,
+        amount_cents: new_amount_cents,
+        amount_currency: plan.amount_currency,
+        fee_type: :subscription,
+        invoiceable_type: 'Subscription',
+        invoiceable: subscription,
+        units: 1,
+        properties: boundaries.to_h,
+        payment_status: :pending,
+        taxes_amount_cents: 0,
+        unit_amount_cents: new_amount_cents,
+      )
+
+      return base_fee if !invoice.draft? || !adjusted_fee
+
+      if adjusted_fee.adjusted_display_name?
+        base_fee.invoice_display_name = adjusted_fee.invoice_display_name
+
+        return base_fee
+      end
+
+      units = adjusted_fee.units
+      unit_amount_cents = adjusted_fee.unit_amount_cents.round
+      amount_cents = adjusted_fee.adjusted_units? ? (units * new_amount_cents) : (units * unit_amount_cents)
+
+      base_fee.amount_cents = amount_cents.round
+      base_fee.units = units
+      base_fee.unit_amount_cents = adjusted_fee.adjusted_units? ? new_amount_cents : unit_amount_cents
+      base_fee.invoice_display_name = adjusted_fee.invoice_display_name
+
+      base_fee
+    end
+
+    def adjusted_fee
+      return @adjusted_fee if defined? @adjusted_fee
+
+      @adjusted_fee = AdjustedFee
+        .where(invoice:, subscription:, fee_type: :subscription)
+        .where("properties->>'from_datetime' = ?", boundaries.from_datetime&.iso8601(3))
+        .where("properties->>'to_datetime' = ?", boundaries.to_datetime&.iso8601(3))
+        .first
+    end
 
     def already_billed?
       existing_fee = invoice.fees.subscription_kind.find_by(subscription_id: subscription.id)

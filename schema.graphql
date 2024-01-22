@@ -166,6 +166,7 @@ type BillableMetric {
   description: String
   draftInvoicesCount: Int!
   fieldName: String
+  filters: [BillableMetricFilter!]
   flatGroups: [Group!]
   group: JSON
   id: ID!
@@ -181,6 +182,15 @@ type BillableMetric {
 type BillableMetricCollection {
   collection: [BillableMetric!]!
   metadata: CollectionMetadata!
+}
+
+"""
+Billable metric filters
+"""
+type BillableMetricFilter {
+  id: ID!
+  key: String!
+  values: [String!]!
 }
 
 enum BillingTimeEnum {
@@ -243,6 +253,7 @@ type ChargeUsage {
   billableMetric: BillableMetric!
   charge: Charge!
   eventsCount: Int!
+  groupedBy: [String!]
   groups: [GroupUsage!]
   units: Float!
 }
@@ -1621,6 +1632,7 @@ input CreateBillableMetricInput {
   code: String!
   description: String!
   fieldName: String
+  filters: [Input!]
   group: JSON
   name: String!
   recurring: Boolean
@@ -3049,6 +3061,7 @@ type Fee implements InvoiceItem {
   feeType: FeeTypesEnum!
   group: Group
   groupName: String
+  groupedBy: [String!]!
   id: ID!
   invoiceDisplayName: String
   invoiceName: String
@@ -3271,6 +3284,14 @@ scalar ISO8601Date
 An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
+
+"""
+Billable metric filters input arguments
+"""
+input Input {
+  key: String!
+  values: [String!]!
+}
 
 type Invite {
   acceptedAt: ISO8601DateTime!
@@ -4279,6 +4300,7 @@ type Properties {
   freeUnitsPerTotalAggregation: String
   graduatedPercentageRanges: [GraduatedPercentageRange!]
   graduatedRanges: [GraduatedRange!]
+  groupedBy: [String!]
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
@@ -4294,6 +4316,7 @@ input PropertiesInput {
   freeUnitsPerTotalAggregation: String
   graduatedPercentageRanges: [GraduatedPercentageRangeInput!]
   graduatedRanges: [GraduatedRangeInput!]
+  groupedBy: [String!]
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
@@ -5755,6 +5778,7 @@ input UpdateBillableMetricInput {
   code: String!
   description: String!
   fieldName: String
+  filters: [Input!]
   group: JSON
   id: String!
   name: String!

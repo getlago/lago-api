@@ -38,8 +38,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries:,
-          group:,
-          event:,
+          filters: { group: },
         )
       end
 

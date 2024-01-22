@@ -70,6 +70,32 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
     end
 
+    context 'with filters arguments' do
+      let(:filters) do
+        [
+          {
+            key: 'cloud',
+            values: %w[aws google],
+          },
+        ]
+      end
+
+      it 'creates billable metric\'s filters' do
+        expect { create_service.create(**create_args.merge(filters:)) }
+          .to change(BillableMetricFilter, :count).by(1)
+      end
+
+      it 'returns an error if a filter is invalid' do
+        result = create_service.create(**create_args.merge(filters: [{ key: 'foo' }]))
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:values]).to eq(['value_is_mandatory'])
+        end
+      end
+    end
+
     it 'calls SegmentTrackJob' do
       metric = create_service.create(**create_args).billable_metric
 

@@ -20,6 +20,9 @@ module BillableMetrics
           group.properties.discard_all
           group.discard!
         end
+
+        discard_filters
+
         Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
       end
 
@@ -35,6 +38,14 @@ module BillableMetrics
     private
 
     attr_reader :metric
+
+    def discard_filters
+      metric.filters.each do |filter|
+        filter.filter_values.discard_all
+        filter.charge_filters.discard_all
+        filter.discard!
+      end
+    end
 
     def track_billable_metric_deleted
       SegmentTrackJob.perform_later(
