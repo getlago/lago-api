@@ -29,6 +29,9 @@ module Types
 
       field :amount_details, Types::Fees::AmountDetails::Object, null: true
 
+      field :adjusted_fee, Boolean, null: false
+      field :adjusted_fee_type, Types::AdjustedFees::AdjustedFeeTypeEnum, null: true
+
       delegate :group_name, to: :object
       delegate :invoice_name, to: :object
 
@@ -38,6 +41,17 @@ module Types
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
+      end
+
+      def adjusted_fee
+        object.adjusted_fee.present?
+      end
+
+      def adjusted_fee_type
+        return nil if object.adjusted_fee.blank?
+        return nil if object.adjusted_fee.adjusted_display_name?
+
+        object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
       end
     end
   end
