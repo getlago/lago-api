@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-describe Clock::RefreshWalletsCreditsJob, job: true do
+describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
   subject { described_class }
 
   describe '.perform' do
@@ -12,13 +12,13 @@ describe Clock::RefreshWalletsCreditsJob, job: true do
 
     before do
       wallet
-      allow(Wallets::RefreshCreditsService).to receive(:call)
+      allow(Wallets::Balance::RefreshOngoingService).to receive(:call)
     end
 
     context 'when freemium' do
       it 'does not call the refresh service' do
         described_class.perform_now
-        expect(Wallets::RefreshCreditsJob).not_to have_been_enqueued.with(wallet)
+        expect(Wallets::RefreshOngoingBalanceJob).not_to have_been_enqueued.with(wallet)
       end
     end
 
@@ -27,7 +27,7 @@ describe Clock::RefreshWalletsCreditsJob, job: true do
 
       it 'calls the refresh service' do
         described_class.perform_now
-        expect(Wallets::RefreshCreditsJob).to have_been_enqueued.with(wallet)
+        expect(Wallets::RefreshOngoingBalanceJob).to have_been_enqueued.with(wallet)
       end
 
       context 'when not active' do
@@ -35,7 +35,7 @@ describe Clock::RefreshWalletsCreditsJob, job: true do
 
         it 'does not call the refresh service' do
           described_class.perform_now
-          expect(Wallets::RefreshCreditsJob).not_to have_been_enqueued.with(wallet)
+          expect(Wallets::RefreshOngoingBalanceJob).not_to have_been_enqueued.with(wallet)
         end
       end
     end

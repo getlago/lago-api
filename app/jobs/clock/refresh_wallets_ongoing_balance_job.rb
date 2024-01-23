@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 module Clock
-  class RefreshWalletsCreditsJob < ApplicationJob
+  class RefreshWalletsOngoingBalanceJob < ApplicationJob
     queue_as 'clock'
 
     def perform
       return unless License.premium?
 
       Wallet.active.find_each do |wallet|
-        Wallets::RefreshCreditsJob.perform_later(wallet)
+        Wallets::RefreshOngoingBalanceJob.perform_later(wallet)
       end
     end
   end

@@ -27,6 +27,7 @@ module Wallets
         end
 
         wallet.update!(update_params)
+        Wallets::Balance::RefreshOngoingService.call(wallet:)
 
         result.wallet = wallet
         result
