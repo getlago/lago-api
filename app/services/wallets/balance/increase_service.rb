@@ -17,9 +17,7 @@ module Wallets
 
         update_params = {
           balance_cents: wallet.balance_cents + amount_cents,
-          ongoing_balance_cents: wallet.ongoing_balance_cents + amount_cents,
           credits_balance: wallet.credits_balance + credits_amount,
-          credits_ongoing_balance: wallet.credits_ongoing_balance + credits_amount,
           last_balance_sync_at: Time.current,
         }
 
