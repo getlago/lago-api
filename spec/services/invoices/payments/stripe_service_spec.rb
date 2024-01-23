@@ -281,6 +281,42 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
   end
 
+  describe '#generate_payment_url' do
+    before do
+      stripe_payment_provider
+      stripe_customer
+
+      allow(Stripe::Checkout::Session).to receive(:create)
+        .and_return({ 'url' => 'https://example.com' })
+    end
+
+    it 'generates payment url' do
+      stripe_service.generate_payment_url
+
+      expect(Stripe::Checkout::Session).to have_received(:create)
+    end
+
+    context 'when invoice is succeeded' do
+      before { invoice.succeeded! }
+
+      it 'does not generate payment url' do
+        stripe_service.generate_payment_url
+
+        expect(Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+
+    context 'when invoice is voided' do
+      before { invoice.voided! }
+
+      it 'does not generate payment url' do
+        stripe_service.generate_payment_url
+
+        expect(Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+  end
+
   describe '.update_payment_status' do
     let(:payment) do
       create(
