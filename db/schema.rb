@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_01_18_141022) do
+ActiveRecord::Schema[7.0].define(version: 2024_01_23_104811) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -165,7 +165,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_18_141022) do
     t.decimal "max_aggregation_with_proration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "grouped_by", default: [], null: false, array: true
+    t.jsonb "grouped_by", default: {}, null: false
     t.index ["charge_id"], name: "index_cached_aggregations_on_charge_id"
     t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
     t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
@@ -480,7 +480,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_18_141022) do
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: {}, null: false
     t.uuid "charge_filter_id"
-    t.string "grouped_by", default: [], null: false, array: true
+    t.jsonb "grouped_by", default: {}, null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
