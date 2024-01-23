@@ -71,11 +71,34 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      def generate_payment_url
+        return result unless should_process_payment?
+
+        res = Stripe::Checkout::Session.create(
+          payment_url_payload,
+          {
+            api_key: stripe_api_key,
+          },
+        )
+
+        result.payment_url = res['url']
+
+        result
+      rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::AuthenticationError, Stripe::PermissionError => e
+        deliver_error_webhook(e)
+        result
+      end
+
       private
 
       attr_accessor :invoice
 
       delegate :organization, :customer, to: :invoice
+
+      def success_redirect_url
+        stripe_payment_provider.success_redirect_url.presence ||
+          PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
+      end
 
       def should_process_payment?
         return false if invoice.succeeded? || invoice.voided?
@@ -168,6 +191,27 @@ module Invoices
             invoice_issuing_date: invoice.issuing_date.iso8601,
             invoice_type: invoice.invoice_type,
           },
+        }
+      end
+
+      def payment_url_payload
+        {
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: invoice.currency.downcase,
+                unit_amount: invoice.total_amount_cents,
+                product_data: {
+                  name: invoice.id,
+                },
+              },
+            },
+          ],
+          mode: 'payment',
+          success_url: success_redirect_url,
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
         }
       end
 
