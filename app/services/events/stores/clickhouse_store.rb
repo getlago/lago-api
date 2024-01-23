@@ -54,7 +54,7 @@ module Events
           with events as (#{cte_sql})
 
           select
-            COUNT(events.transaction_count)::numeric AS events_count
+            COUNT(events.transaction_count) AS events_count
           from events
         SQL
 

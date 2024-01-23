@@ -51,9 +51,10 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       if i.even?
         event.properties[group.key] = group.value if group
-        event.properties[grouped_by] = grouped_by_values[grouped_by] if grouped_by_values
 
-        if grouped_by.present? && grouped_by_values.blank?
+        if grouped_by_values.present?
+          grouped_by_values.each { |grouped_by, value| event.properties[grouped_by] = value }
+        elsif grouped_by.present?
           grouped_by.each do |group|
             event.properties[group] = Faker::Lorem.word
           end
@@ -84,7 +85,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
 
     context 'with grouped_by_values' do
-      let(:grouped_by) { 'region' }
       let(:grouped_by_values) { { 'region' => 'europe' } }
 
       it 'returns a list of events' do

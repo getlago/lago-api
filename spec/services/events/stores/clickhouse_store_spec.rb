@@ -41,9 +41,10 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       if i.even?
         properties[group.key.to_s] = group.value.to_s if group
-        properties[grouped_by] = grouped_by_values[grouped_by] if grouped_by_values
 
-        if grouped_by.present? && grouped_by_values.blank?
+        if grouped_by_values.present?
+          grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
+        elsif grouped_by.present?
           grouped_by.each do |group|
             properties[group] = Faker::Lorem.word
           end
@@ -94,7 +95,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
 
     context 'with grouped_by_values' do
-      let(:grouped_by) { 'region' }
       let(:grouped_by_values) { { 'region' => 'europe' } }
 
       it 'returns a list of events' do

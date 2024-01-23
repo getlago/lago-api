@@ -18,7 +18,7 @@ module Events
       end
 
       def grouped_by_values?
-        grouped_by.present? && grouped_by_values.present?
+        grouped_by_values.present?
       end
 
       def events(force_from: false)
@@ -52,6 +52,10 @@ module Events
       end
 
       def last
+        raise NotImplementedError
+      end
+
+      def grouped_last
         raise NotImplementedError
       end
 
