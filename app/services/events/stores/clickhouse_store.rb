@@ -106,13 +106,24 @@ module Events
 
       def grouped_last
         groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
-        sql = events
-          .reorder(Arel.sql((groups + ['events_raw.timestamp DESC']).join(', ')))
-          .select(
-            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_numeric_property}) AS value",
-          )
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select(Arel.sql(
+            (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+          ))
           .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            DISTINCT ON (#{group_names}) #{group_names},
+            property
+          from events
+          ORDER BY #{group_names}, events.timestamp DESC
+        SQL
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end

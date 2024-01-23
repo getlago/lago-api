@@ -46,7 +46,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
         elsif grouped_by.present?
           grouped_by.each do |group|
-            properties[group] = Faker::Lorem.word
+            properties[group] = "#{Faker::Fantasy::Tolkien.character}_#{i}"
           end
         end
       end

@@ -56,7 +56,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           grouped_by_values.each { |grouped_by, value| event.properties[grouped_by] = value }
         elsif grouped_by.present?
           grouped_by.each do |group|
-            event.properties[group] = Faker::Lorem.word
+            event.properties[group] = "#{Faker::Fantasy::Tolkien.character}_#{i}"
           end
         end
       end
