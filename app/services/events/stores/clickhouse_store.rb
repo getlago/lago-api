@@ -61,8 +61,40 @@ module Events
         ::Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
 
+      def grouped_count
+        groups = grouped_by.map.with_index do |group, index|
+          "#{sanitized_propery_name(group)} AS g_#{index}"
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select((groups + ['events_raw.transaction_id']).join(', '))
+
+        sql = <<-SQL
+          with events as (#{cte_sql.to_sql})
+
+          select
+            #{group_names.join(', ')},
+            toDecimal128(count(), #{DECIMAL_SCALE})
+          from events
+          group by #{group_names.join(',')}
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
+      end
+
       def max
         events.maximum(Arel.sql(sanitized_numeric_property))
+      end
+
+      def grouped_max
+        results = events
+          .reorder(nil)
+          .group(grouped_by.map { |group| sanitized_propery_name(group) })
+          .maximum(Arel.sql(sanitized_numeric_property))
+          .map { |group, value| [group, value].flatten }
+
+        prepare_grouped_result(results)
       end
 
       def last
@@ -70,6 +102,30 @@ module Events
         return value unless value
 
         BigDecimal(value)
+      end
+
+      def grouped_last
+        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select(Arel.sql(
+            (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+          ))
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            DISTINCT ON (#{group_names}) #{group_names},
+            property
+          from events
+          ORDER BY #{group_names}, events.timestamp DESC
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def sum
@@ -85,6 +141,28 @@ module Events
         SQL
 
         ::Clickhouse::EventsRaw.connection.select_value(sql)
+      end
+
+      def grouped_sum
+        groups = grouped_by.map.with_index do |group, index|
+          "#{sanitized_propery_name(group)} AS g_#{index}"
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select((groups + [Arel.sql("#{sanitized_numeric_property} AS property")]).join(', '))
+
+        sql = <<-SQL
+          with events as (#{cte_sql.to_sql})
+
+          select
+            #{group_names},
+            sum(events.property)
+          from events
+          group by #{group_names}
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -186,6 +264,12 @@ module Events
         scope
       end
 
+      def sanitized_propery_name(property = aggregation_property)
+        ActiveRecord::Base.sanitize_sql_for_conditions(
+          ['events_raw.properties[?]', property],
+        )
+      end
+
       def numeric_condition
         ActiveRecord::Base.sanitize_sql_for_conditions(
           [
@@ -221,6 +305,20 @@ module Events
         to_in_timezone = date_in_customer_timezone_sql(to)
 
         "(date_diff('days', #{from_in_timezone}, #{to_in_timezone}) + 1) / #{duration}"
+      end
+
+      # NOTE: returns the values for each groups
+      #       The result format will be an array of hash with the format:
+      #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
+      def prepare_grouped_result(rows)
+        rows.map do |row|
+          groups = row.flatten[...-1].map(&:presence)
+
+          {
+            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            value: row.last,
+          }
+        end
       end
     end
   end

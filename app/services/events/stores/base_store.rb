@@ -18,7 +18,7 @@ module Events
       end
 
       def grouped_by_values?
-        grouped_by.present? && grouped_by_values.present?
+        grouped_by_values.present?
       end
 
       def events(force_from: false)
@@ -39,7 +39,15 @@ module Events
 
       delegate :count, to: :events
 
+      def grouped_count
+        raise NotImplementedError
+      end
+
       def max
+        raise NotImplementedError
+      end
+
+      def grouped_max
         raise NotImplementedError
       end
 
@@ -47,7 +55,15 @@ module Events
         raise NotImplementedError
       end
 
+      def grouped_last
+        raise NotImplementedError
+      end
+
       def sum
+        raise NotImplementedError
+      end
+
+      def grouped_sum
         raise NotImplementedError
       end
 

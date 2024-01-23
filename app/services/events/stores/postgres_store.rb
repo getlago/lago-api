@@ -43,16 +43,59 @@ module Events
         events.pluck(Arel.sql("(#{sanitized_propery_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
+      def grouped_count
+        results = events
+          .reorder(nil)
+          .group(sanitized_grouped_by)
+          .count
+          .map { |group, value| [group, value].flatten }
+
+        prepare_grouped_result(results)
+      end
+
       def max
         events.maximum("(#{sanitized_propery_name})::numeric")
+      end
+
+      def grouped_max
+        results = events
+          .reorder(nil)
+          .group(sanitized_grouped_by)
+          .maximum("(#{sanitized_propery_name})::numeric")
+          .map { |group, value| [group, value].flatten }
+
+        prepare_grouped_result(results)
       end
 
       def last
         events.reorder(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
       end
 
+      def grouped_last
+        groups = sanitized_grouped_by
+
+        sql = events
+          .reorder(Arel.sql((groups + ['events.timestamp DESC']).join(', ')))
+          .select(
+            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_propery_name})::numeric AS value",
+          )
+          .to_sql
+
+        prepare_grouped_result(Event.connection.select_all(sql).rows)
+      end
+
       def sum
         events.sum("(#{sanitized_propery_name})::numeric")
+      end
+
+      def grouped_sum
+        results = events
+          .reorder(nil)
+          .group(sanitized_grouped_by)
+          .sum("(#{sanitized_propery_name})::numeric")
+          .map { |group, value| [group, value].flatten }
+
+        prepare_grouped_result(results)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -136,9 +179,9 @@ module Events
         scope
       end
 
-      def sanitized_propery_name
+      def sanitized_propery_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events.properties->>?', aggregation_property],
+          ['events.properties->>?', property],
         )
       end
 
@@ -151,6 +194,10 @@ module Events
         "#{sanitized_propery_name} ~ '^-?\\d+(\\.\\d+)?$'"
       end
 
+      def sanitized_grouped_by
+        grouped_by.map { sanitized_propery_name(_1) }
+      end
+
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
       #       Dates are in customer timezone to make sure the duration is good
       def duration_ratio_sql(from, to, duration)
@@ -158,6 +205,20 @@ module Events
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{duration}::numeric"
+      end
+
+      # NOTE: returns the values for each groups
+      #       The result format will be an array of hash with the format:
+      #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
+      def prepare_grouped_result(rows)
+        rows.map do |row|
+          groups = row[...-1].map(&:presence)
+
+          {
+            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            value: row.last,
+          }
+        end
       end
     end
   end

@@ -41,7 +41,14 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       if i.even?
         properties[group.key.to_s] = group.value.to_s if group
-        properties[grouped_by] = grouped_by_values[grouped_by] if grouped_by_values
+
+        if grouped_by_values.present?
+          grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
+        elsif grouped_by.present?
+          grouped_by.each do |group|
+            properties[group] = "#{Faker::Fantasy::Tolkien.character}_#{i}"
+          end
+        end
       end
 
       events << Clickhouse::EventsRaw.create!(
@@ -88,7 +95,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
 
     context 'with grouped_by_values' do
-      let(:grouped_by) { 'region' }
       let(:grouped_by_values) { { 'region' => 'europe' } }
 
       it 'returns a list of events' do
@@ -100,6 +106,48 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   describe '.count' do
     it 'returns the number of unique events' do
       expect(event_store.count).to eq(5)
+    end
+  end
+
+  describe '.grouped_count' do
+    let(:grouped_by) { %w[cloud] }
+
+    it 'returns the number of unique events grouped by the provided group' do
+      result = event_store.grouped_count
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
+      expect(null_group[:value]).to eq(2)
+
+      result.each do |row|
+        next if row[:groups]['cloud'].nil?
+
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).to eq(1)
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the number of unique events grouped by the provided groups' do
+        result = event_store.grouped_count
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value]).to eq(2)
+
+        result[...-1].each do |row|
+          next if row[:groups]['cloud'].nil?
+
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).to eq(1)
+        end
+      end
     end
   end
 
@@ -141,6 +189,53 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '.grouped_max' do
+    let(:grouped_by) { %w[cloud] }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the max values grouped by the provided group' do
+      result = event_store.grouped_max
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
+      expect(null_group[:value]).to eq(4)
+
+      result[...-1].each do |row|
+        next if row[:groups]['cloud'].nil?
+
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the max values grouped by the provided groups' do
+        result = event_store.grouped_max
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value]).to eq(4)
+
+        result[...-1].each do |row|
+          next if row[:groups]['cloud'].nil?
+
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
   describe '.last' do
     it 'returns the last event' do
       event_store.aggregation_property = billable_metric.field_name
@@ -150,12 +245,106 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '.grouped_last' do
+    let(:grouped_by) { %w[cloud] }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the value attached to each event prorated on the provided duration' do
+      result = event_store.grouped_last
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
+      expect(null_group[:value]).to eq(4)
+
+      result[...-1].each do |row|
+        next if row[:groups]['cloud'].nil?
+
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the last value for each provided groups' do
+        result = event_store.grouped_last
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value]).to eq(4)
+
+        result[...-1].each do |row|
+          next if row[:groups]['cloud'].nil?
+
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
   describe '.sum' do
     it 'returns the sum of event properties' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
 
       expect(event_store.sum).to eq(15)
+    end
+  end
+
+  describe '.grouped_sum' do
+    let(:grouped_by) { %w[cloud] }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the sum of values grouped by the provided group' do
+      result = event_store.grouped_sum
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
+      expect(null_group[:value]).to eq(6)
+
+      result[...-1].each do |row|
+        next if row[:groups]['cloud'].nil?
+
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the sum of values grouped by the provided groups' do
+        result = event_store.grouped_sum
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value]).to eq(6)
+
+        result[...-1].each do |row|
+          next if row[:groups]['cloud'].nil?
+
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
+        end
+      end
     end
   end
 
