@@ -3061,7 +3061,7 @@ type Fee implements InvoiceItem {
   feeType: FeeTypesEnum!
   group: Group
   groupName: String
-  groupedBy: [String!]!
+  groupedBy: JSON!
   id: ID!
   invoiceDisplayName: String
   invoiceName: String
