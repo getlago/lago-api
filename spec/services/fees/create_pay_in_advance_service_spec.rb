@@ -309,7 +309,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             pay_in_advance_event_id: event.id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
-            grouped_by: ['foo'],
+            grouped_by: { 'operator' => 'foo' },
 
             taxes_rate: 20.0,
             taxes_amount_cents: 2,
@@ -387,7 +387,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           expect(cached_aggregation.current_aggregation).to eq(9)
           expect(cached_aggregation.max_aggregation).to eq(9)
           expect(cached_aggregation.max_aggregation_with_proration).to be_nil
-          expect(cached_aggregation.grouped_by).to eq([])
+          expect(cached_aggregation.grouped_by).to eq({})
         end
       end
     end
