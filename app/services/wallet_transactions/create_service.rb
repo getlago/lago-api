@@ -75,8 +75,6 @@ module WalletTransactions
           reset_consumed_credits:,
         ).call
 
-        Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: granted_credits_amount).call
-
         wallet_transaction
       end
     end

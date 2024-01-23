@@ -3,7 +3,7 @@
 class Wallet < ApplicationRecord
   include PaperTrailTraceable
 
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
 
   has_one :organization, through: :customer
 
