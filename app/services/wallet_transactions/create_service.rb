@@ -43,6 +43,7 @@ module WalletTransactions
         status: :pending,
         source:,
       )
+      Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: paid_credits_amount).call
 
       BillPaidCreditJob.perform_later(
         wallet_transaction,
@@ -73,6 +74,8 @@ module WalletTransactions
           credits_amount: granted_credits_amount,
           reset_consumed_credits:,
         ).call
+
+        Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: granted_credits_amount).call
 
         wallet_transaction
       end
