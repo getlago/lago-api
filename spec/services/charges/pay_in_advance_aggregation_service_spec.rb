@@ -44,17 +44,65 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             event_store_class: Events::Stores::PostgresStore,
             charge:,
             subscription:,
-            group:,
-            event:,
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
+            },
+            filters: {
+              group:,
+              event:,
             },
           )
 
         expect(count_service).to have_received(:aggregate).with(
           options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
         )
+      end
+
+      describe 'when charge model has grouped_by property' do
+        let(:charge) do
+          create(
+            :standard_charge,
+            billable_metric:,
+            pay_in_advance: true,
+            properties: { 'grouped_by' => ['operator'], 'amount' => '100' },
+          )
+        end
+
+        let(:event) do
+          create(
+            :event,
+            organization:,
+            external_subscription_id: subscription.external_id,
+            properties: { 'operator' => 'foo' },
+          )
+        end
+
+        it 'delegates to the count aggregation service' do
+          allow(BillableMetrics::Aggregations::CountService).to receive(:new).and_return(count_service)
+
+          agg_service.call
+
+          expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
+            .with(
+              event_store_class: Events::Stores::PostgresStore,
+              charge:,
+              subscription:,
+              boundaries: {
+                from_datetime: boundaries[:charges_from_datetime],
+                to_datetime: boundaries[:charges_to_datetime],
+              },
+              filters: {
+                group:,
+                event:,
+                grouped_by_values: { 'operator' => 'foo' },
+              },
+            )
+
+          expect(count_service).to have_received(:aggregate).with(
+            options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
+          )
+        end
       end
     end
 
@@ -75,11 +123,13 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             event_store_class: Events::Stores::PostgresStore,
             charge:,
             subscription:,
-            group:,
-            event:,
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
+            },
+            filters: {
+              group:,
+              event:,
             },
           )
 
@@ -105,11 +155,13 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             event_store_class: Events::Stores::PostgresStore,
             charge:,
             subscription:,
-            group:,
-            event:,
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
+            },
+            filters: {
+              group:,
+              event:,
             },
           )
 

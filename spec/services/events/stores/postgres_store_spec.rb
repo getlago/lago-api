@@ -8,7 +8,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       code:,
       subscription:,
       boundaries:,
-      filters: { group:, grouped_by:, grouped_by_value: },
+      filters: { group:, grouped_by:, grouped_by_values: },
     )
   end
 
@@ -31,7 +31,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
   let(:group) { nil }
   let(:grouped_by) { nil }
-  let(:grouped_by_value) { nil }
+  let(:grouped_by_values) { nil }
 
   let(:events) do
     events = []
@@ -51,7 +51,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       if i.even?
         event.properties[group.key] = group.value if group
-        event.properties[grouped_by] = grouped_by_value if grouped_by_value
+        event.properties[grouped_by] = grouped_by_values[grouped_by] if grouped_by_values
       end
 
       event.save!
@@ -77,9 +77,9 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       end
     end
 
-    context 'with grouped_by_value' do
+    context 'with grouped_by_values' do
       let(:grouped_by) { 'region' }
-      let(:grouped_by_value) { 'europe' }
+      let(:grouped_by_values) { { 'region' => 'europe' } }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)

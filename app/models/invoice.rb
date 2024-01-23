@@ -159,11 +159,11 @@ class Invoice < ApplicationRecord
       event_store_class: Events::Stores::PostgresStore,
       charge: fee.charge,
       subscription: fee.subscription,
-      group: fee.group,
       boundaries: {
         from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
         to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
       },
+      filters: { group: fee.group },
     ).breakdown.breakdown
   end
 

@@ -268,6 +268,57 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       end
     end
 
+    context 'when charge has a grouped_by property' do
+      let(:charge) do
+        create(
+          :standard_charge,
+          billable_metric:,
+          pay_in_advance: true,
+          properties: { 'grouped_by' => ['operator'], 'amount' => '100' },
+        )
+      end
+
+      let(:event) do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          properties: { 'operator' => 'foo' },
+        )
+      end
+
+      it 'creates a fee' do
+        result = fee_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.fees.count).to eq(1)
+          expect(result.fees.first).to have_attributes(
+            subscription:,
+            charge:,
+            amount_cents: 10,
+            amount_currency: 'EUR',
+            fee_type: 'charge',
+            pay_in_advance: true,
+            invoiceable: charge,
+            units: 9,
+            properties: Hash,
+            events_count: 1,
+            group: nil,
+            pay_in_advance_event_id: event.id,
+            unit_amount_cents: 1,
+            precise_unit_amount: 0.01111111111,
+            grouped_by: ['foo'],
+
+            taxes_rate: 20.0,
+            taxes_amount_cents: 2,
+          )
+          expect(result.fees.first.applied_taxes.count).to eq(1)
+        end
+      end
+    end
+
     context 'when in estimate mode' do
       let(:estimate) { true }
 
@@ -336,6 +387,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           expect(cached_aggregation.current_aggregation).to eq(9)
           expect(cached_aggregation.max_aggregation).to eq(9)
           expect(cached_aggregation.max_aggregation_with_proration).to be_nil
+          expect(cached_aggregation.grouped_by).to eq([])
         end
       end
     end

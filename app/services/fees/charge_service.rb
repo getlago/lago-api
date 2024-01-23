@@ -231,12 +231,12 @@ module Fees
         charge:,
         current_usage: is_current_usage,
         subscription:,
-        group:,
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration,
         },
+        filters: { group: },
       )
     end
 
