@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Wallets::Balance::IncreaseService, type: :service do
+RSpec.describe Wallets::Balance::IncreaseOngoingService, type: :service do
   subject(:create_service) { described_class.new(wallet:, credits_amount:) }
 
   let(:credits_amount) { BigDecimal('4.5') }
@@ -19,10 +19,10 @@ RSpec.describe Wallets::Balance::IncreaseService, type: :service do
   before { wallet }
 
   describe '.call' do
-    it 'updates wallet balance' do
+    it 'updates wallet ongoing balance' do
       expect { create_service.call }
-        .to change(wallet.reload, :balance_cents).from(1000).to(1450)
-        .and change(wallet, :credits_balance).from(10.0).to(14.5)
+        .to change(wallet, :ongoing_balance_cents).from(800).to(1250)
+        .and change(wallet, :credits_ongoing_balance).from(8.0).to(12.5)
     end
   end
 end
