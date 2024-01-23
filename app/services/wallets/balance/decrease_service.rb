@@ -16,16 +16,14 @@ module Wallets
 
         wallet.update!(
           balance_cents: wallet.balance_cents - amount_cents,
-          ongoing_balance_cents: wallet.ongoing_balance_cents - amount_cents,
           credits_balance: wallet.credits_balance - credits_amount,
-          credits_ongoing_balance: wallet.credits_ongoing_balance - credits_amount,
           last_balance_sync_at: Time.zone.now,
           consumed_credits: wallet.consumed_credits + credits_amount,
           consumed_amount_cents: wallet.consumed_amount_cents + amount_cents,
           last_consumed_credit_at: Time.current,
         )
 
-        handle_threshold_top_up
+        Wallets::Balance::RefreshOngoingService.call(wallet:)
 
         result.wallet = wallet
         result
@@ -34,20 +32,6 @@ module Wallets
       private
 
       attr_reader :wallet, :credits_amount
-
-      def handle_threshold_top_up
-        threshold_rule = wallet.recurring_transaction_rules.where(rule_type: :threshold).first
-
-        return if threshold_rule.nil? || wallet.credits_ongoing_balance > threshold_rule.threshold_credits
-
-        WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
-          organization_id: wallet.organization.id,
-          wallet_id: wallet.id,
-          paid_credits: threshold_rule.paid_credits.to_s,
-          granted_credits: threshold_rule.granted_credits.to_s,
-          source: :threshold,
-        )
-      end
     end
   end
 end

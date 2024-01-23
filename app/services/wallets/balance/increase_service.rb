@@ -4,7 +4,7 @@ module Wallets
   module Balance
     class IncreaseService < BaseService
       def initialize(wallet:, credits_amount:, reset_consumed_credits: false)
-        super(nil)
+        super
 
         @wallet = wallet
         @credits_amount = credits_amount
@@ -27,6 +27,7 @@ module Wallets
         end
 
         wallet.update!(update_params)
+        Wallets::Balance::RefreshOngoingService.call(wallet:)
 
         result.wallet = wallet
         result
