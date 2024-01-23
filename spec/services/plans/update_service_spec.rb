@@ -299,6 +299,36 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
+      context 'when only some minimum commitment arguments are present' do
+        let(:minimum_commitment_args) do
+          { invoice_display_name: minimum_commitment_invoice_display_name }
+        end
+
+        before { update_args.merge!({ minimum_commitment: minimum_commitment_args }) }
+
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'does not update minimum commitment args that are not present' do
+            result = plans_service.call
+
+            aggregate_failures do
+              expect(result.plan.minimum_commitment.invoice_display_name).to eq(minimum_commitment_invoice_display_name)
+              expect(result.plan.minimum_commitment.amount_cents).to eq(minimum_commitment.amount_cents)
+            end
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not update minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment.invoice_display_name).to eq(minimum_commitment.invoice_display_name)
+            expect(result.plan.minimum_commitment.amount_cents).to eq(minimum_commitment.amount_cents)
+          end
+        end
+      end
+
       context 'when minimum commitment arguments are not present' do
         context 'when license is premium' do
           around { |test| lago_premium!(&test) }
