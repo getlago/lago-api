@@ -115,7 +115,7 @@ module PaymentProviderCustomers
         shopperReference: customer.external_id,
         storePaymentMethodMode: 'enabled',
         recurringProcessingModel: 'UnscheduledCardOnFile',
-        expiresAt: Time.current + 70.days,
+        expiresAt: Time.current + 69.days,
       }
       prms[:shopperEmail] = customer.email if customer.email
       prms
