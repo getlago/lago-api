@@ -59,6 +59,9 @@ RSpec.describe ::V1::PlanSerializer do
         'updated_at' => commitment.updated_at.iso8601,
         'taxes' => [],
       )
+      expect(result['plan']['minimum_commitment']).not_to include(
+        'commitment_type' => 'minimum_commitment',
+      )
     end
   end
 

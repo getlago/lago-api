@@ -45,7 +45,7 @@ module V1
         minimum_commitment: V1::CommitmentSerializer.new(
           model.minimum_commitment,
           includes: include?(:taxes) ? %i[taxes] : [],
-        ).serialize,
+        ).serialize.except(:commitment_type),
       }
     end
 
