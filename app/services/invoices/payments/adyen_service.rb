@@ -69,6 +69,22 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      def generate_payment_url
+        return result unless should_process_payment?
+
+        res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_url_params).to_h)
+        handle_adyen_response(res)
+
+        return result unless result.success?
+
+        result.payment_url = res.response['url']
+
+        result
+      rescue Adyen::AdyenError => e
+        deliver_error_webhook(e)
+        result
+      end
+
       private
 
       attr_accessor :invoice
@@ -88,6 +104,10 @@ module Invoices
           env: adyen_payment_provider.environment,
           live_url_prefix: adyen_payment_provider.live_prefix,
         )
+      end
+
+      def success_redirect_url
+        adyen_payment_provider.success_redirect_url.presence || PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL
       end
 
       def adyen_payment_provider
@@ -140,6 +160,24 @@ module Invoices
           merchantAccount: adyen_payment_provider.merchant_account,
           shopperInteraction: 'ContAuth',
           recurringProcessingModel: 'UnscheduledCardOnFile',
+        }
+        prms[:shopperEmail] = customer.email if customer.email
+        prms
+      end
+
+      def payment_url_params
+        prms = {
+          reference: invoice.id,
+          amount: {
+            value: invoice.total_amount_cents,
+            currency: invoice.currency.upcase,
+          },
+          merchantAccount: adyen_payment_provider.merchant_account,
+          returnUrl: success_redirect_url,
+          shopperReference: customer.external_id,
+          storePaymentMethodMode: 'enabled',
+          recurringProcessingModel: 'UnscheduledCardOnFile',
+          expiresAt: Time.current + 1.day,
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
