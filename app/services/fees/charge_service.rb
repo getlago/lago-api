@@ -192,6 +192,8 @@ module Fees
 
     def persist_recurring_value(aggregation_result, group)
       return if is_current_usage
+
+      # NOTE: Only weighted sum aggregation is setting this value
       return unless aggregation_result.recurring_updated_at
 
       result.quantified_events ||= []

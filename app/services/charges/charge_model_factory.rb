@@ -3,13 +3,17 @@
 module Charges
   class ChargeModelFactory
     def self.new_instance(charge:, aggregation_result:, properties:)
-      charge_model_class(charge:).new(charge:, aggregation_result:, properties:)
+      charge_model_class(charge:, aggregation_result:).new(charge:, aggregation_result:, properties:)
     end
 
-    def self.charge_model_class(charge:)
+    def self.charge_model_class(charge:, aggregation_result:)
       case charge.charge_model.to_sym
       when :standard
-        Charges::ChargeModels::StandardService
+        if charge.properties['grouped_by'].present? && aggregation_result.aggregations.present?
+          Charges::ChargeModels::GroupedStandardService
+        else
+          Charges::ChargeModels::StandardService
+        end
       when :graduated
         if charge.prorated?
           Charges::ChargeModels::ProratedGraduatedService
