@@ -12,7 +12,7 @@ module Types
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
         field :charge, Types::Charges::Object, null: false
-        field :grouped_by, [String], null: true
+        field :grouped_by, GraphQL::Types::JSON, null: true
         field :groups, [Types::Customers::Usage::ChargeGroup], null: true
 
         def units

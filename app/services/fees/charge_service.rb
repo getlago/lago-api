@@ -70,14 +70,15 @@ module Fees
     def init_fee(properties:, group: nil)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
-      if invoice.draft? && adjusted_fee(group) && !adjusted_fee(group).adjusted_display_name?
-        amount_result = compute_amount_for_adjusted_fee(properties:, group:)
-        return result.fail_with_error!(amount_result.error) unless amount_result.success?
+      if invoice.draft? && (adjusted = adjusted_fee(group)) && !adjusted.adjusted_display_name?
+        adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
+          adjusted_fee: adjusted,
+          boundaries:,
+          properties:,
+        )
+        return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
 
-        new_fee = init_adjusted_fee(amount_result, group)
-
-        result.fees << new_fee
-
+        result.fees << adjustement_result.fee
         return
       end
 
@@ -127,47 +128,6 @@ module Fees
       result.fees << new_fee
     end
 
-    def init_adjusted_fee(amount_result, group)
-      currency = invoice.total_amount.currency
-      adjusted_fee = adjusted_fee(group)
-
-      units = adjusted_fee.units
-      if adjusted_fee.adjusted_units?
-        rounded_amount = amount_result.amount.round(currency.exponent)
-        amount_cents = rounded_amount * currency.subunit_to_unit
-        unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
-        precise_unit_amount = amount_result.unit_amount
-        amount_details = amount_result.amount_details
-      else
-        unit_amount_cents = adjusted_fee.unit_amount_cents.round
-        amount_cents = (units * unit_amount_cents).round
-        precise_unit_amount = amount_cents / (currency.subunit_to_unit * units)
-        amount_details = {}
-      end
-
-      Fee.new(
-        invoice:,
-        subscription:,
-        charge:,
-        amount_cents:,
-        amount_currency: currency,
-        fee_type: :charge,
-        invoiceable_type: 'Charge',
-        invoiceable: charge,
-        units:,
-        total_aggregated_units: units,
-        properties: boundaries.to_h,
-        events_count: 0,
-        group_id: group&.id,
-        payment_status: :pending,
-        taxes_amount_cents: 0,
-        unit_amount_cents:,
-        precise_unit_amount:,
-        amount_details:,
-        invoice_display_name: adjusted_fee.invoice_display_name,
-      )
-    end
-
     def adjusted_fee(group)
       @adjusted_fee ||= {}
 
@@ -180,20 +140,6 @@ module Fees
         .where("properties->>'charges_from_datetime' = ?", boundaries.charges_from_datetime&.iso8601(3))
         .where("properties->>'charges_to_datetime' = ?", boundaries.charges_to_datetime&.iso8601(3))
         .first
-    end
-
-    def compute_amount_for_adjusted_fee(properties:, group:)
-      adjusted_fee = adjusted_fee(group)
-      adjusted_fee_result = BaseService::Result.new
-
-      return adjusted_fee_result if adjusted_fee.adjusted_amount?
-
-      adjusted_fee_result.aggregation = adjusted_fee.units
-      adjusted_fee_result.current_usage_units = adjusted_fee.units
-      adjusted_fee_result.full_units_number = adjusted_fee.units
-      adjusted_fee_result.count = 0
-
-      apply_charge_model_service(adjusted_fee_result, properties)
     end
 
     def init_true_up_fee(fee:, amount_cents:)
@@ -241,28 +187,7 @@ module Fees
     end
 
     def apply_charge_model_service(aggregation_result, properties)
-      model_service = case charge.charge_model.to_sym
-                      when :standard
-                        Charges::ChargeModels::StandardService
-                      when :graduated
-                        if charge.prorated?
-                          Charges::ChargeModels::ProratedGraduatedService
-                        else
-                          Charges::ChargeModels::GraduatedService
-                        end
-                      when :graduated_percentage
-                        Charges::ChargeModels::GraduatedPercentageService
-                      when :package
-                        Charges::ChargeModels::PackageService
-                      when :percentage
-                        Charges::ChargeModels::PercentageService
-                      when :volume
-                        Charges::ChargeModels::VolumeService
-                      else
-                        raise(NotImplementedError)
-      end
-
-      model_service.apply(charge:, aggregation_result:, properties:)
+      Charges::ChargeModelFactory.new_instance(charge:, aggregation_result:, properties:).apply
     end
 
     def persist_recurring_value(aggregation_result, group)
