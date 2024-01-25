@@ -237,10 +237,10 @@ module Customers
 
       return unless update_provider_customer
 
+      create_or_update_provider_customer(customer, billing)
+
       if customer.provider_customer&.provider_customer_id
         PaymentProviderCustomers::UpdateService.call(customer)
-      else
-        create_or_update_provider_customer(customer, billing)
       end
     end
 
