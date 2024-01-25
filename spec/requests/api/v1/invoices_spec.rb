@@ -563,7 +563,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        expect(json[:invoice_payment_url][:payment_url]).to eq('https://example.com')
+        expect(json[:invoice_payment_details][:payment_url]).to eq('https://example.com')
       end
     end
   end

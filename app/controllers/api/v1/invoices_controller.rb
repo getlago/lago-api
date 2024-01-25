@@ -144,7 +144,7 @@ module Api
           render(
             json: ::V1::PaymentProviders::InvoicePaymentSerializer.new(
               invoice,
-              root_name: 'invoice_payment_url',
+              root_name: 'invoice_payment_details',
               payment_url: result.payment_url,
             ),
           )
