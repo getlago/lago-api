@@ -11,7 +11,7 @@ module BillableMetrics
         event_store.use_from_boundary = !billable_metric.recurring
       end
 
-      def aggregate(options: {})
+      def compute_aggregation(options: {})
         aggregation = event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
@@ -23,6 +23,35 @@ module BillableMetrics
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = event_store.count
         result.options = { running_total: running_total(options) }
+        result
+      rescue ActiveRecord::StatementInvalid => e
+        result.service_failure!(code: 'aggregation_failure', message: e.message)
+      end
+
+      # NOTE: Apply the grouped_by filter to the aggregation
+      #       Result will have an aggregations attribute
+      #       containing the aggregation result of each group.
+      #
+      #       This logic is only applicable for in arrears aggregation
+      #       (exept for the current_usage update)
+      #       as pay in advance aggregation will be computed on a single group
+      #       with the grouped_by_values filter
+      def compute_grouped_by_aggregation(*)
+        aggregations = event_store.grouped_sum
+        counts = event_store.grouped_count
+
+        result.aggregations = aggregations.map do |aggregation|
+          # TODO: in_advance and current_usage
+
+          group_result = BaseService::Result.new
+          group_result.grouped_by = aggregation[:groups]
+          group_result.aggregation = aggregation[:value]
+
+          count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
+          group_result.count = count[:value] || 0
+          group_result
+        end
+
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
@@ -89,6 +118,10 @@ module BillableMetrics
       end
 
       protected
+
+      def support_grouped_aggregation?
+        true
+      end
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values

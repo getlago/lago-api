@@ -12,19 +12,18 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         from_datetime:,
         to_datetime:,
       },
-      filters: {
-        group:,
-        event: pay_in_advance_event,
-      },
+      filters:,
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
+  let(:grouped_by) { nil }
 
   let(:billable_metric) do
     create(
@@ -503,6 +502,42 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       result = sum_service.per_event_aggregation
 
       expect(result.event_aggregation).to eq([12, 12, 12, 12])
+    end
+  end
+
+  describe '.grouped_by aggregation' do
+    let(:grouped_by) { ['agent_name'] }
+
+    let(:agent_names) { %w[aragorn frodo gimli legolas] }
+
+    let(:old_events) { [] }
+
+    let(:latest_events) do
+      agent_names.each do |agent_name|
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            total_count: 12,
+            agent_name:,
+          },
+        )
+      end
+    end
+
+    it 'returns a grouped aggregations' do
+      result = sum_service.aggregate(options:)
+
+      expect(result.aggregations.count).to eq(4)
+
+      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+        expect(aggregation.aggregation).to eq(12)
+        expect(aggregation.count).to eq(1)
+        expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+      end
     end
   end
 end
