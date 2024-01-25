@@ -32,7 +32,6 @@ module Fees
       adjusted_fee_result.current_usage_units = adjusted_fee.units
       adjusted_fee_result.full_units_number = adjusted_fee.units
       adjusted_fee_result.count = 0
-      adjusted_fee_result.grouped_by = adjusted_fee.grouped_by
 
       apply_charge_model_service(adjusted_fee_result)
     end

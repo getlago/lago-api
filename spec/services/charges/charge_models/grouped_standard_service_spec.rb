@@ -47,10 +47,10 @@ RSpec.describe Charges::ChargeModels::GroupedStandardService do
   end
 
   it 'applies the charge model to the values' do
-    expect(apply_grouped_standard_service.model_results.count).to eq(group_results.count)
+    expect(apply_grouped_standard_service.grouped_results.count).to eq(group_results.count)
 
     group_results.each_with_index do |group_result, index|
-      result = apply_grouped_standard_service.model_results[index]
+      result = apply_grouped_standard_service.grouped_results[index]
 
       expect(result.units).to eq(group_result[:aggregation])
       expect(result.current_usage_units).to eq(nil)

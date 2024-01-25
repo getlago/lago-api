@@ -16,7 +16,7 @@ module Charges
       end
 
       def apply
-        result.model_results = aggregation_result.aggregations.map do |aggregation|
+        result.grouped_results = aggregation_result.aggregations.map do |aggregation|
           group_result = Charges::ChargeModels::StandardService.apply(
             charge:,
             aggregation_result: aggregation,

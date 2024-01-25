@@ -42,7 +42,7 @@ module Types
         end
 
         def grouped_usage
-          return [] unless object.first.grouped_by
+          return [] unless object.any? { |f| f.grouped_by.present? }
 
           object
         end
