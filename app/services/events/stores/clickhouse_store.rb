@@ -88,13 +88,27 @@ module Events
       end
 
       def grouped_max
-        results = events
-          .reorder(nil)
-          .group(grouped_by.map { |group| sanitized_propery_name(group) })
-          .maximum(Arel.sql(sanitized_numeric_property))
-          .map { |group, value| [group, value].flatten }
+        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
-        prepare_grouped_result(results)
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select(Arel.sql(
+            (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+          ))
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            #{group_names},
+            MAX(property)
+          from events
+          group by #{group_names}
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def last
