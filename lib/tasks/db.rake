@@ -17,7 +17,10 @@ namespace :db do
 
     migration_file = 'db/clickhouse_schema.rb'
     text = File.read(migration_file)
-    new_contents = text.gsub(ENV.fetch('LAGO_KAFKA_BOOTSTRAP_SERVERS', ''), '*****')
-    File.open(migration_file, 'w') { |file| file.puts new_contents }
+
+    text = text.gsub(ENV.fetch('LAGO_KAFKA_BOOTSTRAP_SERVERS', ''), '*****')
+    text = text.gsub(ENV.fetch('LAGO_KAFKA_EVENTS_RAW_TOPIC', ''), '*****')
+
+    File.open(migration_file, 'w') { |file| file.puts text }
   end
 end
