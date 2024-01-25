@@ -11,7 +11,7 @@ RSpec.describe Invoices::Payments::PaymentProviders::Factory, type: :service do
 
   describe '#self.new_instance' do
     context 'when stripe' do
-      it  'returns correct class' do
+      it 'returns correct class' do
         expect(factory_service.class.to_s).to eq('Invoices::Payments::StripeService')
       end
     end
@@ -19,7 +19,7 @@ RSpec.describe Invoices::Payments::PaymentProviders::Factory, type: :service do
     context 'when adyen' do
       let(:payment_provider) { 'adyen' }
 
-      it  'returns correct class' do
+      it 'returns correct class' do
         expect(factory_service.class.to_s).to eq('Invoices::Payments::AdyenService')
       end
     end
@@ -27,7 +27,7 @@ RSpec.describe Invoices::Payments::PaymentProviders::Factory, type: :service do
     context 'when gocardless' do
       let(:payment_provider) { 'gocardless' }
 
-      it  'returns correct class' do
+      it 'returns correct class' do
         expect(factory_service.class.to_s).to eq('Invoices::Payments::GocardlessService')
       end
     end

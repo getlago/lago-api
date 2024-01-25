@@ -5,7 +5,7 @@ module Invoices
     module PaymentProviders
       class Factory
         def self.new_instance(invoice:)
-          self.service_class(invoice.customer&.payment_provider).new(invoice)
+          service_class(invoice.customer&.payment_provider).new(invoice)
         end
 
         def self.service_class(payment_provider)
