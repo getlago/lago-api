@@ -265,6 +265,29 @@ type CollectionMetadata {
   totalPages: Int!
 }
 
+type Commitment {
+  amountCents: BigInt!
+  commitmentType: CommitmentTypeEnum!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  invoiceDisplayName: String
+  plan: Plan!
+  taxes: [Tax!]
+  updatedAt: ISO8601DateTime!
+}
+
+input CommitmentInput {
+  amountCents: BigInt
+  commitmentType: CommitmentTypeEnum
+  id: ID
+  invoiceDisplayName: String
+  taxCodes: [String!]
+}
+
+enum CommitmentTypeEnum {
+  minimum_commitment
+}
+
 enum CountryCode {
   """
   Andorra
@@ -1810,6 +1833,7 @@ input CreatePlanInput {
   description: String
   interval: PlanInterval!
   invoiceDisplayName: String
+  minimumCommitment: CommitmentInput
   name: String!
   payInAdvance: Boolean!
   taxCodes: [String!]
@@ -4272,6 +4296,7 @@ type Plan {
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
+  minimumCommitment: Commitment
   name: String!
   organization: Organization
   parent: Plan
@@ -4300,6 +4325,7 @@ input PlanOverridesInput {
   charges: [ChargeOverridesInput!]
   description: String
   invoiceDisplayName: String
+  minimumCommitment: CommitmentInput
   name: String
   taxCodes: [String!]
   trialPeriod: Float
@@ -5986,6 +6012,7 @@ input UpdatePlanInput {
   id: String!
   interval: PlanInterval!
   invoiceDisplayName: String
+  minimumCommitment: CommitmentInput
   name: String!
   payInAdvance: Boolean!
   taxCodes: [String!]

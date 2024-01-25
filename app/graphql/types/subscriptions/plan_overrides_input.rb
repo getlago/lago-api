@@ -8,6 +8,7 @@ module Types
       argument :charges, [Types::Subscriptions::ChargeOverridesInput], required: false
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
+      argument :minimum_commitment, Types::Commitments::Input, required: false
       argument :name, String, required: false
       argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false

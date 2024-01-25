@@ -47,6 +47,12 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
               deletedAt
             }
           }
+          minimumCommitment {
+            id
+            amountCents
+            invoiceDisplayName
+            taxes { id rate }
+          }
         }
       }
     GQL
@@ -61,11 +67,13 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
 
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:, plan:) }
+  let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
 
   before do
     customer
     group_property
     create_list(:subscription, 2, customer:, plan:)
+    minimum_commitment
   end
 
   it 'returns a single plan' do
@@ -82,6 +90,12 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       expect(plan_response['id']).to eq(plan.id)
       expect(plan_response['subscriptionsCount']).to eq(2)
       expect(plan_response['customersCount']).to eq(1)
+      expect(plan_response['minimumCommitment']).to include(
+        'id' => minimum_commitment.id,
+        'amountCents' => minimum_commitment.amount_cents.to_s,
+        'invoiceDisplayName' => minimum_commitment.invoice_display_name,
+        'taxes' => [],
+      )
     end
   end
 
