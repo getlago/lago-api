@@ -82,7 +82,8 @@ module Invoices
         result
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
-        result
+
+        result.single_validation_failure!(error_code: 'payment_provider_error')
       end
 
       private

@@ -86,7 +86,8 @@ module Invoices
         result
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::AuthenticationError, Stripe::PermissionError => e
         deliver_error_webhook(e)
-        result
+
+        result.single_validation_failure!(error_code: 'payment_provider_error')
       end
 
       private

@@ -537,4 +537,34 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
   end
+
+  describe 'POST /invoices/:id/payment_url' do
+    let(:organization) { create(:organization) }
+    let(:stripe_provider) { create(:stripe_provider, organization:, code:) }
+    let(:customer) { create(:customer, organization:, payment_provider_code: code) }
+    let(:code) { 'stripe_1' }
+
+    before do
+      create(
+        :stripe_customer,
+        customer_id: customer.id,
+        payment_provider: stripe_provider,
+      )
+
+      customer.update(payment_provider: 'stripe')
+
+      allow(Stripe::Checkout::Session).to receive(:create)
+        .and_return({ 'url' => 'https://example.com' })
+    end
+
+    it 'returns the generated payment url' do
+      post_with_token(organization, "/api/v1/invoices/#{invoice.id}/payment_url")
+
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+
+        expect(json[:invoice][:payment_url]).to eq('https://example.com')
+      end
+    end
+  end
 end

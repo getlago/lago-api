@@ -134,6 +134,25 @@ module Api
         head(:ok)
       end
 
+      def payment_url
+        invoice = current_organization.invoices.not_generating.includes(:customer).find_by(id: params[:id])
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = ::Invoices::Payments::GeneratePaymentUrlService.call(invoice:)
+
+        if result.success?
+          render(
+            json: ::V1::PaymentProviders::InvoicePaymentSerializer.new(
+              invoice,
+              root_name: 'invoice_payment_url',
+              payment_url: result.payment_url,
+            ),
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
