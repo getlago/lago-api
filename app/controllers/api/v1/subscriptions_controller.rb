@@ -148,6 +148,12 @@ module Api
           :trial_period,
           { tax_codes: [] },
           {
+            minimum_commitment: [
+              :id,
+              :invoice_display_name,
+              :amount_cents,
+              { tax_codes: [] },
+            ],
             charges: [
               :id,
               :billable_metric_id,

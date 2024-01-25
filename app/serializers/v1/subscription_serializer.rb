@@ -42,7 +42,7 @@ module V1
     def plan
       ::V1::PlanSerializer.new(
         model.plan,
-        includes: %i[charges taxes],
+        includes: %i[charges taxes minimum_commitment],
       ).serialize
     end
   end
