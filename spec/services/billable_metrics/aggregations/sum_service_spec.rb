@@ -513,7 +513,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     let(:old_events) { [] }
 
     let(:latest_events) do
-      agent_names.each do |agent_name|
+      agent_names.map do |agent_name|
         create(
           :event,
           code: billable_metric.code,
@@ -537,6 +537,54 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         expect(aggregation.aggregation).to eq(12)
         expect(aggregation.count).to eq(1)
         expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+      end
+    end
+
+    context 'when current usage context and charge is pay in advance' do
+      let(:options) do
+        { is_pay_in_advance: true, is_current_usage: true }
+      end
+
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 3.days,
+          current_aggregation: '4',
+          max_aggregation: '6',
+        )
+      end
+
+      before do
+        billable_metric.update!(recurring: true)
+        cached_aggregation
+      end
+
+      it 'returns period maximum as aggregation' do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregations.count).to eq(4)
+
+        result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+          expect(aggregation.aggregation).to eq(12)
+          expect(aggregation.count).to eq(1)
+          expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+        end
+      end
+
+      context 'when cached aggregation does not exist' do
+        let(:latest_events) { nil }
+        let(:cached_aggregation) { nil }
+
+        before { billable_metric.update!(recurring: false) }
+
+        it 'returns zero as aggregation' do
+          result = sum_service.aggregate(options:)
+
+          expect(result.aggregations.count).to eq(0)
+        end
       end
     end
   end

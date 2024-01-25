@@ -36,16 +36,21 @@ module BillableMetrics
       #       (exept for the current_usage update)
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
-      def compute_grouped_by_aggregation(*)
+      def compute_grouped_by_aggregation(options: {})
         aggregations = event_store.grouped_sum
         counts = event_store.grouped_count
 
         result.aggregations = aggregations.map do |aggregation|
-          # TODO: in_advance and current_usage
-
           group_result = BaseService::Result.new
           group_result.grouped_by = aggregation[:groups]
-          group_result.aggregation = aggregation[:value]
+
+          aggregation_value = aggregation[:value]
+
+          if options[:is_pay_in_advance] && options[:is_current_usage]
+            handle_in_advance_current_usage(aggregation_value, target_result: group_result)
+          else
+            group_result.aggregation = aggregation_value
+          end
 
           count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
           group_result.count = count[:value] || 0
@@ -88,6 +93,8 @@ module BillableMetrics
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 
+        cached_aggregation = find_cached_aggregation
+
         unless cached_aggregation
           return_value = BigDecimal(value).negative? ? '0' : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value, units_applied: value)
@@ -126,9 +133,7 @@ module BillableMetrics
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period
-      def cached_aggregation
-        return @cached_aggregation if @cached_aggregation
-
+      def find_cached_aggregation(grouped_by: nil)
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
@@ -137,10 +142,16 @@ module BillableMetrics
           .to_datetime(to_datetime)
           .order(timestamp: :desc)
 
+        if grouped_by.present?
+          grouped_by.each do |key, value|
+            query = query.where('cached_aggregations.grouped_by @> ?', { key.to_s => value.to_s }.to_json)
+          end
+        end
+
         query = query.where.not(event_id: event.id) if event.present?
         query = query.where(group_id: group.id) if group
 
-        @cached_aggregation = query.first
+        query.first
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)
