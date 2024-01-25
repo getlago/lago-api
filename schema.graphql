@@ -253,7 +253,7 @@ type ChargeUsage {
   billableMetric: BillableMetric!
   charge: Charge!
   eventsCount: Int!
-  groupedBy: [String!]
+  groupedBy: JSON
   groups: [GroupUsage!]
   units: Float!
 }

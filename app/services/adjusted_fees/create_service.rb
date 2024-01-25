@@ -32,6 +32,7 @@ module AdjustedFees
         properties: fee.properties,
         units: params[:units].presence || 0,
         unit_amount_cents: params[:unit_amount_cents].presence || 0,
+        grouped_by: fee.grouped_by,
       )
 
       adjusted_fee.save!
