@@ -108,7 +108,7 @@ module Invoices
       end
 
       def success_redirect_url
-        adyen_payment_provider.success_redirect_url.presence || PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL
+        adyen_payment_provider.success_redirect_url.presence || ::PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL
       end
 
       def adyen_payment_provider

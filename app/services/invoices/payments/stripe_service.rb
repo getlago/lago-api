@@ -98,7 +98,7 @@ module Invoices
 
       def success_redirect_url
         stripe_payment_provider.success_redirect_url.presence ||
-          PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
+          ::PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
       end
 
       def should_process_payment?
