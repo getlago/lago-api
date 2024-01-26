@@ -12,19 +12,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         from_datetime:,
         to_datetime:,
       },
-      filters: {
-        group:,
-        event: pay_in_advance_event,
-      },
+      filters:,
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
 
   let(:subscription) { create(:subscription, started_at: Time.zone.parse('2022-12-01 00:00:00')) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
+  let(:grouped_by) { nil }
 
   let(:billable_metric) do
     create(
@@ -531,6 +530,58 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
       expect(result.event_aggregation).to eq([5, 12, 12])
       expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258, 2.32258])
+    end
+  end
+
+  describe '.grouped_by aggregation' do
+    let(:grouped_by) { ['agent_name'] }
+
+    let(:agent_names) { %w[aragorn frodo gimli legolas] }
+
+    let(:old_events) do
+      agent_names.map do |agent_name|
+        create_list(
+          :event,
+          2,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: subscription.started_at + 3.months,
+          properties: {
+            total_count: 2.5,
+            agent_name:,
+          },
+        )
+      end.flatten
+    end
+
+    let(:latest_events) do
+      agent_names.map do |agent_name|
+        create_list(
+          :event,
+          2,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: from_datetime + 25.days,
+          properties: {
+            total_count: 12,
+            agent_name:,
+          },
+        )
+      end.flatten
+    end
+
+    it 'returns a grouped aggregations' do
+      result = sum_service.aggregate(options:)
+
+      expect(result.aggregations.count).to eq(4)
+
+      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+        expect(aggregation.aggregation).to eq(9.64517) # 5 + (12*6/31) + (12*6/31)
+        expect(aggregation.count).to eq(4)
+        expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+      end
     end
   end
 end
