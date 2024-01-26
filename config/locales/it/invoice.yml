@@ -13,8 +13,10 @@ it:
     breakdown_of: Ripartizione di %{fee_group_name}
     coupons: Coupon
     credit_notes: Note di Credito
+    daily: Giornaliero
     date_from: Dal
     date_to: al
+    day: giorno
     details: Dettagli %{resource}
     document_name: Fattura
     due_date: Scadenza %{date}
@@ -86,8 +88,6 @@ it:
     volume:
       fee_per_unit: Tassa per unità
       flat_fee_for_all_units: Canone forfettario per tutte le unità
-    day: giorno
-    daily: Giornaliero
     week: settimana
     weekly: Settimanale
     year: anno
