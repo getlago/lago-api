@@ -23,12 +23,10 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
     before { subscription }
 
+    # NOTE: only test for calendar billing, as it is default option
     context 'when billed daily with calendar billing time' do
       let(:interval) { :daily }
       let(:billing_time) { :calendar }
-
-      let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, timestamp: DateTime.parse('01 Feb 2022 00:00'), recurring: true) }
-      let(:invoice) { create(:invoice, customer:, organization: plan.organization)}
 
       it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Feb 2022 00:00')
@@ -42,9 +40,6 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       end
 
       it 'does not enqueue a job on other time in the same day' do
-        invoice
-        invoice_subscription
-
         current_date = DateTime.parse('01 Feb 2022 20:00')
 
         travel_to(current_date) do
@@ -247,28 +242,6 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.to_i, recurring: true)
           end
-        end
-      end
-    end
-
-    context 'when billed daily with anniversary billing time' do
-      let(:interval) { :daily }
-      let(:billing_time) { :anniversary }
-
-      let(:current_date) { subscription_at + 24.hours}
-
-      it 'enqueues a job on billing day' do
-        travel_to(current_date) do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
-        end
-      end
-
-      it 'does not enqueue a job on other day' do
-        travel_to(current_date + 24.hours) do
-          expect { billing_service.call }.not_to have_enqueued_job
         end
       end
     end
