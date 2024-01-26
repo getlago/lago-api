@@ -23,10 +23,12 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
     before { subscription }
 
-    # NOTE: only test for calendar billing, as it is default option
     context 'when billed daily with calendar billing time' do
       let(:interval) { :daily }
       let(:billing_time) { :calendar }
+
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, timestamp: DateTime.parse('01 Feb 2022 00:00'), recurring: true) }
+      let(:invoice) { create(:invoice, customer:, organization: plan.organization)}
 
       it 'enqueues a job on billing day' do
         current_date = DateTime.parse('01 Feb 2022 00:00')
@@ -40,6 +42,10 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       end
 
       it 'does not enqueue a job on other time in the same day' do
+        # create invoice before travel to other time to check if it is not billed again
+        invoice
+        invoice_subscription
+
         current_date = DateTime.parse('01 Feb 2022 20:00')
 
         travel_to(current_date) do
