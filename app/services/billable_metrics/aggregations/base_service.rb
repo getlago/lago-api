@@ -73,28 +73,30 @@ module BillableMetrics
         events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
       end
 
-      def handle_in_advance_current_usage(total_aggregation)
+      def handle_in_advance_current_usage(total_aggregation, target_result: result)
+        cached_aggregation = find_cached_aggregation(grouped_by: target_result.grouped_by)
+
         if cached_aggregation
           aggregation = total_aggregation -
                         BigDecimal(cached_aggregation.current_aggregation) +
                         BigDecimal(cached_aggregation.max_aggregation)
 
-          result.aggregation = aggregation
+          target_result.aggregation = aggregation
         else
-          result.aggregation = total_aggregation
+          target_result.aggregation = total_aggregation
         end
 
-        result.current_usage_units = total_aggregation
+        target_result.current_usage_units = total_aggregation
 
-        result.aggregation = 0 if result.aggregation.negative?
-        result.current_usage_units = 0 if result.current_usage_units.negative?
+        target_result.aggregation = 0 if target_result.aggregation.negative?
+        target_result.current_usage_units = 0 if target_result.current_usage_units.negative?
       end
 
       def get_cached_aggregation_in_interval(from_datetime:, to_datetime:)
         @from_datetime = from_datetime
         @to_datetime = to_datetime
 
-        cached_aggregation
+        find_cached_aggregation
       end
 
       def support_grouped_aggregation?

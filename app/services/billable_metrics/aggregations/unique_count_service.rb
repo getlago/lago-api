@@ -30,6 +30,8 @@ module BillableMetrics
 
         newly_applied_units = (operation_type == :add) ? 1 : 0
 
+        cached_aggregation = find_cached_aggregation
+
         unless cached_aggregation
           handle_event_metadata(
             current_aggregation: newly_applied_units,
@@ -76,7 +78,7 @@ module BillableMetrics
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period
-      def cached_aggregation
+      def find_cached_aggregation(*)
         return @cached_aggregation if @cached_aggregation
 
         query = CachedAggregation
