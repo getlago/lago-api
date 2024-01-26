@@ -108,7 +108,6 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :daily,
-        # TODO: Test fail due to this line - https://github.com/Pressingly/lagu-api/issues/23
         conditions: ["subscriptions.subscription_at#{at_time_zone} <= :today#{at_time_zone}"],
       )
     end
