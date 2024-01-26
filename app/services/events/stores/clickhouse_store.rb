@@ -161,7 +161,7 @@ module Events
         groups = grouped_by.map.with_index do |group, index|
           "#{sanitized_propery_name(group)} AS g_#{index}"
         end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select((groups + [Arel.sql("#{sanitized_numeric_property} AS property")]).join(', '))
@@ -200,6 +200,37 @@ module Events
         SQL
 
         ::Clickhouse::EventsRaw.connection.select_value(sql)
+      end
+
+      def grouped_prorated_sum(period_duration:, persisted_duration: nil)
+        groups = grouped_by.map.with_index do |group, index|
+          "#{sanitized_propery_name(group)} AS g_#{index}"
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          duration_ratio_sql('events_raw.timestamp', to_datetime, period_duration)
+        end
+
+        cte_sql = events
+          .reorder('')
+          .group(DEDUPLICATION_GROUP)
+          .select((groups + [Arel.sql("(#{sanitized_numeric_property}) * (#{ratio}) AS prorated_value")]).join(', '))
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            #{group_names},
+            sum(events.prorated_value)
+          from events
+          group by #{group_names}
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def sum_date_breakdown

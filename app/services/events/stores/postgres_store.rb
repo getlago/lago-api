@@ -118,6 +118,28 @@ module Events
         ).first['sum_result']
       end
 
+      def grouped_prorated_sum(period_duration:, persisted_duration: nil)
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          duration_ratio_sql('events.timestamp', to_datetime, period_duration)
+        end
+
+        sum_sql = <<-SQL
+          #{sanitized_grouped_by.join(', ')},
+          SUM(
+            (#{sanitized_propery_name})::numeric * (#{ratio})::numeric
+          ) AS sum_result
+        SQL
+
+        sql = events.reorder('')
+          .group(sanitized_grouped_by)
+          .select(sum_sql)
+          .to_sql
+
+        prepare_grouped_result(Event.connection.select_all(sql).rows)
+      end
+
       def sum_date_breakdown
         date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
 
