@@ -12,16 +12,18 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
         from_datetime:,
         to_datetime:,
       },
-      filters: { group: },
+      filters:,
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:filters) { { group:, grouped_by: } }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
+  let(:grouped_by) { nil }
 
   let(:billable_metric) do
     create(
@@ -42,30 +44,34 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
 
-  before do
-    create_list(
-      :event,
-      4,
-      code: billable_metric.code,
-      customer:,
-      subscription:,
-      timestamp: Time.current - 2.days,
-      properties: {
-        total_count: 18,
-      },
-    )
+  let(:events) do
+    [
+      create_list(
+        :event,
+        4,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: Time.current - 2.days,
+        properties: {
+          total_count: 18,
+        },
+      ),
 
-    create(
-      :event,
-      code: billable_metric.code,
-      customer:,
-      subscription:,
-      timestamp: Time.current - 1.day,
-      properties: {
-        total_count: 14,
-      },
-    )
+      create(
+        :event,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: Time.current - 1.day,
+        properties: {
+          total_count: 14,
+        },
+      ),
+    ].flatten
   end
+
+  before { events }
 
   it 'aggregates the events' do
     result = latest_service.aggregate
@@ -99,17 +105,19 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   end
 
   context 'when properties is a float' do
-    before do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.current,
-        properties: {
-          total_count: 14.2,
-        },
-      )
+    let(:events) do
+      [
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current,
+          properties: {
+            total_count: 14.2,
+          },
+        ),
+      ]
     end
 
     it 'aggregates the events' do
@@ -120,17 +128,19 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   end
 
   context 'when properties is negative' do
-    before do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.current,
-        properties: {
-          total_count: -5,
-        },
-      )
+    let(:events) do
+      [
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current,
+          properties: {
+            total_count: -5,
+          },
+        ),
+      ]
     end
 
     it 'returns zero' do
@@ -141,21 +151,23 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   end
 
   context 'when properties is missing' do
-    before do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.current,
-      )
+    let(:events) do
+      [
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current,
+        ),
+      ]
     end
 
     it 'ignores the event' do
       result = latest_service.aggregate
 
       expect(result).to be_success
-      expect(result.aggregation).to eq(14)
+      expect(result.aggregation).to eq(0)
     end
   end
 
@@ -164,42 +176,44 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
     end
 
-    before do
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.current - 2.seconds,
-        properties: {
-          total_count: 12,
-          region: 'europe',
-        },
-      )
+    let(:events) do
+      [
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current - 2.seconds,
+          properties: {
+            total_count: 12,
+            region: 'europe',
+          },
+        ),
 
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.current - 1.second,
-        properties: {
-          total_count: 8,
-          region: 'europe',
-        },
-      )
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current - 1.second,
+          properties: {
+            total_count: 8,
+            region: 'europe',
+          },
+        ),
 
-      create(
-        :event,
-        code: billable_metric.code,
-        customer:,
-        subscription:,
-        timestamp: Time.current - 1.second,
-        properties: {
-          total_count: 12,
-          region: 'africa',
-        },
-      )
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current - 1.second,
+          properties: {
+            total_count: 12,
+            region: 'africa',
+          },
+        ),
+      ].flatten
     end
 
     it 'aggregates the events' do
@@ -207,6 +221,51 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
 
       expect(result.aggregation).to eq(8)
       expect(result.count).to eq(2)
+    end
+  end
+
+  describe '.grouped_by_aggregation' do
+    let(:grouped_by) { ['agent_name'] }
+    let(:agent_names) { %w[aragorn frodo gimli legolas] }
+
+    let(:events) do
+      agent_names.map do |agent_name|
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.zone.now - 1.day,
+          properties: {
+            total_count: 12,
+            agent_name:,
+          },
+        )
+      end + [
+        create(
+          :event,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.zone.now - 1.day,
+          properties: {
+            total_count: 12,
+          },
+        ),
+      ]
+    end
+
+    it 'returns a grouped aggregations' do
+      result = latest_service.aggregate
+
+      expect(result.aggregations.count).to eq(5)
+
+      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] || '' }.each_with_index do |aggregation, index|
+        expect(aggregation.aggregation).to eq(12)
+        expect(aggregation.count).to eq(1)
+
+        expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index - 1]) if index.positive?
+      end
     end
   end
 end
