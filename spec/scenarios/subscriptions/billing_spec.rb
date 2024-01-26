@@ -96,7 +96,6 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
   context 'with daily plan' do
     let(:plan_interval) { 'daily' }
 
-    # NOTE: only test for calendar billing, as it is default option
     context 'with calendar billing' do
       let(:billing_time) { 'calendar' }
       let(:subscription_time) { DateTime.new(2023, 2, 1) }
@@ -143,12 +142,69 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 2, 2, 5, 0), # 2nd of Feb 05:00 UTC - 2nd of Feb 00:00 America/Bogota
             DateTime.new(2023, 2, 2, 6, 0), # 2nd of Feb 06:00 UTC - 2nd of Feb 1:00 America/Bogota
-            DateTime.new(2023, 2, 2, 3, 0), # 2nd of Feb 23:00 UTC - 2nd of Feb 18:00 America/Bogota
+            DateTime.new(2023, 2, 2, 23, 0), # 2nd of Feb 23:00 UTC - 2nd of Feb 18:00 America/Bogota
             DateTime.new(2023, 2, 3, 4, 0), # 3rd of Feb 04:00 UTC - 2nd of Feb 23:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
           [DateTime.new(2023, 2, 3, 5, 0)] # 3rd of Feb 05:00 UTC - 3rd of Feb 00:00 America/Bogota
+        end
+
+        it_behaves_like 'a subscription billing without duplicated invoices'
+      end
+    end
+
+    context 'with anniversary billing' do
+      let(:billing_time) { 'anniversary' }
+      let(:subscription_time) { DateTime.new(2023, 2, 1, 4) }
+
+      let(:before_billing_times) { [DateTime.new(2023, 2, 1, 6)] }
+      let(:billing_times) { [DateTime.new(2023, 2, 2, 4), DateTime.new(2023, 2, 3, 2)] }
+      let(:after_billing_times) { [DateTime.new(2023, 2, 3, 5)] }
+
+      it_behaves_like 'a subscription billing without duplicated invoices'
+
+      context 'with UTC+ timezone' do
+        let(:timezone) { 'Europe/Paris' }
+        let(:subscription_time) { DateTime.new(2023, 5, 2, 4) }
+
+        let(:before_billing_times) do
+          [
+            DateTime.new(2023, 5, 3, 1, 0), # 3rd of May 01:00 UTC - 3rd of May 03:00 Europe/Paris
+          ]
+        end
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 5, 3, 2, 0), # 3rd of May 02:00 UTC - 3rd of May 04:00 Europe/Paris
+            DateTime.new(2023, 5, 3, 4, 0), # 3rd of May 04:00 UTC - 3rd of May 06:00 Europe/Paris
+            DateTime.new(2023, 5, 4, 2, 59), # 4th of May 02:59 UTC - 4th of May 03:59 Europe/Paris
+          ]
+        end
+        let(:after_billing_times) do
+          [DateTime.new(2023, 5, 4, 3, 0)] # 4th of May 03:00 UTC - 4th of May 05:00 Europe/Paris
+        end
+
+        it_behaves_like 'a subscription billing without duplicated invoices'
+      end
+
+      context 'with UTC- timezone' do
+        let(:timezone) { 'America/Bogota' }
+        let(:subscription_time) { DateTime.new(2023, 2, 1, 6, 10) }
+
+        let(:before_billing_times) do
+          [
+            DateTime.new(2023, 2, 2, 11, 0), # 2nd of Feb 11:00 UTC - 2nd of Feb 06:00 America/Bogota
+          ]
+        end
+        let(:billing_times) do
+          [
+            DateTime.new(2023, 2, 2, 11, 10), # 2nd of Feb 11:10 UTC - 2nd of Feb 6:10 America/Bogota
+            DateTime.new(2023, 2, 2, 23, 0), # 2nd of Feb 23:00 UTC - 2nd of Feb 18:00 America/Bogota
+            DateTime.new(2023, 2, 3, 10, 30), # 3rd of Feb 10:30 UTC - 3rd of Feb 5:30 America/Bogota
+          ]
+        end
+        let(:after_billing_times) do
+          [DateTime.new(2023, 2, 3, 11, 30)] # 3rd of Feb 11:30 UTC - 3rd of Feb 06:30 America/Bogota
         end
 
         it_behaves_like 'a subscription billing without duplicated invoices'

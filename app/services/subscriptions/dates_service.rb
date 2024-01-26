@@ -120,7 +120,8 @@ module Subscriptions
     delegate :plan, :calendar?, :customer, to: :subscription
 
     def billing_date
-      @billing_date ||= billing_at.in_time_zone(customer.applicable_timezone).to_date
+      conversion_method = (subscription.plan.interval == 'daily' && subscription.anniversary?) ? :to_datetime : :to_date
+      @billing_date ||= billing_at.in_time_zone(customer.applicable_timezone).send(conversion_method)
     end
 
     def base_date

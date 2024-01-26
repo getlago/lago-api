@@ -12,9 +12,11 @@ module Subscriptions
       end
 
       def compute_from_date(date = base_date)
-        return billing_date if plan.pay_in_advance? || terminated_pay_in_arrear?
+        if plan.pay_in_advance? || terminated_pay_in_arrear?
+          return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date
+        end
 
-        date
+        subscription.anniversary? ? previous_anniversary_day(date) : date
       end
 
       def compute_to_date(from_date = compute_from_date)
@@ -23,10 +25,14 @@ module Subscriptions
 
       def compute_charges_from_date
         # NOTE: when subscription is terminated, we must bill on the current day
-        return billing_date if terminated?
-        return compute_from_date if plan.pay_in_arrear?
+        if terminated?
+          return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date
+        end
 
-        base_date
+        return compute_from_date if plan.pay_in_arrear?
+        return base_date if calendar?
+
+        previous_anniversary_day(base_date)
       end
 
       def compute_charges_to_date
@@ -34,13 +40,23 @@ module Subscriptions
       end
 
       def compute_next_end_of_period
-        billing_date.end_of_day
+        return billing_date.end_of_day if calendar?
+
+        billing_date + 24.hours
       end
 
       def compute_previous_beginning_of_period(date)
         # NOTE: Watchout for this - https://github.com/Pressingly/lagu-api/issues/24
         # date.beginning_of_day
-        date
+        return date if calendar?
+
+        previous_anniversary_day(date)
+      end
+
+      def previous_anniversary_day(date)
+        return date if date >= subscription_at
+
+        date - 24.hours
       end
 
       def compute_duration(*)
