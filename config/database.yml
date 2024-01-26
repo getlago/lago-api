@@ -59,6 +59,7 @@ staging:
     port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
     username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
     password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
+    migrations_paths: db/clickhouse_migrate
     debug: false
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
 
