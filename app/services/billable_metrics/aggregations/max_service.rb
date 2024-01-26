@@ -10,10 +10,31 @@ module BillableMetrics
         event_store.aggregation_property = billable_metric.field_name
       end
 
-      def aggregate(options: {})
+      def compute_aggregation(options: {})
         result.aggregation = event_store.max || 0
         result.count = event_store.count
         result.options = options
+        result
+      rescue ActiveRecord::StatementInvalid => e
+        result.service_failure!(code: 'aggregation_failure', message: e.message)
+      end
+
+      def compute_grouped_by_aggregation(options)
+        aggregations = event_store.grouped_max
+        counts = event_store.grouped_count
+
+        result.aggregations = aggregations.map do |aggregation|
+          group_result = BaseService::Result.new
+          group_result.grouped_by = aggregation[:groups]
+          group_result.aggregation = aggregation[:value]
+          group_result.options = options
+
+          count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
+          group_result.count = count[:value] || 0
+
+          group_result
+        end
+
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
@@ -34,6 +55,12 @@ module BillableMetrics
 
           0
         end
+      end
+
+      protected
+
+      def support_grouped_aggregation?
+        true
       end
     end
   end
