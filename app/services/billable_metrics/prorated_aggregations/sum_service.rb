@@ -52,16 +52,27 @@ module BillableMetrics
         aggregations = compute_grouped_event_aggregation
 
         result.aggregations = aggregations.map do |aggregation|
-          # TODO: in_advance and current_usage
-
-          group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
-          group_result.aggregation = aggregation[:value].ceil(5)
+          aggregation_value = aggregation[:value].ceil(5)
 
           group_result_without_proration = aggregation_without_proration.aggregations.find do |agg|
             agg.grouped_by == aggregation[:groups]
           end
+
+          group_result = BaseService::Result.new
+          group_result.grouped_by = aggregation[:groups]
           group_result.full_units_number = group_result_without_proration&.aggregation || 0
+
+          if options[:is_current_usage]
+            handle_current_usage(
+              aggregation_value,
+              options[:is_pay_in_advance],
+              target_result: group_result,
+              aggregation_without_proration: group_result_without_proration,
+            )
+          else
+            group_result.aggregation = aggregation_value
+          end
+
           group_result.count = group_result_without_proration&.count || 0
           group_result.options = options
 

@@ -583,5 +583,195 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
       end
     end
+
+    context 'when current usage' do
+      let(:options) { { is_pay_in_advance:, is_current_usage: true } }
+      let(:is_pay_in_advance) { false }
+      let(:grouped_by) { ['agent_name'] }
+      let(:agent_names) { %w[aragorn] }
+
+      let(:old_events) do
+        agent_names.map do |agent_name|
+          create_list(
+            :event,
+            2,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: subscription.started_at + 3.months,
+            properties: {
+              total_count: 2.5,
+              agent_name:,
+            },
+          )
+        end.flatten
+      end
+
+      let(:latest_events) do
+        agent_names.map do |agent_name|
+          create_list(
+            :event,
+            2,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 25.days,
+            properties: {
+              total_count: 12,
+              agent_name:,
+            },
+          )
+        end.flatten
+      end
+
+      context 'when charge is pay in arrear' do
+        it 'returns period maximum as aggregation' do
+          result = sum_service.aggregate(options:)
+
+          expect(result.aggregations.count).to eq(1)
+
+          result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+            expect(aggregation.aggregation).to eq(9.64517) # 5 + (12*6/31) + (12*6/31)
+            expect(aggregation.count).to eq(4)
+            expect(aggregation.current_usage_units).to eq(29)
+            expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+          end
+        end
+      end
+
+      context 'when charge is pay in advance' do
+        let(:is_pay_in_advance) { true }
+
+        let(:latest_events) do
+          agent_names.map do |agent_name|
+            create(
+              :event,
+              code: billable_metric.code,
+              customer:,
+              subscription:,
+              timestamp: to_datetime - 3.days,
+              properties: {
+                total_count: 4,
+                agent_name:,
+              },
+            )
+          end.flatten
+        end
+
+        let(:cached_aggregation) do
+          create(
+            :cached_aggregation,
+            organization: billable_metric.organization,
+            charge:,
+            external_subscription_id: subscription.external_id,
+            event_id: latest_events.first.id,
+            timestamp: latest_events.first.timestamp,
+            current_aggregation: '4',
+            max_aggregation: '6',
+            max_aggregation_with_proration: '3.8',
+            grouped_by: { 'agent_name' => agent_names.first },
+          )
+        end
+
+        before { cached_aggregation }
+
+        it 'returns period maximum as aggregation' do
+          result = sum_service.aggregate(options:)
+
+          expect(result.aggregations.count).to eq(1)
+
+          result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+            expect(aggregation.aggregation).to eq(8.8)
+            expect(aggregation.current_usage_units).to eq(9)
+            expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+          end
+        end
+
+        context 'when cached aggregation does not exist' do
+          let(:latest_events) { nil }
+          let(:cached_aggregation) { nil }
+
+          it 'returns zero as aggregation' do
+            result = sum_service.aggregate(options:)
+
+            expect(result.aggregations.count).to eq(1)
+
+            result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+              expect(aggregation.aggregation).to eq(5)
+              expect(aggregation.current_usage_units).to eq(5)
+              expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+            end
+          end
+        end
+      end
+
+      context 'when  charge is pay in advance and just upgraded' do
+        let(:from_datetime) { Time.zone.parse('2023-05-15 00:00:00') }
+        let(:is_pay_in_advance) { true }
+        let(:latest_events) { nil }
+
+        it 'returns correct values' do
+          result = sum_service.aggregate(options:)
+
+          expect(result.aggregations.count).to eq(1)
+
+          result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+            expect(aggregation.aggregation).to eq((5 * 17.fdiv(31)).ceil(5))
+            expect(aggregation.current_usage_units).to eq(5)
+            expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+          end
+        end
+      end
+
+      context 'when charge is pay in advance and just upgraded and new event in period' do
+        let(:from_datetime) { Time.zone.parse('2023-05-15 00:00:00') }
+        let(:is_pay_in_advance) { true }
+
+        let(:latest_events) do
+          agent_names.map do |agent_name|
+            create(
+              :event,
+              code: billable_metric.code,
+              customer:,
+              subscription:,
+              timestamp: to_datetime - 10.days,
+              properties: {
+                total_count: 4,
+                agent_name:,
+              },
+            )
+          end.flatten
+        end
+
+        let(:cached_aggregation) do
+          create(
+            :cached_aggregation,
+            organization: billable_metric.organization,
+            charge:,
+            external_subscription_id: subscription.external_id,
+            event_id: latest_events.first.id,
+            timestamp: latest_events.first.timestamp,
+            current_aggregation: '4',
+            max_aggregation: '6',
+            max_aggregation_with_proration: '3.8',
+            grouped_by: { 'agent_name' => agent_names.first },
+          )
+        end
+
+        before { cached_aggregation }
+
+        it 'returns correct values' do
+          result = sum_service.aggregate(options:)
+
+          expect(result.aggregations.count).to eq(1)
+
+          result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+            expect(aggregation.aggregation).to eq((5 * 17.fdiv(31)).ceil(5) + 3.8)
+            expect(aggregation.current_usage_units).to eq(9)
+            expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+          end
+        end
+      end
+    end
   end
 end
