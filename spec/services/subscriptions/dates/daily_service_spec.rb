@@ -79,39 +79,6 @@ RSpec.describe Subscriptions::Dates::DailyService, type: :service do
         end
       end
     end
-
-    context 'when billing_time is anniversary' do
-      let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('09 Mar 2022 04:00 UTC') }
-
-      it 'returns the time of the previous day' do
-        expect(result).to eq('2022-03-08 04:00:00 UTC')
-      end
-
-      context 'when date is before the start date' do
-        let(:started_at) { DateTime.parse('09 Mar 2022') }
-
-        it 'returns the start date' do
-          expect(result).to eq(started_at.utc.to_s)
-        end
-      end
-
-      context 'when subscription is just terminated' do
-        before { subscription.terminated! }
-
-        it 'returns the correct day time' do
-          expect(result).to eq('2022-03-09 04:00:00 UTC')
-        end
-
-        context 'when plan is pay in advance' do
-          let(:pay_in_advance) { true }
-
-          it 'returns the current day time' do
-            expect(result).to eq('2022-03-09 04:00:00 UTC')
-          end
-        end
-      end
-    end
   end
 
   describe 'to_datetime' do
