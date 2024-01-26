@@ -12,8 +12,10 @@ sv:
     breakdown_for_days: Använt %{breakdown_duration} av %{breakdown_total_duration} dagar
     breakdown_of: Specifikation för %{fee_group_name}
     credit_notes: Kreditfakturor
+    daily: Dagligen
     date_from: Avser period
     date_to: till och med
+    day: dag
     details: "%{resource} specifikation”"
     document_name: Faktura
     due_date: Förfaller %{date}
@@ -84,8 +86,6 @@ sv:
     volume:
       fee_per_unit: Avgift per enhet
       flat_fee_for_all_units: Fast avgift för alla enheter
-    day: dag
-    daily: Dagligen
     week: vecka
     weekly: Veckovis
     year: år
