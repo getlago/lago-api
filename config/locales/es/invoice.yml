@@ -12,8 +12,10 @@ es:
     breakdown_for_days: Utilizados %{breakdown_duration} de %{breakdown_total_duration} días
     breakdown_of: Desglose de %{fee_group_name}
     credit_notes: Notas de crédito
+    daily: Diario
     date_from: Tarifas desde
     date_to: hasta
+    day: día
     details: Detalles de %{resource}
     document_name: Factura
     due_date: Vence el %{date}

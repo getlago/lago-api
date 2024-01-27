@@ -13,8 +13,10 @@ nb:
     breakdown_of: Fordeling av %{fee_group_name}
     coupons: Kuponger
     credit_notes: Kreditnotaer
+    daily: Daglig
     date_from: Fra
     date_to: til
+    day: dag
     details: "%{resource} detaljer"
     document_name: Faktura
     due_date: Forfallsdato %{date}

@@ -15,6 +15,8 @@ de:
     credit_notes: Gutschriften
     date_from: Vom
     date_to: Bis
+    day: tag
+    dayly: Täglich
     details: "%{resource} Details"
     document_name: Rechnung
     due_date: Fälligkeit %{date}

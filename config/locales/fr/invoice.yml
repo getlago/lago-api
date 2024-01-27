@@ -13,8 +13,10 @@ fr:
     breakdown_of: Détails de consommation de %{fee_group_name}
     coupons: Réduction(s)
     credit_notes: Avoir(s)
+    daily: quotidien
     date_from: Du
     date_to: au
+    day: jour
     details: Détails de %{resource}
     document_name: Facture
     due_date: Date d'échéance le %{date}

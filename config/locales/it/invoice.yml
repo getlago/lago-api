@@ -13,8 +13,10 @@ it:
     breakdown_of: Ripartizione di %{fee_group_name}
     coupons: Coupon
     credit_notes: Note di Credito
+    daily: Giornaliero
     date_from: Dal
     date_to: al
+    day: giorno
     details: Dettagli %{resource}
     document_name: Fattura
     due_date: Scadenza %{date}

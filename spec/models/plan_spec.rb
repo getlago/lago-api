@@ -55,6 +55,12 @@ RSpec.describe Plan, type: :model do
 
       it { expect(plan.yearly_amount_cents).to eq(400) }
     end
+    
+    context 'when plan is daily' do
+      before { plan.interval = 'daily' }
+
+      it { expect(plan.yearly_amount_cents).to eq(36500) }
+    end
   end
 
   describe '#invoice_name' do

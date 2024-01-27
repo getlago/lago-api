@@ -4,6 +4,8 @@ module Subscriptions
   class DatesService
     def self.new_instance(subscription, billing_at, current_usage: false)
       klass = case subscription.plan.interval&.to_sym
+              when :daily
+                Subscriptions::Dates::DailyService
               when :weekly
                 Subscriptions::Dates::WeeklyService
               when :monthly

@@ -13,8 +13,10 @@ en:
     breakdown_of: Breakdown of %{fee_group_name}
     coupons: Coupons
     credit_notes: Credit notes
+    daily: Daily
     date_from: From
     date_to: to
+    day: day
     details: "%{resource} details"
     document_name: Invoice
     due_date: Due %{date}

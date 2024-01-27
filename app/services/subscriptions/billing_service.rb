@@ -38,6 +38,8 @@ module Subscriptions
         WITH
           billable_subscriptions AS (
             -- Calendar subscriptions
+            (#{daily_calendar})
+            UNION
             (#{weekly_calendar})
             UNION
             (#{monthly_calendar})
@@ -85,6 +87,8 @@ module Subscriptions
     end
 
     def base_subscription_scope(billing_time: nil, interval: nil, conditions: nil)
+      conditions_clause = conditions&.any? ? "AND #{conditions.join(' AND ')}" : ""
+
       <<-SQL
         SELECT subscriptions.id AS subscription_id
         FROM subscriptions
@@ -94,9 +98,18 @@ module Subscriptions
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
-          AND #{conditions.join(' AND ')}
+          #{conditions_clause}
         GROUP BY subscriptions.id
       SQL
+    end
+
+    # NOTE: For daily interval we send invoices on subscription day
+    def daily_calendar
+      base_subscription_scope(
+        billing_time: :calendar,
+        interval: :daily,
+        conditions: ["subscriptions.subscription_at#{at_time_zone} <= :today#{at_time_zone}"],
+      )
     end
 
     # NOTE: For weekly interval we send invoices on Monday (ISODOW = 1)

@@ -26,6 +26,7 @@ class Plan < ApplicationRecord
     monthly
     yearly
     quarterly
+    daily
   ].freeze
 
   enum interval: INTERVALS
@@ -67,8 +68,9 @@ class Plan < ApplicationRecord
     return amount_cents if yearly?
     return amount_cents * 12 if monthly?
     return amount_cents * 4 if quarterly?
+    return amount_cents * 52 if weekly?
 
-    amount_cents * 52
+    amount_cents * 365
   end
 
   def active_subscriptions_count
