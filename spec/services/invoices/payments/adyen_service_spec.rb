@@ -340,6 +340,32 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         end
       end
     end
+
+    context 'when payment is not found and it is one time payment' do
+      let(:payment) { nil }
+
+      before do
+        adyen_payment_provider
+        adyen_customer
+      end
+
+      it 'creates a payment and updates invoice payment status' do
+        result = adyen_service.update_payment_status(
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+          metadata: { lago_invoice_id: invoice.id, payment_type: 'one-time' },
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment.status).to eq('succeeded')
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: 'succeeded',
+            ready_for_payment_processing: false,
+          )
+        end
+      end
+    end
   end
 
   describe '#generate_payment_url' do
