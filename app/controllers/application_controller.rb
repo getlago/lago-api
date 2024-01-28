@@ -10,16 +10,27 @@ class ApplicationController < ActionController::API
 
   def health
     result = Utils::VersionService.new.version
-    ActiveRecord::Base.connection.execute('')
-
-    render(
-      json: {
-        version: result.version.number,
-        github_url: result.version.github_url,
-        message: 'Success',
-      },
-      status: :ok,
-    )
+    begin
+        ActiveRecord::Base.connection.execute('')
+        render(
+        json: {
+            version: result.version.number,
+            github_url: result.version.github_url,
+            message: 'Success',
+            },
+            status: :ok,
+            )
+    rescue ActiveRecord::ActiveRecordError => e
+        render(
+        json: {
+            version: result.version.number,
+            github_url: result.version.github_url,
+            message: 'Unhealthy',
+            details: e.message,
+            },
+            status: :internal_server_error,
+            )
+    end
   end
 
   def not_found
