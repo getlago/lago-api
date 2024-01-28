@@ -10,6 +10,7 @@ class ApplicationController < ActionController::API
 
   def health
     result = Utils::VersionService.new.version
+    ActiveRecord::Base.connection.execute('')
 
     render(
       json: {
