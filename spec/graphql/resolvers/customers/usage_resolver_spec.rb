@@ -20,6 +20,13 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             groups { id key value units amountCents }
             units
             amountCents
+            groupedUsage {
+              amountCents
+              units
+              eventsCount
+              groupedBy
+              groups { id key value units amountCents }
+            }
           }
         }
       }
@@ -42,6 +49,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
   let(:plan) { create(:plan, interval: 'monthly') }
 
   let(:metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+  let(:sum_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) do
     create(
       :graduated_charge,
@@ -60,10 +68,22 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       },
     )
   end
+  let(:standard_charge) do
+    create(
+      :standard_charge,
+      plan: subscription.plan,
+      billable_metric: sum_metric,
+      properties: {
+        amount: 1.to_s,
+        grouped_by: ['agent_name'],
+      },
+    )
+  end
 
   before do
     subscription
     charge
+    standard_charge
     tax
 
     create_list(
@@ -74,6 +94,20 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       subscription:,
       code: metric.code,
       timestamp: Time.zone.now,
+    )
+
+    create_list(
+      :event,
+      4,
+      organization:,
+      customer:,
+      subscription:,
+      code: sum_metric.code,
+      timestamp: Time.zone.now,
+      properties: {
+        agent_name: 'frodo',
+        item_id: 1,
+      },
     )
   end
 
@@ -95,9 +129,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(usage_response['toDatetime']).to eq(Time.current.end_of_month.iso8601)
       expect(usage_response['currency']).to eq('EUR')
       expect(usage_response['issuingDate']).to eq(Time.zone.today.end_of_month.iso8601)
-      expect(usage_response['amountCents']).to eq('5')
-      expect(usage_response['totalAmountCents']).to eq('6')
-      expect(usage_response['taxesAmountCents']).to eq('1')
+      expect(usage_response['amountCents']).to eq('405')
+      expect(usage_response['totalAmountCents']).to eq('486')
+      expect(usage_response['taxesAmountCents']).to eq('81')
 
       charge_usage = usage_response['chargesUsage'].first
       expect(charge_usage['billableMetric']['name']).to eq(metric.name)
@@ -106,6 +140,20 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(charge_usage['charge']['chargeModel']).to eq('graduated')
       expect(charge_usage['units']).to eq(4.0)
       expect(charge_usage['amountCents']).to eq('5')
+
+      charge_usage = usage_response['chargesUsage'].last
+      expect(charge_usage['billableMetric']['name']).to eq(sum_metric.name)
+      expect(charge_usage['billableMetric']['code']).to eq(sum_metric.code)
+      expect(charge_usage['billableMetric']['aggregationType']).to eq('sum_agg')
+      expect(charge_usage['charge']['chargeModel']).to eq('standard')
+      expect(charge_usage['units']).to eq(4.0)
+      expect(charge_usage['amountCents']).to eq('400')
+
+      grouped_usage = charge_usage['groupedUsage'].first
+      expect(grouped_usage['amountCents']).to eq('400')
+      expect(grouped_usage['units']).to eq(4.0)
+      expect(grouped_usage['eventsCount']).to eq(4)
+      expect(grouped_usage['groupedBy']).to eq({ 'agent_name' => 'frodo' })
     end
   end
 

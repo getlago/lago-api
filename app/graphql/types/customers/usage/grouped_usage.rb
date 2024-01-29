@@ -13,6 +13,22 @@ module Types
         field :grouped_by, GraphQL::Types::JSON, null: true
         field :groups, [Types::Customers::Usage::ChargeGroup], null: true
 
+        def amount_cents
+          object.sum(&:amount_cents)
+        end
+
+        def events_count
+          object.sum(&:events_count)
+        end
+
+        def units
+          object.map { |f| BigDecimal(f.units) }.sum
+        end
+
+        def grouped_by
+          object.first.grouped_by
+        end
+
         def groups
           object
             .select(&:group)

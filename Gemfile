@@ -103,6 +103,13 @@ group :development do
   gem 'bullet'
   gem 'coffee-rails'
   gem 'graphiql-rails', git: 'https://github.com/rmosolgo/graphiql-rails.git'
+
+  gem 'rubocop-graphql', require: false
+  gem 'rubocop-performance', require: false
+  gem 'rubocop-rails', require: false
+  gem 'rubocop-rspec', require: false
+  gem 'rubocop-thread_safety', require: false
+
   gem 'sass-rails'
   gem 'uglifier'
 end

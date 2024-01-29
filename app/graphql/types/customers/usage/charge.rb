@@ -44,7 +44,7 @@ module Types
         def grouped_usage
           return [] unless object.any? { |f| f.grouped_by.present? }
 
-          object
+          object.group_by(&:grouped_by).values
         end
       end
     end
