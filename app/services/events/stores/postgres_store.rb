@@ -38,6 +38,20 @@ module Events
         events.last
       end
 
+      def grouped_last_event
+        groups = sanitized_grouped_by
+
+        sql = events
+          .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
+          .select(
+            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, events.timestamp, (#{sanitized_propery_name})::numeric AS value",
+          )
+          .to_sql
+
+        # TODO: should return an event
+        prepare_grouped_result(Event.connection.select_all(sql).rows)
+      end
+
       def prorated_events_values(total_duration)
         ratio_sql = duration_ratio_sql('events.timestamp', to_datetime, total_duration)
 
@@ -76,7 +90,7 @@ module Events
         groups = sanitized_grouped_by
 
         sql = events
-          .reorder(Arel.sql((groups + ['events.timestamp DESC']).join(', ')))
+          .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
           .select(
             "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_propery_name})::numeric AS value",
           )
@@ -266,14 +280,19 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows)
+      def prepare_grouped_result(rows, timestamp: false)
         rows.map do |row|
-          groups = row[...-1].map(&:presence)
+          last_group = timestamp ? -2 : -1
+          groups = row[...last_group].map(&:presence)
 
-          {
+          result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
             value: row.last,
           }
+
+          result[:timestamp] = row[-2] if last_group
+
+          result
         end
       end
     end

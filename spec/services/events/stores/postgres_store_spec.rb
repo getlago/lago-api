@@ -157,6 +157,55 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
+  describe '.grouped_last_event' do
+    let(:grouped_by) { %w[cloud] }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the last events grouped by the provided group' do
+      result = event_store.grouped_last_event
+
+      expect(result.count).to eq(4)
+
+      null_group = result.last
+      expect(null_group[:groups]['cloud']).to be_nil
+      expect(null_group[:value]).to eq(4)
+      expect(null_group[:timestamp]).not_to be_nil
+
+      result[...-1].each do |row|
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
+        expect(row[:timestamp]).not_to be_nil
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the last events grouped by the provided groups' do
+        result = event_store.grouped_last_event
+
+        expect(result.count).to eq(4)
+
+        null_group = result.last
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value]).to eq(4)
+        expect(null_group[:timestamp]).not_to be_nil
+
+        result[...-1].each do |row|
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
+          expect(row[:timestamp]).not_to be_nil
+        end
+      end
+    end
+  end
+
   describe '.prorated_events_values' do
     it 'returns the value attached to each event prorated on the provided duration' do
       event_store.aggregation_property = billable_metric.field_name
