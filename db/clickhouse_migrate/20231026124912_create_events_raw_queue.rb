@@ -7,7 +7,7 @@ class CreateEventsRawQueue < ActiveRecord::Migration[7.0]
     SETTINGS
       kafka_broker_list = '#{ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS']}',
       kafka_topic_list = '#{ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC']}',
-      kafka_group_name = 'clickhouse',
+      kafka_group_name = '#{ENV['LAGO_KAFKA_CLICKHOUSE_CONSUMER_GROUP']}',
       kafka_format = 'JSONEachRow'
     SQL
 

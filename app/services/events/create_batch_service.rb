@@ -73,7 +73,7 @@ module Events
           external_customer_id: event.external_customer_id,
           external_subscription_id: event.external_subscription_id,
           transaction_id: event.transaction_id,
-          timestamp: event.timestamp,
+          timestamp: event.timestamp.to_f,
           code: event.code,
           properties: event.properties,
         }.to_json,

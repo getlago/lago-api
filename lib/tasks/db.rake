@@ -20,6 +20,7 @@ namespace :db do
 
     text = text.gsub(ENV.fetch('LAGO_KAFKA_BOOTSTRAP_SERVERS', ''), '*****')
     text = text.gsub(ENV.fetch('LAGO_KAFKA_EVENTS_RAW_TOPIC', ''), '*****')
+    text = text.gsub(ENV.fetch('LAGO_KAFKA_CLICKHOUSE_CONSUMER_GROUP', ''), '*****')
 
     File.open(migration_file, 'w') { |file| file.puts text }
   end
