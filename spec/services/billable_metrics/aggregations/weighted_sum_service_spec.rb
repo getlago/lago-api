@@ -56,6 +56,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         subscription:,
         customer:,
@@ -181,6 +182,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
           create(
             :event,
+            organization_id: organization.id,
             code: billable_metric.code,
             subscription: previous_subscription,
             customer:,

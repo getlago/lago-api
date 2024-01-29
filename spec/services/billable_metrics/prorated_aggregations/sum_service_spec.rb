@@ -51,6 +51,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     create_list(
       :event,
       2,
+      organization_id: organization.id,
       code: billable_metric.code,
       customer:,
       subscription:,
@@ -64,6 +65,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     create_list(
       :event,
       2,
+      organization_id: organization.id,
       code: billable_metric.code,
       customer:,
       subscription:,
@@ -141,6 +143,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     before do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -162,6 +165,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     before do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -204,6 +208,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     let(:latest_events) do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -274,6 +279,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     let(:latest_events) do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -316,6 +322,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     before do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -328,6 +335,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -340,6 +348,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -377,6 +386,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       subscription.update!(previous_subscription: old_subscription)
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription: old_subscription,
@@ -400,6 +410,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     let(:pay_in_advance_event) do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -420,6 +431,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       let(:latest_events) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -458,6 +470,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       let(:latest_events) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -543,6 +556,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         create_list(
           :event,
           2,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -560,6 +574,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
         create_list(
           :event,
           2,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -595,6 +610,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
           create_list(
             :event,
             2,
+            organization_id: organization.id,
             code: billable_metric.code,
             customer:,
             subscription:,
@@ -612,6 +628,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
           create_list(
             :event,
             2,
+            organization_id: organization.id,
             code: billable_metric.code,
             customer:,
             subscription:,
@@ -646,6 +663,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
           agent_names.map do |agent_name|
             create(
               :event,
+              organization_id: organization.id,
               code: billable_metric.code,
               customer:,
               subscription:,
@@ -731,6 +749,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
           agent_names.map do |agent_name|
             create(
               :event,
+              organization_id: organization.id,
               code: billable_metric.code,
               customer:,
               subscription:,

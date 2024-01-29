@@ -10,6 +10,7 @@ module Events
       #       and should be deduplicated depending on the aggregation logic
       def events(force_from: false)
         scope = ::Clickhouse::EventsRaw.where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization.id)
           .where(code:)
           .order(timestamp: :asc)
 
