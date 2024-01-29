@@ -52,6 +52,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     create_list(
       :event,
       2,
+      organization_id: organization.id,
       code: billable_metric.code,
       customer:,
       subscription:,
@@ -65,6 +66,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     create_list(
       :event,
       4,
+      organization_id: organization.id,
       code: billable_metric.code,
       customer:,
       subscription:,
@@ -149,6 +151,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       create_list(
         :event,
         4,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -186,6 +189,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     before do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -207,6 +211,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     before do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -236,6 +241,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     let(:latest_events) do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -292,6 +298,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     before do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -304,6 +311,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -316,6 +324,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -355,6 +364,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       billable_metric.update!(recurring: true)
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription: old_subscription,
@@ -378,6 +388,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     let(:pay_in_advance_event) do
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -398,6 +409,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       let(:latest_events) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -434,6 +446,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       let(:latest_events) do
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -516,6 +529,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       agent_names.map do |agent_name|
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,

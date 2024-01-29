@@ -5,6 +5,7 @@ module Events
     class PostgresStore < BaseStore
       def events(force_from: false)
         scope = Event.where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization.id)
           .where(code:)
           .order(timestamp: :asc)
 

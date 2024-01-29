@@ -49,6 +49,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       create_list(
         :event,
         4,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -60,6 +61,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
 
       create(
         :event,
+        organization_id: organization.id,
         code: billable_metric.code,
         customer:,
         subscription:,
@@ -109,6 +111,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -132,6 +135,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -155,6 +159,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -180,6 +185,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -192,6 +198,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
 
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -204,6 +211,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
 
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -232,6 +240,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       agent_names.map do |agent_name|
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -244,6 +253,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       end + [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,

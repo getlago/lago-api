@@ -49,6 +49,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     create_list(
       :event,
       4,
+      organization_id: organization.id,
       code: billable_metric.code,
       subscription:,
       customer:,
@@ -95,6 +96,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -108,6 +110,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
 
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -121,6 +124,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
 
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -167,6 +171,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       agent_names.map do |agent_name|
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
@@ -178,6 +183,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       end + [
         create(
           :event,
+          organization_id: organization.id,
           code: billable_metric.code,
           customer:,
           subscription:,
