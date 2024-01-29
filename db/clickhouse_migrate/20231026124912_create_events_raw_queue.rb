@@ -6,8 +6,8 @@ class CreateEventsRawQueue < ActiveRecord::Migration[7.0]
     Kafka()
     SETTINGS
       kafka_broker_list = '#{ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS']}',
-      kafka_topic_list = '#{ENV['LAGO_KAFKA_EVENTS_RAW_TOPIC']}',
-      kafka_group_name = 'clickhouse',
+      kafka_topic_list = '#{ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC']}',
+      kafka_group_name = '#{ENV['LAGO_KAFKA_CLICKHOUSE_CONSUMER_GROUP']}',
       kafka_format = 'JSONEachRow'
     SQL
 
@@ -16,7 +16,7 @@ class CreateEventsRawQueue < ActiveRecord::Migration[7.0]
       t.string :external_customer_id, null: false
       t.string :external_subscription_id, null: false
       t.string :transaction_id, null: false
-      t.datetime :timestamp, null: false
+      t.float :timestamp, null: false
       t.string :code, null: false
       t.string :properties, null: false
     end
