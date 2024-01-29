@@ -16,7 +16,7 @@ class CreateEventsRawQueue < ActiveRecord::Migration[7.0]
       t.string :external_customer_id, null: false
       t.string :external_subscription_id, null: false
       t.string :transaction_id, null: false
-      t.datetime :timestamp, null: false
+      t.float :timestamp, null: false
       t.string :code, null: false
       t.string :properties, null: false
     end
