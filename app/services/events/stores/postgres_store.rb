@@ -44,12 +44,15 @@ module Events
         sql = events
           .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
           .select(
-            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, events.timestamp, (#{sanitized_propery_name})::numeric AS value",
+            [
+              "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}",
+              'events.timestamp',
+              "(#{sanitized_propery_name})::numeric AS value",
+            ].join(', '),
           )
           .to_sql
 
-        # TODO: should return an event
-        prepare_grouped_result(Event.connection.select_all(sql).rows)
+        prepare_grouped_result(Event.connection.select_all(sql).rows, timestamp: true)
       end
 
       def prorated_events_values(total_duration)
@@ -290,7 +293,7 @@ module Events
             value: row.last,
           }
 
-          result[:timestamp] = row[-2] if last_group
+          result[:timestamp] = row[-2] if timestamp
 
           result
         end

@@ -142,13 +142,18 @@ module Events
               end
             end
 
-            "(#{groups.join(', ')}, timestamp without time zone :from_datetime, #{initial_value[:value]}, timestamp without time zone :from_datetime)"
+            [
+              groups,
+              'timestamp without time zone :from_datetime',
+              initial_value[:value],
+              'timestamp without time zone :from_datetime',
+            ].flatten.join(', ')
           end
 
           <<-SQL
             SELECT *
             FROM (
-                VALUES #{values.join(', ')}
+                VALUES #{values.map { "(#{_1})" }.join(', ')}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end
@@ -163,13 +168,18 @@ module Events
               end
             end
 
-            "(#{groups.join(', ')}, timestamp without time zone :from_datetime, 0, timestamp without time zone :from_datetime)"
+            [
+              groups,
+              'timestamp without time zone :from_datetime',
+              0,
+              'timestamp without time zone :from_datetime',
+            ].flatten.join(', ')
           end
 
           <<-SQL
             SELECT *
             FROM (
-              VALUES #{values.join(', ')}
+              VALUES #{values.map { "(#{_1})" }.join(', ')}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end

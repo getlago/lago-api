@@ -229,6 +229,18 @@ RSpec.describe Fees::ChargeService do
               )
             end
           end
+
+          context 'with recurring weighted sum aggregation' do
+            let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+            it 'creates a fee and a quantified event per group' do
+              result = charge_subscription_service.create
+              expect(result).to be_success
+
+              expect(result.fees.count).to eq(2)
+              expect(result.quantified_events.count).to eq(2)
+            end
+          end
         end
       end
 

@@ -60,7 +60,7 @@ module Events
           ORDER BY #{group_names}, events.timestamp DESC
         SQL
 
-        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows, timestamp: true)
       end
 
       def prorated_events_values(total_duration)
@@ -425,7 +425,7 @@ module Events
             value: row.last,
           }
 
-          result[:timestamp] = row[-2] if last_group
+          result[:timestamp] = row[-2] if timestamp
 
           result
         end
