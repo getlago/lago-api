@@ -8,7 +8,10 @@ module BillableMetrics
       end
 
       def cached_aggregation
-        @cached_aggregation ||= base_aggregator.get_cached_aggregation_in_interval(from_datetime:, to_datetime:)
+        @cached_aggregation ||= base_aggregator.find_cached_aggregation(
+          with_from_datetime: from_datetime,
+          with_to_datetime: to_datetime,
+        )
       end
 
       def compute_pay_in_advance_aggregation
@@ -58,30 +61,39 @@ module BillableMetrics
       # In current usage section two main values are presented, number of units in period and amount.
       # Proration affects only amount (calculated from aggregation) and number of units shows full number of units
       # (calculated from current_usage_units).
-      def handle_current_usage(result_with_proration, is_pay_in_advance)
+      def handle_current_usage(
+        result_with_proration, is_pay_in_advance, target_result: result,
+        aggregation_without_proration: nil
+      )
+        aggregation_without_proration ||= self.aggregation_without_proration
         value_without_proration = aggregation_without_proration.aggregation
+        cached_aggregation = base_aggregator.find_cached_aggregation(
+          with_from_datetime: from_datetime,
+          with_to_datetime: to_datetime,
+          grouped_by: target_result.grouped_by,
+        )
 
         if !is_pay_in_advance
-          result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
-          result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
+          target_result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
+          target_result.current_usage_units = value_without_proration.negative? ? 0 : value_without_proration
         elsif cached_aggregation && persisted_pro_rata < 1
-          result.current_usage_units = aggregation_without_proration.current_usage_units
+          target_result.current_usage_units = aggregation_without_proration.current_usage_units
 
           persisted_units_without_proration = aggregation_without_proration.current_usage_units -
                                               BigDecimal(cached_aggregation.current_aggregation)
-          result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
-                               BigDecimal(cached_aggregation.max_aggregation_with_proration)
+          target_result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
+                                      BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif cached_aggregation
-          result.current_usage_units = aggregation_without_proration.current_usage_units
-          result.aggregation = aggregation_without_proration.current_usage_units -
-                               BigDecimal(cached_aggregation.current_aggregation) +
-                               BigDecimal(cached_aggregation.max_aggregation_with_proration)
+          target_result.current_usage_units = aggregation_without_proration.current_usage_units
+          target_result.aggregation = aggregation_without_proration.current_usage_units -
+                                      BigDecimal(cached_aggregation.current_aggregation) +
+                                      BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif persisted_pro_rata < 1
-          result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
-          result.current_usage_units = aggregation_without_proration.current_usage_units
+          target_result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
+          target_result.current_usage_units = aggregation_without_proration.current_usage_units
         else
-          result.aggregation = value_without_proration
-          result.current_usage_units = aggregation_without_proration.current_usage_units
+          target_result.aggregation = value_without_proration
+          target_result.current_usage_units = aggregation_without_proration.current_usage_units
         end
       end
 

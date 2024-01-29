@@ -348,6 +348,72 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
+  describe '.grouped_prorated_sum' do
+    let(:grouped_by) { %w[cloud] }
+
+    it 'returns the prorated sum of event properties' do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      result = event_store.grouped_prorated_sum(period_duration: 31)
+
+      expect(result.count).to eq(4)
+
+      null_group = result.last
+      expect(null_group[:groups]['cloud']).to be_nil
+      expect(null_group[:value].round(5)).to eq(2.64516)
+
+      result[...-1].each do |row|
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context 'with persisted_duration' do
+      it 'returns the prorated sum of event properties' do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        result = event_store.grouped_prorated_sum(period_duration: 31, persisted_duration: 10)
+
+        expect(result.count).to eq(4)
+
+        null_group = result.last
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:value].round(5)).to eq(1.93548)
+
+        result[...-1].each do |row|
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the sum of values grouped by the provided groups' do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        result = event_store.grouped_prorated_sum(period_duration: 31)
+
+        expect(result.count).to eq(4)
+
+        null_group = result.last
+        expect(null_group[:groups]['cloud']).to be_nil
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value].round(5)).to eq(2.64516)
+
+        result[...-1].each do |row|
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
   describe '.sum_date_breakdown' do
     it 'returns the sum grouped by day' do
       event_store.aggregation_property = billable_metric.field_name

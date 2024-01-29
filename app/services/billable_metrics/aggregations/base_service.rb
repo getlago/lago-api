@@ -92,13 +92,6 @@ module BillableMetrics
         target_result.current_usage_units = 0 if target_result.current_usage_units.negative?
       end
 
-      def get_cached_aggregation_in_interval(from_datetime:, to_datetime:)
-        @from_datetime = from_datetime
-        @to_datetime = to_datetime
-
-        find_cached_aggregation
-      end
-
       def support_grouped_aggregation?
         false
       end

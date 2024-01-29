@@ -73,20 +73,18 @@ module BillableMetrics
         (0...added_query.count).map { |_| 1 }
       end
 
-      protected
-
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period
-      def find_cached_aggregation(*)
+      def find_cached_aggregation(with_from_datetime: from_datetime, with_to_datetime: to_datetime, **)
         return @cached_aggregation if @cached_aggregation
 
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
           .where(charge_id: charge.id)
-          .from_datetime(from_datetime)
-          .to_datetime(to_datetime)
+          .from_datetime(with_from_datetime)
+          .to_datetime(with_to_datetime)
           .order(timestamp: :desc)
 
         query = query
@@ -116,6 +114,8 @@ module BillableMetrics
 
         @cached_aggregation = query.first
       end
+
+      protected
 
       def operation_type
         @operation_type ||= event.properties.fetch('operation_type', 'add')&.to_sym
