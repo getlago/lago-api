@@ -129,7 +129,7 @@ module PaymentProviders
 
     def update_payment_status(event, payment_type)
       provider_payment_id = event['pspReference']
-      status = event['success'] == 'true' ? 'succeeded' : 'failed'
+      status = (event['success'] == 'true') ? 'succeeded' : 'failed'
       metadata = { payment_type:, lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id') }
 
       Invoices::Payments::AdyenService.new.update_payment_status(provider_payment_id:, status:, metadata:)
