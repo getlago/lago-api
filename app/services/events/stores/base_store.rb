@@ -90,11 +90,11 @@ module Events
         boundaries[:charges_duration]
       end
 
-      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary
+      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by
 
       protected
 
-      attr_accessor :code, :subscription, :group, :boundaries, :grouped_by, :grouped_by_values
+      attr_accessor :code, :subscription, :group, :boundaries, :grouped_by_values
 
       delegate :customer, to: :subscription
 

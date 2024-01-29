@@ -46,7 +46,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
         elsif grouped_by.present?
           grouped_by.each do |group|
-            properties[group] = "#{Faker::Fantasy::Tolkien.character}_#{i}"
+            properties[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
           end
         end
       end
@@ -549,6 +549,138 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       it 'returns the weighted sum of event properties scoped to the group' do
         expect(event_store.weighted_sum.round(5)).to eq(1000.0)
+      end
+    end
+  end
+
+  describe '.grouped_weighted_sum' do
+    let(:grouped_by) { %w[agent_name other] }
+
+    let(:started_at) { Time.zone.parse('2023-03-01') }
+
+    let(:events_values) do
+      [
+        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2, agent_name: 'frodo' },
+        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3, agent_name: 'frodo' },
+        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1, agent_name: 'frodo' },
+        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4, agent_name: 'frodo' },
+        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2, agent_name: 'frodo' },
+        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10, agent_name: 'frodo' },
+        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10, agent_name: 'frodo' },
+
+        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2, agent_name: 'aragorn' },
+        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3, agent_name: 'aragorn' },
+        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1, agent_name: 'aragorn' },
+        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4, agent_name: 'aragorn' },
+        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2, agent_name: 'aragorn' },
+        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10, agent_name: 'aragorn' },
+        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10, agent_name: 'aragorn' },
+
+        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2 },
+        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3 },
+        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1 },
+        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4 },
+        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2 },
+        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10 },
+        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10 },
+      ]
+    end
+
+    let(:events) do
+      events_values.map do |values|
+        properties = { value: values[:value] }
+        properties[:region] = values[:region] if values[:region]
+        properties[:agent_name] = values[:agent_name] if values[:agent_name]
+
+        Clickhouse::EventsRaw.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: values[:timestamp],
+          properties:,
+        )
+      end
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it 'returns the weighted sum of event properties' do
+      result = event_store.grouped_weighted_sum
+
+      expect(result.count).to eq(3)
+
+      null_group = result.find { |v| v[:groups]['agent_name'].nil? }
+      expect(null_group[:groups]['agent_name']).to be_nil
+      expect(null_group[:groups]['other']).to be_nil
+      expect(null_group[:value].round(5)).to eq(0.02218)
+
+      (result - [null_group]).each do |row|
+        expect(row[:groups]['agent_name']).not_to be_nil
+        expect(row[:groups]['other']).to be_nil
+        expect(row[:value].round(5)).to eq(0.02218)
+      end
+    end
+
+    context 'with no events' do
+      let(:events_values) { [] }
+
+      it 'returns the weighted sum of event properties' do
+        result = event_store.grouped_weighted_sum
+
+        expect(result.count).to eq(0)
+      end
+    end
+
+    context 'with initial values' do
+      let(:initial_values) do
+        [
+          { groups: { 'agent_name' => 'frodo', 'other' => nil }, value: 1000 },
+          { groups: { 'agent_name' => 'aragorn', 'other' => nil }, value: 1000 },
+          { groups: { 'agent_name' => nil, 'other' => nil }, value: 1000 },
+        ]
+      end
+
+      it 'uses the initial value in the aggregation' do
+        result = event_store.grouped_weighted_sum(initial_values:)
+
+        expect(result.count).to eq(3)
+
+        null_group = result.find { |v| v[:groups]['agent_name'].nil? }
+        expect(null_group[:groups]['agent_name']).to be_nil
+        expect(null_group[:groups]['other']).to be_nil
+        expect(null_group[:value].round(5)).to eq(1000.02218)
+
+        (result - [null_group]).each do |row|
+          expect(row[:groups]['agent_name']).not_to be_nil
+          expect(row[:groups]['other']).to be_nil
+          expect(row[:value].round(5)).to eq(1000.02218)
+        end
+      end
+
+      context 'without events' do
+        let(:events_values) { [] }
+
+        it 'uses only the initial value in the aggregation' do
+          result = event_store.grouped_weighted_sum(initial_values:)
+
+          expect(result.count).to eq(3)
+
+          null_group = result.find { |v| v[:groups]['agent_name'].nil? }
+          expect(null_group[:groups]['agent_name']).to be_nil
+          expect(null_group[:groups]['other']).to be_nil
+          expect(null_group[:value].round(5)).to eq(1000)
+
+          (result - [null_group]).each do |row|
+            expect(row[:groups]['agent_name']).not_to be_nil
+            expect(row[:groups]['other']).to be_nil
+            expect(row[:value].round(5)).to eq(1000)
+          end
+        end
       end
     end
   end

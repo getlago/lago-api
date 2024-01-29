@@ -170,6 +170,39 @@ module Events
         result['aggregation']
       end
 
+      def grouped_weighted_sum(initial_values: [])
+        query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
+
+        # NOTE: build the list of initial values for each groups
+        #       from the events in the period
+        formated_initial_values = grouped_count.map do |group|
+          value = 0
+          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          value = previous_group[:value] if previous_group
+          { groups: group[:groups], value: }
+        end
+
+        # NOTE: add the initial values for groups that are not in the events
+        initial_values.each do |intial_value|
+          next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+
+          formated_initial_values << intial_value
+        end
+        return [] if formated_initial_values.empty?
+
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.grouped_query(initial_values: formated_initial_values),
+            {
+              from_datetime:,
+              to_datetime: to_datetime.ceil,
+            },
+          ],
+        )
+
+        prepare_grouped_result(Event.connection.select_all(sql).rows)
+      end
+
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def weighted_sum_breakdown(initial_value: 0)
         query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
