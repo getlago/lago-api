@@ -8,7 +8,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
   end
 
   let(:customer) { create(:customer) }
-  let(:subscription) { create(:active_subscription, started_at: event_timestamp - 3.days, customer:) }
+  let(:subscription) { create(:subscription, started_at: event_timestamp - 3.days, customer:) }
   let(:organization) { customer.organization }
 
   let(:billable_metric) do

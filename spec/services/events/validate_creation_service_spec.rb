@@ -16,7 +16,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
   let(:organization) { create(:organization) }
   let(:result) { BaseService::Result.new }
   let(:customer) { create(:customer, organization:) }
-  let!(:subscription) { create(:active_subscription, customer:, organization:) }
+  let!(:subscription) { create(:subscription, customer:, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:transaction_id) { SecureRandom.uuid }
   let(:params) do
@@ -43,7 +43,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     end
 
     context 'when customer has two active subscriptions' do
-      before { create(:active_subscription, customer:, organization:) }
+      before { create(:subscription, customer:, organization:) }
 
       let(:params) do
         { code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id: }
@@ -77,7 +77,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     end
 
     context 'when there are two active subscriptions but external_subscription_id is not given' do
-      let(:subscription2) { create(:active_subscription, customer:, organization:) }
+      let(:subscription2) { create(:subscription, customer:, organization:) }
 
       let(:validate_event) do
         described_class.call(
@@ -110,7 +110,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         }
       end
 
-      let(:subscription2) { create(:active_subscription, customer:, organization:) }
+      let(:subscription2) { create(:subscription, customer:, organization:) }
 
       let(:validate_event) do
         described_class.call(
@@ -149,7 +149,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
       before do
         subscription
-        create(:active_subscription, customer:, organization:, external_id:)
+        create(:subscription, customer:, organization:, external_id:)
       end
 
       it 'does not return any validation errors' do

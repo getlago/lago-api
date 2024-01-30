@@ -8,7 +8,7 @@ RSpec.describe Customers::TerminateRelationsService, type: :service do
   let(:customer) { create(:customer, :deleted) }
 
   context 'with an active subscription' do
-    let(:subscription) { create(:active_subscription, customer:) }
+    let(:subscription) { create(:subscription, customer:) }
 
     before { subscription }
 
@@ -36,7 +36,7 @@ RSpec.describe Customers::TerminateRelationsService, type: :service do
   end
 
   context 'with draft invoices' do
-    let(:subscription) { create(:active_subscription, customer:) }
+    let(:subscription) { create(:subscription, customer:) }
     let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
 
     before do

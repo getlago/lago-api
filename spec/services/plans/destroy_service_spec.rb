@@ -63,7 +63,7 @@ RSpec.describe Plans::DestroyService, type: :service do
     end
 
     context 'with active subscriptions' do
-      let(:subscriptions) { create_list(:active_subscription, 2, plan:) }
+      let(:subscriptions) { create_list(:subscription, 2, plan:) }
 
       before { subscriptions }
 
@@ -99,7 +99,7 @@ RSpec.describe Plans::DestroyService, type: :service do
     end
 
     context 'with draft invoices' do
-      let(:subscription) { create(:active_subscription, plan:) }
+      let(:subscription) { create(:subscription, plan:) }
       let(:invoices) { create_list(:invoice, 2, :draft) }
 
       before do

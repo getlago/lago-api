@@ -23,7 +23,7 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
   let(:customer) { create(:customer, organization:) }
 
   before do
-    create(:active_subscription, customer:)
+    create(:subscription, customer:)
   end
 
   it 'assigns a coupon to the customer' do

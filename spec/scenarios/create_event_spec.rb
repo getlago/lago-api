@@ -6,7 +6,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:subscription) { create(:active_subscription, customer:) }
+  let(:subscription) { create(:subscription, customer:) }
   let(:params) do
     { code: billable_metric.code, transaction_id: SecureRandom.uuid }
   end
@@ -123,7 +123,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   context 'with external_subscription_id from another organization' do
     let(:organization2) { create(:organization, webhook_url: nil) }
     let(:customer2) { create(:customer, organization: organization2) }
-    let(:subscription2) { create(:active_subscription, customer: customer2) }
+    let(:subscription2) { create(:subscription, customer: customer2) }
 
     it 'returns the created event' do
       result = create_event(params.merge(external_subscription_id: subscription2.external_id))
@@ -161,7 +161,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with not yet started subscription' do
-    let(:subscription) { create(:active_subscription, customer:, started_at: 1.day.from_now) }
+    let(:subscription) { create(:subscription, customer:, started_at: 1.day.from_now) }
 
     it 'returns the created event' do
       result = create_event(params.merge(external_subscription_id: subscription.external_id))
@@ -181,7 +181,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with subscription started in the same second' do
-    let(:subscription) { create(:active_subscription, customer:, started_at: Time.current) }
+    let(:subscription) { create(:subscription, customer:, started_at: Time.current) }
 
     it 'returns the created event' do
       expect do
@@ -263,7 +263,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with external_customer_id but multiple subscriptions' do
-    let(:subscription2) { create(:active_subscription, customer:, started_at: subscription.started_at - 1.day) }
+    let(:subscription2) { create(:subscription, customer:, started_at: subscription.started_at - 1.day) }
 
     before { subscription2 }
 
@@ -285,7 +285,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   end
 
   context 'with external_customer_id and external_subscription_id and multiple subscriptions' do
-    let(:subscription2) { create(:active_subscription, customer:, started_at: subscription.started_at - 1.day) }
+    let(:subscription2) { create(:subscription, customer:, started_at: subscription.started_at - 1.day) }
 
     before { subscription2 }
 

@@ -7,7 +7,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:active_subscription, customer:, organization:, plan:, started_at: 1.month.ago) }
+  let(:subscription) { create(:subscription, customer:, organization:, plan:, started_at: 1.month.ago) }
 
   before { subscription }
 

@@ -28,7 +28,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
   let(:create_subscription) { customer.present? }
 
   before do
-    create(:active_subscription, customer:) if create_subscription
+    create(:subscription, customer:) if create_subscription
   end
 
   describe 'create' do

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscription, type: :model do
-  subject(:subscription) { create(:active_subscription, plan:) }
+  subject(:subscription) { create(:subscription, plan:) }
 
   let(:plan) { create(:plan) }
 
@@ -112,7 +112,7 @@ RSpec.describe Subscription, type: :model do
     context 'with a previous subscription' do
       let(:subscription) do
         create(
-          :active_subscription,
+          :subscription,
           previous_subscription:,
           started_at: Time.zone.yesterday,
           plan:,
@@ -159,7 +159,7 @@ RSpec.describe Subscription, type: :model do
     context 'with a previous subscription' do
       let(:subscription) do
         create(
-          :active_subscription,
+          :subscription,
           previous_subscription:,
           started_at: Time.zone.yesterday,
           plan:,
@@ -250,7 +250,7 @@ RSpec.describe Subscription, type: :model do
     let(:external_id) { SecureRandom.uuid }
     let(:subscription) do
       create(
-        :active_subscription,
+        :subscription,
         plan:,
         customer: create(:customer, organization:),
       )
@@ -258,7 +258,7 @@ RSpec.describe Subscription, type: :model do
 
     let(:new_subscription) do
       build(
-        :active_subscription,
+        :subscription,
         plan:,
         external_id:,
         customer: create(:customer, organization:),
@@ -310,7 +310,7 @@ RSpec.describe Subscription, type: :model do
 
   describe '#starting_in_the_future?' do
     context 'when subscription is active' do
-      let(:subscription) { create(:active_subscription) }
+      let(:subscription) { create(:subscription) }
 
       it 'returns false' do
         expect(subscription.starting_in_the_future?).to be false
@@ -326,7 +326,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     context 'when subscription is pending and downgraded' do
-      let(:old_subscription) { create(:active_subscription) }
+      let(:old_subscription) { create(:subscription) }
       let(:subscription) { create(:pending_subscription, previous_subscription: old_subscription) }
 
       it 'returns false' do

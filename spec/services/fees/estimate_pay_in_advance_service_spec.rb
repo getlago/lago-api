@@ -118,7 +118,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
       context 'when customer has an active subscription' do
         let(:subscription) do
           create(
-            :active_subscription,
+            :subscription,
             customer:,
             plan:,
             started_at: 1.year.ago,

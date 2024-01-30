@@ -9,7 +9,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
   describe 'apply' do
     before do
-      create(:active_subscription, customer:)
+      create(:subscription, customer:)
     end
 
     let(:params) do

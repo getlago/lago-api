@@ -12,7 +12,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:active_subscription, customer:, plan:) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
   let(:group) { nil }
 

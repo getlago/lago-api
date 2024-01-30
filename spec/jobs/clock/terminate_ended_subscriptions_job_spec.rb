@@ -7,9 +7,9 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
 
   describe '.perform' do
     let(:ending_at) { (Time.current + 2.months).beginning_of_day }
-    let(:subscription1) { create(:active_subscription, ending_at:) }
-    let(:subscription2) { create(:active_subscription, ending_at: ending_at + 1.year) }
-    let(:subscription3) { create(:active_subscription, ending_at: nil) }
+    let(:subscription1) { create(:subscription, ending_at:) }
+    let(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
+    let(:subscription3) { create(:subscription, ending_at: nil) }
 
     before do
       subscription1
