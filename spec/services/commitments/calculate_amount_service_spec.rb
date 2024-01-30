@@ -9,7 +9,7 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
     create(:invoice_subscription, subscription:, from_datetime:, to_datetime:)
   end
 
-  let(:subscription) { create(:active_subscription, customer:, plan:, billing_time:) }
+  let(:subscription) { create(:subscription, customer:, plan:, billing_time:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:, interval:) }
@@ -226,7 +226,7 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
           it 'returns result' do
             result = apply_service.call
 
-            expect(result.commitment_amount_cents).to eq(192350)
+            expect(result.commitment_amount_cents).to eq(192_350)
           end
         end
       end
