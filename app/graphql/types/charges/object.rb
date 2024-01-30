@@ -24,7 +24,7 @@ module Types
       field :taxes, [Types::Taxes::Object]
 
       def properties
-        return unless object.properties == '{}'
+        return object.properties unless object.properties == '{}'
 
         JSON.parse(object.properties)
       end
