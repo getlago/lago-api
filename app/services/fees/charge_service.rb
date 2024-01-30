@@ -151,10 +151,10 @@ module Fees
         .where("properties->>'charges_from_datetime' = ?", boundaries.charges_from_datetime&.iso8601(3))
         .where("properties->>'charges_to_datetime' = ?", boundaries.charges_to_datetime&.iso8601(3))
 
-      if grouped_by.present?
-        grouped_by.each do |key, value|
-          scope = scope.where('adjusted_fees.grouped_by @> ?', { key.to_s => value.to_s }.to_json)
-        end
+      scope = if grouped_by.present?
+        scope.where(grouped_by:)
+      else
+        scope.where(grouped_by: {})
       end
 
       @adjusted_fee[key] = scope.first

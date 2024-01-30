@@ -22,6 +22,7 @@ module BillableMetrics
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(*)
         aggregations = event_store.grouped_count
+        return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new

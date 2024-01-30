@@ -84,10 +84,23 @@ RSpec.describe Fees::ChargeService do
         end
 
         context 'without events' do
-          it 'does not creates fees' do
+          it 'creates an empty fee' do
             result = charge_subscription_service.create
             expect(result).to be_success
-            expect(result.fees.count).to eq(0)
+            expect(result.fees.count).to eq(1)
+
+            fee = result.fees.first
+            expect(fee).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 0,
+              amount_currency: 'EUR',
+              units: 0,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+              grouped_by: { 'cloud' => nil },
+            )
           end
         end
 

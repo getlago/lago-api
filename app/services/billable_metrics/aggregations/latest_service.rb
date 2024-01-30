@@ -24,6 +24,8 @@ module BillableMetrics
       #       containing the aggregation result of each group
       def compute_grouped_by_aggregation(*)
         aggregations = event_store.grouped_last
+        return empty_results if aggregations.blank?
+
         counts = event_store.grouped_count
 
         result.aggregations = aggregations.map do |aggregation|
