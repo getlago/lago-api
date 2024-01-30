@@ -23,7 +23,7 @@
           / Charges payed in advance on payed in advance plan
           - if subscription.plan.charges.where(pay_in_advance: true).any? && subscription.plan.pay_in_advance?
             / Loop over all top level fees
-            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}".downcase }.group_by(&:charge_id).each do |_charge_id, fees|
               - fee = fees.first
               - next unless fee.charge.pay_in_advance?
 
@@ -58,7 +58,7 @@
                 td.body-2 = I18n.t('invoice.amount')
 
             / Loop over all top level fees
-            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}".downcase }.group_by(&:charge_id).each do |_charge_id, fees|
               - fee = fees.first
               - next if fee.charge.pay_in_advance?
 
@@ -91,7 +91,7 @@
               td.body-2 = I18n.t('invoice.amount')
 
             / Loop over all top level fees
-            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}" }.group_by(&:charge_id).each do |_charge_id, fees|
+            - subscription_fees(subscription.id).charge_kind.where(true_up_parent_fee: nil).joins(charge: :billable_metric).sort_by { |f| "#{f.invoice_name}#{f.group_name}".downcase }.group_by(&:charge_id).each do |_charge_id, fees|
               - fee = fees.first
               - next unless fee.charge.pay_in_advance?
 
