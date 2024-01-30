@@ -169,7 +169,12 @@ module Fees
       aggregation_result = aggregator(group:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
-      persist_recurring_value(aggregation_result, group) if billable_metric.recurring?
+      if billable_metric.recurring?
+        persist_recurring_value(
+          aggregation_result.aggregations || [aggregation_result],
+          group,
+        )
+      end
 
       Charges::ChargeModelFactory.new_instance(charge:, aggregation_result:, properties:).apply
     end
@@ -205,24 +210,27 @@ module Fees
       )
     end
 
-    def persist_recurring_value(aggregation_result, group)
+    def persist_recurring_value(aggregation_results, group)
       return if is_current_usage
 
       # NOTE: Only weighted sum aggregation is setting this value
-      return unless aggregation_result.recurring_updated_at
+      return unless aggregation_results.first&.recurring_updated_at
 
       result.quantified_events ||= []
 
       # NOTE: persist current recurring value for next period
-      result.quantified_events << QuantifiedEvent.find_or_initialize_by(
-        organization_id: billable_metric.organization_id,
-        external_subscription_id: subscription.external_id,
-        group_id: group&.id,
-        billable_metric_id: billable_metric.id,
-        added_at: aggregation_result.recurring_updated_at,
-      ) do |event|
-        event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS] = aggregation_result.total_aggregated_units
-        event.save!
+      aggregation_results.each do |aggregation_result|
+        result.quantified_events << QuantifiedEvent.find_or_initialize_by(
+          organization_id: billable_metric.organization_id,
+          external_subscription_id: subscription.external_id,
+          group_id: group&.id,
+          billable_metric_id: billable_metric.id,
+          added_at: aggregation_result.recurring_updated_at,
+          grouped_by: aggregation_result.grouped_by || {},
+        ) do |event|
+          event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS] = aggregation_result.total_aggregated_units
+          event.save!
+        end
       end
     end
 

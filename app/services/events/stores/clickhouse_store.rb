@@ -38,6 +38,31 @@ module Events
         events.last
       end
 
+      def grouped_last_event
+        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+
+        cte_sql = events.group(DEDUPLICATION_GROUP)
+          .select(Arel.sql(
+            (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+          ))
+          .to_sql
+
+        sql = <<-SQL
+          with events as (#{cte_sql})
+
+          select
+            DISTINCT ON (#{group_names}) #{group_names},
+            events.timestamp,
+            property
+          from events
+          ORDER BY #{group_names}, events.timestamp DESC
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows, timestamp: true)
+      end
+
       def prorated_events_values(total_duration)
         ratio_sql = duration_ratio_sql('events_raw.timestamp', to_datetime, total_duration)
 
@@ -276,6 +301,40 @@ module Events
         result['aggregation']
       end
 
+      def grouped_weighted_sum(initial_values: [])
+        query = Clickhouse::WeightedSumQuery.new(store: self)
+
+        # NOTE: build the list of initial values for each groups
+        #       from the events in the period
+        formated_initial_values = grouped_count.map do |group|
+          value = 0
+          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          value = previous_group[:value] if previous_group
+          { groups: group[:groups], value: }
+        end
+
+        # NOTE: add the initial values for groups that are not in the events
+        initial_values.each do |intial_value|
+          next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+
+          formated_initial_values << intial_value
+        end
+        return [] if formated_initial_values.empty?
+
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.grouped_query(initial_values: formated_initial_values),
+            {
+              from_datetime:,
+              to_datetime: to_datetime.ceil,
+              decimal_scale: DECIMAL_SCALE,
+            },
+          ],
+        )
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
+      end
+
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def weighted_sum_breakdown(initial_value: 0)
         query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
@@ -356,14 +415,19 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows)
+      def prepare_grouped_result(rows, timestamp: false)
         rows.map do |row|
-          groups = row.flatten[...-1].map(&:presence)
+          last_group = timestamp ? -2 : -1
+          groups = row.flatten[...last_group].map(&:presence)
 
-          {
+          result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
             value: row.last,
           }
+
+          result[:timestamp] = row[-2] if timestamp
+
+          result
         end
       end
     end
