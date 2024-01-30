@@ -554,6 +554,21 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       end
     end
 
+    context 'without events' do
+      let(:latest_events) { [] }
+
+      it 'returns an empty result' do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregations.count).to eq(1)
+
+        aggregation = result.aggregations.first
+        expect(aggregation.aggregation).to eq(0)
+        expect(aggregation.count).to eq(0)
+        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+      end
+    end
+
     context 'when current usage context and charge is pay in advance' do
       let(:options) do
         { is_pay_in_advance: true, is_current_usage: true }
@@ -594,10 +609,16 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
         before { billable_metric.update!(recurring: false) }
 
-        it 'returns zero as aggregation' do
+        it 'returns an empty result' do
           result = sum_service.aggregate(options:)
 
-          expect(result.aggregations.count).to eq(0)
+          expect(result.aggregations.count).to eq(1)
+
+          aggregation = result.aggregations.first
+          expect(aggregation.aggregation).to eq(0)
+          expect(aggregation.count).to eq(0)
+          expect(aggregation.current_usage_units).to eq(0)
+          expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
         end
       end
     end

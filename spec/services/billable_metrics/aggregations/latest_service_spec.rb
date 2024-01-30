@@ -277,5 +277,20 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
         expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index - 1]) if index.positive?
       end
     end
+
+    context 'without events' do
+      let(:events) { [] }
+
+      it 'returns an empty result' do
+        result = latest_service.aggregate
+
+        expect(result.aggregations.count).to eq(1)
+
+        aggregation = result.aggregations.first
+        expect(aggregation.aggregation).to eq(0)
+        expect(aggregation.count).to eq(0)
+        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+      end
+    end
   end
 end

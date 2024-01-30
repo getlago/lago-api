@@ -95,6 +95,17 @@ module BillableMetrics
       def support_grouped_aggregation?
         false
       end
+
+      def empty_results(options: {})
+        empty_result = BaseService::Result.new
+        empty_result.grouped_by = grouped_by.index_with { nil }
+        empty_result.aggregation = 0
+        empty_result.count = 0
+        empty_result.current_usage_units = 0 if options[:is_pay_in_advance]
+
+        result.aggregations = [empty_result]
+        result
+      end
     end
   end
 end
