@@ -510,6 +510,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
+            customer:,
           },
         )
 
@@ -591,15 +592,15 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       dec15 = DateTime.new(2022, 12, 15)
 
       travel_to(dec15) do
+        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
         create_subscription(
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
+            customer:,
           },
         )
-
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
       end
 
       invoice = Invoice.draft.first
@@ -608,11 +609,13 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       ### 16 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 16)) do
-        create(
-          :event,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code: metric.code,
+        create_event(
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+          },
         )
 
         # Paid in advance invoice amount does not change.
@@ -623,11 +626,13 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       ### 17 Dec: Create event + refresh.
       travel_to(DateTime.new(2022, 12, 17)) do
-        create(
-          :event,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code: metric.code,
+        create_event(
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+          },
         )
 
         # Paid in advance invoice amount does not change.
@@ -645,12 +650,14 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         expect(new_invoice.total_amount_cents).to eq(1440) # (1000 + 200) * 1.2
 
         # Create event for Dec 18.
-        create(
-          :event,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          timestamp: DateTime.new(2022, 12, 18),
-          code: metric.code,
+        create_event(
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            timestamp: DateTime.parse('2022-12-18').to_i,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+          },
         )
 
         # Paid in advance invoice amount does not change.

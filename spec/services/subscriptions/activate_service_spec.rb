@@ -8,7 +8,7 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
   let(:timestamp) { Time.current }
 
   describe 'activate_all_expired' do
-    let(:active_subscription) { create(:active_subscription) }
+    let(:active_subscription) { create(:subscription) }
     let(:pending_subscriptions) { create_list(:pending_subscription, 3, subscription_at: timestamp) }
 
     let(:future_pending_subscriptions) do

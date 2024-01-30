@@ -41,7 +41,7 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
     expect(subscription_response).to include(
       'id' => subscription.id,
       'name' => subscription.name,
-      'startedAt' => subscription.started_at,
+      'startedAt' => subscription.started_at.iso8601,
       'endingAt' => subscription.ending_at,
     )
 
