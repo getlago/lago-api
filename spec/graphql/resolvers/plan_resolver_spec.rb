@@ -17,6 +17,35 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
           charges {
             id
             taxes { id rate }
+            properties {
+              amount
+              groupedBy
+              freeUnits
+              packageSize
+              fixedAmount
+              freeUnitsPerEvents
+              freeUnitsPerTotalAggregation
+              perTransactionMaxAmount
+              perTransactionMinAmount
+              rate
+            }
+            groupProperties {
+              groupId
+              invoiceDisplayName
+              values {
+                amount
+                groupedBy
+                freeUnits
+                packageSize
+                fixedAmount
+                freeUnitsPerEvents
+                freeUnitsPerTotalAggregation
+                perTransactionMaxAmount
+                perTransactionMinAmount
+                rate
+              }
+              deletedAt
+            }
           }
         }
       }
@@ -27,9 +56,15 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
+  let(:group) { create(:group, billable_metric:) }
+  let(:group_property) { create(:group_property, group:, charge:) }
+
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:charge) { create(:standard_charge, billable_metric:, plan:) }
 
   before do
     customer
+    group_property
     create_list(:subscription, 2, customer:, plan:)
   end
 
