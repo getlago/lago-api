@@ -3,6 +3,16 @@
 module Api
   module V1
     class OrganizationsController < Api::BaseController
+      def show
+        render(
+          json: ::V1::OrganizationSerializer.new(
+            current_organization,
+            root_name: 'organization',
+            include: %i[taxes],
+          ),
+        )
+      end
+
       def update
         result = Organizations::UpdateService.call(organization: current_organization, params: input_params)
 

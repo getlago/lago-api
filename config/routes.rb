@@ -71,6 +71,7 @@ Rails.application.routes.draw do
       delete '/wallets/:id', to: 'wallets#terminate'
       post '/events/batch', to: 'events#batch'
 
+      get '/organizations', to: 'organizations#show'
       put '/organizations', to: 'organizations#update'
       get '/organizations/grpc_token', to: 'organizations#grpc_token'
 

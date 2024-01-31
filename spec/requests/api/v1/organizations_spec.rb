@@ -95,4 +95,16 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       expect(json[:organization][:grpc_token]).not_to be_nil
     end
   end
+
+  describe 'GET' do
+    it 'returns the organization' do
+      get_with_token(
+        organization,
+        '/api/v1/organizations',
+      )
+
+      expect(response).to have_http_status(:success)
+      expect(json[:organization][:name]).to eq(organization.name)
+    end
+  end
 end
