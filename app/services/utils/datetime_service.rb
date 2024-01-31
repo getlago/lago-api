@@ -19,5 +19,32 @@ module Utils
 
       (to - from - offset).fdiv(1.day).ceil
     end
+
+    def self.period_total_length_in_days(from_datetime, to_datetime, interval)
+      timezone = from_datetime.time_zone
+
+      case interval.to_sym
+      when :weekly
+        7
+      when :monthly
+        Utils::DatetimeService.date_diff_with_timezone(
+          from_datetime.beginning_of_month.in_time_zone,
+          to_datetime.end_of_month.in_time_zone,
+          timezone,
+        )
+      when :quarterly
+        Utils::DatetimeService.date_diff_with_timezone(
+          from_datetime.beginning_of_quarter.in_time_zone,
+          to_datetime.end_of_quarter.in_time_zone,
+          timezone,
+        )
+      when :yearly
+        Utils::DatetimeService.date_diff_with_timezone(
+          from_datetime.beginning_of_year.in_time_zone,
+          to_datetime.end_of_year.in_time_zone,
+          timezone,
+        )
+      end
+    end
   end
 end

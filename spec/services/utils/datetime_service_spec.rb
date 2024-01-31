@@ -60,4 +60,84 @@ RSpec.describe Utils::DatetimeService, type: :service do
       end
     end
   end
+
+  describe '.period_total_length_in_days' do
+    let(:result) do
+      datetime_service.period_total_length_in_days(from_datetime, to_datetime, interval)
+    end
+
+    context 'when non-leap year' do
+      let(:from_datetime) { Time.zone.parse('2022-01-01 00:00:00') }
+      let(:to_datetime) { Time.zone.parse('2022-01-31 23:59:59') }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(7)
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(31)
+        end
+      end
+
+      context 'when interval is quarterly' do
+        let(:interval) { :quarterly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(90)
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(365)
+        end
+      end
+    end
+
+    context 'when leap year' do
+      let(:from_datetime) { Time.zone.parse('2020-01-01 00:00:00') }
+      let(:to_datetime) { Time.zone.parse('2020-01-31 23:59:59') }
+
+      context 'when interval is weekly' do
+        let(:interval) { :weekly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(7)
+        end
+      end
+
+      context 'when interval is monthly' do
+        let(:interval) { :monthly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(31)
+        end
+      end
+
+      context 'when interval is quarterly' do
+        let(:interval) { :quarterly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(91)
+        end
+      end
+
+      context 'when interval is yearly' do
+        let(:interval) { :yearly }
+
+        it 'returns period length in days' do
+          expect(result).to eq(366)
+        end
+      end
+    end
+  end
 end
