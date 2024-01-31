@@ -100,6 +100,43 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     end
   end
 
+  context 'when invoice boundaries should cover leap month february' do
+    let(:organization) { create(:organization, webhook_url: nil) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: 'monthly') }
+
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2023, 6, 16, 5)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      travel_to(DateTime.new(2024, 2, 1, 12, 12)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        invoice = subscription.invoices.order(created_at: :desc).first
+        invoice_subscription = invoice.invoice_subscriptions.first
+
+        expect(invoice_subscription.from_datetime.iso8601).to eq('2024-02-01T00:00:00Z')
+        expect(invoice_subscription.to_datetime.iso8601).to eq('2024-02-29T23:59:59Z')
+        expect(invoice_subscription.charges_from_datetime.iso8601).to eq('2024-01-01T00:00:00Z')
+        expect(invoice_subscription.charges_to_datetime.iso8601).to eq('2024-01-31T23:59:59Z')
+
+        expect(invoice.total_amount_cents).to eq(700)
+      end
+    end
+  end
+
   context 'when subscription is terminated with a grace period' do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
