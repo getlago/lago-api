@@ -281,4 +281,41 @@ RSpec.describe Fee, type: :model do
 
     it { expect(fee.total_amount_currency).to eq('EUR') }
   end
+
+  describe '#invoice_sorting_clause' do
+    let(:charge) { create(:standard_charge, properties:) }
+    let(:fee) { fee_model.new(charge:, fee_type: 'charge', grouped_by:) }
+    let(:grouped_by) do
+      {
+        'key_1' => 'mercredi',
+        'key_2' => 'week_01',
+        'key_3' => '2024',
+      }
+    end
+    let(:properties) do
+      {
+        'amount' => '5',
+        'grouped_by' => %w[key_1 key_2 key_3],
+      }
+    end
+
+    context 'when it is standard charge fee with grouped_by property' do
+      it 'returns valid response' do
+        expect(fee.invoice_sorting_clause)
+          .to eq("#{fee.invoice_name} #{fee.grouped_by.values.join} #{fee.group_name}".downcase)
+      end
+    end
+
+    context 'when missing grouped_by property' do
+      let(:properties) do
+        {
+          'amount' => '5',
+        }
+      end
+
+      it 'returns valid response' do
+        expect(fee.invoice_sorting_clause).to eq("#{fee.invoice_name} #{fee.group_name}".downcase)
+      end
+    end
+  end
 end

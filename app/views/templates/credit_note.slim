@@ -398,13 +398,9 @@ html
               - subscription_charge_items(subscription_id).where(fees: { true_up_parent_fee: nil }).group_by { |i| i.fee.charge_id }.each do |_charge_id, items|
                 - item = items.first
                 - if items.all? { |i| i.fee.group_id? }
-                  tr
-                    td.body-1 width="60%" = item.fee.invoice_name
-                    td
-                    td
                   - items.each do |item|
                     tr
-                      td.body-1 style="padding-left: 16px;" = item.fee.group_name
+                      td.body-1 = item.fee.invoice_name + item.fee.grouped_by_display + ' • ' + item.fee.group_name
                       td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                       td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - items.select { |i| i.fee.true_up_fee.present? }.each do |item|
@@ -415,7 +411,7 @@ html
                         td.body-2 width="20%" = MoneyHelper.format(true_up_item.amount)
                 - else
                   tr
-                    td.body-1 width="60%" = item.fee.invoice_name
+                    td.body-1 width="60%" = item.fee.invoice_name + item.fee.grouped_by_display
                     td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                     td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - if item.fee.true_up_fee.present?
