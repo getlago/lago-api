@@ -104,7 +104,7 @@ class Fee < ApplicationRecord
     return '' unless charge?
     return '' if charge.properties['grouped_by'].blank?
 
-    ' • ' + grouped_by.values.join(' • ')
+    " • #{grouped_by.values.join(' • ')}"
   end
 
   def invoice_sorting_clause
