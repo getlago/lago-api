@@ -100,13 +100,6 @@ class Fee < ApplicationRecord
     charge&.group_properties&.find_by(group:)&.invoice_display_name || group&.name
   end
 
-  def grouped_by_display
-    return '' unless charge?
-    return '' if charge.properties['grouped_by'].blank?
-
-    " • #{grouped_by.values.join(' • ')}"
-  end
-
   def invoice_sorting_clause
     base_clause = "#{invoice_name} #{group_name}".downcase
 
