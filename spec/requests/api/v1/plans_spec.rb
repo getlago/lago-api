@@ -336,31 +336,55 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
 
     context 'when plan has one minimum commitment' do
-      before do
-        minimum_commitment
-      end
+      before { minimum_commitment }
 
       context 'when request contains minimum commitment params' do
         before { update_params.merge!(minimum_commitment_params) }
 
-        context 'when license is premium' do
-          around { |test| lago_premium!(&test) }
+        context 'when minimum commitment params are an empty hash' do
+          let(:minimum_commitment_params) { { minimum_commitment: {} } }
 
-          it 'updates minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+          context 'when license is premium' do
+            around { |test| lago_premium!(&test) }
 
-            expect(response).to have_http_status(:success)
-            expect(json[:plan][:minimum_commitment][:amount_cents])
-              .to eq(update_params[:minimum_commitment][:amount_cents])
+            it 'deletes minimum commitment' do
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:minimum_commitment]).to be_nil
+            end
+          end
+
+          context 'when license is not premium' do
+            it 'does not delete the minimum commitment' do
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
+            end
           end
         end
 
-        context 'when license is not premium' do
-          it 'does not update minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+        context 'when minimum commitment params are not an empty hash' do
+          context 'when license is premium' do
+            around { |test| lago_premium!(&test) }
 
-            expect(response).to have_http_status(:success)
-            expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
+            it 'updates minimum commitment' do
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:minimum_commitment][:amount_cents])
+                .to eq(update_params[:minimum_commitment][:amount_cents])
+            end
+          end
+
+          context 'when license is not premium' do
+            it 'does not update minimum commitment' do
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
+            end
           end
         end
       end
