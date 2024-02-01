@@ -74,7 +74,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
       )
 
       fetch_current_usage(customer:)
-      expect(json[:customer_usage][:total_amount_cents]).to eq(200)
+      expect(json[:customer_usage][:total_amount_cents]).to eq(300)
     end
   end
 
@@ -193,8 +193,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
         expect(Fee.count).to eq(3)
 
         fetch_current_usage(customer:)
-        # TODO: change after merge of quantified event handling
-        expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(2900)
       end
     end
   end

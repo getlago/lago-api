@@ -8,7 +8,8 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
   end
 
   let(:customer) { create(:customer) }
-  let(:subscription) { create(:subscription, started_at: event_timestamp - 3.days, customer:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:subscription, started_at: event_timestamp - 3.days, customer:, plan:) }
   let(:organization) { customer.organization }
 
   let(:billable_metric) do
@@ -17,6 +18,15 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
       organization:,
       aggregation_type: 'unique_count_agg',
       field_name: 'item_id',
+    )
+  end
+
+  let(:charge) do
+    create(
+      :standard_charge,
+      plan:,
+      billable_metric:,
+      properties: charge_properties,
     )
   end
 
@@ -43,6 +53,8 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
     }
   end
 
+  let(:charge_properties) { { amount: '23' } }
+
   describe '#call' do
     let(:service_result) { create_service.call }
 
@@ -53,7 +65,7 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
           expect(service_result).to be_success
 
-          quantified_event = service_result.quantified_event
+          quantified_event = service_result.quantified_events.first
           expect(quantified_event.organization).to eq(event.organization)
           expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
           expect(quantified_event.external_id).to eq('ext_12345')
@@ -84,6 +96,61 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
           end
         end
       end
+
+      context 'with grouped_by at charge level' do
+        let(:charge_properties) { { amount: '23', grouped_by: ['agent_name'] } }
+
+        let(:properties) do
+          {
+            'operation_type' => operation_type,
+            billable_metric.field_name => 'ext_12345',
+            'region' => 'europe',
+            'agent_name' => 'aragorn',
+          }
+        end
+
+        before { charge }
+
+        it 'creates a quantified metric' do
+          aggregate_failures do
+            expect { service_result }.to change(QuantifiedEvent, :count).by(1)
+
+            expect(service_result).to be_success
+
+            quantified_event = service_result.quantified_events.first
+            expect(quantified_event.organization).to eq(event.organization)
+            expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
+            expect(quantified_event.external_id).to eq('ext_12345')
+            expect(quantified_event.properties).to eq(event.properties)
+            expect(quantified_event.added_at.to_s).to eq(event.timestamp.to_s)
+            expect(quantified_event.grouped_by).to eq({ 'agent_name' => 'aragorn' })
+          end
+        end
+
+        context 'when a quantified metric was removed on the day' do
+          let(:quantified_event) do
+            create(
+              :quantified_event,
+              billable_metric:,
+              external_subscription_id: subscription.external_id,
+              external_id: 'ext_12345',
+              removed_at: Time.zone.parse('31 Oct 2022 09:25:00'),
+              grouped_by: { agent_name: 'aragorn' },
+            )
+          end
+
+          before { quantified_event }
+
+          it 'reactivate the quantified metric' do
+            aggregate_failures do
+              expect { service_result }.to change(QuantifiedEvent, :count).by(0)
+
+              expect(service_result).to be_success
+              expect(quantified_event.reload.removed_at).to be_nil
+            end
+          end
+        end
+      end
     end
 
     context 'without operation type for unique_count_agg' do
@@ -103,12 +170,50 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
           expect(service_result).to be_success
 
-          quantified_event = service_result.quantified_event
+          quantified_event = service_result.quantified_events.first
           expect(quantified_event.organization).to eq(event.organization)
           expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
           expect(quantified_event.external_id).to eq('ext_12345')
           expect(quantified_event.properties).to eq(event.properties)
           expect(quantified_event.added_at.to_s).to eq(event.timestamp.to_s)
+        end
+      end
+
+      context 'with grouped_by at charge level' do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan:,
+            billable_metric:,
+            properties: { amount: '23', grouped_by: ['agent_name'] },
+          )
+        end
+
+        let(:properties) do
+          {
+            'operation_type' => operation_type,
+            billable_metric.field_name => 'ext_12345',
+            'region' => 'europe',
+            'agent_name' => 'aragorn',
+          }
+        end
+
+        before { charge }
+
+        it 'creates a quantified metric' do
+          aggregate_failures do
+            expect { service_result }.to change(QuantifiedEvent, :count).by(1)
+
+            expect(service_result).to be_success
+
+            quantified_event = service_result.quantified_events.first
+            expect(quantified_event.organization).to eq(event.organization)
+            expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
+            expect(quantified_event.external_id).to eq('ext_12345')
+            expect(quantified_event.properties).to eq(event.properties)
+            expect(quantified_event.added_at.to_s).to eq(event.timestamp.to_s)
+            expect(quantified_event.grouped_by).to eq({ 'agent_name' => 'aragorn' })
+          end
         end
       end
     end
@@ -120,10 +225,12 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
           billable_metric:,
           external_subscription_id: subscription.external_id,
           external_id: 'ext_12345',
+          grouped_by:,
         )
       end
 
       let(:operation_type) { 'remove' }
+      let(:grouped_by) { {} }
 
       before { quantified_event }
 
@@ -133,8 +240,8 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
           expect(service_result).to be_success
 
-          expect(service_result.quantified_event).to eq(quantified_event)
-          expect(service_result.quantified_event.removed_at.to_s).to eq(event.timestamp.to_s)
+          expect(service_result.quantified_events.first).to eq(quantified_event)
+          expect(service_result.quantified_events.first.removed_at.to_s).to eq(event.timestamp.to_s)
         end
       end
 
@@ -157,8 +264,34 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
             expect(service_result).to be_success
 
-            expect(service_result.quantified_event).to eq(quantified_event)
-            expect(service_result.quantified_event.removed_at.to_s).to eq(event.timestamp.to_s)
+            expect(service_result.quantified_events.first).to eq(quantified_event)
+            expect(service_result.quantified_events.first.removed_at.to_s).to eq(event.timestamp.to_s)
+          end
+        end
+      end
+
+      context 'with grouped_by at charge level' do
+        let(:charge_properties) { { amount: '23', grouped_by: ['agent_name'] } }
+
+        let(:properties) do
+          {
+            'operation_type' => operation_type,
+            billable_metric.field_name => 'ext_12345',
+            'region' => 'europe',
+            'agent_name' => 'aragorn',
+          }
+        end
+
+        let(:grouped_by) { { 'agent_name' => 'aragorn' } }
+
+        before { charge }
+
+        it 'updates the active quantified metric' do
+          aggregate_failures do
+            expect(service_result).to be_success
+
+            expect(service_result.quantified_events.first).to eq(quantified_event)
+            expect(service_result.quantified_events.first.removed_at.to_s).to eq(event.timestamp.to_s)
           end
         end
       end
@@ -196,6 +329,46 @@ RSpec.describe QuantifiedEvents::CreateOrUpdateService, type: :service do
 
       it 'does not add quantified event for the same external id' do
         expect(create_service).not_to be_process_event
+      end
+    end
+
+    context 'with grouped_by at charge level' do
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric:,
+          properties: { amount: '23', grouped_by: ['agent_name'] },
+        )
+      end
+
+      let(:properties) do
+        {
+          'operation_type' => operation_type,
+          billable_metric.field_name => 'ext_12345',
+          'region' => 'europe',
+          'agent_name' => 'aragorn',
+        }
+      end
+
+      before { charge }
+
+      it { expect(create_service).to be_process_event }
+
+      context 'with an active quantified metric' do
+        before do
+          create(
+            :quantified_event,
+            billable_metric:,
+            external_subscription_id: subscription.external_id,
+            external_id: 'ext_12345',
+            grouped_by: { 'agent_name' => 'aragorn' },
+          )
+        end
+
+        it 'does not add quantified event for the same external id' do
+          expect(create_service).not_to be_process_event
+        end
       end
     end
   end
