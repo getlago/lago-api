@@ -5,6 +5,7 @@ module Charges
     class StandardService < Charges::Validators::BaseService
       def valid?
         validate_amount
+        validate_grouped_by
 
         super
       end
@@ -13,6 +14,10 @@ module Charges
 
       def amount
         properties['amount']
+      end
+
+      def grouped_by
+        properties['grouped_by']
       end
 
       def validate_amount
@@ -25,7 +30,7 @@ module Charges
         return if grouped_by.blank?
         return if grouped_by.is_a?(Array) && grouped_by.all? { |f| f.is_a?(String) }
 
-        add_error(field: :grouped_by, error_code: 'invalid_grouped_by')
+        add_error(field: :grouped_by, error_code: 'invalid_type')
       end
     end
   end
