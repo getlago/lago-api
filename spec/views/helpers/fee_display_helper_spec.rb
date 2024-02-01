@@ -39,5 +39,19 @@ RSpec.describe FeeDisplayHelper do
         expect(helper.grouped_by_display(fee)).to eq('')
       end
     end
+
+    context 'when some values are nil' do
+      let(:grouped_by) do
+        {
+          'key_1' => nil,
+          'key_2' => 'week_01',
+          'key_3' => '2024',
+        }
+      end
+
+      it 'returns valid response' do
+        expect(helper.grouped_by_display(fee)).to eq(' • week_01 • 2024')
+      end
+    end
   end
 end
