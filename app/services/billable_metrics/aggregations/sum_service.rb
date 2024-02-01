@@ -38,7 +38,7 @@ module BillableMetrics
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
         aggregations = event_store.grouped_sum
-        return empty_results(options:) if aggregations.blank?
+        return empty_results if aggregations.blank?
 
         counts = event_store.grouped_count
 
