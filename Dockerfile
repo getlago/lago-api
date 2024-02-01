@@ -1,4 +1,4 @@
-FROM ruby:3.2.2-slim as build
+FROM ruby:3.2.3-slim as build
 
 WORKDIR /app
 
@@ -7,13 +7,13 @@ COPY ./Gemfile.lock /app/Gemfile.lock
 
 RUN apt update -qq && apt install nodejs build-essential git pkg-config libpq-dev curl -y
 
-ENV BUNDLER_VERSION='2.4.21'
-RUN gem install bundler --no-document -v '2.4.21'
+ENV BUNDLER_VERSION='2.5.5'
+RUN gem install bundler --no-document -v '2.5.5'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3 --without development test
 
-FROM ruby:3.2.2-slim
+FROM ruby:3.2.3-slim
 
 WORKDIR /app
 
