@@ -33,7 +33,8 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(_options)
-        aggregations = compute_grouped_aggregations
+        aggregations = [compute_single_aggregation.ceil(5)] # TODO: compute_grouped_aggregations
+        return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new
