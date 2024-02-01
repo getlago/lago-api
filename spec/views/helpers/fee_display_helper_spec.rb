@@ -41,10 +41,11 @@ RSpec.describe FeeDisplayHelper do
     end
 
     context 'when some values are nil' do
-      let(:properties) do
+      let(:grouped_by) do
         {
-          'amount' => '5',
-          'grouped_by' => ['key_2', 'key_3', nil],
+          'key_1' => nil,
+          'key_2' => 'week_01',
+          'key_3' => '2024',
         }
       end
 
