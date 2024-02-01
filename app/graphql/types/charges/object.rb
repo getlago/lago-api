@@ -23,6 +23,12 @@ module Types
 
       field :taxes, [Types::Taxes::Object]
 
+      def properties
+        return object.properties unless object.properties == '{}'
+
+        JSON.parse(object.properties)
+      end
+
       def billable_metric
         return object.billable_metric unless object.discarded?
 

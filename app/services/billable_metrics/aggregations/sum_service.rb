@@ -142,10 +142,10 @@ module BillableMetrics
           .to_datetime(with_to_datetime)
           .order(timestamp: :desc)
 
-        if grouped_by.present?
-          grouped_by.each do |key, value|
-            query = query.where('cached_aggregations.grouped_by @> ?', { key.to_s => value.to_s }.to_json)
-          end
+        query = if grouped_by.present?
+          query.where(grouped_by:)
+        else
+          query.where(grouped_by: {})
         end
 
         query = query.where.not(event_id: event.id) if event.present?
