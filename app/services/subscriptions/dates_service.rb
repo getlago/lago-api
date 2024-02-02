@@ -101,6 +101,11 @@ module Subscriptions
       customer_timezone_shift(end_utc, end_of_day: true)
     end
 
+    def end_of_period
+      end_utc = compute_to_date
+      customer_timezone_shift(end_utc, end_of_day: true)
+    end
+
     # NOTE: Retrieve the beginning of the previous period based on the billing date
     def previous_beginning_of_period(current_period: false)
       date = base_date

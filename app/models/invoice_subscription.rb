@@ -70,14 +70,6 @@ class InvoiceSubscription < ApplicationRecord
     subscription.plan.amount_currency
   end
 
-  def first_period?
-    previous_invoice_subscription.nil?
-  end
-
-  def previous_invoice_subscription
-    subscription.invoice_subscriptions.where('to_datetime < ?', to_datetime).order(to_datetime: :desc).first
-  end
-
   alias charge_amount_currency total_amount_currency
   alias subscription_amount_currency total_amount_currency
 end
