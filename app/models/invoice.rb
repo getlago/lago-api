@@ -9,8 +9,8 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
-  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
-  before_save :ensure_number
+  before_create :ensure_organization_sequential_id, if: -> { organization.per_organization? }
+  before_create :ensure_number
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
