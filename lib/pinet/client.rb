@@ -27,7 +27,7 @@ module Pinet
           transaction: {
             amount: payload[:amount],
             currency: payload[:currency],
-            payment_token: payload[:payment_token] + 'invalid',
+            payment_token: payload[:payment_token],
             description: payload[:description],
           },
         }.to_json
