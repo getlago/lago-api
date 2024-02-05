@@ -95,7 +95,11 @@ module BillableMetrics
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 
-        cached_aggregation = find_cached_aggregation
+        cached_aggregation = find_cached_aggregation(
+          with_from_datetime: from_datetime,
+          with_to_datetime: to_datetime,
+          grouped_by: grouped_by_values,
+        )
 
         unless cached_aggregation
           return_value = BigDecimal(value).negative? ? '0' : value
@@ -129,20 +133,15 @@ module BillableMetrics
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period
-      def find_cached_aggregation(with_from_datetime: from_datetime, with_to_datetime: to_datetime, grouped_by: nil)
+      def find_cached_aggregation(with_from_datetime:, with_to_datetime:, grouped_by: nil)
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
           .where(charge_id: charge.id)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
+          .where(grouped_by: grouped_by.presence || {})
           .order(timestamp: :desc)
-
-        query = if grouped_by.present?
-          query.where(grouped_by:)
-        else
-          query.where(grouped_by: {})
-        end
 
         query = query.where.not(event_id: event.id) if event.present?
         query = query.where(group_id: group.id) if group

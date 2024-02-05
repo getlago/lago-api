@@ -76,7 +76,11 @@ module BillableMetrics
       end
 
       def handle_in_advance_current_usage(total_aggregation, target_result: result)
-        cached_aggregation = find_cached_aggregation(grouped_by: target_result.grouped_by)
+        cached_aggregation = find_cached_aggregation(
+          with_from_datetime: from_datetime,
+          with_to_datetime: to_datetime,
+          grouped_by: target_result.grouped_by,
+        )
 
         if cached_aggregation
           aggregation = total_aggregation -

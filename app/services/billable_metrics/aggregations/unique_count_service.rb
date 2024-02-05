@@ -59,7 +59,11 @@ module BillableMetrics
 
         newly_applied_units = (operation_type == :add) ? 1 : 0
 
-        cached_aggregation = find_cached_aggregation(grouped_by: grouped_by_values)
+        cached_aggregation = find_cached_aggregation(
+          with_from_datetime: from_datetime,
+          with_to_datetime: to_datetime,
+          grouped_by: grouped_by_values,
+        )
 
         unless cached_aggregation
           handle_event_metadata(
@@ -105,7 +109,7 @@ module BillableMetrics
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period
-      def find_cached_aggregation(with_from_datetime: from_datetime, with_to_datetime: to_datetime, grouped_by: nil)
+      def find_cached_aggregation(with_from_datetime:, with_to_datetime:, grouped_by: nil)
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
@@ -141,7 +145,7 @@ module BillableMetrics
             .where('quantified_events.group_id = cached_aggregations.group_id')
         end
 
-        @cached_aggregation = query.first
+        query.first
       end
 
       def count_unique_group_scope(events)

@@ -10,7 +10,7 @@ module BillableMetrics
       end
 
       def compute_aggregation(options: {})
-        @options = options
+        aggregation_without_proration = base_aggregator.aggregate(options:)
 
         # For charges that are pay in advance on billing date we always bill full amount
         return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
@@ -19,12 +19,17 @@ module BillableMetrics
         result.full_units_number = aggregation_without_proration.aggregation if event.nil?
 
         if options[:is_current_usage]
-          handle_current_usage(aggregation, options[:is_pay_in_advance])
+          handle_current_usage(
+            aggregation,
+            options[:is_pay_in_advance],
+            target_result: result,
+            aggregation_without_proration:,
+          )
         else
           result.aggregation = aggregation
         end
 
-        result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
+        result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation(aggregation_without_proration:)
         result.options = options
         result.count = result.aggregation
         result
@@ -39,7 +44,7 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
-        @options = options
+        aggregation_without_proration = base_aggregator.aggregate(options:)
 
         # For charges that are pay in advance on billing date we always bill full amount
         return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]

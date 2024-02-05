@@ -3,11 +3,7 @@
 module BillableMetrics
   module ProratedAggregations
     class BaseService < BillableMetrics::Aggregations::BaseService
-      def aggregation_without_proration
-        @aggregation_without_proration ||= base_aggregator.aggregate(options:)
-      end
-
-      def compute_pay_in_advance_aggregation
+      def compute_pay_in_advance_aggregation(aggregation_without_proration:)
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
 
@@ -25,14 +21,14 @@ module BillableMetrics
 
         value = (result_without_proration * proration_coefficient).ceil(5)
 
-        extend_cached_aggregation(value)
+        extend_cached_aggregation(value, aggregation_without_proration)
 
         value
       end
 
       # We need to extend cached aggregation with max_aggregation_with_proration. This attribute will be used
       # for current usage in pay_in_advance case
-      def extend_cached_aggregation(prorated_value)
+      def extend_cached_aggregation(prorated_value, aggregation_without_proration)
         result.max_aggregation = aggregation_without_proration.max_aggregation
         result.current_aggregation = aggregation_without_proration.current_aggregation
 
@@ -60,11 +56,7 @@ module BillableMetrics
       # In current usage section two main values are presented, number of units in period and amount.
       # Proration affects only amount (calculated from aggregation) and number of units shows full number of units
       # (calculated from current_usage_units).
-      def handle_current_usage(
-        result_with_proration, is_pay_in_advance, target_result: result,
-        aggregation_without_proration: nil
-      )
-        aggregation_without_proration ||= self.aggregation_without_proration
+      def handle_current_usage(result_with_proration, is_pay_in_advance, aggregation_without_proration:, target_result:)
         value_without_proration = aggregation_without_proration.aggregation
         cached_aggregation = base_aggregator.find_cached_aggregation(
           with_from_datetime: from_datetime,
