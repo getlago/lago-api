@@ -12,14 +12,12 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         from_datetime:,
         to_datetime:,
       },
-      filters: {
-        group:,
-        event: pay_in_advance_event,
-      },
+      filters:,
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
 
   let(:subscription) do
     create(
@@ -37,6 +35,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
+  let(:grouped_by) { nil }
 
   let(:billable_metric) do
     create(
@@ -435,6 +434,306 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         it 'assigns a pay_in_advance aggregation' do
           expect(result.pay_in_advance_aggregation).to eq(0)
           expect(result.units_applied).to eq(1)
+        end
+      end
+    end
+  end
+
+  describe '.grouped_by_aggregation' do
+    let(:result) { unique_count_service.aggregate(options:) }
+
+    let(:grouped_by) { ['agent_name'] }
+    let(:agent_names) { %w[aragorn frodo] }
+
+    let(:quantified_event) { nil }
+
+    let(:quantified_events) do
+      agent_names.each do |agent_name|
+        create(
+          :quantified_event,
+          added_at:,
+          removed_at:,
+          external_subscription_id: subscription.external_id,
+          billable_metric:,
+          grouped_by: { agent_name: },
+        )
+      end
+    end
+
+    before { quantified_events }
+
+    context 'with persisted metric on full period' do
+      it 'returns the number of persisted metric' do
+        expect(result.aggregations.count).to eq(2)
+
+        result.aggregations.each do |aggregation|
+          expect(aggregation.grouped_by.keys).to include('agent_name')
+          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.count).to eq(1)
+          expect(aggregation.aggregation).to eq(1)
+          expect(aggregation.full_units_number).to eq(1)
+        end
+      end
+
+      context 'when there is persisted event and event added in period' do
+        let(:new_quantified_events) do
+          agent_names.each do |agent_name|
+            create(
+              :quantified_event,
+              added_at: from_datetime + 10.days,
+              removed_at:,
+              external_subscription_id: subscription.external_id,
+              billable_metric:,
+              grouped_by: { agent_name: },
+            )
+          end
+        end
+
+        before { new_quantified_events }
+
+        it 'returns the correct number' do
+          expect(result.aggregations.count).to eq(2)
+
+          result.aggregations.each do |aggregation|
+            expect(aggregation.grouped_by.keys).to include('agent_name')
+            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
+            expect(aggregation.full_units_number).to eq(2)
+          end
+        end
+      end
+
+      context 'when dimensions are used' do
+        let(:quantified_events) do
+          agent_names.each do |agent_name|
+            create(
+              :quantified_event,
+              added_at:,
+              removed_at:,
+              external_subscription_id: subscription.external_id,
+              billable_metric:,
+              properties: { unique_id: '111', region: 'europe' },
+              grouped_by: { agent_name: },
+            )
+          end
+        end
+
+        let(:group) do
+          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+        end
+
+        it 'returns the number of persisted metric' do
+          expect(result.aggregations.count).to eq(2)
+
+          result.aggregations.each do |aggregation|
+            expect(aggregation.grouped_by.keys).to include('agent_name')
+            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.aggregation).to eq(1)
+            expect(aggregation.full_units_number).to eq(1)
+          end
+        end
+      end
+    end
+
+    context 'with persisted metrics added in the period' do
+      let(:added_at) { from_datetime + 15.days }
+
+      it 'returns the prorata of the full duration' do
+        expect(result.aggregations.count).to eq(2)
+
+        result.aggregations.each do |aggregation|
+          expect(aggregation.grouped_by.keys).to include('agent_name')
+          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.aggregation).to eq(16.fdiv(31).ceil(5))
+          expect(aggregation.full_units_number).to eq(1)
+        end
+      end
+
+      context 'when added on the first day of the period' do
+        let(:added_at) { from_datetime }
+
+        it 'returns the full duration' do
+          expect(result.aggregations.count).to eq(2)
+
+          result.aggregations.each do |aggregation|
+            expect(aggregation.grouped_by.keys).to include('agent_name')
+            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.aggregation).to eq(1)
+            expect(aggregation.full_units_number).to eq(1)
+          end
+        end
+      end
+    end
+
+    context 'with persisted metrics terminated in the period' do
+      let(:removed_at) { to_datetime - 15.days }
+
+      it 'returns the prorata of the full duration' do
+        expect(result.aggregations.count).to eq(2)
+
+        result.aggregations.each do |aggregation|
+          expect(aggregation.grouped_by.keys).to include('agent_name')
+          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.aggregation).to eq(16.fdiv(31).ceil(5))
+        end
+      end
+
+      context 'when removed on the last day of the period' do
+        let(:removed_at) { to_datetime }
+
+        it 'returns the full duration' do
+          expect(result.aggregations.count).to eq(2)
+
+          result.aggregations.each do |aggregation|
+            expect(aggregation.grouped_by.keys).to include('agent_name')
+            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.aggregation).to eq(1)
+          end
+        end
+      end
+    end
+
+    context 'with persisted metrics added and terminated in the period' do
+      let(:added_at) { from_datetime + 1.day }
+      let(:removed_at) { to_datetime - 1.day }
+
+      it 'returns the prorata of the full duration' do
+        expect(result.aggregations.count).to eq(2)
+
+        result.aggregations.each do |aggregation|
+          expect(aggregation.grouped_by.keys).to include('agent_name')
+          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.aggregation).to eq(29.fdiv(31).ceil(5))
+        end
+      end
+
+      context 'when added and removed the same day' do
+        let(:added_at) { from_datetime + 1.day }
+        let(:removed_at) { added_at.end_of_day }
+
+        it 'returns a 1 day duration' do
+          expect(result.aggregations.count).to eq(2)
+
+          result.aggregations.each do |aggregation|
+            expect(aggregation.grouped_by.keys).to include('agent_name')
+            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.aggregation).to eq(1.fdiv(31).ceil(5))
+          end
+        end
+      end
+    end
+
+    context 'when current usage context and charge is pay in arrear' do
+      let(:options) do
+        { is_pay_in_advance: false, is_current_usage: true }
+      end
+      let(:new_quantified_events) do
+        agent_names.map do |agent_name|
+          create(
+            :quantified_event,
+            added_at: from_datetime + 10.days,
+            removed_at:,
+            external_subscription_id: subscription.external_id,
+            billable_metric:,
+            grouped_by: { agent_name: },
+          )
+        end
+      end
+
+      before { new_quantified_events }
+
+      it 'returns correct result' do
+        expect(result.aggregations.count).to eq(2)
+
+        result.aggregations.each do |aggregation|
+          expect(aggregation.grouped_by.keys).to include('agent_name')
+          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
+          expect(aggregation.current_usage_units).to eq(2)
+        end
+      end
+    end
+
+    context 'when current usage context and charge is pay in advance' do
+      let(:options) do
+        { is_pay_in_advance: true, is_current_usage: true }
+      end
+
+      let(:previous_events) do
+        agent_names.map.with_index do |agent_name, index|
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 5.days,
+            properties: {
+              unique_id: previous_quantified_events[index].external_id,
+              agent_name:,
+            },
+          )
+        end
+      end
+
+      let(:previous_quantified_events) do
+        agent_names.map do |agent_name|
+          create(
+            :quantified_event,
+            organization:,
+            added_at: from_datetime + 5.days,
+            removed_at:,
+            external_id: '000',
+            external_subscription_id: subscription.external_id,
+            billable_metric:,
+            grouped_by: { agent_name: },
+          )
+        end
+      end
+
+      let(:cached_aggregations) do
+        agent_names.map.with_index do |agent_name, index|
+          create(
+            :cached_aggregation,
+            organization:,
+            charge:,
+            event_id: previous_events[index].id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 5.days,
+            current_aggregation: '1',
+            max_aggregation: '1',
+            max_aggregation_with_proration: '0.8',
+            grouped_by: { agent_name: },
+          )
+        end
+      end
+
+      before { cached_aggregations }
+
+      it 'returns period maximum as aggregation' do
+        expect(result.aggregations.count).to eq(2)
+
+        result.aggregations.each do |aggregation|
+          expect(aggregation.grouped_by.keys).to include('agent_name')
+          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.aggregation).to eq(1.8)
+          expect(aggregation.current_usage_units).to eq(2)
+        end
+      end
+
+      context 'when cached aggregation does not exist' do
+        let(:cached_aggregations) { nil }
+
+        it 'returns only the past aggregation' do
+          expect(result.aggregations.count).to eq(2)
+
+          result.aggregations.each do |aggregation|
+            expect(aggregation.grouped_by.keys).to include('agent_name')
+            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.aggregation).to eq(1)
+            expect(aggregation.current_usage_units).to eq(1)
+            expect(aggregation.full_units_number).to eq(1)
+          end
         end
       end
     end

@@ -9,7 +9,7 @@ module BillableMetrics
         super(**args)
       end
 
-      def aggregate(options: {})
+      def compute_aggregation(options: {})
         @options = options
 
         # For charges that are pay in advance on billing date we always bill full amount
@@ -30,6 +30,54 @@ module BillableMetrics
         result
       end
 
+      # NOTE: Apply the grouped_by filter to the aggregation
+      #       Result will have an aggregations attribute
+      #       containing the aggregation result of each group.
+      #
+      #       This logic is only applicable for in arrears aggregation
+      #       (exept for the current_usage update)
+      #       as pay in advance aggregation will be computed on a single group
+      #       with the grouped_by_values filter
+      def compute_grouped_by_aggregation(options: {})
+        @options = options
+
+        # For charges that are pay in advance on billing date we always bill full amount
+        return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
+
+        aggregations = compute_prorated_grouped_aggregation
+        return empty_results if aggregations.blank?
+
+        result.aggregations = aggregations.map do |aggregation|
+          aggregation_value = aggregation[:value].ceil(5)
+
+          group_result_without_proration = aggregation_without_proration.aggregations.find do |agg|
+            agg.grouped_by == aggregation[:groups]
+          end
+
+          group_result = BaseService::Result.new
+          group_result.grouped_by = aggregation[:groups]
+          group_result.full_units_number = group_result_without_proration&.aggregation || 0
+
+          if options[:is_current_usage]
+            handle_current_usage(
+              aggregation_value,
+              options[:is_pay_in_advance],
+              target_result: group_result,
+              aggregation_without_proration: group_result_without_proration,
+            )
+          else
+            group_result.aggregation = aggregation_value
+          end
+
+          group_result.count = group_result.aggregation
+          group_result.options = options
+
+          group_result
+        end
+
+        result
+      end
+
       def per_event_aggregation
         recurring_result = recurring_value
         recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
@@ -44,8 +92,18 @@ module BillableMetrics
 
       protected
 
+      def support_grouped_aggregation?
+        true
+      end
+
       def compute_prorated_aggregation
         ActiveRecord::Base.connection.execute(prorated_aggregation_query).first['aggregation_result']
+      end
+
+      def compute_prorated_grouped_aggregation
+        event_store.prepare_grouped_result(
+          ActiveRecord::Base.connection.select_all(prorated_grouped_aggregation_query).rows,
+        )
       end
 
       def prorated_aggregation_query
@@ -71,6 +129,74 @@ module BillableMetrics
         ]
 
         "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
+      end
+
+      def prorated_grouped_aggregation_query
+        groups = grouped_by.map do |group|
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            ['quantified_events.grouped_by->>?', group],
+          )
+        end
+        indexed_groups = groups.map.with_index { |group, index| "#{group} AS g_#{index}" }
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+
+        # NOTE: Billed on the full period.
+        persisted = prorated_persisted_query
+          .select([indexed_groups, "SUM(#{persisted_pro_rata}::numeric) AS group_sum"].flatten.join(', '))
+          .group(groups.join(', '))
+          .to_sql
+
+        # NOTE: Added during the period
+        added = prorated_added_query
+          .select([
+            indexed_groups,
+            duration_ratio_sql('quantified_events.added_at', to_datetime, 'group_sum'),
+          ].flatten.join(', '))
+          .group(groups.join(', '))
+          .to_sql
+
+        # NOTE: removed during the period
+        removed = prorated_removed_query
+          .select([
+            indexed_groups,
+            duration_ratio_sql(from_datetime, 'quantified_events.removed_at', 'group_sum'),
+          ].flatten.join(', '))
+          .group(groups.join(', '))
+          .to_sql
+
+        # NOTE: Added and then removed during the period
+        added_and_removed = prorated_added_and_removed_query
+          .select([
+            indexed_groups,
+            duration_ratio_sql(
+              'quantified_events.added_at',
+              'quantified_events.removed_at',
+              'group_sum',
+            ),
+          ].flatten.join(', '))
+          .group(groups.join(', '))
+          .to_sql
+
+        <<-SQL
+          with persisted AS (#{persisted}),
+          added AS (#{added}),
+          removed AS (#{removed}),
+          added_and_removed AS (#{added_and_removed})
+
+          SELECT
+            #{group_names},
+            SUM(group_sum)
+          FROM (
+            (select * from persisted)
+            UNION ALL
+            (select * from added)
+            UNION ALL
+            (select * from removed)
+            UNION ALL
+            (select * from added_and_removed)
+          ) grouped_count
+          GROUP BY #{group_names}
+        SQL
       end
 
       def prorated_persisted_query
@@ -114,11 +240,13 @@ module BillableMetrics
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
       #       Dates are in customer timezone to make sure the duration is good
-      def duration_ratio_sql(from, to)
+      def duration_ratio_sql(from, to, field_name = nil)
         from_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, from)
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
-        "SUM((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}) + 1)::numeric / #{period_duration})::numeric"
+        field = "SUM((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}) + 1)::numeric / #{period_duration})::numeric"
+        field = "(#{field}) AS #{field_name}" if field_name
+        field
       end
 
       def compute_per_event_prorated_aggregation
