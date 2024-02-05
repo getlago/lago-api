@@ -2,7 +2,7 @@
 
 module Pinet
   class Client
-    PINET_API_URL = ENV.fetch('PINET_API_URL')
+    PINET_API_URL = ENV.fetch('PINET_API_URL', 'default')
     RETRY_INTERVAL = 0.5 # seconds
     TIMEOUT = 5 # seconds
 
