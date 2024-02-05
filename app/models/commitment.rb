@@ -15,4 +15,8 @@ class Commitment < ApplicationRecord
 
   validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: false
   validates :commitment_type, uniqueness: { scope: :plan_id }
+
+  def invoice_name
+    invoice_display_name.presence || 'Minimum commitment'
+  end
 end

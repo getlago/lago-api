@@ -19,13 +19,15 @@ module Commitments
 
       attr_reader :minimum_commitment, :invoice_subscription
 
+      delegate :subscription, to: :invoice_subscription
+
       def amount_cents
         return 0 if !minimum_commitment || fees_total_amount_cents >= commitment_amount_cents
 
         commitment_amount_cents - fees_total_amount_cents
       end
 
-  		def commitment_amount_cents
+      def commitment_amount_cents
         result = Commitments::CalculateAmountService.call(
           commitment: minimum_commitment,
           invoice_subscription:,
@@ -35,21 +37,30 @@ module Commitments
       end
 
       def fees_total_amount_cents
-        # TODO: in case if it's billed monthly, yearly plan
-        # we need to select all the invoice_subscriptions for the whole year not just
-        # one invoice_subscription (fees table)
+        helper_service = Commitments::HelperService.new(
+          commitment: minimum_commitment,
+          invoice_subscription:,
+          current_usage: true,
+        )
+        result = helper_service.period_invoice_ids
 
-        charge_fees = invoice_subscription
-          .fees
+        charge_fees = Fee
           .charge_kind
           .joins(:charge)
-          .where(charge: { pay_in_advance: false })
+          .where(
+            subscription_id: subscription.id,
+            invoice_id: result.period_invoice_ids,
+            charge: { pay_in_advance: false },
+          )
 
-        subscription_fees = invoice_subscription
-          .fees
+        subscription_fees = Fee
           .subscription_kind
           .joins(subscription: :plan)
-          .where(plan: { pay_in_advance: false })
+          .where(
+            subscription_id: subscription.id,
+            invoice_id: result.period_invoice_ids,
+            plan: { pay_in_advance: false },
+          )
 
         charge_fees.sum(:amount_cents) + subscription_fees.sum(:amount_cents)
       end

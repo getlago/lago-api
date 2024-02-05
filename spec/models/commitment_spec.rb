@@ -9,6 +9,26 @@ RSpec.describe Commitment, type: :model do
 
   it { is_expected.to validate_numericality_of(:amount_cents) }
 
+  describe '#invoice_name' do
+    subject(:commitment_invoice_name) { commitment.invoice_name }
+
+    context 'when invoice display name is blank' do
+      let(:commitment) { build_stubbed(:commitment, invoice_display_name: [nil, ''].sample) }
+
+      it 'returns name' do
+        expect(commitment_invoice_name).to eq('Minimum commitment')
+      end
+    end
+
+    context 'when invoice display name is present' do
+      let(:commitment) { build_stubbed(:commitment) }
+
+      it 'returns invoice display name' do
+        expect(commitment_invoice_name).to eq(commitment.invoice_display_name)
+      end
+    end
+  end
+
   describe 'validations' do
     subject(:commitment) { build(:commitment) }
 

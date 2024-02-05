@@ -23,28 +23,10 @@ module Commitments
     def commitment_amount_cents
       return 0 if !commitment || !invoice_subscription || commitment.amount_cents.zero?
 
-      Money.from_cents(commitment.amount_cents * proration_coefficient, commitment.plan.amount_currency).cents
-    end
+      service = Commitments::HelperService.new(commitment:, invoice_subscription:, current_usage: false)
+      result = service.proration_coefficient
 
-    def proration_coefficient
-      days = Utils::DatetimeService.date_diff_with_timezone(
-        invoice_subscription.from_datetime,
-        invoice_subscription.to_datetime,
-        subscription.customer.applicable_timezone,
-      )
-
-      service = Subscriptions::DatesService.new_instance(
-        subscription,
-        invoice_subscription.timestamp,
-      )
-
-      days_total = Utils::DatetimeService.date_diff_with_timezone(
-        service.previous_beginning_of_period,
-        service.end_of_period,
-        subscription.customer.applicable_timezone,
-      )
-
-      days / days_total.to_f
+      Money.from_cents(commitment.amount_cents * result.proration_coefficient, commitment.plan.amount_currency).cents
     end
   end
 end

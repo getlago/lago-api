@@ -223,7 +223,7 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
             it 'returns prorated result' do
               result = apply_service.call
 
-              expect(result.commitment_amount_cents).to eq(39560)
+              expect(result.commitment_amount_cents).to eq(39_560)
             end
           end
         end
@@ -297,7 +297,7 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
             it 'returns prorated result' do
               result = apply_service.call
 
-              expect(result.commitment_amount_cents).to eq(199454)
+              expect(result.commitment_amount_cents).to eq(199_454)
             end
           end
         end
