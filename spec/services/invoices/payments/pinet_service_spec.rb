@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::Payments::PinetService, type: :service do
-  subject(:pinet_service) { described_class.new(invoice) }
+  subject(:pinet_service) { described_class.new(invoice:) }
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
