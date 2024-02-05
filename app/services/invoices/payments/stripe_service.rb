@@ -52,7 +52,11 @@ module Invoices
       end
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
-        payment = Payment.find_by(provider_payment_id:)
+        payment = if metadata[:payment_type] == 'one-time'
+          create_payment(provider_payment_id:, metadata:)
+        else
+          Payment.find_by(provider_payment_id:)
+        end
         return handle_missing_payment(organization_id, metadata) unless payment
 
         result.payment = payment
@@ -95,6 +99,21 @@ module Invoices
       attr_accessor :invoice
 
       delegate :organization, :customer, to: :invoice
+
+      def create_payment(provider_payment_id:, metadata:)
+        @invoice = Invoice.find(metadata[:lago_invoice_id])
+
+        increment_payment_attempts
+
+        Payment.new(
+          invoice:,
+          payment_provider_id: stripe_payment_provider.id,
+          payment_provider_customer_id: customer.stripe_customer.id,
+          amount_cents: invoice.total_amount_cents,
+          amount_currency: invoice.currency&.upcase,
+          provider_payment_id:,
+        )
+      end
 
       def success_redirect_url
         stripe_payment_provider.success_redirect_url.presence ||
@@ -204,7 +223,7 @@ module Invoices
                 currency: invoice.currency.downcase,
                 unit_amount: invoice.total_amount_cents,
                 product_data: {
-                  name: invoice.id,
+                  name: invoice.number,
                 },
               },
             },
@@ -213,6 +232,15 @@ module Invoices
           success_url: success_redirect_url,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
+          payment_intent_data: {
+            metadata: {
+              lago_customer_id: customer.id,
+              lago_invoice_id: invoice.id,
+              invoice_issuing_date: invoice.issuing_date.iso8601,
+              invoice_type: invoice.invoice_type,
+              payment_type: 'one-time',
+            },
+          },
         }
       end
 

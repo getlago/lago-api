@@ -51,8 +51,12 @@ module Invoices
         result
       end
 
-      def update_payment_status(provider_payment_id:, status:)
-        payment = Payment.find_by(provider_payment_id:)
+      def update_payment_status(provider_payment_id:, status:, metadata: {})
+        payment = if metadata[:payment_type] == 'one-time'
+          create_payment(provider_payment_id:, metadata:)
+        else
+          Payment.find_by(provider_payment_id:)
+        end
         return result.not_found_failure!(resource: 'adyen_payment') unless payment
 
         result.payment = payment
@@ -91,6 +95,21 @@ module Invoices
       attr_accessor :invoice
 
       delegate :organization, :customer, to: :invoice
+
+      def create_payment(provider_payment_id:, metadata:)
+        @invoice = Invoice.find(metadata[:lago_invoice_id])
+
+        increment_payment_attempts
+
+        Payment.new(
+          invoice:,
+          payment_provider_id: adyen_payment_provider.id,
+          payment_provider_customer_id: customer.adyen_customer.id,
+          amount_cents: invoice.total_amount_cents,
+          amount_currency: invoice.currency.upcase,
+          provider_payment_id:,
+        )
+      end
 
       def should_process_payment?
         return false if invoice.succeeded? || invoice.voided?
@@ -168,7 +187,7 @@ module Invoices
 
       def payment_url_params
         prms = {
-          reference: invoice.id,
+          reference: invoice.number,
           amount: {
             value: invoice.total_amount_cents,
             currency: invoice.currency.upcase,
@@ -179,6 +198,13 @@ module Invoices
           storePaymentMethodMode: 'enabled',
           recurringProcessingModel: 'UnscheduledCardOnFile',
           expiresAt: Time.current + 1.day,
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_invoice_id: invoice.id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type,
+            payment_type: 'one-time',
+          },
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms

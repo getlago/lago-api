@@ -396,6 +396,33 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
+    context 'when payment is not found and it is one time payment' do
+      let(:payment) { nil }
+
+      before do
+        stripe_payment_provider
+        stripe_customer
+      end
+
+      it 'creates a payment and updates invoice payment status' do
+        result = stripe_service.update_payment_status(
+          organization_id: organization.id,
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+          metadata: { lago_invoice_id: invoice.id, payment_type: 'one-time' },
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment.status).to eq('succeeded')
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: 'succeeded',
+            ready_for_payment_processing: false,
+          )
+        end
+      end
+    end
+
     context 'when payment is not found' do
       let(:payment) { nil }
 
