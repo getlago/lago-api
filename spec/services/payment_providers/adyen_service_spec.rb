@@ -184,6 +184,25 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       end
     end
 
+    context 'when succeeded authorisation event for processed one-time payment' do
+      let(:event_json) do
+        JSON.parse(event_response_json)['notificationItems']
+          .first&.dig('NotificationRequestItem').to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_payment_response.json')
+        File.read(path)
+      end
+
+      it 'routes the event to an other service' do
+        adyen_service.handle_event(organization:, event_json:)
+
+        expect(Invoices::Payments::AdyenService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status)
+      end
+    end
+
     context 'when succeeded refund event' do
       let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
 

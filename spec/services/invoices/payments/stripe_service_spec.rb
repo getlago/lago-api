@@ -281,6 +281,42 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
   end
 
+  describe '#generate_payment_url' do
+    before do
+      stripe_payment_provider
+      stripe_customer
+
+      allow(Stripe::Checkout::Session).to receive(:create)
+        .and_return({ 'url' => 'https://example.com' })
+    end
+
+    it 'generates payment url' do
+      stripe_service.generate_payment_url
+
+      expect(Stripe::Checkout::Session).to have_received(:create)
+    end
+
+    context 'when invoice is succeeded' do
+      before { invoice.succeeded! }
+
+      it 'does not generate payment url' do
+        stripe_service.generate_payment_url
+
+        expect(Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+
+    context 'when invoice is voided' do
+      before { invoice.voided! }
+
+      it 'does not generate payment url' do
+        stripe_service.generate_payment_url
+
+        expect(Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+  end
+
   describe '.update_payment_status' do
     let(:payment) do
       create(
@@ -356,6 +392,33 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages.keys).to include(:payment_status)
           expect(result.error.messages[:payment_status]).to include('value_is_invalid')
+        end
+      end
+    end
+
+    context 'when payment is not found and it is one time payment' do
+      let(:payment) { nil }
+
+      before do
+        stripe_payment_provider
+        stripe_customer
+      end
+
+      it 'creates a payment and updates invoice payment status' do
+        result = stripe_service.update_payment_status(
+          organization_id: organization.id,
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+          metadata: { lago_invoice_id: invoice.id, payment_type: 'one-time' },
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment.status).to eq('succeeded')
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: 'succeeded',
+            ready_for_payment_processing: false,
+          )
         end
       end
     end

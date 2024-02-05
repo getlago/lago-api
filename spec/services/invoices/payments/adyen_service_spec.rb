@@ -11,6 +11,8 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
   let(:adyen_customer) { create(:adyen_customer, customer:) }
   let(:adyen_client) { instance_double(Adyen::Client) }
   let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
+  let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+  let(:payment_links_response) { generate(:adyen_payment_links_response) }
   let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
   let(:payments_response) { generate(:adyen_payments_response) }
   let(:payment_methods_response) { generate(:adyen_payment_methods_response) }
@@ -336,6 +338,74 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
           expect(result.error.messages.keys).to include(:payment_status)
           expect(result.error.messages[:payment_status]).to include('value_is_invalid')
         end
+      end
+    end
+
+    context 'when payment is not found and it is one time payment' do
+      let(:payment) { nil }
+
+      before do
+        adyen_payment_provider
+        adyen_customer
+      end
+
+      it 'creates a payment and updates invoice payment status' do
+        result = adyen_service.update_payment_status(
+          provider_payment_id: 'ch_123456',
+          status: 'succeeded',
+          metadata: { lago_invoice_id: invoice.id, payment_type: 'one-time' },
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.payment.status).to eq('succeeded')
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: 'succeeded',
+            ready_for_payment_processing: false,
+          )
+        end
+      end
+    end
+  end
+
+  describe '#generate_payment_url' do
+    before do
+      adyen_payment_provider
+      adyen_customer
+
+      allow(Adyen::Client).to receive(:new)
+        .and_return(adyen_client)
+      allow(adyen_client).to receive(:checkout)
+        .and_return(checkout)
+      allow(checkout).to receive(:payment_links_api)
+        .and_return(payment_links_api)
+      allow(payment_links_api).to receive(:payment_links)
+        .and_return(payment_links_response)
+    end
+
+    it 'generates payment url' do
+      adyen_service.generate_payment_url
+
+      expect(payment_links_api).to have_received(:payment_links)
+    end
+
+    context 'when invoice is succeeded' do
+      before { invoice.succeeded! }
+
+      it 'does not generate payment url' do
+        adyen_service.generate_payment_url
+
+        expect(payment_links_api).not_to have_received(:payment_links)
+      end
+    end
+
+    context 'when invoice is voided' do
+      before { invoice.voided! }
+
+      it 'does not generate payment url' do
+        adyen_service.generate_payment_url
+
+        expect(payment_links_api).not_to have_received(:payment_links)
       end
     end
   end
