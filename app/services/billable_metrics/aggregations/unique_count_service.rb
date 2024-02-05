@@ -32,7 +32,7 @@ module BillableMetrics
       #       (exept for the current_usage update)
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
-      def compute_grouped_by_aggregation(_options)
+      def compute_grouped_by_aggregation(options: {})
         aggregations = compute_grouped_aggregations
         return empty_results if aggregations.blank?
 
@@ -120,6 +120,7 @@ module BillableMetrics
             'INNER JOIN quantified_events ON quantified_events.organization_id = cached_aggregations.organization_id',
             'quantified_events.external_subscription_id = cached_aggregations.external_subscription_id',
             'quantified_events.billable_metric_id = charges.billable_metric_id',
+            'quantified_events.grouped_by = cached_aggregations.grouped_by',
           ].join(' AND '))
           .where(quantified_events: { external_id: event_store.events_values })
           .where('quantified_events.added_at::timestamp(0) >= ?', with_from_datetime)
@@ -130,12 +131,7 @@ module BillableMetrics
               .where('quantified_events.removed_at::timestamp(0) >= ?', with_from_datetime)
               .where('quantified_events.removed_at::timestamp(0) <= ?', with_to_datetime),
           )
-
-        query = if grouped_by.present?
-          query.where(grouped_by:).where('quantified_events.grouped_by = ?', grouped_by)
-        else
-          query.where(grouped_by: {}).where("quantified_events.grouped_by = '{}'")
-        end
+          .where(grouped_by: grouped_by.presence || {})
 
         # TODO: event_id for clickhouse events
         query = query.where.not(event_id: event.id) if event.present?
@@ -176,7 +172,9 @@ module BillableMetrics
       end
 
       def compute_grouped_aggregations
-        # TODO
+        event_store.prepare_grouped_result(
+          ActiveRecord::Base.connection.select_all(grouped_aggregation_query).rows,
+        )
       end
 
       def aggregation_query
@@ -191,6 +189,52 @@ module BillableMetrics
         ]
 
         "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
+      end
+
+      def grouped_aggregation_query
+        groups = grouped_by.map do |group|
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            ['quantified_events.grouped_by->>?', group],
+          )
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+
+        # NOTE: Billed on the full period
+        persisted = persisted_query
+          .select(
+            [
+              groups.map.with_index { |group, index| "#{group} AS g_#{index}" },
+              '1::numeric AS group_sum',
+            ].flatten.join(', '),
+          )
+          .group(groups.join(', '))
+          .to_sql
+
+        # NOTE: Added during the period
+        added = added_query
+          .select(
+            [
+              groups.map.with_index { |group, index| "#{group} AS g_#{index}" },
+              '1::numeric AS group_sum',
+            ].flatten.join(', '),
+          )
+          .group(groups.join(', '))
+          .to_sql
+
+        <<-SQL
+          with persisted AS (#{persisted}),
+          added AS (#{added})
+
+          SELECT
+            #{group_names},
+            SUM(group_sum)
+          FROM (
+            (select * from persisted)
+          UNION ALL
+            (select * from added)
+          ) grouped_count
+          GROUP BY #{group_names}
+        SQL
       end
 
       def persisted_query
