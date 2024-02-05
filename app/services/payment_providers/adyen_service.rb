@@ -83,7 +83,15 @@ module PaymentProviders
 
       case event['eventCode']
       when 'AUTHORISATION'
-        return result if event.dig('amount', 'value') != 0
+        amount = event.dig('amount', 'value')
+        payment_type = event.dig('additionalData', 'metadata.payment_type')
+
+        if payment_type == 'one-time'
+          update_result = update_payment_status(event, payment_type)
+          return update_result.raise_if_error! || update_result
+        end
+
+        return result if amount != 0
 
         service = PaymentProviderCustomers::AdyenService.new
 
@@ -115,6 +123,16 @@ module PaymentProviders
         .where(payment_provider_id: nil, customers: { organization_id: }).each do |c|
           c.update(payment_provider_id: adyen_provider.id)
         end
+    end
+
+    private
+
+    def update_payment_status(event, payment_type)
+      provider_payment_id = event['pspReference']
+      status = (event['success'] == 'true') ? 'succeeded' : 'failed'
+      metadata = { payment_type:, lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id') }
+
+      Invoices::Payments::AdyenService.new.update_payment_status(provider_payment_id:, status:, metadata:)
     end
   end
 end
