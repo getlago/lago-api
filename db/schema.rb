@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_01_29_155938) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_05_160647) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -609,7 +609,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_29_155938) do
     t.datetime "voided_at"
     t.integer "organization_sequential_id", default: 0, null: false
     t.boolean "ready_to_be_refreshed", default: false, null: false
-    t.index "organization_id, organization_sequential_id, ((date_trunc('month'::text, created_at))::date)", name: "unique_organization_sequential_id", unique: true, where: "(organization_sequential_id <> 0)"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
