@@ -204,7 +204,7 @@ module BillableMetrics
           .select(
             [
               groups.map.with_index { |group, index| "#{group} AS g_#{index}" },
-              '1::numeric AS group_sum',
+              'SUM(1)::numeric AS group_sum',
             ].flatten.join(', '),
           )
           .group(groups.join(', '))
@@ -215,7 +215,7 @@ module BillableMetrics
           .select(
             [
               groups.map.with_index { |group, index| "#{group} AS g_#{index}" },
-              '1::numeric AS group_sum',
+              'SUM(1)::numeric AS group_sum',
             ].flatten.join(', '),
           )
           .group(groups.join(', '))
