@@ -268,7 +268,7 @@ class Invoice < ApplicationRecord
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
       org_formatted_sequential_id = format('%03d', organization_sequential_id)
-      formatted_year_and_month = Time.now.utc.strftime('%Y%m')
+      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || 'UTC').strftime('%Y%m')
 
       self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
     end
@@ -281,9 +281,11 @@ class Invoice < ApplicationRecord
   end
 
   def generate_organization_sequential_id
+    timezone = organization.timezone || 'UTC'
     organization_sequence_scope = organization.invoices.where(
-      "date_trunc('month', created_at)::date = ?",
-      Time.now.utc.beginning_of_month.to_date,
+      "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
+      timezone,
+      Time.now.in_time_zone(timezone).beginning_of_month.to_date,
     )
 
     result = Invoice.with_advisory_lock(
