@@ -1,5 +1,7 @@
 - if subscription?
   - subscriptions.each do |subscription|
+    - invoice_subscription = invoice_subscription(subscription.id)
+    - subscription_fee = invoice_subscription.subscription_fee
     - if subscriptions.count > 1
       h2.title-2.mb-24 class="#{'invoice-details-title' if subscriptions.count > 1}" = I18n.t('invoice.details', resource: subscription.invoice_name)
 
@@ -7,17 +9,20 @@
     .invoice-resume.overflow-auto class="#{'mb-24' if subscription_fees(subscription.id).charge_kind.any? && different_boundaries_for_subscription_and_charges(subscription)}"
       table.invoice-resume-table width="100%"
         tr.first_child
-          td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default))
+          td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.to_datetime_in_customer_timezone&.to_date, format: :default))
           td.body-2 = I18n.t('invoice.units')
           td.body-2 = I18n.t('invoice.unit_price')
           td.body-2 = I18n.t('invoice.tax_rate')
           td.body-2 = I18n.t('invoice.amount')
         tr
-          td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
+          - if subscription_fee&.invoice_display_name&.present?
+            td.body-1 = subscription_fee&.invoice_display_name
+          - else
+            td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
           td.body-2 = 1
-          td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
-          td.body-2 == TaxHelper.applied_taxes(invoice_subscription(subscription.id).subscription_fee)
-          td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).subscription_amount)
+          td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
+          td.body-2 == TaxHelper.applied_taxes(subscription_fee)
+          td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
 
         - if subscription? && subscription_fees(subscription.id).charge_kind.any?
           / Charges payed in advance on payed in advance plan
@@ -51,7 +56,7 @@
           table.invoice-resume-table width="100%"
             - if different_boundaries_for_subscription_and_charges(subscription)
               tr.first_child
-                td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
+                td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.charges_to_datetime_in_customer_timezone&.to_date, format: :default))
                 td.body-2 = I18n.t('invoice.units')
                 td.body-2 = I18n.t('invoice.unit_price')
                 td.body-2 = I18n.t('invoice.tax_rate')
@@ -83,7 +88,7 @@
         .invoice-resume.overflow-auto
           table.invoice-resume-table width="100%"
             tr.first_child
-              - pay_in_advance_interval = charge_pay_in_advance_interval(invoice_subscription(subscription.id).timestamp, subscription)
+              - pay_in_advance_interval = charge_pay_in_advance_interval(invoice_subscription.timestamp, subscription)
               td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(pay_in_advance_interval[:charges_from_date], format: :default), to_date: I18n.l(pay_in_advance_interval[:charges_to_date], format: :default))
               td.body-2 = I18n.t('invoice.units')
               td.body-2 = I18n.t('invoice.unit_price')
@@ -161,7 +166,7 @@
             td.body-2
             td.body-1 = I18n.t('invoice.total')
             td.body-1
-              = MoneyHelper.format(invoice_subscription(subscription.id).total_amount)
+              = MoneyHelper.format(invoice_subscription.total_amount)
 
     / Recuring fees breakdown
     - if subscription? && subscription_fees(subscription.id).charge_kind.any?
