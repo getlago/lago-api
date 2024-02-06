@@ -363,5 +363,19 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(json[:subscriptions].first[:lago_id]).to eq(subscription1.id)
       end
     end
+
+    context 'with terminated status' do
+      let(:subscription3) { create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated) }
+
+      before { subscription3 }
+
+      it 'returns terminated subscriptions' do
+        get_with_token(organization, "/api/v1/subscriptions?external_customer_id=#{customer.external_id}&status[]=terminated")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].count).to eq(1)
+        expect(json[:subscriptions].first[:lago_id]).to eq(subscription3.id)
+      end
+    end
   end
 end
