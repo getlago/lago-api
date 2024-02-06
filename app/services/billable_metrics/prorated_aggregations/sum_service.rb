@@ -102,10 +102,6 @@ module BillableMetrics
 
       protected
 
-      def support_grouped_aggregation?
-        true
-      end
-
       def persisted_event_store_instante
         event_store = event_store_class.new(
           code: billable_metric.code,

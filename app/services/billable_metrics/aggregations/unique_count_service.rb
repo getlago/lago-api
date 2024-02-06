@@ -153,10 +153,6 @@ module BillableMetrics
 
       protected
 
-      def support_grouped_aggregation?
-        true
-      end
-
       def operation_type
         @operation_type ||= event.properties.fetch('operation_type', 'add')&.to_sym
       end

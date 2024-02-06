@@ -92,10 +92,6 @@ module BillableMetrics
 
       protected
 
-      def support_grouped_aggregation?
-        true
-      end
-
       def compute_prorated_aggregation
         ActiveRecord::Base.connection.execute(prorated_aggregation_query).first['aggregation_result']
       end

@@ -67,10 +67,6 @@ module BillableMetrics
 
       private
 
-      def support_grouped_aggregation?
-        true
-      end
-
       def initial_value
         return 0 unless billable_metric.recurring?
 
