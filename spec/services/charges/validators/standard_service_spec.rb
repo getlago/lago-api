@@ -81,6 +81,19 @@ RSpec.describe Charges::Validators::StandardService, type: :service do
           end
         end
       end
+
+      context 'when attribute is an empty string' do
+        let(:grouped_by) { '' }
+
+        it 'is invalid' do
+          aggregate_failures do
+            expect(standard_service).not_to be_valid
+            expect(standard_service.result.error).to be_a(BaseService::ValidationFailure)
+            expect(standard_service.result.error.messages.keys).to include(:grouped_by)
+            expect(standard_service.result.error.messages[:grouped_by]).to include('invalid_type')
+          end
+        end
+      end
     end
   end
 end
