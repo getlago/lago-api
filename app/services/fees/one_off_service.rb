@@ -19,7 +19,7 @@ module Fees
           return result.not_found_failure!(resource: 'add_on') unless add_on
 
           unit_amount_cents = fee[:unit_amount_cents] || add_on.amount_cents
-          units = fee[:units] || 1
+          units = fee[:units]&.to_f || 1
           tax_codes = fee[:tax_codes]
 
           fee = Fee.new(
