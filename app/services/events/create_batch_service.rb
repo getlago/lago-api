@@ -20,7 +20,7 @@ module Events
 
       validate_events
 
-      return result.validation_failure!(errors: result.errors) if result.errors.present?
+      return result.validation_failure!(errors: result.errors) if result.events.size() == 0
 
       post_validate_events
 
@@ -46,8 +46,12 @@ module Events
         event.metadata = metadata || {}
         event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
 
-        result.events.push(event)
-        result.errors = result.errors.merge({ index => event.errors.messages }) unless event.valid?
+        if event.valid?
+          result.events.push(event)
+        else
+          Rails.logger.warn("Event with transactionID #{event.transaction_id} validation error: #{event.errors.full_messages}")
+          result.errors = result.errors.merge({ index => event.errors.messages })
+        end
       end
     end
 
