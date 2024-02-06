@@ -93,11 +93,15 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :memberships, only: %i[create]
     resources :organizations, only: %i[update]
-    resources :invoices, except: :show do
+    resources :invoices do
       post :regenerate, on: :member
     end
+  end
 
-    get '/invoices/:id', to: 'invoices#show' if Rails.env.development?
+  if Rails.env.development?
+    namespace :dev_tools do
+      get '/invoices/:id', to: 'invoices#show'
+    end
   end
 
   match '*unmatched' => 'application#not_found',
