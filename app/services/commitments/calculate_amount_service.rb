@@ -24,9 +24,12 @@ module Commitments
       return 0 if !commitment || !invoice_subscription || commitment.amount_cents.zero?
 
       service = Commitments::HelperService.new(commitment:, invoice_subscription:, current_usage: false)
-      result = service.proration_coefficient
+      service_result = service.proration_coefficient
 
-      Money.from_cents(commitment.amount_cents * result.proration_coefficient, commitment.plan.amount_currency).cents
+      Money.from_cents(
+        commitment.amount_cents * service_result.proration_coefficient,
+        commitment.plan.amount_currency,
+      ).cents
     end
   end
 end

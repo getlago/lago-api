@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Commitments::HelperService, type: :service do
-  let(:service) { described_class.new(commitment:, invoice_subscription:) }
+  let(:service) { described_class.new(commitment:, invoice_subscription:, current_usage: true) }
   let(:commitment) { create(:commitment, plan:) }
   let(:plan) { create(:plan, organization:) }
   let(:organization) { create(:organization) }

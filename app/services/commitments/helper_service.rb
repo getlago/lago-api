@@ -2,7 +2,7 @@
 
 module Commitments
   class HelperService < BaseService
-    def initialize(commitment:, invoice_subscription:, current_usage: false)
+    def initialize(commitment:, invoice_subscription:, current_usage:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription
 
@@ -53,19 +53,14 @@ module Commitments
     end
 
     def fetch_period_invoice_ids
-      # TODO: in case if it's billed monthly, yearly plan
-      # we need to select all the invoice_subscriptions for the whole year not just
-      # one invoice_subscription (fees table)
-      plan = invoice_subscription.subscription.plan
+      plan = subscription.plan
 
-      if !invoice_subscription.subscription.plan.yearly? || !plan.bill_charges_monthly?
-        return [invoice_subscription.invoice_id]
-      end
+      return [invoice_subscription.invoice_id] if !subscription.plan.yearly? || !plan.bill_charges_monthly?
 
       subscription
         .invoice_subscriptions
         .where(
-          'charges_from_datetime >= ? AND charges_to_datetime <= ?',
+          'from_datetime >= ? AND to_datetime <= ?',
           dates_service.previous_beginning_of_period,
           dates_service.end_of_period,
         )
