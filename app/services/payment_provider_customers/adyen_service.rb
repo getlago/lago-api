@@ -117,7 +117,7 @@ module PaymentProviderCustomers
         recurringProcessingModel: 'UnscheduledCardOnFile',
         expiresAt: Time.current + 69.days,
       }
-      prms[:shopperEmail] = customer.email if customer.email
+      prms[:shopperEmail] = customer.email.split(',').first if customer.email
       prms
     end
 
