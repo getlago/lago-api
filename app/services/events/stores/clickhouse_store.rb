@@ -358,7 +358,7 @@ module Events
         scope = scope.where('events_raw.properties[?] = ?', group.key.to_s, group.value.to_s)
         return scope unless group.parent
 
-        scope.where('events_raw.properties[?] = ?', group.parent.key.to_s => group.parent.value.to_s)
+        scope.where('events_raw.properties[?] = ?', group.parent.key.to_s, group.parent.value.to_s)
       end
 
       def with_grouped_by_values(scope)
