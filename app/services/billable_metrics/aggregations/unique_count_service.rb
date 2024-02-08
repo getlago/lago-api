@@ -59,7 +59,7 @@ module BillableMetrics
 
         newly_applied_units = (operation_type == :add) ? 1 : 0
 
-        cached_aggregation = find_cached_aggregation
+        cached_aggregation = find_cached_aggregation(grouped_by: grouped_by_values)
 
         unless cached_aggregation
           handle_event_metadata(

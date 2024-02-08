@@ -13,6 +13,7 @@ module BillableMetrics
         @group = filters[:group]
         @event = filters[:event]
         @grouped_by = filters[:grouped_by]
+        @grouped_by_values = filters[:grouped_by_values]
 
         @boundaries = boundaries
 
@@ -43,7 +44,15 @@ module BillableMetrics
 
       protected
 
-      attr_accessor :event_store_class, :charge, :subscription, :filters, :group, :event, :boundaries, :grouped_by
+      attr_accessor :event_store_class,
+                    :charge,
+                    :subscription,
+                    :filters,
+                    :group,
+                    :event,
+                    :boundaries,
+                    :grouped_by,
+                    :grouped_by_values
 
       delegate :billable_metric, to: :charge
 
