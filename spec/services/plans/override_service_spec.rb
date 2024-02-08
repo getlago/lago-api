@@ -172,5 +172,14 @@ RSpec.describe Plans::OverrideService, type: :service do
         min_amount_cents: 1000,
       )
     end
+
+    context 'when minimum commitment is not valid' do
+      let(:minimum_commitment_amount_cents) { nil }
+
+      it 'returns error', :aggregate_failures do
+        expect { override_service.call }.not_to change(Plan, :count)
+        expect(override_service.call).not_to be_success
+      end
+    end
   end
 end
