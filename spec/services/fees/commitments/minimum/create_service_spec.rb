@@ -75,13 +75,23 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
       end
     end
 
-    context 'when invoice already has a minimum commitment fee' do
-      before { create(:minimum_commitment_fee, invoice:) }
+    context 'when invoice already has a minimum commitment fee for a subscription' do
+      before { create(:minimum_commitment_fee, invoice:, subscription:) }
 
       it 'does not create a commitment fee' do
         expect do
           service_call
         end.not_to change(Fee.commitment_kind, :count)
+      end
+    end
+
+    context 'when invoice already has a minimum commitment fee for different subscription' do
+      before { create(:minimum_commitment_fee, invoice:) }
+
+      it 'does not create a commitment fee' do
+        expect do
+          service_call
+        end.to change(Fee.commitment_kind, :count).by(1)
       end
     end
   end

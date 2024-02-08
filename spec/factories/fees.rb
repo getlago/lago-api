@@ -95,7 +95,7 @@ FactoryBot.define do
     taxes_amount_cents { 2 }
 
     transient do
-      commitment { create(:commitment, plan: subscription.plan) }
+      commitment { subscription.plan.minimum_commitment.presence || create(:commitment, plan: subscription.plan) }
     end
 
     invoiceable_type { 'Commitment' }

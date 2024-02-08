@@ -32,6 +32,9 @@ module Invoices
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
+          if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
+            create_minimum_commitment_true_up_fee(invoice_subscription)
+          end
         end
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
@@ -110,6 +113,11 @@ module Invoices
       base_query.exists?
     end
 
+    def create_minimum_commitment_true_up_fee(invoice_subscription)
+      minimum_commitment_result = Fees::Commitments::Minimum::CreateService.call(invoice_subscription:)
+      minimum_commitment_result.raise_if_error!
+    end
+
     def create_subscription_fee(subscription, boundaries)
       fee_result = Fees::SubscriptionService.new(invoice:, subscription:, boundaries:).create
       fee_result.raise_if_error!
@@ -159,6 +167,21 @@ module Invoices
       return false if next_subscription_charges.blank?
 
       next_subscription_charges.pluck(:billable_metric_id).include?(charge.billable_metric_id)
+    end
+
+    def should_create_minimum_commitment_true_up_fee?(invoice_subscription)
+      subscription = invoice_subscription.subscription
+
+      return false if subscription.plan.pay_in_advance?
+      return false unless should_create_yearly_subscription_fee?(subscription)
+
+      calculate_true_up_fee_result = Commitments::Minimum::CalculateTrueUpFeeService.call(invoice_subscription:)
+
+      return false if calculate_true_up_fee_result.amount_cents.zero?
+
+      subscription.active? ||
+        (subscription.terminated? && subscription.plan.pay_in_arrear?) ||
+        (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
     def should_create_subscription_fee?(subscription)
