@@ -68,27 +68,17 @@ module Invoices
     end
 
     def charge_usage(charge)
-      if ENV['LAGO_CLICKHOUSE_ENABLED'] == 'true'
+      json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
         fees_result = Fees::ChargeService.new(
           invoice:, charge:, subscription:, boundaries:,
         ).current_usage
 
         fees_result.raise_if_error!
 
-        fees_result.fees
-      else
-        json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
-          fees_result = Fees::ChargeService.new(
-            invoice:, charge:, subscription:, boundaries:,
-          ).current_usage
-
-          fees_result.raise_if_error!
-
-          fees_result.fees.to_json
-        end
-
-        JSON.parse(json).map { |j| Fee.new(j) }
+        fees_result.fees.to_json
       end
+
+      JSON.parse(json).map { |j| Fee.new(j) }
     end
 
     def boundaries
