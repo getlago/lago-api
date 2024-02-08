@@ -32,7 +32,7 @@ module Commitments
         .order(
           Arel.sql(
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              'COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.created_at) ASC',
+              'COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.timestamp) ASC',
             ),
           ),
         )
