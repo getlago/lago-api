@@ -8460,6 +8460,12 @@
               "deprecationReason": null
             },
             {
+              "name": "KWD",
+              "description": "Kuwaiti Dinar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "KYD",
               "description": "Cayman Islands Dollar",
               "isDeprecated": false,

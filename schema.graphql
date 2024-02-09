@@ -2282,6 +2282,11 @@ enum CurrencyEnum {
   KRW
 
   """
+  Kuwaiti Dinar
+  """
+  KWD
+
+  """
   Cayman Islands Dollar
   """
   KYD
