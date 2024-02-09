@@ -4,7 +4,7 @@ table.invoice-resume-table width="100%"
     td.body-2 = I18n.t('invoice.amount')
   - subscriptions.each do |subscription|
     tr
-      td.body-1 = I18n.t('invoice.details', resource: subscription.invoice_name)
+      td.body-1 = subscription.invoice_name
       td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).total_amount)
 
 table.total-table width="100%"
