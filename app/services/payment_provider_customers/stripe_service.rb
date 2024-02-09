@@ -192,7 +192,7 @@ module PaymentProviderCustomers
           postal_code: customer.zipcode,
           state: customer.state,
         },
-        email: customer.email,
+        email: customer.email.strip.split(',').first,
         name: customer.name,
         metadata: {
           lago_customer_id: customer.id,
@@ -212,7 +212,7 @@ module PaymentProviderCustomers
           postal_code: customer.zipcode,
           state: customer.state,
         },
-        email: customer.email,
+        email: customer.email.strip.split(',').first,
         name: customer.name,
         phone: customer.phone,
       }

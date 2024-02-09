@@ -72,7 +72,7 @@ module PaymentProviderCustomers
     def create_gocardless_customer
       client.customers.create(
         params: {
-          email: customer.email,
+          email: customer.email.strip.split(',').first,
           company_name: customer.name,
         },
       )
