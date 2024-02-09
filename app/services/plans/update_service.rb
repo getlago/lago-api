@@ -72,9 +72,14 @@ module Plans
         charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
         prorated: params[:prorated] || false,
-        properties: params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(params)),
         group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
+
+      properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
+      charge.properties = Charges::FilterChargeModelPropertiesService.call(
+        charge_model: charge.charge_model,
+        properties:,
+      ).properties
 
       if License.premium?
         charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
@@ -136,12 +141,16 @@ module Plans
             return group_result if group_result.error
           end
 
-          properties = payload_charge.delete(:properties)
+          properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
+            payload_charge[:charge_model],
+          )
+
           charge.update!(
             invoice_display_name: payload_charge[:invoice_display_name],
-            properties: properties.presence || Charges::BuildDefaultPropertiesService.call(
-              payload_charge[:charge_model],
-            ),
+            properties: Charges::FilterChargeModelPropertiesService.call(
+              charge_model: charge.charge_model,
+              properties:,
+            ).properties,
           )
 
           tax_codes = payload_charge.delete(:tax_codes)

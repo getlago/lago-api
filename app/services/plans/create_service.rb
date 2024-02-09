@@ -82,9 +82,14 @@ module Plans
         charge_model: charge_model(args),
         pay_in_advance: args[:pay_in_advance] || false,
         prorated: args[:prorated] || false,
-        properties: args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args)),
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
       )
+
+      properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args))
+      charge.properties = Charges::FilterChargeModelPropertiesService.call(
+        charge_model: charge.charge_model,
+        properties:,
+      ).properties
 
       if License.premium?
         charge.invoiceable = args[:invoiceable] unless args[:invoiceable].nil?
