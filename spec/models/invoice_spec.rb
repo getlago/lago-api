@@ -189,6 +189,44 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#existing_fees_in_interval?' do
+    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: false) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, units: 1) }
+
+    before { fee }
+
+    it 'returns true' do
+      expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(true)
+    end
+
+    context 'when charges are in advance' do
+      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true) }
+
+      it 'returns false' do
+        expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(false)
+      end
+
+      context 'with charge_in_advance set to true' do
+        it 'returns true' do
+          expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true))
+            .to eq(true)
+        end
+      end
+    end
+
+    context 'when unit number iz zero' do
+      let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, units: 0) }
+
+      it 'returns false' do
+        expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(false)
+      end
+    end
+  end
+
   describe '#recurring_fees' do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
