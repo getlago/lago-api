@@ -10,7 +10,7 @@ gem 'aasm'
 gem 'activejob-uniqueness', require: 'active_job/uniqueness/sidekiq_patch'
 gem 'bootsnap', require: false
 gem 'clockwork', require: false
-gem 'puma', '~> 5.6'
+gem 'puma', '~> 6.4'
 gem 'rails', '~> 7.0.8'
 gem 'sidekiq'
 
