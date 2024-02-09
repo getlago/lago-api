@@ -36,6 +36,14 @@ module Plans
           Charges::OverrideService.call(charge:, params: charge_params)
         end
 
+        if params[:minimum_commitment].present? && License.premium?
+          commitment = Commitment.new(plan: new_plan, commitment_type: 'minimum_commitment')
+          minimum_commitment_params = params[:minimum_commitment].merge(plan_id: new_plan.id)
+
+          commitment_override_result = Commitments::OverrideService.call(commitment:, params: minimum_commitment_params)
+          return commitment_override_result unless commitment_override_result.success?
+        end
+
         result.plan = new_plan
         track_plan_created(new_plan)
         result

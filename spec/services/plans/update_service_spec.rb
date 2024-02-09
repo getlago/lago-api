@@ -270,6 +270,28 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
       end
+
+      context 'when minimum commitment arguments is an empty hash' do
+        before { update_args.merge!({ minimum_commitment: {} }) }
+
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'does not create minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).to be_nil
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not create minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).to be_nil
+          end
+        end
+      end
     end
 
     context 'when plan has minimum commitment' do
@@ -345,6 +367,28 @@ RSpec.describe Plans::UpdateService, type: :service do
             result = plans_service.call
 
             expect(result.plan.minimum_commitment.amount_cents).not_to eq(update_args[:amount_cents])
+          end
+        end
+      end
+
+      context 'when minimum commitment arguments is an empty hash' do
+        before { update_args.merge!({ minimum_commitment: {} }) }
+
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'deletes plan minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).to be_nil
+          end
+        end
+
+        context 'when license is not premium' do
+          it 'does not delete minimum commitment' do
+            result = plans_service.call
+
+            expect(result.plan.minimum_commitment).not_to be_nil
           end
         end
       end

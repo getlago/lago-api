@@ -99,11 +99,14 @@ module Plans
     end
 
     def process_minimum_commitment(plan, params)
-      minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: 'minimum_commitment')
+      if params.present?
+        minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: 'minimum_commitment')
 
-      minimum_commitment.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
-      minimum_commitment.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
-      minimum_commitment.save!
+        minimum_commitment.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
+        minimum_commitment.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+        minimum_commitment.save!
+      end
+      plan.minimum_commitment.destroy! if params.blank? && plan.minimum_commitment
 
       if params[:tax_codes]
         taxes_result = Commitments::ApplyTaxesService.call(

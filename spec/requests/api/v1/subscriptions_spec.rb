@@ -6,6 +6,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: 'desc') }
+  let(:commitment_invoice_display_name) { 'Overriden minimum commitment name' }
+  let(:commitment_amount_cents) { 1234 }
 
   around { |test| lago_premium!(&test) }
 
@@ -26,6 +28,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         plan_overrides: {
           amount_cents: 100,
           name: 'overridden name',
+          minimum_commitment: {
+            invoice_display_name: commitment_invoice_display_name,
+            amount_cents: commitment_amount_cents,
+          },
         },
       }
     end
@@ -56,6 +62,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           amount_cents: 100,
           name: 'overridden name',
           description: 'desc',
+        )
+        expect(json[:subscription][:plan][:minimum_commitment]).to include(
+          invoice_display_name: commitment_invoice_display_name,
+          amount_cents: commitment_amount_cents,
         )
       end
     end
@@ -169,6 +179,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         subscription_at: '2022-09-05T12:23:12Z',
         plan_overrides: {
           name: 'plan new name',
+          minimum_commitment: {
+            invoice_display_name: commitment_invoice_display_name,
+            amount_cents: 1234,
+          },
         },
       }
     end
@@ -185,6 +199,11 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
       expect(json[:subscription][:plan]).to include(
         name: 'plan new name',
+      )
+
+      expect(json[:subscription][:plan][:minimum_commitment]).to include(
+        invoice_display_name: commitment_invoice_display_name,
+        amount_cents: commitment_amount_cents,
       )
     end
 

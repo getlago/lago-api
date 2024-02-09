@@ -21,7 +21,7 @@ module Api
 
       def update
         plan = current_organization.plans.parents.find_by(code: params[:code])
-        result = ::Plans::UpdateService.call(plan:, params: input_params)
+        result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
           render_plan(result.plan)

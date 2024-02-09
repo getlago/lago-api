@@ -40,8 +40,20 @@ RSpec.describe Plans::OverrideService, type: :service do
         trial_period: 20,
         tax_codes: [tax.code],
         charges: charges_params,
+        minimum_commitment: minimum_commitment_params,
       }
     end
+
+    let(:minimum_commitment_params) do
+      {
+        amount_cents: minimum_commitment_amount_cents,
+        invoice_display_name: minimum_commitment_invoice_display_name,
+        tax_codes: [tax.code],
+      }
+    end
+
+    let(:minimum_commitment_invoice_display_name) { 'Minimum spending' }
+    let(:minimum_commitment_amount_cents) { 100 }
 
     let(:charges_params) do
       [
@@ -81,6 +93,14 @@ RSpec.describe Plans::OverrideService, type: :service do
       )
 
       expect(plan.taxes).to contain_exactly(tax)
+
+      expect(plan.minimum_commitment).to have_attributes(
+        commitment_type: 'minimum_commitment',
+        amount_cents: minimum_commitment_amount_cents,
+        invoice_display_name: minimum_commitment_invoice_display_name,
+      )
+
+      expect(plan.minimum_commitment.taxes.first).to eq(tax)
     end
 
     it 'calls SegmentTrackJob' do
@@ -151,6 +171,15 @@ RSpec.describe Plans::OverrideService, type: :service do
         plan_id: plan.id,
         min_amount_cents: 1000,
       )
+    end
+
+    context 'when minimum commitment is not valid' do
+      let(:minimum_commitment_amount_cents) { nil }
+
+      it 'returns error', :aggregate_failures do
+        expect { override_service.call }.not_to change(Plan, :count)
+        expect(override_service.call).not_to be_success
+      end
     end
   end
 end
