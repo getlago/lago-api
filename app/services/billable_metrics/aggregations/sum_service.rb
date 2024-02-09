@@ -126,10 +126,6 @@ module BillableMetrics
         event_store.events_values(force_from: true)
       end
 
-      def support_grouped_aggregation?
-        true
-      end
-
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
       # would help us in pay in advance value calculation without iterating through all events in current period

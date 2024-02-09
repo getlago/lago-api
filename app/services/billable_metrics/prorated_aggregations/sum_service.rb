@@ -50,6 +50,7 @@ module BillableMetrics
         return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
 
         aggregations = compute_grouped_event_aggregation
+        return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
           aggregation_value = aggregation[:value].ceil(5)
@@ -100,10 +101,6 @@ module BillableMetrics
       end
 
       protected
-
-      def support_grouped_aggregation?
-        true
-      end
 
       def persisted_event_store_instante
         event_store = event_store_class.new(

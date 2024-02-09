@@ -58,12 +58,6 @@ module BillableMetrics
           0
         end
       end
-
-      protected
-
-      def support_grouped_aggregation?
-        true
-      end
     end
   end
 end

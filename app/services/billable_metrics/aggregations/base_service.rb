@@ -13,6 +13,7 @@ module BillableMetrics
         @group = filters[:group]
         @event = filters[:event]
         @grouped_by = filters[:grouped_by]
+        @grouped_by_values = filters[:grouped_by_values]
 
         @boundaries = boundaries
 
@@ -20,7 +21,7 @@ module BillableMetrics
       end
 
       def aggregate(options: {})
-        if grouped_by.present? && support_grouped_aggregation?
+        if grouped_by.present?
           compute_grouped_by_aggregation(options:)
         else
           compute_aggregation(options:)
@@ -43,7 +44,15 @@ module BillableMetrics
 
       protected
 
-      attr_accessor :event_store_class, :charge, :subscription, :filters, :group, :event, :boundaries, :grouped_by
+      attr_accessor :event_store_class,
+                    :charge,
+                    :subscription,
+                    :filters,
+                    :group,
+                    :event,
+                    :boundaries,
+                    :grouped_by,
+                    :grouped_by_values
 
       delegate :billable_metric, to: :charge
 
@@ -83,10 +92,6 @@ module BillableMetrics
 
         target_result.aggregation = 0 if target_result.aggregation.negative?
         target_result.current_usage_units = 0 if target_result.current_usage_units.negative?
-      end
-
-      def support_grouped_aggregation?
-        false
       end
 
       def empty_results

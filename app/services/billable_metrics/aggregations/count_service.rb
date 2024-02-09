@@ -50,12 +50,6 @@ module BillableMetrics
       def compute_per_event_aggregation
         (0...event_store.count).map { |_| 1 }
       end
-
-      protected
-
-      def support_grouped_aggregation?
-        true
-      end
     end
   end
 end

@@ -45,10 +45,6 @@ module BillableMetrics
 
       protected
 
-      def support_grouped_aggregation?
-        true
-      end
-
       def compute_aggregation_value(latest_value)
         result = BigDecimal((latest_value || 0).to_s)
         return BigDecimal(0) if result.negative?

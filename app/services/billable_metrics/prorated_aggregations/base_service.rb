@@ -7,13 +7,6 @@ module BillableMetrics
         @aggregation_without_proration ||= base_aggregator.aggregate(options:)
       end
 
-      def cached_aggregation
-        @cached_aggregation ||= base_aggregator.find_cached_aggregation(
-          with_from_datetime: from_datetime,
-          with_to_datetime: to_datetime,
-        )
-      end
-
       def compute_pay_in_advance_aggregation
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
@@ -42,6 +35,12 @@ module BillableMetrics
       def extend_cached_aggregation(prorated_value)
         result.max_aggregation = aggregation_without_proration.max_aggregation
         result.current_aggregation = aggregation_without_proration.current_aggregation
+
+        cached_aggregation = base_aggregator.find_cached_aggregation(
+          with_from_datetime: from_datetime,
+          with_to_datetime: to_datetime,
+          grouped_by: grouped_by_values,
+        )
 
         unless cached_aggregation
           result.max_aggregation_with_proration = prorated_value.to_s
