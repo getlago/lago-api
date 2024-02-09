@@ -69,6 +69,7 @@ module Currencies
     KHR: 'Cambodian Riel',
     KMF: 'Comorian Franc',
     KRW: 'South Korean Won',
+    KWD: 'Kuwaiti Dinar',
     KYD: 'Cayman Islands Dollar',
     KZT: 'Kazakhstani Tenge',
     LAK: 'Lao Kip',
