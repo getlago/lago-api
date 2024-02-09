@@ -10,6 +10,12 @@ module Admin
       head(:ok)
     end
 
+    def show
+      service = ::Invoices::GeneratePdfService.new(invoice:)
+
+      render(html: service.render_html)
+    end
+
     private
 
     def invoice

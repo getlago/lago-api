@@ -98,6 +98,12 @@ Rails.application.routes.draw do
     end
   end
 
+  if Rails.env.development?
+    namespace :dev_tools do
+      get '/invoices/:id', to: 'invoices#show'
+    end
+  end
+
   match '*unmatched' => 'application#not_found',
         via: %i[get post put delete patch],
         constraints: lambda { |req|

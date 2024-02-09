@@ -16,16 +16,16 @@ module Utils
       result
     end
 
+    def render_html
+      Slim::Template.new { template_file }.render(context)
+    end
+
     private
 
     attr_reader :template, :context
 
     def template_file
       File.read(Rails.root.join("app/views/templates/#{template}.slim"), encoding: 'UTF-8')
-    end
-
-    def render_html
-      Slim::Template.new { template_file }.render(context)
     end
 
     def pdf_url

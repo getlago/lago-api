@@ -21,6 +21,13 @@ module Invoices
       result
     end
 
+    # rubocop:disable Rails/OutputSafety
+    def render_html
+      pdf_service = Utils::PdfGenerator.new(template:, context: invoice)
+      pdf_service.render_html.html_safe
+    end
+    # rubocop:enable Rails/OutputSafety
+
     private
 
     attr_reader :invoice, :context
