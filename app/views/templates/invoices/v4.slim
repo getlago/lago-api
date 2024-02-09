@@ -196,6 +196,9 @@ html
       .mb-24 {
         margin-bottom: 24px;
       }
+      .mt-24 {
+        margin-top: 24px;
+      }
 
       .overflow-auto {
         overflow: auto;
@@ -439,7 +442,7 @@ html
               = customer.city
           .body-2 = customer.state
           .body-2 = ISO3166::Country.new(customer.country)&.common_name
-          .body-2 = customer.email.gsub(/,\s*/, ', ')
+          .body-2 = customer.email&.gsub(/,\s*/, ', ')
           - if customer.tax_identification_number.present?
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)
 

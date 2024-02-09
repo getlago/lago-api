@@ -51,7 +51,7 @@
     / Charge fees section for subscription invoice
     - if subscription? && subscription_fees(subscription.id).charge_kind.any?
       / Charges payed in arrears OR charges and plan payed in advance
-      - if subscription.plan.charges.where(pay_in_advance: false).any?
+      - if subscription.plan.charges.where(pay_in_advance: false).any? && existing_fees_in_interval?(subscription_id: subscription.id)
         .invoice-resume.overflow-auto
           table.invoice-resume-table width="100%"
             - if different_boundaries_for_subscription_and_charges(subscription)
@@ -84,8 +84,8 @@
                 == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
 
       / Charges payed in advance on payed in arrears plan
-      - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance?
-        .invoice-resume.overflow-auto
+      - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance? && existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true)
+        .invoice-resume.overflow-auto class="mt-24"
           table.invoice-resume-table width="100%"
             tr.first_child
               - pay_in_advance_interval = charge_pay_in_advance_interval(invoice_subscription.timestamp, subscription)
