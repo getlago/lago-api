@@ -49,7 +49,7 @@ module Events
           external_customer_id: event.external_customer_id,
           external_subscription_id: event.external_subscription_id,
           transaction_id: event.transaction_id,
-          timestamp: event.timestamp.to_f,
+          timestamp: event.timestamp.iso8601[...-1], # NOTE: Removes trailing 'Z' to allow clickhouse parsing
           code: event.code,
           properties: event.properties,
         }.to_json,
