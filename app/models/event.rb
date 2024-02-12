@@ -40,7 +40,11 @@ class Event < EventsRecord
 
   def subscription
     scope = if external_customer_id && customer
-      customer.subscriptions
+      if external_subscription_id
+        customer.subscriptions.where(external_id: external_subscription_id)
+      else
+        customer.subscriptions
+      end
     else
       organization.subscriptions.where(external_id: external_subscription_id)
     end
