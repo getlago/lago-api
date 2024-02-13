@@ -92,7 +92,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     end
 
     context 'with sensitive field' do
-      let(:organization_fields) { 'apiKey' }
+      let(:organization_field) { 'apiKey' }
 
       it 'rejects the query for a sensitive field' do
         expect(other_org_result_data).to be nil
