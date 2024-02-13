@@ -71,6 +71,22 @@ module Events
         prepare_grouped_result(results)
       end
 
+      def unique_count
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
+        result = ActiveRecord::Base.connection.select_one(sql)
+
+        result['aggregation']
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def unique_count_breakdown
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+        ActiveRecord::Base.connection.select_all(
+          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query]),
+        ).rows
+      end
+
       def max
         events.maximum("(#{sanitized_propery_name})::numeric")
       end
