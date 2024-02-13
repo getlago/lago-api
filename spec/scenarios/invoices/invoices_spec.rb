@@ -447,7 +447,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
     end
 
-    it 'does bill correctly fees' do
+    it 'bills fees correctly' do
       travel_to(DateTime.new(2024, 1, 1)) do
         create(
           :standard_charge,
@@ -501,8 +501,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         credit_note = customer.credit_notes.first
 
         expect(credit_note.credit_amount_cents).to eq(1_800)
-        expect(terminated_invoice.total_amount_cents).to eq(0) # 12/29 x 5 = 207 - 207(CN)
-        expect(new_subscription_invoice.total_amount_cents).to eq(18_000 - (1_800 - 207))
+        expect(terminated_invoice.total_amount_cents).to eq(0) # 11/29 x 5 = 190 - 190(CN)
+        expect(new_subscription_invoice.total_amount_cents).to eq(18_000 - (1_800 - 190))
       end
     end
   end

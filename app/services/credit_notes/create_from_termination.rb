@@ -81,7 +81,9 @@ module CreditNotes
         end
       end
 
-      (to_date - billed_from).to_i
+      duration = (to_date - billed_from).to_i
+
+      duration < 0 ? 0 : duration
     end
 
     def creditable_amount_cents(item_amount)
