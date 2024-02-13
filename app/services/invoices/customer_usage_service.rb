@@ -115,12 +115,7 @@ module Invoices
     end
 
     def charge_cache_key(charge)
-      [
-        'charge-usage',
-        charge.id,
-        subscription.id,
-        charge.updated_at.iso8601,
-      ].join('/')
+      Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
     end
 
     def charge_cache_expiration
