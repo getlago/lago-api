@@ -71,7 +71,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
   before { events }
 
-  describe '.events' do
+  describe '#events' do
     it 'returns a list of events' do
       expect(event_store.events.count).to eq(5)
     end
@@ -93,13 +93,13 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.count' do
+  describe '#count' do
     it 'returns the number of unique events' do
       expect(event_store.count).to eq(5)
     end
   end
 
-  describe '.grouped_count' do
+  describe '#grouped_count' do
     let(:grouped_by) { %w[cloud] }
 
     it 'returns the number of unique events grouped by the provided group' do
@@ -139,7 +139,28 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.events_values' do
+  describe '#unique_count' do
+    it 'returns the number of unique active event properties' do
+      create(
+        :event,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp: boundaries[:from_datetime] + 2.days,
+        properties: {
+          billable_metric.field_name => 2,
+          operation_type: 'remove',
+        },
+      )
+
+      event_store.aggregation_property = billable_metric.field_name
+
+      expect(event_store.unique_count).to eq(4) # 5 events added / 1 removed
+    end
+  end
+
+  describe '#events_values' do
     it 'returns the value attached to each event' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -148,7 +169,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.last_event' do
+  describe '#last_event' do
     it 'returns the last event' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -157,7 +178,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.grouped_last_event' do
+  describe '#grouped_last_event' do
     let(:grouped_by) { %w[cloud] }
 
     before do
@@ -206,7 +227,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.prorated_events_values' do
+  describe '#prorated_events_values' do
     it 'returns the value attached to each event prorated on the provided duration' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -217,7 +238,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.max' do
+  describe '#max' do
     it 'returns the max value' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -226,7 +247,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.grouped_max' do
+  describe '#grouped_max' do
     let(:grouped_by) { %w[cloud] }
 
     before do
@@ -271,7 +292,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.last' do
+  describe '#last' do
     it 'returns the last event' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -280,7 +301,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.grouped_last' do
+  describe '#grouped_last' do
     let(:grouped_by) { %w[cloud] }
 
     before do
@@ -325,7 +346,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.sum' do
+  describe '#sum' do
     it 'returns the sum of event values' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -334,7 +355,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.grouped_sum' do
+  describe '#grouped_sum' do
     let(:grouped_by) { %w[cloud] }
 
     before do
@@ -379,7 +400,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.prorated_sum' do
+  describe '#prorated_sum' do
     it 'returns the prorated sum of event properties' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -397,7 +418,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.grouped_prorated_sum' do
+  describe '#grouped_prorated_sum' do
     let(:grouped_by) { %w[cloud] }
 
     it 'returns the prorated sum of event properties' do
@@ -463,7 +484,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.sum_date_breakdown' do
+  describe '#sum_date_breakdown' do
     it 'returns the sum grouped by day' do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
@@ -479,7 +500,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.weighted_sum' do
+  describe '#weighted_sum' do
     let(:started_at) { Time.zone.parse('2023-03-01') }
 
     let(:events_values) do
@@ -590,7 +611,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
-  describe '.grouped_weighted_sum' do
+  describe '#grouped_weighted_sum' do
     let(:grouped_by) { %w[agent_name other] }
 
     let(:started_at) { Time.zone.parse('2023-03-01') }
