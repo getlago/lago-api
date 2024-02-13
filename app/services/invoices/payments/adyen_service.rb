@@ -30,8 +30,8 @@ module Invoices
         res = create_adyen_payment
         return result unless res
 
-        handle_adyen_response(res)
-        return result unless result.success?
+        adyen_success, _adyen_error = handle_adyen_response(res)
+        return result unless adyen_success
 
         payment = Payment.new(
           invoice:,
@@ -77,7 +77,8 @@ module Invoices
         return result unless should_process_payment?
 
         res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_url_params).to_h)
-        handle_adyen_response(res)
+        adyen_success, adyen_error = handle_adyen_response(res)
+        result.service_failure!(code: adyen_error.code, message: adyen_error.msg) unless adyen_success
 
         return result unless result.success?
 
@@ -87,7 +88,7 @@ module Invoices
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
 
-        result.single_validation_failure!(error_code: 'payment_provider_error')
+        result.service_failure!(code: e.code, message: e.msg)
       end
 
       private
@@ -154,8 +155,7 @@ module Invoices
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-
-        raise
+        raise e
       end
 
       def payment_method_params
