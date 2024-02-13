@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 describe 'Invoices Scenarios', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:tax) { create(:tax, organization:, rate: 20) }
 
   before { tax }
@@ -434,6 +434,75 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
         invoice = subscription.invoices.first
         expect(invoice.fees.charge_kind.count).to eq(0)
+      end
+    end
+  end
+
+  context 'when pay in advance subscription is upgraded' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
+    let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: true) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'does bill correctly fees' do
+      travel_to(DateTime.new(2024, 1, 1)) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: true,
+          properties: { amount: '1' },
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      travel_to(DateTime.new(2024, 1, 2)) do
+        create_event(
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            properties: { amount: '5' },
+          },
+        )
+      end
+
+      travel_to(DateTime.parse('2024-02-12 06:00:00')) do
+        expect {
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan_new.code,
+              billing_time: 'calendar',
+            },
+          )
+          perform_all_enqueued_jobs
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { customer.invoices.count }.from(1).to(3)
+
+        terminated_invoice = subscription.invoices.order(created_at: :desc).first
+        new_subscription_invoice = customer.subscriptions.active.first.invoices.order(created_at: :desc).first
+        credit_note = customer.credit_notes.first
+
+        expect(credit_note.credit_amount_cents).to eq(1_800)
+        expect(terminated_invoice.total_amount_cents).to eq(0) # 12/29 x 5 = 207 - 207(CN)
+        expect(new_subscription_invoice.total_amount_cents).to eq(18_000 - (1_800 - 207))
       end
     end
   end

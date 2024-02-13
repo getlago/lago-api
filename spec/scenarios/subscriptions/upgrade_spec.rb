@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transaction: false do
-  let(:organization) { create(:organization, webhook_url: false) }
+  let(:organization) { create(:organization, webhook_url: false, email_settings: []) }
 
   let(:customer) { create(:customer, organization:) }
 
