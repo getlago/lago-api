@@ -4913,6 +4913,16 @@ input RevokeMembershipInput {
   id: ID!
 }
 
+"""
+Safe Organization Type
+"""
+type SafeOrganization {
+  id: ID!
+  logoUrl: String
+  name: String!
+  timezone: TimezoneEnum
+}
+
 enum StatusTypeEnum {
   active
   canceled
@@ -6024,7 +6034,7 @@ type User {
   createdAt: ISO8601DateTime!
   email: String
   id: ID!
-  organizations: [Organization!]
+  organizations: [SafeOrganization!]
   premium: Boolean!
   updatedAt: ISO8601DateTime!
 }

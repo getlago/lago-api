@@ -1,17 +1,16 @@
 # frozen_string_literal: true
 
 module Types
-  class OrganizationType < Types::BaseObject
+  class OrganizationType < SafeOrganizationType
     description 'Organization Type'
 
-    field :id, ID, null: false
+    # Some fields (id, name, ...) are defined by the parent type SafeOrganizationType
 
     field :default_currency, Types::CurrencyEnum, null: false
     field :email, String
+
     field :legal_name, String
     field :legal_number, String
-    field :logo_url, String
-    field :name, String, null: false
     field :tax_identification_number, String, null: true
 
     field :address_line1, String
@@ -24,8 +23,6 @@ module Types
 
     field :api_key, String, null: false
     field :webhook_url, String
-
-    field :timezone, Types::TimezoneEnum, null: true
 
     field :document_number_prefix, String, null: false
     field :document_numbering, Types::Organizations::DocumentNumberingEnum, null: false

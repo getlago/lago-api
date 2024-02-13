@@ -13,7 +13,7 @@ RSpec.describe GraphqlController, type: :request do
             token
             user {
               id
-              organizations { id name apiKey }
+              organizations { id name }
             }
           }
         }

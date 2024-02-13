@@ -8,7 +8,8 @@ module Types
     field :premium, Boolean, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-    field :organizations, [Types::OrganizationType]
+    # Use SafeOrganizationType to prevent traversal attack. See SafeOrganizationType for more details.
+    field :organizations, [Types::SafeOrganizationType]
 
     def organizations
       object.memberships.active.map(&:organization)
