@@ -23,13 +23,20 @@ module Commitments
     def commitment_amount_cents
       return 0 if !commitment || !invoice_subscription || commitment.amount_cents.zero?
 
-      service = Commitments::HelperService.new(commitment:, invoice_subscription:)
-      service_result = service.proration_coefficient
+      service_result = helper_service.proration_coefficient
 
       Money.from_cents(
         commitment.amount_cents * service_result.proration_coefficient,
         commitment.plan.amount_currency,
       ).cents
+    end
+
+    def helper_service
+      @helper_service ||= if subscription.plan.pay_in_arrear?
+        Commitments::InArrears::HelperService.new(commitment:, invoice_subscription:)
+      else
+        Commitments::InAdvance::HelperService.new(commitment:, invoice_subscription:)
+      end
     end
   end
 end

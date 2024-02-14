@@ -62,7 +62,26 @@ module Commitments
             plan: { pay_in_advance: false },
           )
 
-        charge_fees.sum(:amount_cents) + subscription_fees.sum(:amount_cents)
+        dates_service = helper_service.dates_service
+        charge_in_advance_fees = Fee
+          .charge_kind
+          .joins(:charge)
+          .where(
+            subscription_id: subscription.id,
+            charge: { pay_in_advance: true },
+          )
+          .where(
+            "(fees.properties->>'charges_from_datetime')::timestamptz = ?",
+            dates_service.previous_beginning_of_period&.iso8601(3),
+          )
+          .where(
+            "(fees.properties->>'charges_to_datetime')::timestamptz = ?",
+            dates_service.end_of_period&.iso8601(3),
+          )
+
+        charge_fees.sum(:amount_cents) +
+          subscription_fees.sum(:amount_cents) +
+          charge_in_advance_fees.sum(:amount_cents)
       end
     end
   end

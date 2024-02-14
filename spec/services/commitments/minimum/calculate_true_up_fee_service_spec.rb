@@ -18,9 +18,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
   end
 
   let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-  let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+  let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59.999') }
   let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-  let(:charges_to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+  let(:charges_to_datetime) { DateTime.parse('2024-12-31T23:59:59.999') }
   let(:timestamp) { DateTime.parse('2025-01-01T10:00:00') }
   let(:subscription) { create(:subscription, customer:, plan:, billing_time:, subscription_at:) }
   let(:customer) { create(:customer, organization:) }
@@ -82,9 +82,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has yearly interval' do
             let(:interval) { :yearly }
             let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-12-31T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2025-01-01T10:00:00') }
 
             context 'when plan is billed yearly' do
@@ -97,8 +97,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
               context 'when fees total amount is smaller than the commitment amount' do
                 let(:commitment_amount_cents) { 10_000 }
 
-                it 'returns result with amount cents' do
-                  expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+                context 'with an in-advance charge from the period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                      properties: {
+                        charges_from_datetime:,
+                        charges_to_datetime:,
+                      },
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(9_000)
+                  end
+                end
+
+                context 'with an in-advance charge from another period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(9_500)
+                  end
                 end
               end
             end
@@ -112,31 +146,49 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                   :invoice_subscription,
                   subscription:,
                   from_datetime: DateTime.parse('2024-01-01T00:00:00'),
-                  to_datetime: DateTime.parse('2024-01-31T23:59:59'),
+                  to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
                   charges_from_datetime: DateTime.parse('2024-01-01T00:00:00'),
-                  charges_to_datetime: DateTime.parse('2024-01-31T23:59:59'),
+                  charges_to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
                   timestamp: DateTime.parse('2024-02-01T10:00:00'),
                 )
               end
 
-              before do
-                create(
-                  :fee,
-                  subscription: invoice_subscription_previous.subscription,
-                  invoice: invoice_subscription_previous.invoice,
-                )
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
 
-                create(
-                  :charge_fee,
-                  subscription: invoice_subscription_previous.subscription,
-                  invoice: invoice_subscription_previous.invoice,
-                  charge:,
-                  amount_cents: 300,
-                )
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
               end
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(9_000)
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end
@@ -144,9 +196,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has quarterly interval' do
             let(:interval) { :quarterly }
             let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-03-31T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-03-31T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-03-31T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-03-31T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2024-04-01T10:00:00') }
 
             context 'when fees total amount is greater or equal than the commitment amount' do
@@ -158,8 +210,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             context 'when fees total amount is smaller than the commitment amount' do
               let(:commitment_amount_cents) { 10_000 }
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
+              end
+
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end
@@ -167,9 +253,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has monthly interval' do
             let(:interval) { :monthly }
             let(:from_datetime) { DateTime.parse('2024-02-01T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-02-29T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-02-29T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-02-01T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-02-29T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-02-29T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2024-03-01T10:00:00') }
 
             context 'when fees total amount is greater or equal than the commitment amount' do
@@ -181,8 +267,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             context 'when fees total amount is smaller than the commitment amount' do
               let(:commitment_amount_cents) { 10_000 }
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
+              end
+
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end
@@ -190,9 +310,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has weekly interval' do
             let(:interval) { :weekly }
             let(:from_datetime) { DateTime.parse('2024-02-05T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-02-11T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-02-11T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-02-05T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-02-11T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-02-11T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2024-02-12T10:00:00') }
 
             context 'when fees total amount is greater or equal than the commitment amount' do
@@ -204,8 +324,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             context 'when fees total amount is smaller than the commitment amount' do
               let(:commitment_amount_cents) { 10_000 }
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
+              end
+
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end
@@ -217,9 +371,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has yearly interval' do
             let(:interval) { :yearly }
             let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-12-31T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2025-01-01T10:00:00') }
 
             context 'when plan is billed yearly' do
@@ -232,8 +386,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
               context 'when fees total amount is smaller than the commitment amount' do
                 let(:commitment_amount_cents) { 10_000 }
 
-                it 'returns result with amount cents' do
-                  expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+                context 'with an in-advance charge from the period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                      properties: {
+                        charges_from_datetime:,
+                        charges_to_datetime:,
+                      },
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(9_000)
+                  end
+                end
+
+                context 'with an in-advance charge from another period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(9_500)
+                  end
                 end
               end
             end
@@ -247,9 +435,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                   :invoice_subscription,
                   subscription:,
                   from_datetime:,
-                  to_datetime: DateTime.parse('2024-01-31T23:59:59'),
+                  to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
                   charges_from_datetime: DateTime.parse('2024-01-01T00:00:00'),
-                  charges_to_datetime: DateTime.parse('2024-01-31T23:59:59'),
+                  charges_to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
                   timestamp: DateTime.parse('2024-02-01T10:00:00'),
                 )
               end
@@ -273,16 +461,84 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
               context 'when subscription starts at the beginning of the period' do
                 let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
 
-                it 'returns result with amount cents' do
-                  expect(service_call.amount_cents).to eq(9_000)
+                context 'with an in-advance charge from the period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                      properties: {
+                        charges_from_datetime:,
+                        charges_to_datetime:,
+                      },
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(8_500)
+                  end
+                end
+
+                context 'with an in-advance charge from another period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(9_000)
+                  end
                 end
               end
 
               context 'when subscription does not start at the beginning of the period' do
                 let(:from_datetime) { DateTime.parse('2024-01-02T00:00:00') }
 
-                it 'returns result with amount cents prorated' do
-                  expect(service_call.amount_cents).to eq(8_973)
+                context 'with an in-advance charge from the period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                      properties: {
+                        charges_from_datetime:,
+                        charges_to_datetime:,
+                      },
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(8_473)
+                  end
+                end
+
+                context 'with an in-advance charge from another period' do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                    )
+                  end
+
+                  it 'returns result with amount cents' do
+                    expect(service_call.amount_cents).to eq(8_973)
+                  end
                 end
               end
             end
@@ -291,9 +547,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has quarterly interval' do
             let(:interval) { :quarterly }
             let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-03-31T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-03-31T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-03-31T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-03-31T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2024-04-01T10:00:00') }
 
             context 'when fees total amount is greater or equal than the commitment amount' do
@@ -305,8 +561,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             context 'when fees total amount is smaller than the commitment amount' do
               let(:commitment_amount_cents) { 10_000 }
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
+              end
+
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end
@@ -314,9 +604,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has monthly interval' do
             let(:interval) { :monthly }
             let(:from_datetime) { DateTime.parse('2024-02-01T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-02-29T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-02-29T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-02-01T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-02-29T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-02-29T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2024-03-01T10:00:00') }
 
             context 'when fees total amount is greater or equal than the commitment amount' do
@@ -328,8 +618,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             context 'when fees total amount is smaller than the commitment amount' do
               let(:commitment_amount_cents) { 10_000 }
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
+              end
+
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end
@@ -337,9 +661,9 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
           context 'when plan has weekly interval' do
             let(:interval) { :weekly }
             let(:from_datetime) { DateTime.parse('2024-02-05T00:00:00') }
-            let(:to_datetime) { DateTime.parse('2024-02-11T23:59:59') }
+            let(:to_datetime) { DateTime.parse('2024-02-11T23:59:59.999') }
             let(:charges_from_datetime) { DateTime.parse('2024-02-05T00:00:00') }
-            let(:charges_to_datetime) { DateTime.parse('2024-02-11T23:59:59') }
+            let(:charges_to_datetime) { DateTime.parse('2024-02-11T23:59:59.999') }
             let(:timestamp) { DateTime.parse('2024-02-12T10:00:00') }
 
             context 'when fees total amount is greater or equal than the commitment amount' do
@@ -351,8 +675,42 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             context 'when fees total amount is smaller than the commitment amount' do
               let(:commitment_amount_cents) { 10_000 }
 
-              it 'returns result with amount cents' do
-                expect(service_call.amount_cents).to eq(true_up_fee_amount_cents)
+              context 'with an in-advance charge from the period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_000)
+                end
+              end
+
+              context 'with an in-advance charge from another period' do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                  )
+                end
+
+                it 'returns result with amount cents' do
+                  expect(service_call.amount_cents).to eq(9_500)
+                end
               end
             end
           end

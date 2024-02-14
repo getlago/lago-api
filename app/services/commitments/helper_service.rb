@@ -19,6 +19,19 @@ module Commitments
       result
     end
 
+    def dates_service
+      ds = Subscriptions::DatesService.new_instance(
+        subscription,
+        invoice_subscription.timestamp,
+        current_usage: subscription.terminated?,
+      )
+
+      return ds unless subscription.terminated?
+
+      Invoices::CalculateFeesService.new(invoice: invoice_subscription.invoice)
+        .terminated_date_service(subscription, ds)
+    end
+
     private
 
     attr_reader :commitment, :invoice_subscription
@@ -65,19 +78,6 @@ module Commitments
           dates_service.end_of_period,
         )
         .pluck(:invoice_id)
-    end
-
-    def dates_service
-      ds = Subscriptions::DatesService.new_instance(
-        subscription,
-        invoice_subscription.timestamp,
-        current_usage: subscription.terminated?,
-      )
-
-      return ds unless subscription.terminated?
-
-      Invoices::CalculateFeesService.new(invoice: invoice_subscription.invoice)
-        .terminated_date_service(subscription, ds)
     end
   end
 end
