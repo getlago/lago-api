@@ -40,8 +40,8 @@ module Commitments
         helper_service = Commitments::HelperService.new(
           commitment: minimum_commitment,
           invoice_subscription:,
-          current_usage: true,
         )
+
         result = helper_service.period_invoice_ids
 
         charge_fees = Fee

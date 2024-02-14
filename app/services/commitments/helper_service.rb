@@ -2,7 +2,7 @@
 
 module Commitments
   class HelperService < BaseService
-    def initialize(commitment:, invoice_subscription:, current_usage:)
+    def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription
 
@@ -21,7 +21,7 @@ module Commitments
 
     private
 
-    attr_reader :commitment, :invoice_subscription, :current_usage
+    attr_reader :commitment, :invoice_subscription
 
     delegate :subscription, to: :invoice_subscription
 
@@ -68,7 +68,16 @@ module Commitments
     end
 
     def dates_service
-      Subscriptions::DatesService.new_instance(subscription, invoice_subscription.timestamp, current_usage:)
+      ds = Subscriptions::DatesService.new_instance(
+        subscription,
+        invoice_subscription.timestamp,
+        current_usage: subscription.terminated?,
+      )
+
+      return ds unless subscription.terminated?
+
+      Invoices::CalculateFeesService.new(invoice: invoice_subscription.invoice)
+        .terminated_date_service(subscription, ds)
     end
   end
 end

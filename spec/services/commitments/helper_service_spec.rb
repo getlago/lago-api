@@ -3,11 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Commitments::HelperService, type: :service do
-  let(:service) { described_class.new(commitment:, invoice_subscription:, current_usage: true) }
+  let(:service) { described_class.new(commitment:, invoice_subscription:) }
   let(:commitment) { create(:commitment, plan:) }
   let(:plan) { create(:plan, organization:) }
   let(:organization) { create(:organization) }
-  let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:subscription) { create(:subscription, customer:, plan:, started_at:) }
   let(:customer) { create(:customer, organization:) }
 
   let(:invoice_subscription) do
@@ -23,6 +23,7 @@ RSpec.describe Commitments::HelperService, type: :service do
   end
 
   let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
+  let(:started_at) { DateTime.parse('2024-01-01T00:00:00') }
   let(:to_datetime) { DateTime.parse('2024-01-31T23:59:59') }
   let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
   let(:charges_to_datetime) { DateTime.parse('2024-01-31T23:59:59') }
@@ -42,6 +43,24 @@ RSpec.describe Commitments::HelperService, type: :service do
 
       it 'returns proration coefficient' do
         expect(apply_service.proration_coefficient).to eq(0.5483870967741935)
+      end
+    end
+
+    context 'when subscription is terminated' do
+      let(:from_datetime) { DateTime.current.beginning_of_day }
+      let(:started_at) { DateTime.current }
+      let(:to_datetime) { nil }
+      let(:days_in_month) { Date.current.end_of_month.day }
+
+      before do
+        Subscriptions::TerminateService.call(subscription:, async: false)
+      end
+
+      it 'returns proration coefficient' do
+        invoice_subscription = subscription.invoice_subscriptions.reload.last
+        apply_service = described_class.new(commitment:, invoice_subscription:).proration_coefficient
+
+        expect(apply_service.proration_coefficient).to eq(1 / days_in_month.to_f)
       end
     end
   end

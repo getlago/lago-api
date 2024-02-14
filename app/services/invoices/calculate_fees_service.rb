@@ -58,24 +58,6 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     end
 
-    private
-
-    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
-
-    delegate :customer, :currency, to: :invoice
-
-    def issuing_date
-      timestamp.in_time_zone(customer.applicable_timezone).to_date
-    end
-
-    def date_service(subscription)
-      Subscriptions::DatesService.new_instance(
-        subscription,
-        timestamp,
-        current_usage: subscription.terminated? && subscription.upgraded?,
-      )
-    end
-
     def terminated_date_service(subscription, date_service)
       return date_service unless subscription.terminated? && subscription.next_subscription.nil?
 
@@ -95,6 +77,24 @@ module Invoices
       new_dates_service = Subscriptions::DatesService.new_instance(duplicate, timestamp, current_usage: false)
 
       matching_invoice_subscription?(subscription, new_dates_service) ? date_service : new_dates_service
+    end
+
+    private
+
+    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
+
+    delegate :customer, :currency, to: :invoice
+
+    def issuing_date
+      timestamp.in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def date_service(subscription)
+      Subscriptions::DatesService.new_instance(
+        subscription,
+        timestamp,
+        current_usage: subscription.terminated? && subscription.upgraded?,
+      )
     end
 
     def matching_invoice_subscription?(subscription, date_service)
