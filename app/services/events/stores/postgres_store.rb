@@ -25,7 +25,7 @@ module Events
       end
 
       def events_values(limit: nil, force_from: false)
-        field_name = sanitized_propery_name
+        field_name = sanitized_property_name
         field_name = "(#{field_name})::numeric" if numeric_property
 
         scope = events(force_from:)
@@ -47,7 +47,7 @@ module Events
             [
               "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}",
               'events.timestamp',
-              "(#{sanitized_propery_name})::numeric AS value",
+              "(#{sanitized_property_name})::numeric AS value",
             ].join(', '),
           )
           .to_sql
@@ -58,7 +58,7 @@ module Events
       def prorated_events_values(total_duration)
         ratio_sql = duration_ratio_sql('events.timestamp', to_datetime, total_duration)
 
-        events.pluck(Arel.sql("(#{sanitized_propery_name})::numeric * (#{ratio_sql})::numeric"))
+        events.pluck(Arel.sql("(#{sanitized_property_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
       def grouped_count
@@ -88,14 +88,14 @@ module Events
       end
 
       def max
-        events.maximum("(#{sanitized_propery_name})::numeric")
+        events.maximum("(#{sanitized_property_name})::numeric")
       end
 
       def grouped_max
         results = events
           .reorder(nil)
           .group(sanitized_grouped_by)
-          .maximum("(#{sanitized_propery_name})::numeric")
+          .maximum("(#{sanitized_property_name})::numeric")
           .map { |group, value| [group, value].flatten }
 
         prepare_grouped_result(results)
@@ -111,7 +111,7 @@ module Events
         sql = events
           .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
           .select(
-            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_propery_name})::numeric AS value",
+            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_property_name})::numeric AS value",
           )
           .to_sql
 
@@ -119,14 +119,14 @@ module Events
       end
 
       def sum
-        events.sum("(#{sanitized_propery_name})::numeric")
+        events.sum("(#{sanitized_property_name})::numeric")
       end
 
       def grouped_sum
         results = events
           .reorder(nil)
           .group(sanitized_grouped_by)
-          .sum("(#{sanitized_propery_name})::numeric")
+          .sum("(#{sanitized_property_name})::numeric")
           .map { |group, value| [group, value].flatten }
 
         prepare_grouped_result(results)
@@ -141,7 +141,7 @@ module Events
 
         sql = <<-SQL
           SUM(
-            (#{sanitized_propery_name})::numeric * (#{ratio})::numeric
+            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
           ) AS sum_result
         SQL
 
@@ -162,7 +162,7 @@ module Events
         sum_sql = <<-SQL
           #{sanitized_grouped_by.join(', ')},
           SUM(
-            (#{sanitized_propery_name})::numeric * (#{ratio})::numeric
+            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
           ) AS sum_result
         SQL
 
@@ -179,7 +179,7 @@ module Events
 
         events.group(Arel.sql("DATE(#{date_field})"))
           .reorder(Arel.sql("DATE(#{date_field}) ASC"))
-          .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_propery_name})::numeric)"))
+          .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_property_name})::numeric)"))
           .map do |row|
             { date: row.first.to_date, value: row.last }
           end
@@ -268,7 +268,7 @@ module Events
         scope
       end
 
-      def sanitized_propery_name(property = aggregation_property)
+      def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
           ['events.properties->>?', property],
         )
@@ -280,11 +280,11 @@ module Events
 
       def numeric_condition
         # NOTE: ensure property value is a numeric value
-        "#{sanitized_propery_name} ~ '^-?\\d+(\\.\\d+)?$'"
+        "#{sanitized_property_name} ~ '^-?\\d+(\\.\\d+)?$'"
       end
 
       def sanitized_grouped_by
-        grouped_by.map { sanitized_propery_name(_1) }
+        grouped_by.map { sanitized_property_name(_1) }
       end
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period

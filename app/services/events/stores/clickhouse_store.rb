@@ -39,7 +39,7 @@ module Events
       end
 
       def grouped_last_event
-        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        groups = grouped_by.map { |group| sanitized_property_name(group) }
         group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
@@ -89,7 +89,7 @@ module Events
 
       def grouped_count
         groups = grouped_by.map.with_index do |group, index|
-          "#{sanitized_propery_name(group)} AS g_#{index}"
+          "#{sanitized_property_name(group)} AS g_#{index}"
         end
         group_names = groups.map.with_index { |_, index| "g_#{index}" }
 
@@ -114,7 +114,7 @@ module Events
       end
 
       def grouped_max
-        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        groups = grouped_by.map { |group| sanitized_property_name(group) }
         group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
@@ -145,7 +145,7 @@ module Events
       end
 
       def grouped_last
-        groups = grouped_by.map { |group| sanitized_propery_name(group) }
+        groups = grouped_by.map { |group| sanitized_property_name(group) }
         group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
@@ -185,7 +185,7 @@ module Events
 
       def grouped_sum
         groups = grouped_by.map.with_index do |group, index|
-          "#{sanitized_propery_name(group)} AS g_#{index}"
+          "#{sanitized_property_name(group)} AS g_#{index}"
         end
         group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
@@ -230,7 +230,7 @@ module Events
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
         groups = grouped_by.map.with_index do |group, index|
-          "#{sanitized_propery_name(group)} AS g_#{index}"
+          "#{sanitized_property_name(group)} AS g_#{index}"
         end
         group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
 
@@ -369,7 +369,7 @@ module Events
         scope
       end
 
-      def sanitized_propery_name(property = aggregation_property)
+      def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
           ['events_raw.properties[?]', property],
         )
