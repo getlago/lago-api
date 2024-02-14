@@ -57,7 +57,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_propery_name, :sanitized_numeric_property, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, :sanitized_numeric_property, to: :store
 
         def events_cte_sql
           <<-SQL
@@ -116,7 +116,7 @@ module Events
 
         def grouped_events_cte_sql(initial_values)
           groups = store.grouped_by.map.with_index do |group, index|
-            "#{sanitized_propery_name(group)} AS g_#{index}"
+            "#{sanitized_property_name(group)} AS g_#{index}"
           end
 
           <<-SQL

@@ -57,7 +57,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_propery_name, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, to: :store
 
         def events_cte_sql
           <<-SQL
@@ -66,7 +66,7 @@ module Events
               UNION
               (#{
                 events
-                  .select("timestamp, (#{sanitized_propery_name})::numeric AS difference, events.created_at")
+                  .select("timestamp, (#{sanitized_property_name})::numeric AS difference, events.created_at")
                   .to_sql
               })
               UNION
@@ -114,7 +114,7 @@ module Events
 
         def grouped_events_cte_sql(initial_values)
           groups = store.grouped_by.map.with_index do |group, index|
-            "#{sanitized_propery_name(group)} AS g_#{index}"
+            "#{sanitized_property_name(group)} AS g_#{index}"
           end
 
           <<-SQL
@@ -123,7 +123,7 @@ module Events
               UNION
               (#{
                 events
-                  .select("#{groups.join(', ')}, timestamp, (#{sanitized_propery_name})::numeric AS difference, events.created_at")
+                  .select("#{groups.join(', ')}, timestamp, (#{sanitized_property_name})::numeric AS difference, events.created_at")
                   .to_sql
               })
               UNION
