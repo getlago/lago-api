@@ -139,7 +139,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         end
 
         it 'returns the prorata of the full duration' do
-          expect(result.aggregation).to eq(16.fdiv(31).ceil(5))
+          expect(result.aggregation).to eq(15.fdiv(31).ceil(5))
         end
       end
 

@@ -396,4 +396,50 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '.date_diff_with_timezone' do
+    let(:from_datetime) { Time.zone.parse('2023-08-31T23:10:00') }
+    let(:to_datetime) { Time.zone.parse('2023-09-30T22:59:59') }
+    let(:customer) { create(:customer, timezone:) }
+    let(:terminated_at) { nil }
+    let(:timezone) { 'Europe/Paris' }
+
+    let(:subscription) do
+      create(
+        :subscription,
+        plan:,
+        customer:,
+        terminated_at:,
+      )
+    end
+
+    let(:result) do
+      subscription.date_diff_with_timezone(from_datetime, to_datetime)
+    end
+
+    it 'returns the number of days between the two datetime' do
+      expect(result).to eq(30)
+    end
+
+    context 'with terminated and upgraded subscription' do
+      let(:terminated_at) { Time.zone.parse('2023-09-30T22:59:59') }
+      let(:new_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          previous_subscription_id: subscription.id,
+        )
+      end
+
+      before do
+        subscription.terminated!
+        new_subscription
+      end
+
+      it 'takes the daylight saving time into account' do
+        expect(result).to eq(29)
+      end
+    end
+  end
 end
