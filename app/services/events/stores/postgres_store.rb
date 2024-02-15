@@ -102,6 +102,16 @@ module Events
         result['aggregation']
       end
 
+      def grouped_unique_count
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [query.grouped_query],
+        )
+
+        prepare_grouped_result(Event.connection.select_all(sql).rows)
+      end
+
       def max
         events.maximum("(#{sanitized_property_name})::numeric")
       end

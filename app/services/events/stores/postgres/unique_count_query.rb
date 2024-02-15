@@ -63,6 +63,36 @@ module Events
           SQL
         end
 
+        def grouped_query
+          <<-SQL
+            #{grouped_events_cte_sql},
+
+            event_values AS (
+              SELECT
+                #{group_names},
+                property,
+                SUM(adjusted_value) AS sum_adjusted_value
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{group_names},
+                  #{grouped_operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              GROUP BY #{group_names}, property
+            )
+
+            SELECT
+              #{group_names},
+              SUM(sum_adjusted_value) as aggregation
+            FROM event_values
+            GROUP BY #{group_names}
+          SQL
+        end
+
         # NOTE: Not used in production, only for debug purpose to check the computed values before aggregation
         # Returns an array of event's timestamp, property, operation type and operation value
         # Example:
@@ -96,16 +126,32 @@ module Events
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
           <<-SQL
-            WITH events_data AS (
-              (#{
-                events
-                  .select(
-                    "timestamp, \
-                    #{sanitized_property_name} AS property, \
-                    COALESCE(events.properties->>'operation_type', 'add') AS operation_type",
-                  ).to_sql
-              })
-            )
+            WITH events_data AS (#{
+              events
+                .select(
+                  "timestamp, \
+                  #{sanitized_property_name} AS property, \
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type",
+                ).to_sql
+            })
+          SQL
+        end
+
+        def grouped_events_cte_sql
+          groups = store.grouped_by.map.with_index do |group, index|
+            "#{sanitized_property_name(group)} AS g_#{index}"
+          end
+
+          <<-SQL
+            WITH events_data AS (#{
+              events
+                .select(
+                  "#{groups.join(', ')}, \
+                  timestamp, \
+                  #{sanitized_property_name} AS property, \
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type",
+                ).to_sql
+            })
           SQL
         end
 
@@ -129,6 +175,26 @@ module Events
           SQL
         end
 
+        def grouped_operation_value_sql
+          # NOTE: Returns 1 for relevant addition, -1 for relevant removal
+          # If property already added, another addition returns 0 ; it returns 1 otherwise
+          # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
+          <<-SQL
+            CASE WHEN operation_type = 'add'
+            THEN
+              CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp) = 'add'
+              THEN 0
+              ELSE 1
+              END
+            ELSE
+              CASE LAG(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)
+                WHEN 'remove' THEN 0
+                ELSE -1
+              END
+            END
+          SQL
+        end
+
         def period_ratio_sql
           <<-SQL
             CASE WHEN operation_type = 'add'
@@ -142,6 +208,10 @@ module Events
               0 -- NOTE: duration was null so usage is null
             END
           SQL
+        end
+
+        def group_names
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(', ')
         end
       end
     end
