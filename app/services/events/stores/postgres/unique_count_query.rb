@@ -34,6 +34,35 @@ module Events
           SQL
         end
 
+        def prorated_query
+          <<-SQL
+            #{events_cte_sql},
+            event_values AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, operation_type, timestamp
+            )
+
+            SELECT SUM(period_ratio) as aggregation
+            FROM (
+              SELECT (#{period_ratio_sql}) AS period_ratio
+              FROM event_values
+            ) cumulated_ratios
+          SQL
+        end
+
         # NOTE: Not used in production, only for debug purpose to check the computed values before aggregation
         # Returns an array of event's timestamp, property, operation type and operation value
         # Example:
@@ -62,7 +91,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :sanitized_property_name, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
@@ -96,6 +125,21 @@ module Events
                 WHEN 'remove' THEN 0
                 ELSE -1
               END
+            END
+          SQL
+        end
+
+        def period_ratio_sql
+          <<-SQL
+            CASE WHEN operation_type = 'add'
+            THEN
+              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp) - timestamp)
+              /
+              -- NOTE: full duration of the period
+              #{charges_duration.days.to_i}
+            ELSE
+              0 -- NOTE: duration was null so usage is null
             END
           SQL
         end

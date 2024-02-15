@@ -87,6 +87,21 @@ module Events
         ).rows
       end
 
+      def prorated_unique_count
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.prorated_query,
+            {
+              to_datetime: to_datetime.ceil,
+            },
+          ],
+        )
+        result = ActiveRecord::Base.connection.select_one(sql)
+
+        result['aggregation']
+      end
+
       def max
         events.maximum("(#{sanitized_property_name})::numeric")
       end
