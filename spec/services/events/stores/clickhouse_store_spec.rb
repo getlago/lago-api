@@ -172,6 +172,40 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '#prorated_unique_count' do
+    it 'returns the number of unique active event properties' do
+      Clickhouse::EventsRaw.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp: boundaries[:from_datetime] + 1.day,
+        properties: {
+          billable_metric.field_name => 2,
+        },
+      )
+
+      Clickhouse::EventsRaw.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp: boundaries[:from_datetime] + 2.days - 1.second,
+        properties: {
+          billable_metric.field_name => 2,
+          operation_type: 'remove',
+        },
+      )
+
+      event_store.aggregation_property = billable_metric.field_name
+
+      # NOTE: Events calculation: 16/31 + 1/31 + + 15/31 + 14/31 + 13/31 + 12/31
+      expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
+    end
+  end
+
   describe '.events_values' do
     it 'returns the value attached to each event' do
       event_store.aggregation_property = billable_metric.field_name

@@ -178,7 +178,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         external_subscription_id: subscription.external_id,
         external_customer_id: customer.external_id,
         code:,
-        timestamp: boundaries[:from_datetime] + 2.days,
+        timestamp: boundaries[:from_datetime] + 2.days - 1.second,
         properties: {
           billable_metric.field_name => 2,
           operation_type: 'remove',
@@ -187,8 +187,8 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       event_store.aggregation_property = billable_metric.field_name
 
-      # NOTE: Events calculation: 16/31 + 1/31 + 14/31 + 13/31 + 12/31
-      expect(event_store.prorated_unique_count.round(3)).to eq(1.806)
+      # NOTE: Events calculation: 16/31 + 1/31 + + 15/31 + 14/31 + 13/31 + 12/31
+      expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
     end
   end
 

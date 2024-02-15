@@ -125,6 +125,22 @@ module Events
         ).rows
       end
 
+      def prorated_unique_count
+        query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.prorated_query,
+            {
+              to_datetime: to_datetime.ceil,
+              decimal_scale: DECIMAL_SCALE,
+            },
+          ],
+        )
+        result = ::Clickhouse::EventsRaw.connection.select_one(sql)
+
+        result['aggregation']
+      end
+
       def max
         events.maximum(Arel.sql(sanitized_numeric_property))
       end
