@@ -34,6 +34,35 @@ module Events
           SQL
         end
 
+        def prorated_query
+          <<-SQL
+            #{events_cte_sql},
+            event_values AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, operation_type, timestamp
+            )
+
+            SELECT SUM(period_ratio) as aggregation
+            FROM (
+              SELECT (#{period_ratio_sql}) AS period_ratio
+              FROM event_values
+            ) cumulated_ratios
+          SQL
+        end
+
         # NOTE: Not used in production, only for debug purpose to check the computed values before aggregation
         # Returns an array of event's timestamp, property, operation type and operation value
         # Example:
@@ -71,7 +100,7 @@ module Events
               (#{
                 events
                   .select(
-                    "timestamp, \
+                    "toDateTime64(timestamp, 5, 'UTC') as timestamp, \
                     #{sanitized_property_name} AS property, \
                     coalesce(NULLIF(events_raw.properties['operation_type'], ''), 'add') AS operation_type",
                   )
@@ -100,6 +129,25 @@ module Events
                 -1,
                 0
               ))
+            )
+          SQL
+        end
+
+        def period_ratio_sql
+          <<-SQL
+            if(
+              operation_type = 'add',
+              -- NOTE: duration in seconds between current add and next remove - using end of period as final boundaries if no remove
+              toDecimal128(
+                (date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))),
+                :decimal_scale
+              )
+              /
+              -- NOTE: full duration of the period
+              #{charges_duration.days.to_i},
+
+              -- NOTE: operation was a remove, so the duration is 0
+              toDecimal128(0, :decimal_scale)
             )
           SQL
         end
