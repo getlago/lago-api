@@ -50,17 +50,9 @@ module Charges
       end
 
       def matching_range
-        @matching_range ||= ranges.each_with_index do |range, index|
-          is_matching = if index.zero?
-            range[:from_value] <= number_of_units && (!range[:to_value] || number_of_units <= range[:to_value])
-          else
-            (range[:from_value] - 1) < number_of_units && (!range[:to_value] || number_of_units <= range[:to_value])
-          end
-
-          return range if is_matching
+        @matching_range ||= ranges.find do |range|
+          range[:from_value] <= number_of_units&.ceil && (!range[:to_value] || number_of_units <= range[:to_value])
         end
-
-        nil
       end
 
       def number_of_units
