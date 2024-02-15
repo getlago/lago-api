@@ -147,8 +147,8 @@ class Subscription < ApplicationRecord
 
     return number_od_days unless terminated? && upgraded?
 
-    number_od_days = number_od_days - 1
+    number_od_days -= 1
 
-    number_od_days < 0 ? 0 : number_od_days
+    number_od_days.negative? ? 0 : number_od_days
   end
 end

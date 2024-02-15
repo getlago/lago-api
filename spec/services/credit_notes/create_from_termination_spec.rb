@@ -244,8 +244,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       end
     end
 
-    context 'when plan has trial period ending after terminated_at' do
-      it 'excludes the trial from the credit amount' do
+    context 'when plan has been upgraded' do
+      it 'calculates credit note correctly' do
         result = described_class.new(subscription:, upgrade: true).call
 
         aggregate_failures do

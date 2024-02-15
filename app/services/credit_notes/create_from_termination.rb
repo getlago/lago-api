@@ -71,7 +71,7 @@ module CreditNotes
 
     def remaining_duration
       billed_from = terminated_at_in_timezone.end_of_day.utc.to_date
-      billed_from = billed_from - 1.day if upgrade
+      billed_from -= 1.day if upgrade
 
       if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > to_date
@@ -83,7 +83,7 @@ module CreditNotes
 
       duration = (to_date - billed_from).to_i
 
-      duration < 0 ? 0 : duration
+      duration.negative? ? 0 : duration
     end
 
     def creditable_amount_cents(item_amount)
