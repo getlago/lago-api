@@ -93,6 +93,43 @@ module Events
           SQL
         end
 
+        def grouped_prorated_query
+          <<-SQL
+            #{grouped_events_cte_sql},
+
+            event_values AS (
+              SELECT
+                #{group_names},
+                property,
+                operation_type,
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{group_names},
+                  #{grouped_operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY #{group_names}, property, operation_type, timestamp
+            )
+
+            SELECT
+              #{group_names},
+              SUM(period_ratio) as aggregation
+            FROM (
+              SELECT
+                (#{grouped_period_ratio_sql}) AS period_ratio,
+                #{group_names}
+              FROM event_values
+            ) cumulated_ratios
+            GROUP BY #{group_names}
+          SQL
+        end
+
         # NOTE: Not used in production, only for debug purpose to check the computed values before aggregation
         # Returns an array of event's timestamp, property, operation type and operation value
         # Example:
@@ -201,6 +238,21 @@ module Events
             THEN
               -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
               EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp) - timestamp)
+              /
+              -- NOTE: full duration of the period
+              #{charges_duration.days.to_i}
+            ELSE
+              0 -- NOTE: duration was null so usage is null
+            END
+          SQL
+        end
+
+        def grouped_period_ratio_sql
+          <<-SQL
+            CASE WHEN operation_type = 'add'
+            THEN
+              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp) - timestamp)
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}

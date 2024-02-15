@@ -274,6 +274,89 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
+  describe '#grouped_prorated_unique_count' do
+    let(:grouped_by) { %w[agent_name other] }
+    let(:started_at) { Time.zone.parse('2023-03-01') }
+
+    let(:events) do
+      [
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 1.day,
+          properties: {
+            billable_metric.field_name => 2,
+            agent_name: 'frodo',
+          },
+        ),
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 1.day,
+          properties: {
+            billable_metric.field_name => 2,
+            agent_name: 'aragorn',
+          },
+        ),
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 2.days,
+          properties: {
+            billable_metric.field_name => 2,
+            agent_name: 'aragorn',
+            operation_type: 'remove',
+          },
+        ),
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 2.days,
+          properties: { billable_metric.field_name => 2 },
+        ),
+      ]
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+    end
+
+    it 'returns the unique count of event properties' do
+      result = event_store.grouped_prorated_unique_count
+
+      expect(result.count).to eq(3)
+
+      null_group = result.last
+      expect(null_group[:groups]['agent_name']).to be_nil
+      expect(null_group[:groups]['other']).to be_nil
+      expect(null_group[:value].round(3)).to eq(0.935) # 29/31
+
+      # NOTE: Events calculation: [1/31, 30/31]
+      expect(result[...-1].map { |r| r[:value].round(3) }).to contain_exactly(0.032, 0.968)
+    end
+
+    context 'with no events' do
+      let(:events) { [] }
+
+      it 'returns the unique count of event properties' do
+        result = event_store.grouped_prorated_unique_count
+        expect(result.count).to eq(0)
+      end
+    end
+  end
+
   describe '#events_values' do
     it 'returns the value attached to each event' do
       event_store.aggregation_property = billable_metric.field_name
