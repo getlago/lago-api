@@ -109,6 +109,22 @@ module Events
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
+      def unique_count
+        query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
+        result = ::Clickhouse::EventsRaw.connection.select_one(sql)
+
+        BigDecimal(result['aggregation'])
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def unique_count_breakdown
+        query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+        ::Clickhouse::EventsRaw.connection.select_all(
+          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query]),
+        ).rows
+      end
+
       def max
         events.maximum(Arel.sql(sanitized_numeric_property))
       end
