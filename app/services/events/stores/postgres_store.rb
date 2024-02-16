@@ -93,6 +93,7 @@ module Events
           [
             query.prorated_query,
             {
+              from_datetime:,
               to_datetime: to_datetime.ceil,
             },
           ],
@@ -118,6 +119,7 @@ module Events
           [
             query.grouped_prorated_query,
             {
+              from_datetime:,
               to_datetime: to_datetime.ceil,
             },
           ],
