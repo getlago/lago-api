@@ -30,7 +30,7 @@ module Events
               GROUP BY property
             )
 
-            SELECT SUM(sum_adjusted_value) AS aggregation FROM event_values
+            SELECT coalesce(SUM(sum_adjusted_value), 0) AS aggregation FROM event_values
           SQL
         end
 
@@ -55,7 +55,7 @@ module Events
               GROUP BY property, operation_type, timestamp
             )
 
-            SELECT SUM(period_ratio) as aggregation
+            SELECT coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
               FROM event_values
@@ -87,7 +87,7 @@ module Events
 
             SELECT
               #{group_names},
-              SUM(sum_adjusted_value) as aggregation
+              coalesce(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
             GROUP BY #{group_names}
           SQL
@@ -119,7 +119,7 @@ module Events
 
             SELECT
               #{group_names},
-              SUM(period_ratio) as aggregation
+              coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
@@ -246,7 +246,15 @@ module Events
               operation_type = 'add',
               -- NOTE: duration in seconds between current add and next remove - using end of period as final boundaries if no remove
               toDecimal128(
-                (date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))),
+                (date_diff(
+                  'seconds',
+                  if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
+                  if(
+                    (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
+                    toDateTime64(:to_datetime, 5, 'UTC'),
+                    leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                  )
+                )),
                 :decimal_scale
               )
               /
@@ -265,7 +273,15 @@ module Events
               operation_type = 'add',
               -- NOTE: duration in seconds between current add and next remove - using end of period as final boundaries if no remove
               toDecimal128(
-                (date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))),
+                (date_diff(
+                  'seconds',
+                  if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
+                  if(
+                    (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
+                    toDateTime64(:to_datetime, 5, 'UTC'),
+                    leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                  )
+                )),
                 :decimal_scale
               )
               /

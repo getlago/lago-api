@@ -30,7 +30,7 @@ module Events
               GROUP BY property
             )
 
-            SELECT SUM(sum_adjusted_value) AS aggregation FROM event_values
+            SELECT COALESCE(SUM(sum_adjusted_value), 0) AS aggregation FROM event_values
           SQL
         end
 
@@ -55,7 +55,7 @@ module Events
               GROUP BY property, operation_type, timestamp
             )
 
-            SELECT SUM(period_ratio) as aggregation
+            SELECT COALESCE(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
               FROM event_values
@@ -87,7 +87,7 @@ module Events
 
             SELECT
               #{group_names},
-              SUM(sum_adjusted_value) as aggregation
+              COALESCE(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
             GROUP BY #{group_names}
           SQL
@@ -119,7 +119,7 @@ module Events
 
             SELECT
               #{group_names},
-              SUM(period_ratio) as aggregation
+              COALESCE(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
@@ -237,7 +237,21 @@ module Events
             CASE WHEN operation_type = 'add'
             THEN
               -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp) - timestamp)
+              EXTRACT(
+                EPOCH FROM (
+                  (
+                    -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
+                    CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp)) < :from_datetime
+                    THEN :from_datetime
+                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp)
+                    END
+                  )
+                  - (
+                    -- NOTE: if events is older than the start of the period, we use the start of the period as the reference
+                    CASE WHEN timestamp < :from_datetime THEN :from_datetime ELSE timestamp END
+                  )
+                )
+              )
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
@@ -252,7 +266,21 @@ module Events
             CASE WHEN operation_type = 'add'
             THEN
               -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp) - timestamp)
+              EXTRACT(
+                EPOCH FROM (
+                  (
+                    -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
+                    CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)) < :from_datetime
+                    THEN :from_datetime
+                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)
+                    END
+                  )
+                  - (
+                    -- NOTE: if events is older than the start of the period, we use the start of the period as the reference
+                    CASE WHEN timestamp < :from_datetime THEN :from_datetime ELSE timestamp END
+                  )
+                )
+              )
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}

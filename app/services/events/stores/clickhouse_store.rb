@@ -136,6 +136,7 @@ module Events
           [
             query.prorated_query,
             {
+              from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
             },
@@ -167,6 +168,7 @@ module Events
           [
             query.grouped_prorated_query,
             {
+              from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
             },
