@@ -22,6 +22,7 @@ gem 'oauth2'
 gem 'rack-cors'
 
 # Database
+gem 'after_commit_everywhere'
 gem 'clickhouse-activerecord', git: 'https://github.com/getlago/clickhouse-activerecord.git'
 gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
