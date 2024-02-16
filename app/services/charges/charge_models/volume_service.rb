@@ -6,7 +6,7 @@ module Charges
       protected
 
       def ranges
-        properties['volume_ranges']&.map(&:with_indifferent_access)
+        properties['volume_ranges']&.map(&:with_indifferent_access)&.sort_by { |h| h[:from_value] }
       end
 
       def compute_amount
@@ -51,7 +51,7 @@ module Charges
 
       def matching_range
         @matching_range ||= ranges.find do |range|
-          range[:from_value] <= number_of_units && (!range[:to_value] || number_of_units <= range[:to_value])
+          range[:from_value] <= number_of_units&.ceil && (!range[:to_value] || number_of_units <= range[:to_value])
         end
       end
 

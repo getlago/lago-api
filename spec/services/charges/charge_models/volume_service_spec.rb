@@ -78,6 +78,22 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     end
   end
 
+  context 'when aggregation is in the between of first and second range' do
+    let(:aggregation) { 100.5 }
+
+    it 'applies unit amount for the second range and no flat amount', :aggregate_failures do
+      expect(apply_volume_service.amount).to eq(100.5)
+      expect(apply_volume_service.unit_amount).to eq(1)
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_unit_amount: 0,
+          per_unit_amount: '1.0',
+          per_unit_total_amount: 100.5,
+        },
+      )
+    end
+  end
+
   context 'when aggregation is the lower limit of the second range' do
     let(:aggregation) { 101 }
 
