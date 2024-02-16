@@ -63,6 +63,36 @@ module Events
           SQL
         end
 
+        def grouped_query
+          <<-SQL
+            #{grouped_events_cte_sql},
+
+            event_values AS (
+              SELECT
+                #{group_names},
+                property,
+                SUM(adjusted_value) AS sum_adjusted_value
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{group_names},
+                  #{grouped_operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              GROUP BY #{group_names}, property
+            )
+
+            SELECT
+              #{group_names},
+              SUM(sum_adjusted_value) as aggregation
+            FROM event_values
+            GROUP BY #{group_names}
+          SQL
+        end
+
         # NOTE: Not used in production, only for debug purpose to check the computed values before aggregation
         # Returns an array of event's timestamp, property, operation type and operation value
         # Example:
@@ -111,6 +141,24 @@ module Events
           SQL
         end
 
+        def grouped_events_cte_sql
+          groups = store.grouped_by.map.with_index do |group, index|
+            "#{sanitized_property_name(group)} AS g_#{index}"
+          end
+
+          <<-SQL
+            WITH events_data AS (#{
+              events
+                .select(
+                  "#{groups.join(', ')}, \
+                  toDateTime64(timestamp, 5, 'UTC') as timestamp, \
+                  #{sanitized_property_name} AS property, \
+                  coalesce(NULLIF(events_raw.properties['operation_type'], ''), 'add') AS operation_type",
+                ).to_sql
+            })
+          SQL
+        end
+
         def operation_value_sql
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
@@ -120,14 +168,36 @@ module Events
               operation_type = 'add',
               (if(
                 (lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'add',
-                0,
-                1
+                toDecimal128(0, :decimal_scale),
+                toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
                 (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'remove',
-                -1,
-                0
+                toDecimal128(-1, :decimal_scale),
+                toDecimal128(0, :decimal_scale)
+              ))
+            )
+          SQL
+        end
+
+        def grouped_operation_value_sql
+          # NOTE: Returns 1 for relevant addition, -1 for relevant removal
+          # If property already added, another addition returns 0 ; it returns 1 otherwise
+          # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
+          <<-SQL
+            if (
+              operation_type = 'add',
+              (if(
+                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'add',
+                toDecimal128(0, :decimal_scale),
+                toDecimal128(1, :decimal_scale)
+              ))
+              ,
+              (if(
+                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'remove',
+                toDecimal128(-1, :decimal_scale),
+                toDecimal128(0, :decimal_scale)
               ))
             )
           SQL
@@ -150,6 +220,10 @@ module Events
               toDecimal128(0, :decimal_scale)
             )
           SQL
+        end
+
+        def group_names
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(', ')
         end
       end
     end

@@ -111,10 +111,15 @@ module Events
 
       def unique_count
         query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.query,
+            { decimal_scale: DECIMAL_SCALE },
+          ],
+        )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
-        BigDecimal(result['aggregation'])
+        result['aggregation']
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -139,6 +144,21 @@ module Events
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
         result['aggregation']
+      end
+
+      def grouped_unique_count
+        query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.grouped_query,
+            {
+              to_datetime: to_datetime.ceil,
+              decimal_scale: DECIMAL_SCALE,
+            },
+          ],
+        )
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def max
