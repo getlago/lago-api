@@ -161,6 +161,20 @@ module Events
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
+      def grouped_prorated_unique_count
+        query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.grouped_prorated_query,
+            {
+              to_datetime: to_datetime.ceil,
+              decimal_scale: DECIMAL_SCALE,
+            },
+          ],
+        )
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
+      end
+
       def max
         events.maximum(Arel.sql(sanitized_numeric_property))
       end
