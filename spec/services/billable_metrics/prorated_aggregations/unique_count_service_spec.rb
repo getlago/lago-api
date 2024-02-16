@@ -11,6 +11,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       boundaries: {
         from_datetime:,
         to_datetime:,
+        charges_duration: 31,
       },
       filters:,
     )
@@ -59,17 +60,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
   let(:added_at) { from_datetime - 1.month }
   let(:removed_at) { nil }
-  let(:quantified_event) do
+  let(:event) do
     create(
-      :quantified_event,
-      added_at:,
-      removed_at:,
+      :event,
+      organization_id: organization.id,
+      code: billable_metric.code,
       external_subscription_id: subscription.external_id,
-      billable_metric:,
+      timestamp: added_at,
+      properties: { unique_id: SecureRandom.uuid },
     )
   end
 
-  before { quantified_event }
+  before { event }
 
   describe '#aggregate' do
     let(:result) { unique_count_service.aggregate(options:) }
@@ -80,17 +82,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       context 'when there is persisted event and event added in period' do
-        let(:new_quantified_event) do
+        let(:new_event) do
           create(
-            :quantified_event,
-            added_at: from_datetime + 10.days,
-            removed_at:,
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            billable_metric:,
+            timestamp: from_datetime + 10.days,
+            properties: { unique_id: SecureRandom.uuid },
           )
         end
 
-        before { new_quantified_event }
+        before { new_event }
 
         it 'returns the correct number' do
           expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
@@ -153,13 +156,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       context 'when dimensions are used' do
-        let(:quantified_event) do
+        let(:event) do
           create(
-            :quantified_event,
-            added_at:,
-            removed_at:,
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            billable_metric:,
+            timestamp: added_at,
             properties: { unique_id: '111', region: 'europe' },
           )
         end
@@ -185,14 +188,32 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'with persisted metrics added in the period' do
-      let(:added_at) { from_datetime + 15.days }
+      let(:event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 15.days,
+          properties: { unique_id: SecureRandom.uuid },
+        )
+      end
 
       it 'returns the prorata of the full duration' do
         expect(result.aggregation).to eq(16.fdiv(31).ceil(5))
       end
 
       context 'when added on the first day of the period' do
-        let(:added_at) { from_datetime }
+        let(:event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime,
+            properties: { unique_id: SecureRandom.uuid },
+          )
+        end
 
         it 'returns the full duration' do
           expect(result.aggregation).to eq(1)
@@ -201,16 +222,36 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'with persisted metrics terminated in the period' do
-      let(:removed_at) { to_datetime - 15.days }
-
       it 'returns the prorata of the full duration' do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 15.days,
+          properties: {
+            unique_id: event.properties['unique_id'],
+            operation_type: 'remove',
+          },
+        )
+
         expect(result.aggregation).to eq(16.fdiv(31).ceil(5))
       end
 
       context 'when removed on the last day of the period' do
-        let(:removed_at) { to_datetime }
-
         it 'returns the full duration' do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: to_datetime,
+            properties: {
+              unique_id: event.properties['unique_id'],
+              operation_type: 'remove',
+            },
+          )
+
           expect(result.aggregation).to eq(1)
         end
       end
@@ -218,17 +259,39 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'with persisted metrics added and terminated in the period' do
       let(:added_at) { from_datetime + 1.day }
-      let(:removed_at) { to_datetime - 1.day }
 
       it 'returns the prorata of the full duration' do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            unique_id: event.properties['unique_id'],
+            operation_type: 'remove',
+          },
+        )
+
         expect(result.aggregation).to eq(29.fdiv(31).ceil(5))
       end
 
       context 'when added and removed the same day' do
         let(:added_at) { from_datetime + 1.day }
-        let(:removed_at) { added_at.end_of_day }
 
         it 'returns a 1 day duration' do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: added_at.end_of_day,
+            properties: {
+              unique_id: event.properties['unique_id'],
+              operation_type: 'remove',
+            },
+          )
+
           expect(result.aggregation).to eq(1.fdiv(31).ceil(5))
         end
       end
@@ -238,19 +301,17 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:options) do
         { is_pay_in_advance: false, is_current_usage: true }
       end
-      let(:new_quantified_event) do
-        create(
-          :quantified_event,
-          added_at: from_datetime + 10.days,
-          removed_at:,
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
-        )
-      end
-
-      before { new_quantified_event }
 
       it 'returns correct result' do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 10.days,
+          properties: { unique_id: SecureRandom.uuid },
+        )
+
         expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
         expect(result.current_usage_units).to eq(2)
       end
@@ -266,24 +327,9 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           :event,
           organization_id: organization.id,
           code: billable_metric.code,
-          external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
-          properties: {
-            unique_id: previous_quantified_event.external_id,
-          },
-        )
-      end
-
-      let(:previous_quantified_event) do
-        create(
-          :quantified_event,
-          organization:,
-          added_at: from_datetime + 5.days,
-          removed_at:,
-          external_id: '000',
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
+          properties: { unique_id: '000' },
         )
       end
 
@@ -319,27 +365,15 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'when event is given' do
-      let(:properties) { { unique_id: new_quantified_event.external_id } }
+      let(:properties) { { unique_id: SecureRandom.uuid } }
       let(:pay_in_advance_event) do
         create(
           :event,
           organization_id: organization.id,
           code: billable_metric.code,
-          external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
           properties:,
-        )
-      end
-
-      let(:new_quantified_event) do
-        create(
-          :quantified_event,
-          organization:,
-          added_at: from_datetime + 10.days,
-          removed_at:,
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
         )
       end
 
@@ -363,21 +397,9 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             :event,
             organization_id: organization.id,
             code: billable_metric.code,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: previous_quantified_event.external_id },
-          )
-        end
-        let(:previous_quantified_event) do
-          create(
-            :quantified_event,
-            organization:,
-            added_at: from_datetime + 5.days,
-            removed_at:,
-            external_id: '000',
-            external_subscription_id: subscription.external_id,
-            billable_metric:,
+            properties: { unique_id: '000' },
           )
         end
 
@@ -394,24 +416,9 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             :event,
             organization_id: organization.id,
             code: billable_metric.code,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: {
-              unique_id: previous_quantified_event.external_id,
-            },
-          )
-        end
-
-        let(:previous_quantified_event) do
-          create(
-            :quantified_event,
-            organization:,
-            added_at: from_datetime + 5.days,
-            removed_at:,
-            external_id: '000',
-            external_subscription_id: subscription.external_id,
-            billable_metric:,
+            properties: { unique_id: '000' },
           )
         end
 
@@ -439,28 +446,26 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
   end
 
-  describe '.grouped_by_aggregation' do
+  describe '#grouped_by_aggregation' do
     let(:result) { unique_count_service.aggregate(options:) }
-
     let(:grouped_by) { ['agent_name'] }
     let(:agent_names) { %w[aragorn frodo] }
+    let(:event) { nil }
 
-    let(:quantified_event) { nil }
-
-    let(:quantified_events) do
+    let(:events) do
       agent_names.each do |agent_name|
         create(
-          :quantified_event,
-          added_at:,
-          removed_at:,
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
           external_subscription_id: subscription.external_id,
-          billable_metric:,
-          grouped_by: { agent_name: },
+          timestamp: added_at,
+          properties: { unique_id: '000', agent_name: },
         )
       end
     end
 
-    before { quantified_events }
+    before { events }
 
     context 'with persisted metric on full period' do
       it 'returns the number of persisted metric' do
@@ -476,20 +481,20 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       context 'when there is persisted event and event added in period' do
-        let(:new_quantified_events) do
+        let(:new_events) do
           agent_names.each do |agent_name|
             create(
-              :quantified_event,
-              added_at: from_datetime + 10.days,
-              removed_at:,
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
               external_subscription_id: subscription.external_id,
-              billable_metric:,
-              grouped_by: { agent_name: },
+              timestamp: from_datetime + 10.days,
+              properties: { unique_id: SecureRandom.uuid, agent_name: },
             )
           end
         end
 
-        before { new_quantified_events }
+        before { new_events }
 
         it 'returns the correct number' do
           expect(result.aggregations.count).to eq(2)
@@ -504,16 +509,15 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       context 'when dimensions are used' do
-        let(:quantified_events) do
+        let(:events) do
           agent_names.each do |agent_name|
             create(
-              :quantified_event,
-              added_at:,
-              removed_at:,
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
               external_subscription_id: subscription.external_id,
-              billable_metric:,
-              properties: { unique_id: '111', region: 'europe' },
-              grouped_by: { agent_name: },
+              timestamp: added_at,
+              properties: { unique_id: '111', region: 'europe', agent_name: },
             )
           end
         end
@@ -566,9 +570,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'with persisted metrics terminated in the period' do
-      let(:removed_at) { to_datetime - 15.days }
-
       it 'returns the prorata of the full duration' do
+        agent_names.each do |agent_name|
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: to_datetime - 15.days,
+            properties: { unique_id: '000', region: 'europe', agent_name:, operation_type: 'remove' },
+          )
+        end
+
         expect(result.aggregations.count).to eq(2)
 
         result.aggregations.each do |aggregation|
@@ -579,9 +592,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       context 'when removed on the last day of the period' do
-        let(:removed_at) { to_datetime }
-
         it 'returns the full duration' do
+          agent_names.each do |agent_name|
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: to_datetime,
+              properties: { unique_id: '111', region: 'europe', agent_name:, operation_type: 'remove' },
+            )
+          end
+
           expect(result.aggregations.count).to eq(2)
 
           result.aggregations.each do |aggregation|
@@ -595,9 +617,19 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'with persisted metrics added and terminated in the period' do
       let(:added_at) { from_datetime + 1.day }
-      let(:removed_at) { to_datetime - 1.day }
 
       it 'returns the prorata of the full duration' do
+        agent_names.each do |agent_name|
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: to_datetime - 1.day,
+            properties: { unique_id: '000', agent_name:, operation_type: 'remove' },
+          )
+        end
+
         expect(result.aggregations.count).to eq(2)
 
         result.aggregations.each do |aggregation|
@@ -609,9 +641,19 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
       context 'when added and removed the same day' do
         let(:added_at) { from_datetime + 1.day }
-        let(:removed_at) { added_at.end_of_day }
 
         it 'returns a 1 day duration' do
+          agent_names.each do |agent_name|
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: added_at.end_of_day,
+              properties: { unique_id: '000', agent_name:, operation_type: 'remove' },
+            )
+          end
+
           expect(result.aggregations.count).to eq(2)
 
           result.aggregations.each do |aggregation|
@@ -627,20 +669,20 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       let(:options) do
         { is_pay_in_advance: false, is_current_usage: true }
       end
-      let(:new_quantified_events) do
+      let(:new_events) do
         agent_names.map do |agent_name|
           create(
-            :quantified_event,
-            added_at: from_datetime + 10.days,
-            removed_at:,
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            billable_metric:,
-            grouped_by: { agent_name: },
+            timestamp: from_datetime + 10.days,
+            properties: { unique_id: SecureRandom.uuid, agent_name: },
           )
         end
       end
 
-      before { new_quantified_events }
+      before { new_events }
 
       it 'returns correct result' do
         expect(result.aggregations.count).to eq(2)
@@ -660,33 +702,17 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       let(:previous_events) do
-        agent_names.map.with_index do |agent_name, index|
+        agent_names.map do |agent_name|
           create(
             :event,
             organization_id: organization.id,
             code: billable_metric.code,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
             properties: {
-              unique_id: previous_quantified_events[index].external_id,
+              unique_id: '111',
               agent_name:,
             },
-          )
-        end
-      end
-
-      let(:previous_quantified_events) do
-        agent_names.map do |agent_name|
-          create(
-            :quantified_event,
-            organization:,
-            added_at: from_datetime + 5.days,
-            removed_at:,
-            external_id: '000',
-            external_subscription_id: subscription.external_id,
-            billable_metric:,
-            grouped_by: { agent_name: },
           )
         end
       end
@@ -754,9 +780,19 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'with persisted metrics removed in the period' do
-      let(:removed_at) { to_datetime - 15.days }
-
       it 'aggregates per events' do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 15.days,
+          properties: {
+            unique_id: event.properties['unique_id'],
+            operation_type: 'remove',
+          },
+        )
+
         result = unique_count_service.per_event_aggregation
 
         expect(result.event_aggregation).to eq([1])
@@ -764,9 +800,19 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       end
 
       context 'when removed on the last day of the period' do
-        let(:removed_at) { to_datetime }
-
         it 'aggregates per events' do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: to_datetime,
+            properties: {
+              unique_id: event.properties['unique_id'],
+              operation_type: 'remove',
+            },
+          )
+
           result = unique_count_service.per_event_aggregation
 
           expect(result.event_aggregation).to eq([1])
@@ -777,9 +823,20 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'with persisted metrics added and removed in the period' do
       let(:added_at) { from_datetime + 1.day }
-      let(:removed_at) { to_datetime - 1.day }
 
       it 'aggregates per events' do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            unique_id: event.properties['unique_id'],
+            operation_type: 'remove',
+          },
+        )
+
         result = unique_count_service.per_event_aggregation
 
         expect(result.event_aggregation).to eq([1])
@@ -788,9 +845,20 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
       context 'when added and removed the same day' do
         let(:added_at) { from_datetime + 1.day }
-        let(:removed_at) { added_at }
 
         it 'aggregates per events' do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: added_at.end_of_day,
+            properties: {
+              unique_id: event.properties['unique_id'],
+              operation_type: 'remove',
+            },
+          )
+
           result = unique_count_service.per_event_aggregation
 
           expect(result.event_aggregation).to eq([1])
@@ -801,28 +869,37 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'with multiple events added in the period and with one added and removed during period' do
       let(:added_at) { from_datetime + 10.days }
-      let(:quantified_event2) do
-        create(
-          :quantified_event,
-          added_at: from_datetime + 10.days,
-          removed_at: nil,
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
-        )
-      end
-      let(:quantified_event3) do
-        create(
-          :quantified_event,
-          added_at: from_datetime + 20.days,
-          removed_at: from_datetime + 20.days,
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
-        )
-      end
 
       before do
-        quantified_event2
-        quantified_event3
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 10.days,
+          properties: { unique_id: SecureRandom.uuid },
+        )
+
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 20.days,
+          properties: { unique_id: '111' },
+        )
+
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: (from_datetime + 20.days).end_of_day,
+          properties: {
+            unique_id: '111',
+            operation_type: 'remove',
+          },
+        )
       end
 
       it 'aggregates per events' do
@@ -837,28 +914,36 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'with multiple events added and removed in the period and with one persisted' do
-      let(:quantified_event2) do
-        create(
-          :quantified_event,
-          added_at: from_datetime + 10.days,
-          removed_at: nil,
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
-        )
-      end
-      let(:quantified_event3) do
-        create(
-          :quantified_event,
-          added_at: from_datetime + 20.days,
-          removed_at: from_datetime + 20.days,
-          external_subscription_id: subscription.external_id,
-          billable_metric:,
-        )
-      end
-
       before do
-        quantified_event2
-        quantified_event3
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 10.days,
+          properties: { unique_id: SecureRandom.uuid },
+        )
+
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 20.days,
+          properties: { unique_id: '111' },
+        )
+
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: (from_datetime + 20.days).end_of_day,
+          properties: {
+            unique_id: '111',
+            operation_type: 'remove',
+          },
+        )
       end
 
       it 'aggregates per events' do

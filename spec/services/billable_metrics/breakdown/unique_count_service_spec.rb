@@ -11,6 +11,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       boundaries: {
         from_datetime:,
         to_datetime:,
+        charges_duration: (to_datetime - from_datetime).fdiv(1.day).round,
       },
       filters: {
         group:,
@@ -20,20 +21,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
 
   let(:event_store_class) { Events::Stores::PostgresStore }
 
-  let(:subscription) do
-    create(
-      :subscription,
-      started_at:,
-      subscription_at:,
-      billing_time: :anniversary,
-    )
-  end
-
-  let(:subscription_at) { DateTime.parse('2022-06-09') }
-  let(:started_at) { subscription_at }
-  let(:organization) { subscription.organization }
-  let(:customer) { subscription.customer }
-  let(:group) { nil }
+  let(:organization) { create(:organization) }
 
   let(:billable_metric) do
     create(
@@ -41,32 +29,73 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       organization:,
       aggregation_type: 'unique_count_agg',
       field_name: 'unique_id',
+      recurring: true,
+    )
+  end
+
+  let(:plan) do
+    create(
+      :plan,
+      organization:,
     )
   end
 
   let(:charge) do
     create(
       :standard_charge,
+      plan:,
       billable_metric:,
     )
   end
 
-  let(:from_datetime) { DateTime.parse('2022-07-09 00:00:00 UTC') }
-  let(:to_datetime) { DateTime.parse('2022-08-08 23:59:59 UTC') }
+  let(:subscription) do
+    create(
+      :subscription,
+      organization:,
+      plan:,
+      started_at:,
+      subscription_at:,
+      billing_time: :anniversary,
+    )
+  end
+
+  let(:subscription_at) { Time.zone.parse('2022-06-09') }
+  let(:started_at) { subscription_at }
+  let(:group) { nil }
+
+  let(:from_datetime) { Time.zone.parse('2022-07-09 00:00:00 UTC') }
+  let(:to_datetime) { Time.zone.parse('2022-08-08 23:59:59 UTC') }
 
   let(:added_at) { from_datetime - 1.month }
   let(:removed_at) { nil }
-  let(:quantified_event) do
+  let(:added_event) do
     create(
-      :quantified_event,
-      added_at:,
-      removed_at:,
+      :event,
+      organization_id: organization.id,
+      timestamp: added_at,
       external_subscription_id: subscription.external_id,
-      billable_metric:,
+      code: billable_metric.code,
+      properties: { unique_id: '111' },
     )
   end
 
-  before { quantified_event }
+  let(:removed_event) do
+    next nil unless removed_at
+
+    create(
+      :event,
+      organization_id: organization.id,
+      timestamp: removed_at,
+      external_subscription_id: subscription.external_id,
+      code: billable_metric.code,
+      properties: { unique_id: '111', operation_type: 'remove' },
+    )
+  end
+
+  before do
+    added_event
+    removed_event
+  end
 
   describe '#breakdown' do
     let(:result) { service.breakdown.breakdown }
@@ -89,6 +118,8 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
         let(:subscription) do
           create(
             :subscription,
+            organization:,
+            plan:,
             started_at:,
             subscription_at:,
             billing_time: :anniversary,
@@ -96,7 +127,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
             status: :terminated,
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
 
         it 'returns the detail the persisted metrics' do
           aggregate_failures do
@@ -116,6 +147,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
         let(:subscription) do
           create(
             :subscription,
+            organization:,
             started_at:,
             subscription_at:,
             billing_time: :anniversary,
@@ -123,14 +155,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
             status: :terminated,
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
 
         before do
           create(
             :subscription,
             previous_subscription: subscription,
             organization:,
-            customer:,
+            plan:,
             started_at: to_datetime,
           )
         end
@@ -152,6 +184,8 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
           let(:subscription) do
             create(
               :subscription,
+              organization:,
+              plan:,
               started_at:,
               subscription_at:,
               billing_time: :calendar,
@@ -178,7 +212,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       end
 
       context 'when subscription was started in the period' do
-        let(:started_at) { DateTime.parse('2022-08-01') }
+        let(:started_at) { Time.zone.parse('2022-08-01') }
         let(:from_datetime) { started_at }
 
         it 'returns the detail the persisted metrics' do
@@ -283,7 +317,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
 
       context 'when added and removed the same day' do
         let(:added_at) { from_datetime + 1.day }
-        let(:removed_at) { added_at }
+        let(:removed_at) { added_at.end_of_day }
 
         it 'returns the detail the persisted metrics' do
           aggregate_failures do
