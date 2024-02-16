@@ -360,7 +360,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       it 'assigns an pay_in_advance aggregation' do
         result = count_service.aggregate
 
-        expect(result.pay_in_advance_aggregation).to eq(1)
+        expect(result.pay_in_advance_aggregation).to eq(0)
       end
 
       context 'when dimensions are used' do
@@ -388,6 +388,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
 
       context 'when current period aggregation is greater than period maximum' do
+        let(:properties) { { unique_id: '003' } }
+
         let(:previous_event) do
           create(
             :event,
@@ -396,7 +398,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '000' },
+            properties: { unique_id: '001' },
           )
         end
 
@@ -408,8 +410,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             event_id: previous_event.id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_event.timestamp,
-            current_aggregation: '7',
-            max_aggregation: '7',
+            current_aggregation: '2',
+            max_aggregation: '2',
           )
         end
 

@@ -96,30 +96,6 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
-    context 'when event code matches a unique count billable metric' do
-      let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: 'unique_count_agg', field_name: 'item_id')
-      end
-
-      let(:event_properties) do
-        {
-          billable_metric.field_name => 'ext_12345',
-          'operation_type' => 'add',
-        }
-      end
-
-      it 'creates a quantified event' do
-        result = nil
-
-        aggregate_failures do
-          expect { result = process_service.call }
-            .to change(QuantifiedEvent, :count).by(1)
-
-          expect(result).to be_success
-        end
-      end
-    end
-
     context 'when event matches an pay_in_advance charge that is not invoiceable' do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) do

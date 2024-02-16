@@ -11,7 +11,7 @@ module BillableMetrics
       end
 
       def compute_aggregation(options: {})
-        aggregation = event_store.unique_count
+        aggregation = event_store.unique_count.ceil(5)
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
           handle_in_advance_current_usage(aggregation)
@@ -58,7 +58,14 @@ module BillableMetrics
         return 0 unless event
         return 0 if event.properties.blank?
 
-        newly_applied_units = (operation_type == :add) ? 1 : 0
+        active_unique_property = event_store.active_unique_property?(event)
+
+        newly_applied_units = if operation_type == :add
+          # NOTE: ensure the unique property is not already present
+          active_unique_property ? 0 : 1
+        else
+          0
+        end
 
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
@@ -79,7 +86,12 @@ module BillableMetrics
         old_aggregation = BigDecimal(cached_aggregation.current_aggregation)
         old_max = BigDecimal(cached_aggregation.max_aggregation)
 
-        current_aggregation = (operation_type == :add) ? (old_aggregation + 1) : (old_aggregation - 1)
+        current_aggregation = if operation_type == :add
+          old_aggregation + newly_applied_units
+        else
+          # NOTE: ensure the unique property is active
+          old_aggregation - (active_unique_property ? 1 : 0)
+        end
 
         if current_aggregation > old_max
           handle_event_metadata(current_aggregation:, max_aggregation: current_aggregation)
@@ -118,7 +130,7 @@ module BillableMetrics
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
           .where(grouped_by: grouped_by.presence || {})
-          .order(timestamp: :desc)
+          .order(timestamp: :desc, created_at: :desc)
 
         query = query.where.not(event_id: event.id) if event.present?
         query = query.where(group_id: group.id) if group

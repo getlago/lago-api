@@ -216,9 +216,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         expect(fee.amount_cents).to eq(1200)
       end
 
-      ### 19 february: Send an other event. Event uses the same value so it is ignored.
+      ### 19 february: Send an event with the same unique id. It creates a 0 amount fee.
       feb18 = DateTime.new(2023, 2, 19)
-
       travel_to(feb18) do
         expect do
           create_event(
@@ -229,7 +228,16 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               properties: { unique_id: 'id_2' },
             },
           )
-        end.not_to change { subscription.reload.fees.count }
+        end.to change { subscription.reload.fees.count }.from(4).to(5)
+
+        fee = subscription.fees.order(created_at: :desc).first
+
+        expect(fee.invoice_id).to be_nil
+        expect(fee.charge_id).to eq(charge.id)
+        expect(fee.pay_in_advance).to eq(true)
+        expect(fee.units).to eq(0)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(0)
       end
 
       ### 20 february: Send an other event.
@@ -245,7 +253,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               properties: { unique_id: 'id_3' },
             },
           )
-        end.to change { subscription.reload.fees.count }.from(4).to(5)
+        end.to change { subscription.reload.fees.count }.from(5).to(6)
 
         fee = subscription.fees.order(created_at: :desc).first
 
@@ -270,7 +278,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               properties: { unique_id: 'id_3', operation_type: 'remove' },
             },
           )
-        end.to change { subscription.reload.fees.count }.from(5).to(6)
+        end.to change { subscription.reload.fees.count }.from(6).to(7)
 
         fee = subscription.fees.order(created_at: :desc).first
 

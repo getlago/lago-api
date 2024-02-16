@@ -125,11 +125,11 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             started_at:,
             subscription_at:,
             billing_time: :anniversary,
-            terminated_at: to_datetime,
+            terminated_at: Time.zone.parse('2022-07-24 12:59:59'),
             status: :terminated,
           )
         end
-        let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2022-07-23 23:59:59') }
 
         before do
           create(
@@ -137,7 +137,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             previous_subscription: subscription,
             organization:,
             customer:,
-            started_at: to_datetime,
+            started_at: Time.zone.parse('2022-07-24 12:59:59'),
           )
         end
 

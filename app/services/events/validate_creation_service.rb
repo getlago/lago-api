@@ -39,9 +39,7 @@ module Events
       return invalid_code_error unless valid_code?
       return invalid_properties_error unless valid_properties?
 
-      subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
-      invalid_quantified_event = quantified_event_validation(subscription || subscriptions.first)
-      invalid_quantified_event_error(invalid_quantified_event) if invalid_quantified_event.present?
+      nil
     end
 
     def valid_transaction_id?
@@ -92,26 +90,8 @@ module Events
       result.not_found_failure!(resource: 'customer')
     end
 
-    def invalid_quantified_event_error(errors)
-      result.validation_failure!(errors:)
-    end
-
     def billable_metric
       @billable_metric ||= organization.billable_metrics.find_by(code: params[:code])
-    end
-
-    def quantified_event_validation(subscription)
-      return {} unless billable_metric.unique_count_agg?
-
-      validation_service = QuantifiedEvents::ValidateCreationService.new(
-        result:,
-        subscription:,
-        billable_metric:,
-        args: params,
-      )
-      return {} if validation_service.valid?
-
-      validation_service.errors
     end
   end
 end

@@ -32,7 +32,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           properties: {
             'item_id' => '001',
@@ -47,7 +46,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           properties: {
             'item_id' => '001',
@@ -62,7 +60,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           properties: {
             'item_id' => '002',
@@ -78,7 +75,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
     end
   end
 
-  context 'with in advance charge' do
+  context 'with in advance charge and group by' do
     let(:charge) do
       create(
         :standard_charge,
@@ -111,7 +108,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => '001',
@@ -132,7 +128,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => '001',
@@ -155,7 +150,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => '001',
@@ -167,7 +161,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
           },
         )
 
-        expect(Fee.count).to eq(2)
+        expect(Fee.count).to eq(3)
 
         fetch_current_usage(customer:)
         expect(json[:customer_usage][:total_amount_cents]).to eq(2900)
@@ -178,7 +172,6 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => '001',
@@ -190,10 +183,178 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
           },
         )
 
-        expect(Fee.count).to eq(3)
+        expect(Fee.count).to eq(4)
 
         fetch_current_usage(customer:)
         expect(json[:customer_usage][:total_amount_cents]).to eq(2900)
+      end
+    end
+  end
+
+  context 'with prorated in advance charge' do
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        prorated: true,
+        pay_in_advance: true,
+        properties: { amount: '1' },
+      )
+    end
+
+    it 'returns the expected result' do
+      travel_to(DateTime.new(2024, 2, 23, 1)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      travel_to(DateTime.new(2024, 2, 23, 1, 2)) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            properties: { 'item_id' => 'seat_1' },
+          },
+        )
+
+        expect(Fee.count).to eq(1)
+
+        fetch_current_usage(customer:)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(24)
+        expect(json[:customer_usage][:charges_usage].first[:units]).to eq('1.0')
+        expect(json[:customer_usage][:charges_usage].first[:amount_cents]).to eq(24) # (7 / 29) * 1
+      end
+
+      travel_to(DateTime.new(2024, 2, 29, 1, 1)) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            properties: { 'item_id' => 'seat_1', 'operation_type' => 'remove' },
+          },
+        )
+
+        expect(Fee.count).to eq(2)
+
+        fetch_current_usage(customer:)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(24)
+        expect(json[:customer_usage][:charges_usage].first[:units]).to eq('0.0')
+        expect(json[:customer_usage][:charges_usage].first[:amount_cents]).to eq(24) # (7 / 29) * 1
+      end
+
+      travel_to(DateTime.new(2024, 2, 29, 1, 2)) do
+        # NOTE: Remove once again the seat, it should not impact the current usage
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            properties: { 'item_id' => 'seat_1', 'operation_type' => 'remove' },
+          },
+        )
+
+        expect(Fee.count).to eq(3)
+
+        fetch_current_usage(customer:)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(24)
+        expect(json[:customer_usage][:charges_usage].first[:units]).to eq('0.0')
+        expect(json[:customer_usage][:charges_usage].first[:amount_cents]).to eq(24) # (7 / 29) * 1
+      end
+    end
+  end
+
+  context 'with in advance charge' do
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        prorated: false,
+        pay_in_advance: true,
+        properties: { amount: '1' },
+      )
+    end
+
+    it 'returns the expected result' do
+      travel_to(DateTime.new(2024, 2, 23, 1)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+            started_at: Time.zone.parse('2024-02-01T01:00:00'),
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      travel_to(DateTime.new(2024, 2, 23, 1, 2)) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            properties: { 'item_id' => 'seat_1' },
+          },
+        )
+
+        expect(Fee.count).to eq(1)
+
+        fetch_current_usage(customer:)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(100)
+        expect(json[:customer_usage][:charges_usage].first[:units]).to eq('1.0')
+        expect(json[:customer_usage][:charges_usage].first[:amount_cents]).to eq(100)
+      end
+
+      travel_to(DateTime.new(2024, 2, 26, 1, 1)) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            timestamp: Time.zone.parse('2024-02-26T01:01:00').to_i,
+            properties: { 'item_id' => 'seat_1', 'operation_type' => 'remove' },
+          },
+        )
+
+        expect(Fee.count).to eq(2)
+
+        fetch_current_usage(customer:)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(100)
+        expect(json[:customer_usage][:charges_usage].first[:units]).to eq('0.0')
+        expect(json[:customer_usage][:charges_usage].first[:amount_cents]).to eq(100)
+      end
+
+      travel_to(DateTime.new(2024, 2, 26, 1, 2)) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            timestamp: Time.zone.parse('2024-02-26T01:01:00').to_i,
+            properties: { 'item_id' => 'seat_2' },
+          },
+        )
+
+        expect(Fee.count).to eq(3)
+
+        fetch_current_usage(customer:)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(100)
+        expect(json[:customer_usage][:charges_usage].first[:units]).to eq('1.0')
+        expect(json[:customer_usage][:charges_usage].first[:amount_cents]).to eq(100)
       end
     end
   end

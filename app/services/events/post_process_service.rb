@@ -21,13 +21,6 @@ module Events
 
       expire_cached_charges(subscriptions)
 
-      if should_handle_quantified_event?
-        # For unique count if repeated event got ingested, we want to store this event but prevent further processing
-        return result unless quantified_event_service.process_event?
-
-        handle_quantified_event
-      end
-
       handle_pay_in_advance
 
       result.event = event
@@ -99,10 +92,6 @@ module Events
 
     def quantified_event_service
       @quantified_event_service ||= QuantifiedEvents::CreateOrUpdateService.new(event)
-    end
-
-    def should_handle_quantified_event?
-      quantified_event_service.matching_billable_metric?
     end
 
     def handle_quantified_event

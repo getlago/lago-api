@@ -544,7 +544,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         credit_note = customer.credit_notes.first
 
         expect(credit_note.credit_amount_cents).to eq(1_800)
-        expect(invoice.total_amount_cents).to eq(18_000 + 190 - 1_800) # 11/29 x 500 = 190
+        # NOTE: the charges from the termination day will be billed on the upgraded subscription
+        expect(invoice.total_amount_cents).to eq(18_000 + 172 - 1_800) # 10/29 x 500 = 172
       end
 
       travel_to(DateTime.new(2024, 3, 1, 12, 12)) do
@@ -627,7 +628,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
         terminated_invoice = subscription.invoices.order(created_at: :desc).first
 
-        expect(terminated_invoice.total_amount_cents).to eq((1_100 + (11.fdiv(29) * 500)).round) # 11 + 11/29 x 5
+        # NOTE: the charges from the termination day will be billed on the upgraded subscription
+        expect(terminated_invoice.total_amount_cents).to eq((1_100 + (10.fdiv(29) * 500)).round) # 11 + 10/29 x 5
       end
 
       travel_to(DateTime.new(2024, 3, 1, 12, 12)) do

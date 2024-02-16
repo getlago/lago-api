@@ -608,8 +608,10 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
 
             invoice = subscription.invoices.order(created_at: :desc).first
             expect(invoice.fees.charge_kind.count).to eq(1)
-            # 30226 (17 / 31 * 75 units) + 2.58 (2 / 31 * 20 units - prorated event in termination period)
-            expect(invoice.total_amount_cents).to eq(27_323)
+
+            # NOTE: the charges from the termination day will be billed on the upgraded subscription
+            # 30226 (16 / 31 * 75 units) + 2.58 (1 / 31 * 20 units - prorated event in termination period)
+            expect(invoice.total_amount_cents).to eq(27_194)
           end
 
           travel_to(DateTime.new(2023, 11, 1)) do
@@ -793,7 +795,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
 
         travel_to(DateTime.new(2023, 10, 5)) do
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_000)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_000) # 100 + 10 + 50 + 5 + 5
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_000)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('3.0')
         end

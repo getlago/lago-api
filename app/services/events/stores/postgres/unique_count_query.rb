@@ -172,7 +172,7 @@ module Events
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
+              GROUP BY property, timestamp, operation_type
             )
 
             SELECT
@@ -282,7 +282,7 @@ module Events
                     -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
                     CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp)) < :from_datetime
                     THEN :from_datetime
-                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp)
+                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp) + interval '1' day
                     END
                   )::timestamptz AT TIME ZONE :timezone)
                   - DATE((
@@ -290,7 +290,6 @@ module Events
                     CASE WHEN timestamp < :from_datetime THEN :from_datetime ELSE timestamp END
                   )::timestamptz AT TIME ZONE :timezone)
                 )::numeric
-                + 1
               )
               /
               -- NOTE: full duration of the period

@@ -13,6 +13,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       subscription_at:,
       billing_time:,
       started_at:,
+      previous_subscription:,
     )
   end
 
@@ -24,6 +25,8 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
   let(:billing_at) { DateTime.parse('07 Mar 2022') }
   let(:started_at) { subscription_at }
   let(:timezone) { 'UTC' }
+
+  let(:previous_subscription) { nil }
 
   describe 'from_datetime' do
     let(:result) { date_service.from_datetime.to_s }
@@ -357,6 +360,22 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
           expect(result).to eq('2022-02-01 00:00:00 UTC')
         end
       end
+
+      context 'when previous subscription is upgraded' do
+        let(:started_at) { Time.zone.parse('2024-02-22T16:13:00') }
+
+        let(:previous_subscription) do
+          create(
+            :subscription,
+            :terminated,
+            terminated_at: started_at,
+          )
+        end
+
+        it 'returns the beginning of the start date' do
+          expect(result).to eq(subscription.started_at.beginning_of_day.utc.to_s)
+        end
+      end
     end
 
     context 'when billing_time is anniversary' do
@@ -405,7 +424,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when subscription is terminated in the middle of a period' do
-        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+        let(:terminated_at) { Time.zone.parse('2022-03-06T12:23:00') }
 
         before do
           subscription.update!(status: :terminated, terminated_at:)
@@ -413,6 +432,29 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
         it 'returns the terminated date' do
           expect(result).to eq(subscription.terminated_at.utc.to_s)
+        end
+
+        context 'when subscription was upgraded' do
+          before do
+            create(
+              :subscription,
+              started_at: terminated_at,
+              previous_subscription: subscription,
+            )
+          end
+
+          it 'returns the previous end of day' do
+            expect(result).to eq((subscription.terminated_at - 1.day).end_of_day.to_s)
+          end
+
+          context 'when end of previous day is before charges_from_datetime' do
+            let(:started_at) { Time.zone.parse('2022-03-06T10:23:00') }
+            let(:terminated_at) { Time.zone.parse('2022-03-06T12:23:00') }
+
+            it 'returns the charges_from_datetime' do
+              expect(result).to eq(subscription.started_at.to_s)
+            end
+          end
         end
       end
 
