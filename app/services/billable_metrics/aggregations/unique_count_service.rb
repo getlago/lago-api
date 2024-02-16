@@ -7,10 +7,11 @@ module BillableMetrics
         super(...)
 
         event_store.aggregation_property = billable_metric.field_name
+        event_store.use_from_boundary = !billable_metric.recurring
       end
 
       def compute_aggregation(options: {})
-        aggregation = compute_single_aggregation.ceil(5)
+        aggregation = event_store.unique_count
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
           handle_in_advance_current_usage(aggregation)
@@ -33,7 +34,7 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
-        aggregations = compute_grouped_aggregations
+        aggregations = event_store.grouped_unique_count
         return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
@@ -103,7 +104,7 @@ module BillableMetrics
       end
 
       def compute_per_event_aggregation
-        (0...added_query.count).map { |_| 1 }
+        (0...event_store.events_values(force_from: true).count).map { |_| 1 }
       end
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
@@ -116,34 +117,11 @@ module BillableMetrics
           .where(charge_id: charge.id)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
+          .where(grouped_by: grouped_by.presence || {})
           .order(timestamp: :desc)
 
-        query = query
-          .joins(:charge)
-          .joins([
-            'INNER JOIN quantified_events ON quantified_events.organization_id = cached_aggregations.organization_id',
-            'quantified_events.external_subscription_id = cached_aggregations.external_subscription_id',
-            'quantified_events.billable_metric_id = charges.billable_metric_id',
-            'quantified_events.grouped_by = cached_aggregations.grouped_by',
-          ].join(' AND '))
-          .where(quantified_events: { external_id: event_store.events_values })
-          .where('quantified_events.added_at::timestamp(0) >= ?', with_from_datetime)
-          .where('quantified_events.added_at::timestamp(0) <= ?', with_to_datetime)
-          .where('quantified_events.removed_at::timestamp(0) IS NULL')
-          .or(
-            query
-              .where('quantified_events.removed_at::timestamp(0) >= ?', with_from_datetime)
-              .where('quantified_events.removed_at::timestamp(0) <= ?', with_to_datetime),
-          )
-          .where(grouped_by: grouped_by.presence || {})
-
-        # TODO: event_id for clickhouse events
         query = query.where.not(event_id: event.id) if event.present?
-
-        if group
-          query = query.where(group_id: group.id)
-            .where('quantified_events.group_id = cached_aggregations.group_id')
-        end
+        query = query.where(group_id: group.id) if group
 
         query.first
       end
@@ -165,121 +143,6 @@ module BillableMetrics
         result.current_aggregation = current_aggregation unless current_aggregation.nil?
         result.max_aggregation = max_aggregation unless max_aggregation.nil?
         result.units_applied = units_applied unless units_applied.nil?
-      end
-
-      def compute_single_aggregation
-        ActiveRecord::Base.connection.execute(aggregation_query).first['aggregation_result']
-      end
-
-      def compute_grouped_aggregations
-        event_store.prepare_grouped_result(
-          ActiveRecord::Base.connection.select_all(grouped_aggregation_query).rows,
-        )
-      end
-
-      def aggregation_query
-        queries = [
-          # NOTE: Billed on the full period. We will replace 1::numeric with proration_coefficient::numeric
-          # in the next part
-          persisted_query.select('SUM(1::numeric)').to_sql,
-
-          # NOTE: Added during the period, We will replace 1::numeric with proration_coefficient::numeric
-          # in the next part
-          added_query.select('SUM(1::numeric)').to_sql,
-        ]
-
-        "SELECT (#{queries.map { |q| "COALESCE((#{q}), 0)" }.join(' + ')}) AS aggregation_result"
-      end
-
-      def grouped_aggregation_query
-        groups = grouped_by.map do |group|
-          ActiveRecord::Base.sanitize_sql_for_conditions(
-            ['quantified_events.grouped_by->>?', group],
-          )
-        end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
-
-        # NOTE: Billed on the full period
-        persisted = persisted_query
-          .select(
-            [
-              groups.map.with_index { |group, index| "#{group} AS g_#{index}" },
-              'SUM(1)::numeric AS group_sum',
-            ].flatten.join(', '),
-          )
-          .group(groups.join(', '))
-          .to_sql
-
-        # NOTE: Added during the period
-        added = added_query
-          .select(
-            [
-              groups.map.with_index { |group, index| "#{group} AS g_#{index}" },
-              'SUM(1)::numeric AS group_sum',
-            ].flatten.join(', '),
-          )
-          .group(groups.join(', '))
-          .to_sql
-
-        <<-SQL
-          with persisted AS (#{persisted}),
-          added AS (#{added})
-
-          SELECT
-            #{group_names},
-            SUM(group_sum)
-          FROM (
-            (select * from persisted)
-          UNION ALL
-            (select * from added)
-          ) grouped_count
-          GROUP BY #{group_names}
-        SQL
-      end
-
-      def persisted_query
-        return QuantifiedEvent.none unless billable_metric.recurring?
-
-        base_scope
-          .where('quantified_events.added_at::timestamp(0) < ?', from_datetime)
-          .where('quantified_events.removed_at IS NULL OR quantified_events.removed_at::timestamp(0) > ?', to_datetime)
-      end
-
-      def added_query
-        base_scope
-          .where('quantified_events.added_at::timestamp(0) >= ?', from_datetime)
-          .where('quantified_events.added_at::timestamp(0) <= ?', to_datetime)
-          .where('quantified_events.removed_at::timestamp(0) IS NULL OR quantified_events.removed_at > ?', to_datetime)
-      end
-
-      def base_scope
-        quantified_events = QuantifiedEvent
-          .where(organization_id: billable_metric.organization_id)
-          .where(billable_metric_id: billable_metric.id)
-          .where(external_subscription_id: subscription.external_id)
-
-        unless billable_metric.recurring?
-          store = event_store_class.new(
-            code: billable_metric.code,
-            subscription:,
-            boundaries: {
-              from_datetime: subscription.started_at,
-              to_datetime: subscription.terminated_at,
-            },
-            filters:,
-          )
-          store.aggregation_property = billable_metric.field_name
-
-          quantified_events = quantified_events.where(external_id: store.events_values)
-        end
-
-        return quantified_events unless group
-
-        count_unique_group_scope(quantified_events)
-      end
-
-      def sanitized_operation_type
-        ActiveRecord::Base.sanitize_sql_for_conditions(['events.properties->>operation_type'])
       end
     end
   end
