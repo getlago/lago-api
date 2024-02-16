@@ -110,7 +110,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
     end
   end
 
-  context 'with multiples subscription attached to the same plan' do
+  context 'with multiple subscriptions attached to the same plan' do
     let(:charge) do
       create(
         :standard_charge,

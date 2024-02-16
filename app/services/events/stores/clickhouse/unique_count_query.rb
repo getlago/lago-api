@@ -52,7 +52,7 @@ module Events
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
+              GROUP BY property, timestamp, operation_type
             )
 
             SELECT coalesce(SUM(period_ratio), 0) as aggregation

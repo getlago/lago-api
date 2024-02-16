@@ -172,6 +172,7 @@ class Invoice < ApplicationRecord
       boundaries: {
         from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
         to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
+        charges_duration: fee.properties['charges_duration'],
       },
       filters: { group: fee.group },
     ).breakdown.breakdown

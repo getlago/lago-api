@@ -108,7 +108,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           properties: { rate: '1', fixed_amount: '5', free_units_per_total_aggregation: '15.0' },
         )
 
-        travel_to(DateTime.new(2023, 3, 6)) do
+        travel_to(DateTime.new(2023, 3, 6, 0, 1)) do
           create_event(
             {
               code: billable_metric.code,
@@ -121,7 +121,9 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:total_amount_cents]).to eq(0)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('4.0')
+        end
 
+        travel_to(DateTime.new(2023, 3, 6, 0, 2)) do
           create_event(
             {
               code: billable_metric.code,
@@ -133,7 +135,9 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:total_amount_cents]).to eq(0)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('8.0')
+        end
 
+        travel_to(DateTime.new(2023, 3, 6, 0, 3)) do
           create_event(
             {
               code: billable_metric.code,
@@ -145,7 +149,9 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:total_amount_cents]).to eq(0)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('12.0')
+        end
 
+        travel_to(DateTime.new(2023, 3, 6, 0, 4)) do
           create_event(
             {
               code: billable_metric.code,
@@ -158,7 +164,9 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           expect(json[:customer_usage][:amount_cents]).to eq(501)
           expect(json[:customer_usage][:total_amount_cents]).to eq(601)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq('16.0')
+        end
 
+        travel_to(DateTime.new(2023, 3, 6, 0, 5)) do
           create_event(
             {
               code: billable_metric.code,

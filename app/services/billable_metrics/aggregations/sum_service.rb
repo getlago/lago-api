@@ -141,7 +141,7 @@ module BillableMetrics
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
           .where(grouped_by: grouped_by.presence || {})
-          .order(timestamp: :desc)
+          .order(timestamp: :desc, created_at: :desc)
 
         query = query.where.not(event_id: event.id) if event.present?
         query = query.where(group_id: group.id) if group
