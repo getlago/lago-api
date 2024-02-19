@@ -180,8 +180,10 @@ module Invoices
       return false if calculate_true_up_fee_result.amount_cents.zero?
 
       subscription.active? ||
-        (subscription.terminated? && subscription.plan.pay_in_arrear?) ||
-        (subscription.terminated? && subscription.terminated_at > invoice.created_at)
+        (
+          subscription.terminated? &&
+          (subscription.plan.pay_in_arrear? || subscription.terminated_at > invoice.created_at)
+        )
     end
 
     def should_create_subscription_fee?(subscription)

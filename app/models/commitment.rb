@@ -17,6 +17,6 @@ class Commitment < ApplicationRecord
   validates :commitment_type, uniqueness: { scope: :plan_id }
 
   def invoice_name
-    invoice_display_name.presence || 'Minimum commitment'
+    invoice_display_name.presence || I18n.t('commitment.minimum.name')
   end
 end
