@@ -2,6 +2,16 @@
 
 module Commitments
   class HelperService < BaseService
+    def self.new_instance(commitment:, invoice_subscription:)
+      klass = if invoice_subscription.subscription.plan.pay_in_advance?
+        Commitments::InAdvance::HelperService
+      else
+        Commitments::InArrears::HelperService
+      end
+
+      klass.new(commitment:, invoice_subscription:)
+    end
+
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription

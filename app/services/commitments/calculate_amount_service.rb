@@ -32,11 +32,7 @@ module Commitments
     end
 
     def helper_service
-      @helper_service ||= if subscription.plan.pay_in_arrear?
-        Commitments::InArrears::HelperService.new(commitment:, invoice_subscription:)
-      else
-        Commitments::InAdvance::HelperService.new(commitment:, invoice_subscription:)
-      end
+      Commitments::HelperService.new_instance(commitment:, invoice_subscription:)
     end
   end
 end

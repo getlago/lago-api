@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service do
-  subject(:service) { described_class.new(invoice_subscription:) }
+  subject(:service) { described_class.new_instance(invoice_subscription:) }
 
   let(:invoice_subscription) do
     create(

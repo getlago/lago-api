@@ -172,10 +172,11 @@ module Invoices
     def should_create_minimum_commitment_true_up_fee?(invoice_subscription)
       subscription = invoice_subscription.subscription
 
-      return false if subscription.plan.pay_in_advance?
+      return false if subscription.plan.pay_in_advance? #&& !invoice_subscription.previous_invoice_subscription
       return false unless should_create_yearly_subscription_fee?(subscription)
 
-      calculate_true_up_fee_result = Commitments::Minimum::CalculateTrueUpFeeService.call(invoice_subscription:)
+      calculate_true_up_fee_result = Commitments::Minimum::CalculateTrueUpFeeService
+        .new_instance(invoice_subscription:).call
 
       return false if calculate_true_up_fee_result.amount_cents.zero?
 

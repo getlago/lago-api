@@ -14,7 +14,8 @@ module Fees
         def call
           return result if invoice_has_minimum_commitment_fee? || !minimum_commitment
 
-          true_up_fee_result = ::Commitments::Minimum::CalculateTrueUpFeeService.call(invoice_subscription:)
+          true_up_fee_result = ::Commitments::Minimum::CalculateTrueUpFeeService
+            .new_instance(invoice_subscription:).call
 
           new_fee = Fee.new(
             invoice:,

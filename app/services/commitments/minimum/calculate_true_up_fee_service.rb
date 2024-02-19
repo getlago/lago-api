@@ -3,6 +3,16 @@
 module Commitments
   module Minimum
     class CalculateTrueUpFeeService < BaseService
+      def self.new_instance(invoice_subscription:)
+        klass = if invoice_subscription.subscription.plan.pay_in_advance?
+          Commitments::Minimum::InAdvance::CalculateTrueUpFeeService
+        else
+          Commitments::Minimum::InArrears::CalculateTrueUpFeeService
+        end
+
+        klass.new(invoice_subscription:)
+      end
+
       def initialize(invoice_subscription:)
         @invoice_subscription = invoice_subscription
         @minimum_commitment = invoice_subscription.subscription.plan.minimum_commitment
@@ -37,7 +47,7 @@ module Commitments
       end
 
       def fees_total_amount_cents
-        helper_service = Commitments::HelperService.new(
+        helper_service = Commitments::HelperService.new_instance(
           commitment: minimum_commitment,
           invoice_subscription:,
         )
