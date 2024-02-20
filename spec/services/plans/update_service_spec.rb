@@ -153,6 +153,29 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
+      context 'with new charge' do
+        let(:plan_name) { 'foo' }
+
+        let(:charges_args) do
+          [
+            {
+              billable_metric_id: sum_billable_metric.id,
+              charge_model: 'standard',
+              pay_in_advance: false,
+              invoiceable: true,
+              properties: {
+                amount: '100',
+              },
+            },
+          ]
+        end
+
+        it 'updates the plan' do
+          result = plans_service.call
+          expect(result.plan.charges.count).to eq(1)
+        end
+      end
+
       context 'with premium charge model' do
         let(:plan_name) { 'foo' }
 

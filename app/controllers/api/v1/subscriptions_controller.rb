@@ -159,6 +159,7 @@ module Api
               :billable_metric_id,
               :min_amount_cents,
               :invoice_display_name,
+              :charge_model,
               { properties: {} },
               {
                 group_properties: [
