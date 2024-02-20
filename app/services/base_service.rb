@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BaseService
+  include AfterCommitEverywhere
+
   class FailedResult < StandardError
     attr_reader :result
 

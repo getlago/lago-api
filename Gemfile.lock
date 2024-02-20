@@ -110,6 +110,9 @@ GEM
       public_suffix (>= 2.0.2, < 6.0)
     adyen-ruby-api-library (7.0.1)
       faraday
+    after_commit_everywhere (1.4.0)
+      activerecord (>= 4.2)
+      activesupport
     analytics-ruby (2.4.0)
     ast (2.4.2)
     aws-eventstream (1.2.0)
@@ -576,6 +579,7 @@ DEPENDENCIES
   activejob-traceable
   activejob-uniqueness
   adyen-ruby-api-library
+  after_commit_everywhere
   analytics-ruby (~> 2.4.0)
   aws-sdk-s3
   bcrypt

@@ -25,8 +25,7 @@ module Customers
 
     def vies_check
       vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
-
-      SendWebhookJob.perform_later('customer.vies_check', customer, vies_check:)
+      after_commit { SendWebhookJob.perform_later('customer.vies_check', customer, vies_check:) }
 
       vies_check
     end
