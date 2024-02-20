@@ -76,6 +76,10 @@ gem 'karafka'
 # Taxes
 gem 'valvat', require: false
 
+# One-time Password
+gem 'rotp', '~> 6.3'
+gem 'rqrcode', '~> 2.2'
+
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'
