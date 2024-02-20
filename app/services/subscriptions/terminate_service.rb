@@ -2,9 +2,10 @@
 
 module Subscriptions
   class TerminateService < BaseService
-    def initialize(subscription:, async: true)
+    def initialize(subscription:, async: true, upgrade: false)
       @subscription = subscription
       @async = async
+      @upgrade = upgrade
 
       super
     end
@@ -25,6 +26,7 @@ module Subscriptions
           credit_note_result = CreditNotes::CreateFromTermination.new(
             subscription:,
             reason: 'order_cancellation',
+            upgrade:,
           ).call
           credit_note_result.raise_if_error!
         end
@@ -76,7 +78,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :async
+    attr_reader :subscription, :async, :upgrade
 
     def bill_subscription
       if async

@@ -566,7 +566,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
 
           subscription = customer.subscriptions.first
 
-          travel_to(DateTime.new(2023, 10, 18)) do
+          travel_to(DateTime.new(2023, 10, 18, 5, 20)) do
             create(
               :graduated_charge,
               billable_metric:,
@@ -608,7 +608,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
 
             invoice = subscription.invoices.order(created_at: :desc).first
             expect(invoice.fees.charge_kind.count).to eq(1)
-            # 30226 (17 / 31 * 75 units) + 2.58 = 2 / 31 * 20 units (prorated event in termination period)
+            # 30226 (17 / 31 * 75 units) + 2.58 (2 / 31 * 20 units - prorated event in termination period)
             expect(invoice.total_amount_cents).to eq(27_323)
           end
 

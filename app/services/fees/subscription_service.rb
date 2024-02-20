@@ -181,11 +181,7 @@ module Fees
       end
 
       # NOTE: number of days between beginning of the period and the termination date
-      number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
-        from_datetime,
-        to_datetime,
-        customer.applicable_timezone,
-      )
+      number_of_day_to_bill = subscription.date_diff_with_timezone(from_datetime, to_datetime)
 
       # Remove later customer timezone fix while passing optional_from_date
       # single_day_price method should return correct amount even without the timezone fix since

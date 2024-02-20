@@ -244,6 +244,29 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       end
     end
 
+    context 'when plan has been upgraded' do
+      it 'calculates credit note correctly' do
+        result = described_class.new(subscription:, upgrade: true).call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to be_available
+          expect(credit_note).to be_order_change
+          expect(credit_note.total_amount_cents).to eq(20)
+          expect(credit_note.total_amount_currency).to eq('EUR')
+          expect(credit_note.credit_amount_cents).to eq(20)
+          expect(credit_note.credit_amount_currency).to eq('EUR')
+          expect(credit_note.balance_amount_cents).to eq(20)
+          expect(credit_note.balance_amount_currency).to eq('EUR')
+          expect(credit_note.reason).to eq('order_change')
+
+          expect(credit_note.items.count).to eq(1)
+        end
+      end
+    end
+
     context 'with a different timezone' do
       let(:started_at) { Time.zone.parse('2022-09-01 12:00') }
       let(:terminated_at) { Time.zone.parse('2022-10-15 01:00') }

@@ -997,7 +997,7 @@ RSpec.describe Fees::SubscriptionService do
         expect(result.fee).to have_attributes(
           id: String,
           invoice_id: invoice.id,
-          amount_cents: 65,
+          amount_cents: 61, # 100/31 * 19
           amount_currency: plan.amount_currency,
           units: 1,
         )
@@ -1016,7 +1016,7 @@ RSpec.describe Fees::SubscriptionService do
         it 'creates a fee with prorated amount based on trial period' do
           result = fees_subscription_service.create
 
-          expect(result.fee.amount_cents).to eq(10)
+          expect(result.fee.amount_cents).to eq(6) # 2 days * (100 / 31)
         end
       end
 

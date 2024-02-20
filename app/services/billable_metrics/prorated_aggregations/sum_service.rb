@@ -139,11 +139,7 @@ module BillableMetrics
       def persisted_sum
         persisted_event_store_instante.prorated_sum(
           period_duration:,
-          persisted_duration: Utils::DatetimeService.date_diff_with_timezone(
-            from_datetime,
-            to_datetime,
-            subscription.customer.applicable_timezone,
-          ),
+          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
         )
       end
 
@@ -180,11 +176,7 @@ module BillableMetrics
       def grouped_persisted_sums
         persisted_event_store_instante.grouped_prorated_sum(
           period_duration:,
-          persisted_duration: Utils::DatetimeService.date_diff_with_timezone(
-            from_datetime,
-            to_datetime,
-            subscription.customer.applicable_timezone,
-          ),
+          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
         )
       end
     end

@@ -2,9 +2,10 @@
 
 module CreditNotes
   class CreateFromTermination < BaseService
-    def initialize(subscription:, reason: 'order_change')
+    def initialize(subscription:, reason: 'order_change', upgrade: false)
       @subscription = subscription
       @reason = reason
+      @upgrade = upgrade
 
       super
     end
@@ -37,7 +38,7 @@ module CreditNotes
 
     private
 
-    attr_accessor :subscription, :reason
+    attr_accessor :subscription, :reason, :upgrade
 
     delegate :plan, :terminated_at, :customer, to: :subscription
 
@@ -70,6 +71,7 @@ module CreditNotes
 
     def remaining_duration
       billed_from = terminated_at_in_timezone.end_of_day.utc.to_date
+      billed_from -= 1.day if upgrade
 
       if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > to_date
@@ -79,7 +81,9 @@ module CreditNotes
         end
       end
 
-      (to_date - billed_from).to_i
+      duration = (to_date - billed_from).to_i
+
+      duration.negative? ? 0 : duration
     end
 
     def creditable_amount_cents(item_amount)
