@@ -147,7 +147,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         external_subscription_id: subscription.external_id,
         external_customer_id: customer.external_id,
         code:,
-        timestamp: boundaries[:from_datetime] + 2.days,
+        timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
         properties: {
           billable_metric.field_name => 2,
           operation_type: 'remove',
@@ -310,7 +310,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           external_subscription_id: subscription.external_id,
           external_customer_id: customer.external_id,
           code:,
-          timestamp: boundaries[:from_datetime] + 2.days,
+          timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
           properties: {
             billable_metric.field_name => 2,
             agent_name: 'aragorn',
@@ -354,6 +354,72 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         result = event_store.grouped_prorated_unique_count
         expect(result.count).to eq(0)
       end
+    end
+  end
+
+  describe '#prorated_unique_count_breakdown' do
+    it 'returns the breakdown of add and remove of unique event properties' do
+      Event.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp: boundaries[:from_datetime] + 1.day,
+        properties: {
+          billable_metric.field_name => 2,
+        },
+      )
+
+      Event.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
+        properties: {
+          billable_metric.field_name => 2,
+          operation_type: 'remove',
+        },
+      )
+
+      event_store.aggregation_property = billable_metric.field_name
+
+      result = event_store.prorated_unique_count_breakdown
+      expect(result.count).to eq(6)
+
+      grouped_result = result.group_by { |r| r['property'] }
+
+      # NOTE: group with property 1
+      group = grouped_result['1']
+      expect(group.count).to eq(1)
+      expect(group.first['prorated_value'].round(3)).to eq(0.516) # 16/31
+      expect(group.first['operation_type']).to eq('add')
+
+      # NOTE: group with property 2 (added and removed)
+      group = grouped_result['2']
+      expect(group.first['prorated_value'].round(3)).to eq(0.032) # 1/31
+      expect(group.last['prorated_value'].round(3)).to eq(0.484) # 15/31
+      expect(group.count).to eq(2)
+
+      # NOTE: group with property 3
+      group = grouped_result['3']
+      expect(group.count).to eq(1)
+      expect(group.first['prorated_value'].round(3)).to eq(0.452) # 14/31
+      expect(group.first['operation_type']).to eq('add')
+
+      # NOTE: group with property 4
+      group = grouped_result['4']
+      expect(group.count).to eq(1)
+      expect(group.first['prorated_value'].round(3)).to eq(0.419) # 13/31
+      expect(group.first['operation_type']).to eq('add')
+
+      # NOTE: group with property 5
+      group = grouped_result['5']
+      expect(group.count).to eq(1)
+      expect(group.first['prorated_value'].round(3)).to eq(0.387) # 12/31
+      expect(group.first['operation_type']).to eq('add')
     end
   end
 

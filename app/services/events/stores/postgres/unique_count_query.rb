@@ -154,6 +154,45 @@ module Events
           SQL
         end
 
+        def prorated_breakdown_query(with_remove: false)
+          <<-SQL
+            #{events_cte_sql},
+            event_values AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, operation_type, timestamp
+            )
+
+            SELECT
+              prorated_value,
+              timestamp,
+              property,
+              operation_type
+            FROM (
+              SELECT
+                (#{period_ratio_sql}) AS prorated_value,
+                timestamp,
+                property,
+                operation_type
+              FROM event_values
+            ) prorated_breakdown
+            #{'WHERE prorated_value != 0' unless with_remove}
+            ORDER BY timestamp ASC
+          SQL
+        end
+
         private
 
         attr_reader :store
@@ -237,24 +276,25 @@ module Events
             CASE WHEN operation_type = 'add'
             THEN
               -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              EXTRACT(
-                EPOCH FROM (
-                  (
+              (
+                (
+                  DATE((
                     -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
                     CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp)) < :from_datetime
                     THEN :from_datetime
                     ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY property ORDER BY timestamp)
                     END
-                  )
-                  - (
+                  )::timestamptz AT TIME ZONE :timezone)
+                  - DATE((
                     -- NOTE: if events is older than the start of the period, we use the start of the period as the reference
                     CASE WHEN timestamp < :from_datetime THEN :from_datetime ELSE timestamp END
-                  )
-                )
+                  )::timestamptz AT TIME ZONE :timezone)
+                )::numeric
+                + 1
               )
               /
               -- NOTE: full duration of the period
-              #{charges_duration.days.to_i}
+              #{charges_duration}::numeric
             ELSE
               0 -- NOTE: duration was null so usage is null
             END
@@ -266,24 +306,25 @@ module Events
             CASE WHEN operation_type = 'add'
             THEN
               -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              EXTRACT(
-                EPOCH FROM (
-                  (
+              (
+                (
+                  DATE((
                     -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
                     CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)) < :from_datetime
                     THEN :from_datetime
                     ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)
                     END
-                  )
-                  - (
+                  )::timestamptz AT TIME ZONE :timezone)
+                  - DATE((
                     -- NOTE: if events is older than the start of the period, we use the start of the period as the reference
                     CASE WHEN timestamp < :from_datetime THEN :from_datetime ELSE timestamp END
-                  )
-                )
+                  )::timestamptz AT TIME ZONE :timezone)
+                )::numeric
+                + 1
               )
               /
               -- NOTE: full duration of the period
-              #{charges_duration.days.to_i}
+              #{charges_duration}::numeric
             ELSE
               0 -- NOTE: duration was null so usage is null
             END

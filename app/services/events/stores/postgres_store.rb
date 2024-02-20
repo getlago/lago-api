@@ -94,13 +94,30 @@ module Events
             query.prorated_query,
             {
               from_datetime:,
-              to_datetime: to_datetime.ceil,
+              to_datetime:,
+              timezone: customer.applicable_timezone,
             },
           ],
         )
         result = ActiveRecord::Base.connection.select_one(sql)
 
         result['aggregation']
+      end
+
+      def prorated_unique_count_breakdown(with_remove: false)
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.prorated_breakdown_query(with_remove:),
+            {
+              from_datetime:,
+              to_datetime:,
+              timezone: customer.applicable_timezone,
+            },
+          ],
+        )
+
+        ActiveRecord::Base.connection.select_all(sql).to_a
       end
 
       def grouped_unique_count
@@ -120,7 +137,8 @@ module Events
             query.grouped_prorated_query,
             {
               from_datetime:,
-              to_datetime: to_datetime.ceil,
+              to_datetime:,
+              timezone: customer.applicable_timezone,
             },
           ],
         )
