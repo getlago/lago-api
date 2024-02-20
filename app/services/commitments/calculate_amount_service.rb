@@ -32,7 +32,16 @@ module Commitments
     end
 
     def helper_service
-      Commitments::HelperService.new_instance(commitment:, invoice_subscription:)
+      @helper_service ||= if subscription.plan.pay_in_advance?
+        is = subscription.terminated? ? invoice_subscription : invoice_subscription.previous_invoice_subscription
+
+        Commitments::HelperService.new_instance(
+          commitment:,
+          invoice_subscription: is,
+        )
+      else
+        Commitments::HelperService.new_instance(commitment:, invoice_subscription:)
+      end
     end
   end
 end

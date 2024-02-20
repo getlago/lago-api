@@ -66,6 +66,10 @@ class InvoiceSubscription < ApplicationRecord
     fees.subscription_kind.first
   end
 
+  def commitment_fee
+    fees.commitment_kind.first
+  end
+
   def total_amount_cents
     charge_amount_cents + subscription_amount_cents
   end

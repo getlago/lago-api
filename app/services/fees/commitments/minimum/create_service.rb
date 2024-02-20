@@ -25,6 +25,8 @@ module Fees
             invoiceable_id: minimum_commitment.id,
             amount_cents: true_up_fee_result.amount_cents,
             amount_currency: subscription.plan.amount_currency,
+            invoice_display_name: minimum_commitment.invoice_name,
+            units: 1,
             taxes_amount_cents: 0,
           )
 

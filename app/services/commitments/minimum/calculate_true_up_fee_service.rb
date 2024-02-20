@@ -31,6 +31,13 @@ module Commitments
 
       delegate :subscription, to: :invoice_subscription
 
+      def helper_service
+        @helper_service ||= Commitments::HelperService.new_instance(
+          commitment: minimum_commitment,
+          invoice_subscription:,
+        )
+      end
+
       def amount_cents
         return 0 if !minimum_commitment || fees_total_amount_cents >= commitment_amount_cents
 
@@ -47,51 +54,7 @@ module Commitments
       end
 
       def fees_total_amount_cents
-        helper_service = Commitments::HelperService.new_instance(
-          commitment: minimum_commitment,
-          invoice_subscription:,
-        )
-
-        result = helper_service.period_invoice_ids
-
-        charge_fees = Fee
-          .charge_kind
-          .joins(:charge)
-          .where(
-            subscription_id: subscription.id,
-            invoice_id: result.period_invoice_ids,
-            charge: { pay_in_advance: false },
-          )
-
-        subscription_fees = Fee
-          .subscription_kind
-          .joins(subscription: :plan)
-          .where(
-            subscription_id: subscription.id,
-            invoice_id: result.period_invoice_ids,
-            plan: { pay_in_advance: false },
-          )
-
-        dates_service = helper_service.dates_service
-        charge_in_advance_fees = Fee
-          .charge_kind
-          .joins(:charge)
-          .where(
-            subscription_id: subscription.id,
-            charge: { pay_in_advance: true },
-          )
-          .where(
-            "(fees.properties->>'charges_from_datetime')::timestamptz = ?",
-            dates_service.previous_beginning_of_period&.iso8601(3),
-          )
-          .where(
-            "(fees.properties->>'charges_to_datetime')::timestamptz = ?",
-            dates_service.end_of_period&.iso8601(3),
-          )
-
-        charge_fees.sum(:amount_cents) +
-          subscription_fees.sum(:amount_cents) +
-          charge_in_advance_fees.sum(:amount_cents)
+        raise NotImplementedError
       end
     end
   end

@@ -2,6 +2,7 @@
   - subscriptions.each do |subscription|
     - invoice_subscription = invoice_subscription(subscription.id)
     - subscription_fee = invoice_subscription.subscription_fee
+    - commitment_fee = invoice_subscription.commitment_fee
     - if subscriptions.count > 1
       h2.title-2.mb-24 class="#{'invoice-details-title' if subscriptions.count > 1}" = I18n.t('invoice.details', resource: subscription.invoice_name)
 
@@ -118,6 +119,15 @@
               - else
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
+
+    - if commitment_fee
+      table.invoice-resume-table width="100%"
+        tr
+          td.body-1 = commitment_fee.invoice_name
+          td.body-2 = 1
+          td.body-2 = MoneyHelper.format(commitment_fee.amount)
+          td.body-2 == TaxHelper.applied_taxes(commitment_fee)
+          td.body-2 = MoneyHelper.format(commitment_fee.amount)
 
     / Total section
     .invoice-resume.overflow-auto

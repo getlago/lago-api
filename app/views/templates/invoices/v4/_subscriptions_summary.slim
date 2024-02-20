@@ -6,6 +6,11 @@ table.invoice-resume-table width="100%"
     tr
       td.body-1 = subscription.invoice_name
       td.body-2 = MoneyHelper.format(invoice_subscription(subscription.id).total_amount)
+    - commitment_fee = invoice_subscription(subscription.id).commitment_fee
+    - if commitment_fee
+      tr
+        td.body-1 = commitment_fee.invoice_name
+        td.body-2 = MoneyHelper.format(commitment_fee.amount)
 
 table.total-table width="100%"
   - unless credit?
