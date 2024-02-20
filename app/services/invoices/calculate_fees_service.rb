@@ -190,7 +190,8 @@ module Invoices
       # - Plan is pay in advance, we're at the beginning of the period or subscription has never been billed
       # - Plan is pay in arrear and we're at the beginning of the period
       date_service(subscription).first_month_in_yearly_period? ||
-        subscription.plan.pay_in_advance && !subscription.already_billed?
+        (subscription.plan.pay_in_advance && !subscription.already_billed?) ||
+        (subscription.plan.pay_in_arrear? && subscription.terminated?)
     end
 
     def should_create_charge_fees?(subscription)
