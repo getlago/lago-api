@@ -151,6 +151,82 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '#active_unique_property?' do
+    before { event_store.aggregation_property = billable_metric.field_name }
+
+    it 'returns false when no previous events exist' do
+      event = ::Clickhouse::EventsRaw.create!(
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
+        properties: {
+          billable_metric.field_name => SecureRandom.uuid,
+        },
+      )
+
+      expect(event_store).not_to be_active_unique_property(event)
+    end
+
+    context 'when event is already active' do
+      it 'returns true if the event property is active' do
+        ::Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+          },
+        )
+
+        event = ::Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+          },
+        )
+
+        expect(event_store).to be_active_unique_property(event)
+      end
+    end
+
+    context 'with a previous removed event' do
+      it 'returns false' do
+        ::Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+            operation_type: 'remove',
+          },
+        )
+
+        event = ::Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+          },
+        )
+
+        expect(event_store).not_to be_active_unique_property(event)
+      end
+    end
+  end
+
   describe '#unique_count' do
     it 'returns the number of unique active event properties' do
       Clickhouse::EventsRaw.create!(

@@ -108,6 +108,21 @@ module Events
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
+      # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
+      #       unique property
+      def active_unique_property?(event)
+        previous_event = events
+          .where('events_raw.properties[?] = ?', aggregation_property, event.properties[aggregation_property])
+          .where('events_raw.timestamp < ?', event.timestamp)
+          .reorder(timestamp: :desc)
+          .first
+
+        previous_event && (
+          previous_event.properties['operation_type'].nil? ||
+          previous_event.properties['operation_type'] == 'add'
+        )
+      end
+
       def unique_count
         query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
