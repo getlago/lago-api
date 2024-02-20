@@ -112,7 +112,7 @@ module BillableMetrics
 
       protected
 
-      def persisted_event_store_instante
+      def persisted_event_store_instance
         event_store = event_store_class.new(
           code: billable_metric.code,
           subscription:,
@@ -137,7 +137,7 @@ module BillableMetrics
       end
 
       def persisted_sum
-        persisted_event_store_instante.prorated_sum(
+        persisted_event_store_instance.prorated_sum(
           period_duration:,
           persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
         )
@@ -147,7 +147,7 @@ module BillableMetrics
         previous_charge_fee_units = previous_charge_fee&.units
         return previous_charge_fee_units if previous_charge_fee_units
 
-        recurring_value_before_first_fee = persisted_event_store_instante.sum
+        recurring_value_before_first_fee = persisted_event_store_instance.sum
 
         ((recurring_value_before_first_fee || 0) <= 0) ? nil : recurring_value_before_first_fee
       end
@@ -174,7 +174,7 @@ module BillableMetrics
       end
 
       def grouped_persisted_sums
-        persisted_event_store_instante.grouped_prorated_sum(
+        persisted_event_store_instance.grouped_prorated_sum(
           period_duration:,
           persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
         )

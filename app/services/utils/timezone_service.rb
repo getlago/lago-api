@@ -10,7 +10,7 @@ module Utils
       end
       sanitized_timezone = ActiveRecord::Base.sanitize_sql_for_conditions(customer.applicable_timezone)
 
-      "#{sanitized_field_name}::timestamptz AT TIME ZONE '#{sanitized_timezone}'"
+      "(#{sanitized_field_name})::timestamptz AT TIME ZONE '#{sanitized_timezone}'"
     end
 
     def self.at_time_zone
